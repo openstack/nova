@@ -248,6 +248,8 @@ class ComputeAPI(object):
 
         3.24 - Update rescue_instance() to take optional rescue_image_ref
         3.25 - Make detach_volume take an object
+        3.26 - Make live_migration() and
+               rollback_live_migration_at_destination() take an object
     '''
 
     VERSION_ALIASES = {
@@ -546,11 +548,14 @@ class ComputeAPI(object):
 
     def live_migration(self, ctxt, instance, dest, block_migration, host,
                        migrate_data=None):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.26'):
+            version = '3.26'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.0')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=host, version=version)
-        cctxt.cast(ctxt, 'live_migration', instance=instance_p,
+        cctxt.cast(ctxt, 'live_migration', instance=instance,
                    dest=dest, block_migration=block_migration,
                    migrate_data=migrate_data)
 
@@ -750,12 +755,15 @@ class ComputeAPI(object):
                    reservations=reservations)
 
     def rollback_live_migration_at_destination(self, ctxt, instance, host):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.26'):
+            version = '3.26'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.0')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'rollback_live_migration_at_destination',
-                   instance=instance_p)
+                   instance=instance)
 
     def run_instance(self, ctxt, instance, host, request_spec,
                      filter_properties, requested_networks,
