@@ -1752,8 +1752,7 @@ class API(base.Base):
     @check_instance_host
     @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.RESCUED,
-                                    vm_states.ERROR],
-                          task_state=[None])
+                                    vm_states.ERROR])
     def stop(self, context, instance, do_cast=True):
         """Stop an instance."""
         self.force_stop(context, instance, do_cast)
@@ -2111,8 +2110,7 @@ class API(base.Base):
     @check_instance_lock
     @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
-                                    vm_states.ERROR],
-                          task_state=[None])
+                                    vm_states.ERROR])
     def rebuild(self, context, instance, image_href, admin_password,
                 files_to_inject=None, **kwargs):
         """Rebuild the given instance with the provided attributes."""
@@ -2350,8 +2348,7 @@ class API(base.Base):
     @wrap_check_policy
     @check_instance_lock
     @check_instance_cell
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED],
-                          task_state=[None])
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
     def resize(self, context, instance, flavor_id=None,
                **extra_instance_updates):
         """Resize (ie, migrate) a running instance.
@@ -2448,8 +2445,7 @@ class API(base.Base):
     @wrap_check_policy
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
-                                    vm_states.PAUSED, vm_states.SUSPENDED],
-                          task_state=[None])
+                                    vm_states.PAUSED, vm_states.SUSPENDED])
     def shelve(self, context, instance):
         """Shelve an instance.
 
@@ -2475,7 +2471,7 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
-    @check_instance_state(vm_state=[vm_states.SHELVED], task_state=[None])
+    @check_instance_state(vm_state=[vm_states.SHELVED])
     def shelve_offload(self, context, instance):
         """Remove a shelved instance from the hypervisor."""
         instance.task_state = task_states.SHELVING_OFFLOADING
@@ -2486,7 +2482,7 @@ class API(base.Base):
     @wrap_check_policy
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.SHELVED,
-        vm_states.SHELVED_OFFLOADED], task_state=[None])
+        vm_states.SHELVED_OFFLOADED])
     def unshelve(self, context, instance):
         """Restore a shelved instance."""
         instance.task_state = task_states.UNSHELVING
@@ -2770,8 +2766,7 @@ class API(base.Base):
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
                                     vm_states.STOPPED, vm_states.RESIZED,
-                                    vm_states.SOFT_DELETED],
-                          task_state=[None])
+                                    vm_states.SOFT_DELETED])
     def attach_volume(self, context, instance, volume_id, device=None,
                        disk_bus=None, device_type=None):
         """Attach an existing volume to an existing instance."""
@@ -2799,8 +2794,7 @@ class API(base.Base):
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
                                     vm_states.STOPPED, vm_states.RESIZED,
-                                    vm_states.SOFT_DELETED],
-                          task_state=[None])
+                                    vm_states.SOFT_DELETED])
     def detach_volume(self, context, instance, volume):
         """Detach a volume from an instance."""
         if volume['attach_status'] == 'detached':
@@ -2816,8 +2810,7 @@ class API(base.Base):
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
                                     vm_states.SUSPENDED, vm_states.STOPPED,
-                                    vm_states.RESIZED, vm_states.SOFT_DELETED],
-                          task_state=[None])
+                                    vm_states.RESIZED, vm_states.SOFT_DELETED])
     def swap_volume(self, context, instance, old_volume, new_volume):
         """Swap volume attached to an instance."""
         if old_volume['attach_status'] == 'detached':
@@ -3012,8 +3005,7 @@ class API(base.Base):
                 host_name, block_migration=block_migration,
                 disk_over_commit=disk_over_commit)
 
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED],
-                          task_state=[None])
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
     def evacuate(self, context, instance, host, on_shared_storage,
                  admin_password=None):
         """Running evacuate to target host.
