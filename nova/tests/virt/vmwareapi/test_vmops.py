@@ -18,6 +18,7 @@ import mock
 
 from nova import exception
 from nova.network import model as network_model
+from nova.objects import instance as instance_obj
 from nova import test
 from nova.tests.virt.vmwareapi import stubs
 from nova.virt.vmwareapi import driver
@@ -252,3 +253,12 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             self.assertEqual("fake_snapshot_ref", snap)
             _wait_for_task.assert_has_calls([
                    mock.call('fake_snapshot_task')])
+
+    def test_update_instance_progress(self):
+        instance = instance_obj.Instance(context=mock.MagicMock(),
+                                         uuid='fake-uuid')
+        with mock.patch.object(instance, 'save') as mock_save:
+            self._vmops._update_instance_progress(instance._context,
+                                                  instance, 5, 10)
+            mock_save.assert_called_once_with()
+        self.assertEqual(50, instance.progress)

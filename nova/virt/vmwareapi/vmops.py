@@ -1188,13 +1188,13 @@ class VMwareVMOps(object):
         # better approximation would use the percentage of the VM image that
         # has been streamed to the destination host.
         progress = round(float(step) / total_steps * 100)
-        instance_uuid = instance['uuid']
+        instance_uuid = instance.uuid
         LOG.debug(_("Updating instance '%(instance_uuid)s' progress to"
                     " %(progress)d"),
                   {'instance_uuid': instance_uuid, 'progress': progress},
                   instance=instance)
-        self._virtapi.instance_update(context, instance_uuid,
-                                      {'progress': progress})
+        instance.progress = progress
+        instance.save()
 
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    flavor):
