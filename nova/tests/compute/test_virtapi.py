@@ -42,10 +42,6 @@ class VirtAPIBaseTest(test.NoDBTestCase, test.APICoverage):
                           getattr(self.virtapi, method), self.context,
                           *args, **kwargs)
 
-    def test_instance_update(self):
-        self.assertExpected('instance_update', 'fake-uuid',
-                            dict(host='foohost'))
-
     def test_provider_fw_rule_get_all(self):
         self.assertExpected('provider_fw_rule_get_all')
 
@@ -73,13 +69,7 @@ class FakeVirtAPITest(VirtAPIBaseTest):
             self.assertTrue(run)
             return
 
-        if method == 'instance_update':
-            # NOTE(danms): instance_update actually becomes the other variant
-            # in FakeVirtAPI
-            db_method = 'instance_update_and_get_original'
-        else:
-            db_method = method
-        self.mox.StubOutWithMock(db, db_method)
+        self.mox.StubOutWithMock(db, method)
 
         if method in ('aggregate_metadata_add', 'aggregate_metadata_delete',
                       'security_group_rule_get_by_security_group'):
@@ -91,7 +81,7 @@ class FakeVirtAPITest(VirtAPIBaseTest):
         else:
             e_args = args
 
-        getattr(db, db_method)(self.context, *e_args, **kwargs).AndReturn(
+        getattr(db, method)(self.context, *e_args, **kwargs).AndReturn(
                 'it worked')
         self.mox.ReplayAll()
         result = getattr(self.virtapi, method)(self.context, *args, **kwargs)
@@ -106,11 +96,6 @@ class FakeCompute(object):
         self.instance_events = mock.MagicMock()
         self.instance_events.prepare_for_instance_event.side_effect = \
             self._prepare_for_instance_event
-
-    def _instance_update(self, context, instance_uuid, **kwargs):
-        # NOTE(danms): Fake this behavior from compute/manager::ComputeManager
-        return self.conductor_api.instance_update(context,
-                                                  instance_uuid, kwargs)
 
     def _event_waiter(self):
         event = mock.MagicMock()

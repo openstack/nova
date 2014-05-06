@@ -320,8 +320,6 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         self.conn._session.is_local_connection = False
 
-        self.stubs.Set(fake.FakeVirtAPI, 'instance_update',
-                       lambda *args, **kwargs: ('fake-oldref', 'fake-newref'))
         fake_image.stub_out_image_service(self.stubs)
         set_image_fixtures()
         stubs.stubout_image_service_download(self.stubs)
