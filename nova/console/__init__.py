@@ -19,5 +19,4 @@
    :platform: Unix
    :synopsis: Wrapper around console proxies such as xvp to set up
               multitenant VM console access
-.. moduleauthor:: Monsyne Dragon <mdragon@rackspace.com>
 """

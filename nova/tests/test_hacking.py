@@ -54,7 +54,11 @@ class HackingTestCase(test.NoDBTestCase):
         self.assertTrue(checks.no_author_tags("# @author: jogo"))
         self.assertTrue(checks.no_author_tags("# @Author: jogo"))
         self.assertTrue(checks.no_author_tags("# Author: jogo"))
+        self.assertTrue(checks.no_author_tags(".. moduleauthor:: jogo"))
         self.assertFalse(checks.no_author_tags("# authorization of this"))
+        self.assertEqual(2, checks.no_author_tags("# author: jogo")[0])
+        self.assertEqual(2, checks.no_author_tags("# Author: jogo")[0])
+        self.assertEqual(3, checks.no_author_tags(".. moduleauthor:: jogo")[0])
 
     def test_assert_true_instance(self):
         self.assertEqual(len(list(checks.assert_true_instance(
