@@ -3006,10 +3006,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                                            disk_mapping,
                                                            inst_type)
                     devices.append(disklocal)
-                    self.virtapi.instance_update(
-                        nova_context.get_admin_context(), instance['uuid'],
-                        {'default_ephemeral_device':
-                             block_device.prepend_dev(disklocal.target_dev)})
+                    instance.default_ephemeral_device = (
+                        block_device.prepend_dev(disklocal.target_dev))
+                    instance.save()
 
                 for idx, eph in enumerate(
                     driver.block_device_info_get_ephemerals(
@@ -3026,10 +3025,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                                           disk_mapping,
                                                           inst_type)
                     devices.append(diskswap)
-                    self.virtapi.instance_update(
-                        nova_context.get_admin_context(), instance['uuid'],
-                        {'default_swap_device': block_device.prepend_dev(
-                            diskswap.target_dev)})
+                    instance.default_swap_device = (
+                        block_device.prepend_dev(diskswap.target_dev))
+                    instance.save()
 
                 for vol in block_device_mapping:
                     connection_info = vol['connection_info']
@@ -3132,9 +3130,8 @@ class LibvirtDriver(driver.ComputeDriver):
         if root_device_name:
             # NOTE(yamahata):
             # for nova.api.ec2.cloud.CloudController.get_metadata()
-            self.virtapi.instance_update(
-                nova_context.get_admin_context(), instance['uuid'],
-                {'root_device_name': root_device_name})
+            instance.root_device_name = root_device_name
+            instance.save()
 
         guest.os_type = vm_mode.get_from_instance(instance)
 
@@ -3542,9 +3539,8 @@ class LibvirtDriver(driver.ComputeDriver):
             #                 detaching the linked image device when deleting
             #                 the lxc instance.
             if container_root_device:
-                self.virtapi.instance_update(
-                    nova_context.get_admin_context(), instance['uuid'],
-                    {'root_device_name': container_root_device})
+                instance.root_device_name = container_root_device
+                instance.save()
 
         if xml:
             try:
