@@ -17,6 +17,10 @@
 """
 Helper methods for operations related to the management of volumes,
 and storage repositories
+
+Official Microsoft iSCSI Initiator and iSCSI command line interface
+documentation can be retrieved at:
+http://www.microsoft.com/en-us/download/details.aspx?id=34750
 """
 
 import time
@@ -49,13 +53,14 @@ class VolumeUtils(basevolumeutils.BaseVolumeUtils):
          target_port) = utils.parse_server_string(target_portal)
 
         #Adding target portal to iscsi initiator. Sending targets
-        self.execute('iscsicli.exe ' + 'AddTargetPortal ' +
-                     target_address + ' ' + target_port +
-                     ' * * * * * * * * * * * * *')
+        self.execute('iscsicli.exe', 'AddTargetPortal',
+                     target_address, target_port,
+                     '*', '*', '*', '*', '*', '*', '*', '*', '*', '*', '*',
+                     '*', '*')
         #Listing targets
-        self.execute('iscsicli.exe ' + 'ListTargets')
+        self.execute('iscsicli.exe', 'ListTargets')
         #Sending login
-        self.execute('iscsicli.exe ' + 'qlogintarget ' + target_iqn)
+        self.execute('iscsicli.exe', 'qlogintarget', target_iqn)
         #Waiting the disk to be mounted.
         #TODO(pnavarro): Check for the operation to end instead of
         #relying on a timeout
@@ -72,4 +77,4 @@ class VolumeUtils(basevolumeutils.BaseVolumeUtils):
 
     def execute_log_out(self, session_id):
         """Executes log out of the session described by its session ID."""
-        self.execute('iscsicli.exe ' + 'logouttarget ' + session_id)
+        self.execute('iscsicli.exe', 'logouttarget', session_id)
