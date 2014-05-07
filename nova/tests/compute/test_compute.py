@@ -5579,9 +5579,6 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(msg.event_type,
                         'compute.instance.live_migration.rollback.dest.end')
 
-        # cleanup
-        db.instance_destroy(c, instance.uuid)
-
     def test_run_kill_vm(self):
         # Detect when a vm is terminated behind the scenes.
         instance = jsonutils.to_primitive(self._create_fake_instance())
