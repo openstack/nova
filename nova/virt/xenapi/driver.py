@@ -577,7 +577,7 @@ class XenAPIDriver(driver.ComputeDriver):
         # TODO(JohnGarbutt) look again when boot-from-volume hits trunk
         pre_live_migration_result = {}
         pre_live_migration_result['sr_uuid_map'] = \
-                 self._vmops.attach_block_device_volumes(block_device_info)
+                 self._vmops.connect_block_device_volumes(block_device_info)
         return pre_live_migration_result
 
     def post_live_migration(self, ctxt, instance_ref, block_device_info,

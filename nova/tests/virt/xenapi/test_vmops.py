@@ -29,6 +29,7 @@ from nova.virt.xenapi.client import session as xenapi_session
 from nova.virt.xenapi import fake as xenapi_fake
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import vmops
+from nova.virt.xenapi import volumeops
 
 
 class VMOpsTestBase(stubs.XenAPITestBaseNoDB):
@@ -926,6 +927,27 @@ class ResizeVdisTestCase(VMOpsTestBase):
                                             4, 2000)
         mock_generate.assert_called_once_with(self.vmops._session, instance,
                                               None, 5, 1000)
+
+
+class LiveMigrateHelperTestCase(VMOpsTestBase):
+    def test_connect_block_device_volumes_none(self):
+        self.assertEqual({}, self.vmops.connect_block_device_volumes(None))
+
+    @mock.patch.object(volumeops.VolumeOps, "connect_volume")
+    def test_connect_block_device_volumes_calls_connect(self, mock_connect):
+        with mock.patch.object(self.vmops._session,
+                               "call_xenapi") as mock_session:
+            mock_connect.return_value = ("sr_uuid", None)
+            mock_session.return_value = "sr_ref"
+            bdm = {"connection_info": "c_info"}
+            bdi = {"block_device_mapping": [bdm]}
+            result = self.vmops.connect_block_device_volumes(bdi)
+
+            self.assertEqual({'sr_uuid': 'sr_ref'}, result)
+
+            mock_connect.assert_called_once_with("c_info")
+            mock_session.assert_called_once_with("SR.get_by_uuid",
+                                                 "sr_uuid")
 
 
 @mock.patch.object(vmops.VMOps, '_resize_ensure_vm_is_shutdown')

@@ -2081,18 +2081,14 @@ class VMOps(object):
 
         return usage
 
-    def attach_block_device_volumes(self, block_device_info):
+    def connect_block_device_volumes(self, block_device_info):
         sr_uuid_map = {}
         try:
             if block_device_info is not None:
                 for block_device_map in block_device_info[
                                                 'block_device_mapping']:
-                    sr_uuid, _ = self._volumeops.attach_volume(
-                        block_device_map['connection_info'],
-                        None,
-                        block_device_map['mount_device'],
-                        hotplug=False)
-
+                    sr_uuid, _ = self._volumeops.connect_volume(
+                            block_device_map['connection_info'])
                     sr_ref = self._session.call_xenapi('SR.get_by_uuid',
                                                        sr_uuid)
                     sr_uuid_map[sr_uuid] = sr_ref
