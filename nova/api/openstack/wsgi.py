@@ -1013,9 +1013,6 @@ class Resource(wsgi.Application):
                                               self.default_serializers)
 
         if hasattr(response, 'headers'):
-            if context:
-                response.headers.add('x-compute-request-id',
-                                     context.request_id)
 
             for hdr, val in response.headers.items():
                 # Headers must be utf-8 strings
@@ -1238,7 +1235,6 @@ class Fault(webob.exc.HTTPException):
 
         self.wrapped_exc.body = serializer.serialize(fault_data)
         self.wrapped_exc.content_type = content_type
-        _set_request_id_header(req, self.wrapped_exc.headers)
 
         return self.wrapped_exc
 
@@ -1298,9 +1294,3 @@ class RateLimitFault(webob.exc.HTTPException):
         self.wrapped_exc.content_type = content_type
 
         return self.wrapped_exc
-
-
-def _set_request_id_header(req, headers):
-    context = req.environ.get('nova.context')
-    if context:
-        headers['x-compute-request-id'] = context.request_id

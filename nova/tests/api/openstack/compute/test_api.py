@@ -20,7 +20,6 @@ import webob.exc
 
 from nova.api import openstack as openstack_api
 from nova.api.openstack import wsgi
-import nova.context
 from nova import exception
 from nova.openstack.common import jsonutils
 from nova import test
@@ -187,13 +186,3 @@ class APITest(test.NoDBTestCase):
         api = self._wsgi_app(fail)
         resp = webob.Request.blank('/').get_response(api)
         self.assertEqual(500, resp.status_int)
-
-    def test_request_id_in_response(self):
-        req = webob.Request.blank('/')
-        req.method = 'GET'
-        context = nova.context.RequestContext('bob', 1)
-        context.request_id = 'test-req-id'
-        req.environ['nova.context'] = context
-
-        res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.headers['x-compute-request-id'], 'test-req-id')
