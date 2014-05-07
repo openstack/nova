@@ -37,10 +37,7 @@ NS = {
 
 EXP_LINKS = {
    'v2.0': {
-       'pdf': 'http://docs.openstack.org/'
-               'api/openstack-compute/2/os-compute-devguide-2.pdf',
-       'wadl': 'http://docs.openstack.org/'
-               'api/openstack-compute/2/wadl/os-compute-2.wadl',
+       'html': 'http://docs.openstack.org/',
     },
 }
 
@@ -53,13 +50,8 @@ EXP_VERSIONS = {
         "links": [
             {
                 "rel": "describedby",
-                "type": "application/pdf",
-                "href": EXP_LINKS['v2.0']['pdf'],
-            },
-            {
-                "rel": "describedby",
-                "type": "application/vnd.sun.wadl+xml",
-                "href": EXP_LINKS['v2.0']['wadl'],
+                "type": "text/html",
+                "href": EXP_LINKS['v2.0']['html'],
             },
         ],
         "media-types": [
@@ -147,13 +139,8 @@ class VersionsTest(test.NoDBTestCase):
                     },
                     {
                         "rel": "describedby",
-                        "type": "application/pdf",
-                        "href": EXP_LINKS['v2.0']['pdf'],
-                    },
-                    {
-                        "rel": "describedby",
-                        "type": "application/vnd.sun.wadl+xml",
-                        "href": EXP_LINKS['v2.0']['wadl'],
+                        "type": "text/html",
+                        "href": EXP_LINKS['v2.0']['html'],
                     },
                 ],
                 "media-types": [
@@ -191,13 +178,8 @@ class VersionsTest(test.NoDBTestCase):
                     },
                     {
                         "rel": "describedby",
-                        "type": "application/pdf",
-                        "href": EXP_LINKS['v2.0']['pdf'],
-                    },
-                    {
-                        "rel": "describedby",
-                        "type": "application/vnd.sun.wadl+xml",
-                        "href": EXP_LINKS['v2.0']['wadl'],
+                        "type": "text/html",
+                        "href": EXP_LINKS['v2.0']['html'],
                     },
                 ],
                 "media-types": [
@@ -289,16 +271,12 @@ class VersionsTest(test.NoDBTestCase):
         self.assertEqual(len(entry.content), 1)
         self.assertEqual(entry.content[0].value,
             'Version v2.0 CURRENT (2011-01-21T11:33:21Z)')
-        self.assertEqual(len(entry.links), 3)
+        self.assertEqual(len(entry.links), 2)
         self.assertEqual(entry.links[0]['href'], 'http://localhost/v2/')
         self.assertEqual(entry.links[0]['rel'], 'self')
         self.assertEqual(entry.links[1], {
-            'href': EXP_LINKS['v2.0']['pdf'],
-            'type': 'application/pdf',
-            'rel': 'describedby'})
-        self.assertEqual(entry.links[2], {
-            'href': EXP_LINKS['v2.0']['wadl'],
-            'type': 'application/vnd.sun.wadl+xml',
+            'href': EXP_LINKS['v2.0']['html'],
+            'type': 'text/html',
             'rel': 'describedby'})
 
     def test_get_version_list_atom(self):
@@ -696,13 +674,8 @@ class VersionsSerializerTests(test.NoDBTestCase):
                     },
                     {
                         "rel": "describedby",
-                        "type": "application/pdf",
-                        "href": EXP_LINKS['v2.0']['pdf'],
-                    },
-                    {
-                        "rel": "describedby",
-                        "type": "application/vnd.sun.wadl+xml",
-                        "href": EXP_LINKS['v2.0']['wadl'],
+                        "type": "text/html",
+                        "href": EXP_LINKS['v2.0']['html'],
                     },
                 ],
                 "media-types": [
@@ -741,15 +714,10 @@ class VersionsSerializerTests(test.NoDBTestCase):
         self.assertEqual(len(entry.content), 1)
         self.assertEqual(entry.content[0].value,
              'Version v2.0 CURRENT (2011-01-21T11:33:21Z)')
-        self.assertEqual(len(entry.links), 3)
+        self.assertEqual(len(entry.links), 2)
         self.assertEqual(entry.links[0]['href'], 'http://localhost/v2/')
         self.assertEqual(entry.links[0]['rel'], 'self')
         self.assertEqual(entry.links[1], {
             'rel': 'describedby',
-            'type': 'application/pdf',
-            'href': EXP_LINKS['v2.0']['pdf']})
-        self.assertEqual(entry.links[2], {
-            'rel': 'describedby',
-            'type': 'application/vnd.sun.wadl+xml',
-            'href': EXP_LINKS['v2.0']['wadl'],
-        })
+            'type': 'text/html',
+            'href': EXP_LINKS['v2.0']['html']})
