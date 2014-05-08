@@ -567,6 +567,9 @@ class LibvirtConnTestCase(test.TestCase):
         default_params['pci_devices'] = pci_device_obj.PciDeviceList()
         default_params.update(params)
         instance = instance_obj.Instance(context, **params)
+        flavor = flavors.get_default_flavor()
+        instance.system_metadata = flavors.save_flavor_info({}, flavor)
+        instance.instance_type_id = flavor['id']
         instance.create()
         return instance
 
@@ -1855,24 +1858,24 @@ class LibvirtConnTestCase(test.TestCase):
         self.flags(virt_type='kvm', group='libvirt')
         service_ref, compute_ref = self._create_fake_service_compute()
 
-        instance_ref = db.instance_create(self.context, self.test_instance)
+        instance = self.create_instance_obj(self.context)
         pci_device_info = dict(test_pci_device.fake_db_dev)
         pci_device_info.update(compute_node_id=1,
                                label='fake',
                                status='allocated',
                                address='0000:00:00.1',
                                compute_id=compute_ref['id'],
-                               instance_uuid=instance_ref['uuid'],
+                               instance_uuid=instance.uuid,
                                extra_info=jsonutils.dumps({}))
         db.pci_device_update(self.context, pci_device_info['compute_node_id'],
                              pci_device_info['address'], pci_device_info)
 
-        instance_ref = db.instance_get(self.context, instance_ref['id'])
+        instance.refresh()
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref)
-        cfg = conn.get_guest_config(instance_ref, [], None, disk_info)
+                                            instance)
+        cfg = conn.get_guest_config(instance, [], None, disk_info)
 
         had_pci = 0
         # care only about the PCI devices
@@ -1893,24 +1896,24 @@ class LibvirtConnTestCase(test.TestCase):
         self.flags(virt_type='xen', group='libvirt')
         service_ref, compute_ref = self._create_fake_service_compute()
 
-        instance_ref = db.instance_create(self.context, self.test_instance)
+        instance = self.create_instance_obj(self.context)
         pci_device_info = dict(test_pci_device.fake_db_dev)
         pci_device_info.update(compute_node_id=1,
                                label='fake',
                                status='allocated',
                                address='0000:00:00.2',
                                compute_id=compute_ref['id'],
-                               instance_uuid=instance_ref['uuid'],
+                               instance_uuid=instance.uuid,
                                extra_info=jsonutils.dumps({}))
         db.pci_device_update(self.context, pci_device_info['compute_node_id'],
                              pci_device_info['address'], pci_device_info)
 
-        instance_ref = db.instance_get(self.context, instance_ref['id'])
+        instance.refresh()
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref)
-        cfg = conn.get_guest_config(instance_ref, [], None, disk_info)
+                                            instance)
+        cfg = conn.get_guest_config(instance, [], None, disk_info)
         had_pci = 0
         # care only about the PCI devices
         for dev in cfg.devices:
