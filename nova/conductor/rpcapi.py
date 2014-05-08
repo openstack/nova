@@ -146,6 +146,7 @@ class ConductorAPI(object):
     ...  - Remove instance_get_all_by_filters()
     ...  - Remove instance_get_active_by_window_joined()
     ...  - Remove instance_fault_create()
+    ...  - Remove action_event_start() and action_event_finish()
     """
 
     VERSION_ALIASES = {
@@ -263,16 +264,6 @@ class ConductorAPI(object):
         return cctxt.call(context, 'instance_get_all_by_host',
                           host=host, node=node,
                           columns_to_join=columns_to_join)
-
-    def action_event_start(self, context, values):
-        values_p = jsonutils.to_primitive(values)
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'action_event_start', values=values_p)
-
-    def action_event_finish(self, context, values):
-        values_p = jsonutils.to_primitive(values)
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'action_event_finish', values=values_p)
 
     def service_create(self, context, values):
         cctxt = self.client.prepare()
