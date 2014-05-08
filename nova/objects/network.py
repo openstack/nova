@@ -24,9 +24,10 @@ from nova.objects import fields
 network_opts = [
     cfg.BoolOpt('share_dhcp_address',
                 default=False,
-                help='If True in multi_host mode, all compute hosts share '
-                     'the same dhcp address. The same IP address used for '
-                     'DHCP will be added on each nova-network node which '
+                help='DEPRECATED: THIS VALUE SHOULD BE SET WHEN CREATING THE '
+                     'NETWORK. If True in multi_host mode, all compute hosts '
+                     'share the same dhcp address. The same IP address used '
+                     'for DHCP will be added on each nova-network node which '
                      'is only visible to the vms on the same host.'),
     cfg.IntOpt('network_device_mtu',
                help='MTU setting for network interface'),
