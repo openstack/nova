@@ -31,10 +31,12 @@ from nova import exception
 from nova.network.security_group import neutron_driver
 from nova.network.security_group import openstack_driver
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common import log as logging
 from nova.openstack.common import xmlutils
 from nova.virt import netutils
 
 
+LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'security_groups')
 softauth = extensions.soft_extension_authorizer('compute', 'security_groups')
 
@@ -217,10 +219,22 @@ class SecurityGroupControllerBase(object):
         sg_rule['ip_range'] = {}
         if rule['group_id']:
             with translate_exceptions():
-                source_group = self.security_group_api.get(context,
-                                                           id=rule['group_id'])
+                try:
+                    source_group = self.security_group_api.get(
+                        context, id=rule['group_id'])
+                except exception.SecurityGroupNotFound:
+                    # NOTE(arosen): There is a possible race condition that can
+                    # occur here if two api calls occur concurrently: one that
+                    # lists the security groups and another one that deletes a
+                    # security group rule that has a group_id before the
+                    # group_id is fetched. To handle this if
+                    # SecurityGroupNotFound is raised we return None instead
+                    # of the rule and the caller should ignore the rule.
+                    LOG.debug("Security Group ID %s does not exist",
+                              rule['group_id'])
+                    return
             sg_rule['group'] = {'name': source_group.get('name'),
-                             'tenant_id': source_group.get('project_id')}
+                                'tenant_id': source_group.get('project_id')}
         else:
             sg_rule['ip_range'] = {'cidr': rule['cidr']}
         return sg_rule
@@ -233,8 +247,9 @@ class SecurityGroupControllerBase(object):
         security_group['tenant_id'] = group['project_id']
         security_group['rules'] = []
         for rule in group['rules']:
-            security_group['rules'] += [self._format_security_group_rule(
-                    context, rule)]
+            formatted_rule = self._format_security_group_rule(context, rule)
+            if formatted_rule:
+                security_group['rules'] += [formatted_rule]
         return security_group
 
     def _from_body(self, body, key):
@@ -384,9 +399,18 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
                 self.security_group_api.create_security_group_rule(
                     context, security_group, new_rule))
 
-        return {"security_group_rule": self._format_security_group_rule(
-                                                        context,
-                                                        security_group_rule)}
+        formatted_rule = self._format_security_group_rule(context,
+                                                          security_group_rule)
+        if formatted_rule:
+            return {"security_group_rule": formatted_rule}
+
+        # TODO(arosen): if we first look up the security group information for
+        # the group_id before creating the rule we can avoid the case that
+        # the remote group (group_id) has been deleted when we go to look
+        # up it's name.
+        with translate_exceptions():
+            raise exception.SecurityGroupNotFound(
+                security_group_id=sg_rule['group_id'])
 
     def _rule_args_to_dict(self, context, to_port=None, from_port=None,
                            ip_protocol=None, cidr=None, group_id=None):
