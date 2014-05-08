@@ -26,7 +26,6 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
-from nova.conductor import api as conductor_api
 from nova.conductor.tasks import live_migrate
 from nova import exception
 from nova import manager
@@ -131,8 +130,7 @@ class SchedulerManager(manager.Manager):
         Sets instance vm_state to ERROR on exceptions
         """
         instance_uuids = request_spec['instance_uuids']
-        with compute_utils.EventReporter(context, conductor_api.LocalAPI(),
-                                         'schedule', *instance_uuids):
+        with compute_utils.EventReporter(context, 'schedule', *instance_uuids):
             try:
                 return self.driver.schedule_run_instance(context,
                         request_spec, admin_password, injected_files,
@@ -159,8 +157,7 @@ class SchedulerManager(manager.Manager):
         Sets vm_state to ERROR on other exceptions
         """
         instance_uuid = instance['uuid']
-        with compute_utils.EventReporter(context, conductor_api.LocalAPI(),
-                                         'schedule', instance_uuid):
+        with compute_utils.EventReporter(context, 'schedule', instance_uuid):
             try:
                 request_spec['num_instances'] = len(
                         request_spec['instance_uuids'])

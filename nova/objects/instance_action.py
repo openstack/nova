@@ -12,7 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.compute import utils as compute_utils
+import traceback
+
 from nova import db
 from nova.objects import base
 from nova.objects import fields
@@ -127,6 +128,29 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject):
         event.obj_reset_changes()
         return event
 
+    @staticmethod
+    def pack_action_event_start(context, instance_uuid, event_name):
+        values = {'event': event_name,
+                  'instance_uuid': instance_uuid,
+                  'request_id': context.request_id,
+                  'start_time': timeutils.utcnow()}
+        return values
+
+    @staticmethod
+    def pack_action_event_finish(context, instance_uuid, event_name,
+                                 exc_val=None, exc_tb=None):
+        values = {'event': event_name,
+                  'instance_uuid': instance_uuid,
+                  'request_id': context.request_id,
+                  'finish_time': timeutils.utcnow()}
+        if exc_tb is None:
+            values['result'] = 'Success'
+        else:
+            values['result'] = 'Error'
+            values['message'] = str(exc_val)
+            values['traceback'] = ''.join(traceback.format_tb(exc_tb))
+        return values
+
     @base.remotable_classmethod
     def get_by_id(cls, context, action_id, event_id):
         db_event = db.action_event_get_by_id(context, action_id, event_id)
@@ -134,8 +158,8 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable_classmethod
     def event_start(cls, context, instance_uuid, event_name, want_result=True):
-        values = compute_utils.pack_action_event_start(context, instance_uuid,
-                                                       event_name)
+        values = cls.pack_action_event_start(context, instance_uuid,
+                                             event_name)
         db_event = db.action_event_start(context, values)
         if want_result:
             return cls._from_db_object(context, cls(), db_event)
@@ -143,10 +167,9 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject):
     @base.remotable_classmethod
     def event_finish_with_failure(cls, context, instance_uuid, event_name,
                                   exc_val=None, exc_tb=None, want_result=None):
-        values = compute_utils.pack_action_event_finish(context, instance_uuid,
-                                                        event_name,
-                                                        exc_val=exc_val,
-                                                        exc_tb=exc_tb)
+        values = cls.pack_action_event_finish(context, instance_uuid,
+                                              event_name, exc_val=exc_val,
+                                              exc_tb=exc_tb)
         db_event = db.action_event_finish(context, values)
         if want_result:
             return cls._from_db_object(context, cls(), db_event)
@@ -161,11 +184,9 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable
     def finish_with_failure(self, context, exc_val, exc_tb):
-        values = compute_utils.pack_action_event_finish(context,
-                                                        self.instance_uuid,
-                                                        self.event,
-                                                        exc_val=exc_val,
-                                                        exc_tb=exc_tb)
+        values = self.pack_action_event_finish(context, self.instance_uuid,
+                                               self.event, exc_val=exc_val,
+                                               exc_tb=exc_tb)
         db_event = db.action_event_finish(context, values)
         self._from_db_object(context, self, db_event)
 

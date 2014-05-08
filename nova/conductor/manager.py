@@ -681,8 +681,8 @@ class ComputeTaskManager(base.Base):
                                block_migration, disk_over_commit)
         elif not live and not rebuild and flavor:
             instance_uuid = instance['uuid']
-            with compute_utils.EventReporter(context, self.db,
-                                         'cold_migrate', instance_uuid):
+            with compute_utils.EventReporter(context, 'cold_migrate',
+                                             instance_uuid):
                 self._cold_migrate(context, instance, flavor,
                                    scheduler_hint['filter_properties'],
                                    reservations)
@@ -828,7 +828,7 @@ class ComputeTaskManager(base.Base):
         elif instance.vm_state == vm_states.SHELVED_OFFLOADED:
             image_id = sys_meta.get('shelved_image_id')
             with compute_utils.EventReporter(
-                context, self.db, 'get_image_info', instance.uuid):
+                context, 'get_image_info', instance.uuid):
                 try:
                     image = safe_image_show(context, image_id)
                 except exception.ImageNotFound:
@@ -841,8 +841,7 @@ class ComputeTaskManager(base.Base):
                         instance_id=instance.uuid, reason=reason)
 
             try:
-                with compute_utils.EventReporter(context, self.db,
-                                                 'schedule_instances',
+                with compute_utils.EventReporter(context, 'schedule_instances',
                                                  instance.uuid):
                     filter_properties = {}
                     hosts = self._schedule_instances(context, image,

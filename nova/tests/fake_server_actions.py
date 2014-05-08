@@ -107,11 +107,11 @@ FAKE_EVENTS = {
 
 
 def fake_action_event_start(*args):
-    pass
+    return FAKE_EVENTS[FAKE_ACTION_ID1][0]
 
 
 def fake_action_event_finish(*args):
-    pass
+    return FAKE_EVENTS[FAKE_ACTION_ID1][0]
 
 
 def stub_out_action_events(stubs):

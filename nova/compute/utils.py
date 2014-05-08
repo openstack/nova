@@ -29,10 +29,10 @@ from nova import exception
 from nova.network import model as network_model
 from nova import notifications
 from nova.objects import instance as instance_obj
+from nova.objects import instance_action as instance_action_obj
 from nova.objects import instance_fault as instance_fault_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log
-from nova.openstack.common import timeutils
 from nova import rpc
 from nova import utils
 from nova.virt import driver
@@ -93,47 +93,6 @@ def add_instance_fault_from_exc(context, instance, fault, exc_info=None):
     code = fault_obj.code
     fault_obj.details = _get_fault_details(exc_info, code)
     fault_obj.create()
-
-
-def pack_action_start(context, instance_uuid, action_name):
-    values = {'action': action_name,
-              'instance_uuid': instance_uuid,
-              'request_id': context.request_id,
-              'user_id': context.user_id,
-              'project_id': context.project_id,
-              'start_time': context.timestamp}
-    return values
-
-
-def pack_action_finish(context, instance_uuid):
-    values = {'instance_uuid': instance_uuid,
-              'request_id': context.request_id,
-              'finish_time': timeutils.utcnow()}
-    return values
-
-
-def pack_action_event_start(context, instance_uuid, event_name):
-    values = {'event': event_name,
-              'instance_uuid': instance_uuid,
-              'request_id': context.request_id,
-              'start_time': timeutils.utcnow()}
-    return values
-
-
-def pack_action_event_finish(context, instance_uuid, event_name, exc_val=None,
-                             exc_tb=None):
-    values = {'event': event_name,
-              'instance_uuid': instance_uuid,
-              'request_id': context.request_id,
-              'finish_time': timeutils.utcnow()}
-    if exc_tb is None:
-        values['result'] = 'Success'
-    else:
-        values['result'] = 'Error'
-        values['message'] = str(exc_val)
-        values['traceback'] = ''.join(traceback.format_tb(exc_tb))
-
-    return values
 
 
 def get_device_name_for_instance(context, instance, bdms, device):
@@ -458,25 +417,23 @@ def get_reboot_type(task_state, current_power_state):
 class EventReporter(object):
     """Context manager to report instance action events."""
 
-    def __init__(self, context, conductor, event_name, *instance_uuids):
+    def __init__(self, context, event_name, *instance_uuids):
         self.context = context
-        self.conductor = conductor
         self.event_name = event_name
         self.instance_uuids = instance_uuids
 
     def __enter__(self):
         for uuid in self.instance_uuids:
-            event = pack_action_event_start(self.context, uuid,
-                                            self.event_name)
-            self.conductor.action_event_start(self.context, event)
+            instance_action_obj.InstanceActionEvent.event_start(
+                self.context, uuid, self.event_name)
 
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         for uuid in self.instance_uuids:
-            event = pack_action_event_finish(self.context, uuid,
-                                             self.event_name, exc_val, exc_tb)
-            self.conductor.action_event_finish(self.context, event)
+            instance_action_obj.InstanceActionEvent.event_finish_with_failure(
+                self.context, uuid, self.event_name, exc_val=exc_val,
+                exc_tb=exc_tb)
         return False
 
 
