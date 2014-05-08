@@ -520,7 +520,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         info = {}
 
         @staticmethod
-        def test_ensure(vlan, bridge, interface, network, mac_address):
+        def test_ensure(vlan, bridge, interface, network, mac_address, mtu):
             info['passed_interface'] = interface
 
         self.stubs.Set(linux_net.LinuxBridgeInterfaceDriver,

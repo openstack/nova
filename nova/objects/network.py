@@ -31,7 +31,8 @@ network_opts = [
                      'for DHCP will be added on each nova-network node which '
                      'is only visible to the vms on the same host.'),
     cfg.IntOpt('network_device_mtu',
-               help='MTU setting for network interface'),
+               help='DEPRECATED: THIS VALUE SHOULD BE SET WHEN CREATING THE '
+                    'NETWORK. MTU setting for network interface.'),
 ]
 
 CONF = cfg.CONF
