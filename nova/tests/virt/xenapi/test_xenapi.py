@@ -1824,26 +1824,24 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         self.mox.StubOutWithMock(vm_utils, 'destroy_vdi')
         self.mox.StubOutWithMock(vm_utils, 'get_vdi_for_vm_safely')
         self.mox.StubOutWithMock(vmops, '_restore_orig_vm_and_cleanup_orphan')
-        self.mox.StubOutWithMock(virtapi, 'instance_update')
 
-        instance = {'auto_disk_config': True, 'uuid': 'uuid'}
+        instance = instance_obj.Instance(context=self.context,
+                                         auto_disk_config=True, uuid='uuid')
+        instance.obj_reset_changes()
         vm_ref = "vm_ref"
         dest = "dest"
         flavor = "type"
         sr_path = "sr_path"
 
-        virtapi.instance_update(self.context, 'uuid', {'progress': 20.0})
         vmops._resize_ensure_vm_is_shutdown(instance, vm_ref)
         vmops._apply_orig_vm_name_label(instance, vm_ref)
         old_vdi_ref = "old_ref"
         vm_utils.get_vdi_for_vm_safely(vmops._session, vm_ref).AndReturn(
             (old_vdi_ref, None))
-        virtapi.instance_update(self.context, 'uuid', {'progress': 40.0})
         new_vdi_ref = "new_ref"
         new_vdi_uuid = "new_uuid"
         vm_utils.resize_disk(vmops._session, instance, old_vdi_ref,
             flavor).AndReturn((new_vdi_ref, new_vdi_uuid))
-        virtapi.instance_update(self.context, 'uuid', {'progress': 60.0})
         vm_utils.migrate_vhd(vmops._session, instance, new_vdi_uuid, dest,
                              sr_path, 0).AndRaise(
                                 exception.ResizeError(reason="asdf"))
@@ -1853,9 +1851,12 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
         self.mox.ReplayAll()
 
-        self.assertRaises(exception.InstanceFaultRollback,
-                          vmops._migrate_disk_resizing_down, self.context,
-                          instance, dest, flavor, vm_ref, sr_path)
+        with mock.patch.object(instance, 'save') as mock_save:
+            self.assertRaises(exception.InstanceFaultRollback,
+                              vmops._migrate_disk_resizing_down, self.context,
+                              instance, dest, flavor, vm_ref, sr_path)
+            self.assertEqual(3, mock_save.call_count)
+            self.assertEqual(60.0, instance.progress)
 
     def test_resize_ensure_vm_is_shutdown_cleanly(self):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
