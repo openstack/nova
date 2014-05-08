@@ -196,11 +196,14 @@ def stub_vm_utils_with_vdi_attached_here(function):
     return decorated_function
 
 
+def get_create_system_metadata(context, instance_type_id):
+    flavor = db.flavor_get(context, instance_type_id)
+    return flavors.save_flavor_info({}, flavor)
+
+
 def create_instance_with_system_metadata(context, instance_values):
-    flavor = db.flavor_get(context,
-                                  instance_values['instance_type_id'])
-    sys_meta = flavors.save_flavor_info({}, flavor)
-    instance_values['system_metadata'] = sys_meta
+    instance_values['system_metadata'] = get_create_system_metadata(
+        context, instance_values['instance_type_id'])
     return db.instance_create(context, instance_values)
 
 
@@ -696,23 +699,25 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                        fake_inject_instance_metadata)
 
         if create_record:
-            instance_values = {'id': instance_id,
-                               'project_id': self.project_id,
-                               'user_id': self.user_id,
-                               'image_ref': image_ref,
-                               'kernel_id': kernel_id,
-                               'ramdisk_id': ramdisk_id,
-                               'root_gb': 20,
-                               'ephemeral_gb': 0,
-                               'instance_type_id': instance_type_id,
-                               'os_type': os_type,
-                               'hostname': hostname,
-                               'key_data': key_data,
-                               'architecture': architecture}
-            instance = create_instance_with_system_metadata(self.context,
-                                                            instance_values)
+            instance = instance_obj.Instance(context=self.context)
+            instance.project_id = self.project_id
+            instance.user_id = self.user_id
+            instance.image_ref = image_ref
+            instance.kernel_id = kernel_id
+            instance.ramdisk_id = ramdisk_id
+            instance.root_gb = 20
+            instance.ephemeral_gb = 0
+            instance.instance_type_id = instance_type_id
+            instance.os_type = os_type
+            instance.hostname = hostname
+            instance.key_data = key_data
+            instance.architecture = architecture
+            instance.system_metadata = get_create_system_metadata(
+                self.context, instance_type_id)
+            instance.create()
         else:
-            instance = db.instance_get(self.context, instance_id)
+            instance = instance_obj.Instance.get_by_id(self.context,
+                                                       instance_id)
 
         network_info = fake_network.fake_get_instance_nw_info(self.stubs)
         if empty_dns:
