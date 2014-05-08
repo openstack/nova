@@ -790,6 +790,11 @@ class Network(BASE, NovaBase):
     host = Column(String(255))  # , ForeignKey('hosts.id'))
     uuid = Column(String(36))
 
+    mtu = Column(Integer)
+    dhcp_server = Column(types.IPAddress())
+    enable_dhcp = Column(Boolean, default=True)
+    share_address = Column(Boolean, default=False)
+
 
 class VirtualInterface(BASE, NovaBase):
     """Represents a virtual interface on an instance."""
