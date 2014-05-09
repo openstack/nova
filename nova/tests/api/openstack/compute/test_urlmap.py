@@ -157,7 +157,7 @@ class UrlmapTest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         body = jsonutils.loads(res.body)
-        self.assertEqual(body['extension']['name'], 'extensions')
+        self.assertEqual(body['extension']['name'], 'Extensions')
 
     def test_accept_content_type_v3(self):
         # Test Accept header specifying JSON returns JSON content.
@@ -168,4 +168,4 @@ class UrlmapTest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         body = jsonutils.loads(res.body)
-        self.assertEqual(body['extension']['name'], 'extensions')
+        self.assertEqual(body['extension']['name'], 'Extensions')

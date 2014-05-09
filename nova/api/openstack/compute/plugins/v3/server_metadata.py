@@ -171,7 +171,7 @@ class ServerMetadataController(wsgi.Controller):
 
 class ServerMetadata(extensions.V3APIExtensionBase):
     """Server Metadata API."""
-    name = "Server Metadata"
+    name = "ServerMetadata"
     alias = "server-metadata"
     version = 1
 

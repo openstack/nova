@@ -75,7 +75,7 @@ class ExtensionInfoController(object):
 class ExtensionInfo(extensions.V3APIExtensionBase):
     """Extension information."""
 
-    name = "extensions"
+    name = "Extensions"
     alias = "extensions"
     version = 1
 
