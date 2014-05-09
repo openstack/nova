@@ -379,7 +379,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         try:
             self._run_multipath(['-f', disk_descriptor],
                                 check_exit_code=[0, 1])
-        except exception.ProcessExecutionError as exc:
+        except processutils.ProcessExecutionError as exc:
             # Because not all cinder drivers need to remove the dev mapper,
             # here just logs a warning to avoid affecting those drivers in
             # exceptional cases.

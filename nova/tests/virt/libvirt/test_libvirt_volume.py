@@ -13,13 +13,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import contextlib
 import fixtures
 import os
 import time
 
+import mock
 from oslo.config import cfg
 
 from nova import exception
+from nova.openstack.common import processutils
 from nova.storage import linuxscsi
 from nova import test
 from nova.tests.virt.libvirt import fake_libvirt_utils
@@ -302,6 +305,45 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
                              ('cp', '/dev/stdin',
                               '/sys/block/%s/device/delete' % dev_name)]
         self.assertEqual(self.executes, expected_commands)
+
+    def test_libvirt_iscsi_driver_disconnect_multipath_error(self):
+        libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
+        devs = ['/dev/disk/by-path/ip-%s-iscsi-%s-lun-2' % (self.location,
+                                                            self.iqn)]
+        with contextlib.nested(
+            mock.patch.object(os.path, 'exists', return_value=True),
+            mock.patch.object(self.fake_conn, 'get_all_block_devices',
+                              return_value=devs),
+            mock.patch.object(libvirt_driver, '_rescan_multipath'),
+            mock.patch.object(libvirt_driver, '_run_multipath'),
+            mock.patch.object(libvirt_driver, '_get_multipath_device_name',
+                        return_value='/dev/mapper/fake-multipath-devname'),
+            mock.patch.object(libvirt_driver,
+                              '_get_target_portals_from_iscsiadm_output',
+                              return_value=[('fake-ip', 'fake-portal')]),
+            mock.patch.object(libvirt_driver, '_get_multipath_iqn',
+                              return_value='fake-portal'),
+        ) as (mock_exists, mock_devices, mock_rescan_multipath,
+              mock_run_multipath, mock_device_name, mock_get_portals,
+              mock_get_iqn):
+            mock_run_multipath.side_effect = processutils.ProcessExecutionError
+            name = 'volume-00000001'
+            vol = {'id': 1, 'name': self.name}
+            connection_info = self.iscsi_connection(vol, self.location,
+                                                    self.iqn)
+            conf = libvirt_driver.connect_volume(connection_info,
+                                                 self.disk_info)
+            tree = conf.format_dom()
+            dev_name = 'ip-%s-iscsi-%s-lun-1' % (self.location, self.iqn)
+            dev_str = '/dev/disk/by-path/%s' % dev_name
+            self.assertEqual('block', tree.get('type'))
+            self.assertEqual(dev_str, tree.find('./source').get('dev'))
+
+            libvirt_driver.use_multipath = True
+            libvirt_driver.disconnect_volume(connection_info, "vde")
+            mock_run_multipath.assert_called_once_with(
+                                            ['-f', 'fake-multipath-devname'],
+                                            check_exit_code=[0, 1])
 
     def iser_connection(self, volume, location, iqn):
         return {
