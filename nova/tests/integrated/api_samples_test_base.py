@@ -271,7 +271,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         # shouldn't be an issue for this case.
         timestamp_re = ('\d{4}-[0,1]\d-[0-3]\d[ ,T]'
                         '\d{2}:\d{2}:\d{2}'
-                        '(Z|(\+|-)\d{2}:\d{2}|\.\d{6}|)')
+                        '(Z|(\+|-)\d{2}:\d{2}|\.\d{6}|'
+                        '\.\d{6}(Z|(\+|-)\d{2}:\d{2})|)')
         return {
             'isotime': isotime_re,
             'timestamp': timestamp_re,

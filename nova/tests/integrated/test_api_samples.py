@@ -1118,6 +1118,14 @@ class KeyPairsSampleJsonTest(ApiSampleTestBaseV2):
         subs['keypair_name'] = '(%s)' % key_name
         self._verify_response('keypairs-list-resp', subs, response, 200)
 
+    def test_keypairs_get(self):
+        # Get api sample of key pairs get request.
+        key_name = self.test_keypairs_post()
+        response = self._do_get('os-keypairs/%s' % key_name)
+        subs = self._get_regexes()
+        subs['keypair_name'] = '(%s)' % key_name
+        self._verify_response('keypairs-get-resp', subs, response, 200)
+
 
 class KeyPairsSampleXmlTest(KeyPairsSampleJsonTest):
     ctype = 'xml'
