@@ -23,6 +23,7 @@ import mock
 import mox
 from oslo.config import cfg
 
+from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
 from nova import db as main_db
@@ -184,6 +185,16 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         instance = main_db.instance_get_by_uuid(self.context,
                 node['instance']['uuid'])
         self.assertEqual(instance['default_ephemeral_device'], '/dev/sda1')
+
+    def test_set_default_ephemeral_device(self):
+        instance = instance_obj.Instance(context=self.context)
+        instance.system_metadata = flavors.save_flavor_info(
+            {}, flavors.get_default_flavor())
+        instance.system_metadata['instance_type_ephemeral_gb'] = 1
+        with mock.patch.object(instance, 'save') as mock_save:
+            self.driver._set_default_ephemeral_device(instance)
+            mock_save.assert_called_once_with()
+            self.assertEqual('/dev/sda1', instance.default_ephemeral_device)
 
     def test_spawn_no_ephemeral_ok(self):
         node = self._create_node(ephemeral=False)
