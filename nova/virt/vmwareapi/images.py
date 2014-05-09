@@ -22,8 +22,10 @@ import os
 from oslo.config import cfg
 from oslo.utils import strutils
 from oslo.utils import units
+from oslo.vmware import rw_handles
 
 from nova import exception
+from nova.i18n import _LI
 from nova import image
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import constants
@@ -247,6 +249,109 @@ def fetch_image(context, instance, host, dc_name, ds_name, file_path,
                'upload_name': 'n/a' if file_path is None else file_path,
                'data_store_name': 'n/a' if ds_name is None else ds_name},
               instance=instance)
+
+
+def _build_shadow_vm_config_spec(session, name, size_kb, disk_type, ds_name):
+    """Return spec for creating a shadow VM for image disk.
+
+    The VM is never meant to be powered on. When used in importing
+    a disk it governs the directory name created for the VM
+    and the disk type of the disk image to convert to.
+
+    :param name: Name of the backing
+    :param size_kb: Size in KB of the backing
+    :param disk_type: VMDK type for the disk
+    :param ds_name: Datastore name where the disk is to be provisioned
+    :return: Spec for creation
+    """
+    cf = session.vim.client.factory
+    controller_device = cf.create('ns0:VirtualLsiLogicController')
+    controller_device.key = -100
+    controller_device.busNumber = 0
+    controller_device.sharedBus = 'noSharing'
+    controller_spec = cf.create('ns0:VirtualDeviceConfigSpec')
+    controller_spec.operation = 'add'
+    controller_spec.device = controller_device
+
+    disk_device = cf.create('ns0:VirtualDisk')
+    # for very small disks allocate at least 1KB
+    disk_device.capacityInKB = max(1, int(size_kb))
+    disk_device.key = -101
+    disk_device.unitNumber = 0
+    disk_device.controllerKey = -100
+    disk_device_bkng = cf.create('ns0:VirtualDiskFlatVer2BackingInfo')
+    if disk_type == constants.DISK_TYPE_EAGER_ZEROED_THICK:
+        disk_device_bkng.eagerlyScrub = True
+    elif disk_type == constants.DISK_TYPE_THIN:
+        disk_device_bkng.thinProvisioned = True
+    disk_device_bkng.fileName = '[%s]' % ds_name
+    disk_device_bkng.diskMode = 'persistent'
+    disk_device.backing = disk_device_bkng
+    disk_spec = cf.create('ns0:VirtualDeviceConfigSpec')
+    disk_spec.operation = 'add'
+    disk_spec.fileOperation = 'create'
+    disk_spec.device = disk_device
+
+    vm_file_info = cf.create('ns0:VirtualMachineFileInfo')
+    vm_file_info.vmPathName = '[%s]' % ds_name
+
+    create_spec = cf.create('ns0:VirtualMachineConfigSpec')
+    create_spec.name = name
+    create_spec.guestId = 'otherGuest'
+    create_spec.numCPUs = 1
+    create_spec.memoryMB = 128
+    create_spec.deviceChange = [controller_spec, disk_spec]
+    create_spec.files = vm_file_info
+
+    return create_spec
+
+
+def _build_import_spec_for_import_vapp(session, vm_name, datastore_name):
+    vm_create_spec = _build_shadow_vm_config_spec(
+            session, vm_name, 0, constants.DISK_TYPE_THIN, datastore_name)
+
+    client_factory = session.vim.client.factory
+    vm_import_spec = client_factory.create('ns0:VirtualMachineImportSpec')
+    vm_import_spec.configSpec = vm_create_spec
+    return vm_import_spec
+
+
+def fetch_image_stream_optimized(context, instance, session, vm_name,
+                                 ds_name, vm_folder_ref, res_pool_ref):
+    """Fetch image from Glance to ESX datastore."""
+    image_ref = instance.image_ref
+    LOG.debug("Downloading image file data %(image_ref)s to the ESX "
+              "as VM named '%(vm_name)s'",
+              {'image_ref': image_ref, 'vm_name': vm_name},
+              instance=instance)
+
+    metadata = IMAGE_API.get(context, image_ref)
+    file_size = int(metadata['size'])
+
+    vm_import_spec = _build_import_spec_for_import_vapp(
+            session, vm_name, ds_name)
+
+    read_iter = IMAGE_API.download(context, image_ref)
+    read_handle = rw_handles.ImageReadHandle(read_iter)
+
+    write_handle = rw_handles.VmdkWriteHandle(session,
+                                              session._host,
+                                              session._port,
+                                              res_pool_ref,
+                                              vm_folder_ref,
+                                              vm_import_spec,
+                                              file_size)
+    start_transfer(context,
+                   read_handle,
+                   file_size,
+                   write_file_handle=write_handle)
+
+    imported_vm_ref = write_handle.get_imported_vm()
+
+    LOG.info(_LI("Downloaded image file data %(image_ref)s"),
+             {'image_ref': instance['image_ref']}, instance=instance)
+    session._call_method(session.vim, "UnregisterVM", imported_vm_ref)
+    LOG.info(_LI("The imported VM was unregistered"), instance=instance)
 
 
 def upload_image(context, image, instance, **kwargs):

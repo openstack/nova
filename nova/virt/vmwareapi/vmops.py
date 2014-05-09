@@ -297,6 +297,30 @@ class VMwareVMOps(object):
             image_ds_loc.rel_path,
             cookies=cookies)
 
+    def _fetch_image_as_vapp(self, context, vi, image_ds_loc):
+        """Download stream optimized image to host as a vApp."""
+
+        # The directory of the imported disk is the unique name
+        # of the VM use to import it with.
+        vm_name = image_ds_loc.parent.basename
+
+        LOG.debug("Downloading stream optimized image %(image_id)s to "
+                  "%(file_path)s on the data store "
+                  "%(datastore_name)s as vApp",
+                  {'image_id': vi.ii.image_id,
+                   'file_path': image_ds_loc,
+                   'datastore_name': vi.datastore.name},
+                  instance=vi.instance)
+
+        images.fetch_image_stream_optimized(
+            context,
+            vi.instance,
+            self._session,
+            vm_name,
+            vi.datastore.name,
+            vi.dc_info.vmFolder,
+            self._root_resource_pool)
+
     def _prepare_sparse_image(self, vi):
         tmp_dir_loc = vi.datastore.build_path(
                 self._tmp_folder, uuidutils.generate_uuid())
@@ -321,6 +345,13 @@ class VMwareVMOps(object):
         flat_vmdk_ds_loc = tmp_dir_loc.join(vi.ii.image_id, flat_vmdk_name)
         self._delete_datastore_file(str(flat_vmdk_ds_loc), vi.dc_info.ref)
         return tmp_dir_loc, flat_vmdk_ds_loc
+
+    def _prepare_stream_optimized_image(self, vi):
+        vm_name = "%s_%s" % (constants.IMAGE_VM_PREFIX,
+                             uuidutils.generate_uuid())
+        tmp_dir_loc = vi.datastore.build_path(vm_name)
+        tmp_image_ds_loc = tmp_dir_loc.join("%s.vmdk" % tmp_dir_loc.basename)
+        return tmp_dir_loc, tmp_image_ds_loc
 
     def _prepare_iso_image(self, vi):
         tmp_dir_loc = vi.datastore.build_path(
@@ -366,6 +397,15 @@ class VMwareVMOps(object):
                             tmp_image_ds_loc.parent,
                             vi.cache_image_folder)
 
+    def _cache_stream_optimized_image(self, vi, tmp_image_ds_loc):
+        dst_path = vi.cache_image_folder.join("%s.vmdk" % vi.ii.image_id)
+        ds_util.mkdir(self._session, vi.cache_image_folder, vi.dc_info.ref)
+        try:
+            ds_util.disk_move(self._session, vi.dc_info.ref,
+                              tmp_image_ds_loc, dst_path)
+        except vexc.FileAlreadyExistsException:
+            pass
+
     def _cache_iso_image(self, vi, tmp_image_ds_loc):
         self._move_to_cache(vi.dc_info.ref,
                             tmp_image_ds_loc.parent,
@@ -395,7 +435,10 @@ class VMwareVMOps(object):
     def _get_image_callbacks(self, vi):
         disk_type = vi.ii.disk_type
 
-        image_fetch = self._fetch_image_as_file
+        if disk_type == constants.DISK_TYPE_STREAM_OPTIMIZED:
+            image_fetch = self._fetch_image_as_vapp
+        else:
+            image_fetch = self._fetch_image_as_file
 
         if vi.ii.is_iso:
             image_prepare = self._prepare_iso_image
@@ -403,6 +446,9 @@ class VMwareVMOps(object):
         elif disk_type == constants.DISK_TYPE_SPARSE:
             image_prepare = self._prepare_sparse_image
             image_cache = self._cache_sparse_image
+        elif disk_type == constants.DISK_TYPE_STREAM_OPTIMIZED:
+            image_prepare = self._prepare_stream_optimized_image
+            image_cache = self._cache_stream_optimized_image
         elif disk_type in constants.SUPPORTED_FLAT_VARIANTS:
             image_prepare = self._prepare_flat_image
             image_cache = self._cache_flat_image
