@@ -16,16 +16,6 @@ import contextlib
 
 
 class VirtAPI(object):
-    def instance_update(self, context, instance_uuid, updates):
-        """Perform an instance update operation on behalf of a virt driver
-        :param context: security context
-        :param instance_uuid: uuid of the instance to be updated
-        :param updates: dict of attribute=value pairs to change
-
-        Returns: orig_instance, new_instance
-        """
-        raise NotImplementedError()
-
     def provider_fw_rule_get_all(self, context):
         """Get the provider firewall rules
         :param context: security context

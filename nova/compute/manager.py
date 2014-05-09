@@ -500,11 +500,6 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         super(ComputeVirtAPI, self).__init__()
         self._compute = compute
 
-    def instance_update(self, context, instance_uuid, updates):
-        return self._compute._instance_update(context,
-                                              instance_uuid,
-                                              **updates)
-
     def provider_fw_rule_get_all(self, context):
         return self._compute.conductor_api.provider_fw_rule_get_all(context)
 
