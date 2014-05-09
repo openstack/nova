@@ -968,9 +968,11 @@ class _ConductorManagerV2Proxy(object):
     def instance_fault_create(self, context, values):
         return self.manager.instance_fault_create(context, values)
 
+    # TODO(danms): This can be removed in version 3.0 of the RPC API
     def action_event_start(self, context, values):
         return self.manager.action_event_start(context, values)
 
+    # TODO(danms): This can be removed in version 3.0 of the RPC API
     def action_event_finish(self, context, values):
         return self.manager.action_event_finish(context, values)
 

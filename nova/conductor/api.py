@@ -164,12 +164,6 @@ class LocalAPI(object):
         return self._manager.service_get_all_by(context, host=host,
                                                 binary=binary)
 
-    def action_event_start(self, context, values):
-        return self._manager.action_event_start(context, values)
-
-    def action_event_finish(self, context, values):
-        return self._manager.action_event_finish(context, values)
-
     def service_create(self, context, values):
         return self._manager.service_create(context, values)
 
