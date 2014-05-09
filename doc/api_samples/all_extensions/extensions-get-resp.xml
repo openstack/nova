@@ -129,6 +129,9 @@
   <extension alias="os-extended-hypervisors" updated="2014-01-04T00:00:00Z" namespace="http://docs.openstack.org/compute/ext/extended_hypervisors/api/v1.1" name="ExtendedHypervisors">
     <description>Extended hypervisors support.</description>
   </extension>
+  <extension alias="os-extended-networks" updated="2014-05-09T00:00:00Z" namespace="http://docs.openstack.org/compute/ext/extended_networks/api/v2" name="ExtendedNetworks">
+    <description>Adds additional fields to networks</description>
+  </extension>
   <extension alias="os-extended-quotas" updated="2013-06-09T00:00:00Z" namespace="http://docs.openstack.org/compute/ext/extended_quotas/api/v1.1" name="ExtendedQuotas">
     <description>Adds ability for admins to delete quota
     and optionally force the update Quota command.

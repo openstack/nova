@@ -297,6 +297,14 @@
             "updated": "2014-01-04T00:00:00Z"
         },
         {
+            "alias": "os-extended-networks",
+            "description": "Adds additional fields to networks",
+            "links": [],
+            "name": "ExtendedNetworks",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_networks/api/v2",
+            "updated": "2014-05-09T00:00:00Z"
+        },
+        {
             "alias": "os-extended-quotas",
             "description": "Adds ability for admins to delete quota\n    and optionally force the update Quota command.\n    ",
             "links": [],

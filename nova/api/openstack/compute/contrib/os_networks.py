@@ -30,9 +30,10 @@ LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'networks')
 authorize_view = extensions.extension_authorizer('compute',
                                                  'networks:view')
+extended_fields = ('mtu', 'dhcp_server', 'enable_dhcp', 'share_address')
 
 
-def network_dict(context, network):
+def network_dict(context, network, extended):
     fields = ('id', 'cidr', 'netmask', 'gateway', 'broadcast', 'dns1', 'dns2',
               'cidr_v6', 'gateway_v6', 'label', 'netmask_v6')
     admin_fields = ('created_at', 'updated_at', 'deleted_at', 'deleted',
@@ -46,6 +47,8 @@ def network_dict(context, network):
         #               are only visible if they are an admin.
         if context.is_admin:
             fields += admin_fields
+            if extended:
+                fields += extended_fields
         result = dict((field, network.get(field)) for field in fields)
         uuid = network.get('uuid')
         if uuid:
@@ -57,14 +60,19 @@ def network_dict(context, network):
 
 class NetworkController(wsgi.Controller):
 
-    def __init__(self, network_api=None):
+    def __init__(self, network_api=None, ext_mgr=None):
         self.network_api = network_api or network.API()
+        if ext_mgr:
+            self.extended = ext_mgr.is_loaded('os-extended-networks')
+        else:
+            self.extended = False
 
     def index(self, req):
         context = req.environ['nova.context']
         authorize_view(context)
         networks = self.network_api.get_all(context)
-        result = [network_dict(context, net_ref) for net_ref in networks]
+        result = [network_dict(context, net_ref, self.extended)
+                  for net_ref in networks]
         return {'networks': result}
 
     @wsgi.action("disassociate")
@@ -93,7 +101,7 @@ class NetworkController(wsgi.Controller):
         except exception.NetworkNotFound:
             msg = _("Network not found")
             raise exc.HTTPNotFound(explanation=msg)
-        return {'network': network_dict(context, network)}
+        return {'network': network_dict(context, network, self.extended)}
 
     def delete(self, req, id):
         context = req.environ['nova.context']
@@ -113,7 +121,7 @@ class NetworkController(wsgi.Controller):
         authorize(context)
 
         def bad(e):
-            return exc.HTTPUnprocessableEntity(explanation=e)
+            return exc.HTTPBadRequest(explanation=e)
 
         if not (body and body.get("network")):
             raise bad(_("Missing network in body"))
@@ -126,13 +134,31 @@ class NetworkController(wsgi.Controller):
         if not cidr:
             raise bad(_("Network cidr or cidr_v6 is required"))
 
+        if params.get("project_id") == "":
+            params["project_id"] = None
+
         LOG.debug("Creating network with label %s", params["label"])
 
-        params["num_networks"] = 1
-        params["network_size"] = netaddr.IPNetwork(cidr).size
+        try:
+            params["num_networks"] = 1
+            try:
+                params["network_size"] = netaddr.IPNetwork(cidr).size
+            except netaddr.AddrFormatError:
+                raise exception.InvalidCidr(cidr=cidr)
+            if not self.extended:
+                create_params = ('allowed_start', 'allowed_end')
+                for field in extended_fields + create_params:
+                    if field in params:
+                        del params[field]
 
-        network = self.network_api.create(context, **params)[0]
-        return {"network": network_dict(context, network)}
+            network = self.network_api.create(context, **params)[0]
+        except exception.NovaException as ex:
+            if ex.code == 400:
+                raise bad(ex.format_message())
+            elif ex.code == 409:
+                raise exc.HTTPConflict(explanation=ex.format_message())
+            raise
+        return {"network": network_dict(context, network, self.extended)}
 
     def add(self, req, body):
         context = req.environ['nova.context']
@@ -177,7 +203,7 @@ class Os_networks(extensions.ExtensionDescriptor):
         collection_actions = {'add': 'POST'}
         res = extensions.ResourceExtension(
             'os-networks',
-            NetworkController(),
+            NetworkController(ext_mgr=self.ext_mgr),
             member_actions=member_actions,
             collection_actions=collection_actions)
         return [res]
