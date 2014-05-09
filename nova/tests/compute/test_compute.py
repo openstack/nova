@@ -58,6 +58,7 @@ from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import compute_node as compute_node_obj
 from nova.objects import instance as instance_obj
+from nova.objects import instance_action as instance_action_obj
 from nova.objects import instance_group as instance_group_obj
 from nova.objects import migration as migration_obj
 from nova.objects import quotas as quotas_obj
@@ -1117,23 +1118,11 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertFalse(called['fault_added'])
 
-    def test_wrap_instance_event(self):
+    @mock.patch.object(instance_action_obj.InstanceActionEvent, 'event_start')
+    @mock.patch.object(instance_action_obj.InstanceActionEvent,
+                       'event_finish_with_failure')
+    def test_wrap_instance_event(self, mock_finish, mock_start):
         inst = {"uuid": "fake_uuid"}
-
-        called = {'started': False,
-                  'finished': False}
-
-        def did_it_update_start(self2, context, values):
-            called['started'] = True
-
-        def did_it_update_finish(self2, context, values):
-            called['finished'] = True
-
-        self.stubs.Set(conductor_manager.ConductorManager,
-                       'action_event_start', did_it_update_start)
-
-        self.stubs.Set(conductor_manager.ConductorManager,
-                       'action_event_finish', did_it_update_finish)
 
         @compute_manager.wrap_instance_event
         def fake_event(self, context, instance):
@@ -1141,28 +1130,14 @@ class ComputeTestCase(BaseTestCase):
 
         fake_event(self.compute, self.context, instance=inst)
 
-        self.assertTrue(called['started'])
-        self.assertTrue(called['finished'])
+        self.assertTrue(mock_start.called)
+        self.assertTrue(mock_finish.called)
 
-    def test_wrap_instance_event_log_exception(self):
+    @mock.patch.object(instance_action_obj.InstanceActionEvent, 'event_start')
+    @mock.patch.object(instance_action_obj.InstanceActionEvent,
+                       'event_finish_with_failure')
+    def test_wrap_instance_event_log_exception(self, mock_finish, mock_start):
         inst = {"uuid": "fake_uuid"}
-
-        called = {'started': False,
-                  'finished': False,
-                  'message': ''}
-
-        def did_it_update_start(self2, context, values):
-            called['started'] = True
-
-        def did_it_update_finish(self2, context, values):
-            called['finished'] = True
-            called['message'] = values['message']
-
-        self.stubs.Set(conductor_manager.ConductorManager,
-                       'action_event_start', did_it_update_start)
-
-        self.stubs.Set(conductor_manager.ConductorManager,
-                       'action_event_finish', did_it_update_finish)
 
         @compute_manager.wrap_instance_event
         def fake_event(self2, context, instance):
@@ -1171,9 +1146,10 @@ class ComputeTestCase(BaseTestCase):
         self.assertRaises(exception.NovaException, fake_event,
                           self.compute, self.context, instance=inst)
 
-        self.assertTrue(called['started'])
-        self.assertTrue(called['finished'])
-        self.assertEqual('An unknown exception occurred.', called['message'])
+        self.assertTrue(mock_start.called)
+        self.assertTrue(mock_finish.called)
+        args, kwargs = mock_finish.call_args
+        self.assertIsInstance(kwargs['exc_val'], exception.NovaException)
 
     def test_object_compat(self):
         db_inst = fake_instance.fake_db_instance()

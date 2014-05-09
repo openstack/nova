@@ -33,6 +33,7 @@ from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import external_event as external_event_obj
 from nova.objects import instance as instance_obj
+from nova.objects import instance_action as instance_action_obj
 from nova.objects import migration as migration_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import uuidutils
@@ -1267,21 +1268,25 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.compute._notify_about_instance_usage(self.context, self.instance,
                 event, **kwargs)
 
+    def _instance_action_events(self):
+        self.mox.StubOutWithMock(instance_action_obj.InstanceActionEvent,
+                                 'event_start')
+        self.mox.StubOutWithMock(instance_action_obj.InstanceActionEvent,
+                                 'event_finish_with_failure')
+        instance_action_obj.InstanceActionEvent.event_start(
+                self.context, self.instance['uuid'], mox.IgnoreArg())
+        instance_action_obj.InstanceActionEvent.event_finish_with_failure(
+                self.context, self.instance['uuid'], mox.IgnoreArg(),
+                exc_val=mox.IgnoreArg(), exc_tb=mox.IgnoreArg())
+
     def test_build_and_run_instance_called_with_proper_args(self):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'action_event_start')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'action_event_finish')
         self._do_build_instance_update()
         self.compute._build_and_run_instance(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
                 self.block_device_mapping, self.node, self.limits)
-        self.compute.conductor_api.action_event_start(self.context,
-                                                      mox.IgnoreArg())
-        self.compute.conductor_api.action_event_finish(self.context,
-                                                       mox.IgnoreArg())
+        self._instance_action_events()
         self.mox.ReplayAll()
 
         self.compute.build_and_run_instance(self.context, self.instance,
@@ -1299,10 +1304,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                                  'build_instances')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'action_event_start')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'action_event_finish')
         self._do_build_instance_update()
         self.compute._build_and_run_instance(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
@@ -1314,10 +1315,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.requested_networks)
         self.compute._set_instance_error_state(self.context,
                 self.instance['uuid'])
-        self.compute.conductor_api.action_event_start(self.context,
-                                                      mox.IgnoreArg())
-        self.compute.conductor_api.action_event_finish(self.context,
-                                                       mox.IgnoreArg())
+        self._instance_action_events()
         self.mox.ReplayAll()
 
         self.compute.build_and_run_instance(self.context, self.instance,
@@ -1334,10 +1332,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                                  'build_instances')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'action_event_start')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'action_event_finish')
         self._do_build_instance_update(reschedule_update=True)
         self.compute._build_and_run_instance(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
@@ -1349,10 +1343,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 [self.instance], self.image, [], self.admin_pass,
                 self.injected_files, self.requested_networks,
                 self.security_groups, self.block_device_mapping)
-        self.compute.conductor_api.action_event_start(self.context,
-                                                      mox.IgnoreArg())
-        self.compute.conductor_api.action_event_finish(self.context,
-                                                       mox.IgnoreArg())
+        self._instance_action_events()
         self.mox.ReplayAll()
 
         self.compute.build_and_run_instance(self.context, self.instance,
@@ -1369,10 +1360,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                 'build_instances')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'action_event_start')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'action_event_finish')
         self._do_build_instance_update(reschedule_update=True)
         self.compute._build_and_run_instance(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
@@ -1384,10 +1371,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 [self.instance], self.image, [], self.admin_pass,
                 self.injected_files, self.requested_networks,
                 self.security_groups, self.block_device_mapping)
-        self.compute.conductor_api.action_event_start(self.context,
-                                                      mox.IgnoreArg())
-        self.compute.conductor_api.action_event_finish(self.context,
-                                                       mox.IgnoreArg())
+        self._instance_action_events()
         self.mox.ReplayAll()
 
         self.compute.build_and_run_instance(self.context, self.instance,
@@ -1406,10 +1390,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                 'build_instances')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'action_event_start')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'action_event_finish')
         self._do_build_instance_update(reschedule_update=True)
         self.compute._build_and_run_instance(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
@@ -1425,10 +1405,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 [self.instance], self.image, [], self.admin_pass,
                 self.injected_files, self.requested_networks,
                 self.security_groups, self.block_device_mapping)
-        self.compute.conductor_api.action_event_start(self.context,
-                                                      mox.IgnoreArg())
-        self.compute.conductor_api.action_event_finish(self.context,
-                                                       mox.IgnoreArg())
+        self._instance_action_events()
         self.mox.ReplayAll()
 
         self.compute.build_and_run_instance(self.context, self.instance,
@@ -1446,10 +1423,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                 'build_instances')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'action_event_start')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'action_event_finish')
         self._do_build_instance_update()
         self.compute._build_and_run_instance(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
@@ -1460,10 +1433,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.requested_networks)
         self.compute._set_instance_error_state(self.context,
                 self.instance['uuid'])
-        self.compute.conductor_api.action_event_start(self.context,
-                                                      mox.IgnoreArg())
-        self.compute.conductor_api.action_event_finish(self.context,
-                                                       mox.IgnoreArg())
+        self._instance_action_events()
         self.mox.ReplayAll()
 
         self.compute.build_and_run_instance(self.context, self.instance,
@@ -1604,10 +1574,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute, '_get_resource_tracker')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                 'build_instances')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'action_event_start')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'action_event_finish')
         self.compute._get_resource_tracker(self.node).AndReturn(
             FakeResourceTracker())
         self._do_build_instance_update(reschedule_update=True)
@@ -1619,10 +1585,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 [self.instance], self.image, [], self.admin_pass,
                 self.injected_files, self.requested_networks,
                 self.security_groups, self.block_device_mapping)
-        self.compute.conductor_api.action_event_start(self.context,
-                                                      mox.IgnoreArg())
-        self.compute.conductor_api.action_event_finish(self.context,
-                                                       mox.IgnoreArg())
+        self._instance_action_events()
         self.mox.ReplayAll()
 
         self.compute.build_and_run_instance(self.context, self.instance,
@@ -1864,10 +1827,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         with contextlib.nested(
             mock.patch.object(self.compute, '_finish_resize',
                               side_effect=exception.ResizeError(reason='')),
-            mock.patch.object(self.compute.conductor_api,
-                              'action_event_start'),
-            mock.patch.object(self.compute.conductor_api,
-                              'action_event_finish'),
+            mock.patch.object(instance_action_obj.InstanceActionEvent,
+                              'event_start'),
+            mock.patch.object(instance_action_obj.InstanceActionEvent,
+                              'event_finish_with_failure'),
             mock.patch.object(db, 'instance_fault_create'),
             mock.patch.object(self.compute, '_instance_update'),
             mock.patch.object(self.migration, 'save'),
@@ -1893,10 +1856,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             mock.patch.object(self.compute.driver,
                               'migrate_disk_and_power_off',
                               side_effect=exception.ResizeError(reason='')),
-            mock.patch.object(self.compute.conductor_api,
-                              'action_event_start'),
-            mock.patch.object(self.compute.conductor_api,
-                              'action_event_finish'),
+            mock.patch.object(instance_action_obj.InstanceActionEvent,
+                              'event_start'),
+            mock.patch.object(instance_action_obj.InstanceActionEvent,
+                              'event_finish_with_failure'),
             mock.patch.object(db, 'instance_fault_create'),
             mock.patch.object(self.compute, '_instance_update'),
             mock.patch.object(self.migration, 'save'),
