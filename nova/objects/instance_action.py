@@ -109,7 +109,23 @@ class InstanceActionList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(), InstanceAction, db_actions)
 
 
+def serialize_args(fn):
+    def wrapper(cls, *args, **kwargs):
+        exc_val = kwargs.get('exc_val')
+        exc_tb = kwargs.get('exc_tb')
+        if exc_val is not None:
+            kwargs['exc_val'] = str(exc_val)
+        if not isinstance(exc_tb, str) and exc_tb is not None:
+            kwargs['exc_tb'] = ''.join(traceback.format_tb(exc_tb))
+        # NOTE(danms): We wrap a descriptor, so use that protocol
+        return fn.__get__(None, cls)(*args, **kwargs)
+    return classmethod(wrapper)
+
+
 class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject):
+    # Version 1.0: Initial version
+    # Version 1.1: event_finish_with_failure decorated with serialize_args
+    VERSION = '1.1'
     fields = {
         'id': fields.IntegerField(),
         'event': fields.StringField(nullable=True),
@@ -147,8 +163,8 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject):
             values['result'] = 'Success'
         else:
             values['result'] = 'Error'
-            values['message'] = str(exc_val)
-            values['traceback'] = ''.join(traceback.format_tb(exc_tb))
+            values['message'] = exc_val
+            values['traceback'] = exc_tb
         return values
 
     @base.remotable_classmethod
@@ -164,6 +180,7 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject):
         if want_result:
             return cls._from_db_object(context, cls(), db_event)
 
+    @serialize_args
     @base.remotable_classmethod
     def event_finish_with_failure(cls, context, instance_uuid, event_name,
                                   exc_val=None, exc_tb=None, want_result=None):
@@ -201,6 +218,7 @@ class InstanceActionEventList(base.ObjectListBase, base.NovaObject):
         }
     child_versions = {
         '1.0': '1.0',
+        '1.0': '1.1',
         }
 
     @base.remotable_classmethod

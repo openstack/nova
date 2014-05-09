@@ -1382,10 +1382,12 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(instance_action_obj.InstanceActionEvent,
                                  'event_finish_with_failure')
         instance_action_obj.InstanceActionEvent.event_start(
-                self.context, self.instance['uuid'], mox.IgnoreArg())
+                self.context, self.instance['uuid'], mox.IgnoreArg(),
+                want_result=False)
         instance_action_obj.InstanceActionEvent.event_finish_with_failure(
                 self.context, self.instance['uuid'], mox.IgnoreArg(),
-                exc_val=mox.IgnoreArg(), exc_tb=mox.IgnoreArg())
+                exc_val=mox.IgnoreArg(), exc_tb=mox.IgnoreArg(),
+                want_result=False)
 
     def test_build_and_run_instance_called_with_proper_args(self):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')

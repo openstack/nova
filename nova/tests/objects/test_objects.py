@@ -871,7 +871,7 @@ object_data = {
     'FloatingIPList': '1.1-a5c220af1c55f2aa3d2d14771bbca668',
     'Instance': '1.13-552999d3072d5aa7b31493d3c2ee551e',
     'InstanceAction': '1.1-abef7ec3247d587bdef78bf47744c6ee',
-    'InstanceActionEvent': '1.0-3b23bda6f8431fd2ab27489275a150ab',
+    'InstanceActionEvent': '1.1-7c8b9daaf15615c90d6dcc2d26c2c3af',
     'InstanceActionEventList': '1.0-6f8bfe29181b175400069c8a47f6e618',
     'InstanceActionList': '1.0-d0f559a2510ea2beab5478e5118a69f9',
     'InstanceExternalEvent': '1.0-c1b2be346d0ee670ebc0146c65859b1e',
