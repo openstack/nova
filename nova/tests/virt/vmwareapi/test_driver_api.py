@@ -231,21 +231,21 @@ class VMwareAPIConfTestCase(test.NoDBTestCase):
         # order to bind the SOAP client.
         wsdl_loc = cfg.CONF.vmware.wsdl_location
         self.assertIsNone(wsdl_loc)
-        wsdl_url = vim.Vim.get_wsdl_url("https", "www.example.com")
-        url = vim.Vim.get_soap_url("https", "www.example.com")
-        self.assertEqual("https://www.example.com/sdk/vimService.wsdl",
+        wsdl_url = vim.Vim.get_wsdl_url("https", "www.example.com", 443)
+        url = vim.Vim.get_soap_url("https", "www.example.com", 443)
+        self.assertEqual("https://www.example.com:443/sdk/vimService.wsdl",
                          wsdl_url)
-        self.assertEqual("https://www.example.com/sdk", url)
+        self.assertEqual("https://www.example.com:443/sdk", url)
 
     def test_configure_without_wsdl_loc_override_using_ipv6(self):
         # Same as above but with ipv6 based host ip
         wsdl_loc = cfg.CONF.vmware.wsdl_location
         self.assertIsNone(wsdl_loc)
-        wsdl_url = vim.Vim.get_wsdl_url("https", "::1")
-        url = vim.Vim.get_soap_url("https", "::1")
-        self.assertEqual("https://[::1]/sdk/vimService.wsdl",
+        wsdl_url = vim.Vim.get_wsdl_url("https", "::1", 443)
+        url = vim.Vim.get_soap_url("https", "::1", 443)
+        self.assertEqual("https://[::1]:443/sdk/vimService.wsdl",
                          wsdl_url)
-        self.assertEqual("https://[::1]/sdk", url)
+        self.assertEqual("https://[::1]:443/sdk", url)
 
     def test_configure_with_wsdl_loc_override(self):
         # Use the setting vmwareapi_wsdl_loc to override the
@@ -257,15 +257,42 @@ class VMwareAPIConfTestCase(test.NoDBTestCase):
         #
         # The wsdl_url should point to a different host than the one we
         # are actually going to send commands to.
-        fake_wsdl = "https://www.test.com/sdk/foo.wsdl"
+        fake_wsdl = "https://www.test.com:443/sdk/foo.wsdl"
         self.flags(wsdl_location=fake_wsdl, group='vmware')
         wsdl_loc = cfg.CONF.vmware.wsdl_location
         self.assertIsNotNone(wsdl_loc)
         self.assertEqual(fake_wsdl, wsdl_loc)
-        wsdl_url = vim.Vim.get_wsdl_url("https", "www.example.com")
-        url = vim.Vim.get_soap_url("https", "www.example.com")
+        wsdl_url = vim.Vim.get_wsdl_url("https", "www.example.com", 443)
+        url = vim.Vim.get_soap_url("https", "www.example.com", 443)
         self.assertEqual(fake_wsdl, wsdl_url)
-        self.assertEqual("https://www.example.com/sdk", url)
+        self.assertEqual("https://www.example.com:443/sdk", url)
+
+    def test_configure_non_default_host_port(self):
+        def _fake_create_session(self):
+            pass
+
+        def _fake_retrieve_service_content(self):
+            return None
+
+        with contextlib.nested(
+            mock.patch.object(driver.VMwareAPISession, '_create_session',
+                              _fake_create_session),
+            mock.patch.object(vim.Vim, 'retrieve_service_content',
+                              _fake_retrieve_service_content),
+            mock.patch('suds.client.Client')
+        ):
+            self.flags(host_ip='www.test.com',
+                       host_port=12345, group='vmware')
+            host_ip = cfg.CONF.vmware.host_ip
+            host_port = cfg.CONF.vmware.host_port
+            self.assertEqual('www.test.com', host_ip)
+            self.assertEqual(12345, host_port)
+            api_session = driver.VMwareAPISession(host_ip=host_ip,
+                                                  host_port=host_port)
+            vim_obj = api_session._get_vim_object()
+            self.assertEqual("https://www.test.com:12345/sdk/vimService.wsdl",
+                             vim_obj.wsdl_url)
+            self.assertEqual("https://www.test.com:12345/sdk", vim_obj.url)
 
 
 @mock.patch.object(driver, 'TIME_BETWEEN_API_CALL_RETRIES', 0)
