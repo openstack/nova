@@ -1812,7 +1812,7 @@ class ComputeManager(manager.Manager):
     def _get_instance_block_device_info(self, context, instance,
                                         refresh_conn_info=False,
                                         bdms=None):
-        """Transform volumes to the driver block_device format."""
+        """Transform block devices to the driver block_device format."""
 
         if not bdms:
             bdms = (block_device_obj.BlockDeviceMappingList.

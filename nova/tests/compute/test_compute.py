@@ -2628,10 +2628,10 @@ class ComputeTestCase(BaseTestCase):
             self.assertFalse(mock_get_by_instance.called)
             self.assertEqual(block_device_info, expected)
 
-    def test_get_instance_block_device_info_swap_and_ephemeral(self):
+    def test_get_instance_block_device_info_swap_and_ephemerals(self):
         instance = self._create_fake_instance()
 
-        ephemerals = fake_block_device.FakeDbBlockDeviceDict({
+        ephemeral0 = fake_block_device.FakeDbBlockDeviceDict({
             'id': 1, 'instance_uuid': 'fake-instance',
             'device_name': '/dev/vdb',
             'source_type': 'blank',
@@ -2643,9 +2643,21 @@ class ComputeTestCase(BaseTestCase):
             'volume_size': 1,
             'boot_index': -1
         })
-        swap = fake_block_device.FakeDbBlockDeviceDict({
+        ephemeral1 = fake_block_device.FakeDbBlockDeviceDict({
             'id': 2, 'instance_uuid': 'fake-instance',
             'device_name': '/dev/vdc',
+            'source_type': 'blank',
+            'destination_type': 'local',
+            'device_type': 'disk',
+            'disk_bus': 'virtio',
+            'delete_on_termination': True,
+            'guest_format': None,
+            'volume_size': 2,
+            'boot_index': -1
+        })
+        swap = fake_block_device.FakeDbBlockDeviceDict({
+            'id': 3, 'instance_uuid': 'fake-instance',
+            'device_name': '/dev/vdd',
             'source_type': 'blank',
             'destination_type': 'local',
             'device_type': 'disk',
@@ -2657,16 +2669,18 @@ class ComputeTestCase(BaseTestCase):
         })
 
         bdms = block_device_obj.block_device_make_list(self.context,
-                                                       [swap, ephemerals])
+            [swap, ephemeral0, ephemeral1])
 
         with (
               mock.patch.object(block_device_obj.BlockDeviceMappingList,
                                 'get_by_instance_uuid', return_value=bdms)
         ) as mock_get_by_instance_uuid:
             expected_block_device_info = {
-                'swap': {'device_name': '/dev/vdc', 'swap_size': 1},
+                'swap': {'device_name': '/dev/vdd', 'swap_size': 1},
                 'ephemerals': [{'device_name': '/dev/vdb', 'num': 0, 'size': 1,
-                                'virtual_name': 'ephemeral0'}],
+                                'virtual_name': 'ephemeral0'},
+                               {'device_name': '/dev/vdc', 'num': 1, 'size': 2,
+                                'virtual_name': 'ephemeral1'}],
                 'block_device_mapping': []
             }
 
