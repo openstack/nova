@@ -238,7 +238,8 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBaseNoDB):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         vm = xenapi_fake.create_vm(self.instance['name'], 'Running')
         conn_info = self._make_connection_info()
-        conn.attach_volume(None, conn_info, self.instance, '/dev/sdc')
+        self.assertIsNone(
+            conn.attach_volume(None, conn_info, self.instance, '/dev/sdc'))
 
         # check that the VM has a VBD attached to it
         # Get XenAPI record for VBD

@@ -228,7 +228,6 @@ class FakeDriver(driver.ComputeDriver):
         if instance_name not in self._mounts:
             self._mounts[instance_name] = {}
         self._mounts[instance_name][mountpoint] = connection_info
-        return True
 
     def detach_volume(self, connection_info, instance, mountpoint,
                       encryption=None):
@@ -237,7 +236,6 @@ class FakeDriver(driver.ComputeDriver):
             del self._mounts[instance['name']][mountpoint]
         except KeyError:
             pass
-        return True
 
     def swap_volume(self, old_connection_info, new_connection_info,
                     instance, mountpoint):
@@ -246,7 +244,6 @@ class FakeDriver(driver.ComputeDriver):
         if instance_name not in self._mounts:
             self._mounts[instance_name] = {}
         self._mounts[instance_name][mountpoint] = new_connection_info
-        return True
 
     def attach_interface(self, instance, image_meta, vif):
         if vif['id'] in self._interfaces:

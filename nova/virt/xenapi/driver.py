@@ -425,16 +425,16 @@ class XenAPIDriver(driver.ComputeDriver):
     def attach_volume(self, context, connection_info, instance, mountpoint,
                       disk_bus=None, device_type=None, encryption=None):
         """Attach volume storage to VM instance."""
-        return self._volumeops.attach_volume(connection_info,
-                                             instance['name'],
-                                             mountpoint)
+        self._volumeops.attach_volume(connection_info,
+                                      instance['name'],
+                                      mountpoint)
 
     def detach_volume(self, connection_info, instance, mountpoint,
                       encryption=None):
         """Detach volume storage from VM instance."""
-        return self._volumeops.detach_volume(connection_info,
-                                             instance['name'],
-                                             mountpoint)
+        self._volumeops.detach_volume(connection_info,
+                                      instance['name'],
+                                      mountpoint)
 
     def get_console_pool_info(self, console_type):
         xs_url = urlparse.urlparse(CONF.xenserver.connection_url)
