@@ -84,7 +84,7 @@ class BittorrentStore(object):
         """
 
         if CONF.xenserver.torrent_base_url:
-            def _default_torrent_url_fn(instance, image_id):
+            def _default_torrent_url_fn(image_id):
                 return urlparse.urljoin(CONF.xenserver.torrent_base_url,
                                         "%s.torrent" % image_id)
 
@@ -109,7 +109,7 @@ class BittorrentStore(object):
 
         return fn
 
-    def download_image(self, context, session, instance, image_id):
+    def download_image(self, context, session, image_id):
         params = {}
         params['image_id'] = image_id
         params['uuid_stack'] = vm_utils._make_uuid_stack()
@@ -128,7 +128,7 @@ class BittorrentStore(object):
                 CONF.xenserver.torrent_max_seeder_processes_per_host
 
         lookup_fn = self._lookup_torrent_url_fn()
-        params['torrent_url'] = lookup_fn(instance, image_id)
+        params['torrent_url'] = lookup_fn(image_id)
 
         vdis = session.call_plugin_serialized(
                 'bittorrent', 'download_vhd', **params)
