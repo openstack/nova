@@ -106,3 +106,51 @@ class IntroduceTestCase(stubs.XenAPITestBaseNoDB):
         self.assertRaises(volume_utils.StorageError,
                           volume_utils.introduce_vdi, session, 'sr_ref')
         mock_sleep.assert_called_once_with(20)
+
+
+class ParseVolumeInfoTestCase(stubs.XenAPITestBaseNoDB):
+    def test_mountpoint_to_number(self):
+        cases = {
+            'sda': 0,
+            'sdp': 15,
+            'hda': 0,
+            'hdp': 15,
+            'vda': 0,
+            'xvda': 0,
+            '0': 0,
+            '10': 10,
+            'vdq': -1,
+            'sdq': -1,
+            'hdq': -1,
+            'xvdq': -1,
+        }
+
+        for (input, expected) in cases.iteritems():
+            actual = volume_utils._mountpoint_to_number(input)
+            self.assertEqual(actual, expected,
+                    '%s yielded %s, not %s' % (input, actual, expected))
+
+    @classmethod
+    def _make_connection_info(cls):
+        target_iqn = 'iqn.2010-10.org.openstack:volume-00000001'
+        return {'driver_volume_type': 'iscsi',
+                'data': {'volume_id': 1,
+                         'target_iqn': target_iqn,
+                         'target_portal': '127.0.0.1:3260,fake',
+                         'target_lun': None,
+                         'auth_method': 'CHAP',
+                         'auth_username': 'username',
+                         'auth_password': 'password'}}
+
+    def test_parse_volume_info_parsing_auth_details(self):
+        conn_info = self._make_connection_info()
+        result = volume_utils._parse_volume_info(conn_info['data'])
+
+        self.assertEqual('username', result['chapuser'])
+        self.assertEqual('password', result['chappassword'])
+
+    def test_get_device_number_raise_exception_on_wrong_mountpoint(self):
+        self.assertRaises(
+            volume_utils.StorageError,
+            volume_utils.get_device_number,
+            'dev/sd')
