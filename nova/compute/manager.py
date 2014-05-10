@@ -2791,6 +2791,12 @@ class ComputeManager(manager.Manager):
             # Quickly bail out of here
             msg = _("Instance disappeared during snapshot")
             LOG.debug(msg, instance=instance)
+            try:
+                image_service = glance.get_default_image_service()
+                image_service.delete(context, image_id)
+            except Exception:
+                LOG.warning(_("Error while trying to clean up image %s"),
+                            image_id, instance=instance)
         except exception.ImageNotFound:
             instance.task_state = None
             instance.save()
