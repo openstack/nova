@@ -36,84 +36,42 @@ class VolumeOps(object):
 
     def attach_volume(self, connection_info, instance_name, mountpoint,
                       hotplug=True):
-        """Attach volume storage to VM instance."""
-
-        # NOTE: No Resource Pool concept so far
-        LOG.debug(_('Attach_volume: %(connection_info)s, %(instance_name)s,'
-                    '" %(mountpoint)s'),
-                  {'connection_info': connection_info,
-                   'instance_name': instance_name,
-                   'mountpoint': mountpoint})
-
+        """Attach volume to VM instance."""
+        #TODO(johngarbutt) move this into _attach_volume_to_vm
         dev_number = volume_utils.get_device_number(mountpoint)
+
         vm_ref = vm_utils.vm_ref_or_raise(self._session, instance_name)
-
-        sr_uuid, vdi_uuid = self._connect_volume(connection_info, dev_number,
-                                                 instance_name, vm_ref,
-                                                 hotplug=hotplug)
-
-        LOG.info(_('Mountpoint %(mountpoint)s attached to'
-                   ' instance %(instance_name)s'),
-                 {'instance_name': instance_name, 'mountpoint': mountpoint})
-
-        return (sr_uuid, vdi_uuid)
+        return self._attach_volume(connection_info, vm_ref,
+                                   instance_name, dev_number, hotplug)
 
     def connect_volume(self, connection_info):
-        """Attach volume storage to the hypervisor without attaching to a VM
-
-        Used to attach the just the SR - e.g. for during live migration
-        """
-
-        # NOTE: No Resource Pool concept so far
-        LOG.debug(_("Connect_volume: %s"), connection_info)
-
-        sr_uuid, vdi_uuid = self._connect_volume(connection_info,
-                                                 None, None, None, False)
-
-        return (sr_uuid, vdi_uuid)
+        """Attach volume to hypervisor, but not the VM."""
+        return self._attach_volume(connection_info)
 
     def _connect_volume(self, connection_info, dev_number=None,
-                        instance_name=None, vm_ref=None, hotplug=True):
-        driver_type = connection_info['driver_volume_type']
-        if driver_type not in ['iscsi', 'xensm']:
-            raise exception.VolumeDriverNotFound(driver_type=driver_type)
+                        instance_name=None, vm_ref=None, hotplug=False):
+        #TODO(johngarbutt) - remove as this is just for tests
+        return self._attach_volume(connection_info, vm_ref, instance_name,
+                                   dev_number, hotplug)
+
+    def _attach_volume(self, connection_info, vm_ref=None, instance_name=None,
+                       dev_number=None, hotplug=False):
+
+        self._check_is_supported_driver_type(connection_info)
 
         connection_data = connection_info['data']
-
-        sr_uuid, sr_label, sr_params = volume_utils.parse_sr_info(
-                connection_data, 'Disk-for:%s' % instance_name)
-
-        # Introduce SR if not already present
-        sr_ref = volume_utils.find_sr_by_uuid(self._session, sr_uuid)
-        if not sr_ref:
-            sr_ref = volume_utils.introduce_sr(
-                    self._session, sr_uuid, sr_label, sr_params)
-
+        sr_ref, sr_uuid = self._connect_to_volume_provider(connection_data,
+                                                           instance_name)
         try:
-            # Introduce VDI
-            if 'vdi_uuid' in connection_data:
-                vdi_ref = volume_utils.introduce_vdi(
-                        self._session, sr_ref,
-                        vdi_uuid=connection_data['vdi_uuid'])
-            elif 'target_lun' in connection_data:
-                vdi_ref = volume_utils.introduce_vdi(
-                        self._session, sr_ref,
-                        target_lun=connection_data['target_lun'])
-            else:
-                # NOTE(sirp): This will introduce the first VDI in the SR
-                vdi_ref = volume_utils.introduce_vdi(self._session, sr_ref)
-
-            # Attach
-            if vm_ref:
-                vbd_ref = vm_utils.create_vbd(self._session, vm_ref, vdi_ref,
-                                              dev_number, bootable=False,
-                                              osvol=True)
-
-                running = not vm_utils.is_vm_shutdown(self._session, vm_ref)
-                if hotplug and running:
-                    self._session.VBD.plug(vbd_ref, vm_ref)
-
+            vdi_ref = self._connect_hypervisor_to_volume(sr_ref,
+                                                         connection_data)
             vdi_uuid = self._session.VDI.get_uuid(vdi_ref)
+            LOG.info(_('Connected volume (vdi_uuid): %s'), vdi_uuid)
+
+            if vm_ref:
+                self._attach_volume_to_vm(vdi_ref, vm_ref, instance_name,
+                                          dev_number, hotplug)
+
             return (sr_uuid, vdi_uuid)
         except Exception:
             with excutils.save_and_reraise_exception():
@@ -121,6 +79,59 @@ class VolumeOps(object):
                 # cleaning up the VDI and VBD records, so no need to handle
                 # that explicitly.
                 volume_utils.forget_sr(self._session, sr_ref)
+
+    def _check_is_supported_driver_type(self, connection_info):
+        driver_type = connection_info['driver_volume_type']
+        if driver_type not in ['iscsi', 'xensm']:
+            raise exception.VolumeDriverNotFound(driver_type=driver_type)
+
+    def _connect_to_volume_provider(self, connection_data, instance_name):
+        sr_uuid, sr_label, sr_params = volume_utils.parse_sr_info(
+                connection_data, 'Disk-for:%s' % instance_name)
+        sr_ref = volume_utils.find_sr_by_uuid(self._session, sr_uuid)
+        if not sr_ref:
+            # introduce SR because not already present
+            sr_ref = volume_utils.introduce_sr(
+                    self._session, sr_uuid, sr_label, sr_params)
+        return (sr_ref, sr_uuid)
+
+    def _connect_hypervisor_to_volume(self, sr_ref, connection_data):
+        LOG.debug(_("Connect volume to hypervisor: %s"), connection_data)
+        if 'vdi_uuid' in connection_data:
+            vdi_ref = volume_utils.introduce_vdi(
+                    self._session, sr_ref,
+                    vdi_uuid=connection_data['vdi_uuid'])
+
+        elif 'target_lun' in connection_data:
+            vdi_ref = volume_utils.introduce_vdi(
+                    self._session, sr_ref,
+                    target_lun=connection_data['target_lun'])
+
+        else:
+            # NOTE(sirp): This will introduce the first VDI in the SR
+            vdi_ref = volume_utils.introduce_vdi(self._session, sr_ref)
+
+        return vdi_ref
+
+    def _attach_volume_to_vm(self, vdi_ref, vm_ref, instance_name, dev_number,
+                             hotplug):
+        msg = _('Attach_volume vdi: %(vdi_ref)s vm: %(vm_ref)s')
+        LOG.debug(msg, {'vdi_ref': vdi_ref, 'vm_ref': vm_ref})
+
+        # osvol is added to the vbd so we can spot which vbds are volumes
+        vbd_ref = vm_utils.create_vbd(self._session, vm_ref, vdi_ref,
+                                      dev_number, bootable=False,
+                                      osvol=True)
+        if hotplug:
+            # NOTE(johngarbutt) can only call VBD.plug on a running vm
+            running = not vm_utils.is_vm_shutdown(self._session, vm_ref)
+            if running:
+                LOG.debug(_("Plugging VBD: %s") % vbd_ref)
+                self._session.VBD.plug(vbd_ref, vm_ref)
+
+        LOG.info(_('Dev %(dev_number)s attached to'
+                   ' instance %(instance_name)s'),
+                 {'instance_name': instance_name, 'dev_number': dev_number})
 
     def detach_volume(self, connection_info, instance_name, mountpoint):
         """Detach volume storage to VM instance."""
