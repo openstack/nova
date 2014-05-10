@@ -1170,10 +1170,7 @@ class Controller(object):
             except AttributeError:
                 return False
 
-        if not is_dict(body[entity_name]):
-            return False
-
-        return True
+        return is_dict(body[entity_name])
 
 
 class Fault(webob.exc.HTTPException):
