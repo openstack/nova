@@ -3428,6 +3428,85 @@ class LibvirtConnTestCase(test.TestCase):
                           {"name": "fake-instance"},
                           "/dev/sda")
 
+    @mock.patch('nova.virt.libvirt.blockinfo.get_info_from_bdm')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._lookup_by_name')
+    def test_attach_volume_with_vir_domain_affect_live_flag(self,
+            mock_lookup_by_name, mock_get_info):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
+        mock_dom = mock.MagicMock()
+        mock_lookup_by_name.return_value = mock_dom
+
+        connection_info = {"driver_volume_type": "fake",
+                           "data": {"device_path": "/fake",
+                                    "access_mode": "rw"}}
+        bdm = {'device_name': 'vdb',
+               'disk_bus': 'fake-bus',
+               'device_type': 'fake-type'}
+        disk_info = {'bus': bdm['disk_bus'], 'type': bdm['device_type'],
+                     'dev': 'vdb'}
+        mock_get_info.return_value = disk_info
+        mock_conf = mock.MagicMock()
+        flags = (fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
+                 fakelibvirt.VIR_DOMAIN_AFFECT_LIVE)
+
+        with contextlib.nested(
+            mock.patch.object(conn, 'volume_driver_method',
+                              return_value=mock_conf),
+            mock.patch.object(conn, 'set_cache_mode')
+        ) as (mock_volume_driver_method, mock_set_cache_mode):
+            for state in (power_state.RUNNING, power_state.PAUSED):
+                mock_dom.info.return_value = [state, 512, 512, 2, 1234, 5678]
+
+                conn.attach_volume(self.context, connection_info, instance,
+                                   "/dev/vdb", disk_bus=bdm['disk_bus'],
+                                   device_type=bdm['device_type'])
+
+                mock_lookup_by_name.assert_called_with(instance['name'])
+                mock_get_info.assert_called_with(CONF.libvirt.virt_type, bdm)
+                mock_volume_driver_method.assert_called_with(
+                    'connect_volume', connection_info, disk_info)
+                mock_set_cache_mode.assert_called_with(mock_conf)
+                mock_dom.attachDeviceFlags.assert_called_with(
+                    mock_conf.to_xml(), flags)
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_disk_xml')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._lookup_by_name')
+    def test_detach_volume_with_vir_domain_affect_live_flag(self,
+            mock_lookup_by_name, mock_get_disk_xml):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
+        mock_dom = mock.MagicMock()
+        mock_xml = \
+            """
+            <disk type='file'>
+                <source file='/path/to/fake-volume'/>
+                <target dev='vdc' bus='virtio'/>
+            </disk>
+            """
+        mock_get_disk_xml.return_value = mock_xml
+
+        connection_info = {"driver_volume_type": "fake",
+                           "data": {"device_path": "/fake",
+                                    "access_mode": "rw"}}
+        flags = (fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
+                 fakelibvirt.VIR_DOMAIN_AFFECT_LIVE)
+
+        with mock.patch.object(conn, 'volume_driver_method') as \
+                mock_volume_driver_method:
+            for state in (power_state.RUNNING, power_state.PAUSED):
+                mock_dom.info.return_value = [state, 512, 512, 2, 1234, 5678]
+                mock_lookup_by_name.return_value = mock_dom
+
+                conn.detach_volume(connection_info, instance, '/dev/vdc')
+
+                mock_lookup_by_name.assert_called_with(instance['name'])
+                mock_get_disk_xml.assert_called_with(mock_dom.XMLDesc(0),
+                                                     'vdc')
+                mock_dom.detachDeviceFlags.assert_called_with(mock_xml, flags)
+                mock_volume_driver_method.assert_called_with(
+                    'disconnect_volume', connection_info, 'vdc')
+
     def test_multi_nic(self):
         instance_data = dict(self.test_instance)
         network_info = _fake_network_info(self.stubs, 2)
