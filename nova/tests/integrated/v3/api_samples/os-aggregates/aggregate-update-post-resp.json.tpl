@@ -1,7 +1,7 @@
 {
     "aggregate": {
         "availability_zone": "nova2",
-        "created_at": "%(timestamp)s",
+        "created_at": "%(strtime)s",
         "deleted": 0,
         "deleted_at": null,
         "hosts": [],
@@ -10,6 +10,6 @@
             "availability_zone": "nova2"
         },
         "name": "newname",
-        "updated_at": "%(timestamp)s"
+        "updated_at": "%(strtime)s"
     }
 }

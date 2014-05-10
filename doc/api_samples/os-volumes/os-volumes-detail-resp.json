@@ -10,7 +10,7 @@
                 }
             ],
             "availabilityZone": "zone1:host1",
-            "createdAt": "1999-01-01T01:01:01",
+            "createdAt": "1999-01-01T01:01:01.000000",
             "displayDescription": "Volume Description",
             "displayName": "Volume Name",
             "id": "a26887c6-c47b-4654-abb5-dfadf7d3f803",

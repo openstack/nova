@@ -1,6 +1,6 @@
 {
     "server": {
-        "os-server-usage:launched_at": "%(timestamp)s",
+        "os-server-usage:launched_at": "%(strtime)s",
         "os-server-usage:terminated_at": null,
         "addresses": {
             "private": [

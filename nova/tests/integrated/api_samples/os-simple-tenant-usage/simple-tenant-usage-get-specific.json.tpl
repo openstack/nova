@@ -9,15 +9,15 @@
                 "local_gb": 1,
                 "memory_mb": 512,
                 "name": "new-server-test",
-                "started_at": "%(timestamp)s",
+                "started_at": "%(strtime)s",
                 "state": "active",
                 "tenant_id": "openstack",
                 "uptime": 3600,
                 "vcpus": 1
             }
         ],
-        "start": "%(timestamp)s",
-        "stop": "%(timestamp)s",
+        "start": "%(strtime)s",
+        "stop": "%(strtime)s",
         "tenant_id": "openstack",
         "total_hours": 1.0,
         "total_local_gb_usage": 1.0,

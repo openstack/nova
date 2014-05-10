@@ -3,7 +3,7 @@
     {
             "status": "ACTIVE",
             "updated": "%(isotime)s",
-            "OS-SRV-USG:launched_at": "%(timestamp)s",
+            "OS-SRV-USG:launched_at": "%(strtime)s",
             "user_id": "fake",
             "addresses": {
                 "private": [

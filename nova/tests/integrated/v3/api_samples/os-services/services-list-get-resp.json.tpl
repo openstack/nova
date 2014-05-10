@@ -7,7 +7,7 @@
             "id": 1,
             "state": "up",
             "status": "disabled",
-            "updated_at": "%(timestamp)s",
+            "updated_at": "%(strtime)s",
             "zone": "internal"
         },
         {
@@ -17,7 +17,7 @@
             "id": 2,
             "state": "up",
             "status": "disabled",
-            "updated_at": "%(timestamp)s",
+            "updated_at": "%(strtime)s",
             "zone": "nova"
         },
         {
@@ -27,7 +27,7 @@
             "id": 3,
             "state": "down",
             "status": "enabled",
-            "updated_at": "%(timestamp)s",
+            "updated_at": "%(strtime)s",
             "zone": "internal"
         },
         {
@@ -37,7 +37,7 @@
             "id": 4,
             "state": "down",
             "status": "disabled",
-            "updated_at": "%(timestamp)s",
+            "updated_at": "%(strtime)s",
             "zone": "nova"
         }
     ]

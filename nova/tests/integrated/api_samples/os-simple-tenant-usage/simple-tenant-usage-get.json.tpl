@@ -1,8 +1,8 @@
 {
     "tenant_usages": [
         {
-            "start": "%(timestamp)s",
-            "stop": "%(timestamp)s",
+            "start": "%(strtime)s",
+            "stop": "%(strtime)s",
             "tenant_id": "openstack",
             "total_hours": 1.0,
             "total_local_gb_usage": 1.0,

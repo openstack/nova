@@ -1,6 +1,6 @@
 {
     "snapshot": {
-        "createdAt": "%(timestamp)s",
+        "createdAt": "%(strtime)s",
         "displayDescription": "%(description)s",
         "displayName": "%(snapshot_name)s",
         "id": 100,

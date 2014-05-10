@@ -6,7 +6,7 @@
             "request_id": "%(request_id)s",
             "user_id": "%(integer_id)s",
             "project_id": "%(integer_id)s",
-            "start_time": "%(timestamp)s",
+            "start_time": "%(strtime)s",
             "message": ""
         },
         {
@@ -15,7 +15,7 @@
             "request_id": "%(request_id)s",
             "user_id": "%(integer_id)s",
             "project_id": "%(integer_id)s",
-            "start_time": "%(timestamp)s",
+            "start_time": "%(strtime)s",
             "message": ""
         }
     ]
