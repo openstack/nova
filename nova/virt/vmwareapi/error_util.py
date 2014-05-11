@@ -150,6 +150,10 @@ class MissingParameter(VMwareDriverException):
     msg_fmt = _("Missing parameter : %(param)s")
 
 
+class NoRootDiskDefined(VMwareDriverException):
+    msg_fmt = _("No root disk defined.")
+
+
 class AlreadyExistsException(VMwareDriverException):
     msg_fmt = _("Resource already exists.")
     code = 409

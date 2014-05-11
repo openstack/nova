@@ -731,6 +731,10 @@ class VMwareVMOps(object):
             (vmdk_file_path_before_snapshot, adapter_type,
              disk_type) = vm_util.get_vmdk_path_and_adapter_type(
                                         hw_devices, uuid=instance['uuid'])
+            if not vmdk_file_path_before_snapshot:
+                LOG.debug("No root disk defined. Unable to snapshot.")
+                raise error_util.NoRootDiskDefined()
+
             datastore_name = ds_util.split_datastore_path(
                                         vmdk_file_path_before_snapshot)[0]
             os_type = self._session._call_method(vim_util,
