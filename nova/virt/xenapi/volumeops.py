@@ -48,12 +48,6 @@ class VolumeOps(object):
         """Attach volume to hypervisor, but not the VM."""
         return self._attach_volume(connection_info)
 
-    def _connect_volume(self, connection_info, dev_number=None,
-                        instance_name=None, vm_ref=None, hotplug=False):
-        #TODO(johngarbutt) - remove as this is just for tests
-        return self._attach_volume(connection_info, vm_ref, instance_name,
-                                   dev_number, hotplug)
-
     def _attach_volume(self, connection_info, vm_ref=None, instance_name=None,
                        dev_number=None, hotplug=False):
 
