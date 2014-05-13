@@ -3,13 +3,14 @@
 # This file is distributed under the same license as the nova project.
 #
 # Translators:
+# lparth <lparth@gmail.com>, 2014
 msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-05-12 06:18+0000\n"
-"PO-Revision-Date: 2014-05-11 15:27+0000\n"
-"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"POT-Creation-Date: 2014-05-13 06:52+0000\n"
+"PO-Revision-Date: 2014-05-12 14:41+0000\n"
+"Last-Translator: lparth <lparth@gmail.com>\n"
 "Language-Team: Tamil "
 "(http://www.transifex.com/projects/p/nova/language/ta/)\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
@@ -47,7 +48,7 @@ msgstr ""
 
 #: nova/crypto.py:62
 msgid "Where we keep our keys"
-msgstr ""
+msgstr "திறவிகளைப் பேணுமிடம்"
 
 #: nova/crypto.py:65
 msgid "Where we keep our root CA"
@@ -143,7 +144,7 @@ msgstr ""
 #: nova/exception.py:182
 #, python-format
 msgid "Image %(image_id)s is not active."
-msgstr ""
+msgstr "படிமம் %(image_id)s இயக்கத்திலில்லை"
 
 #: nova/exception.py:186
 #, python-format
@@ -5716,19 +5717,19 @@ msgid ""
 "'do not call'. To keep the 'do not call' behaviour, use a negative value."
 msgstr ""
 
-#: nova/compute/monitors/__init__.py:175
+#: nova/compute/monitors/__init__.py:177
 #, python-format
 msgid ""
 "Excluding monitor %(monitor_name)s due to metric name overlap; "
 "overlapping metrics: %(overlap)s"
 msgstr ""
 
-#: nova/compute/monitors/__init__.py:183
+#: nova/compute/monitors/__init__.py:185
 #, python-format
 msgid "Monitor %(monitor_name)s cannot be used: %(ex)s"
 msgstr ""
 
-#: nova/compute/monitors/__init__.py:189
+#: nova/compute/monitors/__init__.py:191
 #, python-format
 msgid "The following monitors have been disabled: %s"
 msgstr ""
