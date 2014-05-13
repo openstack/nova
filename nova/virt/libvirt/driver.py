@@ -76,6 +76,7 @@ from nova.objects import service as service_obj
 from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _LW
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -4029,10 +4030,10 @@ class LibvirtDriver(driver.ComputeDriver):
         return self.dev_filter.device_assignable(device)
 
     def get_pci_passthrough_devices(self):
-        """Get host pci devices information.
+        """Get host PCI devices information.
 
         Obtains pci devices information from libvirt, and returns
-        as a json string.
+        as a JSON string.
 
         Each device information is a dictionary, with mandatory keys
         of 'address', 'vendor_id', 'product_id', 'dev_type', 'dev_id',
@@ -4040,12 +4041,28 @@ class LibvirtDriver(driver.ComputeDriver):
 
         Refer to the objects/pci_device.py for more idea of these keys.
 
-        :returns: a list of the assignable pci devices information
+        :returns: a JSON string containaing a list of the assignable PCI
+                  devices information
         """
+        # Bail early if we know we can't support `listDevices` to avoid
+        # repeated warnings within a periodic task
+        if not getattr(self, '_list_devices_supported', True):
+            return jsonutils.dumps([])
+
+        try:
+            dev_names = self._conn.listDevices('pci', 0) or []
+        except libvirt.libvirtError as ex:
+            error_code = ex.get_error_code()
+            if error_code == libvirt.VIR_ERR_NO_SUPPORT:
+                self._list_devices_supported = False
+                LOG.warn(_LW("URI %(uri)s does not support "
+                             "listDevices: " "%(error)s"),
+                             {'uri': self.uri(), 'error': ex})
+                return jsonutils.dumps([])
+            else:
+                raise
+
         pci_info = []
-
-        dev_names = self._conn.listDevices('pci', 0) or []
-
         for name in dev_names:
             pci_dev = self._get_pcidev_info(name)
             if self._pci_device_assignable(pci_dev):

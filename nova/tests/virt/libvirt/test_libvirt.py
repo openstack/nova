@@ -447,6 +447,9 @@ class LibvirtConnTestCase(test.TestCase):
             def nodeDeviceLookupByName(self, x):
                 pass
 
+            def listDevices(self, cap, flags):
+                return []
+
             def lookupByName(self, name):
                 pass
 
@@ -5821,6 +5824,35 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertTrue(conn._pci_device_assignable(fake_dev))
         fake_dev = {'dev_type': 'type-PCI'}
         self.assertTrue(conn._pci_device_assignable(fake_dev))
+
+    def test_list_devices_not_supported(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        # Handle just the NO_SUPPORT error
+        not_supported_exc = fakelibvirt.make_libvirtError(
+                libvirt.libvirtError,
+                'this function is not supported by the connection driver:'
+                ' virNodeNumOfDevices',
+                error_code=libvirt.VIR_ERR_NO_SUPPORT)
+
+        with mock.patch.object(conn._conn, 'listDevices',
+                               side_effect=not_supported_exc):
+            self.assertEqual('[]', conn.get_pci_passthrough_devices())
+
+        # We cache not supported status to avoid emitting too many logging
+        # messages. Clear this value to test the other exception case.
+        del conn._list_devices_supported
+
+        # Other errors should not be caught
+        other_exc = fakelibvirt.make_libvirtError(
+            libvirt.libvirtError,
+            'other exc',
+            error_code=libvirt.VIR_ERR_NO_DOMAIN)
+
+        with mock.patch.object(conn._conn, 'listDevices',
+                               side_effect=other_exc):
+            self.assertRaises(libvirt.libvirtError,
+                              conn.get_pci_passthrough_devices)
 
     def test_get_pci_passthrough_devices(self):
 
