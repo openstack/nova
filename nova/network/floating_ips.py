@@ -284,11 +284,17 @@ class FloatingIP(object):
             LOG.exception(_("Failed to update usages deallocating "
                             "floating IP"))
 
-        floating_ip_obj.FloatingIP.deallocate(context, address)
-
-        # Commit the reservations
-        if reservations:
-            QUOTAS.commit(context, reservations, project_id=project_id)
+        floating_ip_ref = floating_ip_obj.FloatingIP.deallocate(context,
+                                                                address)
+        # floating_ip_ref will be None if concurrently another
+        # API call has also deallocated the same floating ip
+        if floating_ip_ref is None:
+            if reservations:
+                QUOTAS.rollback(context, reservations, project_id=project_id)
+        else:
+            # Commit the reservations
+            if reservations:
+                QUOTAS.commit(context, reservations, project_id=project_id)
 
     @messaging.expected_exceptions(exception.FloatingIpNotFoundForAddress)
     def associate_floating_ip(self, context, floating_address, fixed_address,

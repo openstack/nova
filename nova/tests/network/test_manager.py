@@ -40,6 +40,7 @@ from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
+from nova import quota
 from nova import test
 from nova.tests import fake_instance
 from nova.tests import fake_ldap
@@ -2397,6 +2398,34 @@ class FloatingIPTestCase(test.TestCase):
                 instance_id=instance_ref['id'])
         self.network.deallocate_for_instance(self.context,
                 instance_id=instance_ref['id'])
+
+    def test_deallocate_floating_ip_quota_rollback(self):
+        ctxt = context.RequestContext('testuser', 'testproject',
+                                      is_admin=False)
+
+        def fake(*args, **kwargs):
+            return dict(test_floating_ip.fake_floating_ip,
+                        address='10.0.0.1', fixed_ip_id=None,
+                        project_id=ctxt.project_id)
+
+        self.stubs.Set(self.network.db, 'floating_ip_get_by_address', fake)
+        self.mox.StubOutWithMock(db, 'floating_ip_deallocate')
+        self.mox.StubOutWithMock(self.network,
+                                 '_floating_ip_owned_by_project')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'reserve')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
+        quota.QUOTAS.reserve(self.context,
+                             floating_ips=-1,
+                             project_id='testproject').AndReturn('fake-rsv')
+        self.network._floating_ip_owned_by_project(self.context,
+                                                   mox.IgnoreArg())
+        db.floating_ip_deallocate(mox.IgnoreArg(),
+                                  mox.IgnoreArg()).AndReturn(None)
+        quota.QUOTAS.rollback(self.context, 'fake-rsv',
+                              project_id='testproject')
+
+        self.mox.ReplayAll()
+        self.network.deallocate_floating_ip(self.context, '10.0.0.1')
 
     def test_deallocation_deleted_instance(self):
         self.stubs.Set(self.network, '_teardown_network_on_host',
