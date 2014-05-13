@@ -18,6 +18,7 @@ import shutil
 import tempfile
 
 import fixtures
+import mock
 from oslo.config import cfg
 
 import inspect
@@ -805,6 +806,16 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
                                                 user, conf)
 
         self.assertEqual(image.path, rbd_path)
+
+    def test_resize(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        with mock.patch.object(imagebackend, "RBDVolumeProxy") as mock_proxy:
+            volume_mock = mock.Mock()
+            mock_proxy.side_effect = [mock_proxy]
+            mock_proxy.__enter__.side_effect = [volume_mock]
+
+            image._resize(image.rbd_name, self.SIZE)
+            volume_mock.resize.assert_called_once_with(self.SIZE)
 
 
 class BackendTestCase(test.NoDBTestCase):
