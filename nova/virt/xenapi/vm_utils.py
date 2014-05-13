@@ -39,7 +39,7 @@ from nova.compute import vm_mode
 from nova import exception
 from nova.network import model as network_model
 from nova.openstack.common import excutils
-from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _, _LI
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
@@ -1302,7 +1302,9 @@ def _create_cached_image(context, session, instance, name_label,
     def _create_cached_image_impl(context, session, instance, name_label,
                                   image_id, image_type, sr_ref):
         cache_vdi_ref = _find_cached_image(session, image_id, sr_ref)
+        downloaded = False
         if cache_vdi_ref is None:
+            downloaded = True
             vdis = _fetch_image(context, session, instance, name_label,
                                 image_id, image_type)
 
@@ -1331,15 +1333,17 @@ def _create_cached_image(context, session, instance, name_label,
                             new_vdi_ref, 'image-id')
 
         vdi_uuid = session.call_xenapi('VDI.get_uuid', new_vdi_ref)
-        return vdi_uuid
+        return downloaded, vdi_uuid
 
-    vdi_uuid = _create_cached_image_impl(context, session, instance,
-            name_label, image_id, image_type, sr_ref)
+    downloaded, vdi_uuid = _create_cached_image_impl(context, session,
+                                                     instance, name_label,
+                                                     image_id, image_type,
+                                                     sr_ref)
 
     vdis = {}
     vdi_type = ImageType.get_role(image_type)
     vdis[vdi_type] = dict(uuid=vdi_uuid, file=None)
-    return vdis
+    return downloaded, vdis
 
 
 def _create_image(context, session, instance, name_label, image_id,
@@ -1370,12 +1374,22 @@ def _create_image(context, session, instance, name_label, image_id,
         cache = True
 
     # Fetch (and cache) the image
+    start_time = timeutils.utcnow()
     if cache:
-        vdis = _create_cached_image(context, session, instance, name_label,
-                                    image_id, image_type)
+        downloaded, vdis = _create_cached_image(context, session, instance,
+                                                name_label, image_id,
+                                                image_type)
     else:
         vdis = _fetch_image(context, session, instance, name_label,
                             image_id, image_type)
+        downloaded = True
+    duration = timeutils.delta_seconds(start_time, timeutils.utcnow())
+
+    LOG.info(_LI("Image creation data, cacheable: %(cache)s, "
+                 "downloaded: %(downloaded)s duration: %(duration).2f secs "
+                 "for image %(image_id)s"),
+             {'image_id': image_id, 'cache': cache, 'downloaded': downloaded,
+              'duration': duration})
 
     for vdi_type, vdi in vdis.iteritems():
         vdi_ref = session.call_xenapi('VDI.get_by_uuid', vdi['uuid'])

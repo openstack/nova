@@ -762,6 +762,56 @@ class VMRefOrRaiseVMNotFoundTestCase(VMUtilsTestBase):
         mock.VerifyAll()
 
 
+@mock.patch.object(vm_utils, 'safe_find_sr', return_value='safe_find_sr')
+class CreateCachedImageTestCase(VMUtilsTestBase):
+    def setUp(self):
+        super(CreateCachedImageTestCase, self).setUp()
+        self.session = _get_fake_session()
+
+    @mock.patch.object(vm_utils, '_clone_vdi', return_value='new_vdi_ref')
+    def test_cached(self, mock_clone_vdi, mock_safe_find_sr):
+        self.session.call_xenapi.side_effect = ['ext', {'vdi_ref': 2},
+                                                None, None, None, 'vdi_uuid']
+        self.assertEqual((False, {'root': {'uuid': 'vdi_uuid', 'file': None}}),
+                         vm_utils._create_cached_image('context', self.session,
+                                    'instance', 'name', 'uuid',
+                                    vm_utils.ImageType.DISK_VHD))
+
+    @mock.patch.object(vm_utils, '_safe_copy_vdi', return_value='new_vdi_ref')
+    def test_no_cow(self, mock_safe_copy_vdi, mock_safe_find_sr):
+        self.flags(use_cow_images=False)
+        self.session.call_xenapi.side_effect = ['ext', {'vdi_ref': 2},
+                                                None, None, None, 'vdi_uuid']
+        self.assertEqual((False, {'root': {'uuid': 'vdi_uuid', 'file': None}}),
+                         vm_utils._create_cached_image('context', self.session,
+                                    'instance', 'name', 'uuid',
+                                    vm_utils.ImageType.DISK_VHD))
+
+    def test_no_cow_no_ext(self, mock_safe_find_sr):
+        self.flags(use_cow_images=False)
+        self.session.call_xenapi.side_effect = ['non-ext', {'vdi_ref': 2},
+                                                'vdi_ref', None, None, None,
+                                                'vdi_uuid']
+        self.assertEqual((False, {'root': {'uuid': 'vdi_uuid', 'file': None}}),
+                         vm_utils._create_cached_image('context', self.session,
+                                    'instance', 'name', 'uuid',
+                                    vm_utils.ImageType.DISK_VHD))
+
+    @mock.patch.object(vm_utils, '_clone_vdi', return_value='new_vdi_ref')
+    @mock.patch.object(vm_utils, '_fetch_image',
+                       return_value={'root': {'uuid': 'vdi_uuid',
+                                              'file': None}})
+    def test_noncached(self, mock_fetch_image, mock_clone_vdi,
+                       mock_safe_find_sr):
+        self.session.call_xenapi.side_effect = ['ext', {}, 'cache_vdi_ref',
+                                                None, None, None, None, None,
+                                                None, 'vdi_uuid']
+        self.assertEqual((True, {'root': {'uuid': 'vdi_uuid', 'file': None}}),
+                         vm_utils._create_cached_image('context', self.session,
+                                    'instance', 'name', 'uuid',
+                                    vm_utils.ImageType.DISK_VHD))
+
+
 class BittorrentTestCase(VMUtilsTestBase):
     def setUp(self):
         super(BittorrentTestCase, self).setUp()
@@ -781,7 +831,7 @@ class BittorrentTestCase(VMUtilsTestBase):
 
         def fake_create_cached_image(*args):
             was['called'] = 'some'
-            return {}
+            return (False, {})
         self.stubs.Set(vm_utils, '_create_cached_image',
                        fake_create_cached_image)
 
