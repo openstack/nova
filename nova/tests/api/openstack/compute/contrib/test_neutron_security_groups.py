@@ -12,10 +12,10 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
 import uuid
 
 from lxml import etree
+import mock
 from neutronclient.common import exceptions as n_exc
 from neutronclient.neutron import v2_0 as neutronv20
 from oslo.config import cfg
@@ -356,6 +356,20 @@ class TestNeutronSecurityGroups(
         sgs = security_group_api.get_instance_security_groups(
             context.get_admin_context(), test_security_groups.FAKE_UUID1)
         self.assertEqual(sgs, expected)
+
+    @mock.patch('nova.network.security_group.neutron_driver.SecurityGroupAPI.'
+                'get_instances_security_groups_bindings')
+    def test_get_security_group_empty_for_instance(self, neutron_sg_bind_mock):
+        servers = [{'id': test_security_groups.FAKE_UUID1}]
+        neutron_sg_bind_mock.return_value = {}
+
+        security_group_api = self.controller.security_group_api
+        ctx = context.get_admin_context()
+        sgs = security_group_api.get_instance_security_groups(ctx,
+                test_security_groups.FAKE_UUID1)
+
+        neutron_sg_bind_mock.assert_called_once_with(ctx, servers, False)
+        self.assertEqual([], sgs)
 
     def test_create_port_with_sg_and_port_security_enabled_true(self):
         sg1 = self._create_sg_template(name='test1').get('security_group')
