@@ -17,6 +17,7 @@ from lxml import etree
 import six.moves.urllib.parse as urlparse
 import webob
 
+from nova.api.openstack import common
 from nova.api.openstack.compute import flavors as flavors_v2
 from nova.api.openstack.compute.plugins.v3 import flavors as flavors_v3
 from nova.api.openstack import xmlutil
@@ -91,6 +92,15 @@ def fake_get_all_flavors_sorted_list(context=None, inactive=False,
                 output.append(flavor)
 
     return output
+
+
+def fake_get_limit_and_marker(request, max_limit=1):
+    params = common.get_pagination_params(request)
+    limit = params.get('limit', max_limit)
+    limit = min(max_limit, limit)
+    marker = params.get('marker')
+
+    return limit, marker
 
 
 def empty_get_all_flavors_sorted_list(context=None, inactive=False,
@@ -355,6 +365,40 @@ class FlavorsTestV21(test.TestCase):
         self.assertEqual('/' + self._rspv + '/flavors', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
         self.assertThat({'limit': ['2'], 'marker': ['2']},
+                        matchers.DictMatches(params))
+
+    def test_get_flavor_with_default_limit(self):
+        self.stubs.Set(common, "get_limit_and_marker",
+                       fake_get_limit_and_marker)
+        self.flags(osapi_max_limit=1)
+        req = fakes.HTTPRequest.blank('/v2/fake/flavors?limit=2')
+        response = self.controller.index(req)
+        response_list = response["flavors"]
+        response_links = response["flavors_links"]
+
+        expected_flavors = [
+            {
+                "id": "1",
+                "name": "flavor 1",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v2/fake/flavors/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/fake/flavors/1",
+                    }
+                ]
+           }
+        ]
+
+        self.assertEqual(response_list, expected_flavors)
+        self.assertEqual(response_links[0]['rel'], 'next')
+        href_parts = urlparse.urlparse(response_links[0]['href'])
+        self.assertEqual('/v2/fake/flavors', href_parts.path)
+        params = urlparse.parse_qs(href_parts.query)
+        self.assertThat({'limit': ['2'], 'marker': ['1']},
                         matchers.DictMatches(params))
 
     def test_get_flavor_list_detail(self):

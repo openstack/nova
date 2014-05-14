@@ -15,6 +15,7 @@
 
 import webob
 
+from nova.api.openstack import common
 from nova.api.openstack.compute.views import flavors as flavors_view
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -77,8 +78,7 @@ class FlavorsController(wsgi.Controller):
         filters = {}
         sort_key = req.params.get('sort_key') or 'flavorid'
         sort_dir = req.params.get('sort_dir') or 'asc'
-        limit = req.params.get('limit') or None
-        marker = req.params.get('marker') or None
+        limit, marker = common.get_limit_and_marker(req)
 
         context = req.environ['nova.context']
         if context.is_admin:
