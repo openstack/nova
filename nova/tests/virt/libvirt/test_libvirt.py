@@ -2364,11 +2364,27 @@ class LibvirtConnTestCase(test.TestCase):
                                      (("disk", "virtio", "vda"),))
 
     def test_xml_disk_bus_ide(self):
+        # It's necessary to check if the architecture is power, because
+        # power doesn't have support to ide, and so libvirt translate
+        # all ide calls to scsi
+
+        expected = {"ppc": ("cdrom", "scsi", "sda"),
+                "ppc64": ("cdrom", "scsi", "sda")}
+
+        expec_val = expected.get(blockinfo.libvirt_utils.get_arch({}),
+                                  ("cdrom", "ide", "hda"))
         self._check_xml_and_disk_bus({"disk_format": "iso"},
-                                     None,
-                                     (("cdrom", "ide", "hda"),))
+                                      None,
+                                      (expec_val,))
 
     def test_xml_disk_bus_ide_and_virtio(self):
+        # It's necessary to check if the architecture is power, because
+        # power doesn't have support to ide, and so libvirt translate
+        # all ide calls to scsi
+
+        expected = {"ppc": ("cdrom", "scsi", "sda"),
+                "ppc64": ("cdrom", "scsi", "sda")}
+
         swap = {'device_name': '/dev/vdc',
                 'swap_size': 1}
         ephemerals = [{'device_type': 'disk',
@@ -2378,10 +2394,11 @@ class LibvirtConnTestCase(test.TestCase):
         block_device_info = {
                 'swap': swap,
                 'ephemerals': ephemerals}
-
+        expec_val = expected.get(blockinfo.libvirt_utils.get_arch({}),
+                                  ("cdrom", "ide", "hda"))
         self._check_xml_and_disk_bus({"disk_format": "iso"},
                                      block_device_info,
-                                     (("cdrom", "ide", "hda"),
+                                     (expec_val,
                                       ("disk", "virtio", "vdb"),
                                       ("disk", "virtio", "vdc")))
 
