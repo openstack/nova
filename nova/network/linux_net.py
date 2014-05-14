@@ -53,8 +53,6 @@ linux_net_opts = [
     cfg.StrOpt('public_interface',
                default='eth0',
                help='Interface for public IP addresses'),
-    cfg.IntOpt('network_device_mtu',
-               help='MTU setting for network interface'),
     cfg.StrOpt('dhcpbridge',
                default=paths.bindir_def('nova-dhcpbridge'),
                help='Location of nova-dhcpbridge'),
@@ -136,6 +134,7 @@ CONF.register_opts(linux_net_opts)
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('use_ipv6', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
+CONF.import_opt('network_device_mtu', 'nova.objects.network')
 
 
 # NOTE(vish): Iptables supports chain names of up to 28 characters,  and we

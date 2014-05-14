@@ -140,12 +140,6 @@ network_opts = [
     cfg.BoolOpt('force_dhcp_release',
                 default=True,
                 help='If True, send a dhcp release on instance termination'),
-    cfg.BoolOpt('share_dhcp_address',
-                default=False,
-                help='If True in multi_host mode, all compute hosts share '
-                     'the same dhcp address. The same IP address used for '
-                     'DHCP will be added on each nova-network node which '
-                     'is only visible to the vms on the same host.'),
     cfg.BoolOpt('update_dns_entries',
                 default=False,
                 help='If True, when a DNS entry must be updated, it sends a '
@@ -169,6 +163,7 @@ CONF.import_opt('use_ipv6', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
 CONF.import_opt('network_topic', 'nova.network.rpcapi')
 CONF.import_opt('fake_network', 'nova.network.linux_net')
+CONF.import_opt('share_dhcp_address', 'nova.objects.network')
 
 
 class RPCAllocateFixedIP(object):

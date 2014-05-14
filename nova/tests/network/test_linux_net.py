@@ -38,6 +38,8 @@ from nova import utils
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
+CONF.import_opt('share_dhcp_address', 'nova.objects.network')
+CONF.import_opt('network_device_mtu', 'nova.objects.network')
 
 HOST = "testhost"
 

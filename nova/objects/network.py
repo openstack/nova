@@ -14,16 +14,33 @@
 
 import netaddr
 
+from oslo.config import cfg
+
 from nova import db
 from nova import exception
 from nova.objects import base as obj_base
 from nova.objects import fields
 
+network_opts = [
+    cfg.BoolOpt('share_dhcp_address',
+                default=False,
+                help='If True in multi_host mode, all compute hosts share '
+                     'the same dhcp address. The same IP address used for '
+                     'DHCP will be added on each nova-network node which '
+                     'is only visible to the vms on the same host.'),
+    cfg.IntOpt('network_device_mtu',
+               help='MTU setting for network interface'),
+]
+
+CONF = cfg.CONF
+CONF.register_opts(network_opts)
+
 
 class Network(obj_base.NovaPersistentObject, obj_base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added in_use_on_host()
-    VERSION = '1.1'
+    # Version 1.2: Added mtu, dhcp_server, enable_dhcp, share_address
+    VERSION = '1.2'
 
     fields = {
         'id': fields.IntegerField(),
@@ -51,6 +68,10 @@ class Network(obj_base.NovaPersistentObject, obj_base.NovaObject):
         'priority': fields.IntegerField(nullable=True),
         'host': fields.StringField(nullable=True),
         'uuid': fields.UUIDField(),
+        'mtu': fields.IntegerField(nullable=True),
+        'dhcp_server': fields.IPAddressField(nullable=True),
+        'enable_dhcp': fields.BooleanField(),
+        'share_address': fields.BooleanField(),
         }
 
     @staticmethod
@@ -73,12 +94,31 @@ class Network(obj_base.NovaPersistentObject, obj_base.NovaObject):
             raise ValueError('IPv6 netmask "%s" must be a netmask '
                              'or integral prefix' % netmask)
 
+    def obj_make_compatible(self, primitive, target_version):
+        target_version = tuple(int(x) for x in target_version.split('.'))
+        if target_version < (1, 2):
+            if 'mtu' in primitive:
+                del primitive['mtu']
+            if 'enable_dhcp' in primitive:
+                del primitive['enable_dhcp']
+            if 'dhcp_server' in primitive:
+                del primitive['dhcp_server']
+            if 'share_address' in primitive:
+                del primitive['share_address']
+
     @staticmethod
     def _from_db_object(context, network, db_network):
         for field in network.fields:
             db_value = db_network[field]
             if field is 'netmask_v6' and db_value is not None:
                 db_value = network._convert_legacy_ipv6_netmask(db_value)
+            if field is 'mtu' and db_value is None:
+                db_value = CONF.network_device_mtu
+            if field is 'dhcp_server' and db_value is None:
+                db_value = db_network['gateway']
+            if field is 'share_address' and CONF.share_dhcp_address:
+                db_value = CONF.share_dhcp_address
+
             network[field] = db_value
         network._context = context
         network.obj_reset_changes()
@@ -162,7 +202,8 @@ class Network(obj_base.NovaPersistentObject, obj_base.NovaObject):
 class NetworkList(obj_base.ObjectListBase, obj_base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added get_by_project()
-    VERSION = '1.1'
+    # Version 1.2: Network <= version 1.2
+    VERSION = '1.2'
 
     fields = {
         'objects': fields.ListOfObjectsField('Network'),
@@ -170,6 +211,7 @@ class NetworkList(obj_base.ObjectListBase, obj_base.NovaObject):
     child_versions = {
         '1.0': '1.0',
         '1.1': '1.1',
+        '1.2': '1.2',
         }
 
     @obj_base.remotable_classmethod

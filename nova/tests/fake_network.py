@@ -188,7 +188,8 @@ class FakeNetworkManager(network_manager.NetworkManager):
         # TODO(matelakat) use the deallocate_fixed_ip_calls instead
         self.deallocate_called = address
 
-    def _create_fixed_ips(self, context, network_id, fixed_cidr=None):
+    def _create_fixed_ips(self, context, network_id, fixed_cidr=None,
+                          extra_reserved=None):
         pass
 
     def get_instance_nw_info(context, instance_id, rxtx_factor,
@@ -228,7 +229,11 @@ def fake_network(network_id, ipv6=None):
              'deleted': False,
              'created_at': None,
              'updated_at': None,
-             'deleted_at': None}
+             'deleted_at': None,
+             'mtu': None,
+             'dhcp_server': '192.168.%d.1' % network_id,
+             'enable_dhcp': True,
+             'share_address': False}
     if ipv6:
         fake_network['cidr_v6'] = '2001:db8:0:%x::/64' % network_id
         fake_network['gateway_v6'] = '2001:db8:0:%x::1' % network_id
