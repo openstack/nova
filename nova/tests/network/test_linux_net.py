@@ -88,7 +88,11 @@ networks = [{'id': 0,
              'vlan': None,
              'host': None,
              'project_id': 'fake_project',
-             'vpn_public_address': '192.168.0.2'},
+             'vpn_public_address': '192.168.0.2',
+             'mtu': None,
+             'dhcp_server': '192.168.0.1',
+             'enable_dhcp': True,
+             'share_address': False},
             {'id': 1,
              'uuid': "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
              'label': 'test1',
@@ -110,7 +114,11 @@ networks = [{'id': 0,
              'vlan': None,
              'host': None,
              'project_id': 'fake_project',
-             'vpn_public_address': '192.168.1.2'}]
+             'vpn_public_address': '192.168.1.2',
+             'mtu': None,
+             'dhcp_server': '192.168.1.1',
+             'enable_dhcp': True,
+             'share_address': False}]
 
 
 fixed_ips = [{'id': 0,
@@ -405,14 +413,22 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.assertEqual(actual_hosts, expected)
 
     def test_get_dhcp_opts_for_nw00(self):
-        expected_opts = 'NW-3,3\nNW-4,3'
+        self.flags(use_single_default_gateway=True)
+        expected_opts = 'NW-0,3,192.168.0.1\nNW-3,3\nNW-4,3'
+        actual_opts = self.driver.get_dhcp_opts(self.context, networks[0])
+
+        self.assertEqual(actual_opts, expected_opts)
+
+    def test_get_dhcp_opts_for_nw00_no_single_default_gateway(self):
+        self.flags(use_single_default_gateway=False)
+        expected_opts = '3,192.168.0.1'
         actual_opts = self.driver.get_dhcp_opts(self.context, networks[0])
 
         self.assertEqual(actual_opts, expected_opts)
 
     def test_get_dhcp_opts_for_nw01(self):
-        self.flags(host='fake_instance01')
-        expected_opts = "NW-5,3"
+        self.flags(use_single_default_gateway=True, host='fake_instance01')
+        expected_opts = "NW-2,3,192.168.1.1\nNW-5,3"
         actual_opts = self.driver.get_dhcp_opts(self.context, networks[1])
 
         self.assertEqual(actual_opts, expected_opts)
@@ -571,12 +587,14 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
     def _test_dnsmasq_execute(self, extra_expected=None):
         network_ref = {'id': 'fake',
                        'label': 'fake',
+                       'gateway': '10.0.0.1',
                        'multi_host': False,
                        'cidr': '10.0.0.0/24',
                        'netmask': '255.255.255.0',
                        'dns1': '8.8.4.4',
                        'dhcp_start': '1.0.0.2',
-                       'dhcp_server': '10.0.0.1'}
+                       'dhcp_server': '10.0.0.1',
+                       'share_address': False}
 
         def fake_execute(*args, **kwargs):
             executes.append(args)
@@ -607,6 +625,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             '--bind-interfaces',
             '--conf-file=%s' % CONF.dnsmasq_config_file,
             '--pid-file=%s' % linux_net._dhcp_file(dev, 'pid'),
+            '--dhcp-optsfile=%s' % linux_net._dhcp_file(dev, 'opts'),
             '--listen-address=%s' % network_ref['dhcp_server'],
             '--except-interface=lo',
             "--dhcp-range=set:%s,%s,static,%s,%ss" % (network_ref['label'],
