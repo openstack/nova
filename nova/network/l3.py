@@ -85,9 +85,8 @@ class LinuxNetL3(L3Driver):
         networks = kwargs.get('networks', None)
         if not fixed_range and networks is not None:
             for network in networks:
-                self.initialize_network(network['cidr'])
-        else:
-            linux_net.init_host()
+                if network['enable_dhcp']:
+                    self.initialize_network(network['cidr'])
         linux_net.ensure_metadata_ip()
         linux_net.metadata_forward()
         self.initialized = True
