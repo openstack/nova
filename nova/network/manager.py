@@ -164,6 +164,7 @@ CONF.import_opt('my_ip', 'nova.netconf')
 CONF.import_opt('network_topic', 'nova.network.rpcapi')
 CONF.import_opt('fake_network', 'nova.network.linux_net')
 CONF.import_opt('share_dhcp_address', 'nova.objects.network')
+CONF.import_opt('network_device_mtu', 'nova.objects.network')
 
 
 class RPCAllocateFixedIP(object):
@@ -1053,6 +1054,14 @@ class NetworkManager(manager.Manager):
                      "gateway", "gateway_v6", "bridge",
                      "bridge_interface", "dns1", "dns2",
                      "fixed_cidr")
+        if 'mtu' not in kwargs:
+            kwargs['mtu'] = CONF.network_device_mtu
+        if 'dhcp_server' not in kwargs:
+            kwargs['dhcp_server'] = gateway
+        if 'enable_dhcp' not in kwargs:
+            kwargs['enable_dhcp'] = True
+        if 'share_address' not in kwargs:
+            kwargs['share_address'] = CONF.share_dhcp_address
         for name in arg_names:
             kwargs[name] = locals()[name]
         self._convert_int_args(kwargs)
@@ -1113,7 +1122,8 @@ class NetworkManager(manager.Manager):
                             label, cidr, multi_host, num_networks,
                             network_size, cidr_v6, gateway, gateway_v6, bridge,
                             bridge_interface, dns1=None, dns2=None,
-                            fixed_cidr=None, **kwargs):
+                            fixed_cidr=None, mtu=None, dhcp_server=None,
+                            enable_dhcp=None, share_address=None, **kwargs):
         """Create networks based on parameters."""
         # NOTE(jkoelker): these are dummy values to make sure iter works
         # TODO(tr3buchet): disallow carving up networks
@@ -1199,6 +1209,9 @@ class NetworkManager(manager.Manager):
 
             net.dns1 = dns1
             net.dns2 = dns2
+            net.mtu = mtu
+            net.enable_dhcp = enable_dhcp
+            net.share_address = share_address
 
             net.project_id = kwargs.get('project_id')
 
@@ -1207,12 +1220,20 @@ class NetworkManager(manager.Manager):
             else:
                 net.label = label
 
+            extra_reserved = []
             if cidr and subnet_v4:
                 net.cidr = str(subnet_v4)
                 net.netmask = str(subnet_v4.netmask)
                 net.gateway = gateway or str(subnet_v4[1])
                 net.broadcast = str(subnet_v4.broadcast)
                 net.dhcp_start = str(subnet_v4[2])
+                if not dhcp_server:
+                    dhcp_server = net.gateway
+                if net.dhcp_start == dhcp_server:
+                    net.dhcp_start = str(subnet_v4[3])
+                net.dhcp_server = dhcp_server
+                extra_reserved.append(str(net.dhcp_server))
+                extra_reserved.append(str(net.gateway))
 
             if cidr_v6 and subnet_v6:
                 net.cidr_v6 = str(subnet_v6)
@@ -1249,7 +1270,8 @@ class NetworkManager(manager.Manager):
             networks.objects.append(net)
 
             if cidr and subnet_v4:
-                self._create_fixed_ips(context, net.id, fixed_cidr)
+                self._create_fixed_ips(context, net.id, fixed_cidr,
+                                       extra_reserved)
         # NOTE(danms): Remove this in RPC API v2.0
         return obj_base.obj_to_primitive(networks)
 
@@ -1279,20 +1301,25 @@ class NetworkManager(manager.Manager):
         """Number of reserved ips at the top of the range."""
         return 1  # broadcast
 
-    def _create_fixed_ips(self, context, network_id, fixed_cidr=None):
+    def _create_fixed_ips(self, context, network_id, fixed_cidr=None,
+                          extra_reserved=None):
         """Create all fixed ips for network."""
         network = self._get_network_by_id(context, network_id)
         # NOTE(vish): Should these be properties of the network as opposed
         #             to properties of the manager class?
         bottom_reserved = self._bottom_reserved_ips
         top_reserved = self._top_reserved_ips
+        if extra_reserved == None:
+            extra_reserved = []
+
         if not fixed_cidr:
             fixed_cidr = netaddr.IPNetwork(network['cidr'])
         num_ips = len(fixed_cidr)
         ips = []
         for index in range(num_ips):
             address = str(fixed_cidr[index])
-            if index < bottom_reserved or num_ips - index <= top_reserved:
+            if (index < bottom_reserved or num_ips - index <= top_reserved or
+                address in extra_reserved):
                 reserved = True
             else:
                 reserved = False

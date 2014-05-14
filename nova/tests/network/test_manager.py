@@ -1727,7 +1727,8 @@ class CommonNetworkTestCase(test.TestCase):
                                                              fake_instance)
         self.assertTrue(res)
 
-    def fake_create_fixed_ips(self, context, network_id, fixed_cidr=None):
+    def fake_create_fixed_ips(self, context, network_id, fixed_cidr=None,
+                              extra_reserved=None):
         return None
 
     def test_get_instance_nw_info_client_exceptions(self):
