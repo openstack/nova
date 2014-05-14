@@ -5089,8 +5089,8 @@ class ComputeTestCase(BaseTestCase):
         self._test_cleanup_stored_instance_types('1', '1', True)
 
     def test_get_by_flavor_id(self):
-        type = flavors.get_flavor_by_flavor_id(1)
-        self.assertEqual(type['name'], 'm1.tiny')
+        flavor_type = flavors.get_flavor_by_flavor_id(1)
+        self.assertEqual(flavor_type['name'], 'm1.tiny')
 
     def test_resize_same_source_fails(self):
         """Ensure instance fails to migrate when source and destination are

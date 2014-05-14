@@ -1305,7 +1305,7 @@ class FakeVim(object):
     def _retrieve_properties(self, method, *args, **kwargs):
         """Retrieves properties based on the type."""
         spec_set = kwargs.get("specSet")[0]
-        type = spec_set.propSet[0].type
+        spec_type = spec_set.propSet[0].type
         properties = spec_set.propSet[0].pathSet
         if not isinstance(properties, list):
             properties = properties.split()
@@ -1318,8 +1318,8 @@ class FakeVim(object):
                     # This means that we are retrieving props for all managed
                     # data objects of the specified 'type' in the entire
                     # inventory. This gets invoked by vim_util.get_objects.
-                    mdo_refs = _db_content[type]
-                elif obj_ref.type != type:
+                    mdo_refs = _db_content[spec_type]
+                elif obj_ref.type != spec_type:
                     # This means that we are retrieving props for the managed
                     # data objects in the parent object's 'path' property.
                     # This gets invoked by vim_util.get_inner_objects
@@ -1338,7 +1338,7 @@ class FakeVim(object):
                     mdo_refs = [obj_ref]
 
                 for mdo_ref in mdo_refs:
-                    mdo = _db_content[type][mdo_ref]
+                    mdo = _db_content[spec_type][mdo_ref]
                     prop_list = []
                     for prop_name in properties:
                         prop = Prop(prop_name, mdo.get(prop_name))

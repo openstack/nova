@@ -1172,12 +1172,12 @@ def get_available_datastores(session, cluster=None, datastore_regex=None):
     """Get the datastore list and choose the first local storage."""
     if cluster:
         mobj = cluster
-        type = "ClusterComputeResource"
+        resource_type = "ClusterComputeResource"
     else:
         mobj = get_host_ref(session)
-        type = "HostSystem"
+        resource_type = "HostSystem"
     ds = session._call_method(vim_util, "get_dynamic_property", mobj,
-                              type, "datastore")
+                              resource_type, "datastore")
     if not ds:
         return []
     data_store_mors = ds.ManagedObjectReference
