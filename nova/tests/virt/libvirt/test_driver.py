@@ -1223,6 +1223,10 @@ class LibvirtConnTestCase(test.TestCase,
         self.assertTrue(info['block_device_mapping'][1].save.called)
 
     def test_get_guest_config_with_configdrive(self):
+        # It's necessary to check if the architecture is power, because
+        # power doesn't have support to ide, and so libvirt translate
+        # all ide calls to scsi
+
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = db.instance_create(self.context, self.test_instance)
 
@@ -1233,9 +1237,15 @@ class LibvirtConnTestCase(test.TestCase,
                                             instance_ref)
         cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
 
+        # The last device is selected for this. on x86 is the last ide
+        # device (hdd). Since power only support scsi, the last device
+        # is sdz
+
+        expect = {"ppc": "sdz", "ppc64": "sdz"}
+        disk = expect.get(blockinfo.libvirt_utils.get_arch({}), "hdd")
         self.assertIsInstance(cfg.devices[2],
                               vconfig.LibvirtConfigGuestDisk)
-        self.assertEqual(cfg.devices[2].target_dev, 'hdd')
+        self.assertEqual(cfg.devices[2].target_dev, disk)
 
     def test_get_guest_config_with_virtio_scsi_bus(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
