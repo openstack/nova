@@ -54,7 +54,7 @@ class ExtendedAZController(wsgi.Controller):
 
 
 class ExtendedAvailabilityZone(extensions.V3APIExtensionBase):
-    """Extended Server Attributes support."""
+    """Extended Availability Zone support."""
 
     name = "ExtendedAvailabilityZone"
     alias = ALIAS

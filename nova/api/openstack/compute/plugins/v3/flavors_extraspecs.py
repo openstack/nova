@@ -121,7 +121,7 @@ class FlavorExtraSpecsController(object):
 
 
 class FlavorsExtraSpecs(extensions.V3APIExtensionBase):
-    """Flavors Extension."""
+    """Flavors extra specs support."""
     name = 'FlavorsExtraSpecs'
     alias = FlavorExtraSpecsController.ALIAS
     version = 1
