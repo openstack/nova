@@ -187,7 +187,7 @@ class XenAPIDriver(driver.ComputeDriver):
         NOTE(belliott): This is an override of the base method for
         efficiency.
         """
-        return self._vmops.instance_exists(instance['name'])
+        return self._vmops.instance_exists(instance.name)
 
     def estimate_instance_overhead(self, instance_info):
         """Get virtualization overhead required to build an instance of the
