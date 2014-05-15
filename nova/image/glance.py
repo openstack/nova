@@ -536,7 +536,11 @@ def _extract_attributes(image):
         elif queued and attr in queued_exclude_attrs:
             output[attr] = getattr(image, attr, None)
         else:
-            output[attr] = getattr(image, attr)
+            # NOTE(xarses): Anything that is caught with the default value
+            # will result in a additional lookup to glance for said attr.
+            # Notable attributes that could have this issue:
+            # disk_format, container_format, name, deleted, checksum
+            output[attr] = getattr(image, attr, None)
 
     output['properties'] = getattr(image, 'properties', {})
 
