@@ -19,7 +19,6 @@
 import logging
 import re
 
-from migrate.changeset import UniqueConstraint
 import sqlalchemy
 from sqlalchemy import Boolean
 from sqlalchemy import CheckConstraint
@@ -33,7 +32,6 @@ from sqlalchemy import MetaData
 from sqlalchemy import or_
 from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.sql.expression import UpdateBase
-from sqlalchemy.sql import select
 from sqlalchemy import String
 from sqlalchemy import Table
 from sqlalchemy.types import NullType
@@ -218,6 +216,9 @@ def model_query(context, model, session, args=None, project_only=False,
     :type read_deleted:   bool
 
     Usage:
+
+    ..code:: python
+
         result = (utils.model_query(context, models.Instance, session=session)
                        .filter_by(uuid=instance_uuid)
                        .all())
@@ -226,7 +227,8 @@ def model_query(context, model, session, args=None, project_only=False,
                     context, Node,
                     session=session,
                     args=(func.count(Node.id), func.sum(Node.ram))
-            ).filter_by(project_id=project_id)
+                    ).filter_by(project_id=project_id)
+
     """
 
     if not read_deleted:
@@ -252,6 +254,14 @@ def get_table(engine, name):
 
     Needed because the models don't work for us in migrations
     as models will be far out of sync with the current data.
+
+    .. warning::
+
+       Do not use this method when creating ForeignKeys in database migrations
+       because sqlalchemy needs the same MetaData object to hold information
+       about the parent table and the reference table in the ForeignKey. This
+       method uses a unique MetaData object per table object so it won't work
+       with ForeignKey creation.
     """
     metadata = MetaData()
     metadata.bind = engine
@@ -298,6 +308,10 @@ def drop_unique_constraint(migrate_engine, table_name, uc_name, *columns,
                            **col_name_col_instance):
     """Drop unique constraint from table.
 
+    DEPRECATED: this function is deprecated and will be removed from nova.db
+    in a few releases. Please use UniqueConstraint.drop() method directly for
+    sqlalchemy-migrate migration scripts.
+
     This method drops UC from table and works for mysql, postgresql and sqlite.
     In mysql and postgresql we are able to use "alter table" construction.
     Sqlalchemy doesn't support some sqlite column types and replaces their
@@ -313,6 +327,8 @@ def drop_unique_constraint(migrate_engine, table_name, uc_name, *columns,
                             are required only for columns that have unsupported
                             types by sqlite. For example BigInteger.
     """
+
+    from migrate.changeset import UniqueConstraint
 
     meta = MetaData()
     meta.bind = migrate_engine
@@ -353,9 +369,9 @@ def drop_old_duplicate_entries_from_table(migrate_engine, table_name,
     columns_for_select = [func.max(table.c.id)]
     columns_for_select.extend(columns_for_group_by)
 
-    duplicated_rows_select = select(columns_for_select,
-                                    group_by=columns_for_group_by,
-                                    having=func.count(table.c.id) > 1)
+    duplicated_rows_select = sqlalchemy.sql.select(
+        columns_for_select, group_by=columns_for_group_by,
+        having=func.count(table.c.id) > 1)
 
     for row in migrate_engine.execute(duplicated_rows_select):
         # NOTE(boris-42): Do not remove row that has the biggest ID.
@@ -365,7 +381,8 @@ def drop_old_duplicate_entries_from_table(migrate_engine, table_name,
         for name in uc_column_names:
             delete_condition &= table.c[name] == row[name]
 
-        rows_to_delete_select = select([table.c.id]).where(delete_condition)
+        rows_to_delete_select = sqlalchemy.sql.select(
+            [table.c.id]).where(delete_condition)
         for row in migrate_engine.execute(rows_to_delete_select).fetchall():
             LOG.info(_LI("Deleting duplicated row with id: %(id)s from table: "
                          "%(table)s") % dict(id=row[0], table=table_name))
@@ -476,7 +493,7 @@ def _change_deleted_column_type_to_boolean_sqlite(migrate_engine, table_name,
         else:
             c_select.append(table.c.deleted == table.c.id)
 
-    ins = InsertFromSelect(new_table, select(c_select))
+    ins = InsertFromSelect(new_table, sqlalchemy.sql.select(c_select))
     migrate_engine.execute(ins)
 
     table.drop()

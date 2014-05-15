@@ -29,7 +29,7 @@ from sqlalchemy.orm import object_mapper
 from nova.openstack.common import timeutils
 
 
-class ModelBase(object):
+class ModelBase(six.Iterator):
     """Base class for models."""
     __table_initialized__ = False
 
@@ -70,7 +70,7 @@ class ModelBase(object):
         return []
 
     def __iter__(self):
-        columns = dict(object_mapper(self).columns).keys()
+        columns = list(dict(object_mapper(self).columns).keys())
         # NOTE(russellb): Allow models to specify other keys that can be looked
         # up, beyond the actual db columns.  An example would be the 'name'
         # property for an Instance.
@@ -78,9 +78,13 @@ class ModelBase(object):
         self._i = iter(columns)
         return self
 
-    def next(self):
+    # In Python 3, __next__() has replaced next().
+    def __next__(self):
         n = six.advance_iterator(self._i)
         return n, getattr(self, n)
+
+    def next(self):
+        return self.__next__()
 
     def update(self, values):
         """Make the model object behave like a dict."""
