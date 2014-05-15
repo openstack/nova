@@ -777,10 +777,11 @@ def _snapshot_attached_here_impl(session, instance, vm_ref, label, userdevice,
     """
     LOG.debug(_("Starting snapshot for VM"), instance=instance)
 
-    # Memorize the original_parent_uuid so we can poll for coalesce
+    # Memorize the VDI chain so we can poll for coalesce
     vm_vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref,
                                                    userdevice)
-    original_parent_uuid = _get_vhd_parent_uuid(session, vm_vdi_ref)
+    chain = _walk_vdi_chain(session, vm_vdi_rec['uuid'])
+    vdi_uuid_chain = [vdi_rec['uuid'] for vdi_rec in chain]
     sr_ref = vm_vdi_rec["SR"]
 
     snapshot_ref = _vdi_snapshot(session, vm_vdi_ref)
@@ -789,7 +790,7 @@ def _snapshot_attached_here_impl(session, instance, vm_ref, label, userdevice,
     try:
         # Ensure no VHDs will vanish while we migrate them
         _wait_for_vhd_coalesce(session, instance, sr_ref, vm_vdi_ref,
-                               original_parent_uuid)
+                               vdi_uuid_chain)
 
         snapshot_uuid = _vdi_get_uuid(session, snapshot_ref)
         chain = _walk_vdi_chain(session, snapshot_uuid)
@@ -2063,47 +2064,38 @@ def _child_vhds(session, sr_ref, vdi_uuid):
     return children
 
 
-def _another_child_vhd(session, vdi_ref, sr_ref, original_parent_uuid):
-    # Search for any other vdi which parents to original parent and is not
-    # in the active vm/instance vdi chain.
-    vdi_rec = session.call_xenapi('VDI.get_record', vdi_ref)
-    vdi_uuid = vdi_rec['uuid']
-    parent_vdi_uuid = _get_vhd_parent_uuid(session, vdi_ref, vdi_rec)
+def _count_parents_children(session, vdi_ref, sr_ref):
+    # Search for any other vdi which has the same parent as us to work out
+    # whether we have siblings and therefore if coalesce is possible
+    parent_vdi_uuid = _get_vhd_parent_uuid(session, vdi_ref)
+    children = 0
     for _ref, rec in _get_all_vdis_in_sr(session, sr_ref):
-        if ((rec['uuid'] != vdi_uuid) and
-            (rec['uuid'] != parent_vdi_uuid) and
-            (rec['sm_config'].get('vhd-parent') == original_parent_uuid)):
-            # Found another vhd which too parents to original parent.
-            return True
-    # Found no other vdi with the same parent.
-    return False
+        if (rec['sm_config'].get('vhd-parent') == parent_vdi_uuid):
+            children = children + 1
+    return children
 
 
 def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
-                           original_parent_uuid):
-    """Spin until the parent VHD is coalesced into its parent VHD
+                           vdi_uuid_list):
+    """Spin until the parent VHD is coalesced into one of the VDIs in the list
 
-    Before coalesce:
-        * original_parent_vhd
-            * parent_vhd
-                snapshot
+    vdi_uuid_list is a list of acceptable final parent VDIs for vdi_ref; once
+    the parent of vdi_ref is in vdi_uuid_chain we consider the coalesce over.
 
-    After coalesce:
-        * parent_vhd
-            snapshot
+    The use case is there are any number of VDIs between those in
+    vdi_uuid_list and vdi_ref that we expect to be coalesced, but any of those
+    in vdi_uuid_list may also be coalesced (except the base UUID - which is
+    guaranteed to remain)
     """
-    # NOTE(sirp): If we don't have an original_parent_uuid, then the snapshot
-    # doesn't have a grandparent to coalesce into, so we can skip waiting
-    if not original_parent_uuid:
+    # NOTE(bobba): If we don't have any VDIs in the target list, then no
+    # coalescing can be guaranteed (e.g. file based SRs don't do leaf
+    # coalescing)
+    if len(vdi_uuid_list) == 0:
         return
 
-    # Check if original parent has any other child. If so, coalesce will
-    # not take place.
-    if _another_child_vhd(session, vdi_ref, sr_ref, original_parent_uuid):
-        parent_uuid = _get_vhd_parent_uuid(session, vdi_ref)
-        parent_ref = session.call_xenapi("VDI.get_by_uuid", parent_uuid)
-        base_uuid = _get_vhd_parent_uuid(session, parent_ref)
-        return parent_uuid, base_uuid
+    # Check if we have siblings. If so, coalesce will not take place.
+    if _count_parents_children(session, vdi_ref, sr_ref) > 1:
+        return
 
     max_attempts = CONF.xenserver.vhd_coalesce_max_attempts
     for i in xrange(max_attempts):
@@ -2111,16 +2103,16 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
         # matches the underlying VHDs.
         _scan_sr(session, sr_ref)
         parent_uuid = _get_vhd_parent_uuid(session, vdi_ref)
-        if parent_uuid and (parent_uuid != original_parent_uuid):
-            LOG.debug(_("Parent %(parent_uuid)s doesn't match original parent"
-                        " %(original_parent_uuid)s, waiting for coalesce..."),
+        if parent_uuid and (parent_uuid not in vdi_uuid_list):
+            LOG.debug(_("Parent %(parent_uuid)s not yet in parent list"
+                        " %(vdi_uuid_list)s, waiting for coalesce..."),
                       {'parent_uuid': parent_uuid,
-                       'original_parent_uuid': original_parent_uuid},
+                       'vdi_uuid_list': vdi_uuid_list},
                       instance=instance)
         else:
             parent_ref = session.call_xenapi("VDI.get_by_uuid", parent_uuid)
             base_uuid = _get_vhd_parent_uuid(session, parent_ref)
-            return parent_uuid, base_uuid
+            return
 
         greenthread.sleep(CONF.xenserver.vhd_coalesce_poll_interval)
 
