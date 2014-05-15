@@ -31,7 +31,9 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import processutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import units
+from nova.openstack.common import uuidutils
 from nova import test
+from nova.tests import fake_instance
 from nova.tests.virt.xenapi import stubs
 from nova.tests.virt.xenapi import test_xenapi
 from nova import utils
@@ -614,6 +616,49 @@ class CheckVDISizeTestCase(VMUtilsTestBase):
 
         vm_utils._check_vdi_size(self.context, self.session, self.instance,
                 self.vdi_uuid)
+
+
+class GetVdisForInstanceTestCase(VMUtilsTestBase):
+    """Tests get_vdis_for_instance utility method."""
+    def setUp(self):
+        super(GetVdisForInstanceTestCase, self).setUp()
+        self.context = context.get_admin_context()
+        self.context.auth_token = 'auth_token'
+        self.session = FakeSession()
+        self.instance = fake_instance.fake_instance_obj(self.context)
+        self.name_label = 'name'
+        self.image = 'fake_image_id'
+
+    @mock.patch.object(vm_utils, 'get_vdi_uuid_for_volume',
+                       return_value=uuidutils.generate_uuid())
+    def test_vdis_for_instance_bdi_password_scrubbed(self, get_uuid_mock):
+        # setup fake data
+        data = {'name_label': self.name_label,
+                'sr_uuid': 'fake',
+                'auth_password': 'scrubme'}
+        bdm = [{'mount_device': '/dev/vda',
+                'connection_info': {'data': data}}]
+        bdi = {'root_device_name': 'vda',
+               'block_device_mapping': bdm}
+
+        # Tests that the parameters to the to_xml method are sanitized for
+        # passwords when logged.
+        def fake_debug(*args, **kwargs):
+            if 'auth_password' in args[0]:
+                self.assertNotIn('scrubme', args[0])
+
+        with mock.patch.object(vm_utils.LOG, 'debug',
+                               side_effect=fake_debug) as debug_mock:
+            vdis = vm_utils.get_vdis_for_instance(self.context, self.session,
+                                                  self.instance,
+                                                  self.name_label, self.image,
+                                                  image_type=4,
+                                                  block_device_info=bdi)
+            self.assertEqual(1, len(vdis))
+            get_uuid_mock.assert_called_once_with(self.session, data)
+            # we don't care what the log message is, we just want to make sure
+            # our stub method is called which asserts the password is scrubbed
+            self.assertTrue(debug_mock.called)
 
 
 class GetInstanceForVdisForSrTestCase(VMUtilsTestBase):
