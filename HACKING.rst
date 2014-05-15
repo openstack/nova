@@ -55,6 +55,10 @@ testr arguments that are needed to tox. For example, you can run:
 ``tox -- --analyze-isolation`` to cause tox to tell testr to add
 --analyze-isolation to its argument list.
 
+Python packages may also have dependencies that are outside of tox's ability
+to install. Please refer to doc/source/devref/development.environment.rst for
+a list of those packages on Ubuntu, Fedora and Mac OS X.
+
 It is also possible to run the tests inside of a virtual environment
 you have created, or it is possible that you have all of the dependencies
 installed locally already. In this case, you can interact with the testr
