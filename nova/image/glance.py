@@ -527,7 +527,11 @@ def _extract_attributes(image):
         elif attr == 'checksum' and output['status'] != 'active':
             output[attr] = None
         else:
-            output[attr] = getattr(image, attr)
+            # NOTE(xarses): Anything that is caught with the default value
+            # will result in a additional lookup to glance for said attr.
+            # Notable attributes that could have this issue:
+            # disk_format, container_format, name, deleted, checksum
+            output[attr] = getattr(image, attr, None)
 
     output['properties'] = getattr(image, 'properties', {})
 
