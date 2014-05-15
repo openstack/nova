@@ -183,8 +183,10 @@ class VMwareVMOps(object):
         """
         ebs_root = False
         if block_device_info:
-            LOG.debug(_("Block device information present: %s")
-                      % block_device_info, instance=instance)
+            msg = "Block device information present: %s" % block_device_info
+            # NOTE(mriedem): block_device_info can contain an auth_password
+            # so we have to scrub the message before logging it.
+            LOG.debug(logging.mask_password(msg), instance=instance)
             block_device_mapping = driver.block_device_info_get_mapping(
                     block_device_info)
             if block_device_mapping:

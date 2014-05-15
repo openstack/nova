@@ -3459,15 +3459,17 @@ class LibvirtDriver(driver.ComputeDriver):
         # this ahead of time so that we don't acquire it while also
         # holding the logging lock.
         network_info_str = str(network_info)
-        LOG.debug(_('Start to_xml '
-                    'network_info=%(network_info)s '
-                    'disk_info=%(disk_info)s '
-                    'image_meta=%(image_meta)s rescue=%(rescue)s'
-                    'block_device_info=%(block_device_info)s'),
-                  {'network_info': network_info_str, 'disk_info': disk_info,
-                   'image_meta': image_meta, 'rescue': rescue,
-                   'block_device_info': block_device_info},
-                  instance=instance)
+        msg = ('Start to_xml '
+               'network_info=%(network_info)s '
+               'disk_info=%(disk_info)s '
+               'image_meta=%(image_meta)s rescue=%(rescue)s '
+               'block_device_info=%(block_device_info)s' %
+               {'network_info': network_info_str, 'disk_info': disk_info,
+                'image_meta': image_meta, 'rescue': rescue,
+                'block_device_info': block_device_info})
+        # NOTE(mriedem): block_device_info can contain auth_password so we
+        # need to sanitize the password in the message.
+        LOG.debug(logging.mask_password(msg), instance=instance)
         conf = self.get_guest_config(instance, network_info, image_meta,
                                      disk_info, rescue, block_device_info)
         xml = conf.to_xml()
