@@ -5248,7 +5248,8 @@ class ComputeManager(manager.Manager):
         begin, end = utils.last_completed_audit_period()
         instances = objects.InstanceList.get_active_by_window_joined(
             context, begin, end, host=self.host,
-            expected_attrs=['system_metadata', 'info_cache', 'metadata'])
+            expected_attrs=['system_metadata', 'info_cache', 'metadata'],
+            use_slave=True)
         num_instances = len(instances)
         errors = 0
         successes = 0
@@ -5380,13 +5381,13 @@ class ComputeManager(manager.Manager):
                                                    last_refreshed=refreshed,
                                                    update_cells=update_cells)
 
-    def _get_host_volume_bdms(self, context):
+    def _get_host_volume_bdms(self, context, use_slave=False):
         """Return all block device mappings on a compute host."""
         compute_host_bdms = []
         instances = objects.InstanceList.get_by_host(context, self.host)
         for instance in instances:
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                    context, instance.uuid)
+                    context, instance.uuid, use_slave=use_slave)
             instance_bdms = [bdm for bdm in bdms if bdm.is_volume]
             compute_host_bdms.append(dict(instance=instance,
                                           instance_bdms=instance_bdms))
@@ -5413,7 +5414,8 @@ class ComputeManager(manager.Manager):
         if not start_time:
             start_time = utils.last_completed_audit_period()[1]
 
-        compute_host_bdms = self._get_host_volume_bdms(context)
+        compute_host_bdms = self._get_host_volume_bdms(context,
+                                                       use_slave=True)
         if not compute_host_bdms:
             return
 
@@ -5925,7 +5927,7 @@ class ComputeManager(manager.Manager):
         attrs = ['info_cache', 'security_groups', 'system_metadata']
         with utils.temporary_mutation(context, read_deleted='yes'):
             instances = objects.InstanceList.get_by_filters(
-                context, filters, expected_attrs=attrs)
+                context, filters, expected_attrs=attrs, use_slave=True)
         LOG.debug('There are %d instances to clean', len(instances))
 
         for instance in instances:

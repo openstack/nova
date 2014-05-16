@@ -670,7 +670,8 @@ class ComputeVolumeTestCase(BaseTestCase):
         mock_get_by_host.assert_called_once_with('fake-context',
                                                  self.compute.host)
         mock_get_by_inst.assert_called_once_with('fake-context',
-                                                 'fake-instance-uuid')
+                                                 'fake-instance-uuid',
+                                                 use_slave=False)
         self.assertEqual(expected_host_bdms, got_host_bdms)
 
     def test_poll_volume_usage_disabled(self):
@@ -691,7 +692,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver, 'get_all_volume_usage')
         # Following methods are called.
         utils.last_completed_audit_period().AndReturn((0, 0))
-        self.compute._get_host_volume_bdms(ctxt).AndReturn([])
+        self.compute._get_host_volume_bdms(ctxt, use_slave=True).AndReturn([])
         self.mox.ReplayAll()
 
         self.flags(volume_usage_poll_interval=10)
@@ -707,7 +708,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                        lambda x, y: [3, 4])
         # All the mocks are called
         utils.last_completed_audit_period().AndReturn((10, 20))
-        self.compute._get_host_volume_bdms(ctxt).AndReturn([1, 2])
+        self.compute._get_host_volume_bdms(ctxt,
+                                           use_slave=True).AndReturn([1, 2])
         self.compute._update_volume_usage_cache(ctxt, [3, 4])
         self.mox.ReplayAll()
         self.flags(volume_usage_poll_interval=10)
@@ -736,8 +738,9 @@ class ComputeVolumeTestCase(BaseTestCase):
             AndReturn(bdm)
         self.compute.driver.block_stats(instance['name'], 'vdb').\
             AndReturn([1L, 30L, 1L, 20L, None])
-        self.compute._get_host_volume_bdms(self.context).AndReturn(
-                host_volume_bdms)
+        self.compute._get_host_volume_bdms(self.context,
+                                           use_slave=True).AndReturn(
+                                               host_volume_bdms)
         self.compute.driver.get_all_volume_usage(
                 self.context, host_volume_bdms).AndReturn(
                         [{'volume': 1,
