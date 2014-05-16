@@ -22,6 +22,7 @@ from testtools import matchers
 from nova.conductor import rpcapi as conductor_rpcapi
 from nova import context
 from nova import exception
+from nova import objects
 from nova.objects import base
 from nova.objects import fields
 from nova.openstack.common import jsonutils
@@ -88,6 +89,14 @@ class MyObj(base.NovaPersistentObject, base.NovaObject):
             primitive['bar'] = 'old%s' % primitive['bar']
 
 
+class MyObjDiffVers(MyObj):
+    VERSION = '1.4'
+
+    @classmethod
+    def obj_name(cls):
+        return 'MyObj'
+
+
 class MyObj2(object):
     @classmethod
     def obj_name(cls):
@@ -112,31 +121,51 @@ class TestMetaclass(test.TestCase):
 
         @six.add_metaclass(base.NovaObjectMetaclass)
         class NewBaseClass(object):
+            VERSION = '1.0'
             fields = {}
 
             @classmethod
             def obj_name(cls):
                 return cls.__name__
 
-        class Test1(NewBaseClass):
-            @staticmethod
-            def obj_name():
+        class Fake1TestObj1(NewBaseClass):
+            @classmethod
+            def obj_name(cls):
                 return 'fake1'
 
-        class Test2(NewBaseClass):
+        class Fake1TestObj2(Fake1TestObj1):
             pass
 
-        class Test2v2(NewBaseClass):
-            @staticmethod
-            def obj_name():
-                return 'Test2'
+        class Fake1TestObj3(Fake1TestObj1):
+            VERSION = '1.1'
 
-        expected = {'fake1': [Test1], 'Test2': [Test2, Test2v2]}
+        class Fake2TestObj1(NewBaseClass):
+            @classmethod
+            def obj_name(cls):
+                return 'fake2'
 
+        class Fake1TestObj4(Fake1TestObj3):
+            VERSION = '1.2'
+
+        class Fake2TestObj2(Fake2TestObj1):
+            VERSION = '1.1'
+
+        class Fake1TestObj5(Fake1TestObj1):
+            VERSION = '1.1'
+
+        # Newest versions first in the list. Duplicate versions take the
+        # newest object.
+        expected = {'fake1': [Fake1TestObj4, Fake1TestObj5, Fake1TestObj2],
+                    'fake2': [Fake2TestObj2, Fake2TestObj1]}
         self.assertEqual(expected, NewBaseClass._obj_classes)
         # The following should work, also.
-        self.assertEqual(expected, Test1._obj_classes)
-        self.assertEqual(expected, Test2._obj_classes)
+        self.assertEqual(expected, Fake1TestObj1._obj_classes)
+        self.assertEqual(expected, Fake1TestObj2._obj_classes)
+        self.assertEqual(expected, Fake1TestObj3._obj_classes)
+        self.assertEqual(expected, Fake1TestObj4._obj_classes)
+        self.assertEqual(expected, Fake1TestObj5._obj_classes)
+        self.assertEqual(expected, Fake2TestObj1._obj_classes)
+        self.assertEqual(expected, Fake2TestObj2._obj_classes)
 
     def test_field_checking(self):
         def create_class(field):
@@ -145,7 +174,7 @@ class TestMetaclass(test.TestCase):
                 fields = {'foo': field()}
             return TestField
 
-        cls = create_class(fields.IPV4AndV6AddressField)
+        create_class(fields.IPV4AndV6AddressField)
         self.assertRaises(exception.ObjectFieldInvalid,
                           create_class, fields.IPV4AndV6Address)
         self.assertRaises(exception.ObjectFieldInvalid,
@@ -349,6 +378,14 @@ class _RemoteTest(_BaseTestCase):
 
 
 class _TestObject(object):
+    def test_object_attrs_in_init(self):
+        # Spot check a few
+        objects.Instance
+        objects.InstanceInfoCache
+        objects.SecurityGroup
+        # Now check the test one in this file. Should be newest version
+        self.assertEqual('1.5', objects.MyObj.VERSION)
+
     def test_hydration_type_error(self):
         primitive = {'nova_object.name': 'MyObj',
                      'nova_object.namespace': 'nova',
@@ -455,6 +492,14 @@ class _TestObject(object):
         self.assertEqual(obj2.obj_what_changed(), set(['foo']))
         obj2.obj_reset_changes()
         self.assertEqual(obj2.obj_what_changed(), set())
+
+    def test_obj_class_from_name(self):
+        obj = base.NovaObject.obj_class_from_name('MyObj', '1.4')
+        self.assertEqual('1.4', obj.VERSION)
+
+    def test_obj_class_from_name_latest_compatible(self):
+        obj = base.NovaObject.obj_class_from_name('MyObj', '1.1')
+        self.assertEqual('1.5', obj.VERSION)
 
     def test_unknown_objtype(self):
         self.assertRaises(exception.UnsupportedObjectError,
