@@ -26,6 +26,46 @@ from nova.tests import matchers
 
 
 class BlockDeviceTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(BlockDeviceTestCase, self).setUp()
+        BDM = block_device.BlockDeviceDict
+
+        self.new_mapping = [
+            BDM({'id': 1, 'instance_uuid': 'fake-instance',
+                 'device_name': '/dev/sdb1',
+                 'source_type': 'blank',
+                 'destination_type': 'local',
+                 'delete_on_termination': True,
+                 'volume_size': 1,
+                 'guest_format': 'swap',
+                 'boot_index': -1}),
+            BDM({'id': 2, 'instance_uuid': 'fake-instance',
+                 'device_name': '/dev/sdc1',
+                 'source_type': 'blank',
+                 'destination_type': 'local',
+                 'volume_size': 10,
+                 'delete_on_termination': True,
+                 'boot_index': -1}),
+            BDM({'id': 3, 'instance_uuid': 'fake-instance',
+                 'device_name': '/dev/sda1',
+                 'source_type': 'volume',
+                 'destination_type': 'volume',
+                 'volume_id': 'fake-volume-id-1',
+                 'connection_info': "{'fake': 'connection_info'}",
+                 'boot_index': 0}),
+            BDM({'id': 4, 'instance_uuid': 'fake-instance',
+                 'device_name': '/dev/sda2',
+                 'source_type': 'snapshot',
+                 'destination_type': 'volume',
+                 'connection_info': "{'fake': 'connection_info'}",
+                 'snapshot_id': 'fake-snapshot-id-1',
+                 'volume_id': 'fake-volume-id-2',
+                 'boot_index': -1}),
+            BDM({'id': 5, 'instance_uuid': 'fake-instance',
+                 'no_device': True,
+                 'device_name': '/dev/vdc'}),
+        ]
+
     def test_properties(self):
         root_device0 = '/dev/sda'
         root_device1 = '/dev/sdb'
@@ -141,6 +181,19 @@ class BlockDeviceTestCase(test.NoDBTestCase):
         self.assertIsNone(block_device.get_root_bdm(bdms[2:]))
         self.assertIsNone(block_device.get_root_bdm(bdms[3:]))
         self.assertIsNone(block_device.get_root_bdm([]))
+
+    def test_get_bdm_ephemeral_disk_size(self):
+        size = block_device.get_bdm_ephemeral_disk_size(self.new_mapping)
+        self.assertEqual(10, size)
+
+    def test_get_bdm_swap_list(self):
+        swap_list = block_device.get_bdm_swap_list(self.new_mapping)
+        self.assertEqual(1, len(swap_list))
+        self.assertEqual(1, swap_list[0].get('id'))
+
+    def test_get_bdm_local_disk_num(self):
+        size = block_device.get_bdm_local_disk_num(self.new_mapping)
+        self.assertEqual(2, size)
 
 
 class TestBlockDeviceDict(test.NoDBTestCase):

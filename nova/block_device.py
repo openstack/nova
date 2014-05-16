@@ -529,3 +529,19 @@ def volume_in_mapping(mount_device, block_device_info):
 
     LOG.debug("block_device_list %s", block_device_list)
     return strip_dev(mount_device) in block_device_list
+
+
+def get_bdm_ephemeral_disk_size(block_device_mappings):
+    return sum(bdm.get('volume_size', 0)
+            for bdm in block_device_mappings
+            if new_format_is_ephemeral(bdm))
+
+
+def get_bdm_swap_list(block_device_mappings):
+    return [bdm for bdm in block_device_mappings
+            if new_format_is_swap(bdm)]
+
+
+def get_bdm_local_disk_num(block_device_mappings):
+    return len([bdm for bdm in block_device_mappings
+                if bdm.get('destination_type') == 'local'])
