@@ -231,8 +231,11 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                                    '-p', iscsi_properties['target_portal'],
                                    *iscsi_command, run_as_root=True,
                                    check_exit_code=check_exit_code)
-        LOG.debug("iscsiadm %(command)s: stdout=%(out)s stderr=%(err)s",
-                  {'command': iscsi_command, 'out': out, 'err': err})
+        msg = ('iscsiadm %(command)s: stdout=%(out)s stderr=%(err)s' %
+               {'command': iscsi_command, 'out': out, 'err': err})
+        # NOTE(bpokorny): iscsi_command can contain passwords so we need to
+        # sanitize the password in the message.
+        LOG.debug(logging.mask_password(msg))
         return (out, err)
 
     def _iscsiadm_update(self, iscsi_properties, property_key, property_value,
