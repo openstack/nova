@@ -29,6 +29,7 @@ import sys
 from oslo.config import cfg
 
 from nova import config
+from nova import objects
 from nova.objectstore import s3server
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -49,6 +50,7 @@ def main():
     logging.setup("nova")
     LOG = logging.getLogger('nova.all')
     utils.monkey_patch()
+    objects.register_all()
     launcher = service.process_launcher()
 
     # nova-api

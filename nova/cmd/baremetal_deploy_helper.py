@@ -30,6 +30,7 @@ from wsgiref import simple_server
 
 from nova import config
 from nova import context as nova_context
+from nova import objects
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -369,6 +370,7 @@ def main():
     logging.setup("nova")
     global LOG
     LOG = logging.getLogger('nova.virt.baremetal.deploy_helper')
+    objects.register_all()
     app = BareMetalDeploy()
     srv = simple_server.make_server('', 10000, app)
     srv.serve_forever()

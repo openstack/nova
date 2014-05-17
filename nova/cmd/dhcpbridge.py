@@ -32,6 +32,7 @@ from nova import context
 import nova.db.api
 from nova import exception
 from nova.network import rpcapi as network_rpcapi
+from nova import objects
 from nova.objects import base as objects_base
 from nova.objects import network as network_obj
 from nova.openstack.common.gettextutils import _
@@ -120,6 +121,7 @@ def main():
     logging.setup("nova")
     global LOG
     LOG = logging.getLogger('nova.dhcpbridge')
+    objects.register_all()
 
     if not CONF.conductor.use_local:
         block_db_access()
