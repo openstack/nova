@@ -32,7 +32,6 @@ from nova import context
 from nova import network
 from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import instance as instance_obj
 from nova.objects import security_group as secgroup_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
@@ -116,12 +115,12 @@ class InstanceMetadata():
         ctxt = context.get_admin_context()
 
         # NOTE(danms): This should be removed after bp:compute-manager-objects
-        if not isinstance(instance, instance_obj.Instance):
+        if not isinstance(instance, obj_base.NovaObject):
             expected = ['metadata', 'system_metadata']
             if 'info_cache' in instance:
                 expected.append('info_cache')
-            instance = instance_obj.Instance._from_db_object(
-                ctxt, instance_obj.Instance(), instance,
+            instance = objects.Instance._from_db_object(
+                ctxt, objects.Instance(), instance,
                 expected_attrs=expected)
 
         # The default value of mimeType is set to MIME_TYPE_TEXT_PLAIN
@@ -519,7 +518,7 @@ def get_metadata_by_address(conductor_api, address):
 def get_metadata_by_instance_id(conductor_api, instance_id, address,
                                 ctxt=None):
     ctxt = ctxt or context.get_admin_context()
-    instance = instance_obj.Instance.get_by_uuid(ctxt, instance_id)
+    instance = objects.Instance.get_by_uuid(ctxt, instance_id)
     return InstanceMetadata(instance, address)
 
 

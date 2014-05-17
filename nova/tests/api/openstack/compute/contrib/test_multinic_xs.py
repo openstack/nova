@@ -16,7 +16,7 @@
 import webob
 
 from nova import compute
-from nova.objects import instance as instance_obj
+from nova import objects
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -40,7 +40,7 @@ def compute_api_remove_fixed_ip(self, context, instance, address):
 
 
 def compute_api_get(self, context, instance_id, want_objects=False):
-    instance = instance_obj.Instance()
+    instance = objects.Instance()
     instance.uuid = instance_id
     instance.id = 1
     instance.vm_state = 'fake'

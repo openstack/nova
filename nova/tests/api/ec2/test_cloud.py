@@ -47,7 +47,8 @@ from nova.network import api as network_api
 from nova.network import base_api as base_network_api
 from nova.network import model
 from nova.network import neutronv2
-from nova.objects import instance as instance_obj
+from nova import objects
+from nova.objects import base as obj_base
 from nova.objects import instance_info_cache as instance_info_cache_obj
 from nova.objects import security_group as security_group_obj
 from nova.openstack.common import log as logging
@@ -123,7 +124,7 @@ def get_instances_with_cached_ips(orig_func, get_floating,
     else:
         info_cache = {'network_info': get_fake_cache(get_floating)}
 
-    if isinstance(instances, (list, instance_obj.InstanceList)):
+    if isinstance(instances, (list, obj_base.ObjectListBase)):
         for instance in instances:
             instance['info_cache'] = info_cache
     else:
@@ -1381,7 +1382,7 @@ class CloudTestCase(test.TestCase):
     def test_describe_instances_booting_from_a_volume(self):
         sys_meta = flavors.save_flavor_info(
             {}, flavors.get_flavor(1))
-        inst = instance_obj.Instance()
+        inst = objects.Instance(self.context)
         inst.reservation_id = 'a'
         inst.image_ref = ''
         inst.root_device_name = '/dev/sdh'
@@ -1389,7 +1390,7 @@ class CloudTestCase(test.TestCase):
         inst.vm_state = vm_states.ACTIVE
         inst.host = 'host1'
         inst.system_metadata = sys_meta
-        inst.create(self.context)
+        inst.create()
         result = self.cloud.describe_instances(self.context)
         result = result['reservationSet'][0]
         instance = result['instancesSet'][0]
@@ -2667,7 +2668,7 @@ class CloudTestCase(test.TestCase):
                 security_group_obj.SecurityGroup(name='fake0'))
             secgroups.objects.append(
                 security_group_obj.SecurityGroup(name='fake1'))
-            instance = instance_obj.Instance()
+            instance = objects.Instance(ctxt)
             instance.id = 0
             instance.uuid = 'e5fe5518-0288-4fa3-b0c4-c79764101b85'
             instance.root_device_name = '/dev/sdh'

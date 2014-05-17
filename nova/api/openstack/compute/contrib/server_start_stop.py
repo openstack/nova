@@ -18,7 +18,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
-from nova.objects import instance as instance_obj
+from nova import objects
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
@@ -34,8 +34,8 @@ class ServerStartStopActionController(wsgi.Controller):
     def _get_instance(self, context, instance_uuid):
         try:
             attrs = ['system_metadata', 'metadata']
-            return instance_obj.Instance.get_by_uuid(context, instance_uuid,
-                                                     expected_attrs=attrs)
+            return objects.Instance.get_by_uuid(context, instance_uuid,
+                                                expected_attrs=attrs)
         except exception.NotFound:
             msg = _("Instance not found")
             raise webob.exc.HTTPNotFound(explanation=msg)

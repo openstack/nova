@@ -21,6 +21,7 @@ from nova import compute
 from nova.compute import vm_states
 from nova import db
 from nova import exception
+from nova import objects
 from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova import test
@@ -109,7 +110,7 @@ class HideServerAddressesTest(test.TestCase):
         def get_all(*args, **kwargs):
             fields = instance_obj.INSTANCE_DEFAULT_FIELDS
             return instance_obj._make_instance_list(
-                args[1], instance_obj.InstanceList(), instances, fields)
+                args[1], objects.InstanceList(), instances, fields)
 
         self.stubs.Set(compute.api.API, 'get_all', get_all)
         res = self._make_request('/v3/servers/detail')

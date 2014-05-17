@@ -28,7 +28,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.image import glance
-from nova.objects import instance as instance_obj
+from nova import objects
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import uuidutils
@@ -120,8 +120,8 @@ class ServerActionsControllerTest(test.TestCase):
             uuid = uuidutils.generate_uuid()
         instance = fake_instance.fake_db_instance(
             id=1, uuid=uuid, vm_state=vm_states.ACTIVE, task_state=None)
-        instance = instance_obj.Instance._from_db_object(
-            self.context, instance_obj.Instance(), instance)
+        instance = objects.Instance._from_db_object(
+            self.context, objects.Instance(), instance)
 
         self.compute_api.get(self.context, uuid, want_objects=True,
                 expected_attrs=['pci_devices']).AndReturn(instance)
@@ -554,7 +554,7 @@ class ServerActionsControllerTest(test.TestCase):
 
         self.stubs.Set(fake._FakeImageService, 'show', return_image_meta)
         self.stubs.Set(compute_api.API, 'get', wrap_get)
-        self.stubs.Set(instance_obj.Instance, 'save', fake_save)
+        self.stubs.Set(objects.Instance, 'save', fake_save)
         body = {
             "rebuild": {
                 "image_ref": "155d900f-4e14-4e4c-a73d-069cbf4541e6",

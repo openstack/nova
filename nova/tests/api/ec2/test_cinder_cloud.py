@@ -30,7 +30,7 @@ from nova.compute import utils as compute_utils
 from nova import context
 from nova import db
 from nova import exception
-from nova.objects import instance as instance_obj
+from nova import objects
 from nova import test
 from nova.tests import cast_as_call
 from nova.tests import fake_network
@@ -898,8 +898,7 @@ class CinderCloudTestCase(test.TestCase):
         vol = self.volume_api.get(self.context, vol2_uuid)
         self._assert_volume_detached(vol)
 
-        inst_obj = instance_obj.Instance.get_by_uuid(self.context,
-                                                         instance_uuid)
+        inst_obj = objects.Instance.get_by_uuid(self.context, instance_uuid)
         self.cloud.compute_api.attach_volume(self.context,
                                              inst_obj,
                                              volume_id=vol2_uuid,

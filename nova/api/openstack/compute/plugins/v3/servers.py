@@ -33,7 +33,6 @@ from nova.compute import flavors
 from nova import exception
 from nova.image import glance
 from nova import objects
-from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
@@ -284,7 +283,7 @@ class ServersController(wsgi.Controller):
             log_msg = _("Flavor '%s' could not be found ")
             LOG.debug(log_msg, search_opts['flavor'])
             # TODO(mriedem): Move to ObjectListBase.__init__ for empty lists.
-            instance_list = instance_obj.InstanceList(objects=[])
+            instance_list = objects.InstanceList(objects=[])
 
         if is_detail:
             instance_list.fill_faults()
@@ -958,8 +957,8 @@ class ServersController(wsgi.Controller):
     def _get_instance(self, context, instance_uuid):
         try:
             attrs = ['system_metadata', 'metadata']
-            return instance_obj.Instance.get_by_uuid(context, instance_uuid,
-                                                     expected_attrs=attrs)
+            return objects.Instance.get_by_uuid(context, instance_uuid,
+                                                expected_attrs=attrs)
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 

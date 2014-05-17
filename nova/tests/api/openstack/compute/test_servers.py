@@ -45,6 +45,7 @@ from nova import exception
 from nova.image import glance
 from nova.network import manager
 from nova.network.neutronv2 import api as neutron_api
+from nova import objects
 from nova.objects import instance as instance_obj
 from nova.objects import service as service_obj
 from nova.openstack.common.gettextutils import _
@@ -624,7 +625,7 @@ class ServersControllerTest(ControllerTest):
                          limit=None, marker=None, want_objects=False):
             db_list = [fakes.stub_instance(100, uuid=server_uuid)]
             return instance_obj._make_instance_list(
-                context, instance_obj.InstanceList(), db_list, FIELDS)
+                context, objects.InstanceList(), db_list, FIELDS)
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -645,7 +646,7 @@ class ServersControllerTest(ControllerTest):
             self.assertEqual(search_opts['image'], '12345')
             db_list = [fakes.stub_instance(100, uuid=server_uuid)]
             return instance_obj._make_instance_list(
-                context, instance_obj.InstanceList(), db_list, FIELDS)
+                context, objects.InstanceList(), db_list, FIELDS)
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -829,7 +830,7 @@ class ServersControllerTest(ControllerTest):
             self.assertEqual(search_opts['flavor'], '12345')
             db_list = [fakes.stub_instance(100, uuid=server_uuid)]
             return instance_obj._make_instance_list(
-                context, instance_obj.InstanceList(), db_list, FIELDS)
+                context, objects.InstanceList(), db_list, FIELDS)
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -862,7 +863,7 @@ class ServersControllerTest(ControllerTest):
             self.assertEqual(search_opts['vm_state'], [vm_states.ACTIVE])
             db_list = [fakes.stub_instance(100, uuid=server_uuid)]
             return instance_obj._make_instance_list(
-                context, instance_obj.InstanceList(), db_list, FIELDS)
+                context, objects.InstanceList(), db_list, FIELDS)
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -888,7 +889,7 @@ class ServersControllerTest(ControllerTest):
             db_list = [fakes.stub_instance(100, uuid=server_uuid,
                                                 task_state=task_state)]
             return instance_obj._make_instance_list(
-                context, instance_obj.InstanceList(), db_list, FIELDS)
+                context, objects.InstanceList(), db_list, FIELDS)
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -911,7 +912,7 @@ class ServersControllerTest(ControllerTest):
 
             db_list = [fakes.stub_instance(100, uuid=server_uuid)]
             return instance_obj._make_instance_list(
-                context, instance_obj.InstanceList(), db_list, FIELDS)
+                context, objects.InstanceList(), db_list, FIELDS)
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -945,7 +946,7 @@ class ServersControllerTest(ControllerTest):
 
             db_list = [fakes.stub_instance(100, uuid=server_uuid)]
             return instance_obj._make_instance_list(
-                context, instance_obj.InstanceList(), db_list, FIELDS)
+                context, objects.InstanceList(), db_list, FIELDS)
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -967,7 +968,7 @@ class ServersControllerTest(ControllerTest):
             self.assertEqual(search_opts['name'], 'whee.*')
             db_list = [fakes.stub_instance(100, uuid=server_uuid)]
             return instance_obj._make_instance_list(
-                context, instance_obj.InstanceList(), db_list, FIELDS)
+                context, objects.InstanceList(), db_list, FIELDS)
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -991,7 +992,7 @@ class ServersControllerTest(ControllerTest):
             self.assertNotIn('deleted', search_opts)
             db_list = [fakes.stub_instance(100, uuid=server_uuid)]
             return instance_obj._make_instance_list(
-                context, instance_obj.InstanceList(), db_list, FIELDS)
+                context, objects.InstanceList(), db_list, FIELDS)
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -1027,7 +1028,7 @@ class ServersControllerTest(ControllerTest):
             self.assertNotIn('unknown_option', search_opts)
             db_list = [fakes.stub_instance(100, uuid=server_uuid)]
             return instance_obj._make_instance_list(
-                context, instance_obj.InstanceList(), db_list, FIELDS)
+                context, objects.InstanceList(), db_list, FIELDS)
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -1058,7 +1059,7 @@ class ServersControllerTest(ControllerTest):
             self.assertIn('unknown_option', search_opts)
             db_list = [fakes.stub_instance(100, uuid=server_uuid)]
             return instance_obj._make_instance_list(
-                context, instance_obj.InstanceList(), db_list, FIELDS)
+                context, objects.InstanceList(), db_list, FIELDS)
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -1082,7 +1083,7 @@ class ServersControllerTest(ControllerTest):
             self.assertEqual(search_opts['ip'], '10\..*')
             db_list = [fakes.stub_instance(100, uuid=server_uuid)]
             return instance_obj._make_instance_list(
-                context, instance_obj.InstanceList(), db_list, FIELDS)
+                context, objects.InstanceList(), db_list, FIELDS)
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -1106,7 +1107,7 @@ class ServersControllerTest(ControllerTest):
             self.assertEqual(search_opts['ip6'], 'ffff.*')
             db_list = [fakes.stub_instance(100, uuid=server_uuid)]
             return instance_obj._make_instance_list(
-                context, instance_obj.InstanceList(), db_list, FIELDS)
+                context, objects.InstanceList(), db_list, FIELDS)
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
@@ -1425,7 +1426,7 @@ class ServersControllerDeleteTest(ControllerTest):
             fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                                     task_state=task_states.DELETING,
                                     host='fake_host'))
-        self.stubs.Set(instance_obj.Instance, 'save',
+        self.stubs.Set(objects.Instance, 'save',
                        lambda *args, **kwargs: None)
 
         @classmethod
@@ -1446,7 +1447,7 @@ class ServersControllerDeleteTest(ControllerTest):
             fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                                     task_state=task_states.DELETING,
                                     host='fake_host'))
-        self.stubs.Set(instance_obj.Instance, 'save',
+        self.stubs.Set(objects.Instance, 'save',
                        lambda *args, **kwargs: None)
 
         @classmethod
@@ -2759,7 +2760,7 @@ class ServersControllerCreateTest(test.TestCase):
             self.validation_fail_instance_destroy_called = True
 
         self.stubs.Set(compute_api.API, '_validate_bdm', _validate_bdm)
-        self.stubs.Set(instance_obj.Instance, 'destroy', _instance_destroy)
+        self.stubs.Set(objects.Instance, 'destroy', _instance_destroy)
 
         for _ in xrange(len(bdm_exceptions)):
             params = {'block_device_mapping_v2': [bdm.copy()]}

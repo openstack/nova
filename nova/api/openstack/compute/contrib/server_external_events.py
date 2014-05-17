@@ -19,8 +19,8 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
+from nova import objects
 from nova.objects import external_event as external_event_obj
-from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
@@ -104,7 +104,7 @@ class ServerExternalEventsController(wsgi.Controller):
             events.append(_event)
             if event.instance_uuid not in instances:
                 try:
-                    instance = instance_obj.Instance.get_by_uuid(
+                    instance = objects.Instance.get_by_uuid(
                         context, event.instance_uuid)
                     instances[event.instance_uuid] = instance
                 except exception.InstanceNotFound:
