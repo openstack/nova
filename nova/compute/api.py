@@ -50,7 +50,6 @@ from nova.network.security_group import openstack_driver
 from nova.network.security_group import security_group_base
 from nova import notifications
 from nova import objects
-from nova.objects import aggregate as aggregate_obj
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import flavor as flavor_obj
@@ -3265,7 +3264,7 @@ class AggregateAPI(base.Base):
     def create_aggregate(self, context, aggregate_name, availability_zone):
         """Creates the model for the aggregate."""
 
-        aggregate = aggregate_obj.Aggregate()
+        aggregate = objects.Aggregate()
         aggregate.name = aggregate_name
         if availability_zone:
             aggregate.metadata = {'availability_zone': availability_zone}
@@ -3279,18 +3278,18 @@ class AggregateAPI(base.Base):
 
     def get_aggregate(self, context, aggregate_id):
         """Get an aggregate by id."""
-        aggregate = aggregate_obj.Aggregate.get_by_id(context, aggregate_id)
+        aggregate = objects.Aggregate.get_by_id(context, aggregate_id)
         return self._reformat_aggregate_info(aggregate)
 
     def get_aggregate_list(self, context):
         """Get all the aggregates."""
-        aggregates = aggregate_obj.AggregateList.get_all(context)
+        aggregates = objects.AggregateList.get_all(context)
         return [self._reformat_aggregate_info(agg) for agg in aggregates]
 
     @wrap_exception()
     def update_aggregate(self, context, aggregate_id, values):
         """Update the properties of an aggregate."""
-        aggregate = aggregate_obj.Aggregate.get_by_id(context, aggregate_id)
+        aggregate = objects.Aggregate.get_by_id(context, aggregate_id)
         if 'name' in values:
             aggregate.name = values.pop('name')
         self.is_safe_to_update_az(context, values, aggregate=aggregate,
@@ -3307,7 +3306,7 @@ class AggregateAPI(base.Base):
     @wrap_exception()
     def update_aggregate_metadata(self, context, aggregate_id, metadata):
         """Updates the aggregate metadata."""
-        aggregate = aggregate_obj.Aggregate.get_by_id(context, aggregate_id)
+        aggregate = objects.Aggregate.get_by_id(context, aggregate_id)
         self.is_safe_to_update_az(context, metadata, aggregate=aggregate,
                                   action_name="update_aggregate_metadata")
         aggregate.update_metadata(metadata)
@@ -3324,8 +3323,7 @@ class AggregateAPI(base.Base):
         compute_utils.notify_about_aggregate_update(context,
                                                     "delete.start",
                                                     aggregate_payload)
-        aggregate = aggregate_obj.Aggregate.get_by_id(context,
-                                                      aggregate_id)
+        aggregate = objects.Aggregate.get_by_id(context, aggregate_id)
         if len(aggregate.hosts) > 0:
             msg = _("Host aggregate is not empty")
             raise exception.InvalidAggregateAction(action='delete',
@@ -3356,7 +3354,7 @@ class AggregateAPI(base.Base):
                 if host_az == CONF.default_availability_zone:
                     # NOTE(sbauza): Aggregate with AZ set to default AZ can
                     #               exist, we need to check
-                    host_aggs = aggregate_obj.AggregateList.get_by_host(
+                    host_aggs = objects.AggregateList.get_by_host(
                         context, host, key='availability_zone')
                     default_aggs = [agg for agg in host_aggs
                                     if agg['metadata'].get(
@@ -3414,7 +3412,7 @@ class AggregateAPI(base.Base):
 
         metadata = self.db.aggregate_metadata_get_by_metadata_key(
             context, aggregate_id, 'availability_zone')
-        aggregate = aggregate_obj.Aggregate.get_by_id(context, aggregate_id)
+        aggregate = objects.Aggregate.get_by_id(context, aggregate_id)
         self.is_safe_to_update_az(context, metadata, hosts=[host_name],
                                   aggregate=aggregate)
 
@@ -3439,7 +3437,7 @@ class AggregateAPI(base.Base):
                                                     aggregate_payload)
         # validates the host; ComputeHostNotFound is raised if invalid
         service_obj.Service.get_by_compute_host(context, host_name)
-        aggregate = aggregate_obj.Aggregate.get_by_id(context, aggregate_id)
+        aggregate = objects.Aggregate.get_by_id(context, aggregate_id)
         aggregate.delete_host(host_name)
         self._update_az_cache_for_host(context, host_name, aggregate.metadata)
         self.compute_rpcapi.remove_aggregate_host(context,

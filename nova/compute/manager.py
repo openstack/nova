@@ -62,7 +62,6 @@ from nova import network
 from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova import objects
-from nova.objects import aggregate as aggregate_obj
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import compute_node as compute_node_obj
@@ -412,8 +411,8 @@ def aggregate_object_compat(function):
     def decorated_function(self, context, *args, **kwargs):
         aggregate = kwargs.get('aggregate')
         if isinstance(aggregate, dict):
-            aggregate = aggregate_obj.Aggregate._from_db_object(
-                context.elevated(), aggregate_obj.Aggregate(),
+            aggregate = objects.Aggregate._from_db_object(
+                context.elevated(), objects.Aggregate(),
                 aggregate)
             kwargs['aggregate'] = aggregate
         return function(self, context, *args, **kwargs)
