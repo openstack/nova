@@ -18,13 +18,9 @@ from nova.compute import flavors
 from nova import db
 from nova import exception
 from nova import notifications
+from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova.objects import flavor as flavor_obj
-from nova.objects import instance_fault
-from nova.objects import instance_info_cache
-from nova.objects import pci_device
-from nova.objects import security_group
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -275,13 +271,13 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             instance['system_metadata'] = utils.instance_sys_meta(db_inst)
         if 'fault' in expected_attrs:
             instance['fault'] = (
-                instance_fault.InstanceFault.get_latest_for_instance(
+                objects.InstanceFault.get_latest_for_instance(
                     context, instance.uuid))
 
         if 'pci_devices' in expected_attrs:
             pci_devices = base.obj_make_list(
-                    context, pci_device.PciDeviceList(),
-                    pci_device.PciDevice, db_inst['pci_devices'])
+                    context, objects.PciDeviceList(context),
+                    objects.PciDevice, db_inst['pci_devices'])
             instance['pci_devices'] = pci_devices
         if 'info_cache' in expected_attrs:
             if db_inst['info_cache'] is None:
@@ -289,14 +285,15 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             elif not instance.obj_attr_is_set('info_cache'):
                 # TODO(danms): If this ever happens on a backlevel instance
                 # passed to us by a backlevel service, things will break
-                instance.info_cache = instance_info_cache.InstanceInfoCache()
+                instance.info_cache = objects.InstanceInfoCache(context)
             if instance.info_cache is not None:
-                instance_info_cache.InstanceInfoCache._from_db_object(
-                    context, instance.info_cache, db_inst['info_cache'])
+                instance.info_cache._from_db_object(context,
+                                                    instance.info_cache,
+                                                    db_inst['info_cache'])
         if 'security_groups' in expected_attrs:
             sec_groups = base.obj_make_list(
-                    context, security_group.SecurityGroupList(),
-                    security_group.SecurityGroup, db_inst['security_groups'])
+                    context, objects.SecurityGroupList(context),
+                    objects.SecurityGroup, db_inst['security_groups'])
             instance['security_groups'] = sec_groups
 
         instance._context = context
@@ -341,7 +338,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                 'network_info': updates['info_cache'].network_info.json()
                 }
         db_inst = db.instance_create(context, updates)
-        Instance._from_db_object(context, self, db_inst, expected_attrs)
+        self._from_db_object(context, self, db_inst, expected_attrs)
 
     @base.remotable
     def destroy(self, context):
@@ -360,7 +357,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         try:
             db_inst = db.instance_destroy(context, self.uuid,
                                           constraint=constraint)
-            Instance._from_db_object(context, self, db_inst)
+            self._from_db_object(context, self, db_inst)
         except exception.ConstraintNotMet:
             raise exception.ObjectActionError(action='destroy',
                                               reason='host changed')
@@ -535,7 +532,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         prefix = ('%s_' % namespace) if namespace is not None else ''
 
         db_flavor = flavors.extract_flavor(self, prefix)
-        flavor = flavor_obj.Flavor()
+        flavor = objects.Flavor(self._context)
         for key in flavors.system_metadata_flavor_props:
             flavor[key] = db_flavor[key]
         return flavor
@@ -578,7 +575,7 @@ def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
         # Build an instance_uuid:latest-fault mapping
         expected_attrs.remove('fault')
         instance_uuids = [inst['uuid'] for inst in db_inst_list]
-        faults = instance_fault.InstanceFaultList.get_by_instance_uuids(
+        faults = objects.InstanceFaultList.get_by_instance_uuids(
             context, instance_uuids)
         for fault in faults:
             if fault.instance_uuid not in inst_faults:
@@ -586,8 +583,9 @@ def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
 
     inst_list.objects = []
     for db_inst in db_inst_list:
-        inst_obj = Instance._from_db_object(context, Instance(), db_inst,
-                                            expected_attrs=expected_attrs)
+        inst_obj = objects.Instance._from_db_object(
+                context, objects.Instance(context), db_inst,
+                expected_attrs=expected_attrs)
         if get_fault:
             inst_obj.fault = inst_faults.get(inst_obj.uuid, None)
         inst_list.objects.append(inst_obj)
@@ -719,7 +717,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         :returns: A list of instance uuids for which faults were found.
         """
         uuids = [inst.uuid for inst in self]
-        faults = instance_fault.InstanceFaultList.get_by_instance_uuids(
+        faults = objects.InstanceFaultList.get_by_instance_uuids(
             self._context, uuids)
         faults_by_uuid = {}
         for fault in faults:

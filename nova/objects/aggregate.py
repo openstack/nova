@@ -15,6 +15,7 @@
 from nova.compute import utils as compute_utils
 from nova import db
 from nova import exception
+from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
@@ -165,11 +166,11 @@ class AggregateList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_all(cls, context):
         db_aggregates = db.aggregate_get_all(context)
-        return base.obj_make_list(context, AggregateList(), Aggregate,
+        return base.obj_make_list(context, cls(context), objects.Aggregate,
                                   db_aggregates)
 
     @base.remotable_classmethod
     def get_by_host(cls, context, host, key=None):
         db_aggregates = db.aggregate_get_by_host(context, host, key=key)
-        return base.obj_make_list(context, AggregateList(), Aggregate,
+        return base.obj_make_list(context, cls(context), objects.Aggregate,
                                   db_aggregates)

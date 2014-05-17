@@ -18,6 +18,7 @@ from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 from nova import db
 from nova import exception
+from nova import objects
 from nova.objects import base
 from nova.objects import fields
 from nova.openstack.common.gettextutils import _LE
@@ -106,5 +107,5 @@ class InstanceFaultList(base.ObjectListBase, base.NovaObject):
         db_faultdict = db.instance_fault_get_by_instance_uuids(context,
                                                                instance_uuids)
         db_faultlist = itertools.chain(*db_faultdict.values())
-        return base.obj_make_list(context, InstanceFaultList(), InstanceFault,
+        return base.obj_make_list(context, cls(context), objects.InstanceFault,
                                   db_faultlist)

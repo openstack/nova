@@ -85,10 +85,10 @@ class EC2VolumeMapping(base.NovaPersistentObject, base.NovaObject):
     def get_by_uuid(cls, context, volume_uuid):
         db_vmap = db.ec2_volume_get_by_uuid(context, volume_uuid)
         if db_vmap:
-            return cls._from_db_object(context, cls(), db_vmap)
+            return cls._from_db_object(context, cls(context), db_vmap)
 
     @base.remotable_classmethod
     def get_by_id(cls, context, ec2_id):
         db_vmap = db.ec2_volume_get_by_id(context, ec2_id)
         if db_vmap:
-            return cls._from_db_object(context, cls(), db_vmap)
+            return cls._from_db_object(context, cls(context), db_vmap)

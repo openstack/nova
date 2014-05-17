@@ -72,8 +72,8 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
         # db.api method for this yet.  Come back and optimize this by
         # adding a new query by name.  This is unnecessarily expensive if a
         # tenant has lots of groups.
-        igs = InstanceGroupList.get_by_project_id(context,
-                                                  context.project_id)
+        igs = objects.InstanceGroupList.get_by_project_id(context,
+                                                          context.project_id)
         for ig in igs:
             if ig.name == name:
                 return ig
@@ -181,11 +181,11 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_by_project_id(cls, context, project_id):
         groups = db.instance_group_get_all_by_project_id(context, project_id)
-        return base.obj_make_list(context, InstanceGroupList(), InstanceGroup,
+        return base.obj_make_list(context, cls(context), objects.InstanceGroup,
                                   groups)
 
     @base.remotable_classmethod
     def get_all(cls, context):
         groups = db.instance_group_get_all(context)
-        return base.obj_make_list(context, InstanceGroupList(), InstanceGroup,
+        return base.obj_make_list(context, cls(context), objects.InstanceGroup,
                                   groups)

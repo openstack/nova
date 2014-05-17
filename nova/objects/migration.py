@@ -99,18 +99,18 @@ class MigrationList(base.ObjectListBase, base.NovaObject):
                                         dest_compute, use_slave=False):
         db_migrations = db.migration_get_unconfirmed_by_dest_compute(
             context, confirm_window, dest_compute, use_slave=use_slave)
-        return base.obj_make_list(context, MigrationList(), Migration,
+        return base.obj_make_list(context, cls(context), objects.Migration,
                                   db_migrations)
 
     @base.remotable_classmethod
     def get_in_progress_by_host_and_node(cls, context, host, node):
         db_migrations = db.migration_get_in_progress_by_host_and_node(
             context, host, node)
-        return base.obj_make_list(context, MigrationList(), Migration,
+        return base.obj_make_list(context, cls(context), objects.Migration,
                                   db_migrations)
 
     @base.remotable_classmethod
     def get_by_filters(cls, context, filters):
         db_migrations = db.migration_get_all_by_filters(context, filters)
-        return base.obj_make_list(context, MigrationList(), Migration,
+        return base.obj_make_list(context, cls(context), objects.Migration,
                                   db_migrations)

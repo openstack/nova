@@ -14,6 +14,7 @@
 
 from nova import db
 from nova import exception
+from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
@@ -90,10 +91,12 @@ class VirtualInterfaceList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_all(cls, context):
         db_vifs = db.virtual_interface_get_all(context)
-        return base.obj_make_list(context, cls(), VirtualInterface, db_vifs)
+        return base.obj_make_list(context, cls(context),
+                                  objects.VirtualInterface, db_vifs)
 
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, instance_uuid, use_slave=False):
         db_vifs = db.virtual_interface_get_by_instance(context, instance_uuid,
                 use_slave=use_slave)
-        return base.obj_make_list(context, cls(), VirtualInterface, db_vifs)
+        return base.obj_make_list(context, cls(context),
+                                  objects.VirtualInterface, db_vifs)

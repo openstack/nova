@@ -14,6 +14,7 @@
 
 from nova import db
 from nova import exception
+from nova import objects
 from nova.objects import base
 from nova.objects import fields
 from nova.openstack.common import jsonutils
@@ -114,10 +115,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
 
     @property
     def service(self):
-        # NOTE(danms): avoid a circular import here
         if not hasattr(self, '_cached_service'):
-            from nova.objects import service
-            self._cached_service = service.Service.get_by_id(self._context,
+            self._cached_service = objects.Service.get_by_id(self._context,
                                                              self.service_id)
         return self._cached_service
 
@@ -141,21 +140,21 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_all(cls, context):
         db_computes = db.compute_node_get_all(context)
-        return base.obj_make_list(context, ComputeNodeList(), ComputeNode,
+        return base.obj_make_list(context, cls(context), objects.ComputeNode,
                                   db_computes)
 
     @base.remotable_classmethod
     def get_by_hypervisor(cls, context, hypervisor_match):
         db_computes = db.compute_node_search_by_hypervisor(context,
                                                            hypervisor_match)
-        return base.obj_make_list(context, ComputeNodeList(), ComputeNode,
+        return base.obj_make_list(context, cls(context), objects.ComputeNode,
                                   db_computes)
 
     @base.remotable_classmethod
     def _get_by_service(cls, context, service_id):
         db_service = db.service_get(context, service_id,
                                     with_compute_node=True)
-        return base.obj_make_list(context, ComputeNodeList(), ComputeNode,
+        return base.obj_make_list(context, cls(context), objects.ComputeNode,
                                   db_service['compute_node'])
 
     @classmethod

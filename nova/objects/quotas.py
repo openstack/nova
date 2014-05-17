@@ -45,8 +45,8 @@ class Quotas(base.NovaObject):
         'user_id': fields.StringField(nullable=True),
     }
 
-    def __init__(self):
-        super(Quotas, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(Quotas, self).__init__(*args, **kwargs)
         # Set up defaults.
         self.reservations = []
         self.project_id = None
