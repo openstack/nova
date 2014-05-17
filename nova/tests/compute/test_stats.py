@@ -97,21 +97,46 @@ class StatsTestCase(test.NoDBTestCase):
             "vcpus": 2,
             "uuid": "34-56-78-90-12",
         }
+
         self.stats.update_stats_for_instance(instance)
 
-        self.assertEqual(2, self.stats.num_os_type("Linux"))
+        instance = {
+            "os_type": "Linux",
+            "project_id": "2345",
+            "task_state": task_states.RESCUING,
+            "vm_state": vm_states.ACTIVE,
+            "vcpus": 2,
+            "uuid": "34-56-78-90-13",
+        }
+
+        self.stats.update_stats_for_instance(instance)
+
+        instance = {
+            "os_type": "Linux",
+            "project_id": "2345",
+            "task_state": task_states.UNSHELVING,
+            "vm_state": vm_states.ACTIVE,
+            "vcpus": 2,
+            "uuid": "34-56-78-90-14",
+        }
+
+        self.stats.update_stats_for_instance(instance)
+
+        self.assertEqual(4, self.stats.num_os_type("Linux"))
         self.assertEqual(1, self.stats.num_os_type("FreeBSD"))
 
         self.assertEqual(2, self.stats.num_instances_for_project("1234"))
-        self.assertEqual(1, self.stats.num_instances_for_project("2345"))
+        self.assertEqual(3, self.stats.num_instances_for_project("2345"))
 
         self.assertEqual(1, self.stats["num_task_None"])
         self.assertEqual(2, self.stats["num_task_" + task_states.SCHEDULING])
+        self.assertEqual(1, self.stats["num_task_" + task_states.UNSHELVING])
+        self.assertEqual(1, self.stats["num_task_" + task_states.RESCUING])
 
         self.assertEqual(1, self.stats["num_vm_None"])
         self.assertEqual(2, self.stats["num_vm_" + vm_states.BUILDING])
 
-        self.assertEqual(6, self.stats.num_vcpus_used)
+        self.assertEqual(10, self.stats.num_vcpus_used)
 
     def test_calculate_workload(self):
         self.stats._increment("num_task_None")
@@ -172,14 +197,15 @@ class StatsTestCase(test.NoDBTestCase):
         vms = [vm_states.ACTIVE, vm_states.BUILDING, vm_states.PAUSED]
         tasks = [task_states.RESIZE_MIGRATING, task_states.REBUILDING,
                  task_states.RESIZE_PREP, task_states.IMAGE_SNAPSHOT,
-                 task_states.IMAGE_BACKUP, task_states.RESCUING]
+                 task_states.IMAGE_BACKUP, task_states.RESCUING,
+                 task_states.UNSHELVING, task_states.SHELVING]
 
         for state in vms:
             self.stats._increment("num_vm_" + state)
         for state in tasks:
             self.stats._increment("num_task_" + state)
 
-        self.assertEqual(6, self.stats.io_workload)
+        self.assertEqual(8, self.stats.io_workload)
 
     def test_io_workload_saved_to_stats(self):
         values = {'task_state': task_states.RESIZE_MIGRATING}

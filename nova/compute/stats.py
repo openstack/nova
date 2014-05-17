@@ -45,9 +45,11 @@ class Stats(dict):
         num_resizes = _get(task_states.RESIZE_PREP, "task")
         num_snapshots = _get(task_states.IMAGE_SNAPSHOT, "task")
         num_backups = _get(task_states.IMAGE_BACKUP, "task")
+        num_rescues = _get(task_states.RESCUING, "task")
+        num_unshelves = _get(task_states.UNSHELVING, "task")
 
         return (num_builds + num_rebuilds + num_resizes + num_migrations +
-                num_snapshots + num_backups)
+                num_snapshots + num_backups + num_rescues + num_unshelves)
 
     def calculate_workload(self):
         """Calculate current load of the compute host based on

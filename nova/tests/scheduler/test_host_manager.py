@@ -451,6 +451,45 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertIsNone(host.pci_stats)
         self.assertEqual(hyper_ver_int, host.hypervisor_version)
 
+    def test_stat_consumption_from_compute_node_rescue_unshelving(self):
+        stats = {
+            'num_instances': '5',
+            'num_proj_12345': '3',
+            'num_proj_23456': '1',
+            'num_vm_%s' % vm_states.BUILDING: '2',
+            'num_vm_%s' % vm_states.SUSPENDED: '1',
+            'num_task_%s' % task_states.UNSHELVING: '1',
+            'num_task_%s' % task_states.RESCUING: '2',
+            'num_os_type_linux': '4',
+            'num_os_type_windoze': '1',
+            'io_workload': '42',
+        }
+        stats = jsonutils.dumps(stats)
+
+        hyper_ver_int = utils.convert_version_to_int('6.0.0')
+        compute = dict(stats=stats, memory_mb=0, free_disk_gb=0, local_gb=0,
+                       local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
+                       updated_at=None, host_ip='127.0.0.1',
+                       hypervisor_version=hyper_ver_int)
+
+        host = host_manager.HostState("fakehost", "fakenode")
+        host.update_from_compute_node(compute)
+
+        self.assertEqual(5, host.num_instances)
+        self.assertEqual(3, host.num_instances_by_project['12345'])
+        self.assertEqual(1, host.num_instances_by_project['23456'])
+        self.assertEqual(2, host.vm_states[vm_states.BUILDING])
+        self.assertEqual(1, host.vm_states[vm_states.SUSPENDED])
+        self.assertEqual(1, host.task_states[task_states.UNSHELVING])
+        self.assertEqual(2, host.task_states[task_states.RESCUING])
+        self.assertEqual(4, host.num_instances_by_os_type['linux'])
+        self.assertEqual(1, host.num_instances_by_os_type['windoze'])
+        self.assertEqual(42, host.num_io_ops)
+        self.assertEqual(10, len(host.stats))
+
+        self.assertIsNone(host.pci_stats)
+        self.assertEqual(hyper_ver_int, host.hypervisor_version)
+
     def test_stat_consumption_from_instance(self):
         host = host_manager.HostState("fakehost", "fakenode")
 
