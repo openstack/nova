@@ -23,7 +23,7 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova import exception
-from nova.objects import block_device as block_device_obj
+from nova import objects
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import volume
@@ -46,7 +46,7 @@ class ExtendedVolumesController(wsgi.Controller):
         self.volume_api = volume.API()
 
     def _extend_server(self, context, server, instance):
-        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance['uuid'])
         volume_ids = [bdm['volume_id'] for bdm in bdms if bdm['volume_id']]
         key = "%s:volumes_attached" % ExtendedVolumes.alias
@@ -70,7 +70,7 @@ class ExtendedVolumesController(wsgi.Controller):
 
         instance = common.get_instance(self.compute_api, context, id,
                                        want_objects=True)
-        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
         found = False
         try:
@@ -185,7 +185,7 @@ class ExtendedVolumesController(wsgi.Controller):
         except exception.VolumeNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
 
-        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
         if not bdms:
             msg = _("Volume %(volume_id)s is not attached to the "

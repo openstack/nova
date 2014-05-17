@@ -64,7 +64,6 @@ from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import block_device as block_device_obj
 from nova.objects import compute_node as compute_node_obj
 from nova.objects import external_event as external_event_obj
 from nova.objects import flavor as flavor_obj
@@ -739,7 +738,7 @@ class ComputeManager(manager.Manager):
         deleted in the DB
         """
         instance.destroy()
-        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
         quotas = quotas_obj.Quotas()
         project_id, user_id = quotas_obj.ids_from_instance(context, instance)
@@ -831,8 +830,8 @@ class ComputeManager(manager.Manager):
                            'the deletion now.'), instance=instance)
                 instance.obj_load_attr('metadata')
                 instance.obj_load_attr('system_metadata')
-                bdms = (block_device_obj.BlockDeviceMappingList.
-                        get_by_instance_uuid(context, instance.uuid))
+                bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                        context, instance.uuid)
                 # FIXME(comstud): This needs fixed. We should be creating
                 # reservations and updating quotas, because quotas
                 # wouldn't have been updated for this instance since it is
@@ -1289,7 +1288,7 @@ class ComputeManager(manager.Manager):
             LOG.debug("No node specified, defaulting to %s", node)
 
         network_info = None
-        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance['uuid'])
 
         # b64 decode the files to inject:
@@ -1412,8 +1411,8 @@ class ComputeManager(manager.Manager):
             LOG.debug("Clean up resource before rescheduling.",
                       instance=instance)
             if bdms is None:
-                bdms = (block_device_obj.BlockDeviceMappingList.
-                        get_by_instance_uuid(context, instance.uuid))
+                bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                        context, instance.uuid)
 
             self._shutdown_instance(context, instance,
                                     bdms, requested_networks)
@@ -1809,8 +1808,8 @@ class ComputeManager(manager.Manager):
         """Transform block devices to the driver block_device format."""
 
         if not bdms:
-            bdms = (block_device_obj.BlockDeviceMappingList.
-                    get_by_instance_uuid(context, instance['uuid']))
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                    context, instance['uuid'])
         swap = driver_block_device.convert_swap(bdms)
         ephemerals = driver_block_device.convert_ephemerals(bdms)
         block_device_mapping = (
@@ -2267,10 +2266,10 @@ class ComputeManager(manager.Manager):
         # to avoid converting them back when we can just get them.
         # Remove this when we bump the RPC major version to 4.0
         if (bdms and
-            any(not isinstance(bdm, block_device_obj.BlockDeviceMapping)
+            any(not isinstance(bdm, obj_base.NovaObject)
                 for bdm in bdms)):
-            bdms = (block_device_obj.BlockDeviceMappingList.
-                    get_by_instance_uuid(context, instance.uuid))
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                    context, instance.uuid)
 
         quotas = quotas_obj.Quotas.from_reservations(context,
                                                      reservations,
@@ -2454,7 +2453,7 @@ class ComputeManager(manager.Manager):
         # to avoid converting them back when we can just get them.
         # Remove this on the next major RPC version bump
         if (bdms and
-            any(not isinstance(bdm, block_device_obj.BlockDeviceMapping)
+            any(not isinstance(bdm, obj_base.NovaObject)
                 for bdm in bdms)):
             bdms = None
 
@@ -2530,8 +2529,8 @@ class ComputeManager(manager.Manager):
 
             network_info = compute_utils.get_nw_info_for_instance(instance)
             if bdms is None:
-                bdms = (block_device_obj.BlockDeviceMappingList.
-                        get_by_instance_uuid(context, instance.uuid))
+                bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                        context, instance.uuid)
 
             block_device_info = \
                 self._get_instance_block_device_info(
@@ -3214,8 +3213,8 @@ class ComputeManager(manager.Manager):
                                                     migration_p)
 
             network_info = self._get_instance_nw_info(context, instance)
-            bdms = (block_device_obj.BlockDeviceMappingList.
-                    get_by_instance_uuid(context, instance.uuid))
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                    context, instance.uuid)
             block_device_info = self._get_instance_block_device_info(
                                 context, instance, bdms=bdms)
 
@@ -3468,8 +3467,8 @@ class ComputeManager(manager.Manager):
             self._notify_about_instance_usage(
                 context, instance, "resize.start", network_info=network_info)
 
-            bdms = (block_device_obj.BlockDeviceMappingList.
-                    get_by_instance_uuid(context, instance.uuid))
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                    context, instance.uuid)
             block_device_info = self._get_instance_block_device_info(
                                 context, instance, bdms=bdms)
 
@@ -3908,7 +3907,7 @@ class ComputeManager(manager.Manager):
         instance.save()
 
         network_info = self._get_instance_nw_info(context, instance)
-        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
         block_device_info = self._prep_block_device(context, instance, bdms)
         scrubbed_keys = self._unshelve_instance_key_scrub(instance)
@@ -4138,14 +4137,14 @@ class ComputeManager(manager.Manager):
         @utils.synchronized(instance['uuid'])
         def do_reserve():
             bdms = (
-                block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid))
 
             device_name = compute_utils.get_device_name_for_instance(
                     context, instance, bdms, device)
 
             # NOTE(vish): create bdm here to avoid race condition
-            bdm = block_device_obj.BlockDeviceMapping(
+            bdm = objects.BlockDeviceMapping(
                     source_type='volume', destination_type='volume',
                     instance_uuid=instance.uuid,
                     volume_id=volume_id or 'reserved',
@@ -4165,7 +4164,7 @@ class ComputeManager(manager.Manager):
                       instance, bdm=None):
         """Attach a volume to an instance."""
         if not bdm:
-            bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(
+            bdm = objects.BlockDeviceMapping.get_by_volume_id(
                     context, volume_id)
         driver_bdm = driver_block_device.DriverVolumeBlockDevice(bdm)
         try:
@@ -4236,7 +4235,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def detach_volume(self, context, volume_id, instance):
         """Detach a volume from an instance."""
-        bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(
+        bdm = objects.BlockDeviceMapping.get_by_volume_id(
                 context, volume_id)
         if CONF.volume_usage_poll_interval > 0:
             vol_stats = []
@@ -4335,7 +4334,7 @@ class ComputeManager(manager.Manager):
         """Swap volume for an instance."""
         context = context.elevated()
 
-        bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(
+        bdm = objects.BlockDeviceMapping.get_by_volume_id(
                 context, old_volume_id, instance_uuid=instance.uuid)
         connector = self.driver.get_volume_connector(instance)
         comp_ret, new_cinfo = self._swap_volume(context, instance,
@@ -4373,7 +4372,7 @@ class ComputeManager(manager.Manager):
         #             detached, or delete the bdm, just remove the
         #             connection from this host.
         try:
-            bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(
+            bdm = objects.BlockDeviceMapping.get_by_volume_id(
                     context, volume_id)
             inst_obj = objects.Instance._from_db_object(context,
                                                         objects.Instance(),
@@ -4610,7 +4609,7 @@ class ComputeManager(manager.Manager):
         LOG.info(_('_post_live_migration() is started..'),
                  instance=instance)
 
-        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 ctxt, instance['uuid'])
 
         # Cleanup source host post live-migration
@@ -4777,11 +4776,12 @@ class ComputeManager(manager.Manager):
         # NOTE(tr3buchet): setup networks on source host (really it's re-setup)
         self.network_api.setup_networks_on_host(context, instance, self.host)
 
-        for bdm in (block_device_obj.BlockDeviceMappingList.
-                    get_by_instance_uuid(context, instance['uuid'])):
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance['uuid'])
+        for bdm in bdms:
             if bdm.is_volume:
-                self.compute_rpcapi.remove_volume_connection(context, instance,
-                        bdm.volume_id, dest)
+                self.compute_rpcapi.remove_volume_connection(
+                        context, instance, bdm.volume_id, dest)
 
         self._notify_about_instance_usage(context, instance,
                                           "live_migration._rollback.start")
@@ -5198,10 +5198,9 @@ class ComputeManager(manager.Manager):
         compute_host_bdms = []
         instances = objects.InstanceList.get_by_host(context, self.host)
         for instance in instances:
-            instance_bdms = [bdm for bdm in
-                             (block_device_obj.BlockDeviceMappingList.
-                              get_by_instance_uuid(context, instance.uuid))
-                             if bdm.is_volume]
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                    context, instance.uuid)
+            instance_bdms = [bdm for bdm in bdms if bdm.is_volume]
             compute_host_bdms.append(dict(instance=instance,
                                           instance_bdms=instance_bdms))
 
@@ -5454,8 +5453,8 @@ class ComputeManager(manager.Manager):
             use_slave=True)
         for instance in instances:
             if self._deleted_old_enough(instance, interval):
-                bdms = (block_device_obj.BlockDeviceMappingList.
-                        get_by_instance_uuid(context, instance.uuid))
+                bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                        context, instance.uuid)
                 LOG.info(_('Reclaiming deleted instance'), instance=instance)
                 try:
                     self._delete_instance(context, instance, bdms, quotas)
@@ -5530,9 +5529,8 @@ class ComputeManager(manager.Manager):
         # NOTE(sirp): admin contexts don't ordinarily return deleted records
         with utils.temporary_mutation(context, read_deleted="yes"):
             for instance in self._running_deleted_instances(context):
-                bdms = (block_device_obj.BlockDeviceMappingList.
-                        get_by_instance_uuid(context, instance.uuid,
-                                             use_slave=True))
+                bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                        context, instance.uuid, use_slave=True)
 
                 if action == "log":
                     LOG.warning(_("Detected instance with name label "

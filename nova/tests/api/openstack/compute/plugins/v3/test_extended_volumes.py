@@ -230,7 +230,7 @@ class ExtendedVolumesTest(test.TestCase):
         res = self._make_request(url, {"detach": None})
         self.assertEqual(res.status_int, 400)
 
-    @mock.patch('nova.objects.block_device.BlockDeviceMapping.is_root',
+    @mock.patch('nova.objects.BlockDeviceMapping.is_root',
                  new_callable=mock.PropertyMock)
     def test_detach_volume_root(self, mock_isroot):
         url = "/v3/servers/%s/action" % UUID1

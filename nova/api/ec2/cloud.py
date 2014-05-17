@@ -41,8 +41,8 @@ from nova import exception
 from nova.image import s3
 from nova import network
 from nova.network.security_group import neutron_driver
+from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import block_device as block_device_obj
 from nova.objects import ec2 as ec2_obj
 from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
@@ -1058,7 +1058,7 @@ class CloudController(object):
         """Format InstanceBlockDeviceMappingResponseItemType."""
         root_device_type = 'instance-store'
         mapping = []
-        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance_uuid)
         for bdm in bdms:
             volume_id = bdm.volume_id

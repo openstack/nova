@@ -30,7 +30,6 @@ from nova import db
 from nova import exception
 from nova.network import model as network_model
 from nova import objects
-from nova.objects import block_device as block_device_obj
 from nova.objects import external_event as external_event_obj
 from nova.objects import instance_action as instance_action_obj
 from nova.objects import migration as migration_obj
@@ -315,7 +314,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 vm_state=vm_states.ACTIVE,
                 task_state=task_states.DELETING)
 
-        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
+        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
                                  'get_by_instance_uuid')
         self.mox.StubOutWithMock(self.compute, '_delete_instance')
         self.mox.StubOutWithMock(instance, 'obj_load_attr')
@@ -323,7 +322,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         bdms = []
         instance.obj_load_attr('metadata')
         instance.obj_load_attr('system_metadata')
-        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        objects.BlockDeviceMappingList.get_by_instance_uuid(
                 self.context, instance.uuid).AndReturn(bdms)
         self.compute._delete_instance(self.context, instance, bdms)
 
@@ -488,7 +487,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 uuid='fake',
                 vm_state=vm_states.ERROR,
                 task_state=task_states.DELETING)
-        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
+        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
                                  'get_by_instance_uuid')
         self.mox.StubOutWithMock(self.compute, '_delete_instance')
         self.mox.StubOutWithMock(instance, 'obj_load_attr')
@@ -496,7 +495,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         bdms = []
         instance.obj_load_attr('metadata')
         instance.obj_load_attr('system_metadata')
-        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        objects.BlockDeviceMappingList.get_by_instance_uuid(
                 self.context, instance.uuid).AndReturn(bdms)
         self.compute._delete_instance(self.context, instance, bdms)
         self.mox.ReplayAll()
@@ -1194,8 +1193,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.assertFalse(allow_reboot)
             self.assertEqual(reboot_type, 'HARD')
 
-    @mock.patch('nova.objects.block_device.BlockDeviceMapping.'
-                'get_by_volume_id')
+    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume_id')
     @mock.patch('nova.compute.manager.ComputeManager._detach_volume')
     @mock.patch('nova.objects.instance.Instance._from_db_object')
     def test_remove_volume_connection(self, inst_from_db, detach, bdm_get):
@@ -1993,7 +1991,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             mock.patch.object(self.compute,
                               '_get_instance_block_device_info',
                               return_value=None),
-            mock.patch.object(block_device_obj.BlockDeviceMappingList,
+            mock.patch.object(objects.BlockDeviceMappingList,
                               'get_by_instance_uuid',
                               return_value=None)
         ) as (meth, event_start, event_finish, fault_create, instance_update,

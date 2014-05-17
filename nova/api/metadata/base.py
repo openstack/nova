@@ -30,8 +30,8 @@ from nova.compute import flavors
 from nova import conductor
 from nova import context
 from nova import network
+from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
 from nova.objects import security_group as secgroup_obj
 from nova.openstack.common import importutils
@@ -524,7 +524,7 @@ def get_metadata_by_instance_id(conductor_api, instance_id, address,
 
 
 def _format_instance_mapping(ctxt, instance):
-    bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+    bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
             ctxt, instance.uuid)
     return block_device.instance_block_mapping(instance, bdms)
 

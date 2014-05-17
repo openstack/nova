@@ -31,7 +31,7 @@ from nova.compute import flavors
 from nova import context
 from nova import db
 from nova import exception
-from nova.objects import block_device as block_device_obj
+from nova import objects
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import test
@@ -360,7 +360,7 @@ class VolumeAttachTests(test.TestCase):
                           FAKE_UUID,
                           FAKE_UUID_A)
 
-    @mock.patch.object(block_device_obj.BlockDeviceMappingList,
+    @mock.patch.object(objects.BlockDeviceMappingList,
                        'get_by_instance_uuid', return_value=None)
     def test_show_no_bdms(self, mock_mr):
         req = webob.Request.blank('/v2/servers/id/os-volume_attachments/uuid')
@@ -417,7 +417,7 @@ class VolumeAttachTests(test.TestCase):
                           FAKE_UUID,
                           FAKE_UUID_C)
 
-    @mock.patch('nova.objects.block_device.BlockDeviceMapping.is_root',
+    @mock.patch('nova.objects.BlockDeviceMapping.is_root',
                  new_callable=mock.PropertyMock)
     def test_detach_vol_root(self, mock_isroot):
         req = webob.Request.blank('/v2/servers/id/os-volume_attachments/uuid')

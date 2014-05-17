@@ -22,7 +22,7 @@ from nova.compute import flavors
 from nova import context
 from nova import db
 from nova import exception
-from nova.objects import block_device as block_device_obj
+from nova import objects
 from nova import test
 from nova.tests import fake_block_device
 import nova.tests.image.fake
@@ -685,7 +685,7 @@ class LibvirtBlockInfoTest(test.TestCase):
             self.assertEqual(expected, got)
 
     def test_get_device_name(self):
-        bdm_obj = block_device_obj.BlockDeviceMapping(self.context,
+        bdm_obj = objects.BlockDeviceMapping(self.context,
             **fake_block_device.FakeDbBlockDeviceDict(
                 {'id': 3, 'instance_uuid': 'fake-instance',
                  'device_name': '/dev/vda',
@@ -822,7 +822,7 @@ class DefaultDeviceNamesTestCase(test.TestCase):
         for patcher in self.patchers:
             patcher.start()
 
-        self.ephemerals = [block_device_obj.BlockDeviceMapping(
+        self.ephemerals = [objects.BlockDeviceMapping(
             self.context, **fake_block_device.FakeDbBlockDeviceDict(
                 {'id': 1, 'instance_uuid': 'fake-instance',
                  'device_name': '/dev/vdb',
@@ -835,7 +835,7 @@ class DefaultDeviceNamesTestCase(test.TestCase):
                  'volume_size': 1,
                  'boot_index': -1}))]
 
-        self.swap = [block_device_obj.BlockDeviceMapping(
+        self.swap = [objects.BlockDeviceMapping(
             self.context, **fake_block_device.FakeDbBlockDeviceDict(
                 {'id': 2, 'instance_uuid': 'fake-instance',
                  'device_name': '/dev/vdc',
@@ -849,7 +849,7 @@ class DefaultDeviceNamesTestCase(test.TestCase):
                  'boot_index': -1}))]
 
         self.block_device_mapping = [
-            block_device_obj.BlockDeviceMapping(self.context,
+            objects.BlockDeviceMapping(self.context,
                 **fake_block_device.FakeDbBlockDeviceDict(
                 {'id': 3, 'instance_uuid': 'fake-instance',
                  'device_name': '/dev/vda',
@@ -859,7 +859,7 @@ class DefaultDeviceNamesTestCase(test.TestCase):
                  'disk_bus': 'virtio',
                  'volume_id': 'fake-volume-id-1',
                  'boot_index': 0})),
-            block_device_obj.BlockDeviceMapping(self.context,
+            objects.BlockDeviceMapping(self.context,
                 **fake_block_device.FakeDbBlockDeviceDict(
                 {'id': 4, 'instance_uuid': 'fake-instance',
                  'device_name': '/dev/vdd',

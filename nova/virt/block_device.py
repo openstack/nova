@@ -16,7 +16,8 @@ import functools
 import operator
 
 from nova import block_device
-from nova.objects import block_device as block_device_obj
+from nova import objects
+from nova.objects import base as obj_base
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
@@ -82,10 +83,10 @@ class DriverBlockDevice(dict):
     def __init__(self, bdm):
         # TODO(ndipanov): Remove this check when we have all the rpc methods
         # use objects for block devices.
-        if isinstance(bdm, block_device_obj.BlockDeviceMapping):
+        if isinstance(bdm, obj_base.NovaObject):
             self.__dict__['_bdm_obj'] = bdm
         else:
-            self.__dict__['_bdm_obj'] = block_device_obj.BlockDeviceMapping()
+            self.__dict__['_bdm_obj'] = objects.BlockDeviceMapping()
             self._bdm_obj.update(block_device.BlockDeviceDict(bdm))
             self._bdm_obj.obj_reset_changes()
 
