@@ -132,25 +132,47 @@ class VolumeOps(object):
         LOG.debug(_("Detach_volume: %(instance_name)s, %(mountpoint)s"),
                   {'instance_name': instance_name, 'mountpoint': mountpoint})
 
-        device_number = volume_utils.get_device_number(mountpoint)
         vm_ref = vm_utils.vm_ref_or_raise(self._session, instance_name)
-        try:
-            vbd_ref = vm_utils.find_vbd_by_number(
-                    self._session, vm_ref, device_number)
-        except exception.StorageError:
+        vbd_ref = self._find_vbd(vm_ref, mountpoint)
+        if vbd_ref is None:
             # NOTE(sirp): If we don't find the VBD then it must have been
             # detached previously.
-            LOG.warn(_('Skipping detach because VBD for %s was'
-                       ' not found'), instance_name)
+            LOG.warn(_('Skipping detach because VBD for %s was not found'),
+                     instance_name)
+        else:
+            self._detach_vbds_and_srs(vm_ref, [vbd_ref])
+            LOG.info(_('Mountpoint %(mountpoint)s detached from instance'
+                       ' %(instance_name)s'),
+                     {'instance_name': instance_name,
+                      'mountpoint': mountpoint})
+
+    def _find_vbd(self, vm_ref, mountpoint):
+        device_number = volume_utils.get_device_number(mountpoint)
+        try:
+            return vm_utils.find_vbd_by_number(
+                    self._session, vm_ref, device_number)
+        except exception.StorageError:
             return
 
-        # Unplug VBD if we're NOT shutdown
-        unplug = not vm_utils.is_vm_shutdown(self._session, vm_ref)
-        self._detach_vbd(vbd_ref, unplug, vm_ref)
+    def _detach_vbds_and_srs(self, vm_ref, vbd_refs):
+        is_vm_shutdown = vm_utils.is_vm_shutdown(self._session, vm_ref)
 
-        LOG.info(_('Mountpoint %(mountpoint)s detached from instance'
-                   ' %(instance_name)s'),
-                 {'instance_name': instance_name, 'mountpoint': mountpoint})
+        for vbd_ref in vbd_refs:
+            # find sr before we destroy the vbd
+            sr_ref = volume_utils.find_sr_from_vbd(self._session, vbd_ref)
+
+            if not is_vm_shutdown:
+                vm_utils.unplug_vbd(self._session, vbd_ref, vm_ref)
+
+            vm_utils.destroy_vbd(self._session, vbd_ref)
+            # Forget (i.e. disconnect) SR only if not in use
+            volume_utils.purge_sr(self._session, sr_ref)
+
+    def detach_all(self, vm_ref):
+        """Detach all cinder volumes."""
+        vbd_refs = self._get_all_volume_vbd_refs(vm_ref)
+        if vbd_refs:
+            self._detach_vbds_and_srs(vm_ref, vbd_refs)
 
     def _get_all_volume_vbd_refs(self, vm_ref):
         """Return VBD refs for all Nova/Cinder volumes."""
@@ -159,27 +181,6 @@ class VolumeOps(object):
             other_config = self._session.VBD.get_other_config(vbd_ref)
             if other_config.get('osvol'):
                 yield vbd_ref
-
-    def _detach_vbd(self, vbd_ref, unplug, vm_ref):
-        if unplug:
-            vm_utils.unplug_vbd(self._session, vbd_ref, vm_ref)
-
-        sr_ref = volume_utils.find_sr_from_vbd(self._session, vbd_ref)
-        vm_utils.destroy_vbd(self._session, vbd_ref)
-
-        # Forget SR only if not in use
-        volume_utils.purge_sr(self._session, sr_ref)
-
-    def detach_all(self, vm_ref):
-        """Detach any external nova/cinder volumes and purge the SRs."""
-        # Generally speaking, detach_all will be called with VM already
-        # shutdown; however if it's still running, we can still perform the
-        # operation by unplugging the VBD first.
-        unplug = not vm_utils.is_vm_shutdown(self._session, vm_ref)
-
-        vbd_refs = self._get_all_volume_vbd_refs(vm_ref)
-        for vbd_ref in vbd_refs:
-            self._detach_vbd(vbd_ref, unplug, vm_ref)
 
     def find_bad_volumes(self, vm_ref):
         """Find any volumes with their connection severed.

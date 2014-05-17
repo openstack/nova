@@ -22,7 +22,17 @@ from nova.virt.xenapi import volume_utils
 from nova.virt.xenapi import volumeops
 
 
-class VolumeDetachTestCase(test.NoDBTestCase):
+class VolumeOpsTestBase(stubs.XenAPITestBaseNoDB):
+    def setUp(self):
+        super(VolumeOpsTestBase, self).setUp()
+        self._setup_mock_volumeops()
+
+    def _setup_mock_volumeops(self):
+        self.session = stubs.FakeSessionForVolumeTests('fake_uri')
+        self.ops = volumeops.VolumeOps(self.session)
+
+
+class VolumeDetachTestCase(VolumeOpsTestBase):
     def test_detach_volume_call(self):
         registered_calls = []
 
@@ -73,17 +83,138 @@ class VolumeDetachTestCase(test.NoDBTestCase):
         self.assertEqual(
             ['find_sr_from_vbd', 'destroy_vbd'], registered_calls)
 
+    @mock.patch.object(volumeops.VolumeOps, "_detach_vbds_and_srs")
+    @mock.patch.object(vm_utils, "find_vbd_by_number")
+    @mock.patch.object(vm_utils, "vm_ref_or_raise")
+    def test_detach_volume(self, mock_vm, mock_vbd, mock_detach):
+        mock_vm.return_value = "vm_ref"
+        mock_vbd.return_value = "vbd_ref"
 
-class AttachVolumeTestCase(stubs.XenAPITestBaseNoDB):
-    def setUp(self):
-        super(AttachVolumeTestCase, self).setUp()
-        self._setup_mock_volumeops()
-        self.vms = []
+        self.ops.detach_volume({}, "name", "/dev/xvdd")
 
-    def _setup_mock_volumeops(self):
-        self.session = stubs.FakeSessionForVolumeTests('fake_uri')
-        self.ops = volumeops.VolumeOps(self.session)
+        mock_vm.assert_called_once_with(self.session, "name")
+        mock_vbd.assert_called_once_with(self.session, "vm_ref", 3)
+        mock_detach.assert_called_once_with("vm_ref", ["vbd_ref"])
 
+    @mock.patch.object(volumeops.VolumeOps, "_detach_vbds_and_srs")
+    @mock.patch.object(vm_utils, "find_vbd_by_number")
+    @mock.patch.object(vm_utils, "vm_ref_or_raise")
+    def test_detach_volume_skips_error_skip_attach(self, mock_vm, mock_vbd,
+                                                   mock_detach):
+        mock_vm.return_value = "vm_ref"
+        mock_vbd.side_effect = exception.StorageError(reason="")
+
+        self.ops.detach_volume({}, "name", "/dev/xvdd")
+
+        self.assertFalse(mock_detach.called)
+
+    @mock.patch.object(volumeops.VolumeOps, "_detach_vbds_and_srs")
+    @mock.patch.object(vm_utils, "find_vbd_by_number")
+    @mock.patch.object(vm_utils, "vm_ref_or_raise")
+    def test_detach_volume_raises(self, mock_vm, mock_vbd,
+                                  mock_detach):
+        mock_vm.return_value = "vm_ref"
+        mock_vbd.side_effect = test.TestingException
+
+        self.assertRaises(test.TestingException,
+                          self.ops.detach_volume, {}, "name", "/dev/xvdd")
+        self.assertFalse(mock_detach.called)
+
+    @mock.patch.object(volume_utils, "purge_sr")
+    @mock.patch.object(vm_utils, "destroy_vbd")
+    @mock.patch.object(volume_utils, "find_sr_from_vbd")
+    @mock.patch.object(vm_utils, "unplug_vbd")
+    @mock.patch.object(vm_utils, "is_vm_shutdown")
+    def test_detach_vbds_and_srs_not_shutdown(self, mock_shutdown, mock_unplug,
+            mock_find_sr, mock_destroy, mock_purge):
+        mock_shutdown.return_value = False
+        mock_find_sr.return_value = "sr_ref"
+
+        self.ops._detach_vbds_and_srs("vm_ref", ["vbd_ref"])
+
+        mock_shutdown.assert_called_once_with(self.session, "vm_ref")
+        mock_find_sr.assert_called_once_with(self.session, "vbd_ref")
+        mock_unplug.assert_called_once_with(self.session, "vbd_ref", "vm_ref")
+        mock_destroy.assert_called_once_with(self.session, "vbd_ref")
+        mock_purge.assert_called_once_with(self.session, "sr_ref")
+
+    @mock.patch.object(volume_utils, "purge_sr")
+    @mock.patch.object(vm_utils, "destroy_vbd")
+    @mock.patch.object(volume_utils, "find_sr_from_vbd")
+    @mock.patch.object(vm_utils, "unplug_vbd")
+    @mock.patch.object(vm_utils, "is_vm_shutdown")
+    def test_detach_vbds_and_srs_is_shutdown(self, mock_shutdown, mock_unplug,
+            mock_find_sr, mock_destroy, mock_purge):
+        mock_shutdown.return_value = True
+        mock_find_sr.return_value = "sr_ref"
+
+        self.ops._detach_vbds_and_srs("vm_ref", ["vbd_ref_1", "vbd_ref_2"])
+
+        expected = [mock.call(self.session, "vbd_ref_1"),
+                    mock.call(self.session, "vbd_ref_2")]
+        self.assertEqual(expected, mock_destroy.call_args_list)
+        mock_purge.assert_called_with(self.session, "sr_ref")
+        self.assertFalse(mock_unplug.called)
+
+    @mock.patch.object(volumeops.VolumeOps, "_detach_vbds_and_srs")
+    @mock.patch.object(volumeops.VolumeOps, "_get_all_volume_vbd_refs")
+    def test_detach_all_no_volumes(self, mock_get_all, mock_detach):
+        mock_get_all.return_value = []
+
+        self.ops.detach_all("vm_ref")
+
+        mock_get_all.assert_called_once_with("vm_ref")
+        self.assertFalse(mock_detach.called)
+
+    @mock.patch.object(volumeops.VolumeOps, "_detach_vbds_and_srs")
+    @mock.patch.object(volumeops.VolumeOps, "_get_all_volume_vbd_refs")
+    def test_detach_all_volumes(self, mock_get_all, mock_detach):
+        mock_get_all.return_value = ["1"]
+
+        self.ops.detach_all("vm_ref")
+
+        mock_get_all.assert_called_once_with("vm_ref")
+        mock_detach.assert_called_once_with("vm_ref", ["1"])
+
+    def test_get_all_volume_vbd_refs_no_vbds(self):
+        with mock.patch.object(self.session.VM, "get_VBDs") as mock_get:
+            with mock.patch.object(self.session.VBD,
+                                   "get_other_config") as mock_conf:
+                mock_get.return_value = []
+
+                result = self.ops._get_all_volume_vbd_refs("vm_ref")
+
+                self.assertEqual([], list(result))
+                mock_get.assert_called_once_with("vm_ref")
+                self.assertFalse(mock_conf.called)
+
+    def test_get_all_volume_vbd_refs_no_volumes(self):
+        with mock.patch.object(self.session.VM, "get_VBDs") as mock_get:
+            with mock.patch.object(self.session.VBD,
+                                   "get_other_config") as mock_conf:
+                mock_get.return_value = ["1"]
+                mock_conf.return_value = {}
+
+                result = self.ops._get_all_volume_vbd_refs("vm_ref")
+
+                self.assertEqual([], list(result))
+                mock_get.assert_called_once_with("vm_ref")
+                mock_conf.assert_called_once_with("1")
+
+    def test_get_all_volume_vbd_refs_with_volumes(self):
+        with mock.patch.object(self.session.VM, "get_VBDs") as mock_get:
+            with mock.patch.object(self.session.VBD,
+                                   "get_other_config") as mock_conf:
+                mock_get.return_value = ["1", "2"]
+                mock_conf.return_value = {"osvol": True}
+
+                result = self.ops._get_all_volume_vbd_refs("vm_ref")
+
+                self.assertEqual(["1", "2"], list(result))
+                mock_get.assert_called_once_with("vm_ref")
+
+
+class AttachVolumeTestCase(VolumeOpsTestBase):
     @mock.patch.object(volumeops.VolumeOps, "_attach_volume")
     @mock.patch.object(vm_utils, "vm_ref_or_raise")
     def test_attach_volume_default_hotplug(self, mock_get_vm, mock_attach):
