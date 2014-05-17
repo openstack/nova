@@ -175,8 +175,8 @@ class VolumeController(wsgi.Controller):
 
         try:
             vol = self.volume_api.get(context, id)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        except exception.NotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
 
         return {'volume': _translate_volume_detail_view(context, vol)}
 
@@ -189,8 +189,8 @@ class VolumeController(wsgi.Controller):
 
         try:
             self.volume_api.delete(context, id)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        except exception.NotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         return webob.Response(status_int=202)
 
     @wsgi.serializers(xml=VolumesTemplate)
@@ -352,15 +352,15 @@ class VolumeAttachmentController(wsgi.Controller):
         volume_id = id
         try:
             instance = self.compute_api.get(context, server_id)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        except exception.NotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
 
         bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance['uuid'])
 
         if not bdms:
-            LOG.debug("Instance %s is not attached.", server_id)
-            raise exc.HTTPNotFound()
+            msg = _("Instance %s is not attached.") % server_id
+            raise exc.HTTPNotFound(explanation=msg)
 
         assigned_mountpoint = None
 
@@ -370,8 +370,8 @@ class VolumeAttachmentController(wsgi.Controller):
                 break
 
         if assigned_mountpoint is None:
-            LOG.debug("volume_id not found")
-            raise exc.HTTPNotFound()
+            msg = _("volume_id not found: %s") % volume_id
+            raise exc.HTTPNotFound(explanation=msg)
 
         return {'volumeAttachment': _translate_attachment_detail_view(
             volume_id,
@@ -414,8 +414,8 @@ class VolumeAttachmentController(wsgi.Controller):
                                             want_objects=True)
             device = self.compute_api.attach_volume(context, instance,
                                                     volume_id, device)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        except exception.NotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
@@ -465,8 +465,8 @@ class VolumeAttachmentController(wsgi.Controller):
         try:
             instance = self.compute_api.get(context, server_id,
                                             want_objects=True)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        except exception.NotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
 
         bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
@@ -491,7 +491,8 @@ class VolumeAttachmentController(wsgi.Controller):
                     'swap_volume')
 
         if not found:
-            raise exc.HTTPNotFound()
+            msg = _("volume_id not found: %s") % old_volume_id
+            raise exc.HTTPNotFound(explanation=msg)
         else:
             return webob.Response(status_int=202)
 
@@ -507,16 +508,16 @@ class VolumeAttachmentController(wsgi.Controller):
         try:
             instance = self.compute_api.get(context, server_id,
                                             want_objects=True)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        except exception.NotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
 
         volume = self.volume_api.get(context, volume_id)
 
         bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance['uuid'])
         if not bdms:
-            LOG.debug("Instance %s is not attached.", server_id)
-            raise exc.HTTPNotFound()
+            msg = _("Instance %s is not attached.") % server_id
+            raise exc.HTTPNotFound(explanation=msg)
 
         found = False
         try:
@@ -541,7 +542,8 @@ class VolumeAttachmentController(wsgi.Controller):
                     'detach_volume')
 
         if not found:
-            raise exc.HTTPNotFound()
+            msg = _("volume_id not found: %s") % volume_id
+            raise exc.HTTPNotFound(explanation=msg)
         else:
             return webob.Response(status_int=202)
 
@@ -552,8 +554,8 @@ class VolumeAttachmentController(wsgi.Controller):
 
         try:
             instance = self.compute_api.get(context, server_id)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        except exception.NotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
 
         bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance['uuid'])
@@ -634,8 +636,8 @@ class SnapshotController(wsgi.Controller):
 
         try:
             vol = self.volume_api.get_snapshot(context, id)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        except exception.NotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
 
         return {'snapshot': _translate_snapshot_detail_view(context, vol)}
 
@@ -648,8 +650,8 @@ class SnapshotController(wsgi.Controller):
 
         try:
             self.volume_api.delete_snapshot(context, id)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        except exception.NotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         return webob.Response(status_int=202)
 
     @wsgi.serializers(xml=SnapshotsTemplate)
