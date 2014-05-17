@@ -26,9 +26,13 @@ if sys.platform == 'win32':
 
 from oslo.config import cfg
 
+from nova.openstack.common.gettextutils import _
+from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.hyperv import basevolumeutils
+from nova.virt.hyperv import vmutils
 
+LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 
 
@@ -40,23 +44,62 @@ class VolumeUtilsV2(basevolumeutils.BaseVolumeUtils):
         if sys.platform == 'win32':
             self._conn_storage = wmi.WMI(moniker=storage_namespace)
 
-    def login_storage_target(self, target_lun, target_iqn, target_portal):
-        """Add target portal, list targets and logins to the target."""
+    def _login_target_portal(self, target_portal):
         (target_address,
          target_port) = utils.parse_server_string(target_portal)
 
-        #Adding target portal to iscsi initiator. Sending targets
-        portal = self._conn_storage.MSFT_iSCSITargetPortal
-        portal.New(TargetPortalAddress=target_address,
-                   TargetPortalPortNumber=target_port)
-        #Connecting to the target
-        target = self._conn_storage.MSFT_iSCSITarget
-        target.Connect(NodeAddress=target_iqn,
-                       IsPersistent=True)
-        #Waiting the disk to be mounted.
-        #TODO(pnavarro): Check for the operation to end instead of
-        #relying on a timeout
-        time.sleep(CONF.hyperv.volume_attach_retry_interval)
+        # Checking if the portal is already connected.
+        portal = self._conn_storage.query("SELECT * FROM "
+                                          "MSFT_iSCSITargetPortal "
+                                          "WHERE TargetPortalAddress='%s' "
+                                          "AND TargetPortalPortNumber='%s'"
+                                          % (target_address, target_port))
+        if portal:
+            portal[0].Update()
+        else:
+            # Adding target portal to iscsi initiator. Sending targets
+            portal = self._conn_storage.MSFT_iSCSITargetPortal
+            portal.New(TargetPortalAddress=target_address,
+                       TargetPortalPortNumber=target_port)
+
+    def login_storage_target(self, target_lun, target_iqn, target_portal):
+        """Ensure that the target is logged in."""
+
+        self._login_target_portal(target_portal)
+
+        retry_count = CONF.hyperv.volume_attach_retry_count
+
+        # If the target is not connected, at least two iterations are needed:
+        # one for performing the login and another one for checking if the
+        # target was logged in successfully.
+        if retry_count < 2:
+            retry_count = 2
+
+        for attempt in xrange(retry_count):
+            target = self._conn_storage.query("SELECT * FROM MSFT_iSCSITarget "
+                                              "WHERE NodeAddress='%s' " %
+                                              target_iqn)
+
+            if target and target[0].IsConnected:
+                if attempt == 0:
+                    # The target was already connected but an update may be
+                    # required
+                    target[0].Update()
+                return
+            try:
+                target = self._conn_storage.MSFT_iSCSITarget
+                target.Connect(NodeAddress=target_iqn,
+                               IsPersistent=True)
+                time.sleep(CONF.hyperv.volume_attach_retry_interval)
+            except wmi.x_wmi as exc:
+                LOG.debug("Attempt %(attempt)d to connect to target  "
+                          "%(target_iqn)s failed. Retrying. "
+                          "WMI exception: %(exc)s " %
+                          {'target_iqn': target_iqn,
+                           'exc': exc,
+                           'attempt': attempt})
+        raise vmutils.HyperVException(_('Failed to login target %s') %
+                                      target_iqn)
 
     def logout_storage_target(self, target_iqn):
         """Logs out storage target through its session id."""
