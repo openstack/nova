@@ -12,6 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+# NOTE(comstud): You may scratch your head as you see code that imports
+# this module and then accesses attributes for objects such as Instance,
+# etc, yet you do not see these attributes in here. Never fear, there is
+# a little bit of magic. When objects are registered, an attribute is set
+# on this module automatically, pointing to the newest/latest version of
+# the object.
+
 
 def register_all():
     # NOTE(danms): You must make sure your object gets imported in this

@@ -214,7 +214,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.mox.VerifyAll()
         self.mox.UnsetStubs()
 
-    @mock.patch('nova.objects.instance.InstanceList')
+    @mock.patch('nova.objects.InstanceList')
     def test_cleanup_host(self, mock_instance_list):
         # just testing whether the cleanup_host method
         # when fired will invoke the underlying driver's

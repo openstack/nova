@@ -28,7 +28,7 @@ from nova.compute import task_states
 from nova import exception
 from nova.network import model as network_model
 from nova import notifications
-from nova.objects import instance as instance_obj
+from nova.objects import base as obj_base
 from nova.objects import instance_action as instance_action_obj
 from nova.objects import instance_fault as instance_fault_obj
 from nova.openstack.common.gettextutils import _
@@ -338,7 +338,7 @@ def notify_about_host_update(context, event_suffix, host_payload):
 
 
 def get_nw_info_for_instance(instance):
-    if isinstance(instance, instance_obj.Instance):
+    if isinstance(instance, obj_base.NovaObject):
         if instance.info_cache is None:
             return network_model.NetworkInfo.hydrate([])
         return instance.info_cache.network_info

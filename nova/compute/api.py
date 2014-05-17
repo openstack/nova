@@ -49,11 +49,11 @@ from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova.network.security_group import security_group_base
 from nova import notifications
+from nova import objects
 from nova.objects import aggregate as aggregate_obj
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import flavor as flavor_obj
-from nova.objects import instance as instance_obj
 from nova.objects import instance_action
 from nova.objects import instance_group as instance_group_obj
 from nova.objects import instance_info_cache
@@ -821,7 +821,7 @@ class API(base.Base):
         instances = []
         try:
             for i in xrange(num_instances):
-                instance = instance_obj.Instance()
+                instance = objects.Instance()
                 instance.update(base_options)
                 instance = self.create_db_entry_for_new_instance(
                         context, instance_type, boot_meta, instance,
@@ -1784,10 +1784,10 @@ class API(base.Base):
         # NOTE(ameade): we still need to support integer ids for ec2
         try:
             if uuidutils.is_uuid_like(instance_id):
-                instance = instance_obj.Instance.get_by_uuid(
+                instance = objects.Instance.get_by_uuid(
                     context, instance_id, expected_attrs=expected_attrs)
             elif utils.is_int_like(instance_id):
-                instance = instance_obj.Instance.get_by_id(
+                instance = objects.Instance.get_by_id(
                     context, instance_id, expected_attrs=expected_attrs)
             else:
                 raise exception.InstanceNotFound(instance_id=instance_id)
@@ -1903,7 +1903,7 @@ class API(base.Base):
                   'security_groups']
         if expected_attrs:
             fields.extend(expected_attrs)
-        return instance_obj.InstanceList.get_by_filters(
+        return objects.InstanceList.get_by_filters(
             context, filters=filters, sort_key=sort_key, sort_dir=sort_dir,
             limit=limit, marker=marker, expected_attrs=fields)
 
@@ -3028,8 +3028,8 @@ class API(base.Base):
         self._record_action_start(context, instance, instance_actions.EVACUATE)
 
         # NOTE(danms): Transitional until evacuate supports objects
-        inst_obj = instance_obj.Instance._from_db_object(
-            context, instance_obj.Instance(), instance,
+        inst_obj = objects.Instance._from_db_object(
+            context, objects.Instance(), instance,
             expected_attrs=['metadata', 'system_metadata', 'info_cache'])
 
         return self.compute_rpcapi.rebuild_instance(context,
