@@ -31,6 +31,7 @@ from nova import db
 from nova import exception
 from nova.image import glance
 from nova.network import api as network_api
+from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
 from nova.openstack.common import importutils
@@ -436,7 +437,7 @@ class UsageInfoTestCase(test.TestCase):
     def test_notify_usage_exists(self):
         # Ensure 'exists' notification generates appropriate usage data.
         instance_id = self._create_instance()
-        instance = instance_obj.Instance.get_by_id(self.context, instance_id)
+        instance = objects.Instance.get_by_id(self.context, instance_id)
         # Set some system metadata
         sys_metadata = {'image_md_key1': 'val1',
                         'image_md_key2': 'val2',
@@ -473,7 +474,7 @@ class UsageInfoTestCase(test.TestCase):
     def test_notify_usage_exists_deleted_instance(self):
         # Ensure 'exists' notification generates appropriate usage data.
         instance_id = self._create_instance()
-        instance = instance_obj.Instance.get_by_id(self.context, instance_id,
+        instance = objects.Instance.get_by_id(self.context, instance_id,
                 expected_attrs=['metadata', 'system_metadata', 'info_cache'])
         # Set some system metadata
         sys_metadata = {'image_md_key1': 'val1',
@@ -482,7 +483,7 @@ class UsageInfoTestCase(test.TestCase):
         instance.system_metadata.update(sys_metadata)
         instance.save()
         self.compute.terminate_instance(self.context, instance, [], [])
-        instance = instance_obj.Instance.get_by_id(
+        instance = objects.Instance.get_by_id(
                 self.context.elevated(read_deleted='yes'), instance_id,
                 expected_attrs=['system_metadata'])
         compute_utils.notify_usage_exists(
@@ -513,7 +514,7 @@ class UsageInfoTestCase(test.TestCase):
     def test_notify_usage_exists_instance_not_found(self):
         # Ensure 'exists' notification generates appropriate usage data.
         instance_id = self._create_instance()
-        instance = instance_obj.Instance.get_by_id(self.context, instance_id,
+        instance = objects.Instance.get_by_id(self.context, instance_id,
                 expected_attrs=['metadata', 'system_metadata', 'info_cache'])
         self.compute.terminate_instance(self.context, instance, [], [])
         compute_utils.notify_usage_exists(
@@ -542,7 +543,7 @@ class UsageInfoTestCase(test.TestCase):
 
     def test_notify_about_instance_usage(self):
         instance_id = self._create_instance()
-        instance = instance_obj.Instance.get_by_id(self.context, instance_id,
+        instance = objects.Instance.get_by_id(self.context, instance_id,
                 expected_attrs=['metadata', 'system_metadata', 'info_cache'])
         # Set some system metadata
         sys_metadata = {'image_md_key1': 'val1',
@@ -655,8 +656,8 @@ class ComputeGetImageMetadataTestCase(test.TestCase):
 
     @property
     def instance_obj(self):
-        return instance_obj.Instance._from_db_object(
-            self.ctx, instance_obj.Instance(), self.instance,
+        return objects.Instance._from_db_object(
+            self.ctx, objects.Instance(), self.instance,
             expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
 
     def _fake_show(self, ctx, image_id):

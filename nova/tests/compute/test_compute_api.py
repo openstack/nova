@@ -30,10 +30,10 @@ from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
+from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import external_event as external_event_obj
-from nova.objects import instance as instance_obj
 from nova.objects import instance_info_cache
 from nova.objects import migration as migration_obj
 from nova.objects import quotas as quotas_obj
@@ -102,7 +102,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         now = timeutils.utcnow()
 
-        instance = instance_obj.Instance()
+        instance = objects.Instance()
         instance.metadata = {}
         instance.metadata.update(params.pop('metadata', {}))
         instance.system_metadata = make_fake_sys_meta()
@@ -1712,8 +1712,8 @@ class _ComputeAPIUnitTestMixIn(object):
                           "new password",
                           auto_disk_config=True)
 
-    @mock.patch.object(instance_obj.Instance, 'save')
-    @mock.patch.object(instance_obj.Instance, 'get_flavor')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(objects.Instance, 'get_flavor')
     @mock.patch.object(block_device_obj.BlockDeviceMappingList,
             'get_by_instance_uuid')
     @mock.patch.object(compute_api.API, '_get_image')
@@ -1758,8 +1758,8 @@ class _ComputeAPIUnitTestMixIn(object):
                 None, image, flavor, {}, [])
         self.assertNotEqual(orig_system_metadata, instance.system_metadata)
 
-    @mock.patch.object(instance_obj.Instance, 'save')
-    @mock.patch.object(instance_obj.Instance, 'get_flavor')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(objects.Instance, 'get_flavor')
     @mock.patch.object(block_device_obj.BlockDeviceMappingList,
             'get_by_instance_uuid')
     @mock.patch.object(compute_api.API, '_get_image')
@@ -1836,9 +1836,9 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_external_instance_event(self):
         instances = [
-            instance_obj.Instance(uuid='uuid1', host='host1'),
-            instance_obj.Instance(uuid='uuid2', host='host1'),
-            instance_obj.Instance(uuid='uuid3', host='host2'),
+            objects.Instance(uuid='uuid1', host='host1'),
+            objects.Instance(uuid='uuid2', host='host1'),
+            objects.Instance(uuid='uuid3', host='host2'),
             ]
         events = [
             external_event_obj.InstanceExternalEvent(instance_uuid='uuid1'),
