@@ -330,8 +330,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         vm_utils.lookup(mox.IgnoreArg(), 'foo').AndReturn(True)
         self.mox.ReplayAll()
 
-        self.stubs.Set(instance_obj.Instance, 'name', 'foo')
-        instance = instance_obj.Instance(uuid='fake-uuid')
+        self.stubs.Set(objects.Instance, 'name', 'foo')
+        instance = objects.Instance(uuid='fake-uuid')
         self.assertTrue(self.conn.instance_exists(instance))
 
     def test_instance_not_exists(self):
@@ -339,8 +339,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         vm_utils.lookup(mox.IgnoreArg(), 'bar').AndReturn(None)
         self.mox.ReplayAll()
 
-        self.stubs.Set(instance_obj.Instance, 'name', 'bar')
-        instance = instance_obj.Instance(uuid='fake-uuid')
+        self.stubs.Set(objects.Instance, 'name', 'bar')
+        instance = objects.Instance(uuid='fake-uuid')
         self.assertFalse(self.conn.instance_exists(instance))
 
     def test_list_instances_0(self):
@@ -665,7 +665,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                        fake_inject_instance_metadata)
 
         if create_record:
-            instance = instance_obj.Instance(context=self.context)
+            instance = objects.Instance(context=self.context)
             instance.project_id = self.project_id
             instance.user_id = self.user_id
             instance.image_ref = image_ref
@@ -682,8 +682,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                 self.context, instance_type_id)
             instance.create()
         else:
-            instance = instance_obj.Instance.get_by_id(self.context,
-                                                       instance_id)
+            instance = objects.Instance.get_by_id(self.context, instance_id)
 
         network_info = fake_network.fake_get_instance_nw_info(self.stubs)
         if empty_dns:
@@ -1459,8 +1458,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             self.conn.spawn(self.context, instance, image_meta, [], 'herp',
                             network_info)
         if obj:
-            instance = instance_obj.Instance._from_db_object(
-                self.context, instance_obj.Instance(), instance,
+            instance = objects.Instance._from_db_object(
+                self.context, objects.Instance(), instance,
                 expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
         return instance
 
@@ -1789,8 +1788,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         self.mox.StubOutWithMock(vm_utils, 'get_vdi_for_vm_safely')
         self.mox.StubOutWithMock(vmops, '_restore_orig_vm_and_cleanup_orphan')
 
-        instance = instance_obj.Instance(context=self.context,
-                                         auto_disk_config=True, uuid='uuid')
+        instance = objects.Instance(context=self.context,
+                                    auto_disk_config=True, uuid='uuid')
         instance.obj_reset_changes()
         vm_ref = "vm_ref"
         dest = "dest"

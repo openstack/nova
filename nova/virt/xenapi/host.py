@@ -24,7 +24,6 @@ from nova.compute import vm_states
 from nova import context
 from nova import exception
 from nova import objects
-from nova.objects import instance as instance_obj
 from nova.objects import service as service_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
@@ -75,7 +74,7 @@ class Host(object):
                                        ' ping migration to a new host'),
                                      {'name': name, 'host': host})
                             continue
-                    instance = instance_obj.Instance.get_by_uuid(ctxt, uuid)
+                    instance = objects.Instance.get_by_uuid(ctxt, uuid)
                     vm_counter = vm_counter + 1
 
                     aggregate = objects.AggregateList.get_by_host(
@@ -305,7 +304,7 @@ def call_xenhost(session, method, arg_dict):
 
 def _uuid_find(context, host, name_label):
     """Return instance uuid by name_label."""
-    for i in instance_obj.InstanceList.get_by_host(context, host):
+    for i in objects.InstanceList.get_by_host(context, host):
         if i.name == name_label:
             return i.uuid
     return None

@@ -21,7 +21,6 @@ from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import block_device as block_device_obj
-from nova.objects import instance as instance_obj
 from nova.tests import fake_block_device
 from nova.tests import fake_instance
 from nova.tests.objects import test_objects
@@ -64,7 +63,7 @@ class _TestBlockDeviceMappingObject(object):
 
     def test_save_instance_changed(self):
         bdm_object = objects.BlockDeviceMapping()
-        bdm_object.instance = instance_obj.Instance()
+        bdm_object.instance = objects.Instance()
         self.assertRaises(exception.ObjectActionError,
                           bdm_object.save, self.context)
 
@@ -154,7 +153,7 @@ class _TestBlockDeviceMappingObject(object):
         values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
                   'destination_type': 'volume',
                   'instance_uuid': 'fake-instance',
-                  'instance': instance_obj.Instance()}
+                  'instance': objects.Instance()}
         bdm = objects.BlockDeviceMapping(**values)
         self.assertRaises(exception.ObjectActionError,
                           bdm.create, self.context)

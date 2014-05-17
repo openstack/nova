@@ -17,7 +17,7 @@ from nova.compute import utils as compute_utils
 from nova.conductor.tasks import live_migrate
 from nova import db
 from nova import exception
-from nova.objects import instance as instance_obj
+from nova import objects
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests import fake_instance
@@ -36,8 +36,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 power_state=power_state.RUNNING,
                 memory_mb=512,
                 image_ref=self.instance_image)
-        self.instance = instance_obj.Instance._from_db_object(
-                self.context, instance_obj.Instance(), db_instance)
+        self.instance = objects.Instance._from_db_object(
+                self.context, objects.Instance(), db_instance)
         self.destination = "destination"
         self.block_migration = "bm"
         self.disk_over_commit = "doc"

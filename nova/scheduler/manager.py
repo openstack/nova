@@ -29,7 +29,7 @@ from nova.compute import vm_states
 from nova.conductor.tasks import live_migrate
 from nova import exception
 from nova import manager
-from nova.objects import instance as instance_obj
+from nova import objects
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -175,8 +175,8 @@ class SchedulerManager(manager.Manager):
                 (host, node) = (host_state['host'], host_state['nodename'])
                 attrs = ['metadata', 'system_metadata', 'info_cache',
                          'security_groups']
-                inst_obj = instance_obj.Instance._from_db_object(
-                        context, instance_obj.Instance(), instance,
+                inst_obj = objects.Instance._from_db_object(
+                        context, objects.Instance(), instance,
                         expected_attrs=attrs)
                 self.compute_rpcapi.prep_resize(
                     context, image, inst_obj, instance_type, host,

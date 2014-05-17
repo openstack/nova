@@ -20,7 +20,7 @@ from nova.api.openstack import wsgi
 from nova import context
 from nova import db
 from nova import exception
-from nova.objects import instance
+from nova import objects
 from nova.objects import pci_device as pci_device_obj
 from nova.openstack.common import jsonutils
 from nova.pci import pci_device
@@ -65,7 +65,7 @@ class PciServerControllerTest(test.NoDBTestCase):
         pci_device.allocate(self.pci_device, self.inst)
 
     def _create_fake_instance(self):
-        self.inst = instance.Instance()
+        self.inst = objects.Instance()
         self.inst.uuid = 'fake-inst-uuid'
         self.inst.pci_devices = pci_device_obj.PciDeviceList()
 

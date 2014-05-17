@@ -24,9 +24,10 @@ from nova.network import base_api
 from nova.network import floating_ips
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
+from nova import objects
+from nova.objects import base as obj_base
 from nova.objects import fixed_ip as fixed_ip_obj
 from nova.objects import floating_ip as floating_ip_obj
-from nova.objects import instance as instance_obj
 from nova.objects import network as network_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -262,9 +263,9 @@ class API(base_api.NetworkAPI):
         #             this is called from compute.manager which shouldn't
         #             have db access so we do it on the other side of the
         #             rpc.
-        if not isinstance(instance, instance_obj.Instance):
-            instance = instance_obj.Instance._from_db_object(context,
-                    instance_obj.Instance(), instance)
+        if not isinstance(instance, obj_base.NovaObject):
+            instance = objects.Instance._from_db_object(context,
+                    objects.Instance(), instance)
         self.network_rpcapi.deallocate_for_instance(context, instance=instance,
                 requested_networks=requested_networks)
 

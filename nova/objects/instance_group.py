@@ -14,9 +14,9 @@
 
 from nova import db
 from nova import exception
+from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova.objects import instance as instance_obj
 from nova.openstack.common import uuidutils
 
 
@@ -154,8 +154,8 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
         if exclude:
             filter_uuids = set(filter_uuids) - set(exclude)
         filters = {'uuid': filter_uuids, 'deleted': False}
-        instances = instance_obj.InstanceList.get_by_filters(context,
-                                                             filters=filters)
+        instances = objects.InstanceList.get_by_filters(context,
+                                                        filters=filters)
         return list(set([instance.host for instance in instances
                          if instance.host]))
 

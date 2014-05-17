@@ -20,7 +20,7 @@ from oslo.config import cfg
 from nova.compute import utils as compute_utils
 from nova import context
 from nova.network import linux_net
-from nova.objects import instance as instance_obj
+from nova import objects
 from nova.objects import security_group as security_group_obj
 from nova.objects import security_group_rule as security_group_rule_obj
 from nova.openstack.common.gettextutils import _
@@ -336,8 +336,8 @@ class IptablesFirewallDriver(FirewallDriver):
         if isinstance(instance, dict):
             # NOTE(danms): allow old-world instance objects from
             # unconverted callers; all we need is instance.uuid below
-            instance = instance_obj.Instance._from_db_object(
-                ctxt, instance_obj.Instance(), instance, [])
+            instance = objects.Instance._from_db_object(
+                ctxt, objects.Instance(), instance, [])
 
         ipv4_rules = []
         ipv6_rules = []
@@ -403,7 +403,7 @@ class IptablesFirewallDriver(FirewallDriver):
                 else:
                     if rule['grantee_group']:
                         insts = (
-                            instance_obj.InstanceList.get_by_security_group(
+                            objects.InstanceList.get_by_security_group(
                                 ctxt, rule['grantee_group']))
                         for instance in insts:
                             if instance['info_cache']['deleted']:

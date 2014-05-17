@@ -22,10 +22,10 @@ from nova import context
 from nova.db import base
 from nova import exception
 from nova.network import rpcapi as network_rpcapi
+from nova import objects
 from nova.objects import dns_domain as dns_domain_obj
 from nova.objects import fixed_ip as fixed_ip_obj
 from nova.objects import floating_ip as floating_ip_obj
-from nova.objects import instance as instance_obj
 from nova.objects import network as network_obj
 from nova.objects import service as service_obj
 from nova.openstack.common import excutils
@@ -154,7 +154,7 @@ class FloatingIP(object):
                 # NOTE(francois.charlier): in some cases the instance might be
                 # deleted before the IPs are released, so we need to get
                 # deleted instances too
-                instance = instance_obj.Instance.get_by_id(
+                instance = objects.Instance.get_by_id(
                     context.elevated(read_deleted='yes'), instance_uuid)
                 instance_uuid = instance.uuid
 
@@ -336,7 +336,7 @@ class FloatingIP(object):
         network = network_obj.Network.get_by_id(context.elevated(),
                                                 fixed_ip.network_id)
         if network.multi_host:
-            instance = instance_obj.Instance.get_by_uuid(
+            instance = objects.Instance.get_by_uuid(
                 context, fixed_ip.instance_uuid)
             host = instance.host
         else:
@@ -431,7 +431,7 @@ class FloatingIP(object):
                                                 fixed_ip.network_id)
         interface = floating_ip.interface
         if network.multi_host:
-            instance = instance_obj.Instance.get_by_uuid(
+            instance = objects.Instance.get_by_uuid(
                 context, fixed_ip.instance_uuid)
             service = service_obj.Service.get_by_host_and_topic(
                 context.elevated(), instance.host, CONF.network_topic)

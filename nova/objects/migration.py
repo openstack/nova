@@ -14,9 +14,9 @@
 
 from nova import db
 from nova import exception
+from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova.objects import instance as instance_obj
 
 
 class Migration(base.NovaPersistentObject, base.NovaObject):
@@ -76,8 +76,7 @@ class Migration(base.NovaPersistentObject, base.NovaObject):
 
     @property
     def instance(self):
-        return instance_obj.Instance.get_by_uuid(self._context,
-                                                 self.instance_uuid)
+        return objects.Instance.get_by_uuid(self._context, self.instance_uuid)
 
 
 class MigrationList(base.ObjectListBase, base.NovaObject):

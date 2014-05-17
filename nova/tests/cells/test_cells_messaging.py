@@ -30,9 +30,9 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.network import model as network_model
+from nova import objects
 from nova.objects import base as objects_base
 from nova.objects import fields as objects_fields
-from nova.objects import instance as instance_obj
 from nova.objects import instance_fault as instance_fault_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
@@ -696,12 +696,12 @@ class CellsTargetedMethodsTestCase(test.TestCase):
             # NOTE(comstud): This block of code simulates the following
             # mox code:
             #
-            # self.mox.StubOutWithMock(instance_obj, 'Instance',
+            # self.mox.StubOutWithMock(objects, 'Instance',
             #                          use_mock_anything=True)
-            # self.mox.StubOutWithMock(instance_obj.Instance,
+            # self.mox.StubOutWithMock(objects.Instance,
             #                          '_from_db_object')
-            # instance_mock = self.mox.CreateMock(instance_obj.Instance)
-            # instance_obj.Instance().AndReturn(instance_mock)
+            # instance_mock = self.mox.CreateMock(objects.Instance)
+            # objects.Instance().AndReturn(instance_mock)
             #
             # Unfortunately, the above code fails on py27 do to some
             # issue with the Mock object do to similar issue as this:
@@ -717,7 +717,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
             def fake_instance():
                 return instance_mock
 
-            self.stubs.Set(instance_obj, 'Instance', fake_instance)
+            self.stubs.Set(objects, 'Instance', fake_instance)
             self.mox.StubOutWithMock(instance_mock, '_from_db_object')
             return instance_mock
 
@@ -1086,7 +1086,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         self.assertEqual(0, len(responses))
 
     def test_call_compute_api_with_obj(self):
-        instance = instance_obj.Instance()
+        instance = objects.Instance()
         instance.uuid = uuidutils.generate_uuid()
         self.mox.StubOutWithMock(instance, 'refresh')
         # Using 'snapshot' for this test, because it
@@ -1104,7 +1104,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         self.assertEqual('foo', result)
 
     def test_call_compute_with_obj_unknown_instance(self):
-        instance = instance_obj.Instance()
+        instance = objects.Instance()
         instance.uuid = uuidutils.generate_uuid()
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = None
@@ -1130,7 +1130,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         message = FakeMessage()
         message.ctxt = self.ctxt
 
-        instance = instance_obj.Instance()
+        instance = objects.Instance()
         instance.cell_name = self.tgt_cell_name
         instance.obj_reset_changes()
         instance.task_state = 'meow'
@@ -1293,7 +1293,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
                                           (), {}, (), {}, False)
 
     def test_snapshot_instance(self):
-        inst = instance_obj.Instance()
+        inst = objects.Instance()
         meth_cls = self.tgt_methods_cls
 
         self.mox.StubOutWithMock(inst, 'refresh')
@@ -1322,7 +1322,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         meth_cls.snapshot_instance(message, inst, image_id='image-id')
 
     def test_backup_instance(self):
-        inst = instance_obj.Instance()
+        inst = objects.Instance()
         meth_cls = self.tgt_methods_cls
 
         self.mox.StubOutWithMock(inst, 'refresh')

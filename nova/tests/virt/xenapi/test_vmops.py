@@ -19,7 +19,7 @@ import mock
 from nova.compute import power_state
 from nova.compute import task_states
 from nova import exception
-from nova.objects import instance as instance_obj
+from nova import objects
 from nova.pci import pci_manager
 from nova import test
 from nova.tests import fake_instance
@@ -782,7 +782,7 @@ class CreateVMRecordTestCase(VMOpsTestBase):
             mock_get_vm_device_id, mock_determine_vm_mode):
 
         context = "context"
-        instance = instance_obj.Instance(vm_mode="vm_mode", uuid="uuid123")
+        instance = objects.Instance(vm_mode="vm_mode", uuid="uuid123")
         name_label = "dummy"
         disk_image_type = "vhd"
         kernel_file = "kernel"

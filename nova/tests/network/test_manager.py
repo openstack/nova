@@ -32,9 +32,9 @@ from nova.network import floating_ips
 from nova.network import linux_net
 from nova.network import manager as network_manager
 from nova.network import model as net_model
+from nova import objects
 from nova.objects import fixed_ip as fixed_ip_obj
 from nova.objects import floating_ip as floating_ip_obj
-from nova.objects import instance as instance_obj
 from nova.objects import network as network_obj
 from nova.objects import quotas as quotas_obj
 from nova.objects import virtual_interface as vif_obj
@@ -643,7 +643,7 @@ class FlatNetworkTestCase(test.TestCase):
     @mock.patch('nova.objects.quotas.ids_from_instance')
     def test_allocate_calculates_quota_auth(self, util_method, reserve,
                                             get_by_uuid):
-        inst = instance_obj.Instance()
+        inst = objects.Instance()
         inst['uuid'] = 'nosuch'
         get_by_uuid.return_value = inst
         reserve.side_effect = exception.OverQuota(overs='testing')
@@ -658,7 +658,7 @@ class FlatNetworkTestCase(test.TestCase):
     @mock.patch('nova.objects.quotas.ids_from_instance')
     def test_deallocate_calculates_quota_auth(self, util_method, reserve,
                                               get_by_address):
-        inst = instance_obj.Instance(uuid='fake-uuid')
+        inst = objects.Instance(uuid='fake-uuid')
         fip = fixed_ip_obj.FixedIP(instance_uuid='fake-uuid',
                                    virtual_interface_id=1)
         get_by_address.return_value = fip
@@ -675,7 +675,7 @@ class FlatNetworkTestCase(test.TestCase):
     def test_allocate_fixed_ip_passes_string_address(self, mock_associate,
                                                      mock_get):
         mock_associate.side_effect = test.TestingException
-        instance = instance_obj.Instance(context=self.context)
+        instance = objects.Instance(context=self.context)
         instance.create()
         mock_get.return_value = instance
         self.assertRaises(test.TestingException,
@@ -707,7 +707,7 @@ class FlatNetworkTestCase(test.TestCase):
                                    virtual_interface_id=1)
         mock_fixedip_associate.return_value = fip
 
-        instance = instance_obj.Instance(context=self.context)
+        instance = objects.Instance(context=self.context)
         instance.create()
         mock_instance_get.return_value = instance
 
@@ -883,7 +883,7 @@ class VlanNetworkTestCase(test.TestCase):
     def test_allocate_fixed_ip_passes_string_address(self, mock_associate,
                                                      mock_get):
         mock_associate.side_effect = test.TestingException
-        instance = instance_obj.Instance(context=self.context)
+        instance = objects.Instance(context=self.context)
         instance.create()
         mock_get.return_value = instance
         self.assertRaises(test.TestingException,
@@ -901,7 +901,7 @@ class VlanNetworkTestCase(test.TestCase):
     def test_allocate_fixed_ip_passes_string_address_vpn(self, mock_associate,
                                                          mock_get):
         mock_associate.side_effect = test.TestingException
-        instance = instance_obj.Instance(context=self.context)
+        instance = objects.Instance(context=self.context)
         instance.create()
         mock_get.return_value = instance
         self.assertRaises(test.TestingException,
@@ -1807,8 +1807,8 @@ class CommonNetworkTestCase(test.TestCase):
                                        network_id=123)]
 
         manager.deallocate_for_instance(
-            ctx, instance=instance_obj.Instance._from_db_object(self.context,
-                instance_obj.Instance(), instance_get.return_value))
+            ctx, instance=objects.Instance._from_db_object(self.context,
+                objects.Instance(), instance_get.return_value))
 
         self.assertEqual([
             (ctx, '1.2.3.4', 'fake-host')
@@ -2411,7 +2411,7 @@ class AllocateTestCase(test.TestCase):
         db.floating_ip_create(self.context,
                               {'address': address,
                                'pool': 'nova'})
-        inst = instance_obj.Instance()
+        inst = objects.Instance()
         inst.host = self.compute.host
         inst.display_name = HOST
         inst.instance_type_id = 1
@@ -2614,7 +2614,7 @@ class FloatingIPTestCase(test.TestCase):
     def test_deallocation_deleted_instance(self):
         self.stubs.Set(self.network, '_teardown_network_on_host',
                        lambda *args, **kwargs: None)
-        instance = instance_obj.Instance()
+        instance = objects.Instance()
         instance.project_id = self.project_id
         instance.deleted = True
         instance.create(self.context)
@@ -2634,7 +2634,7 @@ class FloatingIPTestCase(test.TestCase):
     def test_deallocation_duplicate_floating_ip(self):
         self.stubs.Set(self.network, '_teardown_network_on_host',
                        lambda *args, **kwargs: None)
-        instance = instance_obj.Instance()
+        instance = objects.Instance()
         instance.project_id = self.project_id
         instance.create(self.context)
         network = db.network_create_safe(self.context.elevated(), {

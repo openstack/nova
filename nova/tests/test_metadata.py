@@ -42,7 +42,7 @@ from nova import db
 from nova.db.sqlalchemy import api
 from nova import exception
 from nova.network import api as network_api
-from nova.objects import instance as instance_obj
+from nova import objects
 from nova import test
 from nova.tests import fake_block_device
 from nova.tests import fake_instance
@@ -81,8 +81,8 @@ INSTANCE = fake_instance.fake_db_instance(**
 
 
 def fake_inst_obj(context):
-    return instance_obj.Instance._from_db_object(
-        context, instance_obj.Instance(), INSTANCE,
+    return objects.Instance._from_db_object(
+        context, objects.Instance(), INSTANCE,
         expected_attrs=['metadata', 'system_metadata',
                         'info_cache'])
 
@@ -193,12 +193,12 @@ class MetadataTestCase(test.TestCase):
     def test_format_instance_mapping(self):
         # Make sure that _format_instance_mappings works.
         ctxt = None
-        instance_ref0 = instance_obj.Instance(**{'id': 0,
+        instance_ref0 = objects.Instance(**{'id': 0,
                          'uuid': 'e5fe5518-0288-4fa3-b0c4-c79764101b85',
                          'root_device_name': None,
                          'default_ephemeral_device': None,
                          'default_swap_device': None})
-        instance_ref1 = instance_obj.Instance(**{'id': 0,
+        instance_ref1 = objects.Instance(**{'id': 0,
                          'uuid': 'b65cee2f-8c69-4aeb-be2f-f79742548fc2',
                          'root_device_name': '/dev/sda1',
                          'default_ephemeral_device': None,

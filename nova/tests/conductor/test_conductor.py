@@ -38,7 +38,6 @@ from nova import notifications
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import fields
-from nova.objects import instance as instance_obj
 from nova.objects import quotas as quotas_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
@@ -1118,12 +1117,12 @@ class _BaseTaskTestCase(object):
 
     def test_live_migrate(self):
         inst = fake_instance.fake_db_instance()
-        inst_obj = instance_obj.Instance._from_db_object(
-            self.context, instance_obj.Instance(), inst, [])
+        inst_obj = objects.Instance._from_db_object(
+            self.context, objects.Instance(), inst, [])
 
         self.mox.StubOutWithMock(live_migrate, 'execute')
         live_migrate.execute(self.context,
-                             mox.IsA(instance_obj.Instance),
+                             mox.IsA(objects.Instance),
                              'destination',
                              'block_migration',
                              'disk_over_commit')
@@ -1148,18 +1147,18 @@ class _BaseTaskTestCase(object):
         self.mox.StubOutWithMock(self.conductor_manager.scheduler_rpcapi,
                                  'select_destinations')
         inst = fake_instance.fake_db_instance(image_ref='image_ref')
-        inst_obj = instance_obj.Instance._from_db_object(
-            self.context, instance_obj.Instance(), inst, [])
+        inst_obj = objects.Instance._from_db_object(
+            self.context, objects.Instance(), inst, [])
         flavor = flavors.get_default_flavor()
         flavor['extra_specs'] = 'extra_specs'
         request_spec = {'instance_type': flavor}
         compute_utils.get_image_metadata(
             self.context, self.conductor_manager.image_api,
-            'image_ref', mox.IsA(instance_obj.Instance)).AndReturn('image')
+            'image_ref', mox.IsA(objects.Instance)).AndReturn('image')
 
         scheduler_utils.build_request_spec(
             self.context, 'image',
-            [mox.IsA(instance_obj.Instance)],
+            [mox.IsA(objects.Instance)],
             instance_type=flavor).AndReturn(request_spec)
 
         hosts = [dict(host='host1', nodename=None, limits={})]
@@ -1169,7 +1168,7 @@ class _BaseTaskTestCase(object):
         filter_properties = {'limits': {}}
 
         self.conductor_manager.compute_rpcapi.prep_resize(
-            self.context, 'image', mox.IsA(instance_obj.Instance),
+            self.context, 'image', mox.IsA(objects.Instance),
             mox.IsA(dict), 'host1', [], request_spec=request_spec,
             filter_properties=filter_properties, node=None)
 
@@ -1328,7 +1327,7 @@ class _BaseTaskTestCase(object):
 
     def test_unshelve_instance_on_host(self):
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance = instance_obj.Instance.get_by_uuid(self.context,
+        instance = objects.Instance.get_by_uuid(self.context,
                 db_instance['uuid'], expected_attrs=['system_metadata'])
         instance.vm_state = vm_states.SHELVED
         instance.task_state = task_states.UNSHELVING
@@ -1356,7 +1355,7 @@ class _BaseTaskTestCase(object):
         shelved_image_id = "image_not_found"
 
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance = instance_obj.Instance.get_by_uuid(
+        instance = objects.Instance.get_by_uuid(
             self.context,
             db_instance['uuid'],
             expected_attrs=['system_metadata'])
@@ -1384,7 +1383,7 @@ class _BaseTaskTestCase(object):
 
     def test_unshelve_instance_schedule_and_rebuild(self):
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance = instance_obj.Instance.get_by_uuid(self.context,
+        instance = objects.Instance.get_by_uuid(self.context,
                 db_instance['uuid'], expected_attrs=['system_metadata'])
         instance.vm_state = vm_states.SHELVED_OFFLOADED
         instance.save()
@@ -1415,7 +1414,7 @@ class _BaseTaskTestCase(object):
 
     def test_unshelve_instance_schedule_and_rebuild_novalid_host(self):
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance = instance_obj.Instance.get_by_uuid(self.context,
+        instance = objects.Instance.get_by_uuid(self.context,
                 db_instance['uuid'], expected_attrs=['system_metadata'])
         instance.vm_state = vm_states.SHELVED_OFFLOADED
         instance.save()
@@ -1441,7 +1440,7 @@ class _BaseTaskTestCase(object):
 
     def test_unshelve_instance_schedule_and_rebuild_volume_backed(self):
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance = instance_obj.Instance.get_by_uuid(self.context,
+        instance = objects.Instance.get_by_uuid(self.context,
                 db_instance['uuid'], expected_attrs=['system_metadata'])
         instance.vm_state = vm_states.SHELVED_OFFLOADED
         instance.save()
@@ -1495,13 +1494,13 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     def _test_migrate_server_deals_with_expected_exceptions(self, ex):
         instance = fake_instance.fake_db_instance(uuid='uuid',
                                                   vm_state=vm_states.ACTIVE)
-        inst_obj = instance_obj.Instance._from_db_object(
-            self.context, instance_obj.Instance(), instance, [])
+        inst_obj = objects.Instance._from_db_object(
+            self.context, objects.Instance(), instance, [])
         self.mox.StubOutWithMock(live_migrate, 'execute')
         self.mox.StubOutWithMock(scheduler_utils,
                 'set_vm_state_and_notify')
 
-        live_migrate.execute(self.context, mox.IsA(instance_obj.Instance),
+        live_migrate.execute(self.context, mox.IsA(objects.Instance),
                              'destination', 'block_migration',
                              'disk_over_commit').AndRaise(ex)
 
@@ -1524,14 +1523,14 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     def test_migrate_server_deals_with_invalidcpuinfo_exception(self):
         instance = fake_instance.fake_db_instance(uuid='uuid',
                                                   vm_state=vm_states.ACTIVE)
-        inst_obj = instance_obj.Instance._from_db_object(
-            self.context, instance_obj.Instance(), instance, [])
+        inst_obj = objects.Instance._from_db_object(
+            self.context, objects.Instance(), instance, [])
         self.mox.StubOutWithMock(live_migrate, 'execute')
         self.mox.StubOutWithMock(scheduler_utils,
                 'set_vm_state_and_notify')
 
         ex = exc.InvalidCPUInfo(reason="invalid cpu info.")
-        live_migrate.execute(self.context, mox.IsA(instance_obj.Instance),
+        live_migrate.execute(self.context, mox.IsA(objects.Instance),
                              'destination', 'block_migration',
                              'disk_over_commit').AndRaise(ex)
 
@@ -1556,8 +1555,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     def test_migrate_server_deals_with_instancenotrunning_exception(self,
                 mock_live_migrate, mock_set_state):
         inst = fake_instance.fake_db_instance()
-        inst_obj = instance_obj.Instance._from_db_object(
-            self.context, instance_obj.Instance(), inst, [])
+        inst_obj = objects.Instance._from_db_object(
+            self.context, objects.Instance(), inst, [])
 
         error = exc.InstanceNotRunning(instance_id="fake")
         mock_live_migrate.side_effect = error
@@ -1587,14 +1586,14 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
     def test_migrate_server_deals_with_unexpected_exceptions(self):
         instance = fake_instance.fake_db_instance()
-        inst_obj = instance_obj.Instance._from_db_object(
-            self.context, instance_obj.Instance(), instance, [])
+        inst_obj = objects.Instance._from_db_object(
+            self.context, objects.Instance(), instance, [])
         self.mox.StubOutWithMock(live_migrate, 'execute')
         self.mox.StubOutWithMock(scheduler_utils,
                 'set_vm_state_and_notify')
 
         ex = IOError()
-        live_migrate.execute(self.context, mox.IsA(instance_obj.Instance),
+        live_migrate.execute(self.context, mox.IsA(objects.Instance),
                              'destination', 'block_migration',
                              'disk_over_commit').AndRaise(ex)
         self.mox.ReplayAll()
@@ -1620,8 +1619,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
     def test_cold_migrate_no_valid_host_back_in_active_state(self):
         inst = fake_instance.fake_db_instance(image_ref='fake-image_ref')
-        inst_obj = instance_obj.Instance._from_db_object(
-                self.context, instance_obj.Instance(), inst,
+        inst_obj = objects.Instance._from_db_object(
+                self.context, objects.Instance(), inst,
                 expected_attrs=[])
         request_spec = dict(instance_type=dict(extra_specs=dict()))
         filter_props = dict(context=None)
@@ -1638,7 +1637,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         compute_utils.get_image_metadata(
             self.context, self.conductor_manager.image_api,
-            'fake-image_ref', mox.IsA(instance_obj.Instance)).AndReturn(image)
+            'fake-image_ref', mox.IsA(objects.Instance)).AndReturn(image)
 
         scheduler_utils.build_request_spec(
                 self.context, image, [inst_obj],
@@ -1672,8 +1671,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     def test_cold_migrate_no_valid_host_back_in_stopped_state(self):
         inst = fake_instance.fake_db_instance(image_ref='fake-image_ref',
                                               vm_state=vm_states.STOPPED)
-        inst_obj = instance_obj.Instance._from_db_object(
-                self.context, instance_obj.Instance(), inst,
+        inst_obj = objects.Instance._from_db_object(
+                self.context, objects.Instance(), inst,
                 expected_attrs=[])
         request_spec = dict(instance_type=dict(extra_specs=dict()))
         filter_props = dict(context=None)
@@ -1690,7 +1689,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         compute_utils.get_image_metadata(
             self.context, self.conductor_manager.image_api,
-            'fake-image_ref', mox.IsA(instance_obj.Instance)).AndReturn(image)
+            'fake-image_ref', mox.IsA(objects.Instance)).AndReturn(image)
 
         scheduler_utils.build_request_spec(
                 self.context, image, [inst_obj],
@@ -1724,8 +1723,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     def test_cold_migrate_exception_host_in_error_state_and_raise(self):
         inst = fake_instance.fake_db_instance(image_ref='fake-image_ref',
                                               vm_state=vm_states.STOPPED)
-        inst_obj = instance_obj.Instance._from_db_object(
-                self.context, instance_obj.Instance(), inst,
+        inst_obj = objects.Instance._from_db_object(
+                self.context, objects.Instance(), inst,
                 expected_attrs=[])
         request_spec = dict(instance_type=dict(extra_specs=dict()))
         filter_props = dict(context=None)
@@ -1747,7 +1746,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         compute_utils.get_image_metadata(
             self.context, self.conductor_manager.image_api,
-            'fake-image_ref', mox.IsA(instance_obj.Instance)).AndReturn(image)
+            'fake-image_ref', mox.IsA(objects.Instance)).AndReturn(image)
 
         scheduler_utils.build_request_spec(
                 self.context, image, [inst_obj],
