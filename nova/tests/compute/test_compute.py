@@ -1054,7 +1054,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertRaises(exception.InvalidBDM,
                           compute_manager.ComputeManager()._prep_block_device,
                           self.context, instance, bdms)
-        mock_create.assert_called_once()
+        self.assertTrue(mock_create.called)
 
 
 class ComputeTestCase(BaseTestCase):
@@ -1531,7 +1531,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.periodic_tasks(context.get_admin_context())
         self._assert_state({'vm_state': vm_states.ERROR,
                             'task_state': None})
-        mock_prep_block_dev.assert_called_once()
+        self.assertTrue(mock_prep_block_dev.called)
 
     def test_run_instance_spawn_fail(self):
         """spawn failure test.
