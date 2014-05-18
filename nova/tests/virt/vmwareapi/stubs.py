@@ -65,10 +65,8 @@ def set_stubs(stubs):
     """Set the stubs."""
     stubs.Set(network_util, 'get_network_with_the_name',
               fake.fake_get_network)
-    stubs.Set(vmware_images, 'fetch_image', fake.fake_fetch_image)
     stubs.Set(vmware_images, 'get_vmdk_size_and_properties',
               fake.fake_get_vmdk_size_and_properties)
-    stubs.Set(vmware_images, 'upload_image', fake.fake_upload_image)
     stubs.Set(driver.VMwareAPISession, "_get_vim_object",
               fake_get_vim_object)
     stubs.Set(driver.VMwareAPISession, "_is_vim_object",

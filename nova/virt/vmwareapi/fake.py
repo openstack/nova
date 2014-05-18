@@ -946,14 +946,6 @@ def get_file(file_path):
     return file_path in _db_content.get("files")
 
 
-def fake_fetch_image(context, image, instance, **kwargs):
-    """Fakes fetch image call. Just adds a reference to the db for the file."""
-    ds_name = kwargs.get("datastore_name")
-    file_path = kwargs.get("file_path")
-    ds_file_path = "[" + ds_name + "] " + file_path
-    _add_file(ds_file_path)
-
-
 def fake_upload_image(context, image, instance, **kwargs):
     """Fakes the upload of an image."""
     pass
@@ -1271,6 +1263,13 @@ class FakeVim(object):
             _add_file(file)
         task_mdo = create_task(method, "success")
         return task_mdo.obj
+
+    def fake_transfer_file(self, ds_name, file_path):
+        """Fakes fetch image call.
+        Just adds a reference to the db for the file.
+        """
+        ds_file_path = "[" + ds_name + "] " + file_path
+        _add_file(ds_file_path)
 
     def _make_dir(self, method, *args, **kwargs):
         """Creates a directory in the datastore."""

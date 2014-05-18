@@ -113,25 +113,32 @@ def upload_iso_to_datastore(iso_path, instance, **kwargs):
               instance=instance)
 
 
-def fetch_image(context, image, instance, **kwargs):
+def fetch_image(context, instance, host, dc_name, ds_name, file_path,
+                cookies=None):
     """Download image from the glance image server."""
-    LOG.debug(_("Downloading image %s from glance image server") % image,
+    image_ref = instance['image_ref']
+    LOG.debug("Downloading image file data %(image_ref)s to the "
+              "data store %(data_store_name)s",
+              {'image_ref': image_ref,
+               'data_store_name': ds_name},
               instance=instance)
-    (image_service, image_id) = glance.get_remote_image_service(context, image)
+
+    (image_service, image_id) = glance.get_remote_image_service(context,
+                                                                image_ref)
     metadata = image_service.show(context, image_id)
     file_size = int(metadata['size'])
     read_iter = image_service.download(context, image_id)
     read_file_handle = read_write_util.GlanceFileRead(read_iter)
     write_file_handle = read_write_util.VMwareHTTPWriteFile(
-                                kwargs.get("host"),
-                                kwargs.get("data_center_name"),
-                                kwargs.get("datastore_name"),
-                                kwargs.get("cookies"),
-                                kwargs.get("file_path"),
-                                file_size)
+        host, dc_name, ds_name, cookies, file_path, file_size)
     start_transfer(context, read_file_handle, file_size,
                    write_file_handle=write_file_handle)
-    LOG.debug(_("Downloaded image %s from glance image server") % image,
+    LOG.debug("Downloaded image file data %(image_ref)s to "
+              "%(upload_name)s on the data store "
+              "%(data_store_name)s",
+              {'image_ref': image_ref,
+               'upload_name': 'n/a' if file_path is None else file_path,
+               'data_store_name': 'n/a' if ds_name is None else ds_name},
               instance=instance)
 
 
