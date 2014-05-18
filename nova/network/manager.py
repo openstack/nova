@@ -1402,7 +1402,9 @@ class NetworkManager(manager.Manager):
 
     def _initialize_network(self, network):
         if network.enable_dhcp:
-            self.l3driver.initialize_network(network.cidr)
+            is_ext = (network.dhcp_server is not None and
+                      network.dhcp_server != network.gateway)
+            self.l3driver.initialize_network(network.cidr, is_ext)
         self.l3driver.initialize_gateway(network)
 
     def _setup_network_on_host(self, context, network):

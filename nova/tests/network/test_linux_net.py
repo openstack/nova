@@ -298,27 +298,44 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.stubs.Set(db, 'instance_get', get_instance)
         self.stubs.Set(db, 'network_get_associated_fixed_ips', get_associated)
 
-    def _test_add_snat_rule(self, expected):
+    def _test_add_snat_rule(self, expected, is_external):
+
         def verify_add_rule(chain, rule):
             self.assertEqual(chain, 'snat')
             self.assertEqual(rule, expected)
+            self.called = True
 
         self.stubs.Set(linux_net.iptables_manager.ipv4['nat'],
                        'add_rule', verify_add_rule)
-        linux_net.add_snat_rule('10.0.0.0/24')
+        self.called = False
+        linux_net.add_snat_rule('10.0.0.0/24', is_external)
+        if expected:
+            self.assertTrue(self.called)
 
-    def test_add_snat_rule(self):
+    def test_add_snat_rule_no_ext(self):
         self.flags(routing_source_ip='10.10.10.1')
         expected = ('-s 10.0.0.0/24 -d 0.0.0.0/0 '
                     '-j SNAT --to-source 10.10.10.1 -o eth0')
-        self._test_add_snat_rule(expected)
+        self._test_add_snat_rule(expected, False)
 
-    def test_add_snat_rule_snat_range(self):
+    def test_add_snat_rule_ext(self):
+        self.flags(routing_source_ip='10.10.10.1')
+        expected = ()
+        self._test_add_snat_rule(expected, True)
+
+    def test_add_snat_rule_snat_range_no_ext(self):
+        self.flags(routing_source_ip='10.10.10.1',
+                   force_snat_range=['10.10.10.0/24'])
+        expected = ('-s 10.0.0.0/24 -d 0.0.0.0/0 '
+                    '-j SNAT --to-source 10.10.10.1 -o eth0')
+        self._test_add_snat_rule(expected, False)
+
+    def test_add_snat_rule_snat_range_ext(self):
         self.flags(routing_source_ip='10.10.10.1',
                    force_snat_range=['10.10.10.0/24'])
         expected = ('-s 10.0.0.0/24 -d 10.10.10.0/24 '
-                    '-j SNAT --to-source 10.10.10.1 -o eth0')
-        self._test_add_snat_rule(expected)
+                    '-j SNAT --to-source 10.10.10.1')
+        self._test_add_snat_rule(expected, True)
 
     def test_update_dhcp_for_nw00(self):
         self.flags(use_single_default_gateway=True)
