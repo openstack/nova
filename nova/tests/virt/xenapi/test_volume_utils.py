@@ -18,6 +18,7 @@ import mock
 from eventlet import greenthread
 
 from nova import exception
+from nova import test
 from nova.tests.virt.xenapi import stubs
 from nova.virt.xenapi import volume_utils
 
@@ -155,3 +156,51 @@ class ParseVolumeInfoTestCase(stubs.XenAPITestBaseNoDB):
             exception.StorageError,
             volume_utils.get_device_number,
             'dev/sd')
+
+
+class FindVBDTestCase(stubs.XenAPITestBaseNoDB):
+    def test_find_vbd_by_number_works(self):
+        session = mock.Mock()
+        session.VM.get_VBDs.return_value = ["a", "b"]
+        session.VBD.get_userdevice.return_value = "1"
+
+        result = volume_utils.find_vbd_by_number(session, "vm_ref", 1)
+
+        self.assertEqual("a", result)
+        session.VM.get_VBDs.assert_called_once_with("vm_ref")
+        session.VBD.get_userdevice.assert_called_once_with("a")
+
+    def test_find_vbd_by_number_no_matches(self):
+        session = mock.Mock()
+        session.VM.get_VBDs.return_value = ["a", "b"]
+        session.VBD.get_userdevice.return_value = "3"
+
+        result = volume_utils.find_vbd_by_number(session, "vm_ref", 1)
+
+        self.assertIsNone(result)
+        session.VM.get_VBDs.assert_called_once_with("vm_ref")
+        expected = [mock.call("a"), mock.call("b")]
+        self.assertEqual(expected,
+                         session.VBD.get_userdevice.call_args_list)
+
+    def test_find_vbd_by_number_no_vbds(self):
+        session = mock.Mock()
+        session.VM.get_VBDs.return_value = []
+
+        result = volume_utils.find_vbd_by_number(session, "vm_ref", 1)
+
+        self.assertIsNone(result)
+        session.VM.get_VBDs.assert_called_once_with("vm_ref")
+        self.assertFalse(session.VBD.get_userdevice.called)
+
+    def test_find_vbd_by_number_ignores_exception(self):
+        session = mock.Mock()
+        session.XenAPI.Failure = test.TestingException
+        session.VM.get_VBDs.return_value = ["a"]
+        session.VBD.get_userdevice.side_effect = test.TestingException
+
+        result = volume_utils.find_vbd_by_number(session, "vm_ref", 1)
+
+        self.assertIsNone(result)
+        session.VM.get_VBDs.assert_called_once_with("vm_ref")
+        session.VBD.get_userdevice.assert_called_once_with("a")

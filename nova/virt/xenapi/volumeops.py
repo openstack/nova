@@ -133,7 +133,11 @@ class VolumeOps(object):
                   {'instance_name': instance_name, 'mountpoint': mountpoint})
 
         vm_ref = vm_utils.vm_ref_or_raise(self._session, instance_name)
-        vbd_ref = self._find_vbd(vm_ref, mountpoint)
+
+        device_number = volume_utils.get_device_number(mountpoint)
+        vbd_ref = volume_utils.find_vbd_by_number(self._session, vm_ref,
+                                                  device_number)
+
         if vbd_ref is None:
             # NOTE(sirp): If we don't find the VBD then it must have been
             # detached previously.
@@ -145,14 +149,6 @@ class VolumeOps(object):
                        ' %(instance_name)s'),
                      {'instance_name': instance_name,
                       'mountpoint': mountpoint})
-
-    def _find_vbd(self, vm_ref, mountpoint):
-        device_number = volume_utils.get_device_number(mountpoint)
-        try:
-            return vm_utils.find_vbd_by_number(
-                    self._session, vm_ref, device_number)
-        except exception.StorageError:
-            return
 
     def _detach_vbds_and_srs(self, vm_ref, vbd_refs):
         is_vm_shutdown = vm_utils.is_vm_shutdown(self._session, vm_ref)

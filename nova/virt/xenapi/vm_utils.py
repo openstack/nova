@@ -391,22 +391,6 @@ def is_enough_free_mem(session, instance):
     return host_free_mem >= mem
 
 
-def find_vbd_by_number(session, vm_ref, number):
-    """Get the VBD reference from the device number."""
-    vbd_refs = session.call_xenapi("VM.get_VBDs", vm_ref)
-    if vbd_refs:
-        for vbd_ref in vbd_refs:
-            try:
-                user_device = session.call_xenapi("VBD.get_userdevice",
-                                                  vbd_ref)
-                if user_device == str(number):
-                    return vbd_ref
-            except session.XenAPI.Failure as exc:
-                LOG.exception(exc)
-    raise exception.StorageError(
-            reason=_('VBD not found in instance %s') % vm_ref)
-
-
 def _should_retry_unplug_vbd(err):
     # Retry if unplug failed with DEVICE_DETACH_REJECTED
     # For reasons which we don't understand,
