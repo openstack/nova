@@ -1503,6 +1503,7 @@ def virtual_interface_get_by_instance(context, instance_uuid, use_slave=False):
     """
     vif_refs = _virtual_interface_query(context, use_slave=use_slave).\
                        filter_by(instance_uuid=instance_uuid).\
+                       order_by(asc("created_at"), asc("id")).\
                        all()
     return vif_refs
 
