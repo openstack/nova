@@ -64,14 +64,8 @@ from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import compute_node as compute_node_obj
-from nova.objects import external_event as external_event_obj
-from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
-from nova.objects import instance_group as instance_group_obj
-from nova.objects import migration as migration_obj
 from nova.objects import quotas as quotas_obj
-from nova.objects import service as service_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common.gettextutils import _LW
@@ -393,8 +387,8 @@ def object_compat(function):
 
         migration = kwargs.get('migration')
         if isinstance(migration, dict):
-            migration = migration_obj.Migration._from_db_object(
-                    context.elevated(), migration_obj.Migration(),
+            migration = objects.Migration._from_db_object(
+                    context.elevated(), objects.Migration(),
                     migration)
             kwargs['migration'] = migration
 
@@ -539,7 +533,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         for event_name in event_names:
             if isinstance(event_name, tuple):
                 name, tag = event_name
-                event_name = external_event_obj.InstanceExternalEvent.make_key(
+                event_name = objects.InstanceExternalEvent.make_key(
                     name, tag)
             events[event_name] = (
                 self._compute.instance_events.prepare_for_instance_event(
@@ -751,7 +745,7 @@ class ComputeManager(manager.Manager):
         instance.destroy()
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
-        quotas = quotas_obj.Quotas()
+        quotas = objects.Quotas(context)
         project_id, user_id = quotas_obj.ids_from_instance(context, instance)
         quotas.reserve(context, project_id=project_id, user_id=user_id,
                        instances=-1, cores=-instance.vcpus,
@@ -848,7 +842,7 @@ class ComputeManager(manager.Manager):
                 # still in DELETING.  See bug 1296414.
                 #
                 # Create a dummy quota object for now.
-                quotas = quotas_obj.Quotas.from_reservations(
+                quotas = objects.Quotas.from_reservations(
                         context, None, instance=instance)
                 self._delete_instance(context, instance, bdms, quotas)
             except Exception:
@@ -1264,8 +1258,7 @@ class ComputeManager(manager.Manager):
 
         @utils.synchronized(group_hint)
         def _do_validation(context, instance, group_hint):
-            group = instance_group_obj.InstanceGroup.get_by_hint(
-                        context, group_hint)
+            group = objects.InstanceGroup.get_by_hint(context, group_hint)
             if 'anti-affinity' not in group.policies:
                 return
 
@@ -2312,9 +2305,9 @@ class ComputeManager(manager.Manager):
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)
 
-        quotas = quotas_obj.Quotas.from_reservations(context,
-                                                     reservations,
-                                                     instance=instance)
+        quotas = objects.Quotas.from_reservations(context,
+                                                  reservations,
+                                                  instance=instance)
 
         @utils.synchronized(instance['uuid'])
         def do_terminate_instance(instance, bdms):
@@ -2384,9 +2377,9 @@ class ComputeManager(manager.Manager):
     def soft_delete_instance(self, context, instance, reservations):
         """Soft delete an instance on this host."""
 
-        quotas = quotas_obj.Quotas.from_reservations(context,
-                                                     reservations,
-                                                     instance=instance)
+        quotas = objects.Quotas.from_reservations(context,
+                                                  reservations,
+                                                  instance=instance)
         try:
             self._notify_about_instance_usage(context, instance,
                                               "soft_delete.start")
@@ -3125,9 +3118,9 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def confirm_resize(self, context, instance, reservations, migration):
 
-        quotas = quotas_obj.Quotas.from_reservations(context,
-                                                     reservations,
-                                                     instance=instance)
+        quotas = objects.Quotas.from_reservations(context,
+                                                  reservations,
+                                                  instance=instance)
 
         @utils.synchronized(instance['uuid'])
         def do_confirm_resize(context, instance, migration_id):
@@ -3138,7 +3131,7 @@ class ComputeManager(manager.Manager):
             try:
                 # TODO(russellb) Why are we sending the migration object just
                 # to turn around and look it up from the db again?
-                migration = migration_obj.Migration.get_by_id(
+                migration = objects.Migration.get_by_id(
                                     context.elevated(), migration_id)
             except exception.MigrationNotFound:
                 LOG.error(_("Migration %s is not found during confirmation") %
@@ -3503,7 +3496,7 @@ class ComputeManager(manager.Manager):
         with self._error_out_instance_on_exception(context, instance.uuid,
                                                    quotas=quotas):
             if not instance_type:
-                instance_type = flavor_obj.Flavor.get_by_id(
+                instance_type = objects.Flavor.get_by_id(
                     context, migration['new_instance_type_id'])
 
             network_info = self._get_instance_nw_info(context, instance)
@@ -4467,7 +4460,7 @@ class ComputeManager(manager.Manager):
         self.driver.detach_interface(instance, condemned)
 
     def _get_compute_info(self, context, host):
-        service = service_obj.Service.get_by_compute_host(context, host)
+        service = objects.Service.get_by_compute_host(context, host)
         try:
             return service.compute_node
         except IndexError:
@@ -5009,8 +5002,7 @@ class ComputeManager(manager.Manager):
         if CONF.resize_confirm_window == 0:
             return
 
-        mig_list_cls = migration_obj.MigrationList
-        migrations = mig_list_cls.get_unconfirmed_by_dest_compute(
+        migrations = objects.MigrationList.get_unconfirmed_by_dest_compute(
                 context, CONF.resize_confirm_window, self.host,
                 use_slave=True)
 
@@ -5539,12 +5531,11 @@ class ComputeManager(manager.Manager):
         self._resource_tracker_dict = new_resource_tracker_dict
 
     def _get_compute_nodes_in_db(self, context):
-        service = service_obj.Service.get_by_compute_host(context, self.host)
+        service = objects.Service.get_by_compute_host(context, self.host)
         if not service:
             LOG.error(_("No service record for host %s"), self.host)
             return []
-        return compute_node_obj.ComputeNodeList.get_by_service(context,
-                                                               service)
+        return objects.ComputeNodeList.get_by_service(context, service)
 
     @periodic_task.periodic_task(
         spacing=CONF.running_deleted_instance_poll_interval)

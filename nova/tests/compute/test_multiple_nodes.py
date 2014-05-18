@@ -18,7 +18,7 @@ from oslo.config import cfg
 
 from nova import context
 from nova import db
-from nova.objects import compute_node as compute_node_obj
+from nova import objects
 from nova.openstack.common import importutils
 from nova import test
 from nova.virt import fake
@@ -108,8 +108,8 @@ class MultiNodeComputeTestCase(BaseTestCase):
                                    'metrics': '',
                                    'stats': '',
                                    'id': 2}]
-            return [compute_node_obj.ComputeNode._from_db_object(
-                        context, compute_node_obj.ComputeNode(), cn)
+            return [objects.ComputeNode._from_db_object(
+                        context, objects.ComputeNode(), cn)
                     for cn in fake_compute_nodes]
 
         def fake_compute_node_delete(context, compute_node_id):
@@ -142,9 +142,9 @@ class MultiNodeComputeTestCase(BaseTestCase):
         fake.set_nodes(['A', 'B'])
 
         fake_compute_nodes = [
-            compute_node_obj.ComputeNode(
+            objects.ComputeNode(
                 context=ctx, hypervisor_hostname='A', id=2),
-            compute_node_obj.ComputeNode(
+            objects.ComputeNode(
                 context=ctx, hypervisor_hostname='B', id=3),
             ]
 

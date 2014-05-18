@@ -30,9 +30,6 @@ from nova import db
 from nova import exception
 from nova.network import model as network_model
 from nova import objects
-from nova.objects import external_event as external_event_obj
-from nova.objects import instance_action as instance_action_obj
-from nova.objects import migration as migration_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import uuidutils
 from nova import test
@@ -1101,8 +1098,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 }
             }
         inst_obj = objects.Instance(uuid='foo')
-        event_obj = external_event_obj.InstanceExternalEvent(name='test-event',
-                                                             tag=None)
+        event_obj = objects.InstanceExternalEvent(name='test-event', tag=None)
         self.compute._process_instance_event(inst_obj, event_obj)
         self.assertTrue(event.ready())
         self.assertEqual(event_obj, event.wait())
@@ -1113,10 +1109,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             objects.Instance(uuid='uuid1'),
             objects.Instance(uuid='uuid2')]
         events = [
-            external_event_obj.InstanceExternalEvent(name='network-changed',
-                                                     instance_uuid='uuid1'),
-            external_event_obj.InstanceExternalEvent(name='foo',
-                                                     instance_uuid='uuid2')]
+            objects.InstanceExternalEvent(name='network-changed',
+                                          instance_uuid='uuid1'),
+            objects.InstanceExternalEvent(name='foo', instance_uuid='uuid2')]
 
         @mock.patch.object(self.compute.network_api, 'get_instance_nw_info')
         @mock.patch.object(self.compute, '_process_instance_event')
@@ -1199,7 +1194,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume_id')
     @mock.patch('nova.compute.manager.ComputeManager._detach_volume')
-    @mock.patch('nova.objects.instance.Instance._from_db_object')
+    @mock.patch('nova.objects.Instance._from_db_object')
     def test_remove_volume_connection(self, inst_from_db, detach, bdm_get):
         bdm = mock.sentinel.bdm
         inst_obj = mock.sentinel.inst_obj
@@ -1216,9 +1211,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         fake_nw_info = network_model.NetworkInfo()
         rescue_image_meta = {'id': 'fake', 'name': 'fake'}
         with contextlib.nested(
-            mock.patch.object(instance_action_obj.InstanceActionEvent,
-                              'event_start'),
-            mock.patch.object(instance_action_obj.InstanceActionEvent,
+            mock.patch.object(objects.InstanceActionEvent, 'event_start'),
+            mock.patch.object(objects.InstanceActionEvent,
                               'event_finish_with_failure'),
             mock.patch.object(self.context, 'elevated',
                               return_value=self.context),
@@ -1279,9 +1273,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.context, vm_state=vm_states.RESCUED)
         fake_nw_info = network_model.NetworkInfo()
         with contextlib.nested(
-            mock.patch.object(instance_action_obj.InstanceActionEvent,
-                              'event_start'),
-            mock.patch.object(instance_action_obj.InstanceActionEvent,
+            mock.patch.object(objects.InstanceActionEvent, 'event_start'),
+            mock.patch.object(objects.InstanceActionEvent,
                               'event_finish_with_failure'),
             mock.patch.object(self.context, 'elevated',
                               return_value=self.context),
@@ -1540,14 +1533,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 event, **kwargs)
 
     def _instance_action_events(self):
-        self.mox.StubOutWithMock(instance_action_obj.InstanceActionEvent,
-                                 'event_start')
-        self.mox.StubOutWithMock(instance_action_obj.InstanceActionEvent,
+        self.mox.StubOutWithMock(objects.InstanceActionEvent, 'event_start')
+        self.mox.StubOutWithMock(objects.InstanceActionEvent,
                                  'event_finish_with_failure')
-        instance_action_obj.InstanceActionEvent.event_start(
+        objects.InstanceActionEvent.event_start(
                 self.context, self.instance['uuid'], mox.IgnoreArg(),
                 want_result=False)
-        instance_action_obj.InstanceActionEvent.event_finish_with_failure(
+        objects.InstanceActionEvent.event_finish_with_failure(
                 self.context, self.instance['uuid'], mox.IgnoreArg(),
                 exc_val=mox.IgnoreArg(), exc_tb=mox.IgnoreArg(),
                 want_result=False)
@@ -2213,7 +2205,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.instance = fake_instance.fake_instance_obj(self.context,
                 vm_state=vm_states.ACTIVE,
                 expected_attrs=['metadata', 'system_metadata', 'info_cache'])
-        self.migration = migration_obj.Migration()
+        self.migration = objects.Migration()
         self.migration.status = 'migrating'
 
     def test_finish_resize_failure(self):
@@ -2221,9 +2213,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         with contextlib.nested(
             mock.patch.object(self.compute, '_finish_resize',
                               side_effect=exception.ResizeError(reason='')),
-            mock.patch.object(instance_action_obj.InstanceActionEvent,
-                              'event_start'),
-            mock.patch.object(instance_action_obj.InstanceActionEvent,
+            mock.patch.object(objects.InstanceActionEvent, 'event_start'),
+            mock.patch.object(objects.InstanceActionEvent,
                               'event_finish_with_failure'),
             mock.patch.object(db, 'instance_fault_create'),
             mock.patch.object(self.compute, '_instance_update'),
@@ -2250,9 +2241,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             mock.patch.object(self.compute.driver,
                               'migrate_disk_and_power_off',
                               side_effect=exception.ResizeError(reason='')),
-            mock.patch.object(instance_action_obj.InstanceActionEvent,
-                              'event_start'),
-            mock.patch.object(instance_action_obj.InstanceActionEvent,
+            mock.patch.object(objects.InstanceActionEvent, 'event_start'),
+            mock.patch.object(objects.InstanceActionEvent,
                               'event_finish_with_failure'),
             mock.patch.object(db, 'instance_fault_create'),
             mock.patch.object(self.compute, '_instance_update'),

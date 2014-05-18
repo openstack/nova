@@ -28,9 +28,8 @@ from nova.compute import task_states
 from nova import exception
 from nova.network import model as network_model
 from nova import notifications
+from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import instance_action as instance_action_obj
-from nova.objects import instance_fault as instance_fault_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log
 from nova import rpc
@@ -86,7 +85,7 @@ def _get_fault_details(exc_info, error_code):
 def add_instance_fault_from_exc(context, instance, fault, exc_info=None):
     """Adds the specified fault to the database."""
 
-    fault_obj = instance_fault_obj.InstanceFault(context=context)
+    fault_obj = objects.InstanceFault(context=context)
     fault_obj.host = CONF.host
     fault_obj.instance_uuid = instance['uuid']
     fault_obj.update(exception_to_dict(fault))
@@ -426,14 +425,14 @@ class EventReporter(object):
 
     def __enter__(self):
         for uuid in self.instance_uuids:
-            instance_action_obj.InstanceActionEvent.event_start(
+            objects.InstanceActionEvent.event_start(
                 self.context, uuid, self.event_name, want_result=False)
 
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         for uuid in self.instance_uuids:
-            instance_action_obj.InstanceActionEvent.event_finish_with_failure(
+            objects.InstanceActionEvent.event_finish_with_failure(
                 self.context, uuid, self.event_name, exc_val=exc_val,
                 exc_tb=exc_tb, want_result=False)
         return False

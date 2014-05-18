@@ -22,7 +22,7 @@ from nova.cells import utils as cells_utils
 from nova import compute
 from nova import context
 from nova import exception
-from nova.objects import service as service_obj
+from nova import objects
 from nova import test
 from nova.tests import fake_notifier
 from nova.tests.objects import test_objects
@@ -312,9 +312,9 @@ class ComputeHostAPITestCase(test.TestCase):
 
     def test_service_delete(self):
         with contextlib.nested(
-            mock.patch.object(service_obj.Service, 'get_by_id',
-                              return_value=service_obj.Service()),
-            mock.patch.object(service_obj.Service, 'destroy')
+            mock.patch.object(objects.Service, 'get_by_id',
+                              return_value=objects.Service()),
+            mock.patch.object(objects.Service, 'destroy')
         ) as (
             get_by_id, destroy
         ):
