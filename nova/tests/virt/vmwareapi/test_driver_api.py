@@ -714,6 +714,12 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
 
+    def test_spawn_vm_ref_cached(self):
+        uuid = uuidutils.generate_uuid()
+        self.assertIsNone(vm_util.vm_ref_cache_get(uuid))
+        self._create_vm(uuid=uuid)
+        self.assertIsNotNone(vm_util.vm_ref_cache_get(uuid))
+
     def _spawn_power_state(self, power_on):
         self._spawn = self.conn._vmops.spawn
         self._power_on = power_on
