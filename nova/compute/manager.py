@@ -3514,7 +3514,7 @@ class ComputeManager(manager.Manager):
         old_instance_type = flavors.extract_flavor(instance)
         sys_meta = instance.system_metadata
         # NOTE(mriedem): Get the old_vm_state so we know if we should
-        # power on the instance. If old_vm_sate is not set we need to default
+        # power on the instance. If old_vm_state is not set we need to default
         # to ACTIVE for backwards compatibility
         old_vm_state = sys_meta.get('old_vm_state', vm_states.ACTIVE)
         flavors.save_flavor_info(sys_meta,
