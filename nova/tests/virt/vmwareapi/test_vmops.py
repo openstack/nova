@@ -13,14 +13,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import contextlib
+import copy
 
 import mock
 
+from nova.compute import power_state
 from nova import context
 from nova import exception
 from nova.network import model as network_model
 from nova.objects import instance as instance_obj
 from nova import test
+from nova.tests import fake_instance
+import nova.tests.image.fake
 from nova.tests.virt.vmwareapi import stubs
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import ds_util
@@ -43,7 +47,19 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
         self._virtapi = mock.Mock()
         self._vmops = vmops.VMwareVMOps(self._session, self._virtapi, None)
-        self._instance = {'name': 'fake_name', 'uuid': 'fake_uuid'}
+        self._image_id = nova.tests.image.fake.get_valid_image_id()
+        values = {
+            'name': 'fake_name',
+            'uuid': 'fake_uuid',
+            'vcpus': 1,
+            'memory_mb': 512,
+            'image_ref': self._image_id,
+            'root_gb': 1,
+            'node': 'respool-1001(MyResPoolName)',
+        }
+        self._context = context.RequestContext('fake_user', 'fake_project')
+        self._instance = fake_instance.fake_instance_obj(self._context,
+                                                         **values)
 
         subnet_4 = network_model.Subnet(cidr='192.168.0.1/24',
                                         dns=[network_model.IP('192.168.0.1')],
@@ -268,6 +284,33 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             mock_save.assert_called_once_with()
         self.assertEqual(50, instance.progress)
 
+    @mock.patch('nova.virt.vmwareapi.vm_util.get_vm_ref',
+                return_value='fake_ref')
+    def test_get_info(self, mock_get_vm_ref):
+        props = ['summary.config.numCpu', 'summary.config.memorySizeMB',
+                 'runtime.powerState']
+        prop_cpu = vmwareapi_fake.Prop(props[0], 4)
+        prop_mem = vmwareapi_fake.Prop(props[1], 128)
+        prop_state = vmwareapi_fake.Prop(props[2], 'poweredOn')
+        prop_list = [prop_state, prop_mem, prop_cpu]
+        obj_content = vmwareapi_fake.ObjectContent(None, prop_list=prop_list)
+        result = vmwareapi_fake.FakeRetrieveResult()
+        result.add_object(obj_content)
+        mock_call_method = mock.Mock(return_value=result)
+        with mock.patch.object(self._session, '_call_method',
+                               mock_call_method):
+            info = self._vmops.get_info(self._instance)
+            mock_call_method.assert_called_once_with(vim_util,
+                'get_object_properties', None, 'fake_ref', 'VirtualMachine',
+                props)
+            mock_get_vm_ref.assert_called_once_with(self._session,
+                self._instance)
+            self.assertEqual(power_state.RUNNING, info['state'])
+            self.assertEqual(128 * 1024, info['max_mem'])
+            self.assertEqual(128 * 1024, info['mem'])
+            self.assertEqual(4, info['num_cpu'])
+            self.assertEqual(0, info['cpu_time'])
+
     def _test_get_datacenter_ref_and_name(self, ds_ref_exists=False):
         instance_ds_ref = mock.Mock()
         instance_ds_ref.value = "ds-1"
@@ -339,6 +382,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
         path = mock.Mock()
         path_and_type = (path, mock.Mock(), mock.Mock())
+        r_instance = copy.deepcopy(self._instance)
         with contextlib.nested(
                 mock.patch.object(vm_util, 'get_vmdk_path_and_adapter_type',
                                   return_value=path_and_type),
@@ -351,9 +395,10 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                   fake_call_method),
                 mock.patch.object(self._vmops, '_power_off_vm_ref'),
                 mock.patch.object(self._vmops, '_destroy_instance'),
+                mock.patch.object(copy, 'deepcopy', return_value=r_instance)
         ) as (_get_vmdk_path_and_adapter_type, _get_vmdk_volume_disk,
               _power_on_instance, _get_vm_ref, _get_vm_ref_from_name,
-              _call_method, _power_off, _destroy_instance):
+              _call_method, _power_off, _destroy_instance, _deep_copy):
             self._vmops.unrescue(self._instance, power_on=power_on)
 
             _get_vmdk_path_and_adapter_type.assert_called_once_with(
@@ -370,7 +415,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             _get_vm_ref_from_name.assert_called_once_with(self._session,
                                                           'fake_uuid-rescue')
             _power_off.assert_called_once_with(vm_rescue_ref)
-            _destroy_instance.assert_called_once_with(self._instance, None,
+            _destroy_instance.assert_called_once_with(r_instance, None,
                 instance_name='fake_uuid-rescue')
 
     def _test_finish_migration(self, power_on=True, resize_instance=False):

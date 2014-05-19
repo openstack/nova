@@ -1324,12 +1324,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.conn.resume_state_on_host_boot(self.context, self.instance,
             'network_info')
 
-    def test_get_info(self):
-        self._create_vm()
-        info = self.conn.get_info({'uuid': self.uuid,
-                                   'node': self.instance_node})
-        self._check_vm_info(info, power_state.RUNNING)
-
     def destroy_rescued(self, fake_method):
         self._rescue()
         with contextlib.nested(

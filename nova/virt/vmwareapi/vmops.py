@@ -1277,8 +1277,8 @@ class VMwareVMOps(object):
         vm_props = self._session._call_method(vim_util,
                     "get_object_properties", None, vm_ref, "VirtualMachine",
                     lst_properties)
-        query = {'summary.config.numCpu': None,
-                 'summary.config.memorySizeMB': None,
+        query = {'summary.config.numCpu': 0,
+                 'summary.config.memorySizeMB': 0,
                  'runtime.powerState': None}
         self._get_values_from_object_properties(vm_props, query)
         max_mem = int(query['summary.config.memorySizeMB']) * 1024
