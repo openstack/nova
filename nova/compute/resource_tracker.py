@@ -438,8 +438,8 @@ class ResourceTracker(object):
         else:
             LOG.audit(_("Free VCPU information unavailable"))
 
-        if 'pci_devices' in resources:
-            LOG.audit(_("Free PCI devices: %s") % resources['pci_devices'])
+        if 'pci_stats' in resources:
+            LOG.audit(_("PCI stats: %s"), resources['pci_stats'])
 
     def _update(self, context, values):
         """Persist the compute node updates to the DB."""
