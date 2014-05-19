@@ -88,6 +88,7 @@ task states for various commands issued by the user:
     rescue -> error
     active -> rescue
     stopped -> rescue
+    error -> rescue
 
     unrescue [shape="rectangle"]
     unrescue -> active
@@ -139,7 +140,9 @@ task states for various commands issued by the user:
     reboot -> error
     active -> reboot
     stopped -> reboot
-    rescued -> reboot
+    paused -> reboot
+    suspended -> reboot
+    error -> reboot
 
     live_migrate [shape="rectangle"]
     live_migrate -> active

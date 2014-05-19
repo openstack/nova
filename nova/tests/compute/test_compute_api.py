@@ -67,6 +67,16 @@ class _ComputeAPIUnitTestMixIn(object):
         self.context = context.RequestContext(self.user_id,
                                               self.project_id)
 
+    def _get_vm_states(self, exclude_states=None):
+        vm_state = set([vm_states.ACTIVE, vm_states.BUILDING, vm_states.PAUSED,
+                    vm_states.SUSPENDED, vm_states.RESCUED, vm_states.STOPPED,
+                    vm_states.RESIZED, vm_states.SOFT_DELETED,
+                    vm_states.DELETED, vm_states.ERROR, vm_states.SHELVED,
+                    vm_states.SHELVED_OFFLOADED])
+        if not exclude_states:
+            exclude_states = set()
+        return vm_state - exclude_states
+
     def _create_flavor(self, params=None):
         flavor = {'id': 1,
                   'flavorid': 1,
@@ -204,6 +214,19 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertEqual(task_states.SUSPENDING,
                          instance.task_state)
 
+    def _test_suspend_fails(self, vm_state):
+        params = dict(vm_state=vm_state)
+        instance = self._create_instance_obj(params=params)
+        self.assertIsNone(instance.task_state)
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.suspend,
+                          self.context, instance)
+
+    def test_suspend_fails_invalid_states(self):
+        invalid_vm_states = self._get_vm_states(set([vm_states.ACTIVE]))
+        for state in invalid_vm_states:
+            self._test_suspend_fails(state)
+
     def test_resume(self):
         # Ensure instance can be resumed (if suspended).
         instance = self._create_instance_obj(
@@ -309,12 +332,18 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_stop_stopped_instance_with_bypass(self):
         self._test_stop(vm_states.STOPPED, force=True)
 
-    def test_stop_invalid_state(self):
-        params = dict(vm_state=vm_states.PAUSED)
+    def _test_stop_invalid_state(self, vm_state):
+        params = dict(vm_state=vm_state)
         instance = self._create_instance_obj(params=params)
         self.assertRaises(exception.InstanceInvalidState,
                           self.compute_api.stop,
                           self.context, instance)
+
+    def test_stop_fails_invalid_states(self):
+        invalid_vm_states = self._get_vm_states(set([vm_states.ACTIVE,
+                                                     vm_states.ERROR]))
+        for state in invalid_vm_states:
+            self._test_stop_invalid_state(state)
 
     def test_stop_a_stopped_inst(self):
         params = {'vm_state': vm_states.STOPPED}
@@ -1202,6 +1231,19 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertEqual(vm_states.ACTIVE, instance.vm_state)
         self.assertEqual(task_states.PAUSING,
                          instance.task_state)
+
+    def _test_pause_fails(self, vm_state):
+        params = dict(vm_state=vm_state)
+        instance = self._create_instance_obj(params=params)
+        self.assertIsNone(instance.task_state)
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.pause,
+                          self.context, instance)
+
+    def test_pause_fails_invalid_states(self):
+        invalid_vm_states = self._get_vm_states(set([vm_states.ACTIVE]))
+        for state in invalid_vm_states:
+            self._test_pause_fails(state)
 
     def test_unpause(self):
         # Ensure instance can be unpaused.
