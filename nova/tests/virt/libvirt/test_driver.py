@@ -46,9 +46,6 @@ from nova import db
 from nova import exception
 from nova.network import model as network_model
 from nova import objects
-from nova.objects import flavor as flavor_obj
-from nova.objects import pci_device as pci_device_obj
-from nova.objects import service as service_obj
 from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -634,7 +631,7 @@ class LibvirtConnTestCase(test.TestCase,
 
     def create_instance_obj(self, context, **params):
         default_params = self.test_instance
-        default_params['pci_devices'] = pci_device_obj.PciDeviceList()
+        default_params['pci_devices'] = objects.PciDeviceList()
         default_params.update(params)
         instance = objects.Instance(context, **params)
         flavor = flavors.get_default_flavor()
@@ -902,7 +899,7 @@ class LibvirtConnTestCase(test.TestCase,
             mock.patch.object(conn, "_connect", return_value=self.conn),
             mock.patch.object(self.conn, "registerCloseCallback",
                               side_effect=set_close_callback),
-            mock.patch.object(service_obj.Service, "get_by_compute_host",
+            mock.patch.object(objects.Service, "get_by_compute_host",
                               return_value=service_mock)):
 
             # verify that the driver registers for the close callback
@@ -929,7 +926,7 @@ class LibvirtConnTestCase(test.TestCase,
             mock.patch.object(conn, "_connect", return_value=self.conn),
             mock.patch.object(self.conn, "registerCloseCallback",
                               side_effect=TypeError('dd')),
-            mock.patch.object(service_obj.Service, "get_by_compute_host",
+            mock.patch.object(objects.Service, "get_by_compute_host",
                               return_value=service_mock)):
 
             connection = conn._get_connection()
@@ -947,7 +944,7 @@ class LibvirtConnTestCase(test.TestCase,
             mock.patch.object(conn, "_connect", return_value=self.conn),
             mock.patch.object(self.conn, "registerCloseCallback",
                               side_effect=AttributeError('dd')),
-            mock.patch.object(service_obj.Service, "get_by_compute_host",
+            mock.patch.object(objects.Service, "get_by_compute_host",
                               return_value=service_mock)):
 
             connection = conn._get_connection()
@@ -1552,9 +1549,8 @@ class LibvirtConnTestCase(test.TestCase,
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
-        fake_flavor = flavor_obj.Flavor.get_by_id(
-                                 self.context,
-                                 self.test_instance['instance_type_id'])
+        fake_flavor = objects.Flavor.get_by_id(
+                self.context, self.test_instance['instance_type_id'])
         fake_flavor.extra_specs = {'hw_watchdog_action': 'none'}
 
         instance_ref = db.instance_create(self.context, self.test_instance)
@@ -1562,7 +1558,7 @@ class LibvirtConnTestCase(test.TestCase,
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref)
 
-        with mock.patch.object(flavor_obj.Flavor, 'get_by_id',
+        with mock.patch.object(objects.Flavor, 'get_by_id',
                                return_value=fake_flavor):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
 
@@ -1591,9 +1587,8 @@ class LibvirtConnTestCase(test.TestCase,
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
-        fake_flavor = flavor_obj.Flavor.get_by_id(
-                                 self.context,
-                                 self.test_instance['instance_type_id'])
+        fake_flavor = objects.Flavor.get_by_id(
+                self.context, self.test_instance['instance_type_id'])
         fake_flavor.extra_specs = {'hw_watchdog_action': 'none'}
 
         instance_ref = db.instance_create(self.context, self.test_instance)
@@ -1603,7 +1598,7 @@ class LibvirtConnTestCase(test.TestCase,
 
         image_meta = {"properties": {"hw_watchdog_action": "pause"}}
 
-        with mock.patch.object(flavor_obj.Flavor, 'get_by_id',
+        with mock.patch.object(objects.Flavor, 'get_by_id',
                                return_value=fake_flavor):
             cfg = conn._get_guest_config(instance_ref, [],
                                          image_meta, disk_info)
@@ -1713,7 +1708,7 @@ class LibvirtConnTestCase(test.TestCase,
                    agent_enabled=True,
                    group='spice')
 
-        instance_type = flavor_obj.Flavor.get_by_id(self.context, 5)
+        instance_type = objects.Flavor.get_by_id(self.context, 5)
         instance_type.extra_specs = {'hw_video:ram_max_mb': "100"}
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = db.instance_create(self.context, self.test_instance)
@@ -1722,7 +1717,7 @@ class LibvirtConnTestCase(test.TestCase,
                                             instance_ref)
         image_meta = {"properties": {"hw_video_model": "qxl",
                                      "hw_video_ram": "64"}}
-        with mock.patch.object(flavor_obj.Flavor, 'get_by_id',
+        with mock.patch.object(objects.Flavor, 'get_by_id',
                                return_value=instance_type):
             cfg = conn._get_guest_config(instance_ref, [],
                                         image_meta, disk_info)
@@ -1772,7 +1767,7 @@ class LibvirtConnTestCase(test.TestCase,
                    agent_enabled=True,
                    group='spice')
 
-        instance_type = flavor_obj.Flavor.get_by_id(self.context, 5)
+        instance_type = objects.Flavor.get_by_id(self.context, 5)
         instance_type.extra_specs = {'hw_video:ram_max_mb': "50"}
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = db.instance_create(self.context, self.test_instance)
@@ -1781,7 +1776,7 @@ class LibvirtConnTestCase(test.TestCase,
                                             instance_ref)
         image_meta = {"properties": {"hw_video_model": "qxl",
                                      "hw_video_ram": "64"}}
-        with mock.patch.object(flavor_obj.Flavor, 'get_by_id',
+        with mock.patch.object(objects.Flavor, 'get_by_id',
                                return_value=instance_type):
             self.assertRaises(exception.RequestedVRamTooHigh,
                               conn._get_guest_config,
@@ -1824,7 +1819,7 @@ class LibvirtConnTestCase(test.TestCase,
                    use_usb_tablet=False,
                    group='libvirt')
 
-        fake_flavor = flavor_obj.Flavor.get_by_id(
+        fake_flavor = objects.Flavor.get_by_id(
                                  self.context,
                                  self.test_instance['instance_type_id'])
         fake_flavor.extra_specs = {'hw_rng:allowed': 'True'}
@@ -1835,7 +1830,7 @@ class LibvirtConnTestCase(test.TestCase,
                                             instance_ref)
 
         image_meta = {"properties": {"hw_rng_model": "virtio"}}
-        with mock.patch.object(flavor_obj.Flavor, 'get_by_id',
+        with mock.patch.object(objects.Flavor, 'get_by_id',
                                return_value=fake_flavor):
             cfg = conn._get_guest_config(instance_ref, [],
                                         image_meta, disk_info)
@@ -1892,7 +1887,7 @@ class LibvirtConnTestCase(test.TestCase,
                    use_usb_tablet=False,
                    group='libvirt')
 
-        fake_flavor = flavor_obj.Flavor.get_by_id(
+        fake_flavor = objects.Flavor.get_by_id(
                                  self.context,
                                  self.test_instance['instance_type_id'])
         fake_flavor.extra_specs = {'hw_rng:allowed': 'True',
@@ -1905,7 +1900,7 @@ class LibvirtConnTestCase(test.TestCase,
                                             instance_ref)
 
         image_meta = {"properties": {"hw_rng_model": "virtio"}}
-        with mock.patch.object(flavor_obj.Flavor, 'get_by_id',
+        with mock.patch.object(objects.Flavor, 'get_by_id',
                                return_value=fake_flavor):
             cfg = conn._get_guest_config(instance_ref, [],
                                          image_meta, disk_info)
@@ -1935,7 +1930,7 @@ class LibvirtConnTestCase(test.TestCase,
                    rng_dev_path='/dev/hw_rng',
                    group='libvirt')
 
-        fake_flavor = flavor_obj.Flavor.get_by_id(
+        fake_flavor = objects.Flavor.get_by_id(
                                  self.context,
                                  self.test_instance['instance_type_id'])
         fake_flavor.extra_specs = {'hw_rng:allowed': 'True'}
@@ -1946,7 +1941,7 @@ class LibvirtConnTestCase(test.TestCase,
                                             instance_ref)
 
         image_meta = {"properties": {"hw_rng_model": "virtio"}}
-        with contextlib.nested(mock.patch.object(flavor_obj.Flavor,
+        with contextlib.nested(mock.patch.object(objects.Flavor,
                                                  'get_by_id',
                                                  return_value=fake_flavor),
                        mock.patch('nova.virt.libvirt.driver.os.path.exists',
@@ -1979,7 +1974,7 @@ class LibvirtConnTestCase(test.TestCase,
                    rng_dev_path='/dev/hw_rng',
                    group='libvirt')
 
-        fake_flavor = flavor_obj.Flavor.get_by_id(
+        fake_flavor = objects.Flavor.get_by_id(
                                  self.context,
                                  self.test_instance['instance_type_id'])
         fake_flavor.extra_specs = {'hw_rng:allowed': 'True'}
@@ -1990,7 +1985,7 @@ class LibvirtConnTestCase(test.TestCase,
                                             instance_ref)
 
         image_meta = {"properties": {"hw_rng_model": "virtio"}}
-        with contextlib.nested(mock.patch.object(flavor_obj.Flavor,
+        with contextlib.nested(mock.patch.object(objects.Flavor,
                                                  'get_by_id',
                                                  return_value=fake_flavor),
                        mock.patch('nova.virt.libvirt.driver.os.path.exists',
@@ -2006,7 +2001,7 @@ class LibvirtConnTestCase(test.TestCase,
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
-        fake_flavor = flavor_obj.Flavor.get_by_id(
+        fake_flavor = objects.flavor.Flavor.get_by_id(
                                  self.context,
                                  self.test_instance['instance_type_id'])
         fake_flavor.extra_specs = {'quota:cpu_shares': '10000',
@@ -2017,7 +2012,7 @@ class LibvirtConnTestCase(test.TestCase,
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref)
 
-        with mock.patch.object(flavor_obj.Flavor, 'get_by_id',
+        with mock.patch.object(objects.flavor.Flavor, 'get_by_id',
                                return_value=fake_flavor):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
 
@@ -2029,7 +2024,7 @@ class LibvirtConnTestCase(test.TestCase,
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
-        fake_flavor = flavor_obj.Flavor.get_by_id(
+        fake_flavor = objects.flavor.Flavor.get_by_id(
                                  self.context,
                                  self.test_instance['instance_type_id'])
         fake_flavor.extra_specs = {'quota:cpu_shares': 'fishfood',
@@ -2040,7 +2035,7 @@ class LibvirtConnTestCase(test.TestCase,
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref)
 
-        with mock.patch.object(flavor_obj.Flavor, 'get_by_id',
+        with mock.patch.object(objects.flavor.Flavor, 'get_by_id',
                                return_value=fake_flavor):
             self.assertRaises(ValueError,
                               conn._get_guest_config,
@@ -2557,7 +2552,7 @@ class LibvirtConnTestCase(test.TestCase,
         self.assertEqual(conf.cpu.threads, 1)
 
     def test_get_guest_cpu_topology(self):
-        fake_flavor = flavor_obj.Flavor.get_by_id(
+        fake_flavor = objects.flavor.Flavor.get_by_id(
                                  self.context,
                                  self.test_instance['instance_type_id'])
         fake_flavor.vcpus = 8
@@ -2568,7 +2563,7 @@ class LibvirtConnTestCase(test.TestCase,
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref)
 
-        with mock.patch.object(flavor_obj.Flavor, 'get_by_id',
+        with mock.patch.object(objects.flavor.Flavor, 'get_by_id',
                                return_value=fake_flavor):
             conf = conn._get_guest_config(instance_ref,
                                           _fake_network_info(self.stubs, 1),
@@ -5624,7 +5619,7 @@ class LibvirtConnTestCase(test.TestCase,
         with contextlib.nested(
             mock.patch.object(libvirt, 'openAuth',
                               return_value=mock.MagicMock()),
-            mock.patch.object(service_obj.Service, "get_by_compute_host",
+            mock.patch.object(objects.Service, "get_by_compute_host",
                               return_value=service_mock)):
 
             conn.get_num_instances()
@@ -7540,7 +7535,7 @@ Active:          8381604 kB
         else:
             raise ValueError("Unhandled method %" % method_name)
 
-        fake_flavor = flavor_obj.Flavor.get_by_id(
+        fake_flavor = objects.Flavor.get_by_id(
             self.context, test_instance['instance_type_id'])
         expected = conn.vif_driver.get_config(test_instance, network_info[0],
                                               fake_image_meta,
@@ -7548,7 +7543,7 @@ Active:          8381604 kB
         self.mox.StubOutWithMock(conn.vif_driver, 'get_config')
         conn.vif_driver.get_config(test_instance, network_info[0],
                                    fake_image_meta,
-                                   mox.IsA(flavor_obj.Flavor)).\
+                                   mox.IsA(objects.Flavor)).\
                                    AndReturn(expected)
 
         self.mox.ReplayAll()
@@ -9963,7 +9958,7 @@ class LibvirtDriverTestCase(test.TestCase):
             self.libvirtconnection.firewall_driver.setup_basic_filtering(
                 instance, [network_info[0]])
 
-        fake_flavor = flavor_obj.Flavor.get_by_id(
+        fake_flavor = objects.Flavor.get_by_id(
             self.context, instance['instance_type_id'])
         if method == 'attach_interface':
             fake_image_meta = {'id': instance['image_ref']}
@@ -9977,7 +9972,7 @@ class LibvirtDriverTestCase(test.TestCase):
         self.libvirtconnection.vif_driver.get_config(
             instance, network_info[0],
             fake_image_meta,
-            mox.IsA(flavor_obj.Flavor)).AndReturn(expected)
+            mox.IsA(objects.Flavor)).AndReturn(expected)
         domain.info().AndReturn([power_state])
         if method == 'attach_interface':
             domain.attachDeviceFlags(expected.to_xml(), expected_flags)

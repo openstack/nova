@@ -39,7 +39,6 @@ from nova.network.security_group import openstack_driver
 from nova import notifications
 from nova import objects
 from nova.objects import base as nova_object
-from nova.objects import quotas as quotas_obj
 from nova.openstack.common import excutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -503,9 +502,9 @@ class ComputeTaskManager(base.Base):
         request_spec = scheduler_utils.build_request_spec(
             context, image, [instance], instance_type=flavor)
 
-        quotas = quotas_obj.Quotas.from_reservations(context,
-                                                     reservations,
-                                                     instance=instance)
+        quotas = objects.Quotas.from_reservations(context,
+                                                  reservations,
+                                                  instance=instance)
         try:
             scheduler_utils.populate_retry(filter_properties, instance['uuid'])
             hosts = self.scheduler_rpcapi.select_destinations(

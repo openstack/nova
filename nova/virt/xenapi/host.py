@@ -27,7 +27,6 @@ from nova import context
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.objects import service as service_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.pci import pci_whitelist
@@ -120,8 +119,8 @@ class Host(object):
         # Since capabilities are gone, use service table to disable a node
         # in scheduler
         cntxt = context.get_admin_context()
-        service = service_obj.Service.get_by_args(cntxt, CONF.host,
-                                                  'nova-compute')
+        service = objects.Service.get_by_args(cntxt, CONF.host,
+                                              'nova-compute')
         service.disabled = not enabled
         service.disabled_reason = 'set by xenapi host_state'
         service.save()

@@ -33,7 +33,6 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import instance_action as instance_action_obj
 from nova.openstack.common import log as logging
 from nova.scheduler import utils as scheduler_utils
 from nova import utils
@@ -120,7 +119,7 @@ class CellsScheduler(base.Base):
 
     def _create_action_here(self, ctxt, instance_uuids):
         for instance_uuid in instance_uuids:
-            instance_action_obj.InstanceAction.action_start(
+            objects.InstanceAction.action_start(
                     ctxt,
                     instance_uuid,
                     instance_actions.CREATE,

@@ -17,7 +17,6 @@ import uuid
 
 from nova import objects
 from nova.objects import fields
-from nova.objects import instance_fault as inst_fault_obj
 
 
 def fake_db_secgroups(instance, names):
@@ -103,6 +102,6 @@ def fake_fault_obj(context, instance_uuid, code=404,
     }
     if updates:
         fault.update(updates)
-    return inst_fault_obj.InstanceFault._from_db_object(context,
-                                           inst_fault_obj.InstanceFault(),
-                                           fault)
+    return objects.InstanceFault._from_db_object(context,
+                                                 objects.InstanceFault(),
+                                                 fault)
