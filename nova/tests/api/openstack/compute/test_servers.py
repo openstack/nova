@@ -1625,6 +1625,13 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                           self.controller._action_rebuild,
                           self.req, FAKE_UUID, self.body)
 
+    def test_rebuild_instance_with_null_image_ref(self):
+        self.body['rebuild']['imageRef'] = None
+        self.req.body = jsonutils.dumps(self.body)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                self.controller._action_rebuild, self.req, FAKE_UUID,
+                self.body)
+
 
 class ServerStatusTest(test.TestCase):
 
