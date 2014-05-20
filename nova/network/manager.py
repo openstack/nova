@@ -1647,9 +1647,14 @@ class FlatDHCPManager(RPCAllocateFixedIP, floating_ips.FloatingIP,
         """
         ctxt = context.get_admin_context()
         networks = network_obj.NetworkList.get_by_host(ctxt, self.host)
+
+        self.driver.iptables_manager.defer_apply_on()
+
         self.l3driver.initialize(fixed_range=False, networks=networks)
         super(FlatDHCPManager, self).init_host()
         self.init_host_floating_ips()
+
+        self.driver.iptables_manager.defer_apply_off()
 
     def _setup_network_on_host(self, context, network):
         """Sets up network on this host."""
@@ -1728,9 +1733,14 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
 
         ctxt = context.get_admin_context()
         networks = network_obj.NetworkList.get_by_host(ctxt, self.host)
+
+        self.driver.iptables_manager.defer_apply_on()
+
         self.l3driver.initialize(fixed_range=False, networks=networks)
         NetworkManager.init_host(self)
         self.init_host_floating_ips()
+
+        self.driver.iptables_manager.defer_apply_off()
 
     def allocate_fixed_ip(self, context, instance_id, network, **kwargs):
         """Gets a fixed ip from the pool."""

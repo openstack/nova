@@ -668,6 +668,52 @@ class FlatNetworkTestCase(test.TestCase):
         util_method.assert_called_once_with(self.context, inst)
 
 
+class FlatDHCPNetworkTestCase(test.TestCase):
+    def setUp(self):
+        super(FlatDHCPNetworkTestCase, self).setUp()
+        self.useFixture(test.SampleNetworks())
+        self.flags(use_local=True, group='conductor')
+        self.network = network_manager.FlatDHCPManager(host=HOST)
+        self.network.db = db
+        self.context = context.RequestContext('testuser', 'testproject',
+                                              is_admin=False)
+        self.context_admin = context.RequestContext('testuser', 'testproject',
+                                                is_admin=True)
+
+    @mock.patch('nova.objects.fixed_ip.FixedIP.get_by_id')
+    @mock.patch('nova.objects.floating_ip.FloatingIPList.get_by_host')
+    @mock.patch('nova.network.linux_net.iptables_manager._apply')
+    def test_init_host_iptables_defer_apply(self, iptable_apply,
+                                            floating_get_by_host,
+                                            fixed_get_by_id):
+        def get_by_id(context, fixed_ip_id, **kwargs):
+            net = network_obj.Network(bridge='testbridge',
+                                      cidr='192.168.1.0/24')
+            if fixed_ip_id == 1:
+                return fixed_ip_obj.FixedIP(address='192.168.1.4',
+                                            network=net)
+            elif fixed_ip_id == 2:
+                return fixed_ip_obj.FixedIP(address='192.168.1.5',
+                                            network=net)
+
+        def fake_apply():
+            fake_apply.count += 1
+
+        fake_apply.count = 0
+        ctxt = context.RequestContext('testuser', 'testproject', is_admin=True)
+        float1 = floating_ip_obj.FloatingIP(address='1.2.3.4', fixed_ip_id=1)
+        float2 = floating_ip_obj.FloatingIP(address='1.2.3.5', fixed_ip_id=2)
+        float1._context = ctxt
+        float2._context = ctxt
+
+        iptable_apply.side_effect = fake_apply
+        floating_get_by_host.return_value = [float1, float2]
+        fixed_get_by_id.side_effect = get_by_id
+
+        self.network.init_host()
+        self.assertEqual(1, fake_apply.count)
+
+
 class VlanNetworkTestCase(test.TestCase):
     def setUp(self):
         super(VlanNetworkTestCase, self).setUp()
@@ -1545,6 +1591,39 @@ class VlanNetworkTestCase(test.TestCase):
 
         self.assertEqual(res[0]['id'], 1)
         self.assertEqual(res[1]['id'], 0)
+
+    @mock.patch('nova.objects.fixed_ip.FixedIP.get_by_id')
+    @mock.patch('nova.objects.floating_ip.FloatingIPList.get_by_host')
+    @mock.patch('nova.network.linux_net.iptables_manager._apply')
+    def test_init_host_iptables_defer_apply(self, iptable_apply,
+                                            floating_get_by_host,
+                                            fixed_get_by_id):
+        def get_by_id(context, fixed_ip_id, **kwargs):
+            net = network_obj.Network(bridge='testbridge',
+                                      cidr='192.168.1.0/24')
+            if fixed_ip_id == 1:
+                return fixed_ip_obj.FixedIP(address='192.168.1.4',
+                                            network=net)
+            elif fixed_ip_id == 2:
+                return fixed_ip_obj.FixedIP(address='192.168.1.5',
+                                            network=net)
+
+        def fake_apply():
+            fake_apply.count += 1
+
+        fake_apply.count = 0
+        ctxt = context.RequestContext('testuser', 'testproject', is_admin=True)
+        float1 = floating_ip_obj.FloatingIP(address='1.2.3.4', fixed_ip_id=1)
+        float2 = floating_ip_obj.FloatingIP(address='1.2.3.5', fixed_ip_id=2)
+        float1._context = ctxt
+        float2._context = ctxt
+
+        iptable_apply.side_effect = fake_apply
+        floating_get_by_host.return_value = [float1, float2]
+        fixed_get_by_id.side_effect = get_by_id
+
+        self.network.init_host()
+        self.assertEqual(1, fake_apply.count)
 
 
 class _TestDomainObject(object):
