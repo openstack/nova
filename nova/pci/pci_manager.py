@@ -21,8 +21,7 @@ from nova.compute import vm_states
 from nova import context
 from nova import exception
 from nova.i18n import _
-from nova.objects import instance
-from nova.objects import pci_device as pci_device_obj
+from nova import objects
 from nova.openstack.common import log as logging
 from nova.pci import pci_device
 from nova.pci import pci_request
@@ -58,8 +57,7 @@ class PciDevTracker(object):
         self.stats = pci_stats.PciDeviceStats()
         if node_id:
             self.pci_devs = list(
-                pci_device_obj.PciDeviceList.get_by_compute_node(
-                    context, node_id))
+                objects.PciDeviceList.get_by_compute_node(context, node_id))
         else:
             self.pci_devs = []
         self._initial_instance_usage()
@@ -189,7 +187,7 @@ class PciDevTracker(object):
         for dev in [dev for dev in devices if
                     dev['address'] in new_addrs - exist_addrs]:
             dev['compute_node_id'] = self.node_id
-            dev_obj = pci_device_obj.PciDevice.create(dev)
+            dev_obj = objects.PciDevice.create(dev)
             self.pci_devs.append(dev_obj)
             self.stats.add_device(dev_obj)
 
@@ -314,9 +312,9 @@ class PciDevTracker(object):
 
 def get_instance_pci_devs(inst):
     """Get the devices assigned to the instances."""
-    if isinstance(inst, instance.Instance):
+    if isinstance(inst, objects.Instance):
         return inst.pci_devices
     else:
         ctxt = context.get_admin_context()
-        return pci_device_obj.PciDeviceList.get_by_instance_uuid(
+        return objects.PciDeviceList.get_by_instance_uuid(
             ctxt, inst['uuid'])

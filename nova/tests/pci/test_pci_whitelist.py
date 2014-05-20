@@ -14,7 +14,7 @@
 #    under the License.
 
 from nova import exception
-from nova.objects import pci_device
+from nova import objects
 from nova.pci import pci_whitelist
 from nova import test
 
@@ -59,7 +59,7 @@ class PciHostDevicesWhiteListTestCase(test.NoDBTestCase):
                                         'product_id': '0001'}])
 
     def test_whitelist_empty(self):
-        dev = pci_device.PciDevice.create(dev_dict)
+        dev = objects.PciDevice.create(dev_dict)
         parsed = pci_whitelist.PciHostDevicesWhiteList()
         self.assertEqual(parsed.device_assignable(dev), False)
 
@@ -73,13 +73,13 @@ class PciHostDevicesWhiteListTestCase(test.NoDBTestCase):
                          {'vendor_id': '8087', 'product_id': '0002'}])
 
     def test_device_assignable(self):
-        dev = pci_device.PciDevice.create(dev_dict)
+        dev = objects.PciDevice.create(dev_dict)
         white_list = '[{"product_id":"0001", "vendor_id":"8086"}]'
         parsed = pci_whitelist.PciHostDevicesWhiteList([white_list])
         self.assertEqual(parsed.device_assignable(dev), True)
 
     def test_device_assignable_multiple(self):
-        dev = pci_device.PciDevice.create(dev_dict)
+        dev = objects.PciDevice.create(dev_dict)
         white_list_1 = '[{"product_id":"0001", "vendor_id":"8086"}]'
         white_list_2 = '[{"product_id":"0002", "vendor_id":"8087"}]'
         parsed = pci_whitelist.PciHostDevicesWhiteList(
@@ -93,5 +93,5 @@ class PciHostDevicesWhiteListTestCase(test.NoDBTestCase):
         white_list_1 = '[{"product_id":"0001", "vendor_id":"8086"}]'
         self.flags(pci_passthrough_whitelist=[white_list_1])
         pci_filter = pci_whitelist.get_pci_devices_filter()
-        dev = pci_device.PciDevice.create(dev_dict)
+        dev = objects.PciDevice.create(dev_dict)
         self.assertEqual(pci_filter.device_assignable(dev), True)
