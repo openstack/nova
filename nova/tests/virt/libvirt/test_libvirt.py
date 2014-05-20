@@ -7031,7 +7031,8 @@ class LibvirtConnTestCase(test.TestCase):
             self.assertEqual(0, create.call_args_list[0][1]['launch_flags'])
             self.assertEqual(0, domain.resume.call_count)
 
-    def _test_create_with_network_events(self, neutron_failure=None):
+    def _test_create_with_network_events(self, neutron_failure=None,
+                                         power_on=True):
         self.flags(vif_driver="nova.tests.fake_network.FakeVIFDriver",
                    group='libvirt')
         generated_events = []
@@ -7069,9 +7070,11 @@ class LibvirtConnTestCase(test.TestCase):
         @mock.patch.object(conn, 'cleanup')
         def test_create(cleanup, create, fw_driver, plug_vifs):
             domain = conn._create_domain_and_network(self.context, 'xml',
-                                                     instance, vifs)
+                                                     instance, vifs,
+                                                     power_on=power_on)
             plug_vifs.assert_called_with(instance, vifs)
-            event = utils.is_neutron() and CONF.vif_plugging_timeout
+            event = (utils.is_neutron() and CONF.vif_plugging_timeout and
+                     power_on)
             flag = event and libvirt.VIR_DOMAIN_START_PAUSED or 0
             self.assertEqual(flag,
                              create.call_args_list[0][1]['launch_flags'])
@@ -7084,7 +7087,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         test_create()
 
-        if utils.is_neutron() and CONF.vif_plugging_timeout:
+        if utils.is_neutron() and CONF.vif_plugging_timeout and power_on:
             prepare.assert_has_calls([
                 mock.call(instance, 'network-vif-plugged-vif1'),
                 mock.call(instance, 'network-vif-plugged-vif2')])
@@ -7100,6 +7103,12 @@ class LibvirtConnTestCase(test.TestCase):
     @mock.patch('nova.utils.is_neutron', return_value=True)
     def test_create_with_network_events_neutron(self, is_neutron):
         self._test_create_with_network_events()
+
+    @mock.patch('nova.utils.is_neutron', return_value=True)
+    def test_create_with_network_events_neutron_power_off(self,
+                                                          is_neutron):
+        # Tests that we don't wait for events if we don't start the instance.
+        self._test_create_with_network_events(power_on=False)
 
     @mock.patch('nova.utils.is_neutron', return_value=True)
     def test_create_with_network_events_neutron_nowait(self, is_neutron):

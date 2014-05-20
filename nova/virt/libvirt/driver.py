@@ -3659,7 +3659,7 @@ class LibvirtDriver(driver.ComputeDriver):
         timeout = CONF.vif_plugging_timeout
         if (self._conn_supports_start_paused and
             utils.is_neutron() and not
-            vifs_already_plugged and timeout):
+            vifs_already_plugged and power_on and timeout):
             events = self._get_neutron_events(network_info)
         else:
             events = []
