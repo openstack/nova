@@ -30,9 +30,8 @@ from nova.network import base_api
 from nova.network import floating_ips
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
+from nova import objects
 from nova.objects import fields
-from nova.objects import fixed_ip as fixed_ip_obj
-from nova.objects import network as network_obj
 from nova import policy
 from nova import test
 from nova.tests import fake_instance
@@ -241,10 +240,10 @@ class ApiTestCase(test.TestCase):
     @mock.patch('nova.objects.network.Network.get_by_id')
     def _test_is_multi_host_network_has_no_project_id(self, is_multi_host,
                                                       net_get, fip_get):
-        net_get.return_value = network_obj.Network(id=123,
+        net_get.return_value = objects.Network(id=123,
                                                    project_id=None,
                                                    multi_host=is_multi_host)
-        fip_get.return_value = [fixed_ip_obj.FixedIP(
+        fip_get.return_value = [objects.FixedIP(
                 network_id=123, instance_uuid=FAKE_UUID)]
         instance = {'uuid': FAKE_UUID}
         result = self.network_api._is_multi_host(self.context, instance)
@@ -260,11 +259,11 @@ class ApiTestCase(test.TestCase):
     @mock.patch('nova.objects.network.Network.get_by_id')
     def _test_is_multi_host_network_has_project_id(self, is_multi_host,
                                                    net_get, fip_get):
-        net_get.return_value = network_obj.Network(
+        net_get.return_value = objects.Network(
             id=123, project_id=self.context.project_id,
             multi_host=is_multi_host)
         fip_get.return_value = [
-            fixed_ip_obj.FixedIP(network_id=123, instance_uuid=FAKE_UUID)]
+            objects.FixedIP(network_id=123, instance_uuid=FAKE_UUID)]
         instance = {'uuid': FAKE_UUID}
         result = self.network_api._is_multi_host(self.context, instance)
         self.assertEqual(is_multi_host, result)
@@ -338,7 +337,7 @@ class ApiTestCase(test.TestCase):
         fip_get.return_value = test_fixed_ip.fake_fixed_ip
         fip = self.network_api.get_fixed_ip_by_address(self.context,
                                                        'fake-addr')
-        self.assertIsInstance(fip, fixed_ip_obj.FixedIP)
+        self.assertIsInstance(fip, objects.FixedIP)
 
 
 @mock.patch('nova.network.api.API')
