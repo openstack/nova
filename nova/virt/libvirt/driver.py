@@ -1383,6 +1383,11 @@ class LibvirtDriver(driver.ComputeDriver):
                     encryptor = self._get_volume_encryptor(connection_info,
                                                            encryption)
                     encryptor.detach_volume(**encryption)
+        except exception.InstanceNotFound:
+            # NOTE(zhaoqin): If the instance does not exist, _lookup_by_name()
+            #                will throw InstanceNotFound exception. Need to
+            #                disconnect volume under this circumstance.
+            LOG.warn(_LW("During detach_volume, instance disappeared."))
         except libvirt.libvirtError as ex:
             # NOTE(vish): This is called to cleanup volumes after live
             #             migration, so we should still disconnect even if
