@@ -54,7 +54,7 @@ class ServerExternalEventsController(wsgi.Controller):
 
         for _event in body_events:
             client_event = dict(_event)
-            event = external_event_obj.InstanceExternalEvent()
+            event = objects.InstanceExternalEvent(context)
 
             try:
                 event.instance_uuid = client_event.pop('server_uuid')

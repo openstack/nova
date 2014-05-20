@@ -22,7 +22,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import exception
-from nova.objects import flavor as flavor_obj
+from nova import objects
 from nova.openstack.common.gettextutils import _
 
 ALIAS = 'flavor-access'
@@ -52,7 +52,7 @@ class FlavorAccessController(object):
         authorize(context)
 
         try:
-            flavor = flavor_obj.Flavor.get_by_flavor_id(context, flavor_id)
+            flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
         except exception.FlavorNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
@@ -70,7 +70,7 @@ class FlavorActionController(wsgi.Controller):
     def _get_flavor_refs(self, context):
         """Return a dictionary mapping flavorid to flavor_ref."""
 
-        flavors = flavor_obj.FlavorList.get_all(context)
+        flavors = objects.FlavorList.get_all(context)
         rval = {}
         for flavor in flavors:
             rval[flavor.flavorid] = flavor
@@ -115,7 +115,7 @@ class FlavorActionController(wsgi.Controller):
         vals = body['add_tenant_access']
         tenant = vals['tenant_id']
 
-        flavor = flavor_obj.Flavor(context=context, flavorid=id)
+        flavor = objects.Flavor(context=context, flavorid=id)
         try:
             flavor.add_access(tenant)
         except exception.FlavorNotFound as e:
@@ -136,7 +136,7 @@ class FlavorActionController(wsgi.Controller):
         vals = body['remove_tenant_access']
         tenant = vals['tenant_id']
 
-        flavor = flavor_obj.Flavor(context=context, flavorid=id)
+        flavor = objects.Flavor(context=context, flavorid=id)
         try:
             flavor.remove_access(tenant)
         except (exception.FlavorAccessNotFound,

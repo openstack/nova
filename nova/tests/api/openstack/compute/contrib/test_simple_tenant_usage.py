@@ -26,7 +26,6 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import objects
-from nova.objects import flavor as flavor_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common import policy as common_policy
 from nova.openstack.common import timeutils
@@ -461,7 +460,7 @@ class SimpleTenantUsageControllerTest(test.TestCase):
                                return_value=self.baseinst):
             flavor = self.controller._get_flavor(self.context,
                                                  self.inst_obj, {})
-        self.assertEqual(flavor_obj.Flavor, type(flavor))
+        self.assertEqual(objects.Flavor, type(flavor))
         self.assertEqual(FAKE_INST_TYPE['id'], flavor.id)
 
     def test_get_flavor_from_non_deleted_with_id_fails(self):
@@ -479,7 +478,7 @@ class SimpleTenantUsageControllerTest(test.TestCase):
         self.inst_obj.system_metadata = {}
         self.inst_obj.deleted = 1
         flavor = self.controller._get_flavor(self.context, self.inst_obj, {})
-        self.assertEqual(flavor_obj.Flavor, type(flavor))
+        self.assertEqual(objects.Flavor, type(flavor))
         self.assertEqual(FAKE_INST_TYPE['id'], flavor.id)
 
     def test_get_flavor_from_deleted_with_id_of_deleted(self):

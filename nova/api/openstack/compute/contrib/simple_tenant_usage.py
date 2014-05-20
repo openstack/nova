@@ -24,7 +24,6 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
 from nova import objects
-from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import timeutils
@@ -129,7 +128,7 @@ class SimpleTenantUsageController(object):
             return flavors_cache[flavor_type]
 
         try:
-            flavor_ref = flavor_obj.Flavor.get_by_id(context, flavor_type)
+            flavor_ref = objects.Flavor.get_by_id(context, flavor_type)
             flavors_cache[flavor_type] = flavor_ref
         except exception.FlavorNotFound:
             # can't bill if there is no flavor

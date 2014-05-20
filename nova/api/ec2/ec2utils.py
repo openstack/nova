@@ -22,8 +22,8 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.network import model as network_model
+from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import ec2 as ec2_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import memorycache
@@ -202,7 +202,7 @@ def ec2_inst_id_to_uuid(context, ec2_id):
 
 @memoize
 def get_instance_uuid_from_int_id(context, int_id):
-    imap = ec2_obj.EC2InstanceMapping.get_by_id(context, int_id)
+    imap = objects.EC2InstanceMapping.get_by_id(context, int_id)
     return imap.uuid
 
 
@@ -301,10 +301,10 @@ def get_int_id_from_instance_uuid(context, instance_uuid):
     if instance_uuid is None:
         return
     try:
-        imap = ec2_obj.EC2InstanceMapping.get_by_uuid(context, instance_uuid)
+        imap = objects.EC2InstanceMapping.get_by_uuid(context, instance_uuid)
         return imap.id
     except exception.NotFound:
-        imap = ec2_obj.EC2InstanceMapping(context)
+        imap = objects.EC2InstanceMapping(context)
         imap.uuid = instance_uuid
         imap.create()
         return imap.id
@@ -315,10 +315,10 @@ def get_int_id_from_volume_uuid(context, volume_uuid):
     if volume_uuid is None:
         return
     try:
-        vmap = ec2_obj.EC2VolumeMapping.get_by_uuid(context, volume_uuid)
+        vmap = objects.EC2VolumeMapping.get_by_uuid(context, volume_uuid)
         return vmap.id
     except exception.NotFound:
-        vmap = ec2_obj.EC2VolumeMapping(context)
+        vmap = objects.EC2VolumeMapping(context)
         vmap.uuid = volume_uuid
         vmap.create()
         return vmap.id
@@ -326,7 +326,7 @@ def get_int_id_from_volume_uuid(context, volume_uuid):
 
 @memoize
 def get_volume_uuid_from_int_id(context, int_id):
-    vmap = ec2_obj.EC2VolumeMapping.get_by_id(context, int_id)
+    vmap = objects.EC2VolumeMapping.get_by_id(context, int_id)
     return vmap.uuid
 
 
