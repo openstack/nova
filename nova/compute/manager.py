@@ -1888,7 +1888,7 @@ class ComputeManager(manager.Manager):
                 limits = {}
 
             if node is None:
-                node = self.driver.get_available_nodes()[0]
+                node = self.driver.get_available_nodes(refresh=True)[0]
                 LOG.debug('No node specified, defaulting to %s', node,
                           instance=instance)
 
