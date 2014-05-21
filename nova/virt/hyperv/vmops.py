@@ -224,8 +224,10 @@ class VMOps(object):
                                  root_vhd_path, eph_vhd_path)
 
             if configdrive.required_by(instance):
-                self._create_config_drive(instance, injected_files,
-                                          admin_password)
+                configdrive_path = self._create_config_drive(instance,
+                                                             injected_files,
+                                                             admin_password)
+                self.attach_config_drive(instance, configdrive_path)
 
             self.power_on(instance)
         except Exception:
@@ -305,7 +307,6 @@ class VMOps(object):
                               e, instance=instance)
 
         if not CONF.hyperv.config_drive_cdrom:
-            drive_type = constants.IDE_DISK
             configdrive_path = os.path.join(instance_path,
                                             'configdrive.vhd')
             utils.execute(CONF.hyperv.qemu_img_cmd,
@@ -319,11 +320,19 @@ class VMOps(object):
                           attempts=1)
             self._pathutils.remove(configdrive_path_iso)
         else:
-            drive_type = constants.IDE_DVD
             configdrive_path = configdrive_path_iso
 
-        self._vmutils.attach_ide_drive(instance['name'], configdrive_path,
-                                       1, 0, drive_type)
+        return configdrive_path
+
+    def attach_config_drive(self, instance, configdrive_path):
+        configdrive_ext = configdrive_path[(configdrive_path.rfind('.') + 1):]
+        # Do the attach here and if there is a certain file format that isn't
+        # supported in constants.DISK_FORMAT_MAP then bomb out.
+        try:
+            self._vmutils.attach_ide_drive(instance.name, configdrive_path,
+                    1, 0, constants.DISK_FORMAT_MAP[configdrive_ext])
+        except KeyError:
+            raise exception.InvalidDiskFormat(disk_format=configdrive_ext)
 
     def _disconnect_volumes(self, volume_drives):
         for volume_drive in volume_drives:
