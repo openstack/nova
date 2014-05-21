@@ -659,7 +659,7 @@ class Rbd(Image):
         info = vconfig.LibvirtConfigGuestDisk()
 
         hosts, ports = self._get_mon_addrs()
-        info.device_type = device_type
+        info.source_device = device_type
         info.driver_format = 'raw'
         info.driver_cache = cache_mode
         info.target_bus = disk_bus
@@ -794,7 +794,7 @@ class Rbd(Image):
     def direct_fetch(self, image_id, image_meta, image_locations, max_size=0):
         if self.check_image_exists():
             return
-        if image_meta.get('disk_format') != 'raw':
+        if image_meta.get('disk_format') not in ['raw', 'iso']:
             reason = _('Image is not raw format')
             raise exception.ImageUnacceptable(image_id=image_id, reason=reason)
         if not self._supports_layering():
