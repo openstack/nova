@@ -200,7 +200,7 @@ class API(object):
             msg = _("already detached")
             raise exception.InvalidVolume(reason=msg)
 
-    def attach(self, context, volume_id, instance_uuid, mountpoint):
+    def attach(self, context, volume_id, instance_uuid, mountpoint, mode='rw'):
         LOG.info('attaching volume %s', volume_id)
         volume = self.get(context, volume_id)
         volume['status'] = 'in-use'
