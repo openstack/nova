@@ -174,6 +174,22 @@ class _ComputeAPIUnitTestMixIn(object):
             else:
                 self.fail("Exception not raised")
 
+    def test_specified_port_and_multiple_instances_neutronv2(self):
+        # Tests that if port is specified there is only one instance booting
+        # (i.e max_count == 1) as we can't share the same port across multiple
+        # instances.
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        port = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+        address = '10.0.0.1'
+        min_count = 1
+        max_count = 2
+        requested_networks = [(None, address, port)]
+
+        self.assertRaises(exception.MultiplePortsNotApplicable,
+            self.compute_api.create, self.context, 'fake_flavor', 'image_id',
+            min_count=min_count, max_count=max_count,
+            requested_networks=requested_networks)
+
     def _test_specified_ip_and_multiple_instances_helper(self,
                                                          requested_networks):
         # Tests that if ip is specified there is only one instance booting
