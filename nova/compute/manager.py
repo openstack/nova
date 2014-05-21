@@ -4404,9 +4404,7 @@ class ComputeManager(manager.Manager):
     @object_compat
     def detach_interface(self, context, instance, port_id):
         """Detach an network adapter from an instance."""
-        # FIXME(comstud): Why does this need elevated context?
-        network_info = self._get_instance_nw_info(context.elevated(),
-                                                  instance)
+        network_info = instance.info_cache.network_info
         condemned = None
         for vif in network_info:
             if vif['id'] == port_id:
