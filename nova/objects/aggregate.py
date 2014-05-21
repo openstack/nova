@@ -119,7 +119,6 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
                 to_add[key] = value
                 self.metadata[key] = value
         db.aggregate_metadata_add(context, self.id, to_add)
-        payload['meta_data'] = to_add
         compute_utils.notify_about_aggregate_update(context,
                                                     "updatemetadata.end",
                                                     payload)

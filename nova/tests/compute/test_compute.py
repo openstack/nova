@@ -9542,9 +9542,20 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         msg = fake_notifier.NOTIFICATIONS[1]
         self.assertEqual(msg.event_type,
                          'aggregate.updatemetadata.end')
+        fake_notifier.NOTIFICATIONS = []
         metadata['foo_key1'] = None
+        expected_payload_meta_data = {'foo_key1': None,
+                                      'foo_key2': 'foo_value2',
+                                      'availability_zone': 'fake_zone'}
         expected = self.api.update_aggregate_metadata(self.context,
                                              aggr['id'], metadata)
+        self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual('aggregate.updatemetadata.start', msg.event_type)
+        self.assertEqual(expected_payload_meta_data, msg.payload['meta_data'])
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual('aggregate.updatemetadata.end', msg.event_type)
+        self.assertEqual(expected_payload_meta_data, msg.payload['meta_data'])
         self.assertThat(expected['metadata'],
                         matchers.DictMatches({'availability_zone': 'fake_zone',
                         'foo_key2': 'foo_value2'}))
