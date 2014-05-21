@@ -252,6 +252,8 @@ class ComputeAPI(object):
         3.25 - Make detach_volume take an object
         3.26 - Make live_migration() and
                rollback_live_migration_at_destination() take an object
+        ...  - Removed run_instance()
+        3.27 - Make run_instance() accept a new-world object
     '''
 
     VERSION_ALIASES = {

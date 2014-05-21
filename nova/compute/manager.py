@@ -562,7 +562,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.26')
+    target = messaging.Target(version='3.27')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2096,6 +2096,7 @@ class ComputeManager(manager.Manager):
                         ' not rescheduling')
                 LOG.exception(msg, instance=instance)
 
+    @object_compat
     @messaging.expected_exceptions(exception.BuildAbortException,
                                    exception.UnexpectedTaskStateError,
                                    exception.VirtualInterfaceCreateException,
@@ -2115,7 +2116,7 @@ class ComputeManager(manager.Manager):
         if filter_properties is None:
             filter_properties = {}
 
-        @utils.synchronized(instance['uuid'])
+        @utils.synchronized(instance.uuid)
         def do_run_instance():
             self._run_instance(context, request_spec,
                     filter_properties, requested_networks, injected_files,
