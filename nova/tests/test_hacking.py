@@ -47,31 +47,30 @@ class HackingTestCase(test.NoDBTestCase):
     should pass.
     """
     def test_virt_driver_imports(self):
-        self.assertTrue(checks.import_no_virt_driver_import_deps(
+
+        expect = (0, "N311: importing code from other virt drivers forbidden")
+
+        self.assertEqual(expect, checks.import_no_virt_driver_import_deps(
             "from nova.virt.libvirt import utils as libvirt_utils",
+            "./nova/virt/xenapi/driver.py"))
+
+        self.assertEqual(expect, checks.import_no_virt_driver_import_deps(
+            "import nova.virt.libvirt.utils as libvirt_utils",
             "./nova/virt/xenapi/driver.py"))
 
         self.assertIsNone(checks.import_no_virt_driver_import_deps(
             "from nova.virt.libvirt import utils as libvirt_utils",
             "./nova/virt/libvirt/driver.py"))
 
-        self.assertTrue(checks.import_no_virt_driver_import_deps(
-            "import nova.virt.libvirt.utils as libvirt_utils",
-            "./nova/virt/xenapi/driver.py"))
-
-        self.assertTrue(checks.import_no_virt_driver_import_deps(
-            "import nova.virt.libvirt.utils as libvirt_utils",
-            "./nova/virt/xenapi/driver.py"))
-
         self.assertIsNone(checks.import_no_virt_driver_import_deps(
             "import nova.virt.firewall",
             "./nova/virt/libvirt/firewall.py"))
 
     def test_virt_driver_config_vars(self):
-        self.assertTrue(checks.import_no_virt_driver_config_deps(
+        self.assertIsInstance(checks.import_no_virt_driver_config_deps(
             "CONF.import_opt('volume_drivers', "
             "'nova.virt.libvirt.driver', group='libvirt')",
-            "./nova/virt/xenapi/driver.py"))
+            "./nova/virt/xenapi/driver.py"), tuple)
 
         self.assertIsNone(checks.import_no_virt_driver_config_deps(
             "CONF.import_opt('volume_drivers', "
@@ -79,12 +78,13 @@ class HackingTestCase(test.NoDBTestCase):
             "./nova/virt/libvirt/volume.py"))
 
     def test_no_author_tags(self):
-        self.assertTrue(checks.no_author_tags("# author: jogo"))
-        self.assertTrue(checks.no_author_tags("# @author: jogo"))
-        self.assertTrue(checks.no_author_tags("# @Author: jogo"))
-        self.assertTrue(checks.no_author_tags("# Author: jogo"))
-        self.assertTrue(checks.no_author_tags(".. moduleauthor:: jogo"))
-        self.assertFalse(checks.no_author_tags("# authorization of this"))
+        self.assertIsInstance(checks.no_author_tags("# author: jogo"), tuple)
+        self.assertIsInstance(checks.no_author_tags("# @author: jogo"), tuple)
+        self.assertIsInstance(checks.no_author_tags("# @Author: jogo"), tuple)
+        self.assertIsInstance(checks.no_author_tags("# Author: jogo"), tuple)
+        self.assertIsInstance(checks.no_author_tags(".. moduleauthor:: jogo"),
+                              tuple)
+        self.assertIsNone(checks.no_author_tags("# authorization of this"))
         self.assertEqual(2, checks.no_author_tags("# author: jogo")[0])
         self.assertEqual(2, checks.no_author_tags("# Author: jogo")[0])
         self.assertEqual(3, checks.no_author_tags(".. moduleauthor:: jogo")[0])
