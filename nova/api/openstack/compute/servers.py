@@ -986,6 +986,7 @@ class Controller(wsgi.Controller):
                 exception.InvalidMetadata,
                 exception.InvalidRequest,
                 exception.MultiplePortsNotApplicable,
+                exception.InvalidFixedIpAndMaxCountRequest,
                 exception.NetworkNotFound,
                 exception.PortNotFound,
                 exception.FixedIpAlreadyInUse,

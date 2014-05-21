@@ -516,6 +516,7 @@ class ServersController(wsgi.Controller):
                 exception.InvalidMetadata,
                 exception.InvalidRequest,
                 exception.MultiplePortsNotApplicable,
+                exception.InvalidFixedIpAndMaxCountRequest,
                 exception.InstanceUserDataMalformed,
                 exception.PortNotFound,
                 exception.FixedIpAlreadyInUse,
