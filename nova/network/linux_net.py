@@ -62,7 +62,7 @@ linux_net_opts = [
                default='$my_ip',
                help='Public IP of network host'),
     cfg.IntOpt('dhcp_lease_time',
-               default=120,
+               default=86400,
                help='Lifetime of a DHCP lease in seconds'),
     cfg.MultiStrOpt('dns_server',
                     default=[],
