@@ -100,6 +100,7 @@ class CellsScheduler(base.Base):
         instance_values.pop('info_cache')
         instance_values.pop('security_groups')
 
+        instances = []
         num_instances = len(instance_uuids)
         for i, instance_uuid in enumerate(instance_uuids):
             instance = instance_obj.Instance()
@@ -114,8 +115,10 @@ class CellsScheduler(base.Base):
                     block_device_mapping,
                     num_instances, i)
 
-            instance = obj_base.obj_to_primitive(instance)
-            self.msg_runner.instance_update_at_top(ctxt, instance)
+            instances.append(instance)
+            instance_p = obj_base.obj_to_primitive(instance)
+            self.msg_runner.instance_update_at_top(ctxt, instance_p)
+        return instances
 
     def _create_action_here(self, ctxt, instance_uuids):
         for instance_uuid in instance_uuids:
@@ -214,9 +217,10 @@ class CellsScheduler(base.Base):
                 if target_cell.is_me:
                     # Need to create instance DB entries as the conductor
                     # expects that the instance(s) already exists.
-                    self._create_instances_here(ctxt, instance_uuids,
-                            instance_properties, instance_type, image,
-                            security_groups, block_device_mapping)
+                    instances = self._create_instances_here(ctxt,
+                            instance_uuids, instance_properties, instance_type,
+                            image, security_groups, block_device_mapping)
+                    build_inst_kwargs['instances'] = instances
                     # Need to record the create action in the db as the
                     # conductor expects it to already exist.
                     self._create_action_here(ctxt, instance_uuids)

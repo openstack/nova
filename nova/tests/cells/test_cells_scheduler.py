@@ -15,6 +15,7 @@
 """
 Tests For CellsScheduler
 """
+import copy
 import time
 
 from oslo.config import cfg
@@ -30,6 +31,7 @@ from nova.openstack.common import uuidutils
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests.cells import fakes
+from nova.tests import fake_instance
 from nova import utils
 
 CONF = cfg.CONF
@@ -264,6 +266,7 @@ class CellsSchedulerTestCase(test.TestCase):
         self.state_manager.child_cells = {}
 
         call_info = {}
+        build_inst_kwargs = copy.deepcopy(self.build_inst_kwargs)
 
         def fake_create_instances_here(ctxt, instance_uuids,
                 instance_properties, instance_type, image, security_groups,
@@ -275,6 +278,9 @@ class CellsSchedulerTestCase(test.TestCase):
             call_info['image'] = image
             call_info['security_groups'] = security_groups
             call_info['block_device_mapping'] = block_device_mapping
+            instances = [fake_instance.fake_instance_obj(ctxt, **instance)
+                    for instance in self.instances]
+            return instances
 
         def fake_rpc_build_instances(ctxt, **build_inst_kwargs):
             call_info['build_inst_kwargs'] = build_inst_kwargs
@@ -293,7 +299,7 @@ class CellsSchedulerTestCase(test.TestCase):
                 fake_build_request_spec)
 
         self.msg_runner.build_instances(self.ctxt, self.my_cell_state,
-                self.build_inst_kwargs)
+                build_inst_kwargs)
 
         self.assertEqual(self.ctxt, call_info['ctxt'])
         self.assertEqual(self.instance_uuids, call_info['instance_uuids'])
@@ -307,7 +313,7 @@ class CellsSchedulerTestCase(test.TestCase):
                 call_info['security_groups'])
         self.assertEqual(self.build_inst_kwargs['block_device_mapping'],
                 call_info['block_device_mapping'])
-        self.assertEqual(self.build_inst_kwargs,
+        self.assertEqual(build_inst_kwargs,
                 call_info['build_inst_kwargs'])
         self.assertEqual(self.instance_uuids, call_info['instance_uuids'])
 
