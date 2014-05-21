@@ -191,15 +191,6 @@ class CellsManager(manager.Manager):
         else:
             self.instance_update_at_top(ctxt, instance)
 
-    def schedule_run_instance(self, ctxt, host_sched_kwargs):
-        """Pick a cell (possibly ourselves) to build new instance(s)
-        and forward the request accordingly.
-        """
-        # Target is ourselves first.
-        our_cell = self.state_manager.get_my_state()
-        self.msg_runner.schedule_run_instance(ctxt, our_cell,
-                                              host_sched_kwargs)
-
     def build_instances(self, ctxt, build_inst_kwargs):
         """Pick a cell (possibly ourselves) to build new instance(s) and
         forward the request accordingly.

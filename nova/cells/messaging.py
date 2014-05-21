@@ -653,10 +653,6 @@ class _TargetedMessageMethods(_BaseMessageMethods):
     def __init__(self, *args, **kwargs):
         super(_TargetedMessageMethods, self).__init__(*args, **kwargs)
 
-    def schedule_run_instance(self, message, host_sched_kwargs):
-        """Parent cell told us to schedule new instance creation."""
-        self.msg_runner.scheduler.run_instance(message, host_sched_kwargs)
-
     def build_instances(self, message, build_inst_kwargs):
         """Parent cell told us to schedule new instance creation."""
         self.msg_runner.scheduler.build_instances(message, build_inst_kwargs)
@@ -1411,15 +1407,6 @@ class MessageRunner(object):
             message = _TargetedMessage(self, ctxt, 'update_capacities',
                     method_kwargs, 'up', cell, fanout=True)
             message.process()
-
-    def schedule_run_instance(self, ctxt, target_cell, host_sched_kwargs):
-        """Called by the scheduler to tell a child cell to schedule
-        a new instance for build.
-        """
-        method_kwargs = dict(host_sched_kwargs=host_sched_kwargs)
-        message = _TargetedMessage(self, ctxt, 'schedule_run_instance',
-                                   method_kwargs, 'down', target_cell)
-        message.process()
 
     def build_instances(self, ctxt, target_cell, build_inst_kwargs):
         """Called by the cell scheduler to tell a child cell to build

@@ -27,8 +27,6 @@ from nova.db.sqlalchemy import models as sqa_models
 from nova import exception
 from nova.openstack.common import timeutils
 from nova import quota
-from nova.scheduler import driver as scheduler_driver
-from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import test
 import nova.tests.image.fake
 
@@ -58,15 +56,6 @@ class QuotaIntegrationTestCase(test.TestCase):
         nova.tests.image.fake.stub_out_image_service(self.stubs)
 
         self.compute_api = compute.API()
-
-        def fake_run_instance(self, ctxt, request_spec, *args):
-            """Stub out the scheduler creating the instance entry."""
-            instance = scheduler_driver.Scheduler().create_instance_db_entry(
-                context, request_spec, None)
-            return [scheduler_driver.encode_instance(instance)]
-
-        self.stubs.Set(scheduler_rpcapi.SchedulerAPI, 'run_instance',
-                       fake_run_instance)
 
     def tearDown(self):
         super(QuotaIntegrationTestCase, self).tearDown()

@@ -81,11 +81,9 @@ class CellsSchedulerTestCase(test.TestCase):
         self.instances = [{'uuid': uuid} for uuid in instance_uuids]
         self.request_spec = {
                 'instance_uuids': instance_uuids,
-                'instance_properties': 'fake_properties',
+                'instance_properties': self.instances[0],
                 'instance_type': 'fake_type',
-                'image': 'fake_image',
-                'security_group': 'fake_sec_groups',
-                'block_device_mapping': 'fake_bdm'}
+                'image': 'fake_image'}
         self.build_inst_kwargs = {
                 'instances': self.instances,
                 'image': 'fake_image',
@@ -137,42 +135,6 @@ class CellsSchedulerTestCase(test.TestCase):
                              instance['display_name'])
             self.assertEqual('fake_image_ref', instance['image_ref'])
 
-    def test_run_instance_selects_child_cell(self):
-        # Make sure there's no capacity info so we're sure to
-        # select a child cell
-        our_cell_info = self.state_manager.get_my_state()
-        our_cell_info.capacities = {}
-
-        call_info = {'times': 0}
-
-        orig_fn = self.msg_runner.schedule_run_instance
-
-        def msg_runner_schedule_run_instance(ctxt, target_cell,
-                host_sched_kwargs):
-            # This gets called twice.  Once for our running it
-            # in this cell.. and then it'll get called when the
-            # child cell is picked.  So, first time.. just run it
-            # like normal.
-            if not call_info['times']:
-                call_info['times'] += 1
-                return orig_fn(ctxt, target_cell, host_sched_kwargs)
-            call_info['ctxt'] = ctxt
-            call_info['target_cell'] = target_cell
-            call_info['host_sched_kwargs'] = host_sched_kwargs
-
-        self.stubs.Set(self.msg_runner, 'schedule_run_instance',
-                msg_runner_schedule_run_instance)
-
-        host_sched_kwargs = {'request_spec': self.request_spec,
-                             'filter_properties': {}}
-        self.msg_runner.schedule_run_instance(self.ctxt,
-                self.my_cell_state, host_sched_kwargs)
-
-        self.assertEqual(self.ctxt, call_info['ctxt'])
-        self.assertEqual(host_sched_kwargs, call_info['host_sched_kwargs'])
-        child_cells = self.state_manager.get_child_cells()
-        self.assertIn(call_info['target_cell'], child_cells)
-
     def test_build_instances_selects_child_cell(self):
         # Make sure there's no capacity info so we're sure to
         # select a child cell
@@ -214,51 +176,6 @@ class CellsSchedulerTestCase(test.TestCase):
                 call_info['build_inst_kwargs'])
         child_cells = self.state_manager.get_child_cells()
         self.assertIn(call_info['target_cell'], child_cells)
-
-    def test_run_instance_selects_current_cell(self):
-        # Make sure there's no child cells so that we will be
-        # selected
-        self.state_manager.child_cells = {}
-
-        call_info = {}
-
-        def fake_create_instances_here(ctxt, instance_uuids,
-                instance_properties, instance_type, image, security_groups,
-                block_device_mapping):
-            call_info['ctxt'] = ctxt
-            call_info['instance_uuids'] = instance_uuids
-            call_info['instance_properties'] = instance_properties
-            call_info['instance_type'] = instance_type
-            call_info['image'] = image
-            call_info['security_groups'] = security_groups
-            call_info['block_device_mapping'] = block_device_mapping
-
-        def fake_rpc_run_instance(ctxt, **host_sched_kwargs):
-            call_info['host_sched_kwargs'] = host_sched_kwargs
-
-        self.stubs.Set(self.scheduler, '_create_instances_here',
-                fake_create_instances_here)
-        self.stubs.Set(self.scheduler.scheduler_rpcapi,
-                       'run_instance', fake_rpc_run_instance)
-
-        host_sched_kwargs = {'request_spec': self.request_spec,
-                             'filter_properties': {},
-                             'other': 'stuff'}
-        self.msg_runner.schedule_run_instance(self.ctxt,
-                self.my_cell_state, host_sched_kwargs)
-
-        self.assertEqual(self.ctxt, call_info['ctxt'])
-        self.assertEqual(host_sched_kwargs, call_info['host_sched_kwargs'])
-        self.assertEqual(self.instance_uuids, call_info['instance_uuids'])
-        self.assertEqual(self.request_spec['instance_properties'],
-                call_info['instance_properties'])
-        self.assertEqual(self.request_spec['instance_type'],
-                call_info['instance_type'])
-        self.assertEqual(self.request_spec['image'], call_info['image'])
-        self.assertEqual(self.request_spec['security_group'],
-                call_info['security_groups'])
-        self.assertEqual(self.request_spec['block_device_mapping'],
-                call_info['block_device_mapping'])
 
     def test_build_instances_selects_current_cell(self):
         # Make sure there's no child cells so that we will be
@@ -316,36 +233,6 @@ class CellsSchedulerTestCase(test.TestCase):
         self.assertEqual(build_inst_kwargs,
                 call_info['build_inst_kwargs'])
         self.assertEqual(self.instance_uuids, call_info['instance_uuids'])
-
-    def test_run_instance_retries_when_no_cells_avail(self):
-        self.flags(scheduler_retries=7, group='cells')
-
-        host_sched_kwargs = {'request_spec': self.request_spec,
-                             'filter_properties': {}}
-
-        call_info = {'num_tries': 0, 'errored_uuids': []}
-
-        def fake_grab_target_cells(filter_properties):
-            call_info['num_tries'] += 1
-            raise exception.NoCellsAvailable()
-
-        def fake_sleep(_secs):
-            return
-
-        def fake_instance_update(ctxt, instance_uuid, values):
-            self.assertEqual(vm_states.ERROR, values['vm_state'])
-            call_info['errored_uuids'].append(instance_uuid)
-
-        self.stubs.Set(self.scheduler, '_grab_target_cells',
-                fake_grab_target_cells)
-        self.stubs.Set(time, 'sleep', fake_sleep)
-        self.stubs.Set(db, 'instance_update', fake_instance_update)
-
-        self.msg_runner.schedule_run_instance(self.ctxt,
-                self.my_cell_state, host_sched_kwargs)
-
-        self.assertEqual(8, call_info['num_tries'])
-        self.assertEqual(self.instance_uuids, call_info['errored_uuids'])
 
     def test_build_instances_retries_when_no_cells_avail(self):
         self.flags(scheduler_retries=7, group='cells')
@@ -470,7 +357,7 @@ class CellsSchedulerTestCase(test.TestCase):
             call_info['security_groups'] = security_groups
             call_info['block_device_mapping'] = block_device_mapping
 
-        def fake_rpc_run_instance(ctxt, **host_sched_kwargs):
+        def fake_rpc_build_instances(ctxt, **host_sched_kwargs):
             call_info['host_sched_kwargs'] = host_sched_kwargs
 
         def fake_get_filtered_objs(filter_classes, cells, filt_properties):
@@ -479,19 +366,32 @@ class CellsSchedulerTestCase(test.TestCase):
             call_info['filt_props'] = filt_properties
             return cells
 
+        def fake_build_request_spec(ctxt, image, instances):
+            request_spec = {
+                    'instance_uuids': [inst['uuid'] for inst in instances],
+                    'instance_properties': instances[0],
+                    'image': image,
+                    'instance_type': 'fake_type'}
+            return request_spec
+
         self.stubs.Set(self.scheduler, '_create_instances_here',
                 fake_create_instances_here)
-        self.stubs.Set(self.scheduler.scheduler_rpcapi,
-                       'run_instance', fake_rpc_run_instance)
+        self.stubs.Set(self.scheduler.compute_task_api,
+                       'build_instances', fake_rpc_build_instances)
+        self.stubs.Set(scheduler_utils, 'build_request_spec',
+                       fake_build_request_spec)
         filter_handler = self.scheduler.filter_handler
         self.stubs.Set(filter_handler, 'get_filtered_objects',
                        fake_get_filtered_objs)
 
-        host_sched_kwargs = {'request_spec': self.request_spec,
-                             'filter_properties': {},
-                             'other': 'stuff'}
+        host_sched_kwargs = {'image': 'fake_image',
+                             'instances': self.instances,
+                             'filter_properties':
+                                {'instance_type': 'fake_type'},
+                             'security_groups': 'fake_sec_groups',
+                             'block_device_mapping': 'fake_bdm'}
 
-        self.msg_runner.schedule_run_instance(self.ctxt,
+        self.msg_runner.build_instances(self.ctxt,
                 self.my_cell_state, host_sched_kwargs)
         # Our cell was selected.
         self.assertEqual(self.ctxt, call_info['ctxt'])
@@ -501,10 +401,6 @@ class CellsSchedulerTestCase(test.TestCase):
         self.assertEqual(self.request_spec['instance_type'],
                 call_info['instance_type'])
         self.assertEqual(self.request_spec['image'], call_info['image'])
-        self.assertEqual(self.request_spec['security_group'],
-                call_info['security_groups'])
-        self.assertEqual(self.request_spec['block_device_mapping'],
-                call_info['block_device_mapping'])
         self.assertEqual(host_sched_kwargs, call_info['host_sched_kwargs'])
         # Filter args are correct
         expected_filt_props = {'context': self.ctxt,
@@ -512,8 +408,7 @@ class CellsSchedulerTestCase(test.TestCase):
                                'routing_path': self.my_cell_state.name,
                                'host_sched_kwargs': host_sched_kwargs,
                                'request_spec': self.request_spec,
-                               'cell_scheduler_method':
-                                   'schedule_run_instance'}
+                               'instance_type': 'fake_type'}
         self.assertEqual(expected_filt_props, call_info['filt_props'])
         self.assertEqual([FakeFilterClass1, FakeFilterClass2],
                          call_info['filt_classes'])
@@ -548,7 +443,7 @@ class CellsSchedulerTestCase(test.TestCase):
         self.stubs.Set(filter_handler, 'get_filtered_objects',
                        fake_get_filtered_objs)
 
-        self.msg_runner.schedule_run_instance(self.ctxt,
+        self.msg_runner.build_instances(self.ctxt,
                 self.my_cell_state, {})
         self.assertFalse(call_info['scheduled'])
 
@@ -577,7 +472,7 @@ class CellsSchedulerTestCase(test.TestCase):
             call_info['security_groups'] = security_groups
             call_info['block_device_mapping'] = block_device_mapping
 
-        def fake_rpc_run_instance(ctxt, **host_sched_kwargs):
+        def fake_rpc_build_instances(ctxt, **host_sched_kwargs):
             call_info['host_sched_kwargs'] = host_sched_kwargs
 
         def fake_get_weighed_objs(weight_classes, cells, filt_properties):
@@ -586,19 +481,32 @@ class CellsSchedulerTestCase(test.TestCase):
             call_info['weight_props'] = filt_properties
             return [weights.WeightedCell(cells[0], 0.0)]
 
+        def fake_build_request_spec(ctxt, image, instances):
+            request_spec = {
+                    'instance_uuids': [inst['uuid'] for inst in instances],
+                    'instance_properties': instances[0],
+                    'image': image,
+                    'instance_type': 'fake_type'}
+            return request_spec
+
         self.stubs.Set(self.scheduler, '_create_instances_here',
                 fake_create_instances_here)
-        self.stubs.Set(self.scheduler.scheduler_rpcapi,
-                       'run_instance', fake_rpc_run_instance)
+        self.stubs.Set(scheduler_utils, 'build_request_spec',
+                fake_build_request_spec)
+        self.stubs.Set(self.scheduler.compute_task_api,
+                       'build_instances', fake_rpc_build_instances)
         weight_handler = self.scheduler.weight_handler
         self.stubs.Set(weight_handler, 'get_weighed_objects',
                        fake_get_weighed_objs)
 
-        host_sched_kwargs = {'request_spec': self.request_spec,
-                             'filter_properties': {},
-                             'other': 'stuff'}
+        host_sched_kwargs = {'image': 'fake_image',
+                             'instances': self.instances,
+                             'filter_properties':
+                                {'instance_type': 'fake_type'},
+                             'security_groups': 'fake_sec_groups',
+                             'block_device_mapping': 'fake_bdm'}
 
-        self.msg_runner.schedule_run_instance(self.ctxt,
+        self.msg_runner.build_instances(self.ctxt,
                 self.my_cell_state, host_sched_kwargs)
         # Our cell was selected.
         self.assertEqual(self.ctxt, call_info['ctxt'])
@@ -608,10 +516,6 @@ class CellsSchedulerTestCase(test.TestCase):
         self.assertEqual(self.request_spec['instance_type'],
                 call_info['instance_type'])
         self.assertEqual(self.request_spec['image'], call_info['image'])
-        self.assertEqual(self.request_spec['security_group'],
-                call_info['security_groups'])
-        self.assertEqual(self.request_spec['block_device_mapping'],
-                call_info['block_device_mapping'])
         self.assertEqual(host_sched_kwargs, call_info['host_sched_kwargs'])
         # Weight args are correct
         expected_filt_props = {'context': self.ctxt,
@@ -619,8 +523,7 @@ class CellsSchedulerTestCase(test.TestCase):
                                'routing_path': self.my_cell_state.name,
                                'host_sched_kwargs': host_sched_kwargs,
                                'request_spec': self.request_spec,
-                               'cell_scheduler_method':
-                                   'schedule_run_instance'}
+                               'instance_type': 'fake_type'}
         self.assertEqual(expected_filt_props, call_info['weight_props'])
         self.assertEqual([FakeWeightClass1, FakeWeightClass2],
                          call_info['weight_classes'])

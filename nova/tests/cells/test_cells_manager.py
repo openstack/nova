@@ -113,16 +113,6 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
         self.cells_manager._update_our_parents(self.ctxt)
 
-    def test_schedule_run_instance(self):
-        host_sched_kwargs = 'fake_host_sched_kwargs_silently_passed'
-        self.mox.StubOutWithMock(self.msg_runner, 'schedule_run_instance')
-        our_cell = self.msg_runner.state_manager.get_my_state()
-        self.msg_runner.schedule_run_instance(self.ctxt, our_cell,
-                                              host_sched_kwargs)
-        self.mox.ReplayAll()
-        self.cells_manager.schedule_run_instance(self.ctxt,
-                host_sched_kwargs=host_sched_kwargs)
-
     def test_build_instances(self):
         build_inst_kwargs = {'instances': [1, 2]}
         self.mox.StubOutWithMock(self.msg_runner, 'build_instances')

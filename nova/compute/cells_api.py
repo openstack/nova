@@ -64,16 +64,6 @@ class ComputeRPCAPIRedirect(object):
         return _noop_rpc_wrapper
 
 
-class SchedulerRPCAPIRedirect(object):
-    def __init__(self, cells_rpcapi_obj):
-        self.cells_rpcapi = cells_rpcapi_obj
-
-    def __getattr__(self, key):
-        def _noop_rpc_wrapper(*args, **kwargs):
-            return None
-        return _noop_rpc_wrapper
-
-
 class ConductorTaskRPCAPIRedirect(object):
     # NOTE(comstud): These are a list of methods where the cells_rpcapi
     # and the compute_task_rpcapi methods have the same signatures.  This
@@ -175,8 +165,6 @@ class ComputeCellsAPI(compute_api.API):
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
         # Avoid casts/calls directly to compute
         self.compute_rpcapi = ComputeRPCAPIRedirect(self.cells_rpcapi)
-        # Redirect scheduler run_instance to cells.
-        self.scheduler_rpcapi = SchedulerRPCAPIRedirect(self.cells_rpcapi)
         # Redirect conductor build_instances to cells
         self._compute_task_api = ConductorTaskRPCAPIRedirect(self.cells_rpcapi)
         self._cell_type = 'api'

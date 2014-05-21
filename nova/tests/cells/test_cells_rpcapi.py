@@ -122,18 +122,6 @@ class CellsAPITestCase(test.NoDBTestCase):
                 expected_args)
         self.assertEqual(fake_response, result)
 
-    def test_schedule_run_instance(self):
-        call_info = self._stub_rpc_method('cast', None)
-
-        self.cells_rpcapi.schedule_run_instance(
-                self.fake_context, arg1=1, arg2=2, arg3=3)
-
-        expected_args = {'host_sched_kwargs': {'arg1': 1,
-                                               'arg2': 2,
-                                               'arg3': 3}}
-        self._check_result(call_info, 'schedule_run_instance',
-                expected_args)
-
     def test_build_instances(self):
         call_info = self._stub_rpc_method('cast', None)
 

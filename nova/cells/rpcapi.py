@@ -134,12 +134,6 @@ class CellsAPI(object):
                                 method_info=method_info,
                                 call=True)
 
-    # NOTE(alaski): Deprecated and should be removed later.
-    def schedule_run_instance(self, ctxt, **kwargs):
-        """Schedule a new instance for creation."""
-        self.client.cast(ctxt, 'schedule_run_instance',
-                         host_sched_kwargs=kwargs)
-
     def build_instances(self, ctxt, **kwargs):
         """Build instances."""
         build_inst_kwargs = kwargs

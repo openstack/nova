@@ -35,7 +35,6 @@ from nova.objects import instance as instance_obj
 from nova.objects import instance_action as instance_action_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
-from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova.scheduler import utils as scheduler_utils
 from nova import utils
 
@@ -73,7 +72,6 @@ class CellsScheduler(base.Base):
         self.msg_runner = msg_runner
         self.state_manager = msg_runner.state_manager
         self.compute_api = compute.API()
-        self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
         self.compute_task_api = conductor.ComputeTaskAPI()
         self.filter_handler = filters.CellFilterHandler()
         self.filter_classes = self.filter_handler.get_matching_classes(
@@ -158,46 +156,6 @@ class CellsScheduler(base.Base):
         target_cells = [cell.obj for cell in weighted_cells]
         return target_cells
 
-    def _run_instance(self, message, target_cells, instance_uuids,
-            host_sched_kwargs):
-        """Attempt to schedule instance(s)."""
-        ctxt = message.ctxt
-        request_spec = host_sched_kwargs['request_spec']
-        instance_properties = request_spec['instance_properties']
-        instance_type = request_spec['instance_type']
-        image = request_spec['image']
-        security_groups = request_spec['security_group']
-        block_device_mapping = request_spec['block_device_mapping']
-
-        LOG.debug("Scheduling with routing_path=%(routing_path)s",
-                  {'routing_path': message.routing_path})
-
-        for target_cell in target_cells:
-            try:
-                if target_cell.is_me:
-                    # Need to create instance DB entries as the host scheduler
-                    # expects that the instance(s) already exists.
-                    self._create_instances_here(ctxt, instance_uuids,
-                            instance_properties, instance_type, image,
-                            security_groups, block_device_mapping)
-                    # Need to record the create action in the db as the
-                    # scheduler expects it to already exist.
-                    self._create_action_here(ctxt, instance_uuids)
-                    self.scheduler_rpcapi.run_instance(ctxt,
-                            **host_sched_kwargs)
-                    return
-                self.msg_runner.schedule_run_instance(ctxt, target_cell,
-                                                      host_sched_kwargs)
-                return
-            except Exception:
-                LOG.exception(_("Couldn't communicate with cell '%s'") %
-                        target_cell.name)
-        # FIXME(comstud): Would be nice to kick this back up so that
-        # the parent cell could retry, if we had a parent.
-        msg = _("Couldn't communicate with any cells")
-        LOG.error(msg)
-        raise exception.NoCellsAvailable()
-
     def _build_instances(self, message, target_cells, instance_uuids,
             build_inst_kwargs):
         """Attempt to build instance(s) or send msg to child cell."""
@@ -252,28 +210,9 @@ class CellsScheduler(base.Base):
                                   'routing_path': message.routing_path,
                                   'host_sched_kwargs': build_inst_kwargs,
                                   'request_spec': request_spec})
-        # NOTE(belliott) remove when deprecated schedule_run_instance
-        # code gets removed.
-        filter_properties['cell_scheduler_method'] = 'build_instances'
 
         self._schedule_build_to_cells(message, instance_uuids,
                 filter_properties, self._build_instances, build_inst_kwargs)
-
-    def run_instance(self, message, host_sched_kwargs):
-        request_spec = host_sched_kwargs['request_spec']
-        instance_uuids = request_spec['instance_uuids']
-        filter_properties = copy.copy(host_sched_kwargs['filter_properties'])
-        filter_properties.update({'context': message.ctxt,
-                                  'scheduler': self,
-                                  'routing_path': message.routing_path,
-                                  'host_sched_kwargs': host_sched_kwargs,
-                                  'request_spec': request_spec})
-        # NOTE(belliott) remove when deprecated schedule_run_instance
-        # code gets removed.
-        filter_properties['cell_scheduler_method'] = 'schedule_run_instance'
-
-        self._schedule_build_to_cells(message, instance_uuids,
-                filter_properties, self._run_instance, host_sched_kwargs)
 
     def _schedule_build_to_cells(self, message, instance_uuids,
             filter_properties, method, method_kwargs):
