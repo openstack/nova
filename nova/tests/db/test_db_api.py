@@ -4814,14 +4814,17 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         inst_uuid2 = db.instance_create(self.ctxt, {})['uuid']
         vifs1 = [self._create_virt_interface({'address': 'fake1'}),
                  self._create_virt_interface({'address': 'fake2'})]
+        # multiple nic of same instance
         vifs2 = [self._create_virt_interface({'address': 'fake3',
+                                              'instance_uuid': inst_uuid2}),
+                 self._create_virt_interface({'address': 'fake4',
                                               'instance_uuid': inst_uuid2})]
         vifs1_real = db.virtual_interface_get_by_instance(self.ctxt,
                                                           self.instance_uuid)
         vifs2_real = db.virtual_interface_get_by_instance(self.ctxt,
                                                           inst_uuid2)
         self._assertEqualListsOfObjects(vifs1, vifs1_real)
-        self._assertEqualListsOfObjects(vifs2, vifs2_real)
+        self._assertEqualOrderedListOfObjects(vifs2, vifs2_real)
 
     def test_virtual_interface_get_by_instance_and_network(self):
         inst_uuid2 = db.instance_create(self.ctxt, {})['uuid']
