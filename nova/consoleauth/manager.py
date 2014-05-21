@@ -25,7 +25,7 @@ from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import rpcapi as compute_rpcapi
 from nova import manager
 from nova.objects import instance as instance_obj
-from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _, _LW
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import memorycache
@@ -75,7 +75,14 @@ class ConsoleAuthManager(manager.Manager):
                       'internal_access_path': internal_access_path,
                       'last_activity_at': time.time()}
         data = jsonutils.dumps(token_dict)
-        self.mc.set(token.encode('UTF-8'), data, CONF.console_token_ttl)
+
+        # We need to log the warning message if the token is not cached
+        # successfully, because the failure will cause the console for
+        # instance to not be usable.
+        if not self.mc.set(token.encode('UTF-8'),
+                           data, CONF.console_token_ttl):
+            LOG.warning(_LW("Token: %(token)s failed to save into memcached."),
+                            {'token': token})
         tokens = self._get_tokens_for_instance(instance_uuid)
         # Remove the expired tokens from cache.
         for tok in tokens:
@@ -83,8 +90,11 @@ class ConsoleAuthManager(manager.Manager):
             if not token_str:
                 tokens.remove(tok)
         tokens.append(token)
-        self.mc.set(instance_uuid.encode('UTF-8'),
-                    jsonutils.dumps(tokens))
+        if not self.mc.set(instance_uuid.encode('UTF-8'),
+                           jsonutils.dumps(tokens)):
+            LOG.warning(_LW("Instance: %(instance_uuid)s failed to save "
+                            "into memcached"),
+                        {'instance_uuid': instance_uuid})
 
         LOG.audit(_("Received Token: %(token)s, %(token_dict)s"),
                   {'token': token, 'token_dict': token_dict})
