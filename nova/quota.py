@@ -57,9 +57,12 @@ quota_opts = [
     cfg.IntOpt('quota_injected_file_content_bytes',
                default=10 * 1024,
                help='Number of bytes allowed per injected file'),
-    cfg.IntOpt('quota_injected_file_path_bytes',
+    cfg.IntOpt('quota_injected_file_path_length',
                default=255,
-               help='Number of bytes allowed per injected file path'),
+               deprecated_name='quota_injected_file_path_bytes',
+               help='Length of injected file path'),
+    # TODO(lyj): quota_injected_file_path_bytes is deprecated in Juno, and will
+    #            be removed in K.
     cfg.IntOpt('quota_security_groups',
                default=10,
                help='Number of security groups per project'),
@@ -1281,7 +1284,7 @@ resources = [
     AbsoluteResource('injected_file_content_bytes',
                      'quota_injected_file_content_bytes'),
     AbsoluteResource('injected_file_path_bytes',
-                     'quota_injected_file_path_bytes'),
+                     'quota_injected_file_path_length'),
     CountableResource('security_group_rules',
                       db.security_group_rule_count_by_group,
                       'quota_security_group_rules'),

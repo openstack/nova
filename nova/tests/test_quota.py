@@ -208,13 +208,13 @@ class QuotaIntegrationTestCase(test.TestCase):
                           self._create_with_injected_files, files)
 
     def test_max_injected_file_path_bytes(self):
-        max = CONF.quota_injected_file_path_bytes
+        max = CONF.quota_injected_file_path_length
         path = ''.join(['a' for i in xrange(max)])
         files = [(path, 'config = quotatest')]
         self._create_with_injected_files(files)  # no QuotaError
 
     def test_too_many_injected_file_path_bytes(self):
-        max = CONF.quota_injected_file_path_bytes
+        max = CONF.quota_injected_file_path_length
         path = ''.join(['a' for i in xrange(max + 1)])
         files = [(path, 'config = quotatest')]
         self.assertRaises(exception.QuotaError,
@@ -683,7 +683,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                    quota_metadata_items=128,
                    quota_injected_files=5,
                    quota_injected_file_content_bytes=10 * 1024,
-                   quota_injected_file_path_bytes=255,
+                   quota_injected_file_path_length=255,
                    quota_security_groups=10,
                    quota_security_group_rules=20,
                    reservation_expire=86400,
@@ -2185,7 +2185,7 @@ class NoopQuotaDriverTestCase(test.TestCase):
                    quota_metadata_items=128,
                    quota_injected_files=5,
                    quota_injected_file_content_bytes=10 * 1024,
-                   quota_injected_file_path_bytes=255,
+                   quota_injected_file_path_length=255,
                    quota_security_groups=10,
                    quota_security_group_rules=20,
                    reservation_expire=86400,
