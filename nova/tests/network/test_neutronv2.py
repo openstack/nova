@@ -13,9 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 #
+
+import contextlib
 import copy
 import uuid
 
+import mock
 import mox
 from neutronclient.common import exceptions
 from neutronclient.v2_0 import client
@@ -31,7 +34,6 @@ from nova.network import neutronv2
 from nova.network.neutronv2 import api as neutronapi
 from nova.network.neutronv2 import constants
 from nova.openstack.common import jsonutils
-from nova.openstack.common import local
 from nova import test
 from nova import utils
 
@@ -143,6 +145,47 @@ class TestNeutronClient(test.TestCase):
         self.assertRaises(NEUTRON_CLIENT_EXCEPTION,
                           neutronv2.get_client,
                           my_context)
+
+    def test_reuse_admin_token(self):
+        self.flags(neutron_url='http://anyhost/')
+        self.flags(neutron_url_timeout=30)
+        token_store = neutronv2.AdminTokenStore.get()
+        token_store.admin_auth_token = 'new_token'
+        my_context = context.RequestContext('userid', 'my_tenantid',
+                                            auth_token='token')
+        with contextlib.nested(
+            mock.patch.object(client.Client, "list_networks",
+                              side_effect=mock.Mock),
+            mock.patch.object(client.Client, 'get_auth_info',
+                              return_value={'auth_token': 'new_token1'}),
+            ):
+            client1 = neutronv2.get_client(my_context, True)
+            client1.list_networks(retrieve_all=False)
+            self.assertEqual('new_token1', token_store.admin_auth_token)
+            client1 = neutronv2.get_client(my_context, True)
+            client1.list_networks(retrieve_all=False)
+            self.assertEqual('new_token1', token_store.admin_auth_token)
+
+    def test_admin_token_updated(self):
+        self.flags(neutron_url='http://anyhost/')
+        self.flags(neutron_url_timeout=30)
+        token_store = neutronv2.AdminTokenStore.get()
+        token_store.admin_auth_token = 'new_token'
+        tokens = [{'auth_token': 'new_token1'}, {'auth_token': 'new_token'}]
+        my_context = context.RequestContext('userid', 'my_tenantid',
+                                            auth_token='token')
+        with contextlib.nested(
+            mock.patch.object(client.Client, "list_networks",
+                              side_effect=mock.Mock),
+            mock.patch.object(client.Client, 'get_auth_info',
+                              side_effect=tokens.pop),
+            ):
+            client1 = neutronv2.get_client(my_context, True)
+            client1.list_networks(retrieve_all=False)
+            self.assertEqual('new_token', token_store.admin_auth_token)
+            client1 = neutronv2.get_client(my_context, True)
+            client1.list_networks(retrieve_all=False)
+            self.assertEqual('new_token1', token_store.admin_auth_token)
 
 
 class TestNeutronv2Base(test.TestCase):
@@ -2241,51 +2284,11 @@ class TestNeutronv2ExtraDhcpOpts(TestNeutronv2Base):
 
 
 class TestNeutronClientForAdminScenarios(test.TestCase):
-    def test_get_cached_neutron_client_for_admin(self):
-        self.flags(neutron_url='http://anyhost/')
-        self.flags(neutron_url_timeout=30)
-        my_context = context.RequestContext('userid',
-                                            'my_tenantid',
-                                            auth_token='token')
-
-        # Make multiple calls and ensure we get the same
-        # client back again and again
-        client = neutronv2.get_client(my_context, True)
-        client2 = neutronv2.get_client(my_context, True)
-        client3 = neutronv2.get_client(my_context, True)
-        self.assertEqual(client, client2)
-        self.assertEqual(client, client3)
-
-        # clear the cache
-        local.strong_store.neutron_client = None
-
-        # A new client should be created now
-        client4 = neutronv2.get_client(my_context, True)
-        self.assertNotEqual(client, client4)
-
-    def test_get_neutron_client_for_non_admin(self):
-        self.flags(neutron_url='http://anyhost/')
-        self.flags(neutron_url_timeout=30)
-        my_context = context.RequestContext('userid',
-                                            'my_tenantid',
-                                            auth_token='token')
-
-        # Multiple calls should return different clients
-        client = neutronv2.get_client(my_context)
-        client2 = neutronv2.get_client(my_context)
-        self.assertNotEqual(client, client2)
-
-    def test_get_neutron_client_for_non_admin_and_no_token(self):
-        self.flags(neutron_url='http://anyhost/')
-        self.flags(neutron_url_timeout=30)
-        my_context = context.RequestContext('userid',
-                                            'my_tenantid')
-
-        self.assertRaises(exceptions.Unauthorized,
-                          neutronv2.get_client,
-                          my_context)
 
     def _test_get_client_for_admin(self, use_id=False, admin_context=False):
+
+        def client_mock(*args, **kwargs):
+            client.Client.httpclient = mock.MagicMock()
 
         self.flags(neutron_auth_strategy=None)
         self.flags(neutron_url='http://anyhost/')
@@ -2307,18 +2310,18 @@ class TestNeutronClientForAdminScenarios(test.TestCase):
             'auth_strategy': None,
             'timeout': CONF.neutron_url_timeout,
             'insecure': False,
-            'ca_cert': None}
+            'ca_cert': None,
+            'token': None}
         if use_id:
             kwargs['tenant_id'] = CONF.neutron_admin_tenant_id
         else:
             kwargs['tenant_name'] = CONF.neutron_admin_tenant_name
-        client.Client.__init__(**kwargs).AndReturn(None)
+        client.Client.__init__(**kwargs).WithSideEffects(client_mock)
         self.mox.ReplayAll()
 
-        # clear the cache
-        if hasattr(local.strong_store, 'neutron_client'):
-            delattr(local.strong_store, 'neutron_client')
-
+        #clean global
+        token_store = neutronv2.AdminTokenStore.get()
+        token_store.admin_auth_token = None
         if admin_context:
             # Note that the context does not contain a token but is
             # an admin context  which will force an elevation to admin
