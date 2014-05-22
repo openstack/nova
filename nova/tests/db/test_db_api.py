@@ -6233,6 +6233,26 @@ class Ec2TestCase(test.TestCase):
         self.assertIsNotNone(inst['id'])
         self.assertEqual(inst['uuid'], 'fake-uuid')
 
+    def test_ec2_instance_get_by_uuid(self):
+        inst = db.ec2_instance_create(self.ctxt, 'fake-uuid')
+        inst2 = db.ec2_instance_get_by_uuid(self.ctxt, 'fake-uuid')
+        self.assertEqual(inst['id'], inst2['id'])
+
+    def test_ec2_instance_get_by_id(self):
+        inst = db.ec2_instance_create(self.ctxt, 'fake-uuid')
+        inst2 = db.ec2_instance_get_by_id(self.ctxt, inst['id'])
+        self.assertEqual(inst['id'], inst2['id'])
+
+    def test_ec2_instance_get_by_uuid_not_found(self):
+        self.assertRaises(exception.InstanceNotFound,
+                          db.ec2_instance_get_by_uuid,
+                          self.ctxt, 'uuid-not-present')
+
+    def test_ec2_instance_get_by_id_not_found(self):
+        self.assertRaises(exception.InstanceNotFound,
+                          db.ec2_instance_get_by_uuid,
+                          self.ctxt, 12345)
+
     def test_get_ec2_instance_id_by_uuid(self):
         inst = db.ec2_instance_create(self.ctxt, 'fake-uuid')
         inst_id = db.get_ec2_instance_id_by_uuid(self.ctxt, 'fake-uuid')
