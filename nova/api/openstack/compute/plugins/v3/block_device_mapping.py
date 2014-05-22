@@ -47,7 +47,8 @@ class BlockDeviceMapping(extensions.V3APIExtensionBase):
             block_device_mapping = [
                 block_device.BlockDeviceDict.from_api(bdm_dict)
                 for bdm_dict in block_device_mapping]
-        except exception.InvalidBDMFormat as e:
+        except (exception.InvalidBDMFormat,
+                exception.InvalidBDMVolumeNotBootable) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
         create_kwargs['block_device_mapping'] = block_device_mapping

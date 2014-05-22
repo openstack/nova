@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 import mox
 from oslo.config import cfg
 from webob import exc
@@ -271,3 +272,17 @@ class BlockDeviceMappingTest(test.TestCase):
 
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
         self.assertRaises(exc.HTTPBadRequest, self._test_create, params)
+
+    @mock.patch('nova.compute.api.API._get_bdm_image_metadata')
+    def test_create_instance_non_bootable_volume_fails(self, fake_bdm_meta):
+        bdm = [{
+            'id': 1,
+            'bootable': False,
+            'volume_id': '1',
+            'status': 'active',
+            'device_name': 'vda',
+        }]
+        params = {'block_device_mapping': bdm}
+        fake_bdm_meta.side_effect = exception.InvalidBDMVolumeNotBootable(id=1)
+        self.assertRaises(exc.HTTPBadRequest, self._test_create, params,
+                          no_image=True)

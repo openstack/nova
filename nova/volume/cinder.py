@@ -30,6 +30,7 @@ from nova import availability_zones as az
 from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
+from nova.openstack.common import strutils
 
 cinder_opts = [
     cfg.StrOpt('cinder_catalog_info',
@@ -137,7 +138,7 @@ def _untranslate_volume_summary_view(context, vol):
     # TODO(jdg): Information may be lost in this translation
     d['volume_type_id'] = vol.volume_type
     d['snapshot_id'] = vol.snapshot_id
-
+    d['bootable'] = strutils.bool_from_string(vol.bootable)
     d['volume_metadata'] = {}
     for key, value in vol.metadata.items():
         d['volume_metadata'][key] = value
