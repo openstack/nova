@@ -1896,7 +1896,8 @@ class ComputeManager(manager.Manager):
             try:
                 self._build_and_run_instance(context, instance, image,
                         decoded_files, admin_password, requested_networks,
-                        security_groups, block_device_mapping, node, limits)
+                        security_groups, block_device_mapping, node, limits,
+                        filter_properties)
             except exception.RescheduledException as e:
                 LOG.debug(e.format_message(), instance=instance)
                 # dhcp_options are per host, so if they're set we need to
@@ -1940,7 +1941,7 @@ class ComputeManager(manager.Manager):
 
     def _build_and_run_instance(self, context, instance, image, injected_files,
             admin_password, requested_networks, security_groups,
-            block_device_mapping, node, limits):
+            block_device_mapping, node, limits, filter_properties):
 
         image_name = image.get('name')
         self._notify_about_instance_usage(context, instance, 'create.start',
@@ -1948,6 +1949,11 @@ class ComputeManager(manager.Manager):
         try:
             rt = self._get_resource_tracker(node)
             with rt.instance_claim(context, instance, limits):
+                # NOTE(russellb) It's important that this validation be done
+                # *after* the resource tracker instance claim, as that is where
+                # the host is set on the instance.
+                self._validate_instance_group_policy(context, instance,
+                        filter_properties)
                 with self._build_resources(context, instance,
                         requested_networks, security_groups, image,
                         block_device_mapping) as resources:
