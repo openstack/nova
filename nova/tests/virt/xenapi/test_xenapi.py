@@ -37,7 +37,7 @@ from nova import context
 from nova import crypto
 from nova import db
 from nova import exception
-from nova.objects import aggregate as aggregate_obj
+from nova import objects
 from nova.objects import instance as instance_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -2936,7 +2936,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                     pool_states.POOL_FLAG: "XenAPI",
                     pool_states.KEY: pool_states.CREATED}
 
-        aggregate = aggregate_obj.Aggregate()
+        aggregate = objects.Aggregate()
         aggregate.name = 'fake_aggregate'
         aggregate.metadata = dict(metadata)
         aggregate.create(self.context)
@@ -3003,7 +3003,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                          aggr_zone='fake_zone',
                          aggr_state=pool_states.CREATED,
                          hosts=['host'], metadata=None):
-        aggregate = aggregate_obj.Aggregate()
+        aggregate = objects.Aggregate()
         aggregate.name = aggr_name
         aggregate.metadata = {'availability_zone': aggr_zone,
                               pool_states.POOL_FLAG: 'XenAPI',

@@ -23,7 +23,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import exception
-from nova.objects import aggregate as aggregate_obj
+from nova import objects
 from nova.objects import instance as instance_obj
 from nova.objects import service as service_obj
 from nova.openstack.common.gettextutils import _
@@ -78,7 +78,7 @@ class Host(object):
                     instance = instance_obj.Instance.get_by_uuid(ctxt, uuid)
                     vm_counter = vm_counter + 1
 
-                    aggregate = aggregate_obj.AggregateList.get_by_host(
+                    aggregate = objects.AggregateList.get_by_host(
                         ctxt, host, key=pool_states.POOL_FLAG)
                     if not aggregate:
                         msg = _('Aggregate for host %(host)s count not be'
