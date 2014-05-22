@@ -141,6 +141,7 @@
     "compute_extension:floating_ip_dns": "",
     "compute_extension:floating_ip_pools": "",
     "compute_extension:floating_ips": "",
+    "compute_extension:floating_ips:all_tenants": "rule:admin_api",
     "compute_extension:floating_ips_bulk": "rule:admin_api",
     "compute_extension:fping": "",
     "compute_extension:fping:all_tenants": "rule:admin_api",
@@ -292,6 +293,7 @@
     "network:get_backdoor_port": "",
 
     "network:get_floating_ip": "",
+    "network:get_floating_ips": "",
     "network:get_floating_ip_pools": "",
     "network:get_floating_ip_by_address": "",
     "network:get_floating_ips_by_project": "",

@@ -27,11 +27,14 @@ from nova import exception
 from nova import network
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
+from nova.openstack.common import strutils
 from nova.openstack.common import uuidutils
 
 
 LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'floating_ips')
+authorize_all_tenants = extensions.extension_authorizer(
+    'compute', 'floating_ips:all_tenants')
 
 
 def make_float_ip(elem):
@@ -135,11 +138,19 @@ class FloatingIPController(object):
 
     @wsgi.serializers(xml=FloatingIPsTemplate)
     def index(self, req):
-        """Return a list of floating ips allocated to a project."""
+        """Return a list of floating ips."""
         context = req.environ['nova.context']
         authorize(context)
+        all_tenants = False
+        if 'all_tenants' in req.GET:
+            try:
+                if strutils.bool_from_string(req.GET['all_tenants'], True):
+                    authorize_all_tenants(context)
+                    all_tenants = True
+            except ValueError as err:
+                raise webob.exc.HTTPBadRequest(explanation=str(err))
 
-        floating_ips = self.network_api.get_floating_ips_by_project(context)
+        floating_ips = self.network_api.get_floating_ips(context, all_tenants)
 
         for floating_ip in floating_ips:
             self._normalize_ip(floating_ip)

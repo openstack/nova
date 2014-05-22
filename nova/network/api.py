@@ -129,6 +129,14 @@ class API(base_api.NetworkAPI):
                                                       context.project_id)
 
     @wrap_check_policy
+    def get_floating_ips(self, context, all_tenants=False):
+        if all_tenants:
+            return self.db.floating_ip_get_all(context)
+        else:
+            return self.db.floating_ip_get_all_by_project(context,
+                                                          context.project_id)
+
+    @wrap_check_policy
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
         floating_ips = self.db.floating_ip_get_by_fixed_address(context,
                                                                 fixed_address)
