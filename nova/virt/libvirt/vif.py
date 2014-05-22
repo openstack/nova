@@ -25,6 +25,8 @@ from nova import exception
 from nova.network import linux_net
 from nova.network import model as network_model
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _LE
+from nova.openstack.common.gettextutils import _LW
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova import utils
@@ -543,7 +545,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
                           network_model.VIF_TYPE_MLNX_DIRECT, dev_name,
                           run_as_root=True)
         except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while plugging vif"), instance=instance)
+            LOG.exception(_LE("Failed while plugging vif"), instance=instance)
 
     def plug_802qbg(self, instance, vif):
         super(LibvirtGenericVIFDriver,
@@ -567,7 +569,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             utils.execute('mm-ctl', '--bind-port', port_id, dev,
                           run_as_root=True)
         except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while plugging vif"), instance=instance)
+            LOG.exception(_LE("Failed while plugging vif"), instance=instance)
 
     def plug_iovisor(self, instance, vif):
         """Plug using PLUMgrid IO Visor Driver
@@ -591,7 +593,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
                           vif['address'], 'pgtag2=%s' % net_id,
                           'pgtag1=%s' % tenant_id, run_as_root=True)
         except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while plugging vif"), instance=instance)
+            LOG.exception(_LE("Failed while plugging vif"), instance=instance)
 
     def plug(self, instance, vif):
         vif_type = vif['type']
@@ -639,7 +641,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             linux_net.delete_ovs_vif_port(self.get_bridge_name(vif),
                                           self.get_vif_devname(vif))
         except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while unplugging vif"), instance=instance)
+            LOG.exception(_LE("Failed while unplugging vif"),
+                          instance=instance)
 
     def unplug_ovs_bridge(self, instance, vif):
         """No manual unplugging required."""
@@ -670,7 +673,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             linux_net.delete_ovs_vif_port(self.get_bridge_name(vif),
                                           v2_name)
         except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while unplugging vif"), instance=instance)
+            LOG.exception(_LE("Failed while unplugging vif"),
+                          instance=instance)
 
     def unplug_ovs(self, instance, vif):
         if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
@@ -688,7 +692,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         try:
             linux_net.delete_ivs_vif_port(self.get_vif_devname(vif))
         except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while unplugging vif"), instance=instance)
+            LOG.exception(_LE("Failed while unplugging vif"),
+                          instance=instance)
 
     def unplug_ivs_hybrid(self, instance, vif):
         """UnPlug using hybrid strategy (same as OVS)
@@ -709,7 +714,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             utils.execute('brctl', 'delbr', br_name, run_as_root=True)
             linux_net.delete_ivs_vif_port(v2_name)
         except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while unplugging vif"), instance=instance)
+            LOG.exception(_LE("Failed while unplugging vif"),
+                          instance=instance)
 
     def unplug_ivs(self, instance, vif):
         if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
@@ -728,7 +734,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             utils.execute('ebrctl', 'del-port', fabric,
                           vnic_mac, run_as_root=True)
         except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while unplugging vif"), instance=instance)
+            LOG.exception(_LE("Failed while unplugging vif"),
+                          instance=instance)
 
     def unplug_802qbg(self, instance, vif):
         super(LibvirtGenericVIFDriver,
@@ -752,7 +759,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
                           run_as_root=True)
             linux_net.delete_net_dev(dev)
         except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while unplugging vif"), instance=instance)
+            LOG.exception(_LE("Failed while unplugging vif"),
+                          instance=instance)
 
     def unplug_iovisor(self, instance, vif):
         """Unplug using PLUMgrid IO Visor Driver
@@ -773,7 +781,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
                           run_as_root=True)
             linux_net.delete_net_dev(dev)
         except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while unplugging vif"), instance=instance)
+            LOG.exception(_LE("Failed while unplugging vif"),
+                          instance=instance)
 
     def unplug(self, instance, vif):
         vif_type = vif['type']
@@ -815,8 +824,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
 class _LibvirtDeprecatedDriver(LibvirtGenericVIFDriver):
     def __init__(self, *args, **kwargs):
-        LOG.warn(_('VIF driver \"%s\" is marked as deprecated and will be '
-                   'removed in the Juno release.'),
+        LOG.warn(_LW('VIF driver \"%s\" is marked as deprecated and will be '
+                     'removed in the Juno release.'),
                  self.__class__.__name__)
         super(_LibvirtDeprecatedDriver, self).__init__(*args, **kwargs)
 

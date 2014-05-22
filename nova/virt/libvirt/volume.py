@@ -663,7 +663,7 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
             if 'target is busy' in exc.message:
                 LOG.debug("The NFS share %s is still in use.", export)
             else:
-                LOG.exception(_("Couldn't unmount the NFS share %s"), export)
+                LOG.exception(_LE("Couldn't unmount the NFS share %s"), export)
 
     def _ensure_mounted(self, nfs_export, options=None):
         """@type nfs_export: string
@@ -812,7 +812,7 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
             if 'target is busy' in exc.message:
                 LOG.debug("The GlusterFS share %s is still in use.", export)
             else:
-                LOG.exception(_("Couldn't unmount the GlusterFS share %s"),
+                LOG.exception(_LE("Couldn't unmount the GlusterFS share %s"),
                               export)
 
     def _ensure_mounted(self, glusterfs_export, options=None):
