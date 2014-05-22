@@ -24,6 +24,7 @@ import six
 
 from nova import context
 from nova import exception
+from nova import objects
 from nova.objects import fields
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -89,12 +90,40 @@ class NovaObjectMetaclass(type):
 
     def __init__(cls, names, bases, dict_):
         if not hasattr(cls, '_obj_classes'):
-            # This will be set in the 'NovaObject' class.
+            # This means this is a base class using the metaclass. I.e.,
+            # the 'NovaObject' class.
             cls._obj_classes = collections.defaultdict(list)
+            return
+
+        def _vers_tuple(obj):
+            return tuple([int(x) for x in obj.VERSION.split(".")])
+
+        # Add the subclass to NovaObject._obj_classes. If the
+        # same version already exists, replace it. Otherwise,
+        # keep the list with newest version first.
+        make_class_properties(cls)
+        obj_name = cls.obj_name()
+        for i, obj in enumerate(cls._obj_classes[obj_name]):
+            if cls.VERSION == obj.VERSION:
+                cls._obj_classes[obj_name][i] = cls
+                # Update nova.objects with this newer class.
+                setattr(objects, obj_name, cls)
+                break
+            if _vers_tuple(cls) > _vers_tuple(obj):
+                # Insert before.
+                cls._obj_classes[obj_name].insert(i, cls)
+                if i == 0:
+                    # Later version than we've seen before. Update
+                    # nova.objects.
+                    setattr(objects, obj_name, cls)
+                break
         else:
-            # Add the subclass to NovaObject._obj_classes
-            make_class_properties(cls)
-            cls._obj_classes[cls.obj_name()].append(cls)
+            cls._obj_classes[obj_name].append(cls)
+            # Either this is the first time we've seen the object or it's
+            # an older version than anything we'e seen. Update nova.objects
+            # only if it's the first time we've seen this object name.
+            if not hasattr(objects, obj_name):
+                setattr(objects, obj_name, cls)
 
 
 # These are decorators that mark an object's method as remotable.
@@ -203,25 +232,24 @@ class NovaObject(object):
                         '%(objtype)s') % dict(objtype=objname))
             raise exception.UnsupportedObjectError(objtype=objname)
 
-        latest = None
+        # NOTE(comstud): If there's not an exact match, return the highest
+        # compatible version. The objects stored in the class are sorted
+        # such that highest version is first, so only set compatible_match
+        # once below.
         compatible_match = None
+
         for objclass in cls._obj_classes[objname]:
             if objclass.VERSION == objver:
                 return objclass
-
-            version_bits = tuple([int(x) for x in objclass.VERSION.split(".")])
-            if latest is None:
-                latest = version_bits
-            elif latest < version_bits:
-                latest = version_bits
-
-            if versionutils.is_compatible(objver, objclass.VERSION):
+            if (not compatible_match and
+                    versionutils.is_compatible(objver, objclass.VERSION)):
                 compatible_match = objclass
 
         if compatible_match:
             return compatible_match
 
-        latest_ver = '%i.%i' % latest
+        # As mentioned above, latest version is always first in the list.
+        latest_ver = cls._obj_classes[objname][0].VERSION
         raise exception.IncompatibleObjectVersion(objname=objname,
                                                   objver=objver,
                                                   supported=latest_ver)
