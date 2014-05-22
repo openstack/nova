@@ -18,7 +18,7 @@ from nova.compute import claims
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import db
-from nova.objects import instance as instance_obj
+from nova import objects
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova.tests.compute import test_compute
@@ -49,7 +49,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, db_instance, {}, {}, [], None,
                 None, True, None, False)
-        instance = instance_obj.Instance.get_by_uuid(
+        instance = objects.Instance.get_by_uuid(
             self.context, db_instance['uuid'],
             expected_attrs=['metadata', 'system_metadata'])
         image_id = 'fake_image_id'
@@ -126,7 +126,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, db_instance, {}, {}, [], None,
                 None, True, None, False)
-        instance = instance_obj.Instance.get_by_uuid(
+        instance = objects.Instance.get_by_uuid(
             self.context, db_instance['uuid'],
             expected_attrs=['metadata', 'system_metadata'])
         instance.task_state = task_states.SHELVING
@@ -169,7 +169,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, db_instance, {}, {}, [], None,
                 None, True, None, False)
-        instance = instance_obj.Instance.get_by_uuid(
+        instance = objects.Instance.get_by_uuid(
             self.context, db_instance['uuid'],
             expected_attrs=['metadata', 'system_metadata'])
         instance.task_state = task_states.UNSHELVING
@@ -252,7 +252,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         timeutils.set_time_override(cur_time)
         self.compute.run_instance(self.context, db_instance, {}, {}, [], None,
                 None, True, None, False)
-        instance = instance_obj.Instance.get_by_uuid(
+        instance = objects.Instance.get_by_uuid(
             self.context, db_instance['uuid'],
             expected_attrs=['metadata', 'system_metadata'])
         instance.task_state = task_states.UNSHELVING
@@ -383,8 +383,7 @@ class ShelveComputeAPITestCase(test_compute.BaseTestCase):
         self.stubs.Set(fake_image._FakeImageService, '__init__', fake_init)
         self.stubs.Set(fake_image._FakeImageService, 'create', fake_create)
 
-        inst_obj = instance_obj.Instance.get_by_uuid(self.context,
-                                                     instance_uuid)
+        inst_obj = objects.Instance.get_by_uuid(self.context, instance_uuid)
         self.compute_api.shelve(self.context, inst_obj)
 
         inst_obj.refresh()
@@ -401,8 +400,7 @@ class ShelveComputeAPITestCase(test_compute.BaseTestCase):
 
         self.assertIsNone(instance['task_state'])
 
-        inst_obj = instance_obj.Instance.get_by_uuid(self.context,
-                                                     instance_uuid)
+        inst_obj = objects.Instance.get_by_uuid(self.context, instance_uuid)
         self.compute_api.shelve(self.context, inst_obj)
 
         inst_obj.refresh()

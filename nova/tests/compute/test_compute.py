@@ -54,6 +54,7 @@ from nova.image import glance
 from nova.network import api as network_api
 from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
+from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import compute_node as compute_node_obj
@@ -305,8 +306,8 @@ class BaseTestCase(test.TestCase):
         return db.instance_create(self.context, inst)
 
     def _objectify(self, db_inst):
-        return instance_obj.Instance._from_db_object(
-            self.context, instance_obj.Instance(), db_inst,
+        return objects.Instance._from_db_object(
+            self.context, objects.Instance(), db_inst,
             expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
 
     def _create_fake_instance_obj(self, params=None, type_name='m1.tiny'):
@@ -367,8 +368,8 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.fake_volume = fake_block_device.FakeDbBlockDeviceDict(
                 {'source_type': 'volume', 'destination_type': 'volume',
                  'volume_id': self.volume_id, 'device_name': '/dev/vdb'})
-        self.instance_object = instance_obj.Instance._from_db_object(
-                self.context, instance_obj.Instance(),
+        self.instance_object = objects.Instance._from_db_object(
+                self.context, objects.Instance(),
                 fake_instance.fake_db_instance())
         self.stubs.Set(self.compute.volume_api, 'get', lambda *a, **kw:
                        {'id': self.volume_id})
@@ -593,17 +594,15 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver, 'get_all_bw_counters')
         self.mox.StubOutWithMock(utils, 'last_completed_audit_period')
         self.mox.StubOutWithMock(time, 'time')
-        self.mox.StubOutWithMock(instance_obj.InstanceList,
-                                 'get_by_host')
+        self.mox.StubOutWithMock(objects.InstanceList, 'get_by_host')
         # Following methods will be called
         utils.last_completed_audit_period().AndReturn((0, 0))
         time.time().AndReturn(10)
         # Note - time called two more times from Log
         time.time().AndReturn(20)
         time.time().AndReturn(21)
-        instance_obj.InstanceList.get_by_host(ctxt,
-                           'fake-mini',
-                           use_slave=True).AndReturn([])
+        objects.InstanceList.get_by_host(ctxt, 'fake-mini',
+                                         use_slave=True).AndReturn([])
         self.compute.driver.get_all_bw_counters([]).AndRaise(
             NotImplementedError)
         self.mox.ReplayAll()
@@ -615,7 +614,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.compute._poll_bandwidth_usage(ctxt)
         self.mox.UnsetStubs()
 
-    @mock.patch.object(instance_obj.InstanceList, 'get_by_host')
+    @mock.patch.object(objects.InstanceList, 'get_by_host')
     @mock.patch.object(block_device_obj.BlockDeviceMappingList,
                        'get_by_instance_uuid')
     def test_get_host_volume_bdms(self, mock_get_by_inst, mock_get_by_host):
@@ -1157,7 +1156,7 @@ class ComputeTestCase(BaseTestCase):
 
         @compute_manager.object_compat
         def test_fn(_self, context, instance):
-            self.assertIsInstance(instance, instance_obj.Instance)
+            self.assertIsInstance(instance, objects.Instance)
             self.assertEqual(instance.uuid, db_inst['uuid'])
         test_fn(None, self.context, instance=db_inst)
 
@@ -1166,7 +1165,7 @@ class ComputeTestCase(BaseTestCase):
 
         @compute_manager.object_compat
         def test_fn(_self, context, instance, pos_arg_1, pos_arg_2):
-            self.assertIsInstance(instance, instance_obj.Instance)
+            self.assertIsInstance(instance, objects.Instance)
             self.assertEqual(instance.uuid, db_inst['uuid'])
             self.assertEqual(pos_arg_1, 'fake_pos_arg1')
             self.assertEqual(pos_arg_2, 'fake_pos_arg2')
@@ -1812,9 +1811,9 @@ class ComputeTestCase(BaseTestCase):
                            {"task_state": task_states.POWERING_OFF})
         inst_uuid = instance['uuid']
         extra = ['system_metadata', 'metadata']
-        inst_obj = instance_obj.Instance.get_by_uuid(self.context,
-                                                     inst_uuid,
-                                                     expected_attrs=extra)
+        inst_obj = objects.Instance.get_by_uuid(self.context,
+                                                inst_uuid,
+                                                expected_attrs=extra)
         self.compute.stop_instance(self.context, instance=inst_obj)
         self.compute.terminate_instance(self.context,
                 self._objectify(instance), [], [])
@@ -1828,9 +1827,9 @@ class ComputeTestCase(BaseTestCase):
                            {"task_state": task_states.POWERING_OFF})
         extra = ['system_metadata', 'metadata']
         inst_uuid = instance['uuid']
-        inst_obj = instance_obj.Instance.get_by_uuid(self.context,
-                                                     inst_uuid,
-                                                     expected_attrs=extra)
+        inst_obj = objects.Instance.get_by_uuid(self.context,
+                                                inst_uuid,
+                                                expected_attrs=extra)
         self.compute.stop_instance(self.context, instance=inst_obj)
         inst_obj.task_state = task_states.POWERING_ON
         inst_obj.save(self.context)
@@ -1847,9 +1846,9 @@ class ComputeTestCase(BaseTestCase):
                            {"task_state": task_states.POWERING_OFF})
         extra = ['system_metadata', 'metadata']
         inst_uuid = instance['uuid']
-        inst_obj = instance_obj.Instance.get_by_uuid(self.context,
-                                                     inst_uuid,
-                                                     expected_attrs=extra)
+        inst_obj = objects.Instance.get_by_uuid(self.context,
+                                                inst_uuid,
+                                                expected_attrs=extra)
         self.compute.stop_instance(self.context, instance=inst_obj)
         inst_obj.task_state = task_states.POWERING_ON
         inst_obj.save(self.context)
@@ -2092,9 +2091,9 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance, {}, {}, [], None,
                 None, True, None, False)
         extra = ['system_metadata', 'metadata']
-        inst_obj = instance_obj.Instance.get_by_uuid(self.context,
-                                                     instance['uuid'],
-                                                     expected_attrs=extra)
+        inst_obj = objects.Instance.get_by_uuid(self.context,
+                                                instance['uuid'],
+                                                expected_attrs=extra)
         inst_obj.task_state = task_states.POWERING_ON
         inst_obj.save(self.context)
         self.compute.start_instance(self.context, instance=inst_obj)
@@ -2117,9 +2116,9 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance, {}, {}, [], None,
                 None, True, None, False)
         extra = ['system_metadata', 'metadata']
-        inst_obj = instance_obj.Instance.get_by_uuid(self.context,
-                                                     instance['uuid'],
-                                                     expected_attrs=extra)
+        inst_obj = objects.Instance.get_by_uuid(self.context,
+                                                instance['uuid'],
+                                                expected_attrs=extra)
         inst_obj.task_state = task_states.POWERING_OFF
         inst_obj.save(self.context)
         self.compute.stop_instance(self.context, instance=inst_obj)
@@ -2382,8 +2381,9 @@ class ComputeTestCase(BaseTestCase):
                    vm_state=vm_states.ACTIVE,
                    task_state=expected_task,
                    launched_at=timeutils.utcnow()))
-        instance = instance_obj.Instance._from_db_object(
-            econtext, instance_obj.Instance(), db_instance)
+        instance = objects.Instance._from_db_object(econtext,
+                                                    objects.Instance(),
+                                                    db_instance)
 
         updated_dbinstance1 = fake_instance.fake_db_instance(
             **dict(uuid='updated-instance1',
@@ -2949,8 +2949,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_snapshot_handles_cases_when_instance_is_not_found(self):
         inst_obj = self._get_snapshotting_instance()
-        inst_obj2 = instance_obj.Instance.get_by_uuid(self.context,
-                                                      inst_obj.uuid)
+        inst_obj2 = objects.Instance.get_by_uuid(self.context, inst_obj.uuid)
         inst_obj2.destroy()
         self.compute.snapshot_instance(self.context, image_id='fakesnap',
                                        instance=inst_obj)
@@ -3859,8 +3858,7 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(instance['task_state'], task_state)
 
         # should fail with locked nonadmin context
-        inst_obj = instance_obj.Instance.get_by_uuid(self.context,
-                                                     instance['uuid'])
+        inst_obj = objects.Instance.get_by_uuid(self.context, instance['uuid'])
 
         self.compute_api.lock(self.context, inst_obj)
         self.assertRaises(exception.InstanceIsLocked,
@@ -4036,8 +4034,8 @@ class ComputeTestCase(BaseTestCase):
 
         self._stub_out_resize_network_methods()
         instance = self._create_fake_instance()
-        inst_obj = instance_obj.Instance._from_db_object(
-            self.context, instance_obj.Instance(), instance,
+        inst_obj = objects.Instance._from_db_object(
+            self.context, objects.Instance(), instance,
             expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
         for operation in actions:
             if operation[0] in want_objects:
@@ -5499,8 +5497,8 @@ class ComputeTestCase(BaseTestCase):
                                   self._create_fake_instance(params))
 
         self.admin_ctxt = context.get_admin_context()
-        self.instance = instance_obj.Instance._from_db_object(self.context,
-               instance_obj.Instance(),
+        self.instance = objects.Instance._from_db_object(self.context,
+               objects.Instance(),
                db.instance_get_by_uuid(self.admin_ctxt, self.instance['uuid']))
 
         self.compute.network_api.setup_networks_on_host(self.admin_ctxt,
@@ -5922,12 +5920,12 @@ class ComputeTestCase(BaseTestCase):
                                 use_slave=False
                                 ).AndReturn(fake_inst)
         self.compute.network_api.get_instance_nw_info(self.context,
-                mox.IsA(instance_obj.Instance)).AndReturn(fake_nw_info)
+                mox.IsA(objects.Instance)).AndReturn(fake_nw_info)
 
         self.mox.ReplayAll()
 
-        fake_inst_obj = instance_obj.Instance._from_db_object(
-            self.context, instance_obj.Instance(), fake_inst, [])
+        fake_inst_obj = objects.Instance._from_db_object(
+            self.context, objects.Instance(), fake_inst, [])
         result = self.compute._get_instance_nw_info(self.context,
                                                     fake_inst_obj)
         self.assertEqual(fake_nw_info, result)
@@ -6032,13 +6030,13 @@ class ComputeTestCase(BaseTestCase):
         timed_out_time = timeutils.utcnow() - datetime.timedelta(minutes=5)
         not_timed_out_time = timeutils.utcnow()
 
-        instances = [instance_obj.Instance(uuid='fake_uuid1',
+        instances = [objects.Instance(uuid='fake_uuid1',
                                            vm_state=vm_states.RESCUED,
                                            launched_at=timed_out_time),
-                     instance_obj.Instance(uuid='fake_uuid2',
+                     objects.Instance(uuid='fake_uuid2',
                                            vm_state=vm_states.RESCUED,
                                            launched_at=timed_out_time),
-                     instance_obj.Instance(uuid='fake_uuid3',
+                     objects.Instance(uuid='fake_uuid3',
                                            vm_state=vm_states.RESCUED,
                                            launched_at=not_timed_out_time)]
         unrescued_instances = {'fake_uuid1': False, 'fake_uuid2': False}
@@ -6399,7 +6397,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_complete_partial_deletion(self):
         admin_context = context.get_admin_context()
-        instance = instance_obj.Instance()
+        instance = objects.Instance()
         instance.id = 1
         instance.uuid = 'fake-uuid'
         instance.vm_state = vm_states.DELETED
@@ -6431,7 +6429,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_init_instance_for_partial_deletion(self):
         admin_context = context.get_admin_context()
-        instance = instance_obj.Instance(admin_context)
+        instance = objects.Instance(admin_context)
         instance.id = 1
         instance.vm_state = vm_states.DELETED
         instance.deleted = False
@@ -6448,7 +6446,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_partial_deletion_raise_exception(self):
         admin_context = context.get_admin_context()
-        instance = instance_obj.Instance(admin_context)
+        instance = objects.Instance(admin_context)
         instance.id = 1
         instance.vm_state = vm_states.DELETED
         instance.deleted = False
@@ -6529,7 +6527,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute, '_delete_instance')
         self.compute._delete_instance(
-                ctxt, mox.IsA(instance_obj.Instance), [],
+                ctxt, mox.IsA(objects.Instance), [],
                 mox.IsA(quotas_obj.Quotas))
 
         self.mox.ReplayAll()
@@ -6555,14 +6553,14 @@ class ComputeTestCase(BaseTestCase):
         instances.append(instance1)
         instances.append(instance2)
 
-        self.mox.StubOutWithMock(instance_obj.InstanceList,
+        self.mox.StubOutWithMock(objects.InstanceList,
                                  'get_by_filters')
         self.mox.StubOutWithMock(self.compute, '_deleted_old_enough')
         self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
                                  'get_by_instance_uuid')
         self.mox.StubOutWithMock(self.compute, '_delete_instance')
 
-        instance_obj.InstanceList.get_by_filters(
+        objects.InstanceList.get_by_filters(
             ctxt, mox.IgnoreArg(),
             expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS,
             use_slave=True
@@ -7060,7 +7058,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_populate_instance_for_create(self):
         base_options = {'image_ref': self.fake_image['id'],
                         'system_metadata': {'fake': 'value'}}
-        instance = instance_obj.Instance()
+        instance = objects.Instance()
         instance.update(base_options)
         inst_type = flavors.get_flavor_by_name("m1.tiny")
         instance = self.compute_api._populate_instance_for_create(
@@ -7192,8 +7190,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance, {}, {}, None, None,
                 None, True, None, False)
 
-        instance = instance_obj.Instance.get_by_uuid(self.context,
-                                                     instance_uuid)
+        instance = objects.Instance.get_by_uuid(self.context,
+                                                instance_uuid)
         self.assertIsNone(instance.task_state)
         # Set some image metadata that should get wiped out and reset
         # as well as some other metadata that should be preserved.
@@ -7537,8 +7535,8 @@ class ComputeAPITestCase(BaseTestCase):
         # NOTE(danms): Transform the db object in a similar way as
         # the API method will do.
         expected = obj_base.obj_to_primitive(
-            instance_obj.Instance._from_db_object(
-                self.context, instance_obj.Instance(), exp_instance,
+            objects.Instance._from_db_object(
+                self.context, objects.Instance(), exp_instance,
                 instance_obj.INSTANCE_DEFAULT_FIELDS + ['fault']))
 
         def fake_db_get(_context, _instance_uuid,
@@ -7558,8 +7556,8 @@ class ComputeAPITestCase(BaseTestCase):
         # NOTE(danms): Transform the db object in a similar way as
         # the API method will do.
         expected = obj_base.obj_to_primitive(
-            instance_obj.Instance._from_db_object(
-                c, instance_obj.Instance(), exp_instance,
+            objects.Instance._from_db_object(
+                c, objects.Instance(), exp_instance,
                 instance_obj.INSTANCE_DEFAULT_FIELDS + ['fault']))
 
         def fake_db_get(context, instance_uuid,
@@ -7578,8 +7576,8 @@ class ComputeAPITestCase(BaseTestCase):
         # NOTE(danms): Transform the db object in a similar way as
         # the API method will do.
         expected = obj_base.obj_to_primitive(
-            instance_obj.Instance._from_db_object(
-                self.context, instance_obj.Instance(), exp_instance,
+            objects.Instance._from_db_object(
+                self.context, objects.Instance(), exp_instance,
                 instance_obj.INSTANCE_DEFAULT_FIELDS + ['fault']))
 
         def fake_db_get(_context, _instance_id, columns_to_join=None):
@@ -8722,8 +8720,8 @@ class ComputeAPITestCase(BaseTestCase):
         new_type = flavors.get_flavor_by_flavor_id('4')
         sys_meta = flavors.save_flavor_info({}, new_type)
 
-        instance = instance_obj.Instance(image_ref='foo',
-                                         system_metadata=sys_meta)
+        instance = objects.Instance(image_ref='foo',
+                                    system_metadata=sys_meta)
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'allocate_port_for_instance')
         nwinfo = [fake_network_cache_model.new_vif()]
@@ -8747,7 +8745,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(self.compute.network_api,
                        'deallocate_port_for_instance',
                        lambda a, b, c: [])
-        instance = instance_obj.Instance()
+        instance = objects.Instance()
         instance.info_cache = instance_info_cache.InstanceInfoCache.new(
             self.context, 'fake-uuid')
         instance.info_cache.network_info = network_model.NetworkInfo.hydrate(
@@ -10736,7 +10734,7 @@ class EvacuateHostTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute, '_prep_block_device')
         self.compute._prep_block_device(mox.IsA(self.context),
-                                        mox.IsA(instance_obj.Instance),
+                                        mox.IsA(objects.Instance),
                                         mox.IgnoreArg())
 
         self.stubs.Set(self.compute.driver, 'instance_on_disk', lambda x: True)
@@ -10753,7 +10751,7 @@ class EvacuateHostTestCase(BaseTestCase):
         """Confirm evacuate scenario on shared storage."""
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
         self.compute.driver.spawn(mox.IsA(self.context),
-                mox.IsA(instance_obj.Instance), {}, mox.IgnoreArg(), 'newpass',
+                mox.IsA(objects.Instance), {}, mox.IgnoreArg(), 'newpass',
                 network_info=mox.IgnoreArg(),
                 block_device_info=mox.IgnoreArg())
 
@@ -10773,7 +10771,7 @@ class EvacuateHostTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
         self.compute.driver.spawn(mox.IsA(self.context),
-                mox.IsA(instance_obj.Instance), mox.IsA(fake_image),
+                mox.IsA(objects.Instance), mox.IsA(fake_image),
                 mox.IgnoreArg(), mox.IsA('newpass'),
                 network_info=mox.IgnoreArg(),
                 block_device_info=mox.IgnoreArg())
