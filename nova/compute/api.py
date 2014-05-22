@@ -2072,7 +2072,7 @@ class API(base.Base):
             properties['block_device_mapping'] = mapping
             properties['bdm_v2'] = True
 
-        for attr in ('status', 'location', 'id'):
+        for attr in ('status', 'location', 'id', 'owner'):
             image_meta.pop(attr, None)
 
         # the new image is simply a bucket of properties (particularly the
