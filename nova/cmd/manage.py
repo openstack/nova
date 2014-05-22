@@ -72,6 +72,7 @@ from nova import context
 from nova import db
 from nova.db import migration
 from nova import exception
+from nova import objects
 from nova.openstack.common import cliutils
 from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common.gettextutils import _
@@ -1354,6 +1355,8 @@ def main():
 
         print(_('Please re-run nova-manage as root.'))
         return(2)
+
+    objects.register_all()
 
     if CONF.category.name == "version":
         print(version.version_string_with_package())

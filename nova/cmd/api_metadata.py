@@ -22,6 +22,7 @@ from oslo.config import cfg
 
 from nova.conductor import rpcapi as conductor_rpcapi
 from nova import config
+from nova import objects
 from nova.objects import base as objects_base
 from nova.openstack.common import log as logging
 from nova.openstack.common.report import guru_meditation_report as gmr
@@ -39,6 +40,7 @@ def main():
     config.parse_args(sys.argv)
     logging.setup("nova")
     utils.monkey_patch()
+    objects.register_all()
 
     gmr.TextGuruMeditation.setup_autorun(version)
 

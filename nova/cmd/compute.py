@@ -55,10 +55,10 @@ def block_db_access():
 
 
 def main():
-    objects.register_all()
     config.parse_args(sys.argv)
     logging.setup('nova')
     utils.monkey_patch()
+    objects.register_all()
 
     gmr.TextGuruMeditation.setup_autorun(version)
 

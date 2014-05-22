@@ -58,6 +58,7 @@ from oslo.config import cfg
 import six
 
 from nova import config
+from nova import objects
 from nova.openstack.common import cliutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -163,6 +164,8 @@ def main():
 
         print(_('Please re-run nova-manage as root.'))
         return(2)
+
+    objects.register_all()
 
     if CONF.category.name == "version":
         print(version.version_string_with_package())
