@@ -2574,20 +2574,18 @@ class API(base.Base):
         """Rescue the given instance."""
 
         bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
-                    context, instance['uuid'])
+                    context, instance.uuid)
         for bdm in bdms:
             if bdm.volume_id:
                 vol = self.volume_api.get(context, bdm.volume_id)
                 self.volume_api.check_attached(context, vol)
         if self.is_volume_backed_instance(context, instance, bdms):
             reason = _("Cannot rescue a volume-backed instance")
-            raise exception.InstanceNotRescuable(instance_id=instance['uuid'],
+            raise exception.InstanceNotRescuable(instance_id=instance.uuid,
                                                  reason=reason)
 
-        self.update(context,
-                    instance,
-                    task_state=task_states.RESCUING,
-                    expected_task_state=[None])
+        instance.task_state = task_states.RESCUING
+        instance.save(expected_task_state=[None])
 
         self._record_action_start(context, instance, instance_actions.RESCUE)
 

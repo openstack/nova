@@ -2013,23 +2013,23 @@ class _ComputeAPIUnitTestMixIn(object):
                               'get_by_instance_uuid', return_value=bdms),
             mock.patch.object(self.compute_api, 'is_volume_backed_instance',
                               return_value=False),
-            mock.patch.object(self.compute_api, 'update'),
+            mock.patch.object(instance, 'save'),
             mock.patch.object(self.compute_api, '_record_action_start'),
             mock.patch.object(self.compute_api.compute_rpcapi,
                               'rescue_instance')
         ) as (
-            bdm_get_by_instance_uuid, volume_backed_inst, compute_api_update,
+            bdm_get_by_instance_uuid, volume_backed_inst, instance_save,
             record_action_start, rpcapi_rescue_instance
         ):
             self.compute_api.rescue(self.context, instance)
+            # assert field values set on the instance object
+            self.assertEqual(task_states.RESCUING, instance.task_state)
             # assert our mock calls
             bdm_get_by_instance_uuid.assert_called_once_with(
                 self.context, instance.uuid)
             volume_backed_inst.assert_called_once_with(
                 self.context, instance, bdms)
-            compute_api_update.assert_called_once_with(
-                self.context, instance, task_state=task_states.RESCUING,
-                expected_task_state=[None])
+            instance_save.assert_called_once_with(expected_task_state=[None])
             record_action_start.assert_called_once_with(
                 self.context, instance, instance_actions.RESCUE)
             rpcapi_rescue_instance.assert_called_once_with(
