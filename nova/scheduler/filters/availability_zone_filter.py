@@ -39,7 +39,7 @@ class AvailabilityZoneFilter(filters.BaseHostFilter):
         availability_zone = props.get('availability_zone')
 
         if availability_zone:
-            context = filter_properties['context'].elevated()
+            context = filter_properties['context']
             metadata = db.aggregate_metadata_get_by_host(
                          context, host_state.host, key='availability_zone')
             if 'availability_zone' in metadata:

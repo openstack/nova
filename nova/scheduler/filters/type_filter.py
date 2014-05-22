@@ -51,7 +51,7 @@ class AggregateTypeAffinityFilter(filters.BaseHostFilter):
 
     def host_passes(self, host_state, filter_properties):
         instance_type = filter_properties.get('instance_type')
-        context = filter_properties['context'].elevated()
+        context = filter_properties['context']
         metadata = db.aggregate_metadata_get_by_host(
                      context, host_state.host, key='instance_type')
         return (len(metadata) == 0 or

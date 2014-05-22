@@ -41,7 +41,7 @@ class AggregateInstanceExtraSpecsFilter(filters.BaseHostFilter):
         if 'extra_specs' not in instance_type:
             return True
 
-        context = filter_properties['context'].elevated()
+        context = filter_properties['context']
         metadata = db.aggregate_metadata_get_by_host(context, host_state.host)
 
         for key, req in instance_type['extra_specs'].iteritems():
