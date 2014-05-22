@@ -317,6 +317,54 @@ class VMOps(object):
         if bad_volumes_callback and bad_devices:
             bad_volumes_callback(bad_devices)
 
+    def _get_vdis_for_instance(self, context, instance, name_label,
+                               image_id, image_type, block_device_info):
+        """Create or connect to all virtual disks for this instance."""
+
+        vdis = self._connect_cinder_volumes(instance, block_device_info)
+
+        # If we didn't get a root VDI from volumes,
+        # then use the Glance image as the root device
+        if 'root' not in vdis:
+            create_image_vdis = vm_utils.create_image(context, self._session,
+                    instance, name_label, image_id, image_type)
+            vdis.update(create_image_vdis)
+
+        # Fetch VDI refs now so we don't have to fetch the ref multiple times
+        for vdi in vdis.itervalues():
+            vdi['ref'] = self._session.call_xenapi('VDI.get_by_uuid',
+                                                   vdi['uuid'])
+        return vdis
+
+    def _connect_cinder_volumes(self, instance, block_device_info):
+        """Attach all the cinder volumes described in block_device_info."""
+        vdis = {}
+
+        if block_device_info:
+            msg = "block device info: %s" % block_device_info
+            # NOTE(mriedem): block_device_info can contain an auth_password
+            # so we have to scrub the message before logging it.
+            LOG.debug(logging.mask_password(msg), instance=instance)
+            root_device_name = block_device_info['root_device_name']
+
+            for bdm in block_device_info['block_device_mapping']:
+                if (block_device.strip_prefix(bdm['mount_device']) ==
+                        block_device.strip_prefix(root_device_name)):
+                    # If we're a root-device, record that fact so we don't
+                    # download a root image via Glance
+                    type_ = 'root'
+                else:
+                    # Otherwise, use mount_device as `type_` so that we have
+                    # easy access to it in _attach_disks to create the VBD
+                    type_ = bdm['mount_device']
+
+                conn_info = bdm['connection_info']
+                _sr, vdi_uuid = self._volumeops.connect_volume(conn_info)
+                if vdi_uuid:
+                    vdis[type_] = dict(uuid=vdi_uuid, file=None, osvol=True)
+
+        return vdis
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None,
               name_label=None, rescue=False):
@@ -333,9 +381,9 @@ class VMOps(object):
         @step
         def create_disks_step(undo_mgr, disk_image_type, image_meta,
                               name_label):
-            vdis = vm_utils.get_vdis_for_instance(context, self._session,
-                        instance, name_label, image_meta.get('id'),
-                        disk_image_type, block_device_info=block_device_info)
+            vdis = self._get_vdis_for_instance(context, instance, name_label,
+                        image_meta.get('id'), disk_image_type,
+                        block_device_info)
 
             def undo_create_disks():
                 vdi_refs = [vdi['ref'] for vdi in vdis.values()

@@ -18,6 +18,7 @@ import mock
 
 from nova.compute import power_state
 from nova.compute import task_states
+from nova import context
 from nova import exception
 from nova import objects
 from nova.pci import pci_manager
@@ -211,7 +212,7 @@ class SpawnTestCase(VMOpsTestBase):
         self.mox.StubOutWithMock(self.vmops, '_ensure_enough_free_mem')
         self.mox.StubOutWithMock(self.vmops, '_update_instance_progress')
         self.mox.StubOutWithMock(vm_utils, 'determine_disk_image_type')
-        self.mox.StubOutWithMock(vm_utils, 'get_vdis_for_instance')
+        self.mox.StubOutWithMock(self.vmops, '_get_vdis_for_instance')
         self.mox.StubOutWithMock(vm_utils, 'safe_destroy_vdis')
         self.mox.StubOutWithMock(self.vmops, '_resize_up_vdis')
         self.mox.StubOutWithMock(vm_utils,
@@ -274,9 +275,9 @@ class SpawnTestCase(VMOpsTestBase):
         vdis = {"other": {"ref": "fake_ref_2", "osvol": True}}
         if include_root_vdi:
             vdis["root"] = {"ref": "fake_ref"}
-        vm_utils.get_vdis_for_instance(context, session, instance, name_label,
-                    "image_id", di_type,
-                    block_device_info=block_device_info).AndReturn(vdis)
+        self.vmops._get_vdis_for_instance(context, instance,
+                name_label, "image_id", di_type,
+                block_device_info).AndReturn(vdis)
         self.vmops._resize_up_vdis(instance, vdis)
         step += 1
         self.vmops._update_instance_progress(context, instance, step, steps)
@@ -1016,3 +1017,49 @@ class MigrateDiskResizingDownTestCase(VMOpsTestBase):
             ]
         self.assertEqual(prog_expected,
                          mock_update_instance_progress.call_args_list)
+
+
+class GetVdisForInstanceTestCase(VMOpsTestBase):
+    """Tests get_vdis_for_instance utility method."""
+    def setUp(self):
+        super(GetVdisForInstanceTestCase, self).setUp()
+        self.context = context.get_admin_context()
+        self.context.auth_token = 'auth_token'
+        self.session = mock.Mock()
+        self.vmops._session = self.session
+        self.instance = fake_instance.fake_instance_obj(self.context)
+        self.name_label = 'name'
+        self.image = 'fake_image_id'
+
+    @mock.patch.object(volumeops.VolumeOps, "connect_volume",
+                       return_value=("sr", "vdi_uuid"))
+    def test_vdis_for_instance_bdi_password_scrubbed(self, get_uuid_mock):
+        # setup fake data
+        data = {'name_label': self.name_label,
+                'sr_uuid': 'fake',
+                'auth_password': 'scrubme'}
+        bdm = [{'mount_device': '/dev/vda',
+                'connection_info': {'data': data}}]
+        bdi = {'root_device_name': 'vda',
+               'block_device_mapping': bdm}
+
+        # Tests that the parameters to the to_xml method are sanitized for
+        # passwords when logged.
+        def fake_debug(*args, **kwargs):
+            if 'auth_password' in args[0]:
+                self.assertNotIn('scrubme', args[0])
+                fake_debug.matched = True
+
+        fake_debug.matched = False
+
+        with mock.patch.object(vmops.LOG, 'debug',
+                               side_effect=fake_debug) as debug_mock:
+            vdis = self.vmops._get_vdis_for_instance(self.context,
+                    self.instance, self.name_label, self.image,
+                    image_type=4, block_device_info=bdi)
+            self.assertEqual(1, len(vdis))
+            get_uuid_mock.assert_called_once_with({"data": data})
+            # we don't care what the log message is, we just want to make sure
+            # our stub method is called which asserts the password is scrubbed
+            self.assertTrue(debug_mock.called)
+            self.assertTrue(fake_debug.matched)
