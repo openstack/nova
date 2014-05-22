@@ -278,41 +278,6 @@ class VMwareVMOps(object):
             vnc_port = vm_util.get_vnc_port(self._session)
             self._set_vnc_config(client_factory, instance, vnc_port)
 
-        def _copy_virtual_disk(source, dest):
-            """Copy a sparse virtual disk to a thin virtual disk."""
-            # Copy a sparse virtual disk to a thin virtual disk. This is also
-            # done to generate the meta-data file whose specifics
-            # depend on the size of the disk, thin/thick provisioning and the
-            # storage adapter type.
-            LOG.debug(_("Copying Virtual Disk of size "
-                      "%(vmdk_file_size_in_kb)s KB and adapter type "
-                      "%(adapter_type)s on the ESX host local store "
-                      "%(data_store_name)s to disk type %(disk_type)s") %
-                       {"vmdk_file_size_in_kb": vmdk_file_size_in_kb,
-                        "adapter_type": adapter_type,
-                        "data_store_name": data_store_name,
-                        "disk_type": disk_type},
-                      instance=instance)
-            vmdk_copy_spec = self.get_copy_virtual_disk_spec(client_factory,
-                                                             adapter_type,
-                                                             disk_type)
-            vmdk_copy_task = self._session._call_method(
-                self._session._get_vim(),
-                "CopyVirtualDisk_Task",
-                service_content.virtualDiskManager,
-                sourceName=source,
-                sourceDatacenter=dc_info.ref,
-                destName=dest,
-                destSpec=vmdk_copy_spec)
-            self._session._wait_for_task(vmdk_copy_task)
-            LOG.debug(_("Copied Virtual Disk of size %(vmdk_file_size_in_kb)s"
-                        " KB and type %(disk_type)s on "
-                        "the ESX host local store %(data_store_name)s") %
-                        {"vmdk_file_size_in_kb": vmdk_file_size_in_kb,
-                         "disk_type": disk_type,
-                         "data_store_name": data_store_name},
-                        instance=instance)
-
         if not ebs_root:
             # this logic allows for instances or images to decide
             # for themselves which strategy is best for them.
@@ -418,7 +383,12 @@ class VMwareVMOps(object):
                 if not is_iso and disk_type == "sparse":
                     # Copy the sparse virtual disk to a thin virtual disk.
                     disk_type = "thin"
-                    _copy_virtual_disk(sparse_uploaded_vmdk_path, upload_path)
+                    copy_spec = self.get_copy_virtual_disk_spec(client_factory,
+                                                                adapter_type,
+                                                                disk_type)
+                    vm_util.copy_virtual_disk(self._session, dc_info.ref,
+                                              sparse_uploaded_vmdk_path,
+                                              upload_path, copy_spec)
                     self._delete_datastore_file(instance,
                                                 sparse_uploaded_vmdk_path,
                                                 dc_info.ref)
@@ -473,7 +443,13 @@ class VMwareVMOps(object):
                     # linked clone it is references from the cache directory
                     dest_vmdk_path = self._get_vmdk_path(data_store_name,
                             instance_name, instance_name)
-                    _copy_virtual_disk(uploaded_file_path, dest_vmdk_path)
+                    copy_spec = self.get_copy_virtual_disk_spec(client_factory,
+                                                                 adapter_type,
+                                                                 disk_type)
+                    vm_util.copy_virtual_disk(self._session,
+                                              dc_info.ref,
+                                              uploaded_file_path,
+                                              dest_vmdk_path, copy_spec)
 
                     root_vmdk_path = dest_vmdk_path
                     if root_gb_in_kb > vmdk_file_size_in_kb:
@@ -492,8 +468,13 @@ class VMwareVMOps(object):
                                         upload_name + ".%s.vmdk" % root_gb):
                         LOG.debug(_("Copying root disk of size %sGb"), root_gb)
                         try:
-                            _copy_virtual_disk(uploaded_file_path,
-                                               root_vmdk_path)
+                            copy_spec = self.get_copy_virtual_disk_spec(
+                                client_factory, adapter_type, disk_type)
+                            vm_util.copy_virtual_disk(self._session,
+                                                      dc_info.ref,
+                                                      uploaded_file_path,
+                                                      root_vmdk_path,
+                                                      copy_spec)
                         except Exception as e:
                             LOG.warning(_("Root disk file creation "
                                           "failed - %s"), e)
