@@ -29,9 +29,9 @@ from nova.compute import vm_states
 from nova import conductor
 from nova import context
 from nova import exception
+from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import flavor as flavor_obj
-from nova.objects import instance as instance_obj
 from nova.objects import migration as migration_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
@@ -311,7 +311,7 @@ class ResourceTracker(object):
                 'pci_passthrough_devices')))
 
         # Grab all instances assigned to this node:
-        instances = instance_obj.InstanceList.get_by_host_and_node(
+        instances = objects.InstanceList.get_by_host_and_node(
             context, self.host, self.nodename)
 
         # Now calculate usage based on instance utilization:

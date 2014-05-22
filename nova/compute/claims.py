@@ -18,7 +18,7 @@ Claim objects for use with resource tracking.
 """
 
 from nova import exception
-from nova.objects import instance as instance_obj
+from nova.objects import base as obj_base
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -76,7 +76,7 @@ class Claim(NopClaim):
                  limits=None):
         super(Claim, self).__init__()
         # Stash a copy of the instance at the current point of time
-        if isinstance(instance, instance_obj.Instance):
+        if isinstance(instance, obj_base.NovaObject):
             self.instance = instance.obj_clone()
         else:
             # This does not use copy.deepcopy() because it could be

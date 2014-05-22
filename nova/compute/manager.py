@@ -61,6 +61,7 @@ from nova import manager
 from nova import network
 from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
+from nova import objects
 from nova.objects import aggregate as aggregate_obj
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
@@ -378,8 +379,8 @@ def object_compat(function):
     def decorated_function(self, context, *args, **kwargs):
         def _load_instance(instance_or_dict):
             if isinstance(instance_or_dict, dict):
-                instance = instance_obj.Instance._from_db_object(
-                    context, instance_obj.Instance(), instance_or_dict,
+                instance = objects.Instance._from_db_object(
+                    context, objects.Instance(), instance_or_dict,
                     expected_attrs=metas)
                 instance._context = context
                 return instance
@@ -656,7 +657,7 @@ class ComputeManager(manager.Manager):
         try:
             driver_uuids = self.driver.list_instance_uuids()
             filters['uuid'] = driver_uuids
-            local_instances = instance_obj.InstanceList.get_by_filters(
+            local_instances = objects.InstanceList.get_by_filters(
                 context, filters, use_slave=True)
             return local_instances
         except NotImplementedError:
@@ -665,8 +666,8 @@ class ComputeManager(manager.Manager):
         # The driver doesn't support uuids listing, so we'll have
         # to brute force.
         driver_instances = self.driver.list_instances()
-        instances = instance_obj.InstanceList.get_by_filters(context, filters,
-                                                             use_slave=True)
+        instances = objects.InstanceList.get_by_filters(context, filters,
+                                                        use_slave=True)
         name_map = dict((instance.name, instance) for instance in instances)
         local_instances = []
         for driver_instance in driver_instances:
@@ -1004,8 +1005,8 @@ class ComputeManager(manager.Manager):
                   {'state': event.get_transition(),
                    'uuid': event.get_instance_uuid()})
         context = nova.context.get_admin_context(read_deleted='yes')
-        instance = instance_obj.Instance.get_by_uuid(
-            context, event.get_instance_uuid())
+        instance = objects.Instance.get_by_uuid(context,
+                                                event.get_instance_uuid())
         vm_power_state = None
         if event.get_transition() == virtevent.EVENT_LIFECYCLE_STOPPED:
             vm_power_state = power_state.SHUTDOWN
@@ -1041,7 +1042,7 @@ class ComputeManager(manager.Manager):
         """Initialization for a standalone compute service."""
         self.driver.init_host(host=self.host)
         context = nova.context.get_admin_context()
-        instances = instance_obj.InstanceList.get_by_host(
+        instances = objects.InstanceList.get_by_host(
             context, self.host, expected_attrs=['info_cache'])
 
         if CONF.defer_iptables_apply:
@@ -1140,9 +1141,9 @@ class ComputeManager(manager.Manager):
             # If we get an instance without it, re-fetch so that the call
             # to network_api (which requires it for instance_type) will
             # succeed.
-            instance = instance_obj.Instance.get_by_uuid(context,
-                                                         instance['uuid'],
-                                                         use_slave=use_slave)
+            instance = objects.Instance.get_by_uuid(context,
+                                                    instance['uuid'],
+                                                    use_slave=use_slave)
 
         network_info = self.network_api.get_instance_nw_info(context,
                                                              instance)
@@ -1490,7 +1491,7 @@ class ComputeManager(manager.Manager):
         filters = {'vm_state': vm_states.BUILDING,
                    'host': self.host}
 
-        building_insts = instance_obj.InstanceList.get_by_filters(context,
+        building_insts = objects.InstanceList.get_by_filters(context,
                            filters, expected_attrs=[], use_slave=True)
 
         for instance in building_insts:
@@ -3109,8 +3110,9 @@ class ComputeManager(manager.Manager):
             #                deleted, we do nothing and return here
             expected_attrs = ['metadata', 'system_metadata']
             try:
-                instance = instance_obj.Instance.get_by_uuid(context,
-                                instance.uuid, expected_attrs=expected_attrs)
+                instance = objects.Instance.get_by_uuid(
+                        context, instance.uuid,
+                        expected_attrs=expected_attrs)
             except exception.InstanceNotFound:
                 LOG.info(_("Instance is not found during confirmation"),
                             context=context, instance=instance)
@@ -3972,8 +3974,8 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def get_console_output(self, context, instance, tail_length):
         """Send the console output for the given instance."""
-        instance = instance_obj.Instance._from_db_object(
-            context, instance_obj.Instance(), instance)
+        instance = objects.Instance._from_db_object(
+            context, objects.Instance(), instance)
         context = context.elevated()
         LOG.audit(_("Get console output"), context=context,
                   instance=instance)
@@ -4373,9 +4375,9 @@ class ComputeManager(manager.Manager):
         try:
             bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(
                     context, volume_id)
-            inst_obj = instance_obj.Instance._from_db_object(
-                context, instance_obj.Instance(),
-                instance)
+            inst_obj = objects.Instance._from_db_object(context,
+                                                        objects.Instance(),
+                                                        instance)
             self._detach_volume(context, inst_obj, bdm)
             connector = self.driver.get_volume_connector(instance)
             self.volume_api.terminate_connection(context, volume_id, connector)
@@ -4555,11 +4557,11 @@ class ComputeManager(manager.Manager):
         # NOTE(danms): since instance is not the first parameter, we can't
         # use @object_compat on this method. Since this is the only example,
         # we do this manually instead of complicating the decorator
-        if not isinstance(instance, instance_obj.Instance):
+        if not isinstance(instance, obj_base.NovaObject):
             expected = ['metadata', 'system_metadata',
                         'security_groups', 'info_cache']
-            instance = instance_obj.Instance._from_db_object(
-                context, instance_obj.Instance(), instance,
+            instance = objects.Instance._from_db_object(
+                context, objects.Instance(), instance,
                 expected_attrs=expected)
 
         # Create a local copy since we'll be modifying the dictionary
@@ -4857,7 +4859,7 @@ class ComputeManager(manager.Manager):
         if not instance_uuids:
             # The list of instances to heal is empty so rebuild it
             LOG.debug('Rebuilding the list of instances to heal')
-            db_instances = instance_obj.InstanceList.get_by_host(
+            db_instances = objects.InstanceList.get_by_host(
                 context, self.host, expected_attrs=[], use_slave=True)
             for inst in db_instances:
                 # We don't want to refersh the cache for instances
@@ -4885,7 +4887,7 @@ class ComputeManager(manager.Manager):
             # Find the next valid instance on the list
             while instance_uuids:
                 try:
-                    inst = instance_obj.Instance.get_by_uuid(
+                    inst = objects.Instance.get_by_uuid(
                             context, instance_uuids.pop(0),
                             expected_attrs=['system_metadata', 'info_cache'],
                             use_slave=True)
@@ -4926,7 +4928,7 @@ class ComputeManager(manager.Manager):
         if CONF.reboot_timeout > 0:
             filters = {'task_state': task_states.REBOOTING,
                        'host': self.host}
-            rebooting = instance_obj.InstanceList.get_by_filters(
+            rebooting = objects.InstanceList.get_by_filters(
                 context, filters, expected_attrs=[], use_slave=True)
 
             to_poll = []
@@ -4942,7 +4944,7 @@ class ComputeManager(manager.Manager):
         if CONF.rescue_timeout > 0:
             filters = {'vm_state': vm_states.RESCUED,
                        'host': self.host}
-            rescued_instances = instance_obj.InstanceList.get_by_filters(
+            rescued_instances = objects.InstanceList.get_by_filters(
                 context, filters, expected_attrs=["system_metadata"],
                 use_slave=True)
 
@@ -4989,7 +4991,7 @@ class ComputeManager(manager.Manager):
                       'instance_uuid': instance_uuid})
             expected_attrs = ['metadata', 'system_metadata']
             try:
-                instance = instance_obj.Instance.get_by_uuid(context,
+                instance = objects.Instance.get_by_uuid(context,
                             instance_uuid, expected_attrs=expected_attrs,
                             use_slave=True)
             except exception.InstanceNotFound:
@@ -5028,7 +5030,7 @@ class ComputeManager(manager.Manager):
 
         filters = {'vm_state': vm_states.SHELVED,
                    'host': self.host}
-        shelved_instances = instance_obj.InstanceList.get_by_filters(
+        shelved_instances = objects.InstanceList.get_by_filters(
             context, filters=filters, expected_attrs=['system_metadata'],
             use_slave=True)
 
@@ -5059,7 +5061,7 @@ class ComputeManager(manager.Manager):
             return
 
         begin, end = utils.last_completed_audit_period()
-        instances = instance_obj.InstanceList.get_active_by_window_joined(
+        instances = objects.InstanceList.get_active_by_window_joined(
             context, begin, end, host=self.host,
             expected_attrs=['system_metadata', 'info_cache', 'metadata'])
         num_instances = len(instances)
@@ -5124,7 +5126,7 @@ class ComputeManager(manager.Manager):
             else:
                 update_cells = False
 
-            instances = instance_obj.InstanceList.get_by_host(context,
+            instances = objects.InstanceList.get_by_host(context,
                                                               self.host,
                                                               use_slave=True)
             try:
@@ -5196,7 +5198,7 @@ class ComputeManager(manager.Manager):
     def _get_host_volume_bdms(self, context):
         """Return all block device mappings on a compute host."""
         compute_host_bdms = []
-        instances = instance_obj.InstanceList.get_by_host(context, self.host)
+        instances = objects.InstanceList.get_by_host(context, self.host)
         for instance in instances:
             instance_bdms = [bdm for bdm in
                              (block_device_obj.BlockDeviceMappingList.
@@ -5252,7 +5254,7 @@ class ComputeManager(manager.Manager):
         loop, one database record at a time, checking if the hypervisor has the
         same power state as is in the database.
         """
-        db_instances = instance_obj.InstanceList.get_by_host(context,
+        db_instances = objects.InstanceList.get_by_host(context,
                                                              self.host,
                                                              use_slave=True)
 
@@ -5448,7 +5450,7 @@ class ComputeManager(manager.Manager):
         filters = {'vm_state': vm_states.SOFT_DELETED,
                    'task_state': None,
                    'host': self.host}
-        instances = instance_obj.InstanceList.get_by_filters(
+        instances = objects.InstanceList.get_by_filters(
             context, filters,
             expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS,
             use_slave=True)
@@ -5708,7 +5710,7 @@ class ComputeManager(manager.Manager):
         filters = {'deleted': False,
                    'soft_deleted': True,
                    'host': nodes}
-        filtered_instances = instance_obj.InstanceList.get_by_filters(context,
+        filtered_instances = objects.InstanceList.get_by_filters(context,
                                  filters, expected_attrs=[], use_slave=True)
 
         self.driver.manage_image_cache(context, filtered_instances)
@@ -5726,7 +5728,7 @@ class ComputeManager(manager.Manager):
                    'cleaned': False}
         attrs = ['info_cache', 'security_groups', 'system_metadata']
         with utils.temporary_mutation(context, read_deleted='yes'):
-            instances = instance_obj.InstanceList.get_by_filters(
+            instances = objects.InstanceList.get_by_filters(
                 context, filters, expected_attrs=attrs)
         LOG.debug('There are %d instances to clean', len(instances))
 
