@@ -6183,8 +6183,6 @@ class Ec2TestCase(test.TestCase):
             except exception.NotFound as exc:
                 self.assertIn(unicode(value), unicode(exc))
 
-        check_exc_format(db.get_ec2_volume_id_by_uuid, 'fake')
-        check_exc_format(db.get_volume_uuid_by_ec2_id, 123456)
         check_exc_format(db.get_ec2_snapshot_id_by_uuid, 'fake')
         check_exc_format(db.get_snapshot_uuid_by_ec2_id, 123456)
         check_exc_format(db.get_ec2_instance_id_by_uuid, 'fake')
@@ -6195,16 +6193,6 @@ class Ec2TestCase(test.TestCase):
         self.assertIsNotNone(vol['id'])
         self.assertEqual(vol['uuid'], 'fake-uuid')
 
-    def test_get_ec2_volume_id_by_uuid(self):
-        vol = db.ec2_volume_create(self.ctxt, 'fake-uuid')
-        vol_id = db.get_ec2_volume_id_by_uuid(self.ctxt, 'fake-uuid')
-        self.assertEqual(vol['id'], vol_id)
-
-    def test_get_volume_uuid_by_ec2_id(self):
-        vol = db.ec2_volume_create(self.ctxt, 'fake-uuid')
-        vol_uuid = db.get_volume_uuid_by_ec2_id(self.ctxt, vol['id'])
-        self.assertEqual(vol_uuid, 'fake-uuid')
-
     def test_ec2_volume_get_by_id(self):
         vol = db.ec2_volume_create(self.ctxt, 'fake-uuid')
         vol2 = db.ec2_volume_get_by_id(self.ctxt, vol['id'])
@@ -6214,16 +6202,6 @@ class Ec2TestCase(test.TestCase):
         vol = db.ec2_volume_create(self.ctxt, 'fake-uuid')
         vol2 = db.ec2_volume_get_by_uuid(self.ctxt, vol['uuid'])
         self.assertEqual(vol2['id'], vol['id'])
-
-    def test_get_ec2_volume_id_by_uuid_not_found(self):
-        self.assertRaises(exception.VolumeNotFound,
-                          db.get_ec2_volume_id_by_uuid,
-                          self.ctxt, 'uuid-not-present')
-
-    def test_get_volume_uuid_by_ec2_id_not_found(self):
-        self.assertRaises(exception.VolumeNotFound,
-                          db.get_volume_uuid_by_ec2_id,
-                          self.ctxt, 100500)
 
     def test_ec2_snapshot_create(self):
         snap = db.ec2_snapshot_create(self.ctxt, 'fake-uuid')
