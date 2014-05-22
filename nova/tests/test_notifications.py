@@ -278,6 +278,13 @@ class NotificationsTestCase(test.TestCase):
         self.assertIn("fixed_ips", info)
         self.assertEqual(info["fixed_ips"][0]["label"], "test1")
 
+    def test_payload_has_vif_mac_address(self):
+        info = notifications.info_from_instance(self.context, self.instance,
+                                                  self.net_info, None)
+        self.assertIn("fixed_ips", info)
+        self.assertEqual(self.net_info[0]['address'],
+                         info["fixed_ips"][0]["vif_mac"])
+
     def test_send_access_ip_update(self):
         notifications.send_update(self.context, self.instance, self.instance)
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))

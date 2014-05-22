@@ -405,6 +405,7 @@ def info_from_instance(context, instance_ref, network_info,
         for vif in network_info:
             for ip in vif.fixed_ips():
                 ip["label"] = vif["network"]["label"]
+                ip["vif_mac"] = vif["address"]
                 fixed_ips.append(ip)
         instance_info['fixed_ips'] = fixed_ips
 
