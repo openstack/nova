@@ -1028,7 +1028,8 @@ def convert_version_to_int(version):
         if isinstance(version, tuple):
             return reduce(lambda x, y: (x * 1000) + y, version)
     except Exception:
-        raise exception.NovaException(message="Hypervisor version invalid.")
+        msg = _("Hypervisor version %s is invalid.") % version
+        raise exception.NovaException(msg)
 
 
 def convert_version_to_str(version_int):
