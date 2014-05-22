@@ -10958,3 +10958,13 @@ class CheckRequestedImageTestCase(test.TestCase):
 
         self.compute_api._check_requested_image(self.context, image['id'],
                 image, self.instance_type)
+
+
+class ComputeHooksTestCase(test.BaseHookTestCase):
+    def test_delete_instance_has_hook(self):
+        delete_func = compute_manager.ComputeManager._delete_instance
+        self.assert_has_hook('delete_instance', delete_func)
+
+    def test_create_instance_has_hook(self):
+        create_func = compute_api.API.create
+        self.assert_has_hook('create_instance', create_func)

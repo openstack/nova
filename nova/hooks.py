@@ -91,6 +91,8 @@ def add_hook(name, pass_function=False):
     """
 
     def outer(f):
+        f.__hook_name__ = name
+
         @functools.wraps(f)
         def inner(*args, **kwargs):
             manager = _HOOKS.setdefault(name, HookManager(name))
