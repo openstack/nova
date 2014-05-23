@@ -5867,6 +5867,33 @@ class LibvirtConnTestCase(test.TestCase):
         result = conn.get_disk_over_committed_size_total()
         self.assertEqual(result, 10653532160)
 
+    def test_disk_over_committed_size_total_permission_denied(self):
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        driver.list_instances = mock.Mock(return_value=['fake1', 'fake2'])
+
+        fake_disks = {'fake1': [{'type': 'qcow2', 'path': '/somepath/disk1',
+                                 'virt_disk_size': '10737418240',
+                                 'backing_file': '/somepath/disk1',
+                                 'disk_size': '83886080',
+                                 'over_committed_disk_size': '10653532160'}],
+                      'fake2': [{'type': 'raw', 'path': '/somepath/disk2',
+                                 'virt_disk_size': '0',
+                                 'backing_file': '/somepath/disk2',
+                                 'disk_size': '10737418240',
+                                 'over_committed_disk_size': '21474836480'}]}
+
+        def side_effect(arg):
+            if arg == 'fake1':
+                raise OSError(errno.EACCES, 'Permission denied')
+            if arg == 'fake2':
+                return jsonutils.dumps(fake_disks.get(arg))
+        get_disk_info = mock.Mock()
+        get_disk_info.side_effect = side_effect
+        driver.get_instance_disk_info = get_disk_info
+
+        result = driver.get_disk_over_committed_size_total()
+        self.assertEqual(21474836480, result)
+
     def test_cpu_info(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 

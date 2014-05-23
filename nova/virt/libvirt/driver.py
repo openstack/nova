@@ -4809,6 +4809,13 @@ class LibvirtDriver(driver.ComputeDriver):
                                   'but disk file was removed by concurrent '
                                   'operations such as resize.'),
                                 {'i_name': i_name})
+                if e.errno == errno.EACCES:
+                    LOG.warn(_LW('Periodic task is updating the host stat, '
+                                 'it is trying to get disk %(i_name)s, '
+                                 'but access is denied. It is most likely '
+                                 'due to a VM that exists on the compute '
+                                 'node but is not managed by Nova.'),
+                             {'i_name': i_name})
                 else:
                     raise
             except exception.InstanceNotFound:
