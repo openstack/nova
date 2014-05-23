@@ -1583,3 +1583,18 @@ class NoBlockMigrationForConfigDriveInLibVirt(NovaException):
 
 class UnshelveException(NovaException):
     msg_fmt = _("Error during unshelve instance %(instance_id)s: %(reason)s")
+
+
+class ImageVCPULimitsRangeExceeded(Invalid):
+    msg_fmt = _("Image vCPU limits %(sockets)d:%(cores)d:%(threads)d "
+                "exceeds permitted %(maxsockets)d:%(maxcores)d:%(maxthreads)d")
+
+
+class ImageVCPUTopologyRangeExceeded(Invalid):
+    msg_fmt = _("Image vCPU topology %(sockets)d:%(cores)d:%(threads)d "
+                "exceeds permitted %(maxsockets)d:%(maxcores)d:%(maxthreads)d")
+
+
+class ImageVCPULimitsRangeImpossible(Invalid):
+    msg_fmt = _("Requested vCPU limits %(sockets)d:%(cores)d:%(threads)d "
+                "are impossible to satisfy for vcpus count %(vcpus)d")
