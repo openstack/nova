@@ -1168,6 +1168,55 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               </devices>
             </domain>""")
 
+    def test_config_lxc_with_idmap(self):
+        obj = config.LibvirtConfigGuest()
+        obj.virt_type = "lxc"
+        obj.memory = 100 * units.Mi
+        obj.vcpus = 2
+        obj.cpuset = set([0, 1, 3, 4, 5])
+        obj.name = "demo"
+        obj.uuid = "b38a3f43-4be2-4046-897f-b67c2f5e0147"
+        obj.os_type = "exe"
+        obj.os_init_path = "/sbin/init"
+
+        uidmap = config.LibvirtConfigGuestUIDMap()
+        uidmap.target = "10000"
+        uidmap.count = "1"
+        obj.idmaps.append(uidmap)
+        gidmap = config.LibvirtConfigGuestGIDMap()
+        gidmap.target = "10000"
+        gidmap.count = "1"
+        obj.idmaps.append(gidmap)
+
+        fs = config.LibvirtConfigGuestFilesys()
+        fs.source_dir = "/root/lxc"
+        fs.target_dir = "/"
+
+        obj.add_device(fs)
+
+        xml = obj.to_xml()
+        self.assertXmlEqual("""
+            <domain type="lxc">
+              <uuid>b38a3f43-4be2-4046-897f-b67c2f5e0147</uuid>
+              <name>demo</name>
+              <memory>104857600</memory>
+              <vcpu cpuset="0-1,3-5">2</vcpu>
+              <os>
+                <type>exe</type>
+                <init>/sbin/init</init>
+              </os>
+              <devices>
+                <filesystem type="mount">
+                  <source dir="/root/lxc"/>
+                  <target dir="/"/>
+                </filesystem>
+              </devices>
+              <idmap>
+                <uid start="0" target="10000" count="1"/>
+                <gid start="0" target="10000" count="1"/>
+              </idmap>
+            </domain>""", xml)
+
     def test_config_xen_pv(self):
         obj = config.LibvirtConfigGuest()
         obj.virt_type = "xen"
@@ -2033,3 +2082,59 @@ class LibvirtConfigGuestMetadataNovaTest(LibvirtConfigBaseTest):
       <nova:root type="image" uuid="fe55c69a-8b2e-4bbc-811a-9ad2023a0426"/>
     </nova:instance>
         """)
+
+
+class LibvirtConfigGuestIDMap(LibvirtConfigBaseTest):
+    def test_config_id_map_parse_start_not_int(self):
+        xmlin = "<uid start='a' target='20000' count='5'/>"
+        obj = config.LibvirtConfigGuestIDMap()
+
+        self.assertRaises(ValueError, obj.parse_str, xmlin)
+
+    def test_config_id_map_parse_target_not_int(self):
+        xmlin = "<uid start='2' target='a' count='5'/>"
+        obj = config.LibvirtConfigGuestIDMap()
+
+        self.assertRaises(ValueError, obj.parse_str, xmlin)
+
+    def test_config_id_map_parse_count_not_int(self):
+        xmlin = "<uid start='2' target='20000' count='a'/>"
+        obj = config.LibvirtConfigGuestIDMap()
+
+        self.assertRaises(ValueError, obj.parse_str, xmlin)
+
+    def test_config_uid_map(self):
+        obj = config.LibvirtConfigGuestUIDMap()
+        obj.start = 1
+        obj.target = 10000
+        obj.count = 2
+
+        xml = obj.to_xml()
+        self.assertXmlEqual("<uid start='1' target='10000' count='2'/>", xml)
+
+    def test_config_uid_map_parse(self):
+        xmlin = "<uid start='2' target='20000' count='5'/>"
+        obj = config.LibvirtConfigGuestUIDMap()
+        obj.parse_str(xmlin)
+
+        self.assertEqual(2, obj.start)
+        self.assertEqual(20000, obj.target)
+        self.assertEqual(5, obj.count)
+
+    def test_config_gid_map(self):
+        obj = config.LibvirtConfigGuestGIDMap()
+        obj.start = 1
+        obj.target = 10000
+        obj.count = 2
+
+        xml = obj.to_xml()
+        self.assertXmlEqual("<gid start='1' target='10000' count='2'/>", xml)
+
+    def test_config_gid_map_parse(self):
+        xmlin = "<gid start='2' target='20000' count='5'/>"
+        obj = config.LibvirtConfigGuestGIDMap()
+        obj.parse_str(xmlin)
+
+        self.assertEqual(2, obj.start)
+        self.assertEqual(20000, obj.target)
+        self.assertEqual(5, obj.count)
