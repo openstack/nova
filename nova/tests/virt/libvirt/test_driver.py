@@ -1966,8 +1966,8 @@ class LibvirtConnTestCase(test.TestCase):
                                return_value=fake_flavor):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
 
-            self.assertEqual(10000, cfg.cpu_shares)
-            self.assertEqual(20000, cfg.cpu_period)
+            self.assertEqual(10000, cfg.cputune.shares)
+            self.assertEqual(20000, cfg.cputune.period)
 
     def test_get_guest_config_with_bogus_cpu_quota(self):
         self.flags(virt_type='kvm', group='libvirt')

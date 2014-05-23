@@ -3111,12 +3111,14 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.vcpus = flavor.vcpus
         guest.cpuset = CONF.vcpu_pin_set
 
-        quota_items = ['cpu_shares', 'cpu_period', 'cpu_quota']
-        for key, value in flavor.extra_specs.iteritems():
-            scope = key.split(':')
-            if len(scope) > 1 and scope[0] == 'quota':
-                if scope[1] in quota_items:
-                    setattr(guest, scope[1], int(value))
+        cputuning = ['shares', 'period', 'quota']
+        for name in cputuning:
+            key = "quota:cpu_" + name
+            if key in flavor.extra_specs:
+                if guest.cputune is None:
+                    guest.cputune = vconfig.LibvirtConfigGuestCPUTune()
+                setattr(guest.cputune, name,
+                        int(flavor.extra_specs[key]))
 
         guest.cpu = self._get_guest_cpu_config()
 

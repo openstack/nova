@@ -1108,9 +1108,12 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.memory = 100 * units.Mi
         obj.vcpus = 2
         obj.cpuset = "0-3,^2,4-5"
-        obj.cpu_shares = 100
-        obj.cpu_quota = 50000
-        obj.cpu_period = 25000
+
+        obj.cputune = config.LibvirtConfigGuestCPUTune()
+        obj.cputune.shares = 100
+        obj.cputune.quota = 50000
+        obj.cputune.period = 25000
+
         obj.name = "demo"
         obj.uuid = "b38a3f43-4be2-4046-897f-b67c2f5e0147"
         obj.os_type = "linux"
@@ -1681,3 +1684,20 @@ class LibvirtConfigGuestWatchdogTest(LibvirtConfigBaseTest):
 
         xml = obj.to_xml()
         self.assertXmlEqual(xml, "<watchdog model='i6300esb' action='reset'/>")
+
+
+class LibvirtConfigGuestCPUTuneTest(LibvirtConfigBaseTest):
+
+    def test_config_cputune_timeslice(self):
+        cputune = config.LibvirtConfigGuestCPUTune()
+        cputune.shares = 100
+        cputune.quota = 50000
+        cputune.period = 25000
+
+        xml = cputune.to_xml()
+        self.assertXmlEqual(xml, """
+          <cputune>
+            <shares>100</shares>
+            <quota>50000</quota>
+            <period>25000</period>
+          </cputune>""")
