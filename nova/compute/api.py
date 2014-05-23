@@ -2597,10 +2597,8 @@ class API(base.Base):
     @check_instance_state(vm_state=[vm_states.RESCUED])
     def unrescue(self, context, instance):
         """Unrescue the given instance."""
-        self.update(context,
-                    instance,
-                    task_state=task_states.UNRESCUING,
-                    expected_task_state=[None])
+        instance.task_state = task_states.UNRESCUING
+        instance.save(expected_task_state=[None])
 
         self._record_action_start(context, instance, instance_actions.UNRESCUE)
 

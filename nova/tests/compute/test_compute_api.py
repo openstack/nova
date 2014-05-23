@@ -2049,18 +2049,18 @@ class _ComputeAPIUnitTestMixIn(object):
         instance = self._create_instance_obj(
             params={'vm_state': vm_states.RESCUED})
         with contextlib.nested(
-            mock.patch.object(self.compute_api, 'update'),
+            mock.patch.object(instance, 'save'),
             mock.patch.object(self.compute_api, '_record_action_start'),
             mock.patch.object(self.compute_api.compute_rpcapi,
                               'unrescue_instance')
         ) as (
-            compute_api_update, record_action_start, rpcapi_unrescue_instance
+            instance_save, record_action_start, rpcapi_unrescue_instance
         ):
             self.compute_api.unrescue(self.context, instance)
+            # assert field values set on the instance object
+            self.assertEqual(task_states.UNRESCUING, instance.task_state)
             # assert our mock calls
-            compute_api_update.assert_called_once_with(
-                self.context, instance, task_state=task_states.UNRESCUING,
-                expected_task_state=[None])
+            instance_save.assert_called_once_with(expected_task_state=[None])
             record_action_start.assert_called_once_with(
                 self.context, instance, instance_actions.UNRESCUE)
             rpcapi_unrescue_instance.assert_called_once_with(
