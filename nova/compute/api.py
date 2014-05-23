@@ -1427,14 +1427,13 @@ class API(base.Base):
             instance.update(instance_attrs)
             instance.progress = 0
             instance.save()
-            new_type_id = instance.instance_type_id
 
             # NOTE(comstud): If we delete the instance locally, we'll
             # commit the reservations here.  Otherwise, the manager side
             # will commit or rollback the reservations based on success.
             reservations = self._create_reservations(context,
                                                      instance,
-                                                     new_type_id,
+                                                     original_task_state,
                                                      project_id, user_id)
 
             if self.cell_type == 'api':
@@ -1570,24 +1569,24 @@ class API(base.Base):
                 src_host, quotas.reservations,
                 cast=False)
 
-    def _create_reservations(self, context, old_instance, new_instance_type_id,
+    def _create_reservations(self, context, instance, original_task_state,
                              project_id, user_id):
-        instance_vcpus = old_instance['vcpus']
-        instance_memory_mb = old_instance['memory_mb']
+        instance_vcpus = instance.vcpus
+        instance_memory_mb = instance.memory_mb
         # NOTE(wangpan): if the instance is resizing, and the resources
         #                are updated to new instance type, we should use
         #                the old instance type to create reservation.
         # see https://bugs.launchpad.net/nova/+bug/1099729 for more details
-        if old_instance['task_state'] in (task_states.RESIZE_MIGRATED,
-                                          task_states.RESIZE_FINISH):
+        if original_task_state in (task_states.RESIZE_MIGRATED,
+                                   task_states.RESIZE_FINISH):
             Migration = migration_obj.Migration
             try:
                 migration = Migration.get_by_instance_and_status(
-                    context.elevated(), old_instance.uuid, 'post-migrating')
+                    context.elevated(), instance.uuid, 'post-migrating')
             except exception.MigrationNotFoundByStatus:
                 migration = None
             if (migration and
-                    new_instance_type_id ==
+                    instance.instance_type_id ==
                         migration.new_instance_type_id):
                 old_inst_type_id = migration.old_instance_type_id
                 try:
@@ -1597,8 +1596,8 @@ class API(base.Base):
                     pass
                 else:
                     instance_vcpus = old_inst_type['vcpus']
-                    vram_mb = int(old_inst_type['extra_specs']
-                                                            .get(VIDEO_RAM, 0))
+                    vram_mb = int(old_inst_type.get('extra_specs',
+                                                    {}).get(VIDEO_RAM, 0))
                     instance_memory_mb = (old_inst_type['memory_mb'] + vram_mb)
                     LOG.debug("going to delete a resizing instance")
 
