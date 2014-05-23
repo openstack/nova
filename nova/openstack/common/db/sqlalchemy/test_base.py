@@ -18,11 +18,12 @@ import functools
 import os
 
 import fixtures
+from oslotest import base as test_base
 import six
 
+from nova.openstack.common.db.sqlalchemy import provision
 from nova.openstack.common.db.sqlalchemy import session
 from nova.openstack.common.db.sqlalchemy import utils
-from nova.openstack.common import test
 
 
 class DbFixture(fixtures.Fixture):
@@ -42,15 +43,17 @@ class DbFixture(fixtures.Fixture):
 
         self.test = test
 
+    def cleanUp(self):
+        self.test.engine.dispose()
+
     def setUp(self):
         super(DbFixture, self).setUp()
 
         self.test.engine = session.create_engine(self._get_uri())
         self.test.sessionmaker = session.get_maker(self.test.engine)
-        self.addCleanup(self.test.engine.dispose)
 
 
-class DbTestCase(test.BaseTestCase):
+class DbTestCase(test_base.BaseTestCase):
     """Base class for testing of DB code.
 
     Using `DbFixture`. Intended to be the main database test case to use all
@@ -102,11 +105,24 @@ class OpportunisticFixture(DbFixture):
     DRIVER = abc.abstractproperty(lambda: None)
     DBNAME = PASSWORD = USERNAME = 'openstack_citest'
 
+    def setUp(self):
+        self._provisioning_engine = provision.get_engine(
+            utils.get_connect_string(backend=self.DRIVER,
+                                     user=self.USERNAME,
+                                     passwd=self.PASSWORD,
+                                     database=self.DBNAME)
+        )
+        self._uri = provision.create_database(self._provisioning_engine)
+
+        super(OpportunisticFixture, self).setUp()
+
+    def cleanUp(self):
+        super(OpportunisticFixture, self).cleanUp()
+
+        provision.drop_database(self._provisioning_engine, self._uri)
+
     def _get_uri(self):
-        return utils.get_connect_string(backend=self.DRIVER,
-                                        user=self.USERNAME,
-                                        passwd=self.PASSWORD,
-                                        database=self.DBNAME)
+        return self._uri
 
 
 @six.add_metaclass(abc.ABCMeta)
