@@ -136,6 +136,14 @@ _fake_NodeDevXml = \
     </device>"""}
 
 
+def mocked_bdm(id, bdm_info):
+    bdm_mock = mock.MagicMock()
+    bdm_mock.__getitem__ = lambda s, k: bdm_info[k]
+    bdm_mock.get = lambda *k, **kw: bdm_info.get(*k, **kw)
+    bdm_mock.id = id
+    return bdm_mock
+
+
 def _concurrency(signal, wait, done, target):
     signal.send()
     wait.wait()
@@ -841,8 +849,11 @@ class LibvirtConnTestCase(test.TestCase):
         instance_ref = db.instance_create(self.context, self.test_instance)
         conn_info = {'driver_volume_type': 'fake'}
         info = {'block_device_mapping': [
-                  {'connection_info': conn_info, 'mount_device': '/dev/vdc'},
-                  {'connection_info': conn_info, 'mount_device': '/dev/vdd'}]}
+                mocked_bdm(1, {'connection_info': conn_info,
+                               'mount_device': '/dev/vdc'}),
+                mocked_bdm(1, {'connection_info': conn_info,
+                               'mount_device': '/dev/vdd'}),
+                ]}
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance_ref, info)
@@ -3528,8 +3539,8 @@ class LibvirtConnTestCase(test.TestCase):
 
         block_device_info = {'root_device_name': '/dev/vda',
                              'block_device_mapping': [
-                                {'mount_device': 'vda',
-                                 'boot_index': 0}
+                                mocked_bdm(1, {'mount_device': 'vda',
+                                               'boot_index': 0}),
                                 ]
                             }
 
@@ -3550,6 +3561,7 @@ class LibvirtConnTestCase(test.TestCase):
         instance_ref['image_ref'] = 'my_fake_image'
         instance_ref['root_device_name'] = '/dev/vda'
         instance_ref['uuid'] = uuidutils.generate_uuid()
+        block_device_info['block_device_mapping'][0].id = 2
         instance = db.instance_create(self.context, instance_ref)
 
         conn.spawn(self.context, instance, None, [], None,
@@ -5647,16 +5659,19 @@ class LibvirtConnTestCase(test.TestCase):
         self.stubs.Set(conn,
                        '_lookup_by_name',
                        fake_lookup_name)
-        block_device_info = {'block_device_mapping': [
-                    {'guest_format': None,
-                     'boot_index': 0,
-                     'mount_device': '/dev/vda',
-                     'connection_info':
-                        {'driver_volume_type': 'iscsi'},
-                     'disk_bus': 'virtio',
-                     'device_type': 'disk',
-                     'delete_on_termination': False}
-                    ]}
+        bdm = {'guest_format': None,
+               'boot_index': 0,
+               'mount_device': '/dev/vda',
+               'connection_info':
+                   {'driver_volume_type': 'iscsi'},
+               'disk_bus': 'virtio',
+               'device_type': 'disk',
+               'delete_on_termination': False,
+               }
+        block_device_info = {
+            'block_device_mapping': [mocked_bdm(1, bdm)]
+            }
+
         conn.post_live_migration_at_destination(self.context, instance,
                                         network_info, True,
                                         block_device_info=block_device_info)
