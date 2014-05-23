@@ -29,13 +29,16 @@ import mox
 import netaddr
 from oslo.config import cfg
 import six
+from sqlalchemy import Column
 from sqlalchemy.dialects import sqlite
 from sqlalchemy import exc
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import Integer
 from sqlalchemy import MetaData
 from sqlalchemy.orm import exc as sqlalchemy_orm_exc
 from sqlalchemy.orm import query
 from sqlalchemy.sql.expression import select
+from sqlalchemy import Table
 
 from nova import block_device
 from nova.compute import vm_states
@@ -43,10 +46,12 @@ from nova import context
 from nova import db
 from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova.db.sqlalchemy import models
+from nova.db.sqlalchemy import types as col_types
 from nova.db.sqlalchemy import utils as db_utils
 from nova import exception
 from nova.openstack.common.db import api as db_api
 from nova.openstack.common.db import exception as db_exc
+from nova.openstack.common.db.sqlalchemy import test_base
 from nova.openstack.common.db.sqlalchemy import utils as sqlalchemyutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
@@ -7161,3 +7166,42 @@ class NovaDBAPITestCase(test.TestCase):
         nova_db_api.instance_group_get
         # CONF.database.use_tpool is True, so we get tpool proxy in this case
         self.assertIsInstance(nova_db_api._db_api, eventlet.tpool.Proxy)
+
+
+class TestSqlalchemyTypesRepr(test_base.DbTestCase):
+    def setUp(self):
+        super(TestSqlalchemyTypesRepr, self).setUp()
+        meta = MetaData(bind=self.engine)
+        self.table = Table(
+            'cidr_tbl',
+            meta,
+            Column('id', Integer, primary_key=True),
+            Column('addr', col_types.CIDR())
+        )
+        self.table.create()
+        self.addCleanup(meta.drop_all)
+
+    def test_cidr_repr(self):
+        addrs = [('192.168.3.0/24', '192.168.3.0/24'),
+                 ('2001:db8::/64', '2001:db8::/64'),
+                 ('192.168.3.0', '192.168.3.0/32'),
+                 ('2001:db8::', '2001:db8::/128'),
+                 (None, None)]
+        with self.engine.begin() as conn:
+            for i in addrs:
+                conn.execute(self.table.insert(), {'addr': i[0]})
+
+            query = self.table.select().order_by(self.table.c.id)
+            result = conn.execute(query)
+            for idx, row in enumerate(result):
+                self.assertEqual(addrs[idx][1], row.addr)
+
+
+class TestMySQLSqlalchemyTypesRepr(TestSqlalchemyTypesRepr,
+        test_base.MySQLOpportunisticTestCase):
+    pass
+
+
+class TestPostgreSQLSqlalchemyTypesRepr(TestSqlalchemyTypesRepr,
+        test_base.PostgreSQLOpportunisticTestCase):
+    pass
