@@ -153,7 +153,8 @@ class FakeNetworkManager(network_manager.NetworkManager):
         self.deallocate_called = address
 
     def _create_fixed_ips(self, context, network_id, fixed_cidr=None,
-                          extra_reserved=None):
+                          extra_reserved=None, bottom_reserved=0,
+                          top_reserved=0):
         pass
 
     def get_instance_nw_info(context, instance_id, rxtx_factor,
