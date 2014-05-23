@@ -70,6 +70,28 @@ class LibvirtConfigCapsTest(LibvirtConfigBaseTest):
               <feature name='ibs'/>
               <feature name='osvw'/>
             </cpu>
+            <topology>
+              <cells num='2'>
+                <cell id='0'>
+                  <memory unit='KiB'>4048280</memory>
+                  <cpus num='4'>
+                    <cpu id='0' socket_id='0' core_id='0' siblings='0'/>
+                    <cpu id='1' socket_id='0' core_id='1' siblings='1'/>
+                    <cpu id='2' socket_id='0' core_id='2' siblings='2'/>
+                    <cpu id='3' socket_id='0' core_id='3' siblings='3'/>
+                  </cpus>
+                </cell>
+                <cell id='1'>
+                  <memory unit='KiB'>4127684</memory>
+                  <cpus num='4'>
+                    <cpu id='4' socket_id='1' core_id='0' siblings='4'/>
+                    <cpu id='5' socket_id='1' core_id='1' siblings='5'/>
+                    <cpu id='6' socket_id='1' core_id='2' siblings='6'/>
+                    <cpu id='7' socket_id='1' core_id='3' siblings='7'/>
+                  </cpus>
+                </cell>
+              </cells>
+            </topology>
           </host>
           <guest>
             <os_type>hvm</os_type>
