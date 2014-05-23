@@ -179,6 +179,11 @@ def translate_volume_exception(method):
             elif isinstance(exc_value, cinder_exception.BadRequest):
                 exc_value = exception.InvalidInput(reason=exc_value.message)
             raise exc_value, None, exc_trace
+        except cinder_exception.ConnectionError:
+            exc_type, exc_value, exc_trace = sys.exc_info()
+            exc_value = exception.CinderConnectionFailed(
+                                                   reason=exc_value.message)
+            raise exc_value, None, exc_trace
         return res
     return wrapper
 
@@ -194,6 +199,11 @@ def translate_snapshot_exception(method):
             exc_type, exc_value, exc_trace = sys.exc_info()
             if isinstance(exc_value, cinder_exception.NotFound):
                 exc_value = exception.SnapshotNotFound(snapshot_id=snapshot_id)
+            raise exc_value, None, exc_trace
+        except cinder_exception.ConnectionError:
+            exc_type, exc_value, exc_trace = sys.exc_info()
+            exc_value = exception.CinderConnectionFailed(
+                                                  reason=exc_value.message)
             raise exc_value, None, exc_trace
         return res
     return wrapper

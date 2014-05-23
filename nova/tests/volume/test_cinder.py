@@ -66,11 +66,15 @@ class CinderApiTestCase(test.NoDBTestCase):
         volume_id = 'volume_id'
         cinder.cinderclient(self.ctx).AndRaise(cinder_exception.NotFound(''))
         cinder.cinderclient(self.ctx).AndRaise(cinder_exception.BadRequest(''))
+        cinder.cinderclient(self.ctx).AndRaise(
+                                        cinder_exception.ConnectionError(''))
         self.mox.ReplayAll()
 
         self.assertRaises(exception.VolumeNotFound,
                           self.api.get, self.ctx, volume_id)
         self.assertRaises(exception.InvalidInput,
+                          self.api.get, self.ctx, volume_id)
+        self.assertRaises(exception.CinderConnectionFailed,
                           self.api.get, self.ctx, volume_id)
 
     def test_create(self):
@@ -281,9 +285,13 @@ class CinderApiTestCase(test.NoDBTestCase):
     def test_get_snapshot_failed(self):
         snapshot_id = 'snapshot_id'
         cinder.cinderclient(self.ctx).AndRaise(cinder_exception.NotFound(''))
+        cinder.cinderclient(self.ctx).AndRaise(
+                                        cinder_exception.ConnectionError(''))
         self.mox.ReplayAll()
 
         self.assertRaises(exception.SnapshotNotFound,
+                          self.api.get_snapshot, self.ctx, snapshot_id)
+        self.assertRaises(exception.CinderConnectionFailed,
                           self.api.get_snapshot, self.ctx, snapshot_id)
 
     def test_get_all_snapshots(self):

@@ -49,6 +49,7 @@ from nova.tests import matchers
 from nova.tests.objects import test_flavor
 from nova.tests.objects import test_migration
 from nova.tests.objects import test_service
+from nova.volume import cinder
 
 
 FAKE_IMAGE_REF = 'fake-image-ref'
@@ -1896,6 +1897,108 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.compute_api.swap_volume,
                           self.context, instance,
                           volume_id, new_volume_id)
+
+    @mock.patch.object(cinder.API, 'get',
+             side_effect=exception.CinderConnectionFailed(reason='error'))
+    def test_get_bdm_image_metadata_with_cinder_down(self, mock_get):
+        bdms = [block_device_obj.BlockDeviceMapping(
+                **fake_block_device.FakeDbBlockDeviceDict(
+                {
+                 'id': 1,
+                 'volume_id': 1,
+                 'source_type': 'volume',
+                 'destination_type': 'volume',
+                 'device_name': 'vda',
+                 }))]
+        self.assertRaises(exception.CinderConnectionFailed,
+                          self.compute_api._get_bdm_image_metadata,
+                          self.context,
+                          bdms, legacy_bdm=True)
+
+    @mock.patch.object(cinder.API, 'get_snapshot',
+             side_effect=exception.CinderConnectionFailed(reason='error'))
+    @mock.patch.object(cinder.API, 'get',
+             side_effect=exception.CinderConnectionFailed(reason='error'))
+    def test_validate_bdm_with_cinder_down(self, mock_get, mock_get_snapshot):
+        instance = self._create_instance_obj()
+        instance_type = self._create_flavor()
+        bdm = [block_device_obj.BlockDeviceMapping(
+                **fake_block_device.FakeDbBlockDeviceDict(
+                {
+                 'id': 1,
+                 'volume_id': 1,
+                 'source_type': 'volume',
+                 'destination_type': 'volume',
+                 'device_name': 'vda',
+                 'boot_index': 0,
+                 }))]
+        bdms = [block_device_obj.BlockDeviceMapping(
+                **fake_block_device.FakeDbBlockDeviceDict(
+                {
+                 'id': 1,
+                 'snapshot_id': 1,
+                 'source_type': 'volume',
+                 'destination_type': 'volume',
+                 'device_name': 'vda',
+                 'boot_index': 0,
+                 }))]
+        self.assertRaises(exception.CinderConnectionFailed,
+                          self.compute_api._validate_bdm,
+                          self.context,
+                          instance, instance_type, bdm)
+        self.assertRaises(exception.CinderConnectionFailed,
+                          self.compute_api._validate_bdm,
+                          self.context,
+                          instance, instance_type, bdms)
+
+    @mock.patch.object(objects.Instance, 'create')
+    @mock.patch.object(compute_api.SecurityGroupAPI, 'ensure_default')
+    @mock.patch.object(compute_api.API,
+                       '_populate_instance_shutdown_terminate')
+    @mock.patch.object(compute_api.API, '_populate_instance_names')
+    @mock.patch.object(compute_api.API, '_populate_instance_for_create')
+    @mock.patch.object(cinder.API, 'get',
+             side_effect=exception.CinderConnectionFailed(reason='error'))
+    def test_create_db_entry_for_new_instancewith_cinder_down(self, mock_get,
+                                                            mock_create,
+                                                            mock_names,
+                                                            mock_terminate,
+                                                            mock_ensure,
+                                                            mock_inst_create):
+        instance = self._create_instance_obj()
+        instance['display_name'] = 'FAKE_DISPLAY_NAME'
+        instance['shutdown_terminate'] = False
+        instance_type = self._create_flavor()
+        fake_image = {
+            'id': 'fake-image-id',
+            'properties': {'mappings': []},
+            'status': 'fake-status',
+            'location': 'far-away'}
+        fake_security_group = None
+        fake_num_instances = 1
+        fake_index = 1
+        bdm = [block_device_obj.BlockDeviceMapping(
+                **fake_block_device.FakeDbBlockDeviceDict(
+                {
+                 'id': 1,
+                 'volume_id': 1,
+                 'source_type': 'volume',
+                 'destination_type': 'volume',
+                 'device_name': 'vda',
+                 'boot_index': 0,
+                 }))]
+        with mock.patch.object(instance, "destroy") as destroy:
+            self.assertRaises(exception.CinderConnectionFailed,
+                            self.compute_api.create_db_entry_for_new_instance,
+                            self.context,
+                            instance_type,
+                            fake_image,
+                            instance,
+                            fake_security_group,
+                            bdm,
+                            fake_num_instances,
+                            fake_index)
+            destroy.assert_called_once_with(self.context)
 
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
