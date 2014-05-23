@@ -3116,7 +3116,7 @@ class LibvirtDriver(driver.ComputeDriver):
             scope = key.split(':')
             if len(scope) > 1 and scope[0] == 'quota':
                 if scope[1] in quota_items:
-                    setattr(guest, scope[1], value)
+                    setattr(guest, scope[1], int(value))
 
         guest.cpu = self._get_guest_cpu_config()
 

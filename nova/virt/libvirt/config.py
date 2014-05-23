@@ -1210,11 +1210,11 @@ class LibvirtConfigGuest(LibvirtConfigObject):
     def _format_cputune(self, root):
         cputune = etree.Element("cputune")
         if self.cpu_shares is not None:
-            cputune.append(self._text_node("shares", self.cpu_shares))
+            cputune.append(self._text_node("shares", str(self.cpu_shares)))
         if self.cpu_quota is not None:
-            cputune.append(self._text_node("quota", self.cpu_quota))
+            cputune.append(self._text_node("quota", str(self.cpu_quota)))
         if self.cpu_period is not None:
-            cputune.append(self._text_node("period", self.cpu_period))
+            cputune.append(self._text_node("period", str(self.cpu_period)))
         if len(cputune) > 0:
             root.append(cputune)
 
