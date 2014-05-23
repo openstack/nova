@@ -43,25 +43,6 @@ def fake_get_filtered_hosts(hosts, filter_properties, index):
     return list(hosts)
 
 
-def fake_get_group_filtered_hosts(hosts, filter_properties, index):
-    group_hosts = filter_properties.get('group_hosts') or []
-    if group_hosts:
-        hosts = list(hosts)
-        hosts.pop(0)
-        return hosts
-    else:
-        return list(hosts)
-
-
-def fake_get_group_filtered_affinity_hosts(hosts, filter_properties, index):
-    group_hosts = filter_properties.get('group_hosts') or []
-    if group_hosts:
-        affinity_host = hosts.pop(0)
-        return [affinity_host]
-    else:
-        return list(hosts)
-
-
 class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
     """Test case for Filter Scheduler."""
 
