@@ -27,6 +27,7 @@ from nova.image import glance
 from nova.network import minidns
 from nova.network import model as network_model
 from nova.objects import instance as instance_obj
+import nova.utils
 
 CONF = cfg.CONF
 CONF.import_opt('use_ipv6', 'nova.netconf')
@@ -149,6 +150,11 @@ def get_test_network_info(count=1):
 
 def is_osx():
     return platform.mac_ver()[0] != ''
+
+
+def coreutils_readlink_available():
+    _out, err = nova.utils.trycmd('readlink', '-nm', '/')
+    return err == ''
 
 
 test_dns_managers = []
