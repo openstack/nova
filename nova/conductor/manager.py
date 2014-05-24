@@ -385,6 +385,7 @@ class ConductorManager(manager.Manager):
     def security_groups_trigger_handler(self, context, event, args):
         self.security_group_api.trigger_handler(event, context, *args)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def security_groups_trigger_members_refresh(self, context, group_ids):
         self.security_group_api.trigger_members_refresh(context, group_ids)
 

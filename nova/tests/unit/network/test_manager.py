@@ -186,7 +186,6 @@ class FlatNetworkTestCase(test.TestCase):
         super(FlatNetworkTestCase, self).setUp()
         self.tempdir = self.useFixture(fixtures.TempDir()).path
         self.flags(log_dir=self.tempdir)
-        self.flags(use_local=True, group='conductor')
         self.network = network_manager.FlatManager(host=HOST)
         self.network.instance_dns_domain = ''
         self.network.db = db
@@ -858,7 +857,6 @@ class VlanNetworkTestCase(test.TestCase):
     def setUp(self):
         super(VlanNetworkTestCase, self).setUp()
         self.useFixture(test.SampleNetworks())
-        self.flags(use_local=True, group='conductor')
         self.network = network_manager.VlanManager(host=HOST)
         self.network.db = db
         self.context = context.RequestContext('testuser', 'testproject',
@@ -1953,7 +1951,6 @@ class CommonNetworkTestCase(test.TestCase):
         super(CommonNetworkTestCase, self).setUp()
         self.context = context.RequestContext('fake', 'fake')
         self.flags(ipv6_backend='rfc2462')
-        self.flags(use_local=True, group='conductor')
         ipv6.reset_backend()
 
     def test_validate_instance_zone_for_dns_domain(self):
@@ -2659,7 +2656,6 @@ class RPCAllocateTestCase(test.NoDBTestCase):
     """Tests nova.network.manager.RPCAllocateFixedIP."""
     def setUp(self):
         super(RPCAllocateTestCase, self).setUp()
-        self.flags(use_local=True, group='conductor')
         self.rpc_fixed = TestRPCFixedManager()
         self.context = context.RequestContext('fake', 'fake')
 
@@ -2815,7 +2811,6 @@ class FloatingIPTestCase(test.TestCase):
         super(FloatingIPTestCase, self).setUp()
         self.tempdir = self.useFixture(fixtures.TempDir()).path
         self.flags(log_dir=self.tempdir)
-        self.flags(use_local=True, group='conductor')
         self.network = TestFloatingIPManager()
         self.network.db = db
         self.project_id = 'testproject'
@@ -3362,7 +3357,6 @@ class InstanceDNSTestCase(test.TestCase):
         super(InstanceDNSTestCase, self).setUp()
         self.tempdir = self.useFixture(fixtures.TempDir()).path
         self.flags(log_dir=self.tempdir)
-        self.flags(use_local=True, group='conductor')
         self.network = TestFloatingIPManager()
         self.network.db = db
         self.project_id = 'testproject'

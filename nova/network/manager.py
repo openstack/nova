@@ -45,7 +45,6 @@ from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 
-from nova import conductor
 from nova import context
 from nova import exception
 from nova.i18n import _, _LI, _LE, _LW
@@ -56,6 +55,7 @@ from nova.network import driver
 from nova.network import floating_ips
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
+from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import quotas as quotas_obj
@@ -273,7 +273,8 @@ class NetworkManager(manager.Manager):
                 CONF.floating_ip_dns_manager)
         self.network_api = network_api.API()
         self.network_rpcapi = network_rpcapi.NetworkAPI()
-        self.conductor_api = conductor.API()
+        self.security_group_api = (
+            openstack_driver.get_openstack_security_group_driver())
 
         self.servicegroup_api = servicegroup.API()
 
@@ -381,8 +382,8 @@ class NetworkManager(manager.Manager):
         groups = instance.security_groups
         group_ids = [group.id for group in groups]
 
-        self.conductor_api.security_groups_trigger_members_refresh(
-            admin_context, group_ids)
+        self.security_group_api.trigger_members_refresh(admin_context,
+                                                        group_ids)
 
     # NOTE(hanlind): This method can be removed in version 2.0 of the RPC API
     def get_instance_uuids_by_ip_filter(self, context, filters):

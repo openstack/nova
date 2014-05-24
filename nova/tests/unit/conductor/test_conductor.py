@@ -184,15 +184,6 @@ class _BaseTestCase(object):
                                                     'fake-values')
         self.assertEqual(result, 'fake-result')
 
-    def test_security_groups_trigger_members_refresh(self):
-        self.mox.StubOutWithMock(self.conductor_manager.security_group_api,
-                                 'trigger_members_refresh')
-        self.conductor_manager.security_group_api.trigger_members_refresh(
-            self.context, [1, 2, 3])
-        self.mox.ReplayAll()
-        self.conductor.security_groups_trigger_members_refresh(self.context,
-                                                               [1, 2, 3])
-
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests."""
@@ -776,6 +767,15 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         result = self.conductor.task_log_end_task(
             self.context, 'task', 'begin', 'end', 'host', 'errors', 'message')
         self.assertEqual(result, 'result')
+
+    def test_security_groups_trigger_members_refresh(self):
+        self.mox.StubOutWithMock(self.conductor_manager.security_group_api,
+                                 'trigger_members_refresh')
+        self.conductor_manager.security_group_api.trigger_members_refresh(
+            self.context, [1, 2, 3])
+        self.mox.ReplayAll()
+        self.conductor.security_groups_trigger_members_refresh(self.context,
+                                                               [1, 2, 3])
 
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
