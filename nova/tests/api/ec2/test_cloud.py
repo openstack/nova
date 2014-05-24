@@ -1866,12 +1866,10 @@ class CloudTestCase(test.TestCase):
 
     def test_import_key_pair(self):
         pubkey_path = os.path.join(os.path.dirname(__file__), 'public_key')
-        f = open(pubkey_path + '/dummy.pub', 'r')
-        dummypub = f.readline().rstrip()
-        f.close
-        f = open(pubkey_path + '/dummy.fingerprint', 'r')
-        dummyfprint = f.readline().rstrip()
-        f.close
+        with open(pubkey_path + '/dummy.pub') as f:
+            dummypub = f.readline().rstrip()
+        with open(pubkey_path + '/dummy.fingerprint') as f:
+            dummyfprint = f.readline().rstrip()
         key_name = 'testimportkey'
         public_key_material = base64.b64encode(dummypub)
         result = self.cloud.import_key_pair(self.context,
