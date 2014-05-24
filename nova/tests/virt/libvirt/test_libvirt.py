@@ -7021,7 +7021,7 @@ class LibvirtConnTestCase(test.TestCase):
                                         block_device_info=block_device_info)
         self.assertTrue('fake' in self.resultXML)
 
-    def test_create_propogates_exceptions(self):
+    def test_create_propagates_exceptions(self):
         self.flags(virt_type='lxc', group='libvirt')
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)

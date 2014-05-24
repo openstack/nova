@@ -968,7 +968,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
                 fake_topic,
                 fake_rpc_message, False, timeout=None)
 
-    def test_task_log_get_all_targetted(self):
+    def test_task_log_get_all_targeted(self):
         task_name = 'fake_task_name'
         begin = 'fake_begin'
         end = 'fake_end'

@@ -177,7 +177,7 @@ class libvirtError(Exception):
 
     Since a test environment will use the real `libvirt-python` version of
     `libvirtError` if it's installed and not this fake, we need to maintain
-    strict compatability with the original class, including `__init__` args
+    strict compatibility with the original class, including `__init__` args
     and instance-attributes.
 
     To create a libvirtError instance you should:
