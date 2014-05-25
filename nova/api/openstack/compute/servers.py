@@ -1443,13 +1443,11 @@ class Controller(wsgi.Controller):
                 img = instance['image_ref']
                 if not img:
                     props = bdms.root_metadata(
-                            context, self.compute_api.image_service,
+                            context, self.compute_api.image_api,
                             self.compute_api.volume_api)
                     image_meta = {'properties': props}
                 else:
-                    src_image = self.compute_api.image_service.\
-                                                show(context, img)
-                    image_meta = dict(src_image)
+                    image_meta = self.compute_api.image_api.get(context, img)
 
                 image = self.compute_api.snapshot_volume_backed(
                                                        context,

@@ -374,7 +374,7 @@ class ShelveComputeAPITestCase(test_compute.BaseTestCase):
             # sets a fake method.
             self2.images = {}
 
-        def fake_create(self2, ctxt, metadata):
+        def fake_create(self2, ctxt, metadata, data=None):
             self.assertEqual(metadata['name'], 'vm01-shelved')
             metadata['id'] = '8b24ed3f-ee57-43bc-bc2e-fb2e9482bc42'
             return metadata
