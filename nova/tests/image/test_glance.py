@@ -453,6 +453,48 @@ class TestGlanceImageService(test.NoDBTestCase):
         self.assertEqual(same_id, image_id)
         self.assertEqual(service._client.host, 'something-less-likely')
 
+    def test_extracting_missing_attributes(self):
+        """Verify behavior from glance objects that are missing attributes
+
+        This fakes the image class and is missing attribute as the client can
+        return if they're not set in the database.
+        """
+        class MyFakeGlanceImage(glance_stubs.FakeImage):
+            def __init__(self, metadata):
+                IMAGE_ATTRIBUTES = ['size', 'owner', 'id', 'created_at',
+                                    'updated_at', 'status', 'min_disk',
+                                    'min_ram', 'is_public']
+                raw = dict.fromkeys(IMAGE_ATTRIBUTES)
+                raw.update(metadata)
+                self.__dict__['raw'] = raw
+
+        metadata = {
+            'id': 1,
+            'created_at': self.NOW_DATETIME,
+            'updated_at': self.NOW_DATETIME,
+        }
+        image = MyFakeGlanceImage(metadata)
+        observed = glance._extract_attributes(image)
+        expected = {
+            'id': 1,
+            'name': None,
+            'is_public': None,
+            'size': None,
+            'min_disk': None,
+            'min_ram': None,
+            'disk_format': None,
+            'container_format': None,
+            'checksum': None,
+            'created_at': self.NOW_DATETIME,
+            'updated_at': self.NOW_DATETIME,
+            'deleted_at': None,
+            'deleted': None,
+            'status': None,
+            'properties': {},
+            'owner': None,
+        }
+        self.assertEqual(expected, observed)
+
 
 def _create_failing_glance_client(info):
     class MyGlanceStubClient(glance_stubs.StubGlanceClient):
