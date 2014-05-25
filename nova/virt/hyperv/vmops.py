@@ -504,11 +504,15 @@ class VMOps(object):
         self._set_vm_state(instance,
                            constants.HYPERV_VM_STATE_DISABLED)
 
-    def power_on(self, instance):
+    def power_on(self, instance, block_device_info=None):
         """Power on the specified instance."""
         LOG.debug("Power on instance", instance=instance)
-        self._set_vm_state(instance,
-                           constants.HYPERV_VM_STATE_ENABLED)
+
+        if block_device_info:
+            self._volumeops.fix_instance_volume_disk_paths(instance['name'],
+                                                           block_device_info)
+
+        self._set_vm_state(instance, constants.HYPERV_VM_STATE_ENABLED)
 
     def _set_vm_state(self, instance, req_state):
         instance_name = instance['name']
@@ -567,6 +571,11 @@ class VMOps(object):
             periodic_call.stop()
 
         return True
+
+    def resume_state_on_host_boot(self, context, instance, network_info,
+                                  block_device_info=None):
+        """Resume guest state when a host is booted."""
+        self.power_on(instance, block_device_info)
 
     def log_vm_serial_output(self, instance_name, instance_uuid):
         # Uses a 'thread' that will run in background, reading
