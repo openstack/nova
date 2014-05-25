@@ -57,6 +57,8 @@ class VMUtilsV2(vmutils.VMUtils):
     _ETHERNET_PORT_ALLOCATION_SETTING_DATA_CLASS = \
     'Msvm_EthernetPortAllocationSettingData'
 
+    _AUTOMATIC_STARTUP_ACTION_NONE = 2
+
     _vm_power_states_map = {constants.HYPERV_VM_STATE_ENABLED: 2,
                             constants.HYPERV_VM_STATE_DISABLED: 3,
                             constants.HYPERV_VM_STATE_REBOOT: 11,
@@ -90,6 +92,9 @@ class VMUtilsV2(vmutils.VMUtils):
         vs_data = self._conn.Msvm_VirtualSystemSettingData.new()
         vs_data.ElementName = vm_name
         vs_data.Notes = notes
+
+        # Don't start automatically on host boot
+        vs_data.AutomaticStartupAction = self._AUTOMATIC_STARTUP_ACTION_NONE
 
         (job_path,
          vm_path,
@@ -158,6 +163,9 @@ class VMUtilsV2(vmutils.VMUtils):
         diskdrive.HostResource = [mounted_disk_path]
 
         self._add_virt_resource(diskdrive, vm.path_())
+
+    def _get_disk_resource_address(self, disk_resource):
+        return disk_resource.AddressOnParent
 
     def create_scsi_controller(self, vm_name):
         """Create an iscsi controller ready to mount volumes."""

@@ -28,7 +28,7 @@ if sys.platform == 'win32':
 from oslo.config import cfg
 
 from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _, _LW
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import constants
 
@@ -81,6 +81,7 @@ class VMUtils(object):
     _AFFECTED_JOB_ELEMENT_CLASS = "Msvm_AffectedJobElement"
 
     _VIRTUAL_SYSTEM_CURRENT_SETTINGS = 3
+    _AUTOMATIC_STARTUP_ACTION_NONE = 0
 
     _vm_power_states_map = {constants.HYPERV_VM_STATE_ENABLED: 2,
                             constants.HYPERV_VM_STATE_DISABLED: 3,
@@ -253,6 +254,8 @@ class VMUtils(object):
     def _create_vm_obj(self, vs_man_svc, vm_name, notes):
         vs_gs_data = self._conn.Msvm_VirtualSystemGlobalSettingData.new()
         vs_gs_data.ElementName = vm_name
+        # Don't start automatically on host boot
+        vs_gs_data.AutomaticStartupAction = self._AUTOMATIC_STARTUP_ACTION_NONE
 
         (vm_path,
          job_path,
@@ -386,6 +389,33 @@ class VMUtils(object):
         diskdrive.HostResource = [mounted_disk_path]
         self._add_virt_resource(diskdrive, vm.path_())
 
+    def _get_disk_resource_address(self, disk_resource):
+        return disk_resource.Address
+
+    def set_disk_host_resource(self, vm_name, controller_path, address,
+                               mounted_disk_path):
+        disk_found = False
+        vm = self._lookup_vm_check(vm_name)
+        (disk_resources, volume_resources) = self._get_vm_disks(vm)
+        for disk_resource in disk_resources + volume_resources:
+            if (disk_resource.Parent == controller_path and
+                    self._get_disk_resource_address(disk_resource) ==
+                    str(address)):
+                if (disk_resource.HostResource and
+                        disk_resource.HostResource[0] != mounted_disk_path):
+                    LOG.debug('Updating disk host resource "%(old)s" to '
+                                '"%(new)s"' %
+                              {'old': disk_resource.HostResource[0],
+                               'new': mounted_disk_path})
+                    disk_resource.HostResource = [mounted_disk_path]
+                    self._modify_virt_resource(disk_resource, vm.path_())
+                disk_found = True
+                break
+        if not disk_found:
+            LOG.warn(_LW('Disk not found on controller "%(controller_path)s" '
+                         'with address "%(address)s"'),
+                     {'controller_path': controller_path, 'address': address})
+
     def set_nic_connection(self, vm_name, nic_name, vswitch_conn_data):
         nic_data = self._get_nic_data_by_name(nic_name)
         nic_data.Connection = [vswitch_conn_data]
@@ -454,6 +484,12 @@ class VMUtils(object):
                           r.ResourceSubType in
                           [self._IDE_DISK_RES_SUB_TYPE,
                            self._IDE_DVD_RES_SUB_TYPE]]
+
+        if (self._RESOURCE_ALLOC_SETTING_DATA_CLASS !=
+                self._STORAGE_ALLOC_SETTING_DATA_CLASS):
+            rasds = vmsettings[0].associators(
+                wmi_result_class=self._RESOURCE_ALLOC_SETTING_DATA_CLASS)
+
         volume_resources = [r for r in rasds if
                             r.ResourceSubType == self._PHYS_DISK_RES_SUB_TYPE]
 

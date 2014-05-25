@@ -416,10 +416,15 @@ class VMOps(object):
         self._set_vm_state(instance["name"],
                            constants.HYPERV_VM_STATE_DISABLED)
 
-    def power_on(self, instance):
+    def power_on(self, instance, block_device_info=None):
         """Power on the specified instance."""
         LOG.debug(_("Power on instance"), instance=instance)
-        self._set_vm_state(instance["name"],
+
+        if block_device_info:
+            self._volumeops.fix_instance_volume_disk_paths(instance['name'],
+                                                           block_device_info)
+
+        self._set_vm_state(instance['name'],
                            constants.HYPERV_VM_STATE_ENABLED)
 
     def _set_vm_state(self, vm_name, req_state):
@@ -433,3 +438,8 @@ class VMOps(object):
                 LOG.error(_("Failed to change vm state of %(vm_name)s"
                             " to %(req_state)s"),
                           {'vm_name': vm_name, 'req_state': req_state})
+
+    def resume_state_on_host_boot(self, context, instance, network_info,
+                                  block_device_info=None):
+        """Resume guest state when a host is booted."""
+        self.power_on(instance, block_device_info)

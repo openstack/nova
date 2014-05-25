@@ -581,14 +581,30 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
                                    constants.HYPERV_VM_STATE_DISABLED,
                                    constants.HYPERV_VM_STATE_DISABLED)
 
-    def test_power_on(self):
+    def _test_power_on(self, block_device_info):
         self._instance_data = self._get_instance_data()
         network_info = fake_network.fake_get_instance_nw_info(self.stubs)
+
         vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
                                      constants.HYPERV_VM_STATE_ENABLED)
+        if block_device_info:
+            self._mox.StubOutWithMock(volumeops.VolumeOps,
+                                      'fix_instance_volume_disk_paths')
+            volumeops.VolumeOps.fix_instance_volume_disk_paths(
+                mox.Func(self._check_instance_name), block_device_info)
+
         self._mox.ReplayAll()
-        self._conn.power_on(self._context, self._instance_data, network_info)
+        self._conn.power_on(self._context, self._instance_data, network_info,
+                            block_device_info=block_device_info)
         self._mox.VerifyAll()
+
+    def test_power_on_having_block_devices(self):
+        block_device_info = db_fakes.get_fake_block_device_info(
+            self._volume_target_portal, self._volume_id)
+        self._test_power_on(block_device_info=block_device_info)
+
+    def test_power_on_without_block_devices(self):
+        self._test_power_on(block_device_info=None)
 
     def test_power_on_already_running(self):
         self._instance_data = self._get_instance_data()
@@ -1814,3 +1830,35 @@ class VolumeOpsTestCase(HyperVAPIBaseTestCase):
             self.assertRaises(vmutils.HyperVException,
                               self.volumeops._get_free_controller_slot,
                               fake_scsi_controller_path)
+
+    def test_fix_instance_volume_disk_paths(self):
+        block_device_info = db_fakes.get_fake_block_device_info(
+            self._volume_target_portal, self._volume_id)
+
+        with contextlib.nested(
+            mock.patch.object(self.volumeops,
+                              '_get_mounted_disk_from_lun'),
+            mock.patch.object(self.volumeops._vmutils,
+                              'get_vm_scsi_controller'),
+            mock.patch.object(self.volumeops._vmutils,
+                              'set_disk_host_resource'),
+            mock.patch.object(self.volumeops,
+                              'ebs_root_in_block_devices')
+            ) as (mock_get_mounted_disk_from_lun,
+                  mock_get_vm_scsi_controller,
+                  mock_set_disk_host_resource,
+                  mock_ebs_in_block_devices):
+
+            mock_ebs_in_block_devices.return_value = False
+            mock_get_mounted_disk_from_lun.return_value = "fake_mounted_path"
+            mock_set_disk_host_resource.return_value = "fake_controller_path"
+
+            self.volumeops.fix_instance_volume_disk_paths(
+                "test_vm_name",
+                block_device_info)
+
+            mock_get_mounted_disk_from_lun.assert_called_with(
+                'iqn.2010-10.org.openstack:volume-' + self._volume_id, 1, True)
+            mock_get_vm_scsi_controller.assert_called_with("test_vm_name")
+            mock_set_disk_host_resource("test_vm_name", "fake_controller_path",
+                                        0, "fake_mounted_path")

@@ -172,7 +172,7 @@ class VMUtilsTestCase(test.NoDBTestCase):
         mock_vm.associators.assert_called_with(
             wmi_result_class=self._vmutils._VIRTUAL_SYSTEM_SETTING_DATA_CLASS)
         mock_vmsettings[0].associators.assert_called_with(
-            wmi_result_class=self._vmutils._STORAGE_ALLOC_SETTING_DATA_CLASS)
+            wmi_result_class=self._vmutils._RESOURCE_ALLOC_SETTING_DATA_CLASS)
         self.assertEqual([mock_rasds[0]], disks)
         self.assertEqual([mock_rasds[1]], volumes)
 
@@ -181,6 +181,9 @@ class VMUtilsTestCase(test.NoDBTestCase):
         mock_rasd1.ResourceSubType = self._vmutils._IDE_DISK_RES_SUB_TYPE
         mock_rasd1.HostResource = [self._FAKE_VHD_PATH]
         mock_rasd1.Connection = [self._FAKE_VHD_PATH]
+        mock_rasd1.Parent = self._FAKE_CTRL_PATH
+        mock_rasd1.Address = self._FAKE_ADDRESS
+        mock_rasd1.HostResource = [self._FAKE_VHD_PATH]
 
         mock_rasd2 = mock.MagicMock()
         mock_rasd2.ResourceSubType = self._vmutils._PHYS_DISK_RES_SUB_TYPE
@@ -567,3 +570,26 @@ class VMUtilsTestCase(test.NoDBTestCase):
     def _assert_remove_resources(self, mock_svc):
         getattr(mock_svc, self._REMOVE_RESOURCE).assert_called_with(
             [self._FAKE_RES_PATH], self._FAKE_VM_PATH)
+
+    def test_set_disk_host_resource(self):
+        self._lookup_vm()
+        mock_rasds = self._create_mock_disks()
+
+        self._vmutils._get_vm_disks = mock.MagicMock(
+            return_value=([mock_rasds[0]], [mock_rasds[1]]))
+        self._vmutils._modify_virt_resource = mock.MagicMock()
+        self._vmutils._get_disk_resource_address = mock.MagicMock(
+            return_value=self._FAKE_ADDRESS)
+
+        self._vmutils.set_disk_host_resource(
+            self._FAKE_VM_NAME,
+            self._FAKE_CTRL_PATH,
+            self._FAKE_ADDRESS,
+            mock.sentinel.fake_new_mounted_disk_path)
+        self._vmutils._get_disk_resource_address.assert_called_with(
+            mock_rasds[0])
+        self._vmutils._modify_virt_resource.assert_called_with(
+            mock_rasds[0], self._FAKE_VM_PATH)
+        self.assertEqual(
+            mock.sentinel.fake_new_mounted_disk_path,
+            mock_rasds[0].HostResource[0])

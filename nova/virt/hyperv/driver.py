@@ -116,7 +116,13 @@ class HyperVDriver(driver.ComputeDriver):
 
     def power_on(self, context, instance, network_info,
                  block_device_info=None):
-        self._vmops.power_on(instance)
+        self._vmops.power_on(instance, block_device_info)
+
+    def resume_state_on_host_boot(self, context, instance, network_info,
+                                  block_device_info=None):
+        """Resume guest state when a host is booted."""
+        self._vmops.resume_state_on_host_boot(context, instance, network_info,
+                                              block_device_info)
 
     def live_migration(self, context, instance_ref, dest, post_method,
                        recover_method, block_migration=False,
