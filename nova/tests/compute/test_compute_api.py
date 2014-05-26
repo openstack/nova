@@ -1062,8 +1062,12 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context.elevated().AndReturn(self.context)
                 mig.create(self.context).WithSideEffects(_check_mig)
 
-            self.compute_api._record_action_start(self.context, fake_inst,
-                                                  'resize')
+            if flavor_id_passed:
+                self.compute_api._record_action_start(self.context, fake_inst,
+                                                      'resize')
+            else:
+                self.compute_api._record_action_start(self.context, fake_inst,
+                                                      'migrate')
 
             scheduler_hint = {'filter_properties': filter_properties}
 

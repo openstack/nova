@@ -2433,7 +2433,12 @@ class API(base.Base):
                                        current_instance_type,
                                        new_instance_type)
 
-        self._record_action_start(context, instance, instance_actions.RESIZE)
+        if not flavor_id:
+            self._record_action_start(context, instance,
+                                      instance_actions.MIGRATE)
+        else:
+            self._record_action_start(context, instance,
+                                      instance_actions.RESIZE)
 
         scheduler_hint = {'filter_properties': filter_properties}
         self.compute_task_api.resize_instance(context, instance,
