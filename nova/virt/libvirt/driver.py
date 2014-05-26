@@ -1120,21 +1120,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 return []
             pattern = '%s_' % instance['uuid']
 
-            # TODO(sdague): remove in Juno
-            def belongs_to_instance_legacy(disk):
-                # We don't want to leak old disks, but at the same time, we
-                # don't want to do an unsafe thing. So we will only handle
-                # the old filter if it's the system default still.
-                pattern = '%s_' % instance['name']
-                if disk.startswith(pattern):
-                    if CONF.instance_name_template == 'instance-%08x':
-                        return True
-                    else:
-                        LOG.warn(_LW('Volume %(disk)s possibly unsafe to '
-                                     'remove, please clean up manually'),
-                                    {'disk': disk})
-                return False
-
             def belongs_to_instance(disk):
                 return disk.startswith(pattern)
 
@@ -1144,10 +1129,6 @@ class LibvirtDriver(driver.ComputeDriver):
             logical_volumes = lvm.list_volumes(vg)
 
             disk_names = filter(belongs_to_instance, logical_volumes)
-            # TODO(sdague): remove in Juno
-            disk_names.extend(
-                filter(belongs_to_instance_legacy, logical_volumes)
-            )
             disks = map(fullpath, disk_names)
             return disks
         return []

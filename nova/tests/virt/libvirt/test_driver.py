@@ -9800,12 +9800,9 @@ class LibvirtDriverTestCase(test.TestCase):
         self.flags(images_volume_group='vols', group='libvirt')
         exists.return_value = True
         listlvs.return_value = ['fake-uuid_foo',
-                                'instance-00000001_bar',
-                                'other-uuid_foo',
-                                'instance-00000002_bar']
+                                'other-uuid_foo']
         disks = self.libvirtconnection._lvm_disks(instance)
-        self.assertEqual(['/dev/vols/fake-uuid_foo',
-                          '/dev/vols/instance-00000001_bar'], disks)
+        self.assertEqual(['/dev/vols/fake-uuid_foo'], disks)
 
     def test_is_booted_from_volume(self):
         func = libvirt_driver.LibvirtDriver._is_booted_from_volume
