@@ -861,7 +861,9 @@ class API(base.Base):
             return {}
 
         for bdm in block_device_mapping:
-            if legacy_bdm and bdm.get('device_name') != 'vda':
+            if (legacy_bdm and
+                    block_device.get_device_letter(
+                       bdm.get('device_name', '')) != 'a'):
                 continue
             elif not legacy_bdm and bdm.get('boot_index') != 0:
                 continue

@@ -453,6 +453,16 @@ def strip_prefix(device_name):
     return _pref.sub('', device_name)
 
 
+_nums = re.compile('\d+')
+
+
+def get_device_letter(device_name):
+    letter = strip_prefix(device_name)
+    # NOTE(vish): delete numbers in case we have something like
+    #             /dev/sda1
+    return _nums.sub('', letter)
+
+
 def instance_block_mapping(instance, bdms):
     root_device_name = instance['root_device_name']
     # NOTE(clayg): remove this when xenapi is setting default_root_device

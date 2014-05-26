@@ -94,6 +94,15 @@ class BlockDeviceTestCase(test.NoDBTestCase):
         self.assertEqual(block_device.strip_prefix('xvda'), 'a')
         self.assertEqual(block_device.strip_prefix('vda'), 'a')
 
+    def test_get_device_letter(self):
+        self.assertEqual(block_device.get_device_letter(''), '')
+        self.assertEqual(block_device.get_device_letter('/dev/sda1'), 'a')
+        self.assertEqual(block_device.get_device_letter('/dev/xvdb'), 'b')
+        self.assertEqual(block_device.get_device_letter('/dev/d'), 'd')
+        self.assertEqual(block_device.get_device_letter('a'), 'a')
+        self.assertEqual(block_device.get_device_letter('sdb2'), 'b')
+        self.assertEqual(block_device.get_device_letter('vdc'), 'c')
+
     def test_volume_in_mapping(self):
         swap = {'device_name': '/dev/sdb',
                 'swap_size': 1}
