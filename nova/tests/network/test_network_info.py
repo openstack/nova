@@ -503,15 +503,21 @@ class NetworkInfoTests(test.NoDBTestCase):
                  fake_network_cache_model.new_fixed_ip(
                         {'address': '10.10.0.3'})] * 4)
 
-    def _test_injected_network_template(self, should_inject, use_ipv4=True,
-                                        use_ipv6=False, gateway=True):
+    def _setup_injected_network_scenario(self, should_inject=True,
+                                        use_ipv4=True, use_ipv6=False,
+                                        gateway=True, dns=True,
+                                        two_interfaces=False):
         """Check that netutils properly decides whether to inject based on
            whether the supplied subnet is static or dynamic.
         """
         network = fake_network_cache_model.new_network({'subnets': []})
+
         subnet_dict = {}
         if not gateway:
             subnet_dict['gateway'] = None
+
+        if not dns:
+            subnet_dict['dns'] = None
 
         if not should_inject:
             subnet_dict['dhcp_server'] = '10.10.0.1'
@@ -537,71 +543,174 @@ class NetworkInfoTests(test.NoDBTestCase):
         # Behave as though CONF.flat_injected is True
         network['meta']['injected'] = True
         vif = fake_network_cache_model.new_vif({'network': network})
-        ninfo = model.NetworkInfo([vif])
+        vifs = [vif]
+        if two_interfaces:
+            vifs.append(vif)
 
-        template = netutils.get_injected_network_template(ninfo,
-                                                          use_ipv6=use_ipv6)
-
-        # will just ignore the improper behavior.
-        if not should_inject:
-            self.assertIsNone(template)
-        else:
-            if use_ipv4:
-                self.assertIn('auto eth0', template)
-                self.assertIn('iface eth0 inet static', template)
-                self.assertIn('address 10.10.0.2', template)
-                self.assertIn('netmask 255.255.255.0', template)
-                self.assertIn('broadcast 10.10.0.255', template)
-                if gateway:
-                    self.assertIn('gateway 10.10.0.1', template)
-                else:
-                    self.assertNotIn('gateway', template)
-                self.assertIn('dns-nameservers 1.2.3.4 2.3.4.5', template)
-            if use_ipv6:
-                self.assertIn('iface eth0 inet6 static', template)
-                self.assertIn('address 1234:567::2', template)
-                self.assertIn('netmask 48', template)
-                if gateway:
-                    self.assertIn('gateway 1234:567::1', template)
-            if not use_ipv4 and not use_ipv6:
-                self.assertIsNone(template)
-
-    def test_injection_static(self):
-        self._test_injected_network_template(should_inject=True)
-
-    def test_injection_static_nogateway(self):
-        self._test_injected_network_template(should_inject=True, gateway=False)
-
-    def test_injection_static_ipv6(self):
-        self._test_injected_network_template(should_inject=True, use_ipv6=True)
-
-    def test_injection_static_ipv6_nogateway(self):
-        self._test_injected_network_template(should_inject=True,
-                                             use_ipv6=True,
-                                             gateway=False)
+        nwinfo = model.NetworkInfo(vifs)
+        return netutils.get_injected_network_template(nwinfo,
+                                                      use_ipv6=use_ipv6)
 
     def test_injection_dynamic(self):
-        self._test_injected_network_template(should_inject=False)
+        expected = None
+        template = self._setup_injected_network_scenario(should_inject=False)
+        self.assertEqual(expected, template)
 
-    def test_injection_dynamic_nogateway(self):
-        self._test_injected_network_template(should_inject=False,
-                                             gateway=False)
+    def test_injection_static(self):
+        expected = """\
+# Injected by Nova on instance boot
+#
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+    address 10.10.0.2
+    netmask 255.255.255.0
+    broadcast 10.10.0.255
+    gateway 10.10.0.1
+    dns-nameservers 1.2.3.4 2.3.4.5
+"""
+        template = self._setup_injected_network_scenario()
+        self.assertEqual(expected, template)
+
+    def test_injection_static_no_gateway(self):
+        expected = """\
+# Injected by Nova on instance boot
+#
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+    address 10.10.0.2
+    netmask 255.255.255.0
+    broadcast 10.10.0.255
+    dns-nameservers 1.2.3.4 2.3.4.5
+"""
+        template = self._setup_injected_network_scenario(gateway=False)
+        self.assertEqual(expected, template)
+
+    def test_injection_static_no_dns(self):
+        expected = """\
+# Injected by Nova on instance boot
+#
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+    address 10.10.0.2
+    netmask 255.255.255.0
+    broadcast 10.10.0.255
+    gateway 10.10.0.1
+"""
+        template = self._setup_injected_network_scenario(dns=False)
+        self.assertEqual(expected, template)
+
+    def test_injection_static_ipv6(self):
+        expected = """\
+# Injected by Nova on instance boot
+#
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+    address 10.10.0.2
+    netmask 255.255.255.0
+    broadcast 10.10.0.255
+    gateway 10.10.0.1
+    dns-nameservers 1.2.3.4 2.3.4.5
+iface eth0 inet6 static
+    address 1234:567::2
+    netmask 48
+    gateway 1234:567::1
+"""
+        template = self._setup_injected_network_scenario(use_ipv6=True)
+        self.assertEqual(expected, template)
+
+    def test_injection_static_ipv6_no_gateway(self):
+        expected = """\
+# Injected by Nova on instance boot
+#
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+    address 10.10.0.2
+    netmask 255.255.255.0
+    broadcast 10.10.0.255
+    dns-nameservers 1.2.3.4 2.3.4.5
+iface eth0 inet6 static
+    address 1234:567::2
+    netmask 48
+"""
+        template = self._setup_injected_network_scenario(use_ipv6=True,
+                                                         gateway=False)
+        self.assertEqual(expected, template)
 
     def test_injection_static_with_ipv4_off(self):
-        self._test_injected_network_template(should_inject=True,
-                                             use_ipv4=False)
+        expected = None
+        template = self._setup_injected_network_scenario(use_ipv4=False)
+        self.assertEqual(expected, template)
 
-    def test_injection_static_ipv6_with_ipv4_off(self):
-        self._test_injected_network_template(should_inject=True,
-                                             use_ipv6=True,
-                                             use_ipv4=False)
+    def test_injection_ipv6_two_interfaces(self):
+        expected = """\
+# Injected by Nova on instance boot
+#
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
 
-    def test_injection_static_ipv6_nogateway_with_ipv4_off(self):
-        self._test_injected_network_template(should_inject=True,
-                                             use_ipv6=True,
-                                             use_ipv4=False,
-                                             gateway=False)
+# The loopback network interface
+auto lo
+iface lo inet loopback
 
-    def test_injection_dynamic_with_ipv4_off(self):
-        self._test_injected_network_template(should_inject=False,
-                                             use_ipv4=False)
+auto eth0
+iface eth0 inet static
+    address 10.10.0.2
+    netmask 255.255.255.0
+    broadcast 10.10.0.255
+    gateway 10.10.0.1
+    dns-nameservers 1.2.3.4 2.3.4.5
+iface eth0 inet6 static
+    address 1234:567::2
+    netmask 48
+    gateway 1234:567::1
+
+auto eth1
+iface eth1 inet static
+    address 10.10.0.2
+    netmask 255.255.255.0
+    broadcast 10.10.0.255
+    gateway 10.10.0.1
+    dns-nameservers 1.2.3.4 2.3.4.5
+iface eth1 inet6 static
+    address 1234:567::2
+    netmask 48
+    gateway 1234:567::1
+"""
+        template = self._setup_injected_network_scenario(use_ipv6=True,
+                                                         two_interfaces=True)
+        self.assertEqual(expected, template)

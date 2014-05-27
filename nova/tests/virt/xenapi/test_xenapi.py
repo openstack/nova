@@ -873,19 +873,30 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self._tee_executed = False
 
         def _tee_handler(cmd, **kwargs):
-            input = kwargs.get('process_input', None)
-            self.assertIsNotNone(input)
-            config = [line.strip() for line in input.split("\n")]
-            # Find the start of eth0 configuration and check it
-            index = config.index('auto eth0')
-            self.assertEqual(config[index + 1:index + 8], [
-                'iface eth0 inet static',
-                'address 192.168.1.100',
-                'netmask 255.255.255.0',
-                'broadcast 192.168.1.255',
-                'gateway 192.168.1.1',
-                'dns-nameservers 192.168.1.3 192.168.1.4',
-                ''])
+            actual = kwargs.get('process_input', None)
+            expected = """\
+# Injected by Nova on instance boot
+#
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+    address 192.168.1.100
+    netmask 255.255.255.0
+    broadcast 192.168.1.255
+    gateway 192.168.1.1
+    dns-nameservers 192.168.1.3 192.168.1.4
+iface eth0 inet6 static
+    address 2001:db8:0:1::1
+    netmask ffff:ffff:ffff:ffff::
+    gateway 2001:db8:0:1::1
+"""
+            self.assertEqual(expected, actual)
             self._tee_executed = True
             return '', ''
 

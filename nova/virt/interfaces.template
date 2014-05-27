@@ -6,27 +6,25 @@
 # The loopback network interface
 auto lo
 iface lo inet loopback
+{% for ifc in interfaces %}
 
-{% for ifc in interfaces -%}
 auto {{ ifc.name }}
 iface {{ ifc.name }} inet static
-        address {{ ifc.address }}
-        netmask {{ ifc.netmask }}
-        broadcast {{ ifc.broadcast }}
-{%- if ifc.gateway %}
-        gateway {{ ifc.gateway }}
-{%- endif %}
-{%- if ifc.dns %}
-        dns-nameservers {{ ifc.dns }}
-{%- endif %}
-
-{% if use_ipv6 -%}
+    address {{ ifc.address }}
+    netmask {{ ifc.netmask }}
+    broadcast {{ ifc.broadcast }}
+{% if ifc.gateway %}
+    gateway {{ ifc.gateway }}
+{% endif %}
+{% if ifc.dns %}
+    dns-nameservers {{ ifc.dns }}
+{% endif %}
+{% if use_ipv6 %}
 iface {{ ifc.name }} inet6 static
     address {{ ifc.address_v6 }}
     netmask {{ ifc.netmask_v6 }}
-{%- if ifc.gateway_v6 %}
+{% if ifc.gateway_v6 %}
     gateway {{ ifc.gateway_v6 }}
-{%- endif %}
-{%- endif %}
-
-{%- endfor %}
+{% endif %}
+{% endif %}
+{% endfor %}
