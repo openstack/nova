@@ -5038,6 +5038,33 @@ class LibvirtDriver(driver.ComputeDriver):
                       '-O', 'raw', path, path_raw)
         utils.execute('mv', path_raw, path)
 
+    def _disk_resize(self, info, size):
+        """Attempts to resize a disk to size
+
+        Attempts to resize a disk by checking the capabilities and
+        preparing the format, then calling disk.api.extend.
+
+        Note: Currently only support disk extend.
+        """
+        # If we have a non partitioned image that we can extend
+        # then ensure we're in 'raw' format so we can extend file system.
+        fmt = info['type']
+        pth = info['path']
+        if (size and fmt == 'qcow2' and
+                disk.can_resize_image(pth, size) and
+                disk.is_image_partitionless(pth, use_cow=True)):
+            self._disk_qcow2_to_raw(pth)
+            fmt = 'raw'
+
+        if size:
+            use_cow = fmt == 'qcow2'
+            disk.extend(pth, size, use_cow=use_cow)
+
+        if fmt == 'raw' and CONF.use_cow_images:
+            # back to qcow2 (no backing_file though) so that snapshot
+            # will be available
+            self._disk_raw_to_qcow2(pth)
+
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
                          block_device_info=None, power_on=True):
@@ -5047,25 +5074,7 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_info = jsonutils.loads(disk_info)
         for info in disk_info:
             size = self._disk_size_from_instance(instance, info)
-
-            # If we have a non partitioned image that we can extend
-            # then ensure we're in 'raw' format so we can extend file system.
-            fmt = info['type']
-            pth = info['path']
-            if (size and fmt == 'qcow2' and
-                    disk.can_resize_image(pth, size) and
-                    disk.is_image_partitionless(pth, use_cow=True)):
-                self._disk_qcow2_to_raw(pth)
-                fmt = 'raw'
-
-            if size:
-                use_cow = fmt == 'qcow2'
-                disk.extend(pth, size, use_cow=use_cow)
-
-            if fmt == 'raw' and CONF.use_cow_images:
-                # back to qcow2 (no backing_file though) so that snapshot
-                # will be available
-                self._disk_raw_to_qcow2(pth)
+            self._disk_resize(info, size)
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
