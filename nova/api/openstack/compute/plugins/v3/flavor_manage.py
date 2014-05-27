@@ -17,6 +17,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.compute import flavors
 from nova import exception
+from nova.openstack.common.gettextutils import _
 
 ALIAS = "flavor-manage"
 
@@ -54,7 +55,8 @@ class FlavorManageController(wsgi.Controller):
         authorize(context)
 
         if not self.is_valid_body(body, 'flavor'):
-            raise webob.exc.HTTPBadRequest('Invalid request body ')
+            msg = _('Invalid request body')
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         vals = body['flavor']
 
