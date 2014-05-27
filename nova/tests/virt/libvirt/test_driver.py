@@ -498,7 +498,7 @@ class LibvirtConnTestCase(test.TestCase):
                 return FakeVirtDomain()
 
         # Creating mocks
-        volume_driver = ('iscsi=nova.tests.virt.libvirt.test_libvirt'
+        volume_driver = ('iscsi=nova.tests.virt.libvirt.test_driver'
                          '.FakeVolumeDriver')
         self.flags(volume_drivers=[volume_driver],
                    group='libvirt')
