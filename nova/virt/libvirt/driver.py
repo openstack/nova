@@ -5018,6 +5018,22 @@ class LibvirtDriver(driver.ComputeDriver):
             size = 0
         return size * units.Gi
 
+    @staticmethod
+    def _disk_raw_to_qcow2(path):
+        """Converts a raw disk to qcow2."""
+        path_qcow = path + '_qcow'
+        utils.execute('qemu-img', 'convert', '-f', 'raw',
+                      '-O', 'qcow2', path, path_qcow)
+        utils.execute('mv', path_qcow, path)
+
+    @staticmethod
+    def _disk_qcow2_to_raw(path):
+        """Converts a qcow2 disk to raw."""
+        path_raw = path + '_raw'
+        utils.execute('qemu-img', 'convert', '-f', 'qcow2',
+                      '-O', 'raw', path, path_raw)
+        utils.execute('mv', path_raw, path)
+
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
                          block_device_info=None, power_on=True):
@@ -5031,26 +5047,21 @@ class LibvirtDriver(driver.ComputeDriver):
             # If we have a non partitioned image that we can extend
             # then ensure we're in 'raw' format so we can extend file system.
             fmt = info['type']
+            pth = info['path']
             if (size and fmt == 'qcow2' and
-                    disk.can_resize_image(info['path'], size) and
-                    disk.is_image_partitionless(info['path'], use_cow=True)):
-                path_raw = info['path'] + '_raw'
-                utils.execute('qemu-img', 'convert', '-f', 'qcow2',
-                              '-O', 'raw', info['path'], path_raw)
-                utils.execute('mv', path_raw, info['path'])
+                    disk.can_resize_image(pth, size) and
+                    disk.is_image_partitionless(pth, use_cow=True)):
+                self._disk_qcow2_to_raw(pth)
                 fmt = 'raw'
 
             if size:
                 use_cow = fmt == 'qcow2'
-                disk.extend(info['path'], size, use_cow=use_cow)
+                disk.extend(pth, size, use_cow=use_cow)
 
             if fmt == 'raw' and CONF.use_cow_images:
                 # back to qcow2 (no backing_file though) so that snapshot
                 # will be available
-                path_qcow = info['path'] + '_qcow'
-                utils.execute('qemu-img', 'convert', '-f', 'raw',
-                              '-O', 'qcow2', info['path'], path_qcow)
-                utils.execute('mv', path_qcow, info['path'])
+                self._disk_raw_to_qcow2(pth)
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,

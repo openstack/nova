@@ -8379,6 +8379,28 @@ class LibvirtDriverTestCase(test.TestCase):
         self.assertEqual(0,
             self.libvirtconnection._disk_size_from_instance(inst, info))
 
+    @mock.patch('nova.utils.execute')
+    def test_disk_raw_to_qcow2(self, mock_execute):
+        path = '/test/disk'
+        _path_qcow = path + '_qcow'
+
+        self.libvirtconnection._disk_raw_to_qcow2(path)
+        mock_execute.assert_has_calls([
+            mock.call('qemu-img', 'convert', '-f', 'raw',
+                      '-O', 'qcow2', path, _path_qcow),
+            mock.call('mv', _path_qcow, path)])
+
+    @mock.patch('nova.utils.execute')
+    def test_disk_qcow2_to_raw(self, mock_execute):
+        path = '/test/disk'
+        _path_raw = path + '_raw'
+
+        self.libvirtconnection._disk_qcow2_to_raw(path)
+        mock_execute.assert_has_calls([
+            mock.call('qemu-img', 'convert', '-f', 'qcow2',
+                      '-O', 'raw', path, _path_raw),
+            mock.call('mv', _path_raw, path)])
+
     def _test_finish_migration(self, power_on):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
         .finish_migration.
