@@ -1307,6 +1307,29 @@ class LibvirtConfigGuestCPUTune(LibvirtConfigObject):
         return root
 
 
+class LibvirtConfigGuestMemoryBacking(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestMemoryBacking, self).__init__(
+            root_name="memoryBacking", **kwargs)
+
+        self.hugepages = False
+        self.sharedpages = True
+        self.locked = False
+
+    def format_dom(self):
+        root = super(LibvirtConfigGuestMemoryBacking, self).format_dom()
+
+        if self.hugepages:
+            root.append(etree.Element("hugepages"))
+        if not self.sharedpages:
+            root.append(etree.Element("nosharedpages"))
+        if self.locked:
+            root.append(etree.Element("locked"))
+
+        return root
+
+
 class LibvirtConfigGuest(LibvirtConfigObject):
 
     def __init__(self, **kwargs):
@@ -1317,6 +1340,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.uuid = None
         self.name = None
         self.memory = 500 * units.Mi
+        self.membacking = None
         self.vcpus = 1
         self.cpuset = None
         self.cpu = None
@@ -1342,6 +1366,8 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         root.append(self._text_node("uuid", self.uuid))
         root.append(self._text_node("name", self.name))
         root.append(self._text_node("memory", self.memory))
+        if self.membacking is not None:
+            root.append(self.membacking.format_dom())
         if self.cpuset is not None:
             vcpu = self._text_node("vcpu", self.vcpus)
             vcpu.set("cpuset", hardware.format_cpu_spec(self.cpuset))
