@@ -497,3 +497,28 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     def test_finish_revert_migration_power_off(self):
         self._test_finish_revert_migration(power_on=False)
+
+    def test_spawn_mask_block_device_info_password(self):
+        # Very simple test that just ensures block_device_info auth_password
+        # is masked when logged; the rest of the test just fails out early.
+        data = {'auth_password': 'scrubme'}
+        bdm = [{'connection_info': {'data': data}}]
+        bdi = {'block_device_mapping': bdm}
+
+        # Tests that the parameters to the to_xml method are sanitized for
+        # passwords when logged.
+        def fake_debug(*args, **kwargs):
+            if 'auth_password' in args[0]:
+                self.assertNotIn('scrubme', args[0])
+
+        with mock.patch.object(vmops.LOG, 'debug',
+                               side_effect=fake_debug) as debug_mock:
+            # the invalid disk format will cause an exception
+            image_meta = {'disk_format': 'fake'}
+            self.assertRaises(exception.InvalidDiskFormat, self._vmops.spawn,
+                              self._context, self._instance, image_meta,
+                              injected_files=None, admin_password=None,
+                              network_info=[], block_device_info=bdi)
+            # we don't care what the log message is, we just want to make sure
+            # our stub method is called which asserts the password is scrubbed
+            self.assertTrue(debug_mock.called)

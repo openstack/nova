@@ -787,6 +787,33 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(0, len(log_mock.method_calls),
                          'LOG should not be used in _connect_auth_cb.')
 
+    def test_sanitize_log_to_xml(self):
+        # setup fake data
+        data = {'auth_password': 'scrubme'}
+        bdm = [{'connection_info': {'data': data}}]
+        bdi = {'block_device_mapping': bdm}
+
+        # Tests that the parameters to the to_xml method are sanitized for
+        # passwords when logged.
+        def fake_debug(*args, **kwargs):
+            if 'auth_password' in args[0]:
+                self.assertNotIn('scrubme', args[0])
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        conf = mock.Mock()
+        with contextlib.nested(
+            mock.patch.object(libvirt_driver.LOG, 'debug',
+                              side_effect=fake_debug),
+            mock.patch.object(conn, 'get_guest_config', return_value=conf)
+        ) as (
+            debug_mock, conf_mock
+        ):
+            conn.to_xml(self.context, self.test_instance, network_info={},
+                        disk_info={}, image_meta={}, block_device_info=bdi)
+            # we don't care what the log message is, we just want to make sure
+            # our stub method is called which asserts the password is scrubbed
+            self.assertTrue(debug_mock.called)
+
     def test_close_callback(self):
         self.close_callback = None
 
