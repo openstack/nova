@@ -519,6 +519,9 @@ def _extract_attributes(image):
                         'name', 'created_at', 'updated_at',
                         'deleted', 'deleted_at', 'checksum',
                         'min_disk', 'min_ram', 'is_public']
+
+    queued = getattr(image, 'status') == 'queued'
+    queued_exclude_attrs = ['disk_format', 'container_format']
     output = {}
 
     for attr in IMAGE_ATTRIBUTES:
@@ -526,6 +529,12 @@ def _extract_attributes(image):
             output[attr] = None
         elif attr == 'checksum' and output['status'] != 'active':
             output[attr] = None
+        # image may not have 'name' attr
+        elif attr == 'name':
+            output[attr] = getattr(image, attr, None)
+        #NOTE(liusheng): queued image may not have these attributes and 'name'
+        elif queued and attr in queued_exclude_attrs:
+            output[attr] = getattr(image, attr, None)
         else:
             # NOTE(xarses): Anything that is caught with the default value
             # will result in a additional lookup to glance for said attr.
