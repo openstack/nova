@@ -515,7 +515,7 @@ class AgentBuildExists(NovaException):
 
 
 class VolumeNotFound(NotFound):
-    ec2_code = 'InvalidVolumeID.NotFound'
+    ec2_code = 'InvalidVolume.NotFound'
     msg_fmt = _("Volume %(volume_id)s could not be found.")
 
 
@@ -524,7 +524,7 @@ class VolumeBDMNotFound(NotFound):
 
 
 class SnapshotNotFound(NotFound):
-    ec2_code = 'InvalidSnapshotID.NotFound'
+    ec2_code = 'InvalidSnapshot.NotFound'
     msg_fmt = _("Snapshot %(snapshot_id)s could not be found.")
 
 

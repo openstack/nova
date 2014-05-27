@@ -111,11 +111,17 @@ class ExecutorTestCase(test.NoDBTestCase):
         tree = etree.fromstring(result.body)
         return tree.findall('./Errors')[0].find('Error/Message').text
 
+    def _extract_code(self, result):
+        tree = etree.fromstring(result.body)
+        return tree.findall('./Errors')[0].find('Error/Code').text
+
     def test_instance_not_found(self):
         def not_found(context):
             raise exception.InstanceNotFound(instance_id=5)
         result = self._execute(not_found)
         self.assertIn('i-00000005', self._extract_message(result))
+        self.assertEqual('InvalidInstanceID.NotFound',
+                         self._extract_code(result))
 
     def test_instance_not_found_none(self):
         def not_found(context):
@@ -125,18 +131,23 @@ class ExecutorTestCase(test.NoDBTestCase):
         # was happening in bug/1080406
         result = self._execute(not_found)
         self.assertIn('None', self._extract_message(result))
+        self.assertEqual('InvalidInstanceID.NotFound',
+                         self._extract_code(result))
 
     def test_snapshot_not_found(self):
         def not_found(context):
             raise exception.SnapshotNotFound(snapshot_id=5)
         result = self._execute(not_found)
         self.assertIn('snap-00000005', self._extract_message(result))
+        self.assertEqual('InvalidSnapshot.NotFound',
+                         self._extract_code(result))
 
     def test_volume_not_found(self):
         def not_found(context):
             raise exception.VolumeNotFound(volume_id=5)
         result = self._execute(not_found)
         self.assertIn('vol-00000005', self._extract_message(result))
+        self.assertEqual('InvalidVolume.NotFound', self._extract_code(result))
 
 
 class FakeResponse(object):
