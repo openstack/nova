@@ -1416,6 +1416,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                          data_store_name, folder,
                                          instance_uuid, cookies):
                 self.assertTrue(uuidutils.is_uuid_like(instance['uuid']))
+                return "[%s] %s/fake.iso" % (data_store_name, instance_uuid)
 
             self.stubs.Set(self.conn._vmops, '_create_config_drive',
                            fake_create_config_drive)

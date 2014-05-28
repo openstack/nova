@@ -15,7 +15,9 @@
 """
 Datastore utility functions
 """
+import posixpath
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import vm_util
@@ -23,24 +25,94 @@ from nova.virt.vmwareapi import vm_util
 LOG = logging.getLogger(__name__)
 
 
+class DatastorePath(object):
+    """Class for representing a directory or file path in a vSphere datatore.
+
+    This provides various helper methods to access components and useful
+    variants of the datastore path.
+
+    Example usage:
+
+    DatastorePath("datastore1", "_base/foo", "foo.vmdk") creates an
+    object that describes the "[datastore1] _base/foo/foo.vmdk" datastore
+    file path to a virtual disk.
+
+    Note:
+    - Datastore path representations always uses forward slash as separator
+      (hence the use of the posixpath module).
+    - Datastore names are enclosed in square brackets.
+    - Path part of datastore path is relative to the root directory
+      of the datastore, and is always separated from the [ds_name] part with
+      a single space.
+    """
+
+    VMDK_EXTENSION = "vmdk"
+
+    def __init__(self, datastore_name, *paths):
+        if datastore_name is None or datastore_name == '':
+            raise ValueError(_("datastore name empty"))
+        self._datastore_name = datastore_name
+        self._rel_path = ''
+        if paths:
+            if None in paths:
+                raise ValueError(_("path component cannot be None"))
+            self._rel_path = posixpath.join(*paths)
+
+    def __str__(self):
+        """Full datastore path to the file or directory."""
+        if self._rel_path != '':
+            return "[%s] %s" % (self._datastore_name, self.rel_path)
+        return "[%s]" % self._datastore_name
+
+    @property
+    def datastore(self):
+        return self._datastore_name
+
+    @property
+    def parent(self):
+        return DatastorePath(self.datastore, posixpath.dirname(self._rel_path))
+
+    @property
+    def basename(self):
+        return posixpath.basename(self._rel_path)
+
+    @property
+    def dirname(self):
+        return posixpath.dirname(self._rel_path)
+
+    @property
+    def rel_path(self):
+        return self._rel_path
+
+    @classmethod
+    def parse(cls, datastore_path):
+        """Constructs a DatastorePath object given a datastore path string."""
+        if not datastore_path:
+            raise ValueError(_("datastore path empty"))
+
+        spl = datastore_path.split('[', 1)[1].split(']', 1)
+        path = ""
+        if len(spl) == 1:
+            datastore_name = spl[0]
+        else:
+            datastore_name, path = spl
+        return cls(datastore_name, path.strip())
+
+
 def build_datastore_path(datastore_name, path):
     """Build the datastore compliant path."""
-    return "[%s] %s" % (datastore_name, path)
+    return str(DatastorePath(datastore_name, path))
 
 
+# TODO(vui): Convert all callers to use DatastorePath instead next.
 def split_datastore_path(datastore_path):
     """Return the datastore and path from a datastore_path.
 
     Split the VMware style datastore path to get the Datastore
     name and the entity path.
     """
-    spl = datastore_path.split('[', 1)[1].split(']', 1)
-    path = ""
-    if len(spl) == 1:
-        datastore_name = spl[0]
-    else:
-        datastore_name, path = spl
-    return datastore_name, path.strip()
+    ds_path_obj = DatastorePath.parse(datastore_path)
+    return ds_path_obj.datastore, ds_path_obj.rel_path
 
 
 def file_delete(session, datastore_path, dc_ref):
