@@ -113,7 +113,7 @@ class VolumeOps(object):
                 if hotplug and running:
                     self._session.VBD.plug(vbd_ref, vm_ref)
 
-            vdi_uuid = self._session.call_xenapi("VDI.get_uuid", vdi_ref)
+            vdi_uuid = self._session.VDI.get_uuid(vdi_ref)
             return (sr_uuid, vdi_uuid)
         except Exception:
             with excutils.save_and_reraise_exception():
@@ -149,10 +149,9 @@ class VolumeOps(object):
 
     def _get_all_volume_vbd_refs(self, vm_ref):
         """Return VBD refs for all Nova/Cinder volumes."""
-        vbd_refs = self._session.call_xenapi("VM.get_VBDs", vm_ref)
+        vbd_refs = self._session.VM.get_VBDs(vm_ref)
         for vbd_ref in vbd_refs:
-            other_config = self._session.call_xenapi(
-                    "VBD.get_other_config", vbd_ref)
+            other_config = self._session.VBD.get_other_config(vbd_ref)
             if other_config.get('osvol'):
                 yield vbd_ref
 
@@ -194,12 +193,11 @@ class VolumeOps(object):
                 # TODO(sirp): bug1152401 This relies on a 120 sec timeout
                 # within XenServer, update this to fail-fast when this is fixed
                 # upstream
-                self._session.call_xenapi("SR.scan", sr_ref)
+                self._session.SR.scan(sr_ref)
             except self._session.XenAPI.Failure as exc:
                 if exc.details[0] == 'SR_BACKEND_FAILURE_40':
-                    vbd_rec = vbd_rec = self._session.call_xenapi(
-                            "VBD.get_record", vbd_ref)
-                    bad_devices.append('/dev/%s' % vbd_rec['device'])
+                    device = self._session.VBD.get_device(vbd_ref)
+                    bad_devices.append('/dev/%s' % device)
                 else:
                     raise
 
