@@ -17,17 +17,14 @@
 Network-related utilities and helper functions.
 """
 
-# TODO(jd) Use six.moves once
-# https://bitbucket.org/gutworth/six/pull-request/28
-# is merged
-try:
-    import urllib.parse
-    SplitResult = urllib.parse.SplitResult
-except ImportError:
-    import urlparse
-    SplitResult = urlparse.SplitResult
+import socket
 
 from six.moves.urllib import parse
+
+from nova.openstack.common.gettextutils import _LW
+from nova.openstack.common import log as logging
+
+LOG = logging.getLogger(__name__)
 
 
 def parse_host_port(address, default_port=None):
@@ -74,7 +71,7 @@ def parse_host_port(address, default_port=None):
     return (host, None if port is None else int(port))
 
 
-class ModifiedSplitResult(SplitResult):
+class ModifiedSplitResult(parse.SplitResult):
     """Split results class for urlsplit."""
 
     # NOTE(dims): The functions below are needed for Python 2.6.x.
@@ -106,3 +103,58 @@ def urlsplit(url, scheme='', allow_fragments=True):
         path, query = path.split('?', 1)
     return ModifiedSplitResult(scheme, netloc,
                                path, query, fragment)
+
+
+def set_tcp_keepalive(sock, tcp_keepalive=True,
+                      tcp_keepidle=None,
+                      tcp_keepalive_interval=None,
+                      tcp_keepalive_count=None):
+    """Set values for tcp keepalive parameters
+
+    This function configures tcp keepalive parameters if users wish to do
+    so.
+    :param tcp_keepalive: Boolean, turn on or off tcp_keepalive. If users are
+      not sure, this should be True, and default values will be used.
+
+    :param tcp_keepidle: time to wait before starting to send keepalive probes
+
+    :param tcp_keepalive_interval: time between successive probes, once the
+      initial wait time is over
+
+    :param tcp_keepalive_count: number of probes to send before the connection
+      is killed
+    """
+
+    # NOTE(praneshp): Despite keepalive being a tcp concept, the level is
+    # still SOL_SOCKET. This is a quirk.
+    if isinstance(tcp_keepalive, bool):
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, tcp_keepalive)
+    else:
+        raise TypeError("tcp_keepalive must be a boolean")
+
+    if not tcp_keepalive:
+        return
+
+    # These options aren't available in the OS X version of eventlet,
+    # Idle + Count * Interval effectively gives you the total timeout.
+    if tcp_keepidle is not None:
+        if hasattr(socket, 'TCP_KEEPIDLE'):
+            sock.setsockopt(socket.IPPROTO_TCP,
+                            socket.TCP_KEEPIDLE,
+                            tcp_keepidle)
+        else:
+            LOG.warning(_LW('tcp_keepidle not available on your system'))
+    if tcp_keepalive_interval is not None:
+        if hasattr(socket, 'TCP_KEEPINTVL'):
+            sock.setsockopt(socket.IPPROTO_TCP,
+                            socket.TCP_KEEPINTVL,
+                            tcp_keepalive_interval)
+        else:
+            LOG.warning(_LW('tcp_keepintvl not available on your system'))
+    if tcp_keepalive_count is not None:
+        if hasattr(socket, 'TCP_KEEPCNT'):
+            sock.setsockopt(socket.IPPROTO_TCP,
+                            socket.TCP_KEEPCNT,
+                            tcp_keepalive_count)
+        else:
+            LOG.warning(_LW('tcp_keepknt not available on your system'))
