@@ -264,6 +264,48 @@ class CinderCloudTestCase(test.TestCase):
         self.cloud.delete_snapshot(self.context, snap['snapshotId'])
         self.cloud.delete_volume(self.context, volume1_id)
 
+    def test_volume_status_of_attaching_volume(self):
+        """Test the volume's status in response when attaching a volume."""
+        vol1 = self.cloud.create_volume(self.context,
+                                        size=1,
+                                        name='test-ls',
+                                        description='test volume ls')
+        self.assertEqual('available', vol1['status'])
+
+        kwargs = {'image_id': 'ami-1',
+                  'instance_type': CONF.default_flavor,
+                  'max_count': 1}
+        ec2_instance_id = self._run_instance(**kwargs)
+        resp = self.cloud.attach_volume(self.context,
+                                        vol1['volumeId'],
+                                        ec2_instance_id,
+                                        '/dev/sde')
+        # Here,the status should be 'attaching',but it can be 'attached' in
+        # unittest scenario if the attach action is very fast.
+        self.assertIn(resp['status'], ('attaching', 'attached'))
+
+    def test_volume_status_of_detaching_volume(self):
+        """Test the volume's status in response when detaching a volume."""
+        vol1 = self.cloud.create_volume(self.context,
+                                        size=1,
+                                        name='test-ls',
+                                        description='test volume ls')
+        self.assertEqual('available', vol1['status'])
+        vol1_uuid = ec2utils.ec2_vol_id_to_uuid(vol1['volumeId'])
+        kwargs = {'image_id': 'ami-1',
+                  'instance_type': CONF.default_flavor,
+                  'max_count': 1,
+                  'block_device_mapping': [{'device_name': '/dev/sdb',
+                                            'volume_id': vol1_uuid,
+                                            'delete_on_termination': True}]}
+        self._run_instance(**kwargs)
+        resp = self.cloud.detach_volume(self.context,
+                                        vol1['volumeId'])
+
+        # Here,the status should be 'detaching',but it can be 'detached' in
+        # unittest scenario if the detach action is very fast.
+        self.assertIn(resp['status'], ('detaching', 'detached'))
+
     def test_describe_snapshots(self):
         # Makes sure describe_snapshots works and filters results.
         availability_zone = 'zone1:host1'
