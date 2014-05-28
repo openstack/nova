@@ -422,12 +422,15 @@ class LibvirtConnTestCase(test.TestCase):
                             <model fallback='allow'>Westmere</model>
                             <vendor>Intel</vendor>
                             <feature policy='require' name='aes'/>
+                            <feature policy='require' name='hypervisor'/>
                           </cpu>"""
 
             def getCapabilities(self):
                 """Ensure standard capabilities being returned."""
                 return """<capabilities>
-                            <host><cpu><arch>x86_64</arch></cpu></host>
+                            <host><cpu><arch>x86_64</arch>
+                            <feature policy='require' name='hypervisor'/>
+                            </cpu></host>
                           </capabilities>"""
 
             def getVersion(self):
@@ -894,6 +897,25 @@ class LibvirtConnTestCase(test.TestCase):
             conn._caps = None
             caps = conn.get_host_capabilities()
             self.assertIn('aes', [x.name for x in caps.host.cpu.features])
+
+    def test_cpu_features_are_not_duplicated(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        # Test old version of libvirt. Should return single 'hypervisor'
+        with mock.patch('nova.virt.libvirt.driver.libvirt') as mock_libvirt:
+            del mock_libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
+            caps = conn.get_host_capabilities()
+            cnt = [x.name for x in caps.host.cpu.features].count('hypervisor')
+            self.assertEqual(1, cnt)
+
+        # Test new version of libvirt. Should still return single 'hypervisor'
+        with mock.patch('nova.virt.libvirt.driver.libvirt') as mock_libvirt:
+            mock_libvirt['VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES'] = 1
+            # Cleanup the capabilities cache firstly
+            conn._caps = None
+            caps = conn.get_host_capabilities()
+            cnt = [x.name for x in caps.host.cpu.features].count('hypervisor')
+            self.assertEqual(1, cnt)
 
     def test_baseline_cpu_not_supported(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)

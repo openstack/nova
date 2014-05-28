@@ -2886,7 +2886,9 @@ class LibvirtDriver(driver.ComputeDriver):
                     #                 of it from 1.1.2 which is fixed in 1.2.0,
                     #                 this -1 checking should be removed later.
                     if features and features != -1:
-                        self._caps.host.cpu.parse_str(features)
+                        cpu = vconfig.LibvirtConfigCPU()
+                        cpu.parse_str(features)
+                        self._caps.host.cpu.features = cpu.features
                 except libvirt.libvirtError as ex:
                     error_code = ex.get_error_code()
                     if error_code == libvirt.VIR_ERR_NO_SUPPORT:
