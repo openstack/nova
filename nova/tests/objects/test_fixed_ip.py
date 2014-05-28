@@ -155,16 +155,6 @@ class _TestFixedIPObject(object):
                                      network_id=None, reserved=False)
         self._compare(fixedip, fake_fixed_ip)
 
-    @mock.patch('nova.db.fixed_ip_associate')
-    def test_associate_with_IPAddress(self, associate):
-        associate.return_value = fake_fixed_ip
-        address = netaddr.IPAddress('1.2.3.4')
-        fixedip = fixed_ip.FixedIP.associate(self.context, address,
-                                             'fake-uuid')
-        associate.assert_called_with(self.context, '1.2.3.4', 'fake-uuid',
-                                     network_id=None, reserved=False)
-        self._compare(fixedip, fake_fixed_ip)
-
     @mock.patch('nova.db.fixed_ip_associate_pool')
     def test_associate_pool(self, associate):
         associate.return_value = fake_fixed_ip

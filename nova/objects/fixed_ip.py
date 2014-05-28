@@ -104,18 +104,8 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
         db_fixedip = db.fixed_ip_get_by_network_host(context, network_id, host)
         return cls._from_db_object(context, cls(), db_fixedip)
 
-    @classmethod
-    def associate(cls, context, address, instance_uuid, network_id=None,
-                  reserved=False):
-        # NOTE(alaski): address may be a netaddr.IPAddress which is not
-        # serializable for RPC, and fails in SQLAlchemy.
-        str_address = str(address)
-        fixedip = cls._associate(context, str_address, instance_uuid,
-                network_id=network_id, reserved=reserved)
-        return fixedip
-
     @obj_base.remotable_classmethod
-    def _associate(cls, context, address, instance_uuid, network_id=None,
+    def associate(cls, context, address, instance_uuid, network_id=None,
                   reserved=False):
         db_fixedip = db.fixed_ip_associate(context, address, instance_uuid,
                                            network_id=network_id,

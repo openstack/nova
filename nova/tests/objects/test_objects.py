@@ -863,7 +863,7 @@ object_data = {
     'ComputeNodeList': '1.2-be44294fa7d0deef6146863836adb1e5',
     'DNSDomain': '1.0-f0467d23e2c8b567469cdcd6a9708615',
     'DNSDomainList': '1.0-47ffa72c29119d19fc8d3854ae49f094',
-    'FixedIP': '1.1-e3ceee4d62b52320707db6f730338531',
+    'FixedIP': '1.1-121f5e17f0e1a2115a6d93b80a158292',
     'FixedIPList': '1.1-c944566e2e21af32432d7b7c35018831',
     'Flavor': '1.0-4f0c857e5bf5627a40d04ba249f9e31b',
     'FlavorList': '1.0-47ffa72c29119d19fc8d3854ae49f094',
