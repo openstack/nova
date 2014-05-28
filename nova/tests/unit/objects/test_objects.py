@@ -960,7 +960,7 @@ object_data = {
     'InstanceGroup': '1.9-95ece99f092e8f4f88327cdbb44162c9',
     'InstanceGroupList': '1.6-c6b78f3c9d9080d33c08667e80589817',
     'InstanceInfoCache': '1.5-ef64b604498bfa505a8c93747a9d8b2f',
-    'InstanceList': '1.10-03dd7839cd11cff75c3661c9e4227900',
+    'InstanceList': '1.11-bb0b3a74a1c82791330247a963a7d6a9',
     'InstanceNUMACell': '1.1-8d2a13c8360cc9ea1b68c9c6c4476857',
     'InstanceNUMATopology': '1.1-86b95d263c4c68411d44c6741b8d2bb0',
     'InstancePCIRequest': '1.1-e082d174f4643e5756ba098c47c1510f',

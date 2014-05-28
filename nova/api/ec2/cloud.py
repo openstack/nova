@@ -1173,7 +1173,8 @@ class CloudController(object):
                 search_opts['deleted'] = False
                 instances = self.compute_api.get_all(context,
                                                      search_opts=search_opts,
-                                                     sort_dir='asc',
+                                                     sort_keys=['created_at'],
+                                                     sort_dirs=['asc'],
                                                      want_objects=True)
             except exception.NotFound:
                 instances = []
