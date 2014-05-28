@@ -111,8 +111,7 @@ class InterfaceAttachmentController(object):
                 exception.NetworkNotFound) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.NotFound as e:
-            LOG.exception(e)
-            raise exc.HTTPNotFound()
+            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError:
