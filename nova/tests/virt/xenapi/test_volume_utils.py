@@ -17,6 +17,7 @@ import mock
 
 from eventlet import greenthread
 
+from nova import exception
 from nova.tests.virt.xenapi import stubs
 from nova.virt.xenapi import volume_utils
 
@@ -103,7 +104,7 @@ class IntroduceTestCase(stubs.XenAPITestBaseNoDB):
         session.call_xenapi.side_effect = fake_call_xenapi
         mock_get_vdi_ref.return_value = None
 
-        self.assertRaises(volume_utils.StorageError,
+        self.assertRaises(exception.StorageError,
                           volume_utils.introduce_vdi, session, 'sr_ref')
         mock_sleep.assert_called_once_with(20)
 
@@ -151,6 +152,6 @@ class ParseVolumeInfoTestCase(stubs.XenAPITestBaseNoDB):
 
     def test_get_device_number_raise_exception_on_wrong_mountpoint(self):
         self.assertRaises(
-            volume_utils.StorageError,
+            exception.StorageError,
             volume_utils.get_device_number,
             'dev/sd')
