@@ -3022,7 +3022,7 @@ class ComputeManager(manager.Manager):
         network_info = self._get_instance_nw_info(context, instance)
         self._notify_about_instance_usage(context, instance,
                 "unrescue.start", network_info=network_info)
-        with self._error_out_instance_on_exception(context, instance['uuid']):
+        with self._error_out_instance_on_exception(context, instance.uuid):
             self.driver.unrescue(instance,
                                  network_info)
 

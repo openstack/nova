@@ -1957,16 +1957,14 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.virt.fake.FakeDriver, 'unrescue',
                        fake_unrescue)
 
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_uuid = instance['uuid']
+        instance = self._create_fake_instance_obj()
         self.compute.run_instance(self.context, instance, {}, {}, [], None,
                 None, True, None, False)
 
         fake_notifier.NOTIFICATIONS = []
-        db.instance_update(self.context, instance_uuid,
-                           {"task_state": task_states.UNRESCUING})
-        self.compute.unrescue_instance(self.context,
-                                       instance=self._objectify(instance))
+        instance.task_state = task_states.UNRESCUING
+        instance.save()
+        self.compute.unrescue_instance(self.context, instance)
 
         expected_notifications = ['compute.instance.unrescue.start',
                                   'compute.instance.unrescue.end']
@@ -1978,7 +1976,7 @@ class ComputeTestCase(BaseTestCase):
             payload = msg.payload
             self.assertEqual(payload['tenant_id'], self.project_id)
             self.assertEqual(payload['user_id'], self.user_id)
-            self.assertEqual(payload['instance_id'], instance_uuid)
+            self.assertEqual(payload['instance_id'], instance.uuid)
             self.assertEqual(payload['instance_type'], 'm1.tiny')
             type_id = flavors.get_flavor_by_name('m1.tiny')['id']
             self.assertEqual(str(payload['instance_type_id']), str(type_id))
@@ -1988,8 +1986,7 @@ class ComputeTestCase(BaseTestCase):
             image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
             self.assertEqual(payload['image_ref_url'], image_ref_url)
 
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_rescue_handle_err(self):
         # If the driver fails to rescue, instance state should remain the same
@@ -2396,7 +2393,7 @@ class ComputeTestCase(BaseTestCase):
                    launched_at=timeutils.utcnow()))
 
         if test_unrescue:
-            instance['vm_state'] = vm_states.RESCUED
+            instance.vm_state = vm_states.RESCUED
         instance.obj_reset_changes()
 
         fake_nw_model = network_model.NetworkInfo()
