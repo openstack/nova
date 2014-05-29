@@ -147,6 +147,7 @@ class ConductorAPI(object):
     ...  - Remove instance_get_active_by_window_joined()
     ...  - Remove instance_fault_create()
     ...  - Remove action_event_start() and action_event_finish()
+    ...  - Remove instance_get_by_uuid()
     """
 
     VERSION_ALIASES = {
@@ -173,13 +174,6 @@ class ConductorAPI(object):
                           instance_uuid=instance_uuid,
                           updates=updates_p,
                           service=service)
-
-    def instance_get_by_uuid(self, context, instance_uuid,
-                             columns_to_join=None):
-        kwargs = {'instance_uuid': instance_uuid,
-                  'columns_to_join': columns_to_join}
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'instance_get_by_uuid', **kwargs)
 
     def migration_get_in_progress_by_host_and_node(self, context,
                                                    host, node):

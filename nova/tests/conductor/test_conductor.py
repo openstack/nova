@@ -140,13 +140,6 @@ class _BaseTestCase(object):
             self.context, 'fake-host', 'fake-node')
         self.assertEqual(result, 'fake-result')
 
-    def test_instance_get_by_uuid(self):
-        orig_instance = self._create_fake_instance()
-        copy_instance = self.conductor.instance_get_by_uuid(
-            self.context, orig_instance['uuid'])
-        self.assertEqual(orig_instance['name'],
-                         copy_instance['name'])
-
     def test_aggregate_metadata_get_by_host(self):
         self.mox.StubOutWithMock(db, 'aggregate_metadata_get_by_host')
         db.aggregate_metadata_get_by_host(self.context, 'host',
@@ -404,6 +397,13 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         super(ConductorTestCase, self).setUp()
         self.conductor = conductor_manager.ConductorManager()
         self.conductor_manager = self.conductor
+
+    def test_instance_get_by_uuid(self):
+        orig_instance = self._create_fake_instance()
+        copy_instance = self.conductor.instance_get_by_uuid(
+            self.context, orig_instance['uuid'])
+        self.assertEqual(orig_instance['name'],
+                         copy_instance['name'])
 
     def test_instance_info_cache_update(self):
         fake_values = {'key1': 'val1', 'key2': 'val2'}

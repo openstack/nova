@@ -66,11 +66,6 @@ class LocalAPI(object):
         return self._manager.instance_update(context, instance_uuid,
                                              updates, 'compute')
 
-    def instance_get_by_uuid(self, context, instance_uuid,
-                             columns_to_join=None):
-        return self._manager.instance_get_by_uuid(context, instance_uuid,
-                columns_to_join)
-
     def instance_get_all_by_host(self, context, host, columns_to_join=None):
         return self._manager.instance_get_all_by_host(
             context, host, columns_to_join=columns_to_join)

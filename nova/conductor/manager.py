@@ -921,6 +921,7 @@ class _ConductorManagerV2Proxy(object):
         return self.manager.instance_update(context, instance_uuid, updates,
                 service)
 
+    # TODO(danms): This can be removed in version 3.0 of the RPC API
     def instance_get_by_uuid(self, context, instance_uuid,
                              columns_to_join):
         return self.manager.instance_get_by_uuid(context, instance_uuid,

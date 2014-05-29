@@ -26,7 +26,6 @@ from oslo.config import cfg
 import six
 
 from nova.compute import flavors
-from nova.conductor import api as conductor_api
 from nova import context
 from nova import exception
 from nova.network import model
@@ -727,9 +726,6 @@ class TestNeutronv2(TestNeutronv2Base):
         neutronv2.get_client(mox.IgnoreArg(),
                              admin=True).MultipleTimes().AndReturn(
             self.moxed_client)
-
-        self.mox.StubOutWithMock(conductor_api.API,
-                                 'instance_get_by_uuid')
 
         net_info_cache = []
         for port in self.port_data3:
