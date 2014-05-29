@@ -794,8 +794,7 @@ class ComputeManager(manager.Manager):
                 # we don't want that an exception blocks the init_host
                 msg = _('Failed to complete a deletion')
                 LOG.exception(msg, instance=instance)
-            finally:
-                return
+            return
 
         if (instance.vm_state == vm_states.BUILDING or
             instance.task_state in [task_states.SCHEDULING,
@@ -847,8 +846,7 @@ class ComputeManager(manager.Manager):
                 msg = _('Failed to complete a deletion')
                 LOG.exception(msg, instance=instance)
                 self._set_instance_error_state(context, instance['uuid'])
-            finally:
-                return
+            return
 
         try_reboot, reboot_type = self._retry_reboot(context, instance)
         current_power_state = self._get_power_state(context, instance)
@@ -888,8 +886,7 @@ class ComputeManager(manager.Manager):
                 # we don't want that an exception blocks the init_host
                 msg = _('Failed to stop instance')
                 LOG.exception(msg, instance=instance)
-            finally:
-                return
+            return
 
         if instance.task_state == task_states.POWERING_ON:
             try:
@@ -901,8 +898,7 @@ class ComputeManager(manager.Manager):
                 # we don't want that an exception blocks the init_host
                 msg = _('Failed to start instance')
                 LOG.exception(msg, instance=instance)
-            finally:
-                return
+            return
 
         net_info = compute_utils.get_nw_info_for_instance(instance)
         try:

@@ -6454,7 +6454,7 @@ class ComputeTestCase(BaseTestCase):
     def test_partial_deletion_raise_exception(self):
         admin_context = context.get_admin_context()
         instance = objects.Instance(admin_context)
-        instance.id = 1
+        instance.uuid = str(uuid.uuid4())
         instance.vm_state = vm_states.DELETED
         instance.deleted = False
 
