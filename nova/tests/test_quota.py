@@ -357,7 +357,7 @@ class BaseResourceTestCase(test.TestCase):
         self.assertEqual(resource.flag, 'quota_instances')
         self.assertEqual(resource.default, -1)
 
-    def test_quota_no_project(self):
+    def test_quota_no_project_no_class(self):
         self.flags(quota_instances=10)
         resource = quota.BaseResource('test_resource', 'quota_instances')
         driver = FakeDriver()
@@ -366,7 +366,7 @@ class BaseResourceTestCase(test.TestCase):
 
         self.assertEqual(quota_value, 10)
 
-    def test_quota_with_project(self):
+    def test_quota_with_project_no_class(self):
         self.flags(quota_instances=10)
         resource = quota.BaseResource('test_resource', 'quota_instances')
         driver = FakeDriver(by_project=dict(
@@ -376,6 +376,57 @@ class BaseResourceTestCase(test.TestCase):
         quota_value = resource.quota(driver, context)
 
         self.assertEqual(quota_value, 15)
+
+    def test_quota_no_project_with_class(self):
+        self.flags(quota_instances=10)
+        resource = quota.BaseResource('test_resource', 'quota_instances')
+        driver = FakeDriver(by_class=dict(
+                test_class=dict(test_resource=20),
+                ))
+        context = FakeContext(None, 'test_class')
+        quota_value = resource.quota(driver, context)
+
+        self.assertEqual(quota_value, 20)
+
+    def test_quota_with_project_with_class(self):
+        self.flags(quota_instances=10)
+        resource = quota.BaseResource('test_resource', 'quota_instances')
+        driver = FakeDriver(by_project=dict(
+                test_project=dict(test_resource=15),
+                ),
+                            by_class=dict(
+                test_class=dict(test_resource=20),
+                ))
+        context = FakeContext('test_project', 'test_class')
+        quota_value = resource.quota(driver, context)
+
+        self.assertEqual(quota_value, 15)
+
+    def test_quota_override_project_with_class(self):
+        self.flags(quota_instances=10)
+        resource = quota.BaseResource('test_resource', 'quota_instances')
+        driver = FakeDriver(by_project=dict(
+                test_project=dict(test_resource=15),
+                override_project=dict(test_resource=20),
+                ))
+        context = FakeContext('test_project', 'test_class')
+        quota_value = resource.quota(driver, context,
+                                     project_id='override_project')
+
+        self.assertEqual(quota_value, 20)
+
+    def test_quota_with_project_override_class(self):
+        self.flags(quota_instances=10)
+        resource = quota.BaseResource('test_resource', 'quota_instances')
+        driver = FakeDriver(by_class=dict(
+                test_class=dict(test_resource=15),
+                override_class=dict(test_resource=20),
+                ))
+        context = FakeContext('test_project', 'test_class')
+        quota_value = resource.quota(driver, context,
+                                     quota_class='override_class')
+
+        self.assertEqual(quota_value, 20)
 
 
 class QuotaEngineTestCase(test.TestCase):
@@ -861,10 +912,11 @@ class DbQuotaDriverTestCase(test.TestCase):
                 'quota_get_all_by_project_and_user',
                 'quota_get_all_by_project',
                 'quota_usage_get_all_by_project_and_user',
+                'quota_class_get_all_by_name',
                 ])
         self.assertEqual(result, dict(
                 instances=dict(
-                    limit=10,
+                    limit=5,
                     in_use=2,
                     reserved=2,
                     ),
@@ -874,7 +926,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                     reserved=4,
                     ),
                 ram=dict(
-                    limit=50 * 1024,
+                    limit=25 * 1024,
                     in_use=10 * 1024,
                     reserved=0,
                     ),
@@ -889,7 +941,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                     reserved=0,
                     ),
                 metadata_items=dict(
-                    limit=128,
+                    limit=64,
                     in_use=0,
                     reserved=0,
                     ),
@@ -899,7 +951,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                     reserved=0,
                     ),
                 injected_file_content_bytes=dict(
-                    limit=10 * 1024,
+                    limit=5 * 1024,
                     in_use=0,
                     reserved=0,
                     ),
@@ -987,6 +1039,7 @@ class DbQuotaDriverTestCase(test.TestCase):
         self.assertEqual(self.calls, [
                 'quota_get_all_by_project',
                 'quota_usage_get_all_by_project',
+                'quota_class_get_all_by_name',
                 'quota_class_get_default',
                 ])
         self.assertEqual(result, dict(
@@ -1202,6 +1255,159 @@ class DbQuotaDriverTestCase(test.TestCase):
                     ),
                 ))
 
+    def test_get_user_quotas_alt_context_with_class(self):
+        self.maxDiff = None
+        self._stub_get_by_project_and_user()
+        result = self.driver.get_user_quotas(
+            FakeContext('test_project', 'test_class'),
+            quota.QUOTAS._resources, 'test_project', 'fake_user',
+            quota_class='test_class')
+
+        self.assertEqual(self.calls, [
+                'quota_get_all_by_project_and_user',
+                'quota_get_all_by_project',
+                'quota_usage_get_all_by_project_and_user',
+                'quota_class_get_all_by_name',
+                ])
+        self.assertEqual(result, dict(
+                instances=dict(
+                    limit=5,
+                    in_use=2,
+                    reserved=2,
+                    ),
+                cores=dict(
+                    limit=10,
+                    in_use=4,
+                    reserved=4,
+                    ),
+                ram=dict(
+                    limit=25 * 1024,
+                    in_use=10 * 1024,
+                    reserved=0,
+                    ),
+                floating_ips=dict(
+                    limit=10,
+                    in_use=2,
+                    reserved=0,
+                    ),
+                fixed_ips=dict(
+                    limit=10,
+                    in_use=0,
+                    reserved=0,
+                    ),
+                metadata_items=dict(
+                    limit=64,
+                    in_use=0,
+                    reserved=0,
+                    ),
+                injected_files=dict(
+                    limit=2,
+                    in_use=0,
+                    reserved=0,
+                    ),
+                injected_file_content_bytes=dict(
+                    limit=5 * 1024,
+                    in_use=0,
+                    reserved=0,
+                    ),
+                injected_file_path_bytes=dict(
+                    limit=127,
+                    in_use=0,
+                    reserved=0,
+                    ),
+                security_groups=dict(
+                    limit=10,
+                    in_use=0,
+                    reserved=0,
+                    ),
+                security_group_rules=dict(
+                    limit=20,
+                    in_use=0,
+                    reserved=0,
+                    ),
+                key_pairs=dict(
+                    limit=100,
+                    in_use=0,
+                    reserved=0,
+                    ),
+                ))
+
+    def test_get_project_quotas_alt_context_with_class(self):
+        self.maxDiff = None
+        self._stub_get_by_project()
+        result = self.driver.get_project_quotas(
+            FakeContext('other_project', 'other_class'),
+            quota.QUOTAS._resources, 'test_project', quota_class='test_class')
+
+        self.assertEqual(self.calls, [
+                'quota_get_all_by_project',
+                'quota_usage_get_all_by_project',
+                'quota_class_get_all_by_name',
+                'quota_class_get_default',
+                ])
+        self.assertEqual(result, dict(
+                instances=dict(
+                    limit=5,
+                    in_use=2,
+                    reserved=2,
+                    ),
+                cores=dict(
+                    limit=10,
+                    in_use=4,
+                    reserved=4,
+                    ),
+                ram=dict(
+                    limit=25 * 1024,
+                    in_use=10 * 1024,
+                    reserved=0,
+                    ),
+                floating_ips=dict(
+                    limit=10,
+                    in_use=2,
+                    reserved=0,
+                    ),
+                fixed_ips=dict(
+                    limit=10,
+                    in_use=0,
+                    reserved=0,
+                    ),
+                metadata_items=dict(
+                    limit=64,
+                    in_use=0,
+                    reserved=0,
+                    ),
+                injected_files=dict(
+                    limit=2,
+                    in_use=0,
+                    reserved=0,
+                    ),
+                injected_file_content_bytes=dict(
+                    limit=5 * 1024,
+                    in_use=0,
+                    reserved=0,
+                    ),
+                injected_file_path_bytes=dict(
+                    limit=127,
+                    in_use=0,
+                    reserved=0,
+                    ),
+                security_groups=dict(
+                    limit=10,
+                    in_use=0,
+                    reserved=0,
+                    ),
+                security_group_rules=dict(
+                    limit=20,
+                    in_use=0,
+                    reserved=0,
+                    ),
+                key_pairs=dict(
+                    limit=100,
+                    in_use=0,
+                    reserved=0,
+                    ),
+                ))
+
     def test_get_user_quotas_no_defaults(self):
         self._stub_get_by_project_and_user()
         result = self.driver.get_user_quotas(
@@ -1213,6 +1419,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                 'quota_get_all_by_project_and_user',
                 'quota_get_all_by_project',
                 'quota_usage_get_all_by_project_and_user',
+                'quota_class_get_all_by_name',
                 ])
         self.assertEqual(result, dict(
                 cores=dict(
@@ -1241,6 +1448,7 @@ class DbQuotaDriverTestCase(test.TestCase):
         self.assertEqual(self.calls, [
                 'quota_get_all_by_project',
                 'quota_usage_get_all_by_project',
+                'quota_class_get_all_by_name',
                 'quota_class_get_default',
                 ])
         self.assertEqual(result, dict(
@@ -1270,16 +1478,17 @@ class DbQuotaDriverTestCase(test.TestCase):
         self.assertEqual(self.calls, [
                 'quota_get_all_by_project_and_user',
                 'quota_get_all_by_project',
+                'quota_class_get_all_by_name',
                 ])
         self.assertEqual(result, dict(
                 instances=dict(
-                    limit=10,
+                    limit=5,
                     ),
                 cores=dict(
                     limit=10,
                     ),
                 ram=dict(
-                    limit=50 * 1024,
+                    limit=25 * 1024,
                     ),
                 floating_ips=dict(
                     limit=10,
@@ -1288,13 +1497,13 @@ class DbQuotaDriverTestCase(test.TestCase):
                     limit=10,
                     ),
                 metadata_items=dict(
-                    limit=128,
+                    limit=64,
                     ),
                 injected_files=dict(
                     limit=2,
                     ),
                 injected_file_content_bytes=dict(
-                    limit=10 * 1024,
+                    limit=5 * 1024,
                     ),
                 injected_file_path_bytes=dict(
                     limit=127,
@@ -1318,6 +1527,7 @@ class DbQuotaDriverTestCase(test.TestCase):
 
         self.assertEqual(self.calls, [
                 'quota_get_all_by_project',
+                'quota_class_get_all_by_name',
                 'quota_class_get_default',
                 ])
         self.assertEqual(result, dict(
