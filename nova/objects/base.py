@@ -134,6 +134,8 @@ class NovaObjectMetaclass(type):
 # requested action and the result will be returned here.
 def remotable_classmethod(fn):
     """Decorator for remotable classmethods."""
+    fn.remotable = True
+
     @functools.wraps(fn)
     def wrapper(cls, context, *args, **kwargs):
         if NovaObject.indirection_api:
@@ -155,6 +157,8 @@ def remotable_classmethod(fn):
 # "orphaned" and remotable methods cannot be called.
 def remotable(fn):
     """Decorator for remotable object methods."""
+    fn.remotable = True
+
     @functools.wraps(fn)
     def wrapper(self, *args, **kwargs):
         ctxt = self._context

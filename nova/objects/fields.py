@@ -122,6 +122,15 @@ class Field(object):
         self._nullable = nullable
         self._default = default
 
+    def __repr__(self):
+        args = {
+            'nullable': self._nullable,
+            'default': self._default,
+            }
+        return '%s(%s)' % (self._type.__class__.__name__,
+                           ','.join(['%s=%s' % (k, v)
+                                     for k, v in args.items()]))
+
     @property
     def nullable(self):
         return self._nullable

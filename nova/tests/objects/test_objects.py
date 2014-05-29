@@ -14,6 +14,8 @@
 
 import contextlib
 import datetime
+import hashlib
+import inspect
 
 import mock
 import six
@@ -847,3 +849,93 @@ class TestObjectSerializer(_BaseTestCase):
             self.assertEqual(1, len(thing2))
             for item in thing2:
                 self.assertIsInstance(item, MyObj)
+
+
+# NOTE(danms): The hashes in this list should only be changed if
+# they come with a corresponding version bump in the affected
+# objects
+object_data = {
+    'Aggregate': '1.1-1d96b82d2f0ad66ad1d49313f08eca71',
+    'AggregateList': '1.1-dbb5bafde58c263c1fd132c33d68ba77',
+    'BlockDeviceMapping': '1.1-d44030deca25ebf8efcb4f3d12429677',
+    'BlockDeviceMappingList': '1.2-d0f559a2510ea2beab5478e5118a69f9',
+    'ComputeNode': '1.3-da09be1ff8b43f9889f2bb4e43b5686e',
+    'ComputeNodeList': '1.2-be44294fa7d0deef6146863836adb1e5',
+    'DNSDomain': '1.0-f0467d23e2c8b567469cdcd6a9708615',
+    'DNSDomainList': '1.0-47ffa72c29119d19fc8d3854ae49f094',
+    'FixedIP': '1.1-e3ceee4d62b52320707db6f730338531',
+    'FixedIPList': '1.1-c944566e2e21af32432d7b7c35018831',
+    'Flavor': '1.0-4f0c857e5bf5627a40d04ba249f9e31b',
+    'FlavorList': '1.0-47ffa72c29119d19fc8d3854ae49f094',
+    'FloatingIP': '1.1-ee1245f7df59fcd081e3bffe3411e822',
+    'FloatingIPList': '1.1-a5c220af1c55f2aa3d2d14771bbca668',
+    'Instance': '1.13-552999d3072d5aa7b31493d3c2ee551e',
+    'InstanceAction': '1.1-abef7ec3247d587bdef78bf47744c6ee',
+    'InstanceActionEvent': '1.0-3b23bda6f8431fd2ab27489275a150ab',
+    'InstanceActionEventList': '1.0-6f8bfe29181b175400069c8a47f6e618',
+    'InstanceActionList': '1.0-d0f559a2510ea2beab5478e5118a69f9',
+    'InstanceExternalEvent': '1.0-c1b2be346d0ee670ebc0146c65859b1e',
+    'InstanceFault': '1.2-c85a5ecc4f4a82a26c9da95d947a719d',
+    'InstanceFaultList': '1.1-6e250b18ac45ea63a3478a4b365b009f',
+    'InstanceGroup': '1.6-c17ebff3c3453108370362a8f22b8d48',
+    'InstanceGroupList': '1.2-176452f4f090408eb1b9d631957f996b',
+    'InstanceInfoCache': '1.5-04937dde0e8409eb87bc04f3514736ba',
+    'InstanceList': '1.6-086b5de1c23af9e023fa10dd2e8c6a69',
+    'KeyPair': '1.1-30e67207cd4d0a3a044b5805f252a60c',
+    'KeyPairList': '1.0-ab564b050224c1945febb24ce84c9524',
+    'Migration': '1.1-c90e531ec87739decb31026c05100964',
+    'MigrationList': '1.1-add1d472f38ee759f9d717b9824e07a4',
+    'MyObj': '1.5-2cb1447b872ebaf439eff9c678af8bf4',
+    'Network': '1.1-faba26d0290395456f9a040584c4364b',
+    'NetworkList': '1.1-eaafb55cf6b571581df685127cd687c1',
+    'OtherTestableObject': '1.0-b43ae164bcf53764db6a54270af71b86',
+    'PciDevice': '1.1-637f3dddb48197d2a69e41bd1144a3c5',
+    'PciDeviceList': '1.0-80491949ec8ac90cbbd1ea153adcb4ef',
+    'Quotas': '1.0-759987de0abbb6e4428bba7c6bdf8e9e',
+    'QuotasNoOp': '1.0-c25493f36b5df1d1f0a1077a610495cd',
+    'SecurityGroup': '1.1-0a71e19e0b5bd790e6bf882afcb71d4c',
+    'SecurityGroupList': '1.0-ae82c19e66b17d506e25f8d49576db1f',
+    'SecurityGroupRule': '1.0-96cdebd0294fd834e3e4249238c76eb9',
+    'SecurityGroupRuleList': '1.0-790df2265ff6d41794f60decdf9dd080',
+    'Service': '1.2-16a7d0f0d41e423deefb804ca2aeb51d',
+    'ServiceList': '1.0-35c5e3a116de08c1655d5fc3ecbe6549',
+    'TestableObject': '1.0-b43ae164bcf53764db6a54270af71b86',
+    'TestSubclassedObject': '1.5-f5f524f005954e2e351f20bd58cb74fb',
+    'VirtualInterface': '1.0-022c3e84a172f8302a0f8c4407bc92a2',
+    'VirtualInterfaceList': '1.0-59568968ee1ac0e796c7ebbf8354d65d',
+    'VolumeMapping': '1.0-b97464d4e338688d04a46d5c1740423d',
+    }
+
+
+class TestObjectVersions(test.TestCase):
+    def _get_fingerprint(self, obj_class):
+        fields = obj_class.fields.items()
+        methods = {}
+        for name in dir(obj_class):
+            thing = getattr(obj_class, name)
+            if inspect.ismethod(thing) and hasattr(thing, 'remotable'):
+                methods[name] = inspect.getargspec(thing)
+        # NOTE(danms): Things that need a version bump are any fields
+        # and their types, or the signatures of any remotable methods.
+        # Of course, these are just the mechanical changes we can detect,
+        # but many other things may require a version bump (method behavior
+        # and return value changes, for example).
+        relevant_data = {'fields': fields,
+                         'methods': methods,
+                         }
+        return '%s-%s' % (obj_class.VERSION,
+                          hashlib.md5(str(relevant_data)).hexdigest())
+
+    def _test_versions_cls(self, obj_name):
+        obj_class = base.NovaObject._obj_classes[obj_name][0]
+        expected_fingerprint = object_data.get(obj_name, 'unknown')
+        actual_fingerprint = self._get_fingerprint(obj_class)
+
+        self.assertEqual(
+            expected_fingerprint, actual_fingerprint,
+            ('%s object has changed; please make sure the version '
+             'has been bumped, and then update this hash') % obj_name)
+
+    def test_versions(self):
+        for obj_name in base.NovaObject._obj_classes:
+            self._test_versions_cls(obj_name)
