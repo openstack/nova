@@ -1894,24 +1894,20 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(nova.virt.fake.FakeDriver, 'unrescue',
                        fake_unrescue)
 
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_uuid = instance['uuid']
+        instance = self._create_fake_instance_obj()
         self.compute.run_instance(self.context, instance, {}, {}, [], None,
                 None, True, None, False)
 
-        db.instance_update(self.context, instance_uuid,
-                           {"task_state": task_states.RESCUING})
-        self.compute.rescue_instance(self.context, self._objectify(instance),
-                                     None)
+        instance.task_state = task_states.RESCUING
+        instance.save()
+        self.compute.rescue_instance(self.context, instance, None)
         self.assertTrue(called['rescued'])
-        db.instance_update(self.context, instance_uuid,
-                           {"task_state": task_states.UNRESCUING})
-        self.compute.unrescue_instance(self.context,
-                                       instance=self._objectify(instance))
+        instance.task_state = task_states.UNRESCUING
+        instance.save()
+        self.compute.unrescue_instance(self.context, instance)
         self.assertTrue(called['unrescued'])
 
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_rescue_notifications(self):
         # Ensure notifications on instance rescue.
@@ -1920,16 +1916,14 @@ class ComputeTestCase(BaseTestCase):
             pass
         self.stubs.Set(nova.virt.fake.FakeDriver, 'rescue', fake_rescue)
 
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_uuid = instance['uuid']
+        instance = self._create_fake_instance_obj()
         self.compute.run_instance(self.context, instance, {}, {}, [], None,
                 None, True, None, False)
 
         fake_notifier.NOTIFICATIONS = []
-        db.instance_update(self.context, instance_uuid,
-                           {"task_state": task_states.RESCUING})
-        self.compute.rescue_instance(self.context, self._objectify(instance),
-                                     None)
+        instance.task_state = task_states.RESCUING
+        instance.save()
+        self.compute.rescue_instance(self.context, instance, None)
 
         expected_notifications = ['compute.instance.rescue.start',
                                   'compute.instance.exists',
@@ -1942,7 +1936,7 @@ class ComputeTestCase(BaseTestCase):
             payload = msg.payload
             self.assertEqual(payload['tenant_id'], self.project_id)
             self.assertEqual(payload['user_id'], self.user_id)
-            self.assertEqual(payload['instance_id'], instance_uuid)
+            self.assertEqual(payload['instance_id'], instance.uuid)
             self.assertEqual(payload['instance_type'], 'm1.tiny')
             type_id = flavors.get_flavor_by_name('m1.tiny')['id']
             self.assertEqual(str(payload['instance_type_id']), str(type_id))
@@ -1954,8 +1948,7 @@ class ComputeTestCase(BaseTestCase):
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertIn('rescue_image_name', msg.payload)
 
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_unrescue_notifications(self):
         # Ensure notifications on instance rescue.
@@ -2001,8 +1994,7 @@ class ComputeTestCase(BaseTestCase):
     def test_rescue_handle_err(self):
         # If the driver fails to rescue, instance state should remain the same
         # and the exception should be converted to InstanceNotRescuable
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-        inst_obj = self._objectify(instance)
+        inst_obj = self._create_fake_instance_obj()
         self.mox.StubOutWithMock(self.compute, '_get_rescue_image')
         self.mox.StubOutWithMock(nova.virt.fake.FakeDriver, 'rescue')
 
@@ -2015,8 +2007,8 @@ class ComputeTestCase(BaseTestCase):
         self.mox.ReplayAll()
 
         expected_message = ('Instance %s cannot be rescued: '
-                            'Driver Error: Try again later' % inst_obj['uuid'])
-        inst_obj['vm_state'] = 'some_random_state'
+                            'Driver Error: Try again later' % inst_obj.uuid)
+        inst_obj.vm_state = 'some_random_state'
 
         with testtools.ExpectedException(
                 exception.InstanceNotRescuable, expected_message):
@@ -2024,7 +2016,7 @@ class ComputeTestCase(BaseTestCase):
                     self.context, instance=inst_obj,
                     rescue_password='password')
 
-        self.assertEqual('some_random_state', inst_obj['vm_state'])
+        self.assertEqual('some_random_state', inst_obj.vm_state)
 
     @mock.patch.object(nova.compute.utils, "get_image_metadata")
     @mock.patch.object(nova.virt.fake.FakeDriver, "rescue")
@@ -2034,8 +2026,7 @@ class ComputeTestCase(BaseTestCase):
         image_ref = "image-ref"
         rescue_image_meta = {}
         params = {"task_state": task_states.RESCUING}
-        instance = self._create_fake_instance(params=params)
-        instance = self._objectify(instance)
+        instance = self._create_fake_instance_obj(params=params)
 
         ctxt = context.get_admin_context()
         mock_context = mock.Mock()
@@ -2051,8 +2042,7 @@ class ComputeTestCase(BaseTestCase):
                                                    image_ref, instance)
         mock_rescue.assert_called_with(ctxt, instance, [],
                                        rescue_image_meta, 'password')
-        self.compute.terminate_instance(ctxt,
-                                        self._objectify(instance), [], [])
+        self.compute.terminate_instance(ctxt, instance, [], [])
 
     @mock.patch.object(nova.compute.utils, "get_image_metadata")
     @mock.patch.object(nova.virt.fake.FakeDriver, "rescue")
@@ -2064,8 +2054,7 @@ class ComputeTestCase(BaseTestCase):
         rescue_image_meta = {}
         params = {"task_state": task_states.RESCUING,
                   "system_metadata": system_meta}
-        instance = self._create_fake_instance(params=params)
-        instance = self._objectify(instance)
+        instance = self._create_fake_instance_obj(params=params)
 
         ctxt = context.get_admin_context()
         mock_context = mock.Mock()
@@ -2081,8 +2070,7 @@ class ComputeTestCase(BaseTestCase):
                                                    image_ref, instance)
         mock_rescue.assert_called_with(ctxt, instance, [],
                                        rescue_image_meta, 'password')
-        self.compute.terminate_instance(self.context,
-                                        self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_power_on(self):
         # Ensure instance can be powered on.
@@ -7458,8 +7446,8 @@ class ComputeAPITestCase(BaseTestCase):
     @mock.patch.object(cinder.API, 'get')
     def test_rescue_volume_backed_no_image(self, mock_get_vol, mock_get_bdms):
         # Instance started without an image
-        volume_backed_inst_1 = jsonutils.to_primitive(
-            self._create_fake_instance({'image_ref': ''}))
+        params = {'image_ref': ''}
+        volume_backed_inst_1 = self._create_fake_instance_obj(params=params)
         bdms, volume = self._fake_rescue_block_devices(volume_backed_inst_1)
 
         mock_get_vol.return_value = {'id': volume['id'], 'status': "in-use"}
@@ -7474,8 +7462,8 @@ class ComputeAPITestCase(BaseTestCase):
                           self.compute_api.rescue, self.context,
                           volume_backed_inst_1)
 
-        self.compute.terminate_instance(self.context,
-                self._objectify(volume_backed_inst_1), [], [])
+        self.compute.terminate_instance(self.context, volume_backed_inst_1,
+                                        [], [])
 
     @mock.patch.object(block_device_obj.BlockDeviceMappingList,
                        'get_by_instance_uuid')
@@ -7484,11 +7472,9 @@ class ComputeAPITestCase(BaseTestCase):
                                                     mock_get_vol,
                                                     mock_get_bdms):
         # Instance started with a placeholder image (for metadata)
-        volume_backed_inst_2 = jsonutils.to_primitive(
-            self._create_fake_instance(
+        volume_backed_inst_2 = self._create_fake_instance_obj(
                 {'image_ref': 'my_placeholder_img',
                  'root_device_name': '/dev/vda'})
-            )
         bdms, volume = self._fake_rescue_block_devices(volume_backed_inst_2)
 
         mock_get_vol.return_value = {'id': volume['id'], 'status': "in-use"}
@@ -7503,8 +7489,8 @@ class ComputeAPITestCase(BaseTestCase):
                           self.compute_api.rescue, self.context,
                           volume_backed_inst_2)
 
-        self.compute.terminate_instance(self.context,
-                self._objectify(volume_backed_inst_2), [], [])
+        self.compute.terminate_instance(self.context, volume_backed_inst_2,
+                                        [], [])
 
     def test_get(self):
         # Test get instance.

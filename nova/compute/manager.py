@@ -2951,8 +2951,8 @@ class ComputeManager(manager.Manager):
 
         if not rescue_image_ref:
             LOG.warn(_('Unable to find a different image to use for rescue VM,'
-                       ' using instance\'s current image'))
-            rescue_image_ref = instance['image_ref']
+                       ' using instance\'s current image'), instance=instance)
+            rescue_image_ref = instance.image_ref
 
         image_meta = compute_utils.get_image_metadata(context, self.image_api,
                                                       rescue_image_ref,
@@ -2993,7 +2993,7 @@ class ComputeManager(manager.Manager):
             LOG.exception(_("Error trying to Rescue Instance"),
                           instance=instance)
             raise exception.InstanceNotRescuable(
-                instance_id=instance['uuid'],
+                instance_id=instance.uuid,
                 reason=_("Driver Error: %s") % unicode(e))
 
         self.conductor_api.notify_usage_exists(context, instance,
