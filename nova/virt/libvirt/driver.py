@@ -3646,11 +3646,17 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 guest.os_type = vm_mode.HVM
 
-        if CONF.libvirt.virt_type == "xen" and guest.os_type == vm_mode.HVM:
-            guest.os_loader = CONF.libvirt.xen_hvmloader_path
+        caps = self._get_host_capabilities()
+
+        if CONF.libvirt.virt_type == "xen":
+            if guest.os_type == vm_mode.HVM:
+                guest.os_loader = CONF.libvirt.xen_hvmloader_path
+
+            # PAE only makes sense in X86
+            if caps.host.cpu.arch in (arch.I686, arch.X86_64):
+                guest.pae = True
 
         if CONF.libvirt.virt_type in ("kvm", "qemu"):
-            caps = self._get_host_capabilities()
             if caps.host.cpu.arch in (arch.I686, arch.X86_64):
                 guest.sysinfo = self._get_guest_config_sysinfo(instance)
                 guest.os_smbios = vconfig.LibvirtConfigGuestSMBIOS()

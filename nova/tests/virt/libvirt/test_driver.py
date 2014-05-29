@@ -1057,6 +1057,7 @@ class LibvirtConnTestCase(test.TestCase,
                                          context=ctxt)
 
         self.assertEqual(cfg.uuid, instance_ref["uuid"])
+        self.assertEqual(cfg.pae, False)
         self.assertEqual(cfg.acpi, True)
         self.assertEqual(cfg.apic, True)
         self.assertEqual(cfg.memory, 6 * units.Ki)
@@ -1863,6 +1864,46 @@ class LibvirtConnTestCase(test.TestCase,
 
         self.assertEqual(cfg.devices[3].type, "vnc")
         self.assertEqual(cfg.devices[4].type, "xen")
+
+    def test_get_guest_config_with_type_xen_pae_hvm(self):
+        self.flags(vnc_enabled=True)
+        self.flags(virt_type='xen',
+                   use_usb_tablet=False,
+                   group='libvirt')
+        self.flags(enabled=False,
+                   group='spice')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        instance_ref['vm_mode'] = vm_mode.HVM
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+
+        self.assertEqual(cfg.os_type, vm_mode.HVM)
+        self.assertEqual(cfg.os_loader, CONF.libvirt.xen_hvmloader_path)
+        self.assertEqual(cfg.pae, True)
+
+    def test_get_guest_config_with_type_xen_pae_pvm(self):
+        self.flags(vnc_enabled=True)
+        self.flags(virt_type='xen',
+                   use_usb_tablet=False,
+                   group='libvirt')
+        self.flags(enabled=False,
+                   group='spice')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+
+        self.assertEqual(cfg.os_type, vm_mode.XEN)
+        self.assertEqual(cfg.pae, True)
 
     def test_get_guest_config_with_vnc_and_spice(self):
         self.flags(vnc_enabled=True)

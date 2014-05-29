@@ -199,13 +199,13 @@ def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
     return "qemu"
 
 
-def get_arch(image_meta):
-    pass
-
-
 def is_valid_hostname(name):
     return True
 
 
 def chown_for_id_maps(path, id_maps):
     pass
+
+
+def get_arch(image_meta):
+    return libvirt_utils.get_arch(image_meta)
