@@ -667,6 +667,24 @@ class FlatNetworkTestCase(test.TestCase):
                           self.context, '1.2.3.4', instance=inst)
         util_method.assert_called_once_with(self.context, inst)
 
+    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    @mock.patch('nova.objects.fixed_ip.FixedIP.associate')
+    def test_allocate_fixed_ip_passes_string_address(self, mock_associate,
+                                                     mock_get):
+        mock_associate.side_effect = test.TestingException
+        instance = instance_obj.Instance(context=self.context)
+        instance.create()
+        mock_get.return_value = instance
+        self.assertRaises(test.TestingException,
+                          self.network.allocate_fixed_ip,
+                          self.context, instance.uuid,
+                          {'cidr': '24', 'id': 1},
+                          address=netaddr.IPAddress('1.2.3.4'))
+        mock_associate.assert_called_once_with(self.context,
+                                               '1.2.3.4',
+                                               instance.uuid,
+                                               1)
+
 
 class FlatDHCPNetworkTestCase(test.TestCase):
     def setUp(self):
@@ -810,6 +828,43 @@ class VlanNetworkTestCase(test.TestCase):
             dict(test_network.fake_network, **networks[0]))
         network.vpn_private_address = '192.168.0.2'
         self.network.allocate_fixed_ip(self.context, FAKEUUID, network)
+
+    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    @mock.patch('nova.objects.fixed_ip.FixedIP.associate')
+    def test_allocate_fixed_ip_passes_string_address(self, mock_associate,
+                                                     mock_get):
+        mock_associate.side_effect = test.TestingException
+        instance = instance_obj.Instance(context=self.context)
+        instance.create()
+        mock_get.return_value = instance
+        self.assertRaises(test.TestingException,
+                          self.network.allocate_fixed_ip,
+                          self.context, instance.uuid,
+                          {'cidr': '24', 'id': 1},
+                          address=netaddr.IPAddress('1.2.3.4'))
+        mock_associate.assert_called_once_with(self.context,
+                                               '1.2.3.4',
+                                               instance.uuid,
+                                               1)
+
+    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    @mock.patch('nova.objects.fixed_ip.FixedIP.associate')
+    def test_allocate_fixed_ip_passes_string_address_vpn(self, mock_associate,
+                                                         mock_get):
+        mock_associate.side_effect = test.TestingException
+        instance = instance_obj.Instance(context=self.context)
+        instance.create()
+        mock_get.return_value = instance
+        self.assertRaises(test.TestingException,
+                          self.network.allocate_fixed_ip,
+                          self.context, instance.uuid,
+                          {'cidr': '24', 'id': 1,
+                           'vpn_private_address': netaddr.IPAddress('1.2.3.4')
+                           }, vpn=1)
+        mock_associate.assert_called_once_with(self.context,
+                                               '1.2.3.4',
+                                               instance.uuid,
+                                               1, reserved=True)
 
     def test_create_networks_too_big(self):
         self.assertRaises(ValueError, self.network.create_networks, None,
