@@ -20,6 +20,7 @@ import base64
 import hashlib
 import hmac
 import json
+import mock
 import re
 
 try:
@@ -794,21 +795,18 @@ class MetadataPasswordTestCase(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           password.handle_password, request, self.mdinst)
 
-    def _try_set_password(self, val='bar'):
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    def _try_set_password(self, get_by_uuid, val='bar'):
         request = webob.Request.blank('')
         request.method = 'POST'
         request.body = val
-        self.stubs.Set(db, 'instance_get_by_uuid',
-                       lambda *a, **kw: {'system_metadata': []})
+        get_by_uuid.return_value = self.instance
 
-        def fake_instance_update(context, uuid, updates):
-            self.assertIn('system_metadata', updates)
-            self.assertIn('password_0', updates['system_metadata'])
-            return self.instance, self.instance
+        with mock.patch.object(self.instance, 'save') as save:
+            password.handle_password(request, self.mdinst)
+            save.assert_called_once_with()
 
-        self.stubs.Set(db, 'instance_update_and_get_original',
-                       fake_instance_update)
-        password.handle_password(request, self.mdinst)
+        self.assertIn('password_0', self.instance.system_metadata)
 
     def test_set_password(self):
         self.mdinst.password = ''
@@ -823,4 +821,4 @@ class MetadataPasswordTestCase(test.TestCase):
         self.mdinst.password = ''
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._try_set_password,
-                          'a' * (password.MAX_SIZE + 1))
+                          val=('a' * (password.MAX_SIZE + 1)))
