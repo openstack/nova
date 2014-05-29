@@ -158,6 +158,10 @@ class MigrateServerTests(admin_only_action_common.CommonTests):
         self._test_migrate_live_failed_with_exception(
             exception.InvalidHypervisorType())
 
+    def test_migrate_live_invalid_cpu_info(self):
+        self._test_migrate_live_failed_with_exception(
+            exception.InvalidCPUInfo(reason=""))
+
     def test_migrate_live_unable_to_migrate_to_self(self):
         uuid = uuidutils.generate_uuid()
         self._test_migrate_live_failed_with_exception(
@@ -180,6 +184,14 @@ class MigrateServerTests(admin_only_action_common.CommonTests):
     def test_migrate_live_invalid_shared_storage(self):
         self._test_migrate_live_failed_with_exception(
             exception.InvalidSharedStorage(path='', reason=''))
+
+    def test_migrate_live_hypervisor_unavailable(self):
+        self._test_migrate_live_failed_with_exception(
+            exception.HypervisorUnavailable(host=""))
+
+    def test_migrate_live_instance_not_running(self):
+        self._test_migrate_live_failed_with_exception(
+            exception.InstanceNotRunning(instance_id=""))
 
     def test_migrate_live_pre_check_error(self):
         self._test_migrate_live_failed_with_exception(

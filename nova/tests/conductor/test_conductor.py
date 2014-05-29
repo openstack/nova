@@ -1691,6 +1691,32 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             {'host': 'destination'}, True, False, None, 'block_migration',
             'disk_over_commit')
 
+    @mock.patch.object(scheduler_utils, 'set_vm_state_and_notify')
+    @mock.patch.object(live_migrate, 'execute')
+    def test_migrate_server_deals_with_instancenotrunning_exception(self,
+                mock_live_migrate, mock_set_state):
+        inst = fake_instance.fake_db_instance()
+        inst_obj = instance_obj.Instance._from_db_object(
+            self.context, instance_obj.Instance(), inst, [])
+
+        error = exc.InstanceNotRunning(instance_id="fake")
+        mock_live_migrate.side_effect = error
+
+        self.conductor = utils.ExceptionHelper(self.conductor)
+
+        self.assertRaises(exc.InstanceNotRunning,
+            self.conductor.migrate_server, self.context, inst_obj,
+            {'host': 'destination'}, True, False, None,
+             'block_migration', 'disk_over_commit')
+
+        request_spec = self._build_request_spec(inst_obj)
+        mock_set_state.assert_called_once_with(self.context, 'compute_task',
+                'migrate_server',
+                 dict(vm_state=inst_obj.vm_state,
+                      task_state=None,
+                      expected_task_state=task_states.MIGRATING),
+                 error, request_spec, self.conductor_manager.db)
+
     def test_migrate_server_deals_with_unexpected_exceptions(self):
         instance = fake_instance.fake_db_instance()
         inst_obj = instance_obj.Instance._from_db_object(
