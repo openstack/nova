@@ -465,71 +465,83 @@ class CinderCloudTestCase(test.TestCase):
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         sys_meta = flavors.save_flavor_info(
             {}, flavors.get_flavor(1))
-        inst1 = db.instance_create(self.context,
+        inst0 = db.instance_create(self.context,
                                   {'image_ref': image_uuid,
                                    'instance_type_id': 1,
                                    'root_device_name': '/dev/sdb1',
                                    'system_metadata': sys_meta})
-        inst2 = db.instance_create(self.context,
+        inst1 = db.instance_create(self.context,
                                   {'image_ref': image_uuid,
                                    'instance_type_id': 1,
                                    'root_device_name': '/dev/sdc1',
                                    'system_metadata': sys_meta})
+        inst2 = db.instance_create(self.context,
+                                  {'image_ref': '',
+                                   'instance_type_id': 1,
+                                   'root_device_name': '/dev/vda',
+                                   'system_metadata': sys_meta})
 
-        instance_uuid = inst1['uuid']
+        instance0_uuid = inst0['uuid']
         mappings0 = [
-            {'instance_uuid': instance_uuid,
+            {'instance_uuid': instance0_uuid,
              'device_name': '/dev/sdb1',
              'snapshot_id': '1',
              'volume_id': '2'},
-            {'instance_uuid': instance_uuid,
+            {'instance_uuid': instance0_uuid,
              'device_name': '/dev/sdb2',
              'volume_id': '3',
              'volume_size': 1},
-            {'instance_uuid': instance_uuid,
+            {'instance_uuid': instance0_uuid,
              'device_name': '/dev/sdb3',
              'delete_on_termination': True,
              'snapshot_id': '4',
              'volume_id': '5'},
-            {'instance_uuid': instance_uuid,
+            {'instance_uuid': instance0_uuid,
              'device_name': '/dev/sdb4',
              'delete_on_termination': False,
              'snapshot_id': '6',
              'volume_id': '7'},
-            {'instance_uuid': instance_uuid,
+            {'instance_uuid': instance0_uuid,
              'device_name': '/dev/sdb5',
              'snapshot_id': '8',
              'volume_id': '9',
              'volume_size': 0},
-            {'instance_uuid': instance_uuid,
+            {'instance_uuid': instance0_uuid,
              'device_name': '/dev/sdb6',
              'snapshot_id': '10',
              'volume_id': '11',
              'volume_size': 1},
-            {'instance_uuid': instance_uuid,
+            {'instance_uuid': instance0_uuid,
              'device_name': '/dev/sdb7',
              'no_device': True},
-            {'instance_uuid': instance_uuid,
+            {'instance_uuid': instance0_uuid,
              'device_name': '/dev/sdb8',
              'virtual_name': 'swap'},
-            {'instance_uuid': instance_uuid,
+            {'instance_uuid': instance0_uuid,
              'device_name': '/dev/sdb9',
              'virtual_name': 'ephemeral3'}]
+        instance2_uuid = inst2['uuid']
+        mappings2 = [
+            {'instance_uuid': instance2_uuid,
+             'device_name': 'vda',
+             'snapshot_id': '1',
+             'volume_id': '21'}]
 
-        volumes = self._block_device_mapping_create(instance_uuid, mappings0)
-        return (inst1, inst2, volumes)
+        volumes0 = self._block_device_mapping_create(instance0_uuid, mappings0)
+        volumes2 = self._block_device_mapping_create(instance2_uuid, mappings2)
+        return ((inst0, inst1, inst2), (volumes0, [], volumes2))
 
-    def _tearDownBlockDeviceMapping(self, inst1, inst2, volumes):
-        for vol in volumes:
-            self.volume_api.delete(self.context, vol['id'])
-        for instance_uuid in (inst1['uuid'], inst2['uuid']):
+    def _tearDownBlockDeviceMapping(self, instances, volumes):
+        for vols in volumes:
+            for vol in vols:
+                self.volume_api.delete(self.context, vol['id'])
+        for instance in instances:
             for bdm in db.block_device_mapping_get_all_by_instance(
-                    self.context, instance_uuid):
+                    self.context, instance['uuid']):
                 db.block_device_mapping_destroy(self.context, bdm['id'])
-        db.instance_destroy(self.context, inst2['uuid'])
-        db.instance_destroy(self.context, inst1['uuid'])
+            db.instance_destroy(self.context, instance['uuid'])
 
-    _expected_instance_bdm1 = {
+    _expected_instance_bdm0 = {
         'instanceId': 'i-00000001',
         'rootDeviceName': '/dev/sdb1',
         'rootDeviceType': 'ebs'}
@@ -566,31 +578,36 @@ class CinderCloudTestCase(test.TestCase):
                  'volumeId': 'vol-0000000b', }}]
     # NOTE(yamahata): swap/ephemeral device case isn't supported yet.
 
-    _expected_instance_bdm2 = {
+    _expected_instance_bdm1 = {
         'instanceId': 'i-00000002',
         'rootDeviceName': '/dev/sdc1',
         'rootDeviceType': 'instance-store'}
 
+    _expected_instance_bdm2 = {
+        'instanceId': 'i-00000003',
+        'rootDeviceName': '/dev/vda',
+        'rootDeviceType': 'ebs'}
+
     def test_format_instance_bdm(self):
-        (inst1, inst2, volumes) = self._setUpBlockDeviceMapping()
+        (instances, volumes) = self._setUpBlockDeviceMapping()
 
         result = {}
-        self.cloud._format_instance_bdm(self.context, inst1['uuid'],
+        self.cloud._format_instance_bdm(self.context, instances[0]['uuid'],
                                         '/dev/sdb1', result)
         self.assertThat(
-            {'rootDeviceType': self._expected_instance_bdm1['rootDeviceType']},
+            {'rootDeviceType': self._expected_instance_bdm0['rootDeviceType']},
             matchers.IsSubDictOf(result))
         self._assertEqualBlockDeviceMapping(
             self._expected_block_device_mapping0, result['blockDeviceMapping'])
 
         result = {}
-        self.cloud._format_instance_bdm(self.context, inst2['uuid'],
+        self.cloud._format_instance_bdm(self.context, instances[1]['uuid'],
                                         '/dev/sdc1', result)
         self.assertThat(
-            {'rootDeviceType': self._expected_instance_bdm2['rootDeviceType']},
+            {'rootDeviceType': self._expected_instance_bdm1['rootDeviceType']},
             matchers.IsSubDictOf(result))
 
-        self._tearDownBlockDeviceMapping(inst1, inst2, volumes)
+        self._tearDownBlockDeviceMapping(instances, volumes)
 
     def _assertInstance(self, instance_id):
         ec2_instance_id = ec2utils.id_to_ec2_id(instance_id)
@@ -617,21 +634,26 @@ class CinderCloudTestCase(test.TestCase):
         """Make sure describe_instances works with root_device_name and
         block device mappings
         """
-        (inst1, inst2, volumes) = self._setUpBlockDeviceMapping()
+        (instances, volumes) = self._setUpBlockDeviceMapping()
 
-        result = self._assertInstance(inst1['id'])
+        result = self._assertInstance(instances[0]['id'])
         self.assertThat(
-            self._expected_instance_bdm1,
+            self._expected_instance_bdm0,
             matchers.IsSubDictOf(result))
         self._assertEqualBlockDeviceMapping(
             self._expected_block_device_mapping0, result['blockDeviceMapping'])
 
-        result = self._assertInstance(inst2['id'])
+        result = self._assertInstance(instances[1]['id'])
+        self.assertThat(
+            self._expected_instance_bdm1,
+            matchers.IsSubDictOf(result))
+
+        result = self._assertInstance(instances[2]['id'])
         self.assertThat(
             self._expected_instance_bdm2,
             matchers.IsSubDictOf(result))
 
-        self._tearDownBlockDeviceMapping(inst1, inst2, volumes)
+        self._tearDownBlockDeviceMapping(instances, volumes)
 
     def _setUpImageSet(self, create_volumes_and_snapshots=False):
         self.flags(max_local_block_devices=-1)
