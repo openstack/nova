@@ -3938,11 +3938,9 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         if detailed:
             return self.db.security_group_get_by_instance(context,
                                                           instance_uuid)
-        instance = self.db.instance_get_by_uuid(context, instance_uuid)
-        groups = instance.get('security_groups')
-        if groups:
-            return [{'name': group['name']} for group in groups]
-        return []
+        instance = objects.Instance(uuid=instance_uuid)
+        groups = objects.SecurityGroupList.get_by_instance(context, instance)
+        return [{'name': group.name} for group in groups]
 
     def populate_security_groups(self, instance, security_groups):
         if not security_groups:

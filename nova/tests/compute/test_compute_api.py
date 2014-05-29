@@ -2133,3 +2133,26 @@ class DiffDictTestCase(test.NoDBTestCase):
         diff = compute_api._diff_dict(old, new)
 
         self.assertEqual(diff, dict(b=['-']))
+
+
+class SecurityGroupAPITest(test.NoDBTestCase):
+    def setUp(self):
+        super(SecurityGroupAPITest, self).setUp()
+        self.secgroup_api = compute_api.SecurityGroupAPI()
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id,
+                                              self.project_id)
+
+    @mock.patch('nova.objects.security_group.SecurityGroupList.'
+                'get_by_instance')
+    def test_get_instance_security_groups(self, mock_get):
+        groups = objects.SecurityGroupList()
+        groups.objects = [objects.SecurityGroup(name='foo'),
+                          objects.SecurityGroup(name='bar')]
+        mock_get.return_value = groups
+        names = self.secgroup_api.get_instance_security_groups(self.context,
+                                                               'fake-uuid')
+        self.assertEqual([{'name': 'bar'}, {'name': 'foo'}], sorted(names))
+        self.assertEqual(1, mock_get.call_count)
+        self.assertEqual('fake-uuid', mock_get.call_args_list[0][0][1].uuid)
