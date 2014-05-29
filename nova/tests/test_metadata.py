@@ -500,7 +500,7 @@ class OpenStackMetadataTestCase(test.TestCase):
 
         self.assertEqual([], [k for k in mdjson.keys() if k.find("-") != -1])
 
-    def test_vendor_data_presense(self):
+    def test_vendor_data_presence(self):
         inst = self.instance.obj_clone()
         mdinst = fake_InstanceMetadata(self.stubs, inst)
 

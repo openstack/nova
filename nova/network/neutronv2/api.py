@@ -133,8 +133,8 @@ class API(base_api.NetworkAPI):
         if not context.is_admin:
             for net in nets:
                 # Perform this check here rather than in validate_networks to
-                # ensure the check is performed everytime allocate_for_instance
-                # is invoked
+                # ensure the check is performed every time
+                # allocate_for_instance is invoked
                 if net.get('router:external'):
                     raise exception.ExternalNetworkAttachForbidden(
                         network_uuid=net['id'])
