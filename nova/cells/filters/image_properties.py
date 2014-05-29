@@ -54,7 +54,10 @@ class ImagePropertiesFilter(filters.BaseCellFilter):
         filtered_cells = []
         for cell in cells:
             version = cell.capabilities.get('prominent_hypervisor_version')
-            version = version and str(version.pop())
+            if version:
+                l = list(version)
+                version = str(l[0])
+
             if version is None or self._matches_version(version,
                                                 hypervisor_version_requires):
                 filtered_cells.append(cell)
