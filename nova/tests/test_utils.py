@@ -955,7 +955,7 @@ class GetImageFromSystemMetadataTestCase(test.NoDBTestCase):
         sys_meta = self.get_system_metadata()
         sys_meta["%soo1" % utils.SM_IMAGE_PROP_PREFIX] = "bar"
 
-        CONF.non_inheritable_image_properties = ["foo1"]
+        self.flags(non_inheritable_image_properties=["foo1"])
 
         image = utils.get_image_from_system_metadata(sys_meta)
 

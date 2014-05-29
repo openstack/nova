@@ -123,3 +123,24 @@ class HackingTestCase(test.NoDBTestCase):
 
         self.assertEqual(len(list(checks.no_translate_debug_logs(
             "LOG.info(_('foo'))", "nova/scheduler/foo.py"))), 0)
+
+    def test_no_setting_conf_directly_in_tests(self):
+        self.assertEqual(len(list(checks.no_setting_conf_directly_in_tests(
+            "CONF.option = 1", "nova/tests/test_foo.py"))), 1)
+
+        self.assertEqual(len(list(checks.no_setting_conf_directly_in_tests(
+            "CONF.group.option = 1", "nova/tests/test_foo.py"))), 1)
+
+        self.assertEqual(len(list(checks.no_setting_conf_directly_in_tests(
+            "CONF.option = foo = 1", "nova/tests/test_foo.py"))), 1)
+
+        # Shouldn't fail with comparisons
+        self.assertEqual(len(list(checks.no_setting_conf_directly_in_tests(
+            "CONF.option == 'foo'", "nova/tests/test_foo.py"))), 0)
+
+        self.assertEqual(len(list(checks.no_setting_conf_directly_in_tests(
+            "CONF.option != 1", "nova/tests/test_foo.py"))), 0)
+
+        # Shouldn't fail since not in nova/tests/
+        self.assertEqual(len(list(checks.no_setting_conf_directly_in_tests(
+            "CONF.option = 1", "nova/compute/foo.py"))), 0)

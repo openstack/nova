@@ -593,7 +593,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         default_domain = CONF.dhcp_domain
         for domain in ('', default_domain):
             executes = []
-            CONF.dhcp_domain = domain
+            self.flags(dhcp_domain=domain)
             linux_net.restart_dhcp(self.context, dev, network_ref)
             expected = ['env',
             'CONFIG_FILE=%s' % jsonutils.dumps(CONF.dhcpbridge_flagfile),
