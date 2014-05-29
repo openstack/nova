@@ -1225,7 +1225,7 @@ class ComputeDriver(object):
     def need_legacy_block_device_info(self):
         """Tell the caller if the driver requires legacy block device info.
 
-        Tell the caller weather we expect the legacy format of block
+        Tell the caller whether we expect the legacy format of block
         device info to be passed in to methods that expect it.
         """
         return True
