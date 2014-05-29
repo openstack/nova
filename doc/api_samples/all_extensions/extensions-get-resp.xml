@@ -207,6 +207,9 @@
   <extension alias="os-preserve-ephemeral-rebuild" updated="2013-12-17T00:00:00Z" namespace="http://docs.openstack.org/compute/ext/preserve_ephemeral_rebuild/api/v2" name="PreserveEphemeralOnRebuild">
     <description>Allow preservation of the ephemeral partition on rebuild.</description>
   </extension>
+  <extension alias="os-quota-class-sets" updated="2012-03-12T00:00:00Z" namespace="http://docs.openstack.org/compute/ext/quota-classes-sets/api/v1.1" name="QuotaClasses">
+    <description>Quota classes management support.</description>
+  </extension>
   <extension alias="os-quota-sets" updated="2011-08-08T00:00:00Z" namespace="http://docs.openstack.org/compute/ext/quotas-sets/api/v1.1" name="Quotas">
     <description>Quotas management support.</description>
   </extension>
