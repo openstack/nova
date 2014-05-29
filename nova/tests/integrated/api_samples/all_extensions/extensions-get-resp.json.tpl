@@ -473,6 +473,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-quota-class-sets",
+            "description": "%(text)s",
+            "links": [],
+            "name": "QuotaClasses",
+            "namespace": "http://docs.openstack.org/compute/ext/quota-classes-sets/api/v1.1",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-extended-quotas",
             "description": "%(text)s",
             "links": [],

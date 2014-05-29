@@ -248,6 +248,7 @@ policy_data = """
     "compute_extension:v3:os-quota-sets:update": "",
     "compute_extension:v3:os-quota-sets:delete": "",
     "compute_extension:v3:os-quota-sets:detail": "",
+    "compute_extension:quota_classes": "",
     "compute_extension:rescue": "",
     "compute_extension:v3:os-rescue": "",
     "compute_extension:security_group_default_rules": "",

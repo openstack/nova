@@ -2661,6 +2661,31 @@ class FlavorDisabledSampleXmlTests(FlavorDisabledSampleJsonTests):
     ctype = "xml"
 
 
+class QuotaClassesSampleJsonTests(ApiSampleTestBaseV2):
+    extension_name = ("nova.api.openstack.compute.contrib.quota_classes."
+                      "Quota_classes")
+    set_id = 'test_class'
+
+    def test_show_quota_classes(self):
+        # Get api sample to show quota classes.
+        response = self._do_get('os-quota-class-sets/%s' % self.set_id)
+        subs = {'set_id': self.set_id}
+        self._verify_response('quota-classes-show-get-resp', subs,
+                              response, 200)
+
+    def test_update_quota_classes(self):
+        # Get api sample to update quota classes.
+        response = self._do_put('os-quota-class-sets/%s' % self.set_id,
+                                'quota-classes-update-post-req',
+                                {})
+        self._verify_response('quota-classes-update-post-resp',
+                              {}, response, 200)
+
+
+class QuotaClassesSampleXmlTests(QuotaClassesSampleJsonTests):
+    ctype = "xml"
+
+
 class CellsSampleJsonTest(ApiSampleTestBaseV2):
     extension_name = "nova.api.openstack.compute.contrib.cells.Cells"
 
