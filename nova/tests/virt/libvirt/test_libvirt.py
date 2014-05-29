@@ -9069,7 +9069,7 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
             self.conn._volume_api, self.conn)
 
     def test_volume_snapshot_create(self, quiesce=True):
-        CONF.instance_name_template = 'instance-%s'
+        self.flags(instance_name_template='instance-%s')
         self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
         self.mox.StubOutWithMock(self.conn, '_volume_api')
 

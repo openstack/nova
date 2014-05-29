@@ -285,15 +285,12 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
         flavor = utils.get_test_flavor()
         # Raises an exception when options are neither specified
         # on the instance nor in configuration file
-        CONF.baremetal.deploy_kernel = None
-        CONF.baremetal.deploy_ramdisk = None
         self.assertRaises(exception.NovaException,
                 pxe.get_tftp_image_info,
                 self.instance, flavor)
 
         # Test that other non-true values also raise an exception
-        CONF.baremetal.deploy_kernel = ""
-        CONF.baremetal.deploy_ramdisk = ""
+        self.flags(deploy_kernel='', deploy_ramdisk='', group='baremetal')
         self.assertRaises(exception.NovaException,
                 pxe.get_tftp_image_info,
                 self.instance, flavor)
@@ -313,8 +310,8 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
 
         # Here, we confirm both that all four values were set
         # and that the proper paths are getting set for all of them
-        CONF.baremetal.deploy_kernel = 'cccc'
-        CONF.baremetal.deploy_ramdisk = 'dddd'
+        self.flags(deploy_kernel='cccc', deploy_ramdisk='dddd',
+                   group='baremetal')
         base = os.path.join(CONF.baremetal.tftp_root, self.instance['uuid'])
         res = pxe.get_tftp_image_info(self.instance, flavor)
         expected = {

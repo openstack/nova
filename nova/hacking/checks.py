@@ -49,6 +49,7 @@ asse_equal_end_with_none_re = re.compile(
                            r"(.)*assertEqual\((\w|\.|\'|\"|\[|\])+, None\)")
 asse_equal_start_with_none_re = re.compile(
                            r"(.)*assertEqual\(None, (\w|\.|\'|\"|\[|\])+\)")
+conf_attribute_set_re = re.compile(r"CONF\.[a-z0-9_.]+\s*=\s*\w")
 
 
 def import_no_db_in_virt(logical_line, filename):
@@ -243,6 +244,22 @@ def no_translate_debug_logs(logical_line, filename):
             yield(0, "N319 Don't translate debug level logs")
 
 
+def no_setting_conf_directly_in_tests(logical_line, filename):
+    """Check for setting CONF.* attributes directly in tests
+
+    The value can leak out of tests affecting how subsequent tests run.
+    Using self.flags(option=value) is the preferred method to temporarily
+    set config options in tests.
+
+    N320
+    """
+    if 'nova/tests/' in filename:
+        res = conf_attribute_set_re.match(logical_line)
+        if res:
+            yield (0, "N320: Setting CONF.* attributes directly in tests is "
+                      "forbidden. Use self.flags(option=value) instead")
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -256,3 +273,4 @@ def factory(register):
     register(assert_equal_type)
     register(assert_equal_none)
     register(no_translate_debug_logs)
+    register(no_setting_conf_directly_in_tests)

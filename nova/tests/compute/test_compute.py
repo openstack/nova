@@ -604,7 +604,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         # None of the mocks should be called.
         self.mox.ReplayAll()
 
-        CONF.bandwidth_poll_interval = 0
+        self.flags(bandwidth_poll_interval=0)
         self.compute._poll_bandwidth_usage(ctxt)
         self.mox.UnsetStubs()
 
@@ -627,7 +627,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             NotImplementedError)
         self.mox.ReplayAll()
 
-        CONF.bandwidth_poll_interval = 1
+        self.flags(bandwidth_poll_interval=1)
         self.compute._poll_bandwidth_usage(ctxt)
         # A second call won't call the stubs again as the bandwidth
         # poll is now disabled
@@ -662,7 +662,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         # None of the mocks should be called.
         self.mox.ReplayAll()
 
-        CONF.volume_usage_poll_interval = 0
+        self.flags(volume_usage_poll_interval=0)
         self.compute._poll_volume_usage(ctxt)
         self.mox.UnsetStubs()
 
@@ -676,7 +676,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.compute._get_host_volume_bdms(ctxt).AndReturn([])
         self.mox.ReplayAll()
 
-        CONF.volume_usage_poll_interval = 10
+        self.flags(volume_usage_poll_interval=10)
         self.compute._poll_volume_usage(ctxt)
         self.mox.UnsetStubs()
 
@@ -692,7 +692,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.compute._get_host_volume_bdms(ctxt).AndReturn([1, 2])
         self.compute._update_volume_usage_cache(ctxt, [3, 4])
         self.mox.ReplayAll()
-        CONF.volume_usage_poll_interval = 10
+        self.flags(volume_usage_poll_interval=10)
         self.compute._poll_volume_usage(ctxt)
         self.mox.UnsetStubs()
 
@@ -742,7 +742,7 @@ class ComputeVolumeTestCase(BaseTestCase):
 
         # Poll volume usage & then detach the volume. This will update the
         # total fields in the volume usage cache.
-        CONF.volume_usage_poll_interval = 10
+        self.flags(volume_usage_poll_interval=10)
         self.compute._poll_volume_usage(self.context)
         # Check that a volume.usage and volume.attach notification was sent
         self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
