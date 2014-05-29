@@ -821,3 +821,12 @@ class ComputeRpcAPITestCase(test.TestCase):
                                instances=[self.fake_instance],
                                events=['event'],
                                version='3.23')
+
+    def test_build_and_run_instance(self):
+        self._test_compute_api('build_and_run_instance', 'cast',
+                instance=self.fake_instance, host='host', image='image',
+                request_spec={'request': 'spec'}, filter_properties=[],
+                admin_password='passwd', injected_files=None,
+                requested_networks=['network1'], security_groups=None,
+                block_device_mapping=None, node='node', limits=[],
+                version='3.23')

@@ -14,6 +14,9 @@
 
 """Handles database requests from other nova services."""
 
+import copy
+import itertools
+
 from oslo import messaging
 import six
 
@@ -34,6 +37,7 @@ from nova import network
 from nova.network.security_group import openstack_driver
 from nova import notifications
 from nova.objects import base as nova_object
+from nova.objects import block_device as block_device_object
 from nova.objects import instance as instance_obj
 from nova.objects import migration as migration_obj
 from nova.objects import quotas as quotas_obj
@@ -43,6 +47,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import quota
+from nova.scheduler import driver as scheduler_driver
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova.scheduler import utils as scheduler_utils
 
@@ -788,14 +793,40 @@ class ComputeTaskManager(base.Base):
             security_groups, block_device_mapping, legacy_bdm=True):
         request_spec = scheduler_utils.build_request_spec(context, image,
                                                           instances)
-        # NOTE(alaski): For compatibility until a new scheduler method is used.
-        request_spec.update({'block_device_mapping': block_device_mapping,
-                             'security_group': security_groups})
-        self.scheduler_rpcapi.run_instance(context, request_spec=request_spec,
-                admin_password=admin_password, injected_files=injected_files,
-                requested_networks=requested_networks, is_first_time=True,
-                filter_properties=filter_properties,
-                legacy_bdm_in_spec=legacy_bdm)
+        try:
+            hosts = self.scheduler_rpcapi.select_destinations(context,
+                    request_spec, filter_properties)
+        except Exception as exc:
+            for instance in instances:
+                scheduler_driver.handle_schedule_error(context, exc,
+                        instance.uuid, request_spec)
+            return
+
+        for (instance, host) in itertools.izip(instances, hosts):
+            try:
+                instance.refresh()
+            except exception.InstanceNotFound:
+                LOG.debug('Instance deleted during build', instance=instance)
+                continue
+            local_filter_props = copy.deepcopy(filter_properties)
+            scheduler_utils.populate_filter_properties(local_filter_props,
+                host)
+            # The block_device_mapping passed from the api doesn't contain
+            # instance specific information
+            bdo = block_device_object
+            bdms = bdo.BlockDeviceMappingList.get_by_instance_uuid(context,
+                    instance.uuid)
+
+            self.compute_rpcapi.build_and_run_instance(context,
+                    instance=instance, host=host['host'], image=image,
+                    request_spec=request_spec,
+                    filter_properties=local_filter_props,
+                    admin_password=admin_password,
+                    injected_files=injected_files,
+                    requested_networks=requested_networks,
+                    security_groups=security_groups,
+                    block_device_mapping=bdms, node=host['nodename'],
+                    limits=host['limits'])
 
     def _delete_image(self, context, image_id):
         (image_service, image_id) = glance.get_remote_image_service(context,

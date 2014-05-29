@@ -241,6 +241,8 @@ class ComputeAPI(object):
         3.21 - Made rebuild take new-world BDM objects
         3.22 - Made terminate_instance take new-world BDM objects
         3.23 - Added external_instance_event()
+             - build_and_run_instance was added in Havana and not used or
+               documented.
 
         ... Icehouse supports message version 3.23.  So, any changes to
         existing methods in 3.x after that point should be done such that they
@@ -990,6 +992,21 @@ class ComputeAPI(object):
             version='3.23')
         cctxt.cast(ctxt, 'external_instance_event', instances=instances,
                    events=events)
+
+    def build_and_run_instance(self, ctxt, instance, host, image, request_spec,
+            filter_properties, admin_password=None, injected_files=None,
+            requested_networks=None, security_groups=None,
+            block_device_mapping=None, node=None, limits=None):
+        cctxt = self.client.prepare(server=host, version='3.23')
+        cctxt.cast(ctxt, 'build_and_run_instance', instance=instance,
+                image=image, request_spec=request_spec,
+                filter_properties=filter_properties,
+                admin_password=admin_password,
+                injected_files=injected_files,
+                requested_networks=requested_networks,
+                security_groups=security_groups,
+                block_device_mapping=block_device_mapping, node=node,
+                limits=limits)
 
 
 class SecurityGroupAPI(object):

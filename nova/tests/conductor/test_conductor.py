@@ -35,6 +35,7 @@ from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception as exc
 from nova import notifications
+from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import fields
 from nova.objects import instance as instance_obj
@@ -44,6 +45,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import quota
 from nova import rpc
+from nova.scheduler import driver as scheduler_driver
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests import cast_as_call
@@ -1334,48 +1336,127 @@ class _BaseTaskTestCase(object):
                 False, False, flavor, None, None, [])
 
     def test_build_instances(self):
-        instance_type = flavors.get_default_flavor()
-        system_metadata = flavors.save_flavor_info({}, instance_type)
-        # NOTE(alaski): instance_type -> system_metadata -> instance_type
-        # loses some data (extra_specs).  This build process is using
-        # scheduler/utils:build_request_spec() which extracts flavor from
-        # system_metadata and will re-query the DB for extra_specs.. so
-        # we need to test this properly
-        expected_instance_type = flavors.extract_flavor(
-                {'system_metadata': system_metadata})
-        expected_instance_type['extra_specs'] = 'fake-specs'
+        system_metadata = flavors.save_flavor_info({},
+                flavors.get_default_flavor())
+        instances = [fake_instance.fake_instance_obj(
+            self.context,
+            system_metadata=system_metadata,
+            expected_attrs=['system_metadata']) for i in xrange(2)]
+        instance_type = flavors.extract_flavor(instances[0])
+        instance_type['extra_specs'] = 'fake-specs'
+        instance_properties = jsonutils.to_primitive(instances[0])
 
         self.mox.StubOutWithMock(db, 'flavor_extra_specs_get')
         self.mox.StubOutWithMock(self.conductor_manager.scheduler_rpcapi,
-                                 'run_instance')
+                                 'select_destinations')
+        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
+        self.mox.StubOutWithMock(db,
+                                 'block_device_mapping_get_all_by_instance')
+        self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
+                                 'build_and_run_instance')
 
         db.flavor_extra_specs_get(
                 self.context,
                 instance_type['flavorid']).AndReturn('fake-specs')
-        self.conductor_manager.scheduler_rpcapi.run_instance(self.context,
+        self.conductor_manager.scheduler_rpcapi.select_destinations(
+                self.context, {'image': {'fake_data': 'should_pass_silently'},
+                    'instance_properties': jsonutils.to_primitive(
+                        instances[0]),
+                    'instance_type': instance_type,
+                    'instance_uuids': [inst.uuid for inst in instances],
+                    'num_instances': 2}, {}).AndReturn(
+                        [{'host': 'host1', 'nodename': 'node1', 'limits': []},
+                         {'host': 'host2', 'nodename': 'node2', 'limits': []}])
+        db.instance_get_by_uuid(self.context, instances[0].uuid,
+                columns_to_join=['system_metadata'],
+                use_slave=False).AndReturn(
+                        jsonutils.to_primitive(instances[0]))
+        db.block_device_mapping_get_all_by_instance(self.context,
+                instances[0].uuid, use_slave=False).AndReturn([])
+        self.conductor_manager.compute_rpcapi.build_and_run_instance(
+                self.context,
+                instance=mox.IgnoreArg(),
+                host='host1',
+                image={'fake_data': 'should_pass_silently'},
                 request_spec={
                     'image': {'fake_data': 'should_pass_silently'},
-                    'instance_properties': {'system_metadata': system_metadata,
-                                            'uuid': 'fakeuuid'},
-                    'instance_type': expected_instance_type,
-                    'instance_uuids': ['fakeuuid', 'fakeuuid2'],
-                    'block_device_mapping': 'block_device_mapping',
-                    'security_group': 'security_groups',
+                    'instance_properties': instance_properties,
+                    'instance_type': instance_type,
+                    'instance_uuids': [inst.uuid for inst in instances],
                     'num_instances': 2},
+                filter_properties={'limits': []},
                 admin_password='admin_password',
                 injected_files='injected_files',
-                requested_networks='requested_networks', is_first_time=True,
-                filter_properties={}, legacy_bdm_in_spec=False)
+                requested_networks='requested_networks',
+                security_groups='security_groups',
+                block_device_mapping=mox.IgnoreArg(),
+                node='node1', limits=[])
+        db.instance_get_by_uuid(self.context, instances[1].uuid,
+                columns_to_join=['system_metadata'],
+                use_slave=False).AndReturn(
+                        jsonutils.to_primitive(instances[1]))
+        db.block_device_mapping_get_all_by_instance(self.context,
+                instances[1].uuid, use_slave=False).AndReturn([])
+        self.conductor_manager.compute_rpcapi.build_and_run_instance(
+                self.context,
+                instance=mox.IgnoreArg(),
+                host='host2',
+                image={'fake_data': 'should_pass_silently'},
+                request_spec={
+                    'image': {'fake_data': 'should_pass_silently'},
+                    'instance_properties': instance_properties,
+                    'instance_type': instance_type,
+                    'instance_uuids': [inst.uuid for inst in instances],
+                    'num_instances': 2},
+                filter_properties={'limits': []},
+                admin_password='admin_password',
+                injected_files='injected_files',
+                requested_networks='requested_networks',
+                security_groups='security_groups',
+                block_device_mapping=mox.IgnoreArg(),
+                node='node2', limits=[])
         self.mox.ReplayAll()
 
         # build_instances() is a cast, we need to wait for it to complete
         self.useFixture(cast_as_call.CastAsCall(self.stubs))
 
         self.conductor.build_instances(self.context,
-                instances=[{'uuid': 'fakeuuid',
-                            'system_metadata': system_metadata},
-                           {'uuid': 'fakeuuid2'}],
+                instances=instances,
                 image={'fake_data': 'should_pass_silently'},
+                filter_properties={},
+                admin_password='admin_password',
+                injected_files='injected_files',
+                requested_networks='requested_networks',
+                security_groups='security_groups',
+                block_device_mapping='block_device_mapping',
+                legacy_bdm=False)
+
+    def test_build_instances_scheduler_failure(self):
+        instances = [fake_instance.fake_instance_obj(self.context)
+                for i in xrange(2)]
+        image = {'fake-data': 'should_pass_silently'}
+        spec = {'fake': 'specs'}
+        exception = exc.NoValidHost(reason='fake-reason')
+        self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
+        self.mox.StubOutWithMock(scheduler_driver, 'handle_schedule_error')
+        self.mox.StubOutWithMock(self.conductor_manager.scheduler_rpcapi,
+                'select_destinations')
+
+        scheduler_utils.build_request_spec(self.context, image,
+                mox.IgnoreArg()).AndReturn(spec)
+        self.conductor_manager.scheduler_rpcapi.select_destinations(
+                self.context, spec, {}).AndRaise(exception)
+        for instance in instances:
+            scheduler_driver.handle_schedule_error(self.context, exception,
+                    instance.uuid, spec)
+        self.mox.ReplayAll()
+
+        # build_instances() is a cast, we need to wait for it to complete
+        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+
+        self.conductor.build_instances(self.context,
+                instances=instances,
+                image=image,
                 filter_properties={},
                 admin_password='admin_password',
                 injected_files='injected_files',
@@ -1818,6 +1899,55 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                           self.conductor._cold_migrate,
                           self.context, inst_obj, 'flavor',
                           filter_props, [resvs])
+
+    def test_build_instances_instance_not_found(self):
+        instances = [fake_instance.fake_instance_obj(self.context)
+                for i in xrange(2)]
+        self.mox.StubOutWithMock(instances[0], 'refresh')
+        self.mox.StubOutWithMock(instances[1], 'refresh')
+        image = {'fake-data': 'should_pass_silently'}
+        spec = {'fake': 'specs'}
+        self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
+        self.mox.StubOutWithMock(scheduler_driver, 'handle_schedule_error')
+        self.mox.StubOutWithMock(self.conductor_manager.scheduler_rpcapi,
+                'select_destinations')
+        self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
+                'build_and_run_instance')
+
+        scheduler_utils.build_request_spec(self.context, image,
+                mox.IgnoreArg()).AndReturn(spec)
+        self.conductor_manager.scheduler_rpcapi.select_destinations(
+                self.context, spec, {}).AndReturn(
+                        [{'host': 'host1', 'nodename': 'node1', 'limits': []},
+                         {'host': 'host2', 'nodename': 'node2', 'limits': []}])
+        instances[0].refresh().AndRaise(
+                exc.InstanceNotFound(instance_id=instances[0].uuid))
+        instances[1].refresh()
+        self.conductor_manager.compute_rpcapi.build_and_run_instance(
+                self.context, instance=instances[1], host='host2',
+                image={'fake-data': 'should_pass_silently'}, request_spec=spec,
+                filter_properties={'limits': []},
+                admin_password='admin_password',
+                injected_files='injected_files',
+                requested_networks='requested_networks',
+                security_groups='security_groups',
+                block_device_mapping=mox.IsA(objects.BlockDeviceMappingList),
+                node='node2', limits=[])
+        self.mox.ReplayAll()
+
+        # build_instances() is a cast, we need to wait for it to complete
+        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+
+        self.conductor.build_instances(self.context,
+                instances=instances,
+                image=image,
+                filter_properties={},
+                admin_password='admin_password',
+                injected_files='injected_files',
+                requested_networks='requested_networks',
+                security_groups='security_groups',
+                block_device_mapping='block_device_mapping',
+                legacy_bdm=False)
 
 
 class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
