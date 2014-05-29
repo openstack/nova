@@ -7439,35 +7439,6 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
                 self._objectify(inst_ref), [], [])
 
-    def test_rescue_unrescue(self):
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance, {}, {}, None, None,
-                None, True, None, False)
-
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['vm_state'], vm_states.ACTIVE)
-        self.assertIsNone(instance['task_state'])
-
-        self.compute_api.rescue(self.context, self._objectify(instance))
-
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['vm_state'], vm_states.ACTIVE)
-        self.assertEqual(instance['task_state'], task_states.RESCUING)
-
-        params = {'vm_state': vm_states.RESCUED, 'task_state': None}
-        db.instance_update(self.context, instance_uuid, params)
-
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.compute_api.unrescue(self.context, self._objectify(instance))
-
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['vm_state'], vm_states.RESCUED)
-        self.assertEqual(instance['task_state'], task_states.UNRESCUING)
-
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
-
     def _fake_rescue_block_devices(self, instance, status="in-use"):
         fake_bdms = block_device_obj.block_device_make_list(self.context,
                     [fake_block_device.FakeDbBlockDeviceDict(

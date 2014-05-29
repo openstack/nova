@@ -13,6 +13,7 @@
 
 """Unit tests for compute API."""
 
+import contextlib
 import copy
 import datetime
 import iso8601
@@ -2003,6 +2004,67 @@ class _ComputeAPIUnitTestMixIn(object):
                             fake_num_instances,
                             fake_index)
             destroy.assert_called_once_with(self.context)
+
+    def _test_rescue(self, vm_state):
+        instance = self._create_instance_obj(params={'vm_state': vm_state})
+        bdms = []
+        with contextlib.nested(
+            mock.patch.object(block_device_obj.BlockDeviceMappingList,
+                              'get_by_instance_uuid', return_value=bdms),
+            mock.patch.object(self.compute_api, 'is_volume_backed_instance',
+                              return_value=False),
+            mock.patch.object(self.compute_api, 'update'),
+            mock.patch.object(self.compute_api, '_record_action_start'),
+            mock.patch.object(self.compute_api.compute_rpcapi,
+                              'rescue_instance')
+        ) as (
+            bdm_get_by_instance_uuid, volume_backed_inst, compute_api_update,
+            record_action_start, rpcapi_rescue_instance
+        ):
+            self.compute_api.rescue(self.context, instance)
+            # assert our mock calls
+            bdm_get_by_instance_uuid.assert_called_once_with(
+                self.context, instance.uuid)
+            volume_backed_inst.assert_called_once_with(
+                self.context, instance, bdms)
+            compute_api_update.assert_called_once_with(
+                self.context, instance, task_state=task_states.RESCUING,
+                expected_task_state=[None])
+            record_action_start.assert_called_once_with(
+                self.context, instance, instance_actions.RESCUE)
+            rpcapi_rescue_instance.assert_called_once_with(
+                self.context, instance=instance, rescue_password=None,
+                rescue_image_ref=None)
+
+    def test_rescue_active(self):
+        self._test_rescue(vm_state=vm_states.ACTIVE)
+
+    def test_rescue_stopped(self):
+        self._test_rescue(vm_state=vm_states.STOPPED)
+
+    def test_rescue_error(self):
+        self._test_rescue(vm_state=vm_states.ERROR)
+
+    def test_unrescue(self):
+        instance = self._create_instance_obj(
+            params={'vm_state': vm_states.RESCUED})
+        with contextlib.nested(
+            mock.patch.object(self.compute_api, 'update'),
+            mock.patch.object(self.compute_api, '_record_action_start'),
+            mock.patch.object(self.compute_api.compute_rpcapi,
+                              'unrescue_instance')
+        ) as (
+            compute_api_update, record_action_start, rpcapi_unrescue_instance
+        ):
+            self.compute_api.unrescue(self.context, instance)
+            # assert our mock calls
+            compute_api_update.assert_called_once_with(
+                self.context, instance, task_state=task_states.UNRESCUING,
+                expected_task_state=[None])
+            record_action_start.assert_called_once_with(
+                self.context, instance, instance_actions.UNRESCUE)
+            rpcapi_unrescue_instance.assert_called_once_with(
+                self.context, instance=instance)
 
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):

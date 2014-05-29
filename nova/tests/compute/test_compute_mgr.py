@@ -1208,6 +1208,116 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                   {'uuid': 'fake-inst'})
         detach.assert_called_once_with(self.context, inst_obj, bdm)
 
+    def test_rescue(self):
+        instance = fake_instance.fake_instance_obj(
+            self.context, vm_state=vm_states.ACTIVE)
+        fake_nw_info = network_model.NetworkInfo()
+        rescue_image_meta = {'id': 'fake', 'name': 'fake'}
+        with contextlib.nested(
+            mock.patch.object(instance_action_obj.InstanceActionEvent,
+                              'event_start'),
+            mock.patch.object(instance_action_obj.InstanceActionEvent,
+                              'event_finish_with_failure'),
+            mock.patch.object(self.context, 'elevated',
+                              return_value=self.context),
+            mock.patch.object(self.compute, '_get_instance_nw_info',
+                              return_value=fake_nw_info),
+            mock.patch.object(self.compute, '_get_rescue_image',
+                              return_value=rescue_image_meta),
+            mock.patch.object(self.compute, '_notify_about_instance_usage'),
+            mock.patch.object(self.compute.driver, 'rescue'),
+            mock.patch.object(self.compute.conductor_api,
+                              'notify_usage_exists'),
+            mock.patch.object(self.compute, '_get_power_state',
+                              return_value=power_state.RUNNING),
+            mock.patch.object(instance, 'save')
+        ) as (
+            event_start, event_finish, elevated_context, get_nw_info,
+            get_rescue_image, notify_instance_usage, driver_rescue,
+            notify_usage_exists, get_power_state, instance_save
+        ):
+            self.compute.rescue_instance(
+                self.context, instance, rescue_password='verybadpass',
+                rescue_image_ref=None)
+
+            # assert the field values on the instance object
+            self.assertEqual(vm_states.RESCUED, instance.vm_state)
+            self.assertIsNone(instance.task_state)
+            self.assertEqual(power_state.RUNNING, instance.power_state)
+            self.assertIsNotNone(instance.launched_at)
+
+            # assert our mock calls
+            get_nw_info.assert_called_once_with(self.context, instance)
+            get_rescue_image.assert_called_once_with(
+                self.context, instance, None)
+
+            extra_usage_info = {'rescue_image_name': 'fake'}
+            notify_calls = [
+                mock.call(self.context, instance, "rescue.start",
+                          extra_usage_info=extra_usage_info,
+                          network_info=fake_nw_info),
+                mock.call(self.context, instance, "rescue.end",
+                          extra_usage_info=extra_usage_info,
+                          network_info=fake_nw_info)
+            ]
+            notify_instance_usage.assert_has_calls(notify_calls)
+
+            driver_rescue.assert_called_once_with(
+                self.context, instance, fake_nw_info, rescue_image_meta,
+                'verybadpass')
+
+            notify_usage_exists.assert_called_once_with(
+                self.context, instance, current_period=True)
+
+            instance_save.assert_called_once_with(
+                expected_task_state=task_states.RESCUING)
+
+    def test_unrescue(self):
+        instance = fake_instance.fake_instance_obj(
+            self.context, vm_state=vm_states.RESCUED)
+        fake_nw_info = network_model.NetworkInfo()
+        with contextlib.nested(
+            mock.patch.object(instance_action_obj.InstanceActionEvent,
+                              'event_start'),
+            mock.patch.object(instance_action_obj.InstanceActionEvent,
+                              'event_finish_with_failure'),
+            mock.patch.object(self.context, 'elevated',
+                              return_value=self.context),
+            mock.patch.object(self.compute, '_get_instance_nw_info',
+                              return_value=fake_nw_info),
+            mock.patch.object(self.compute, '_notify_about_instance_usage'),
+            mock.patch.object(self.compute.driver, 'unrescue'),
+            mock.patch.object(self.compute, '_get_power_state',
+                              return_value=power_state.RUNNING),
+            mock.patch.object(instance, 'save')
+        ) as (
+            event_start, event_finish, elevated_context, get_nw_info,
+            notify_instance_usage, driver_unrescue, get_power_state,
+            instance_save
+        ):
+            self.compute.unrescue_instance(self.context, instance)
+
+            # assert the field values on the instance object
+            self.assertEqual(vm_states.ACTIVE, instance.vm_state)
+            self.assertIsNone(instance.task_state)
+            self.assertEqual(power_state.RUNNING, instance.power_state)
+
+            # assert our mock calls
+            get_nw_info.assert_called_once_with(self.context, instance)
+
+            notify_calls = [
+                mock.call(self.context, instance, "unrescue.start",
+                          network_info=fake_nw_info),
+                mock.call(self.context, instance, "unrescue.end",
+                          network_info=fake_nw_info)
+            ]
+            notify_instance_usage.assert_has_calls(notify_calls)
+
+            driver_unrescue.assert_called_once_with(instance, fake_nw_info)
+
+            instance_save.assert_called_once_with(
+                expected_task_state=task_states.UNRESCUING)
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):
