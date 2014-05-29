@@ -1082,6 +1082,34 @@ def quota_update(context, project_id, resource, limit, user_id=None):
 ###################
 
 
+def quota_class_create(context, class_name, resource, limit):
+    """Create a quota class for the given name and resource."""
+    return IMPL.quota_class_create(context, class_name, resource, limit)
+
+
+def quota_class_get(context, class_name, resource):
+    """Retrieve a quota class or raise if it does not exist."""
+    return IMPL.quota_class_get(context, class_name, resource)
+
+
+def quota_class_get_default(context):
+    """Retrieve all default quotas."""
+    return IMPL.quota_class_get_default(context)
+
+
+def quota_class_get_all_by_name(context, class_name):
+    """Retrieve all quotas associated with a given quota class."""
+    return IMPL.quota_class_get_all_by_name(context, class_name)
+
+
+def quota_class_update(context, class_name, resource, limit):
+    """Update a quota class or raise if it does not exist."""
+    return IMPL.quota_class_update(context, class_name, resource, limit)
+
+
+###################
+
+
 def quota_usage_get(context, project_id, resource, user_id=None):
     """Retrieve a quota usage or raise if it does not exist."""
     return IMPL.quota_usage_get(context, project_id, resource, user_id=user_id)
