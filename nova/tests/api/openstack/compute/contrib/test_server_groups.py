@@ -227,6 +227,14 @@ class ServerGroupTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'server_group': sgroup})
 
+    def test_create_server_group_with_duplicate_policies(self):
+        sgroup = server_group_template()
+        policies = ['affinity', 'affinity']
+        sgroup['policies'] = policies
+        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          req, {'server_group': sgroup})
+
     def test_create_server_group_not_supported(self):
         sgroup = server_group_template()
         policies = ['storage-affinity', 'anti-affinity', 'rack-affinity']

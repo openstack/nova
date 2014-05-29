@@ -181,6 +181,11 @@ class ServerGroupController(wsgi.Controller):
             msg = _("Invalid policies: %s") % ', '.join(not_supported)
             raise nova.exception.InvalidInput(reason=msg)
 
+        # Note(wingwj): It doesn't make sense to store duplicate policies.
+        if sorted(set(policies)) != sorted(policies):
+            msg = _("Duplicate policies configured!")
+            raise nova.exception.InvalidInput(reason=msg)
+
     def _validate_input_body(self, body, entity_name):
         if not self.is_valid_body(body, entity_name):
             msg = _("the body is invalid.")
