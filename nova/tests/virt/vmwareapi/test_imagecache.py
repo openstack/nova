@@ -61,13 +61,11 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         ) as (_get_timestamp, _file_delete):
             self.exists = False
             self._imagecache.timestamp_cleanup(
-                    'fake-dc-ref', 'fake-ds-browser', 'fake-ds-ref',
-                    'fake-ds-name', 'fake-ds-path')
+                    'fake-dc-ref', 'fake-ds-browser', 'fake-ds-path')
             self.assertEqual(0, _file_delete.call_count)
             self.exists = True
             self._imagecache.timestamp_cleanup(
-                    'fake-dc-ref', 'fake-ds-browser', 'fake-ds-ref',
-                    'fake-ds-name', 'fake-ds-path')
+                    'fake-dc-ref', 'fake-ds-browser', 'fake-ds-path')
             _file_delete.assert_called_once_with(self._session,
                     'fake-ds-path/ts-2012-11-22-12-00-00',
                     'fake-dc-ref')
@@ -169,8 +167,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         def fake_file_delete(session, path, dc_ref):
             self.assertEqual('fake-ds-path/fake-image-3', path)
 
-        def fake_timestamp_cleanup(dc_ref, ds_browser,
-                                   ds_ref, ds_name, path):
+        def fake_timestamp_cleanup(dc_ref, ds_browser, path):
             self.assertEqual('fake-ds-path/fake-image-4', path)
 
         with contextlib.nested(

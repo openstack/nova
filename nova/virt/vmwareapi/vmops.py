@@ -315,7 +315,7 @@ class VMwareVMOps(object):
                 with lockutils.lock(path, lock_file_prefix='nova-vmware-ts',
                                     external=True):
                     self._imagecache.timestamp_cleanup(dc_info.ref, ds_browser,
-                            data_store_ref, data_store_name, path)
+                                                       path)
 
             # Check if the image exists in the datastore cache. If not the
             # image will be uploaded and cached.
