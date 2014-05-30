@@ -867,7 +867,8 @@ class NetworkManager(manager.Manager):
             if network['cidr']:
                 address = kwargs.get('address', None)
                 if address:
-                    fip = fixed_ip_obj.FixedIP.associate(context, address,
+                    fip = fixed_ip_obj.FixedIP.associate(context,
+                                                         str(address),
                                                          instance_id,
                                                          network['id'])
                 else:
@@ -1747,12 +1748,13 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
 
         if kwargs.get('vpn', None):
             address = network['vpn_private_address']
-            fip = fixed_ip_obj.FixedIP.associate(context, address, instance_id,
-                                                 network['id'], reserved=True)
+            fip = fixed_ip_obj.FixedIP.associate(context, str(address),
+                                                 instance_id, network['id'],
+                                                 reserved=True)
         else:
             address = kwargs.get('address', None)
             if address:
-                fip = fixed_ip_obj.FixedIP.associate(context, address,
+                fip = fixed_ip_obj.FixedIP.associate(context, str(address),
                                                      instance_id,
                                                      network['id'])
             else:
