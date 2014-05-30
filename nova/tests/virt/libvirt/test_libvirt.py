@@ -6606,6 +6606,26 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertRaises(exception.ConsoleTypeUnavailable,
                           conn.get_spice_console, self.context, instance)
 
+    def test_detach_volume_with_instance_not_found(self):
+        # Test that detach_volume() method does not raise exception,
+        # if the instance does not exist.
+
+        instance = self.create_instance_obj(self.context)
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        with contextlib.nested(
+            mock.patch.object(conn, '_lookup_by_name',
+                              side_effect=exception.InstanceNotFound(
+                                  instance_id=instance.name)),
+            mock.patch.object(conn, 'volume_driver_method')
+        ) as (_lookup_by_name, volume_driver_method):
+            connection_info = {'driver_volume_type': 'fake'}
+            conn.detach_volume(connection_info, instance, '/dev/sda')
+            _lookup_by_name.assert_called_once_with(instance.name)
+            volume_driver_method.assert_called_once_with('disconnect_volume',
+                                                         connection_info,
+                                                         'sda')
+
     def _test_attach_detach_interface_get_config(self, method_name):
         """Tests that the get_config() method is properly called in
         attach_interface() and detach_interface().
