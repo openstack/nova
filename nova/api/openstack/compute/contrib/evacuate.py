@@ -72,8 +72,8 @@ class Controller(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
 
         try:
-            instance = self.compute_api.get(context, id)
-            if instance['host'] == host:
+            instance = self.compute_api.get(context, id, want_objects=True)
+            if instance.host == host:
                 msg = _("The target host can't be the same one.")
                 raise exc.HTTPBadRequest(explanation=msg)
             self.compute_api.evacuate(context, instance, host,

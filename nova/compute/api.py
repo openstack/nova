@@ -3025,7 +3025,7 @@ class API(base.Base):
         raising an exception.
         """
         LOG.debug('vm evacuation scheduled')
-        inst_host = instance['host']
+        inst_host = instance.host
         service = service_obj.Service.get_by_compute_host(context, inst_host)
         if self.servicegroup_api.service_is_up(service):
             msg = (_('Instance compute service state on %s '
@@ -3033,18 +3033,12 @@ class API(base.Base):
             LOG.error(msg)
             raise exception.ComputeServiceInUse(host=inst_host)
 
-        instance = self.update(context, instance, expected_task_state=[None],
-                               task_state=task_states.REBUILDING)
-
+        instance.task_state = task_states.REBUILDING
+        instance.save(expected_task_state=[None])
         self._record_action_start(context, instance, instance_actions.EVACUATE)
 
-        # NOTE(danms): Transitional until evacuate supports objects
-        inst_obj = objects.Instance._from_db_object(
-            context, objects.Instance(), instance,
-            expected_attrs=['metadata', 'system_metadata', 'info_cache'])
-
         return self.compute_rpcapi.rebuild_instance(context,
-                                        instance=inst_obj,
+                                        instance=instance,
                                         new_pass=admin_password,
                                         injected_files=None,
                                         image_ref=None,

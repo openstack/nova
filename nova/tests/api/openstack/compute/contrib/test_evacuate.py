@@ -24,6 +24,8 @@ from nova import exception
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_instance
+
 
 CONF = cfg.CONF
 CONF.import_opt('password_length', 'nova.utils')
@@ -33,17 +35,14 @@ def fake_compute_api(*args, **kwargs):
     return True
 
 
-def fake_compute_api_get(self, context, instance_id):
+def fake_compute_api_get(self, context, instance_id, want_objects=False):
     # BAD_UUID is something that does not exist
     if instance_id == 'BAD_UUID':
         raise exception.InstanceNotFound(instance_id=instance_id)
     else:
-        return {
-            'id': 1,
-            'uuid': instance_id,
-            'vm_state': vm_states.ACTIVE,
-            'task_state': None, 'host': 'host1'
-        }
+        return fake_instance.fake_instance_obj(context, id=1, uuid=instance_id,
+                                               task_state=None, host='host1',
+                                               vm_state=vm_states.ACTIVE)
 
 
 def fake_service_get_by_compute_host(self, context, host):

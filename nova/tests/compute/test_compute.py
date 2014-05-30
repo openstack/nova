@@ -310,8 +310,10 @@ class BaseTestCase(test.TestCase):
             self.context, objects.Instance(), db_inst,
             expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
 
-    def _create_fake_instance_obj(self, params=None, type_name='m1.tiny'):
-        db_inst = self._create_fake_instance(params, type_name=type_name)
+    def _create_fake_instance_obj(self, params=None, type_name='m1.tiny',
+                                  services=False):
+        db_inst = self._create_fake_instance(params, type_name=type_name,
+                                             services=services)
         return self._objectify(db_inst)
 
     def _create_instance_type(self, params=None):
@@ -9112,20 +9114,16 @@ class ComputeAPITestCase(BaseTestCase):
         instance.refresh()
         self.assertEqual(instance['task_state'], task_states.MIGRATING)
 
-    def _check_evacuate(self, instance_params=None):
-        instance = jsonutils.to_primitive(self._create_fake_instance(
-                                          instance_params, services=True))
-        instance_uuid = instance['uuid']
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertIsNone(instance['task_state'])
+    def test_evacuate(self):
+        instance = self._create_fake_instance_obj(services=True)
+        self.assertIsNone(instance.task_state)
 
         def fake_service_is_up(*args, **kwargs):
             return False
 
         def fake_rebuild_instance(*args, **kwargs):
-            self.assertIn('info_cache', kwargs['instance'])
-            db.instance_update(self.context, instance_uuid,
-                               {'host': kwargs['host']})
+            instance.host = kwargs['host']
+            instance.save()
 
         self.stubs.Set(self.compute_api.servicegroup_api, 'service_is_up',
                 fake_service_is_up)
@@ -9137,17 +9135,10 @@ class ComputeAPITestCase(BaseTestCase):
                                   on_shared_storage=True,
                                   admin_password=None)
 
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], task_states.REBUILDING)
-        self.assertEqual(instance['host'], 'fake_dest_host')
-
-        db.instance_destroy(self.context, instance['uuid'])
-
-    def test_evacuate(self):
-        self._check_evacuate()
-
-    def test_error_evacuate(self):
-        self._check_evacuate({'vm_state': vm_states.ERROR})
+        instance.refresh()
+        self.assertEqual(instance.task_state, task_states.REBUILDING)
+        self.assertEqual(instance.host, 'fake_dest_host')
+        instance.destroy()
 
     def test_fail_evacuate_from_non_existing_host(self):
         inst = {}
@@ -9168,26 +9159,18 @@ class ComputeAPITestCase(BaseTestCase):
         inst['ephemeral_gb'] = 0
         inst['architecture'] = 'x86_64'
         inst['os_type'] = 'Linux'
+        instance = self._create_fake_instance_obj(inst)
 
-        instance = jsonutils.to_primitive(db.instance_create(self.context,
-                                                             inst))
-        instance_uuid = instance['uuid']
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertIsNone(instance['task_state'])
-
+        self.assertIsNone(instance.task_state)
         self.assertRaises(exception.ComputeHostNotFound,
                 self.compute_api.evacuate, self.context.elevated(), instance,
                 host='fake_dest_host', on_shared_storage=True,
                 admin_password=None)
-
-        db.instance_destroy(self.context, instance['uuid'])
+        instance.destroy()
 
     def test_fail_evacuate_from_running_host(self):
-        instance = jsonutils.to_primitive(self._create_fake_instance(
-                                          services=True))
-        instance_uuid = instance['uuid']
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertIsNone(instance['task_state'])
+        instance = self._create_fake_instance_obj(services=True)
+        self.assertIsNone(instance.task_state)
 
         def fake_service_is_up(*args, **kwargs):
             return True
@@ -9199,33 +9182,21 @@ class ComputeAPITestCase(BaseTestCase):
                 self.compute_api.evacuate, self.context.elevated(), instance,
                 host='fake_dest_host', on_shared_storage=True,
                 admin_password=None)
-
-        db.instance_destroy(self.context, instance['uuid'])
+        instance.destroy()
 
     def test_fail_evacuate_instance_in_wrong_state(self):
-        instances = [
-            jsonutils.to_primitive(self._create_fake_instance(
-                                    {'vm_state': vm_states.BUILDING})),
-            jsonutils.to_primitive(self._create_fake_instance(
-                                    {'vm_state': vm_states.PAUSED})),
-            jsonutils.to_primitive(self._create_fake_instance(
-                                    {'vm_state': vm_states.SUSPENDED})),
-            jsonutils.to_primitive(self._create_fake_instance(
-                                    {'vm_state': vm_states.RESCUED})),
-            jsonutils.to_primitive(self._create_fake_instance(
-                                    {'vm_state': vm_states.RESIZED})),
-            jsonutils.to_primitive(self._create_fake_instance(
-                                    {'vm_state': vm_states.SOFT_DELETED})),
-            jsonutils.to_primitive(self._create_fake_instance(
-                                    {'vm_state': vm_states.DELETED}))
-        ]
+        states = [vm_states.BUILDING, vm_states.PAUSED, vm_states.SUSPENDED,
+                  vm_states.RESCUED, vm_states.RESIZED, vm_states.SOFT_DELETED,
+                  vm_states.DELETED]
+        instances = [self._create_fake_instance_obj({'vm_state': state})
+                     for state in states]
 
         for instance in instances:
             self.assertRaises(exception.InstanceInvalidState,
                 self.compute_api.evacuate, self.context, instance,
                 host='fake_dest_host', on_shared_storage=True,
                 admin_password=None)
-            db.instance_destroy(self.context, instance['uuid'])
+            instance.destroy()
 
     def test_get_migrations(self):
         migration = test_migration.fake_db_migration(uuid="1234")
