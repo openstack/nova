@@ -809,7 +809,8 @@ class ComputeTaskManager(base.Base):
         for (instance, host) in itertools.izip(instances, hosts):
             try:
                 instance.refresh()
-            except exception.InstanceNotFound:
+            except (exception.InstanceNotFound,
+                    exception.InstanceInfoCacheNotFound):
                 LOG.debug('Instance deleted during build', instance=instance)
                 continue
             local_filter_props = copy.deepcopy(filter_properties)

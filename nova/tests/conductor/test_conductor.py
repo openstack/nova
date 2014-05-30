@@ -1975,6 +1975,52 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 block_device_mapping='block_device_mapping',
                 legacy_bdm=False)
 
+    @mock.patch.object(scheduler_utils, 'build_request_spec')
+    def test_build_instances_info_cache_not_found(self, build_request_spec):
+        instances = [fake_instance.fake_instance_obj(self.context)
+                for i in xrange(2)]
+        image = {'fake-data': 'should_pass_silently'}
+        destinations = [{'host': 'host1', 'nodename': 'node1', 'limits': []},
+                {'host': 'host2', 'nodename': 'node2', 'limits': []}]
+        spec = {'fake': 'specs'}
+        build_request_spec.return_value = spec
+        with contextlib.nested(
+                mock.patch.object(instances[0], 'refresh',
+                    side_effect=exc.InstanceInfoCacheNotFound(
+                        instance_uuid=instances[0].uuid)),
+                mock.patch.object(instances[1], 'refresh'),
+                mock.patch.object(self.conductor_manager.scheduler_rpcapi,
+                    'select_destinations', return_value=destinations),
+                mock.patch.object(self.conductor_manager.compute_rpcapi,
+                    'build_and_run_instance')
+                ) as (inst1_refresh, inst2_refresh, select_destinations,
+                        build_and_run_instance):
+
+            # build_instances() is a cast, we need to wait for it to complete
+            self.useFixture(cast_as_call.CastAsCall(self.stubs))
+
+            self.conductor.build_instances(self.context,
+                    instances=instances,
+                    image=image,
+                    filter_properties={},
+                    admin_password='admin_password',
+                    injected_files='injected_files',
+                    requested_networks='requested_networks',
+                    security_groups='security_groups',
+                    block_device_mapping='block_device_mapping',
+                    legacy_bdm=False)
+
+            build_and_run_instance.assert_called_once_with(self.context,
+                    instance=instances[1], host='host2', image={'fake-data':
+                        'should_pass_silently'}, request_spec=spec,
+                    filter_properties={'limits': []},
+                    admin_password='admin_password',
+                    injected_files='injected_files',
+                    requested_networks='requested_networks',
+                    security_groups='security_groups',
+                    block_device_mapping=mock.ANY,
+                    node='node2', limits=[])
+
 
 class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
         test_compute.BaseTestCase):
