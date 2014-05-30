@@ -123,6 +123,8 @@ class SchedulerManager(manager.Manager):
                     dest, block_migration, disk_over_commit)
         return task.execute()
 
+    # NOTE(alaski): Remove this method when the scheduler rpc interface is
+    # bumped to 4.x as it is no longer used.
     def run_instance(self, context, request_spec, admin_password,
             injected_files, requested_networks, is_first_time,
             filter_properties, legacy_bdm_in_spec=True):

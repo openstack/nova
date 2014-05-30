@@ -648,17 +648,6 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         self.tgt_db_inst = methods_cls.db
         self.tgt_c_rpcapi = methods_cls.compute_rpcapi
 
-    def test_schedule_run_instance(self):
-        host_sched_kwargs = {'filter_properties': {},
-                             'key1': 'value1',
-                             'key2': 'value2'}
-        self.mox.StubOutWithMock(self.tgt_scheduler, 'run_instance')
-        self.tgt_scheduler.run_instance(self.ctxt, host_sched_kwargs)
-        self.mox.ReplayAll()
-        self.src_msg_runner.schedule_run_instance(self.ctxt,
-                                                  self.tgt_cell_name,
-                                                  host_sched_kwargs)
-
     def test_build_instances(self):
         build_inst_kwargs = {'filter_properties': {},
                              'key1': 'value1',

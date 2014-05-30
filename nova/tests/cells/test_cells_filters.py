@@ -140,13 +140,13 @@ class TestTargetCellFilter(_FilterTestClass):
     def test_target_cell_specified_not_me(self):
         info = {}
 
-        def _fake_sched_run_instance(ctxt, cell, sched_kwargs):
+        def _fake_build_instances(ctxt, cell, sched_kwargs):
             info['ctxt'] = ctxt
             info['cell'] = cell
             info['sched_kwargs'] = sched_kwargs
 
-        self.stubs.Set(self.msg_runner, 'schedule_run_instance',
-                       _fake_sched_run_instance)
+        self.stubs.Set(self.msg_runner, 'build_instances',
+                       _fake_build_instances)
         cells = [1, 2, 3]
         target_cell = 'fake!cell!path'
         current_cell = 'not!the!same'
@@ -155,7 +155,7 @@ class TestTargetCellFilter(_FilterTestClass):
                         'scheduler': self.scheduler,
                         'context': self.context,
                         'host_sched_kwargs': 'meow',
-                        'cell_scheduler_method': 'schedule_run_instance'}
+                        'cell_scheduler_method': 'build_instances'}
         # None is returned to bypass further scheduling.
         self.assertIsNone(self._filter_cells(cells, filter_props))
         # The filter should have re-scheduled to the child cell itself.

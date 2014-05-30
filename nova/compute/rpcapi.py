@@ -767,6 +767,8 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'rollback_live_migration_at_destination',
                    instance=instance)
 
+    # NOTE(alaski): Remove this method when the scheduler rpc interface is
+    # bumped to 4.x as the only callers of this method will be removed.
     def run_instance(self, ctxt, instance, host, request_spec,
                      filter_properties, requested_networks,
                      injected_files, admin_password,

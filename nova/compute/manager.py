@@ -2107,6 +2107,9 @@ class ComputeManager(manager.Manager):
                      filter_properties, requested_networks,
                      injected_files, admin_password,
                      is_first_time, node, legacy_bdm_in_spec):
+        # NOTE(alaski) This method should be deprecated when the scheduler and
+        # compute rpc interfaces are bumped to 4.x, and slated for removal in
+        # 5.x as it is no longer used.
 
         if filter_properties is None:
             filter_properties = {}

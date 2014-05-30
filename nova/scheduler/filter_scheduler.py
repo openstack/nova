@@ -62,6 +62,8 @@ class FilterScheduler(driver.Scheduler):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.notifier = rpc.get_notifier('scheduler')
 
+    # NOTE(alaski): Remove this method when the scheduler rpc interface is
+    # bumped to 4.x as it is no longer used.
     def schedule_run_instance(self, context, request_spec,
                               admin_password, injected_files,
                               requested_networks, is_first_time,

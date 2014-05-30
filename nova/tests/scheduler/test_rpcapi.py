@@ -63,14 +63,6 @@ class SchedulerRpcAPITestCase(test.NoDBTestCase):
         retval = getattr(rpcapi, method)(ctxt, **kwargs)
         self.assertEqual(retval, expected_retval)
 
-    def test_run_instance(self):
-        self._test_scheduler_api('run_instance', rpc_method='cast',
-                request_spec='fake_request_spec',
-                admin_password='pw', injected_files='fake_injected_files',
-                requested_networks='fake_requested_networks',
-                is_first_time=True, filter_properties='fake_filter_properties',
-                legacy_bdm_in_spec=False)
-
     def test_prep_resize(self):
         self._test_scheduler_api('prep_resize', rpc_method='cast',
                 instance='fake_instance',
