@@ -2173,11 +2173,12 @@ class API(base.Base):
 
         self._record_action_start(context, instance, instance_actions.REBUILD)
 
-        self.compute_rpcapi.rebuild_instance(context, instance=instance,
+        self.compute_task_api.rebuild_instance(context, instance=instance,
                 new_pass=admin_password, injected_files=files_to_inject,
                 image_ref=image_href, orig_image_ref=orig_image_ref,
                 orig_sys_metadata=orig_sys_metadata, bdms=bdms,
-                preserve_ephemeral=preserve_ephemeral, kwargs=kwargs)
+                preserve_ephemeral=preserve_ephemeral, host=instance.host,
+                kwargs=kwargs)
 
     @wrap_check_policy
     @check_instance_lock
@@ -3011,6 +3012,12 @@ class API(base.Base):
 
         Checking vm compute host state, if the host not in expected_state,
         raising an exception.
+
+        :param instance: The instance to evacuate
+        :param host: Target host. if not set, the scheduler will pick up one
+        :param on_shared_storage: True if instance files on shared storage
+        :param admin_password: password to set on rebuilt instance
+
         """
         LOG.debug('vm evacuation scheduled')
         inst_host = instance.host
@@ -3025,17 +3032,17 @@ class API(base.Base):
         instance.save(expected_task_state=[None])
         self._record_action_start(context, instance, instance_actions.EVACUATE)
 
-        return self.compute_rpcapi.rebuild_instance(context,
-                                        instance=instance,
-                                        new_pass=admin_password,
-                                        injected_files=None,
-                                        image_ref=None,
-                                        orig_image_ref=None,
-                                        orig_sys_metadata=None,
-                                        bdms=None,
-                                        recreate=True,
-                                        on_shared_storage=on_shared_storage,
-                                        host=host)
+        return self.compute_task_api.rebuild_instance(context,
+                       instance=instance,
+                       new_pass=admin_password,
+                       injected_files=None,
+                       image_ref=None,
+                       orig_image_ref=None,
+                       orig_sys_metadata=None,
+                       bdms=None,
+                       recreate=True,
+                       on_shared_storage=on_shared_storage,
+                       host=host)
 
     def get_migrations(self, context, filters):
         """Get all migrations for the given filters."""

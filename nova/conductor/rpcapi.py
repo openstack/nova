@@ -367,6 +367,7 @@ class ComputeTaskAPI(object):
     1.5 - Added the leagacy_bdm parameter to build_instances
     1.6 - Made migrate_server use instance objects
     1.7 - Do not send block_device_mapping and legacy_bdm to build_instances
+    1.8 - Add rebuild_instance
     """
 
     def __init__(self):
@@ -418,3 +419,17 @@ class ComputeTaskAPI(object):
     def unshelve_instance(self, context, instance):
         cctxt = self.client.prepare(version='1.3')
         cctxt.cast(context, 'unshelve_instance', instance=instance)
+
+    def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
+            image_ref, orig_image_ref, orig_sys_metadata, bdms,
+            recreate=False, on_shared_storage=False, host=None,
+            preserve_ephemeral=False, kwargs=None):
+        cctxt = self.client.prepare(version='1.8')
+        cctxt.cast(ctxt, 'rebuild_instance',
+                   instance=instance, new_pass=new_pass,
+                   injected_files=injected_files, image_ref=image_ref,
+                   orig_image_ref=orig_image_ref,
+                   orig_sys_metadata=orig_sys_metadata, bdms=bdms,
+                   recreate=recreate, on_shared_storage=on_shared_storage,
+                   preserve_ephemeral=preserve_ephemeral,
+                   host=host)
