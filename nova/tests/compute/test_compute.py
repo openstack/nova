@@ -3630,7 +3630,8 @@ class ComputeTestCase(BaseTestCase):
                 fake_network.fake_get_instance_nw_info(self.stubs, 1, 1))
 
         self.mox.StubOutWithMock(self.compute.driver, "macs_for_instance")
-        self.compute.driver.macs_for_instance(instance).AndReturn(macs)
+        self.compute.driver.macs_for_instance(
+            mox.IsA(instance_obj.Instance)).AndReturn(macs)
         self.mox.ReplayAll()
         self.compute.run_instance(self.context, instance, {}, {}, None, None,
                 None, True, None, False)

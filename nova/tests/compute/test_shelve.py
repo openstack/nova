@@ -11,6 +11,7 @@
 #    under the License.
 
 import iso8601
+import mock
 import mox
 from oslo.config import cfg
 
@@ -199,6 +200,10 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         def fake_delete(self2, ctxt, image_id):
             self.deleted_image_id = image_id
 
+        def fake_claim(context, instance, limits):
+            instance.host = self.compute.host
+            return claims.Claim(db_instance, self.rt, _fake_resources())
+
         fake_image.stub_out_image_service(self.stubs)
         self.stubs.Set(fake_image._FakeImageService, 'delete', fake_delete)
 
@@ -213,8 +218,6 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 mox.IgnoreArg()).AndReturn('fake_bdm')
         db_instance['key_data'] = None
         db_instance['auto_disk_config'] = None
-        self.rt.instance_claim(self.context, instance, limits).AndReturn(
-                claims.Claim(db_instance, self.rt, _fake_resources()))
         self.compute.driver.spawn(self.context, instance, image,
                 injected_files=[], admin_password=None,
                 network_info=[],
@@ -226,18 +229,23 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                  'task_state': None,
                  'image_ref': instance['image_ref'],
                  'key_data': None,
+                 'host': self.compute.host,  # rt.instance_claim set this
                  'auto_disk_config': False,
                  'expected_task_state': task_states.SPAWNING,
                  'launched_at': cur_time_tz},
                  update_cells=False,
                  columns_to_join=['metadata', 'system_metadata']
-                 ).AndReturn((db_instance, db_instance))
+                 ).AndReturn((db_instance,
+                              dict(db_instance,
+                                   host=self.compute.host)))
         self.compute._notify_about_instance_usage(self.context, instance,
                 'unshelve.end')
         self.mox.ReplayAll()
 
-        self.compute.unshelve_instance(self.context, instance, image=image,
-                filter_properties=filter_properties, node=node)
+        with mock.patch.object(self.rt, 'instance_claim',
+                               side_effect=fake_claim):
+            self.compute.unshelve_instance(self.context, instance, image=image,
+                    filter_properties=filter_properties, node=node)
         self.assertEqual(image['id'], self.deleted_image_id)
         self.assertEqual(instance.host, self.compute.host)
 
