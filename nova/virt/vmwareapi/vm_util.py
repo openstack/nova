@@ -30,6 +30,7 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import units
 from nova import utils
+from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import vim_util
 
@@ -728,13 +729,6 @@ def _get_allocated_vnc_ports(session):
     return vnc_ports
 
 
-def search_datastore_spec(client_factory, file_name):
-    """Builds the datastore search spec."""
-    search_spec = client_factory.create('ns0:HostDatastoreBrowserSearchSpec')
-    search_spec.matchPattern = [file_name]
-    return search_spec
-
-
 def _get_token(results):
     """Get the token from the property results."""
     return getattr(results, 'token', None)
@@ -1098,6 +1092,15 @@ def _select_datastore(data_stores, best_match, datastore_regex=None):
                     best_match = new_ds
 
     return best_match
+
+
+def get_datastore(session, cluster=None, host=None, datastore_regex=None):
+    # TODO(hartsocks): refactor get_datastore_ref_and_name and Datastore object
+    # such that this does not need to exist and the Datastore object holds the
+    # correct values pulled in by dynamic properties calls.
+    # Look to move to ds_util module.
+    ds = get_datastore_ref_and_name(session, cluster, host, datastore_regex)
+    return ds_util.Datastore(ds[0], ds[1])
 
 
 def get_datastore_ref_and_name(session, cluster=None, host=None,

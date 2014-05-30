@@ -20,9 +20,45 @@ import posixpath
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import error_util
-from nova.virt.vmwareapi import vm_util
 
 LOG = logging.getLogger(__name__)
+
+
+class Datastore(object):
+
+    def __init__(self, ref, name):
+        """Datastore object holds ref and name together for convenience.
+
+        :param ref: a vSphere reference to a datastore
+        :param name: vSphere unique name for this datastore
+        """
+        if name is None:
+            raise ValueError(_("Datastore name cannot be None"))
+        if ref is None:
+            raise ValueError(_("Datastore reference cannot be None"))
+
+        self._ref = ref
+        self._name = name
+
+    @property
+    def ref(self):
+        return self._ref
+
+    @property
+    def name(self):
+        return self._name
+
+    def build_path(self, *paths):
+        """Constructs and returns a DatastorePath.
+
+        :param paths: list of path components, for constructing a path relative
+                      to the root directory of the datastore
+        :return: a DatastorePath object
+        """
+        return DatastorePath(self._name, *paths)
+
+    def __str__(self):
+        return '[%s]' % self._name
 
 
 class DatastorePath(object):
@@ -99,6 +135,7 @@ class DatastorePath(object):
         return cls(datastore_name, path.strip())
 
 
+# TODO(vui): remove after converting all callers to use Datastore.build_path()
 def build_datastore_path(datastore_name, path):
     """Build the datastore compliant path."""
     return str(DatastorePath(datastore_name, path))
@@ -154,10 +191,17 @@ def file_move(session, dc_ref, src_file, dst_file):
     LOG.debug("File moved")
 
 
+def search_datastore_spec(client_factory, file_name):
+    """Builds the datastore search spec."""
+    search_spec = client_factory.create('ns0:HostDatastoreBrowserSearchSpec')
+    search_spec.matchPattern = [file_name]
+    return search_spec
+
+
 def file_exists(session, ds_browser, ds_path, file_name):
     """Check if the file exists on the datastore."""
     client_factory = session._get_vim().client.factory
-    search_spec = vm_util.search_datastore_spec(client_factory, file_name)
+    search_spec = search_datastore_spec(client_factory, file_name)
     search_task = session._call_method(session._get_vim(),
                                              "SearchDatastore_Task",
                                              ds_browser,
