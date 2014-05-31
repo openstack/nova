@@ -1436,10 +1436,10 @@ class VMOps(object):
 
         """
         rescue_vm_ref = vm_utils.lookup(self._session,
-                                        "%s-rescue" % instance['name'])
+                                        "%s-rescue" % instance.name)
         if not rescue_vm_ref:
             raise exception.InstanceNotInRescueMode(
-                    instance_id=instance['uuid'])
+                    instance_id=instance.uuid)
 
         original_vm_ref = self._get_vm_opaque_ref(instance)
 
