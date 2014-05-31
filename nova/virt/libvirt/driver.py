@@ -2217,11 +2217,11 @@ class LibvirtDriver(driver.ComputeDriver):
 
         rescue_images = {
             'image_id': (rescue_image_id or
-                        CONF.libvirt.rescue_image_id or instance['image_ref']),
+                        CONF.libvirt.rescue_image_id or instance.image_ref),
             'kernel_id': (CONF.libvirt.rescue_kernel_id or
-                          instance['kernel_id']),
+                          instance.kernel_id),
             'ramdisk_id': (CONF.libvirt.rescue_ramdisk_id or
-                           instance['ramdisk_id']),
+                           instance.ramdisk_id),
         }
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
