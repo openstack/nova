@@ -694,7 +694,7 @@ class VMwareVCDriver(VMwareESXDriver):
     def rescue(self, context, instance, network_info, image_meta,
                rescue_password):
         """Rescue the specified instance."""
-        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops = self._get_vmops_for_compute_node(instance.node)
         _vmops.rescue(context, instance, network_info, image_meta)
 
     def unrescue(self, instance, network_info):
