@@ -188,12 +188,18 @@ class Vim:
                 raise
             except suds.WebFault as excep:
                 doc = excep.document
+                fault_string = doc.childAtPath("/Envelope/Body/Fault/"
+                                               "faultstring").getText()
                 detail = doc.childAtPath("/Envelope/Body/Fault/detail")
                 fault_list = []
+                details = {}
                 if detail:
-                    for child in detail.getChildren():
-                        fault_list.append(child.get("type"))
-                raise error_util.VimFaultException(fault_list, excep)
+                    for fault in detail.getChildren():
+                        fault_list.append(fault.get("type"))
+                        for child in fault.getChildren():
+                            details[child.name] = child.getText()
+                raise error_util.VimFaultException(fault_list, fault_string,
+                                                   details)
             except AttributeError as excep:
                 raise error_util.VimAttributeError(_("No such SOAP method "
                      "'%s' provided by VI SDK") % (attr_name), excep)
