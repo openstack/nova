@@ -1048,10 +1048,10 @@ class VMwareVMOps(object):
                         "VirtualMachine", "config.hardware.device")
         (vmdk_path, adapter_type,
          disk_type) = vm_util.get_vmdk_path_and_adapter_type(
-                hardware_devices, uuid=instance['uuid'])
+                hardware_devices, uuid=instance.uuid)
 
         r_instance = copy.deepcopy(instance)
-        instance_name = r_instance['uuid'] + self._rescue_suffix
+        instance_name = r_instance.uuid + self._rescue_suffix
         # detach the original instance disk from the rescue disk
         vm_rescue_ref = vm_util.get_vm_ref_from_name(self._session,
                                                      instance_name)
