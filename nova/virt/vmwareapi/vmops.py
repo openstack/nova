@@ -698,8 +698,8 @@ class VMwareVMOps(object):
                 LOG.debug("No root disk defined. Unable to snapshot.")
                 raise error_util.NoRootDiskDefined()
 
-            datastore_name = ds_util.split_datastore_path(
-                                        vmdk_file_path_before_snapshot)[0]
+            datastore_name = ds_util.DatastorePath.parse(
+                    vmdk_file_path_before_snapshot).datastore
             os_type = self._session._call_method(vim_util,
                         "get_dynamic_property", vm_ref,
                         "VirtualMachine", "summary.config.guestId")
@@ -855,10 +855,10 @@ class VMwareVMOps(object):
                     self._session, props, lst_properties)
             pwr_state = query['runtime.powerState']
             vm_config_pathname = query['config.files.vmPathName']
-            datastore_name = None
+            vm_ds_path = None
             if vm_config_pathname:
-                _ds_path = ds_util.split_datastore_path(vm_config_pathname)
-                datastore_name, vmx_file_path = _ds_path
+                vm_ds_path = ds_util.DatastorePath.parse(vm_config_pathname)
+
             # Power off the VM if it is in PoweredOn state.
             if pwr_state == "poweredOn":
                 LOG.debug("Powering off the VM", instance=instance)
@@ -880,14 +880,12 @@ class VMwareVMOps(object):
                          excep)
             # Delete the folder holding the VM related content on
             # the datastore.
-            if destroy_disks and datastore_name:
+            if destroy_disks and vm_ds_path:
                 try:
-                    dir_ds_compliant_path = ds_util.build_datastore_path(
-                                     datastore_name,
-                                     os.path.dirname(vmx_file_path))
+                    dir_ds_compliant_path = str(vm_ds_path.parent)
                     LOG.debug("Deleting contents of the VM from "
                               "datastore %(datastore_name)s",
-                              {'datastore_name': datastore_name},
+                              {'datastore_name': vm_ds_path.datastore},
                               instance=instance)
                     ds_ref_ret = query['datastore']
                     ds_ref = ds_ref_ret.ManagedObjectReference[0]
@@ -897,7 +895,7 @@ class VMwareVMOps(object):
                                         dc_info.ref)
                     LOG.debug("Deleted contents of the VM from "
                               "datastore %(datastore_name)s",
-                              {'datastore_name': datastore_name},
+                              {'datastore_name': vm_ds_path.datastore},
                               instance=instance)
                 except Exception as excep:
                     LOG.warn(_("In vmwareapi:vmops:_destroy_instance, "
