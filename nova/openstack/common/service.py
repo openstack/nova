@@ -378,19 +378,22 @@ class ProcessLauncher(object):
         LOG.debug(_('Full set of CONF:'))
         CONF.log_opt_values(LOG, std_logging.DEBUG)
 
-        while True:
-            self.handle_signal()
-            self._respawn_children()
-            if self.sigcaught:
-                signame = _signo_to_signame(self.sigcaught)
-                LOG.info(_('Caught %s, stopping children'), signame)
-            if not _is_sighup_and_daemon(self.sigcaught):
-                break
+        try:
+            while True:
+                self.handle_signal()
+                self._respawn_children()
+                if self.sigcaught:
+                    signame = _signo_to_signame(self.sigcaught)
+                    LOG.info(_('Caught %s, stopping children'), signame)
+                if not _is_sighup_and_daemon(self.sigcaught):
+                    break
 
-            for pid in self.children:
-                os.kill(pid, signal.SIGHUP)
-            self.running = True
-            self.sigcaught = None
+                for pid in self.children:
+                    os.kill(pid, signal.SIGHUP)
+                self.running = True
+                self.sigcaught = None
+        except eventlet.greenlet.GreenletExit:
+            LOG.info(_("Wait called after thread killed.  Cleaning up."))
 
         for pid in self.children:
             try:
