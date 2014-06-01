@@ -863,74 +863,74 @@ class TestObjectSerializer(_BaseTestCase):
 # they come with a corresponding version bump in the affected
 # objects
 object_data = {
-    'Aggregate': '1.1-1d96b82d2f0ad66ad1d49313f08eca71',
-    'AggregateList': '1.1-dbb5bafde58c263c1fd132c33d68ba77',
-    'BlockDeviceMapping': '1.1-d44030deca25ebf8efcb4f3d12429677',
-    'BlockDeviceMappingList': '1.2-d0f559a2510ea2beab5478e5118a69f9',
-    'ComputeNode': '1.3-da09be1ff8b43f9889f2bb4e43b5686e',
-    'ComputeNodeList': '1.2-be44294fa7d0deef6146863836adb1e5',
-    'DNSDomain': '1.0-f0467d23e2c8b567469cdcd6a9708615',
-    'DNSDomainList': '1.0-47ffa72c29119d19fc8d3854ae49f094',
-    'FixedIP': '1.1-121f5e17f0e1a2115a6d93b80a158292',
-    'FixedIPList': '1.1-c944566e2e21af32432d7b7c35018831',
-    'Flavor': '1.0-4f0c857e5bf5627a40d04ba249f9e31b',
-    'FlavorList': '1.0-47ffa72c29119d19fc8d3854ae49f094',
-    'FloatingIP': '1.1-ee1245f7df59fcd081e3bffe3411e822',
-    'FloatingIPList': '1.1-a5c220af1c55f2aa3d2d14771bbca668',
-    'Instance': '1.13-552999d3072d5aa7b31493d3c2ee551e',
-    'InstanceAction': '1.1-abef7ec3247d587bdef78bf47744c6ee',
-    'InstanceActionEvent': '1.1-7c8b9daaf15615c90d6dcc2d26c2c3af',
-    'InstanceActionEventList': '1.0-6f8bfe29181b175400069c8a47f6e618',
-    'InstanceActionList': '1.0-d0f559a2510ea2beab5478e5118a69f9',
-    'InstanceExternalEvent': '1.0-c1b2be346d0ee670ebc0146c65859b1e',
-    'InstanceFault': '1.2-c85a5ecc4f4a82a26c9da95d947a719d',
-    'InstanceFaultList': '1.1-6e250b18ac45ea63a3478a4b365b009f',
-    'InstanceGroup': '1.6-c17ebff3c3453108370362a8f22b8d48',
-    'InstanceGroupList': '1.2-176452f4f090408eb1b9d631957f996b',
-    'InstanceInfoCache': '1.5-04937dde0e8409eb87bc04f3514736ba',
-    'InstanceList': '1.6-086b5de1c23af9e023fa10dd2e8c6a69',
-    'KeyPair': '1.1-30e67207cd4d0a3a044b5805f252a60c',
-    'KeyPairList': '1.0-ab564b050224c1945febb24ce84c9524',
-    'Migration': '1.1-c90e531ec87739decb31026c05100964',
-    'MigrationList': '1.1-add1d472f38ee759f9d717b9824e07a4',
-    'MyObj': '1.6-f441a9b820e323c45b92d66d2f9ebbf2',
-    'Network': '1.1-faba26d0290395456f9a040584c4364b',
-    'NetworkList': '1.1-eaafb55cf6b571581df685127cd687c1',
-    'OtherTestableObject': '1.0-b43ae164bcf53764db6a54270af71b86',
-    'PciDevice': '1.1-637f3dddb48197d2a69e41bd1144a3c5',
-    'PciDeviceList': '1.0-80491949ec8ac90cbbd1ea153adcb4ef',
-    'Quotas': '1.0-759987de0abbb6e4428bba7c6bdf8e9e',
-    'QuotasNoOp': '1.0-c25493f36b5df1d1f0a1077a610495cd',
-    'SecurityGroup': '1.1-0a71e19e0b5bd790e6bf882afcb71d4c',
-    'SecurityGroupList': '1.0-ae82c19e66b17d506e25f8d49576db1f',
-    'SecurityGroupRule': '1.0-96cdebd0294fd834e3e4249238c76eb9',
-    'SecurityGroupRuleList': '1.0-790df2265ff6d41794f60decdf9dd080',
-    'Service': '1.2-16a7d0f0d41e423deefb804ca2aeb51d',
-    'ServiceList': '1.0-35c5e3a116de08c1655d5fc3ecbe6549',
-    'TestableObject': '1.0-b43ae164bcf53764db6a54270af71b86',
-    'TestSubclassedObject': '1.6-cd6574f48c2bc3ccebe7306a06dfaa1c',
-    'VirtualInterface': '1.0-022c3e84a172f8302a0f8c4407bc92a2',
-    'VirtualInterfaceList': '1.0-59568968ee1ac0e796c7ebbf8354d65d',
-    'VolumeMapping': '1.0-b97464d4e338688d04a46d5c1740423d',
+    'Aggregate': '1.1-a8030eb9504298acd842f635f8bd2f19',
+    'AggregateList': '1.1-ca6711fddd7db09a8eae0caebe143b9b',
+    'BlockDeviceMapping': '1.1-c6c6666a794bf2001d11036b14077cd9',
+    'BlockDeviceMappingList': '1.2-f28e7d9d33cda3ff58f59bc1656e73e0',
+    'ComputeNode': '1.3-d7c5160fbbe8f4422dc5eaf9a60faad1',
+    'ComputeNodeList': '1.2-449b4b9dcaa8dbe753f81376a36e9174',
+    'DNSDomain': '1.0-b5dfe60928d40bc6ba0f4612bdc8a0d7',
+    'DNSDomainList': '1.0-55b701ff268087d7f2e07d4e354d0076',
+    'FixedIP': '1.1-a6ea086a0ff76012be20ffe7abd523e2',
+    'FixedIPList': '1.1-57fbf24a3e2d4e64468bc7f489979dbe',
+    'Flavor': '1.0-cb2a9f2358a251eb5e6558d79cc748fa',
+    'FlavorList': '1.0-55b701ff268087d7f2e07d4e354d0076',
+    'FloatingIP': '1.1-496f505556c9c88fbd8cd9c1a8aa8b59',
+    'FloatingIPList': '1.1-c143a4b3dd9dd20b7342832357be4d86',
+    'Instance': '1.13-a74dd3377293437f76ceee4dab7d9b47',
+    'InstanceAction': '1.1-8f924dba9a5642bad3863af504f82e81',
+    'InstanceActionEvent': '1.1-9839040ad484210e5edb144ab52d296d',
+    'InstanceActionEventList': '1.0-3dcae6acfa7314ba52cf339d148cae97',
+    'InstanceActionList': '1.0-f28e7d9d33cda3ff58f59bc1656e73e0',
+    'InstanceExternalEvent': '1.0-4e160b099f6bf7e9dd17260e6bcee8cd',
+    'InstanceFault': '1.2-08e9f3fa7d8ef74c274a473f1e095a1b',
+    'InstanceFaultList': '1.1-46ad861dfdbf45f4460c335399fdcb63',
+    'InstanceGroup': '1.6-5af0f1fa6431f9a0f921d54ad6aa3651',
+    'InstanceGroupList': '1.2-9b1860b3e271bd784b8fbf28d7c02b95',
+    'InstanceInfoCache': '1.5-8441f39115f464c532536f7f08135e58',
+    'InstanceList': '1.6-5a5dec483441c30690c113b44be1cdd7',
+    'KeyPair': '1.1-74a2ee5ae6d1fbbbbc9d604e609fe08f',
+    'KeyPairList': '1.0-abf31a4dc9638d97e8320077e923b534',
+    'Migration': '1.1-6a0e81e4499b3e3e012edfce2455bb7a',
+    'MigrationList': '1.1-905b96a278bce399e4fc5cf7229a8ba0',
+    'MyObj': '1.6-b765dab574b06771c6138da886107c31',
+    'Network': '1.1-5f52c5298b7239f70bff605a27dfd7d1',
+    'NetworkList': '1.1-26b404cf27eb2a88e5cbde2def7eef6a',
+    'OtherTestableObject': '1.0-4e160b099f6bf7e9dd17260e6bcee8cd',
+    'PciDevice': '1.1-9f3a2c36f5683901258bd521c476c34e',
+    'PciDeviceList': '1.0-a566a94a9cba14c3264de40e9f3efccd',
+    'Quotas': '1.0-cf15257c7bcef67d295fb7e24aa93ca5',
+    'QuotasNoOp': '1.0-4e160b099f6bf7e9dd17260e6bcee8cd',
+    'SecurityGroup': '1.1-f01f4d981a1fa46a50559550b22b07f4',
+    'SecurityGroupList': '1.0-78d23d61ddbf9eac1138150ee0e37621',
+    'SecurityGroupRule': '1.0-5be5bfb6813ebeea3f5ab2c9c2b66f5b',
+    'SecurityGroupRuleList': '1.0-c37d672f191c1856bba446ca34edefc8',
+    'Service': '1.2-63bce2b0f7e1a41d114f2d3370cc37e8',
+    'ServiceList': '1.0-78394f83d3fa72f9280a8428de1bf020',
+    'TestableObject': '1.0-4e160b099f6bf7e9dd17260e6bcee8cd',
+    'TestSubclassedObject': '1.6-b765dab574b06771c6138da886107c31',
+    'VirtualInterface': '1.0-afb878628a82a35f34cd0c8a398d8f14',
+    'VirtualInterfaceList': '1.0-2e00f527016c60964af11d313e9a0702',
+    'VolumeMapping': '1.0-5b7710b0e04810afeaad255387defe3a'
     }
 
 
 class TestObjectVersions(test.TestCase):
     def _get_fingerprint(self, obj_class):
         fields = obj_class.fields.items()
-        methods = {}
+        fields = fields.sort()
+        methods = []
         for name in dir(obj_class):
             thing = getattr(obj_class, name)
             if inspect.ismethod(thing) and hasattr(thing, 'remotable'):
-                methods[name] = inspect.getargspec(thing)
+                methods.append((name, inspect.getargspec(thing)))
+        methods.sort()
         # NOTE(danms): Things that need a version bump are any fields
         # and their types, or the signatures of any remotable methods.
         # Of course, these are just the mechanical changes we can detect,
         # but many other things may require a version bump (method behavior
         # and return value changes, for example).
-        relevant_data = {'fields': fields,
-                         'methods': methods,
-                         }
+        relevant_data = (fields, methods)
         return '%s-%s' % (obj_class.VERSION,
                           hashlib.md5(str(relevant_data)).hexdigest())
 
