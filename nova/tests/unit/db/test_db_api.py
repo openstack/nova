@@ -2106,6 +2106,96 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self.assertTrue(result[1]['cleaned'])
             self.assertFalse(result[0]['cleaned'])
 
+    def test_instance_get_all_by_filters_tag_any(self):
+        inst1 = self.create_instance_with_args()
+        inst2 = self.create_instance_with_args()
+        inst3 = self.create_instance_with_args()
+
+        t1 = 'tag1'
+        t2 = 'tag2'
+        t3 = 'tag3'
+
+        db.instance_tag_set(self.ctxt, inst1.uuid, [t1])
+        db.instance_tag_set(self.ctxt, inst2.uuid, [t1, t2, t3])
+        db.instance_tag_set(self.ctxt, inst3.uuid, [t3])
+
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'tag-any': [t1, t2]})
+        self._assertEqualListsOfObjects([inst1, inst2], result,
+                ignored_keys=['deleted', 'deleted_at', 'metadata', 'extra',
+                              'system_metadata', 'info_cache', 'pci_devices'])
+
+    def test_instance_get_all_by_filters_tag_any_empty(self):
+        inst1 = self.create_instance_with_args()
+        inst2 = self.create_instance_with_args()
+
+        t1 = 'tag1'
+        t2 = 'tag2'
+        t3 = 'tag3'
+        t4 = 'tag4'
+
+        db.instance_tag_set(self.ctxt, inst1.uuid, [t1])
+        db.instance_tag_set(self.ctxt, inst2.uuid, [t1, t2])
+
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'tag-any': [t3, t4]})
+        self.assertEqual([], result)
+
+    def test_instance_get_all_by_filters_tag(self):
+        inst1 = self.create_instance_with_args()
+        inst2 = self.create_instance_with_args()
+        inst3 = self.create_instance_with_args()
+
+        t1 = 'tag1'
+        t2 = 'tag2'
+        t3 = 'tag3'
+
+        db.instance_tag_set(self.ctxt, inst1.uuid, [t1, t3])
+        db.instance_tag_set(self.ctxt, inst2.uuid, [t1, t2])
+        db.instance_tag_set(self.ctxt, inst3.uuid, [t1, t2, t3])
+
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'tag': [t1, t2]})
+        self._assertEqualListsOfObjects([inst2, inst3], result,
+                ignored_keys=['deleted', 'deleted_at', 'metadata', 'extra',
+                              'system_metadata', 'info_cache', 'pci_devices'])
+
+    def test_instance_get_all_by_filters_tag_empty(self):
+        inst1 = self.create_instance_with_args()
+        inst2 = self.create_instance_with_args()
+
+        t1 = 'tag1'
+        t2 = 'tag2'
+        t3 = 'tag3'
+
+        db.instance_tag_set(self.ctxt, inst1.uuid, [t1])
+        db.instance_tag_set(self.ctxt, inst2.uuid, [t1, t2])
+
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'tag': [t3]})
+        self.assertEqual([], result)
+
+    def test_instance_get_all_by_filters_tag_any_and_tag(self):
+        inst1 = self.create_instance_with_args()
+        inst2 = self.create_instance_with_args()
+        inst3 = self.create_instance_with_args()
+
+        t1 = 'tag1'
+        t2 = 'tag2'
+        t3 = 'tag3'
+        t4 = 'tag4'
+
+        db.instance_tag_set(self.ctxt, inst1.uuid, [t1, t2])
+        db.instance_tag_set(self.ctxt, inst2.uuid, [t1, t2, t4])
+        db.instance_tag_set(self.ctxt, inst3.uuid, [t2, t3])
+
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'tag': [t1, t2],
+                                                 'tag-any': [t3, t4]})
+        self._assertEqualListsOfObjects([inst2], result,
+                ignored_keys=['deleted', 'deleted_at', 'metadata', 'extra',
+                              'system_metadata', 'info_cache', 'pci_devices'])
+
     def test_instance_get_all_by_host_and_node_no_join(self):
         instance = self.create_instance_with_args()
         result = db.instance_get_all_by_host_and_node(self.ctxt, 'h1', 'n1')
