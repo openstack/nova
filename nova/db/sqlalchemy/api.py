@@ -1597,6 +1597,12 @@ def _handle_objects_related_type_conversions(values):
     convert_objects_related_datetimes(values, *datetime_keys)
 
 
+def _check_instance_exists(context, session, instance_uuid):
+    if not model_query(context, models.Instance, session=session,
+                       read_deleted="no").first():
+        raise exception.InstanceNotFound(instance_id=instance_uuid)
+
+
 @require_context
 def instance_create(context, values):
     """Create a new Instance record in the database.
@@ -5826,6 +5832,12 @@ def _get_default_deleted_value(table):
     # of SQLAlchemy 0.7.  0.8 has better introspection APIs, which we should
     # use when Nova is ready to require 0.8.
 
+    # NOTE(snikitin): We have one table (tags) which is not
+    # subclass of NovaBase. That is way this table does not contain
+    # column 'deleted'
+    if 'deleted' not in table.c:
+        return
+
     # NOTE(mikal): this is a little confusing. This method returns the value
     # that a _not_deleted_ row would have.
     deleted_column_type = table.c.deleted.type
@@ -6298,3 +6310,78 @@ def pci_device_update(context, node_id, address, values):
         device.update(values)
         session.add(device)
     return device
+
+
+####################
+
+
+def instance_tag_add(context, instance_uuid, tag):
+    session = get_session()
+
+    tag_ref = models.Tag()
+    tag_ref.resource_id = instance_uuid
+    tag_ref.tag = tag
+
+    try:
+        with session.begin(subtransactions=True):
+            _check_instance_exists(context, session, instance_uuid)
+            session.add(tag_ref)
+    except db_exc.DBDuplicateEntry:
+        # NOTE(snikitin): We should ignore tags duplicates
+        pass
+
+    return tag_ref
+
+
+def instance_tag_set(context, instance_uuid, tags):
+    session = get_session()
+
+    with session.begin(subtransactions=True):
+        _check_instance_exists(context, session, instance_uuid)
+
+        existing = session.query(models.Tag.tag).filter_by(
+            resource_id=instance_uuid).all()
+
+        existing = set(row.tag for row in existing)
+        tags = set(tags)
+        to_delete = existing - tags
+        to_add = tags - existing
+
+        session.query(models.Tag).filter_by(resource_id=instance_uuid).filter(
+            models.Tag.tag.in_(to_delete)).delete(synchronize_session=False)
+
+        data = [{'resource_id': instance_uuid, 'tag': tag} for tag in to_add]
+        session.execute(models.Tag.__table__.insert(), data)
+
+        return session.query(models.Tag).filter_by(
+            resource_id=instance_uuid).all()
+
+
+def instance_tag_get_by_instance_uuid(context, instance_uuid):
+    session = get_session()
+
+    with session.begin(subtransactions=True):
+        _check_instance_exists(context, session, instance_uuid)
+        return session.query(models.Tag).filter_by(
+            resource_id=instance_uuid).all()
+
+
+def instance_tag_delete(context, instance_uuid, tag):
+    session = get_session()
+
+    with session.begin(subtransactions=True):
+        _check_instance_exists(context, session, instance_uuid)
+        result = session.query(models.Tag).filter_by(
+            resource_id=instance_uuid, tag=tag).delete()
+
+        if not result:
+            raise exception.InstanceTagNotFound(instance_id=instance_uuid,
+                                                tag=tag)
+
+
+def instance_tag_delete_all(context, instance_uuid):
+    session = get_session()
+
+    with session.begin(subtransactions=True):
+        _check_instance_exists(context, session, instance_uuid)
+        session.query(models.Tag).filter_by(resource_id=instance_uuid).delete()

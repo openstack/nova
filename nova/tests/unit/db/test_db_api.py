@@ -6938,6 +6938,12 @@ class ArchiveTestCase(test.TestCase):
             if table_name.startswith("dump_"):
                 continue
 
+            # NOTE(snikitin): migration 266 introduced a new table 'tags',
+            #                 which have no shadow table and it's
+            #                 completely OK, so we should skip it here
+            if table_name == 'tags':
+                continue
+
             if table_name.startswith("shadow_"):
                 self.assertIn(table_name[7:], metadata.tables)
                 continue
@@ -7704,3 +7710,184 @@ class TestMySQLSqlalchemyTypesRepr(TestSqlalchemyTypesRepr,
 class TestPostgreSQLSqlalchemyTypesRepr(TestSqlalchemyTypesRepr,
         test_base.PostgreSQLOpportunisticTestCase):
     pass
+
+
+class TestDBInstanceTags(test.TestCase):
+
+    sample_data = {
+        'project_id': 'project1',
+        'hostname': 'example.com',
+        'host': 'h1',
+        'node': 'n1',
+        'metadata': {'mkey1': 'mval1', 'mkey2': 'mval2'},
+        'system_metadata': {'smkey1': 'smval1', 'smkey2': 'smval2'},
+        'info_cache': {'ckey': 'cvalue'}
+    }
+
+    def setUp(self):
+        super(TestDBInstanceTags, self).setUp()
+        self.user_id = 'user1'
+        self.project_id = 'project1'
+        self.context = context.RequestContext(self.user_id, self.project_id)
+
+    def _create_instance(self):
+        inst = db.instance_create(self.context, self.sample_data)
+        return inst['uuid']
+
+    def _get_tags_from_resp(self, tag_refs):
+        return [(t.resource_id, t.tag) for t in tag_refs]
+
+    def test_instance_tag_add(self):
+        uuid = self._create_instance()
+
+        tag = 'tag'
+        tag_ref = db.instance_tag_add(self.context, uuid, tag)
+        self.assertEqual(uuid, tag_ref.resource_id)
+        self.assertEqual(tag, tag_ref.tag)
+
+        tag_refs = db.instance_tag_get_by_instance_uuid(self.context, uuid)
+
+        # Check the tag for the instance was added
+        tags = self._get_tags_from_resp(tag_refs)
+        self.assertEqual([(uuid, tag)], tags)
+
+    def test_instance_tag_add_duplication(self):
+        uuid = self._create_instance()
+        tag = 'tag'
+
+        for x in xrange(5):
+            db.instance_tag_add(self.context, uuid, tag)
+
+        tag_refs = db.instance_tag_get_by_instance_uuid(self.context, uuid)
+
+        # Check the only one tag for the instance was added
+        tags = self._get_tags_from_resp(tag_refs)
+        self.assertEqual([(uuid, tag)], tags)
+
+    def test_instance_tag_set(self):
+        uuid = self._create_instance()
+
+        tag1 = 'tag1'
+        tag2 = 'tag2'
+        tag3 = 'tag3'
+        tag4 = 'tag4'
+
+        # Set tags to the instance
+        db.instance_tag_set(self.context, uuid, [tag1, tag2])
+        tag_refs = db.instance_tag_get_by_instance_uuid(self.context, uuid)
+
+        # Check the tags for the instance were set
+        tags = self._get_tags_from_resp(tag_refs)
+        expected = [(uuid, tag1), (uuid, tag2)]
+        self.assertEqual(expected, tags)
+
+        # Set new tags to the instance
+        db.instance_tag_set(self.context, uuid, [tag3, tag4, tag2])
+        tag_refs = db.instance_tag_get_by_instance_uuid(self.context, uuid)
+
+        # Check the tags for the instance were replaced
+        tags = self._get_tags_from_resp(tag_refs)
+        expected = [(uuid, tag3), (uuid, tag4), (uuid, tag2)]
+        self.assertEqual(set(expected), set(tags))
+
+    def test_instance_tag_get_by_instance_uuid(self):
+        uuid1 = self._create_instance()
+        uuid2 = self._create_instance()
+
+        tag1 = 'tag1'
+        tag2 = 'tag2'
+        tag3 = 'tag3'
+
+        db.instance_tag_add(self.context, uuid1, tag1)
+        db.instance_tag_add(self.context, uuid2, tag1)
+        db.instance_tag_add(self.context, uuid2, tag2)
+        db.instance_tag_add(self.context, uuid2, tag3)
+
+        # Check the tags for the first instance
+        tag_refs = db.instance_tag_get_by_instance_uuid(self.context, uuid1)
+        tags = self._get_tags_from_resp(tag_refs)
+        expected = [(uuid1, tag1)]
+
+        self.assertEqual(expected, tags)
+
+        # Check the tags for the second instance
+        tag_refs = db.instance_tag_get_by_instance_uuid(self.context, uuid2)
+        tags = self._get_tags_from_resp(tag_refs)
+        expected = [(uuid2, tag1), (uuid2, tag2), (uuid2, tag3)]
+
+        self.assertEqual(expected, tags)
+
+    def test_instance_tag_get_by_instance_uuid_no_tags(self):
+        uuid = self._create_instance()
+        self.assertEqual([], db.instance_tag_get_by_instance_uuid(self.context,
+                                                                  uuid))
+
+    def test_instance_tag_delete(self):
+        uuid = self._create_instance()
+        tag1 = 'tag1'
+        tag2 = 'tag2'
+
+        db.instance_tag_add(self.context, uuid, tag1)
+        db.instance_tag_add(self.context, uuid, tag2)
+
+        tag_refs = db.instance_tag_get_by_instance_uuid(self.context, uuid)
+        tags = self._get_tags_from_resp(tag_refs)
+        expected = [(uuid, tag1), (uuid, tag2)]
+
+        # Check the tags for the instance were added
+        self.assertEqual(expected, tags)
+
+        db.instance_tag_delete(self.context, uuid, tag1)
+
+        tag_refs = db.instance_tag_get_by_instance_uuid(self.context, uuid)
+        tags = self._get_tags_from_resp(tag_refs)
+        expected = [(uuid, tag2)]
+        self.assertEqual(expected, tags)
+
+    def test_instance_tag_delete_non_existent(self):
+        uuid = self._create_instance()
+        self.assertRaises(exception.InstanceTagNotFound,
+                          db.instance_tag_delete, self.context, uuid, 'tag')
+
+    def test_instance_tag_delete_all(self):
+        uuid = self._create_instance()
+        tag1 = 'tag1'
+        tag2 = 'tag2'
+
+        db.instance_tag_add(self.context, uuid, tag1)
+        db.instance_tag_add(self.context, uuid, tag2)
+
+        tag_refs = db.instance_tag_get_by_instance_uuid(self.context, uuid)
+        tags = self._get_tags_from_resp(tag_refs)
+        expected = [(uuid, tag1), (uuid, tag2)]
+
+        # Check the tags for the instance were added
+        self.assertEqual(expected, tags)
+
+        db.instance_tag_delete_all(self.context, uuid)
+
+        tag_refs = db.instance_tag_get_by_instance_uuid(self.context, uuid)
+        tags = self._get_tags_from_resp(tag_refs)
+        self.assertEqual([], tags)
+
+    def test_instance_tag_add_to_non_existing_instance(self):
+        self.assertRaises(exception.InstanceNotFound, db.instance_tag_add,
+                          self.context, 'fake_uuid', 'tag')
+
+    def test_instance_tag_set_to_non_existing_instance(self):
+        self.assertRaises(exception.InstanceNotFound, db.instance_tag_set,
+                          self.context, 'fake_uuid', ['tag1', 'tag2'])
+
+    def test_instance_tag_get_from_non_existing_instance(self):
+        self.assertRaises(exception.InstanceNotFound,
+                          db.instance_tag_get_by_instance_uuid, self.context,
+                          'fake_uuid')
+
+    def test_instance_tag_delete_from_non_existing_instance(self):
+        self.assertRaises(exception.InstanceNotFound, db.instance_tag_delete,
+                          self.context, 'fake_uuid', 'tag')
+
+    def test_instance_tag_delete_all_from_non_existing_instance(self):
+        self.assertRaises(exception.InstanceNotFound,
+                          db.instance_tag_delete_all,
+                          self.context, 'fake_uuid')
