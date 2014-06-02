@@ -655,7 +655,7 @@ class ComputeTaskManager(base.Base):
     may involve coordinating activities on multiple compute nodes.
     """
 
-    target = messaging.Target(namespace='compute_task', version='1.6')
+    target = messaging.Target(namespace='compute_task', version='1.7')
 
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
@@ -794,7 +794,9 @@ class ComputeTaskManager(base.Base):
 
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,
-            security_groups, block_device_mapping, legacy_bdm=True):
+            security_groups, block_device_mapping=None, legacy_bdm=True):
+        # TODO(ndipanov): Remove block_device_mapping and legacy_bdm in version
+        #                 2.0 of the RPC API.
         request_spec = scheduler_utils.build_request_spec(context, image,
                                                           instances)
         try:

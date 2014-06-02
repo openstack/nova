@@ -371,6 +371,7 @@ class ComputeTaskAPI(object):
     1.4 - Added reservations to migrate_server.
     1.5 - Added the leagacy_bdm parameter to build_instances
     1.6 - Made migrate_server use instance objects
+    1.7 - Do not send block_device_mapping and legacy_bdm to build_instances
     """
 
     def __init__(self):
@@ -403,16 +404,21 @@ class ComputeTaskAPI(object):
             admin_password, injected_files, requested_networks,
             security_groups, block_device_mapping, legacy_bdm=True):
         image_p = jsonutils.to_primitive(image)
-        cctxt = self.client.prepare(version='1.5')
-        cctxt.cast(context, 'build_instances',
-                   instances=instances, image=image_p,
-                   filter_properties=filter_properties,
-                   admin_password=admin_password,
-                   injected_files=injected_files,
-                   requested_networks=requested_networks,
-                   security_groups=security_groups,
-                   block_device_mapping=block_device_mapping,
-                   legacy_bdm=legacy_bdm)
+        kw = {'instances': instances, 'image': image_p,
+               'filter_properties': filter_properties,
+               'admin_password': admin_password,
+               'injected_files': injected_files,
+               'requested_networks': requested_networks,
+               'security_groups': security_groups}
+
+        if self.client.can_send_version('1.7'):
+            version = '1.7'
+        else:
+            version = '1.5'
+            kw.update({'block_device_mapping': block_device_mapping,
+                       'legacy_bdm': legacy_bdm})
+        cctxt = self.client.prepare(version=version)
+        cctxt.cast(context, 'build_instances', **kw)
 
     def unshelve_instance(self, context, instance):
         cctxt = self.client.prepare(version='1.3')
