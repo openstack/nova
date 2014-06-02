@@ -78,6 +78,14 @@ class Host(object):
         pass
 
 
+def _get_ds_capacity_and_freespace(session, cluster=None):
+    try:
+        ds = vm_util.get_datastore(session, cluster)
+        return ds.capacity, ds.freespace
+    except exception.DatastoreNotFound:
+        return 0, 0
+
+
 class HostState(object):
     """Manages information about the ESX host this compute
     node is running on.
@@ -110,10 +118,7 @@ class HostState(object):
         if summary is None:
             return
 
-        try:
-            ds = vm_util.get_datastore_ref_and_name(self._session)
-        except exception.DatastoreNotFound:
-            ds = (None, None, 0, 0)
+        capacity, freespace = _get_ds_capacity_and_freespace(self._session)
 
         data = {}
         data["vcpus"] = summary.hardware.numCpuThreads
@@ -124,8 +129,8 @@ class HostState(object):
                               "sockets": summary.hardware.numCpuPkgs,
                               "threads": summary.hardware.numCpuThreads}
                 }
-        data["disk_total"] = ds[2] / units.Gi
-        data["disk_available"] = ds[3] / units.Gi
+        data["disk_total"] = capacity / units.Gi
+        data["disk_available"] = freespace / units.Gi
         data["disk_used"] = data["disk_total"] - data["disk_available"]
         data["host_memory_total"] = summary.hardware.memorySize / units.Mi
         data["host_memory_free"] = data["host_memory_total"] - \
@@ -163,12 +168,8 @@ class VCState(object):
 
     def update_status(self):
         """Update the current state of the cluster."""
-        # Get the datastore in the cluster
-        try:
-            ds = vm_util.get_datastore_ref_and_name(self._session,
-                                                    self._cluster)
-        except exception.DatastoreNotFound:
-            ds = (None, None, 0, 0)
+        capacity, freespace = _get_ds_capacity_and_freespace(self._session,
+                                                             self._cluster)
 
         # Get cpu, memory stats from the cluster
         stats = vm_util.get_stats_from_cluster(self._session, self._cluster)
@@ -179,8 +180,8 @@ class VCState(object):
                             "model": stats['cpu']['model'],
                             "topology": {"cores": stats['cpu']['cores'],
                                          "threads": stats['cpu']['vcpus']}}
-        data["disk_total"] = ds[2] / units.Gi
-        data["disk_available"] = ds[3] / units.Gi
+        data["disk_total"] = capacity / units.Gi
+        data["disk_available"] = freespace / units.Gi
         data["disk_used"] = data["disk_total"] - data["disk_available"]
         data["host_memory_total"] = stats['mem']['total']
         data["host_memory_free"] = stats['mem']['free']

@@ -18,7 +18,6 @@
 The VMware API VM utility module to build SOAP object specs.
 """
 
-import collections
 import copy
 import functools
 
@@ -40,8 +39,6 @@ LOG = logging.getLogger(__name__)
 ALL_SUPPORTED_NETWORK_DEVICES = ['VirtualE1000', 'VirtualE1000e',
                                  'VirtualPCNet32', 'VirtualSriovEthernetCard',
                                  'VirtualVmxnet']
-DSRecord = collections.namedtuple(
-    'DSRecord', ['datastore', 'name', 'capacity', 'freespace'])
 
 # A cache for VM references. The key will be the VM name
 # and the value is the VM reference. The VM name is unique. This
@@ -1032,29 +1029,20 @@ def _select_datastore(data_stores, best_match, datastore_regex=None):
         if ((ds_type == 'VMFS' or ds_type == 'NFS') and
                 propdict.get('summary.accessible')):
             if datastore_regex is None or datastore_regex.match(ds_name):
-                new_ds = DSRecord(
-                    datastore=obj_content.obj,
+                new_ds = ds_util.Datastore(
+                    ref=obj_content.obj,
                     name=ds_name,
                     capacity=propdict['summary.capacity'],
                     freespace=propdict['summary.freeSpace'])
                 # favor datastores with more free space
-                if new_ds.freespace > best_match.freespace:
+                if (best_match is None or
+                    new_ds.freespace > best_match.freespace):
                     best_match = new_ds
 
     return best_match
 
 
 def get_datastore(session, cluster=None, host=None, datastore_regex=None):
-    # TODO(hartsocks): refactor get_datastore_ref_and_name and Datastore object
-    # such that this does not need to exist and the Datastore object holds the
-    # correct values pulled in by dynamic properties calls.
-    # Look to move to ds_util module.
-    ds = get_datastore_ref_and_name(session, cluster, host, datastore_regex)
-    return ds_util.Datastore(ds[0], ds[1])
-
-
-def get_datastore_ref_and_name(session, cluster=None, host=None,
-                               datastore_regex=None):
     """Get the datastore list and choose the most preferable one."""
     if cluster is None and host is None:
         data_stores = session._call_method(vim_util, "get_objects",
@@ -1082,8 +1070,7 @@ def get_datastore_ref_and_name(session, cluster=None, host=None,
                                 ["summary.type", "summary.name",
                                  "summary.capacity", "summary.freeSpace",
                                  "summary.accessible"])
-    best_match = DSRecord(datastore=None, name=None,
-                          capacity=None, freespace=0)
+    best_match = None
     while data_stores:
         best_match = _select_datastore(data_stores, best_match,
                                        datastore_regex)
@@ -1093,7 +1080,7 @@ def get_datastore_ref_and_name(session, cluster=None, host=None,
         data_stores = session._call_method(vim_util,
                                            "continue_to_get_objects",
                                            token)
-    if best_match.datastore:
+    if best_match:
         return best_match
     if datastore_regex:
         raise exception.DatastoreNotFound(
