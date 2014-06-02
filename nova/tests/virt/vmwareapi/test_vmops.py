@@ -522,3 +522,17 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             # we don't care what the log message is, we just want to make sure
             # our stub method is called which asserts the password is scrubbed
             self.assertTrue(debug_mock.called)
+
+    def test_get_ds_browser(self):
+        cache = self._vmops._datastore_browser_mapping
+        ds_browser = mock.Mock()
+        moref = vmwareapi_fake.ManagedObjectReference('datastore-100')
+        self.assertIsNone(cache.get(moref.value))
+        mock_call_method = mock.Mock(return_value=ds_browser)
+        with mock.patch.object(self._session, '_call_method',
+                               mock_call_method):
+            ret = self._vmops._get_ds_browser(moref)
+            mock_call_method.assert_called_once_with(vim_util,
+                'get_dynamic_property', moref, 'Datastore', 'browser')
+            self.assertIs(ds_browser, ret)
+            self.assertIs(ds_browser, cache.get(moref.value))
