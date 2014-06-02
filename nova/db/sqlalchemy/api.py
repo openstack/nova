@@ -2868,6 +2868,68 @@ def quota_update(context, project_id, resource, limit, user_id=None):
 
 
 @require_context
+def quota_class_get(context, class_name, resource):
+    result = model_query(context, models.QuotaClass, read_deleted="no").\
+                     filter_by(class_name=class_name).\
+                     filter_by(resource=resource).\
+                     first()
+
+    if not result:
+        raise exception.QuotaClassNotFound(class_name=class_name)
+
+    return result
+
+
+def quota_class_get_default(context):
+    rows = model_query(context, models.QuotaClass, read_deleted="no").\
+                   filter_by(class_name=_DEFAULT_QUOTA_NAME).\
+                   all()
+
+    result = {'class_name': _DEFAULT_QUOTA_NAME}
+    for row in rows:
+        result[row.resource] = row.hard_limit
+
+    return result
+
+
+@require_context
+def quota_class_get_all_by_name(context, class_name):
+    rows = model_query(context, models.QuotaClass, read_deleted="no").\
+                   filter_by(class_name=class_name).\
+                   all()
+
+    result = {'class_name': class_name}
+    for row in rows:
+        result[row.resource] = row.hard_limit
+
+    return result
+
+
+@require_admin_context
+def quota_class_create(context, class_name, resource, limit):
+    quota_class_ref = models.QuotaClass()
+    quota_class_ref.class_name = class_name
+    quota_class_ref.resource = resource
+    quota_class_ref.hard_limit = limit
+    quota_class_ref.save()
+    return quota_class_ref
+
+
+@require_admin_context
+def quota_class_update(context, class_name, resource, limit):
+    result = model_query(context, models.QuotaClass, read_deleted="no").\
+                     filter_by(class_name=class_name).\
+                     filter_by(resource=resource).\
+                     update({'hard_limit': limit})
+
+    if not result:
+        raise exception.QuotaClassNotFound(class_name=class_name)
+
+
+###################
+
+
+@require_context
 def quota_usage_get(context, project_id, resource, user_id=None):
     query = model_query(context, models.QuotaUsage, read_deleted="no").\
                      filter_by(project_id=project_id).\
