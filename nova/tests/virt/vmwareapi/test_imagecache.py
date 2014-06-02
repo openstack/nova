@@ -104,26 +104,18 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         self.assertEqual(self._time, t)
 
     def test_get_ds_browser(self):
-        def fake_get_dynamic_property(vim, mobj, type, property_name):
-            self.assertEqual('Datastore', type)
-            self.assertEqual('browser', property_name)
-            self.fake_called += 1
-            return 'fake-ds-browser'
-
-        with contextlib.nested(
-            mock.patch.object(vim_util, 'get_dynamic_property',
-                              fake_get_dynamic_property)
-        ) as _get_dynamic:
-            self.fake_called = 0
-            self.assertEqual({}, self._imagecache._ds_browser)
-            browser = self._imagecache._get_ds_browser('fake-ds-ref')
-            self.assertEqual('fake-ds-browser', browser)
-            self.assertEqual({'fake-ds-ref': 'fake-ds-browser'},
-                             self._imagecache._ds_browser)
-            self.assertEqual(1, self.fake_called)
-            browser = self._imagecache._get_ds_browser('fake-ds-ref')
-            self.assertEqual('fake-ds-browser', browser)
-            self.assertEqual(1, self.fake_called)
+        cache = self._imagecache._ds_browser
+        ds_browser = mock.Mock()
+        moref = fake.ManagedObjectReference('datastore-100')
+        self.assertIsNone(cache.get(moref.value))
+        mock_get_method = mock.Mock(return_value=ds_browser)
+        with mock.patch.object(vim_util, 'get_dynamic_property',
+                               mock_get_method):
+            ret = self._imagecache._get_ds_browser(moref)
+            mock_get_method.assert_called_once_with(mock.ANY, moref,
+                                                    'Datastore', 'browser')
+            self.assertIs(ds_browser, ret)
+            self.assertIs(ds_browser, cache.get(moref.value))
 
     def test_list_base_images(self):
         def fake_get_dynamic_property(vim, mobj, type, property_name):
@@ -140,7 +132,8 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             mock.patch.object(ds_util, 'get_sub_folders',
                               fake_get_sub_folders)
         ) as (_get_dynamic, _get_sub_folders):
-            datastore = {'name': 'ds', 'ref': 'fake-ds-ref'}
+            fake_ds_ref = fake.ManagedObjectReference('fake-ds-ref')
+            datastore = {'name': 'ds', 'ref': fake_ds_ref}
             ds_path = ds_util.build_datastore_path(datastore['name'],
                                                    'base_folder')
             images = self._imagecache._list_datastore_images(

@@ -1550,12 +1550,12 @@ class VMwareVMOps(object):
                   instance=instance)
 
     def _get_ds_browser(self, ds_ref):
-        ds_browser = self._datastore_browser_mapping.get(ds_ref)
+        ds_browser = self._datastore_browser_mapping.get(ds_ref.value)
         if not ds_browser:
             ds_browser = self._session._call_method(
                 vim_util, "get_dynamic_property", ds_ref, "Datastore",
                 "browser")
-            self._datastore_browser_mapping[ds_ref] = ds_browser
+            self._datastore_browser_mapping[ds_ref.value] = ds_browser
         return ds_browser
 
     def get_datacenter_ref_and_name(self, ds_ref):
