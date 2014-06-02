@@ -505,6 +505,12 @@ class ObjectListBase(object):
     # requested of the list object.
     child_versions = {}
 
+    def __init__(self, *args, **kwargs):
+        super(ObjectListBase, self).__init__(*args, **kwargs)
+        if 'objects' not in kwargs:
+            self.objects = []
+            self._changed_fields.discard('objects')
+
     def __iter__(self):
         """List iterator interface."""
         return iter(self.objects)
