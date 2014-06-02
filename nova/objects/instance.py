@@ -37,7 +37,7 @@ LOG = logging.getLogger(__name__)
 # List of fields that can be joined in DB layer.
 _INSTANCE_OPTIONAL_JOINED_FIELDS = ['metadata', 'system_metadata',
                                     'info_cache', 'security_groups',
-                                    'pci_devices']
+                                    'pci_devices', 'tags']
 # These are fields that are optional but don't translate to db columns
 _INSTANCE_OPTIONAL_NON_COLUMN_FIELDS = ['fault']
 # These are fields that are optional and in instance_extra
@@ -86,7 +86,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
     # Version 1.14: Added numa_topology
     # Version 1.15: PciDeviceList 1.1
     # Version 1.16: Added pci_requests
-    VERSION = '1.16'
+    # Version 1.17: Added tags
+    VERSION = '1.17'
 
     fields = {
         'id': fields.IntegerField(),
@@ -176,6 +177,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                                             nullable=True),
         'pci_requests': fields.ObjectField('InstancePCIRequests',
                                            nullable=True),
+        'tags': fields.ObjectField('TagList'),
         }
 
     obj_extra_fields = ['name']
@@ -248,6 +250,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                 del primitive['pci_devices']
         if target_version < (1, 16) and 'pci_requests' in primitive:
             del primitive['pci_requests']
+        if target_version < (1, 17):
+            # NOTE(snikitin): Before 1.17 there was no tags list
+            if 'tags' in primitive:
+                del primitive['tags']
 
     @property
     def name(self):
@@ -332,6 +338,12 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                     context, objects.SecurityGroupList(context),
                     objects.SecurityGroup, db_inst['security_groups'])
             instance['security_groups'] = sec_groups
+
+        if 'tags' in expected_attrs:
+            tags = base.obj_make_list(
+                context, objects.TagList(context),
+                objects.Tag, db_inst['tags'])
+            instance['tags'] = tags
 
         instance.obj_reset_changes()
         return instance
@@ -715,7 +727,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.10: Instance <= version 1.16
     # Version 1.11: Added sort_keys and sort_dirs to get_by_filters
     # Version 1.12: Pass expected_attrs to instance_get_active_by_window_joined
-    VERSION = '1.12'
+    # Version 1.13: Instance <= version 1.17
+    VERSION = '1.13'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -734,6 +747,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         '1.10': '1.16',
         '1.11': '1.16',
         '1.12': '1.16',
+        '1.13': '1.17',
         }
 
     @base.remotable_classmethod
