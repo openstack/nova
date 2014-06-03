@@ -40,22 +40,22 @@ class AdminTokenStore(object):
 
 def _get_client(token=None, admin=False):
     params = {
-        'endpoint_url': CONF.neutron_url,
-        'timeout': CONF.neutron_url_timeout,
-        'insecure': CONF.neutron_api_insecure,
-        'ca_cert': CONF.neutron_ca_certificates_file,
-        'auth_strategy': CONF.neutron_auth_strategy,
+        'endpoint_url': CONF.neutron.url,
+        'timeout': CONF.neutron.url_timeout,
+        'insecure': CONF.neutron.api_insecure,
+        'ca_cert': CONF.neutron.ca_certificates_file,
+        'auth_strategy': CONF.neutron.auth_strategy,
         'token': token,
     }
 
     if admin:
-        params['username'] = CONF.neutron_admin_username
-        if CONF.neutron_admin_tenant_id:
-            params['tenant_id'] = CONF.neutron_admin_tenant_id
+        params['username'] = CONF.neutron.admin_username
+        if CONF.neutron.admin_tenant_id:
+            params['tenant_id'] = CONF.neutron.admin_tenant_id
         else:
-            params['tenant_name'] = CONF.neutron_admin_tenant_name
-        params['password'] = CONF.neutron_admin_password
-        params['auth_url'] = CONF.neutron_admin_auth_url
+            params['tenant_name'] = CONF.neutron.admin_tenant_name
+        params['password'] = CONF.neutron.admin_password
+        params['auth_url'] = CONF.neutron.admin_auth_url
     return clientv20.Client(**params)
 
 

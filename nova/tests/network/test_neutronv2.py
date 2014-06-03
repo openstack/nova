@@ -94,17 +94,17 @@ class MyComparator(mox.Comparator):
 
 class TestNeutronClient(test.TestCase):
     def test_withtoken(self):
-        self.flags(neutron_url='http://anyhost/')
-        self.flags(neutron_url_timeout=30)
+        self.flags(url='http://anyhost/', group='neutron')
+        self.flags(url_timeout=30, group='neutron')
         my_context = context.RequestContext('userid',
                                             'my_tenantid',
                                             auth_token='token')
         self.mox.StubOutWithMock(client.Client, "__init__")
         client.Client.__init__(
-            auth_strategy=CONF.neutron_auth_strategy,
-            endpoint_url=CONF.neutron_url,
+            auth_strategy=CONF.neutron.auth_strategy,
+            endpoint_url=CONF.neutron.url,
             token=my_context.auth_token,
-            timeout=CONF.neutron_url_timeout,
+            timeout=CONF.neutron.url_timeout,
             insecure=False,
             ca_cert=None).AndReturn(None)
         self.mox.ReplayAll()
@@ -117,18 +117,18 @@ class TestNeutronClient(test.TestCase):
                           my_context)
 
     def test_withtoken_context_is_admin(self):
-        self.flags(neutron_url='http://anyhost/')
-        self.flags(neutron_url_timeout=30)
+        self.flags(url='http://anyhost/', group='neutron')
+        self.flags(url_timeout=30, group='neutron')
         my_context = context.RequestContext('userid',
                                             'my_tenantid',
                                             auth_token='token',
                                             is_admin=True)
         self.mox.StubOutWithMock(client.Client, "__init__")
         client.Client.__init__(
-            auth_strategy=CONF.neutron_auth_strategy,
-            endpoint_url=CONF.neutron_url,
+            auth_strategy=CONF.neutron.auth_strategy,
+            endpoint_url=CONF.neutron.url,
             token=my_context.auth_token,
-            timeout=CONF.neutron_url_timeout,
+            timeout=CONF.neutron.url_timeout,
             insecure=False,
             ca_cert=None).AndReturn(None)
         self.mox.ReplayAll()
@@ -138,16 +138,16 @@ class TestNeutronClient(test.TestCase):
         neutronv2.get_client(my_context)
 
     def test_withouttoken_keystone_connection_error(self):
-        self.flags(neutron_auth_strategy='keystone')
-        self.flags(neutron_url='http://anyhost/')
+        self.flags(auth_strategy='keystone', group='neutron')
+        self.flags(url='http://anyhost/', group='neutron')
         my_context = context.RequestContext('userid', 'my_tenantid')
         self.assertRaises(NEUTRON_CLIENT_EXCEPTION,
                           neutronv2.get_client,
                           my_context)
 
     def test_reuse_admin_token(self):
-        self.flags(neutron_url='http://anyhost/')
-        self.flags(neutron_url_timeout=30)
+        self.flags(url='http://anyhost/', group='neutron')
+        self.flags(url_timeout=30, group='neutron')
         token_store = neutronv2.AdminTokenStore.get()
         token_store.admin_auth_token = 'new_token'
         my_context = context.RequestContext('userid', 'my_tenantid',
@@ -166,8 +166,8 @@ class TestNeutronClient(test.TestCase):
             self.assertEqual('new_token1', token_store.admin_auth_token)
 
     def test_admin_token_updated(self):
-        self.flags(neutron_url='http://anyhost/')
-        self.flags(neutron_url_timeout=30)
+        self.flags(url='http://anyhost/', group='neutron')
+        self.flags(url_timeout=30, group='neutron')
         token_store = neutronv2.AdminTokenStore.get()
         token_store.admin_auth_token = 'new_token'
         tokens = [{'auth_token': 'new_token1'}, {'auth_token': 'new_token'}]
@@ -2038,7 +2038,7 @@ class TestNeutronv2(TestNeutronv2Base):
 
     def test_nw_info_build_network_ovs(self):
         net, iid = self._test_nw_info_build_network(model.VIF_TYPE_OVS)
-        self.assertEqual(net['bridge'], CONF.neutron_ovs_bridge)
+        self.assertEqual(net['bridge'], CONF.neutron.ovs_bridge)
         self.assertNotIn('should_create_bridge', net)
         self.assertEqual(iid, 'port-id')
 
@@ -2439,11 +2439,11 @@ class TestNeutronClientForAdminScenarios(test.TestCase):
         def client_mock(*args, **kwargs):
             client.Client.httpclient = mock.MagicMock()
 
-        self.flags(neutron_auth_strategy=None)
-        self.flags(neutron_url='http://anyhost/')
-        self.flags(neutron_url_timeout=30)
+        self.flags(auth_strategy=None, group='neutron')
+        self.flags(url='http://anyhost/', group='neutron')
+        self.flags(url_timeout=30, group='neutron')
         if use_id:
-            self.flags(neutron_admin_tenant_id='admin_tenant_id')
+            self.flags(admin_tenant_id='admin_tenant_id', group='neutron')
 
         if admin_context:
             my_context = context.get_admin_context()
@@ -2452,19 +2452,19 @@ class TestNeutronClientForAdminScenarios(test.TestCase):
                                             auth_token='token')
         self.mox.StubOutWithMock(client.Client, "__init__")
         kwargs = {
-            'auth_url': CONF.neutron_admin_auth_url,
-            'password': CONF.neutron_admin_password,
-            'username': CONF.neutron_admin_username,
-            'endpoint_url': CONF.neutron_url,
+            'auth_url': CONF.neutron.admin_auth_url,
+            'password': CONF.neutron.admin_password,
+            'username': CONF.neutron.admin_username,
+            'endpoint_url': CONF.neutron.url,
             'auth_strategy': None,
-            'timeout': CONF.neutron_url_timeout,
+            'timeout': CONF.neutron.url_timeout,
             'insecure': False,
             'ca_cert': None,
             'token': None}
         if use_id:
-            kwargs['tenant_id'] = CONF.neutron_admin_tenant_id
+            kwargs['tenant_id'] = CONF.neutron.admin_tenant_id
         else:
-            kwargs['tenant_name'] = CONF.neutron_admin_tenant_name
+            kwargs['tenant_name'] = CONF.neutron.admin_tenant_name
         client.Client.__init__(**kwargs).WithSideEffects(client_mock)
         self.mox.ReplayAll()
 
