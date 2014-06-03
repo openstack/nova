@@ -13,6 +13,7 @@
 #    under the License.
 
 from nova import block_device
+from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 from nova import db
 from nova import exception
@@ -81,6 +82,13 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable
     def create(self, context):
+        cell_type = cells_opts.get_cell_type()
+        if cell_type == 'api':
+            raise exception.ObjectActionError(
+                    action='create',
+                    reason='BlockDeviceMapping cannot be '
+                           'created in the API cell.')
+
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
@@ -90,8 +98,9 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject):
                                               reason='instance assigned')
 
         db_bdm = db.block_device_mapping_create(context, updates, legacy=False)
-        cells_api = cells_rpcapi.CellsAPI()
-        cells_api.bdm_update_or_create_at_top(context, db_bdm, create=True)
+        if cell_type == 'compute':
+            cells_api = cells_rpcapi.CellsAPI()
+            cells_api.bdm_update_or_create_at_top(context, db_bdm, create=True)
         self._from_db_object(context, self, db_bdm)
 
     @base.remotable
@@ -101,10 +110,13 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject):
                                               reason='already destroyed')
         db.block_device_mapping_destroy(context, self.id)
         delattr(self, base.get_attrname('id'))
-        cells_api = cells_rpcapi.CellsAPI()
-        cells_api.bdm_destroy_at_top(context, self.instance_uuid,
-                                     device_name=self.device_name,
-                                     volume_id=self.volume_id)
+
+        cell_type = cells_opts.get_cell_type()
+        if cell_type == 'compute':
+            cells_api = cells_rpcapi.CellsAPI()
+            cells_api.bdm_destroy_at_top(context, self.instance_uuid,
+                                         device_name=self.device_name,
+                                         volume_id=self.volume_id)
 
     @base.remotable
     def save(self, context):
@@ -115,8 +127,10 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject):
         updates.pop('id', None)
         updated = db.block_device_mapping_update(self._context, self.id,
                                                  updates, legacy=False)
-        cells_api = cells_rpcapi.CellsAPI()
-        cells_api.bdm_update_or_create_at_top(context, updated)
+        cell_type = cells_opts.get_cell_type()
+        if cell_type == 'compute':
+            cells_api = cells_rpcapi.CellsAPI()
+            cells_api.bdm_update_or_create_at_top(context, updated)
         self._from_db_object(context, self, updated)
 
     @base.remotable_classmethod
