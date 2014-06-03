@@ -235,6 +235,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "SecurityGroupDefaultRules",
             "SecurityGroups",
             "ServerDiagnostics",
+            "ServerListMultiStatus",
             "ServerPassword",
             "ServerStartStop",
             "Services",

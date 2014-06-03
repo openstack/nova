@@ -192,6 +192,9 @@
   <extension alias="os-server-diagnostics" updated="%(isotime)s" namespace="http://docs.openstack.org/compute/ext/server-diagnostics/api/v1.1" name="ServerDiagnostics">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-server-list-multi-status" updated="%(isotime)s" namespace="http://docs.openstack.org/compute/ext/os-server-list-multi-status/api/v2" name="ServerListMultiStatus">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="os-server-password" updated="%(isotime)s" namespace="http://docs.openstack.org/compute/ext/server-password/api/v2" name="ServerPassword">
     <description>%(text)s</description>
   </extension>
