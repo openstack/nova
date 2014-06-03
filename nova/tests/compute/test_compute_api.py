@@ -2077,17 +2077,15 @@ class _ComputeAPIUnitTestMixIn(object):
         # Ensure instance can have its admin password set.
         instance = self._create_instance_obj()
 
-        @mock.patch.object(self.compute_api, 'update')
+        @mock.patch.object(objects.Instance, 'save')
         @mock.patch.object(self.compute_api, '_record_action_start')
         @mock.patch.object(self.compute_api.compute_rpcapi,
                            'set_admin_password')
-        def do_test(compute_rpcapi_mock, record_mock, update_mock):
+        def do_test(compute_rpcapi_mock, record_mock, instance_save_mock):
             # call the API
             self.compute_api.set_admin_password(self.context, instance)
             # make our assertions
-            update_mock.assert_called_once_with(
-                self.context, instance,
-                task_state=task_states.UPDATING_PASSWORD,
+            instance_save_mock.assert_called_once_with(
                 expected_task_state=[None])
             record_mock.assert_called_once_with(
                 self.context, instance, instance_actions.CHANGE_PASSWORD)

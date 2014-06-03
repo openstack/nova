@@ -2608,11 +2608,14 @@ class API(base.Base):
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE])
     def set_admin_password(self, context, instance, password=None):
-        """Set the root/admin password for the given instance."""
-        self.update(context,
-                    instance,
-                    task_state=task_states.UPDATING_PASSWORD,
-                    expected_task_state=[None])
+        """Set the root/admin password for the given instance.
+
+        @param context: Nova auth context.
+        @param instance: Nova instance object.
+        @param password: The admin password for the instance.
+        """
+        instance.task_state = task_states.UPDATING_PASSWORD
+        instance.save(expected_task_state=[None])
 
         self._record_action_start(context, instance,
                                   instance_actions.CHANGE_PASSWORD)
