@@ -2066,6 +2066,36 @@ class _ComputeAPIUnitTestMixIn(object):
             rpcapi_unrescue_instance.assert_called_once_with(
                 self.context, instance=instance)
 
+    def test_set_admin_password_invalid_state(self):
+        # Tests that InstanceInvalidState is raised when not ACTIVE.
+        instance = self._create_instance_obj({'vm_state': vm_states.STOPPED})
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.set_admin_password,
+                          self.context, instance)
+
+    def test_set_admin_password(self):
+        # Ensure instance can have its admin password set.
+        instance = self._create_instance_obj()
+
+        @mock.patch.object(self.compute_api, 'update')
+        @mock.patch.object(self.compute_api, '_record_action_start')
+        @mock.patch.object(self.compute_api.compute_rpcapi,
+                           'set_admin_password')
+        def do_test(compute_rpcapi_mock, record_mock, update_mock):
+            # call the API
+            self.compute_api.set_admin_password(self.context, instance)
+            # make our assertions
+            update_mock.assert_called_once_with(
+                self.context, instance,
+                task_state=task_states.UPDATING_PASSWORD,
+                expected_task_state=[None])
+            record_mock.assert_called_once_with(
+                self.context, instance, instance_actions.CHANGE_PASSWORD)
+            compute_rpcapi_mock.assert_called_once_with(
+                self.context, instance=instance, new_pass=None)
+
+        do_test()
+
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     def setUp(self):
