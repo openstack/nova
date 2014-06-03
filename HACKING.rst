@@ -31,6 +31,8 @@ Nova Specific Commandments
 - [N318] Change assertEqual(A, None) or assertEqual(None, A) by optimal assert like
   assertIsNone(A)
 - [N319] Validate that debug level logs are not translated.
+- [N320] Setting CONF.* attributes directly in tests is forbidden. Use
+  self.flags(option=value) instead.
 
 Creating Unit Tests
 -------------------
