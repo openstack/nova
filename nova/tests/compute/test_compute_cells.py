@@ -24,7 +24,6 @@ from nova.cells import manager
 from nova.compute import api as compute_api
 from nova.compute import cells_api as compute_cells_api
 from nova import db
-from nova.openstack.common import jsonutils
 from nova import quota
 from nova.tests.compute import test_compute
 
@@ -88,23 +87,6 @@ def deploy_stubs(stubs, api, original_instance=None):
 
     stubs.Set(api, '_call_to_cells', call)
     stubs.Set(api, '_cast_to_cells', cast)
-
-
-def wrap_create_instance(func):
-    @functools.wraps(func)
-    def wrapper(self, *args, **kwargs):
-        instance = self._create_fake_instance()
-
-        def fake(*args, **kwargs):
-            return instance
-
-        self.stubs.Set(self, '_create_fake_instance', fake)
-        original_instance = jsonutils.to_primitive(instance)
-        deploy_stubs(self.stubs, self.compute_api,
-                     original_instance=original_instance)
-        return func(self, *args, **kwargs)
-
-    return wrapper
 
 
 class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
