@@ -250,6 +250,15 @@ class LibvirtConfigCPUFeature(LibvirtConfigObject):
 
         return ft
 
+    def __eq__(self, obj):
+        return obj.name == self.name
+
+    def __ne__(self, obj):
+        return obj.name != self.name
+
+    def __hash__(self):
+        return hash(self.name)
+
 
 class LibvirtConfigCPU(LibvirtConfigObject):
 
@@ -265,7 +274,7 @@ class LibvirtConfigCPU(LibvirtConfigObject):
         self.cores = None
         self.threads = None
 
-        self.features = []
+        self.features = set()
 
     def parse_dom(self, xmldoc):
         super(LibvirtConfigCPU, self).parse_dom(xmldoc)
@@ -305,13 +314,14 @@ class LibvirtConfigCPU(LibvirtConfigObject):
             top.set("threads", str(self.threads))
             cpu.append(top)
 
-        for f in self.features:
+        # sorting the features to allow more predictable tests
+        for f in sorted(self.features, key=lambda x: x.name):
             cpu.append(f.format_dom())
 
         return cpu
 
     def add_feature(self, feat):
-        self.features.append(feat)
+        self.features.add(feat)
 
 
 class LibvirtConfigGuestCPUFeature(LibvirtConfigCPUFeature):
