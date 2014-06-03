@@ -3465,6 +3465,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                 context, instance, legacy=False)
         block_device_info = self._prep_block_device(context, instance, bdms)
         scrubbed_keys = self._unshelve_instance_key_scrub(instance)
+
+        if image:
+            shelved_image_ref = instance.image_ref
+            instance.image_ref = image['id']
+
         try:
             self.driver.spawn(context, instance, image, injected_files=[],
                     admin_password=None,
@@ -3475,6 +3480,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.exception(_('Instance failed to spawn'), instance=instance)
 
         if image:
+            instance.image_ref = shelved_image_ref
             image_service = glance.get_default_image_service()
             image_service.delete(context, image['id'])
 
