@@ -2923,7 +2923,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for hostfeat in hostcpu.features:
             guestfeat = vconfig.LibvirtConfigGuestCPUFeature(hostfeat.name)
             guestfeat.policy = "require"
-            guestcpu.features.append(guestfeat)
+            guestcpu.add_feature(guestfeat)
 
         return guestcpu
 
