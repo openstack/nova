@@ -361,16 +361,34 @@ class FlatNetworkTestCase(test.TestCase):
     def test_validate_reserved_start_out_of_range(self):
         context_admin = context.RequestContext('testuser', 'testproject',
                                               is_admin=True)
-        self.assertRaises(ValueError, self.network.create_networks,
+        self.assertRaises(exception.AddressOutOfRange,
+                          self.network.create_networks,
                           context_admin, 'fake', '192.168.0.0/24', False,
                           1, 256, allowed_start='192.168.1.10')
 
     def test_validate_reserved_end_invalid(self):
         context_admin = context.RequestContext('testuser', 'testproject',
                                               is_admin=True)
-        self.assertRaises(ValueError, self.network.create_networks,
+        self.assertRaises(exception.InvalidAddress,
+                          self.network.create_networks,
                           context_admin, 'fake', '192.168.0.0/24', False,
                           1, 256, allowed_end='invalid')
+
+    def test_validate_cidr_invalid(self):
+        context_admin = context.RequestContext('testuser', 'testproject',
+                                              is_admin=True)
+        self.assertRaises(exception.InvalidCidr,
+                          self.network.create_networks,
+                          context_admin, 'fake', 'invalid', False,
+                          1, 256)
+
+    def test_validate_non_int_size(self):
+        context_admin = context.RequestContext('testuser', 'testproject',
+                                              is_admin=True)
+        self.assertRaises(exception.InvalidIntValue,
+                          self.network.create_networks,
+                          context_admin, 'fake', '192.168.0.0/24', False,
+                          1, 'invalid')
 
     def test_validate_networks_none_requested_networks(self):
         self.network.validate_networks(self.context, None)
