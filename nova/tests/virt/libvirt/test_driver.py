@@ -1471,55 +1471,49 @@ class LibvirtConnTestCase(test.TestCase):
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
-        flavor = db.flavor_get(self.context,
-                               self.test_instance['instance_type_id'])
-        db.flavor_extra_specs_update_or_create(
-                self.context,
-                flavor['flavorid'],
-                {'hw_watchdog_action': 'none'})
+        fake_flavour = flavor_obj.Flavor.get_by_id(
+                                 self.context,
+                                 self.test_instance['instance_type_id'])
+        fake_flavour.extra_specs = {'hw_watchdog_action': 'none'}
 
         instance_ref = db.instance_create(self.context, self.test_instance)
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref)
 
-        cfg = conn.get_guest_config(instance_ref, [], {}, disk_info)
+        with mock.patch.object(flavor_obj.Flavor, 'get_by_id',
+                               return_value=fake_flavour):
+            cfg = conn.get_guest_config(instance_ref, [], {}, disk_info)
 
-        db.flavor_extra_specs_delete(self.context,
-                                     flavor['flavorid'],
-                                     'hw_watchdog_action')
+            self.assertEqual(8, len(cfg.devices))
+            self.assertIsInstance(cfg.devices[0],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertIsInstance(cfg.devices[1],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertIsInstance(cfg.devices[2],
+                                  vconfig.LibvirtConfigGuestSerial)
+            self.assertIsInstance(cfg.devices[3],
+                                  vconfig.LibvirtConfigGuestSerial)
+            self.assertIsInstance(cfg.devices[4],
+                                  vconfig.LibvirtConfigGuestInput)
+            self.assertIsInstance(cfg.devices[5],
+                                  vconfig.LibvirtConfigGuestGraphics)
+            self.assertIsInstance(cfg.devices[6],
+                                  vconfig.LibvirtConfigGuestVideo)
+            self.assertIsInstance(cfg.devices[7],
+                                  vconfig.LibvirtConfigGuestWatchdog)
 
-        self.assertEqual(8, len(cfg.devices))
-        self.assertIsInstance(cfg.devices[0],
-                              vconfig.LibvirtConfigGuestDisk)
-        self.assertIsInstance(cfg.devices[1],
-                              vconfig.LibvirtConfigGuestDisk)
-        self.assertIsInstance(cfg.devices[2],
-                              vconfig.LibvirtConfigGuestSerial)
-        self.assertIsInstance(cfg.devices[3],
-                              vconfig.LibvirtConfigGuestSerial)
-        self.assertIsInstance(cfg.devices[4],
-                              vconfig.LibvirtConfigGuestInput)
-        self.assertIsInstance(cfg.devices[5],
-                              vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[6],
-                              vconfig.LibvirtConfigGuestVideo)
-        self.assertIsInstance(cfg.devices[7],
-                              vconfig.LibvirtConfigGuestWatchdog)
-
-        self.assertEqual("none", cfg.devices[7].action)
+            self.assertEqual("none", cfg.devices[7].action)
 
     def test_get_guest_config_with_watchdog_action_meta_overrides_flavor(self):
         self.flags(virt_type='kvm', group='libvirt')
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
-        flavor = db.flavor_get(self.context,
-                               self.test_instance['instance_type_id'])
-        db.flavor_extra_specs_update_or_create(
-                self.context,
-                flavor['flavorid'],
-                {'hw_watchdog_action': 'none'})
+        fake_flavour = flavor_obj.Flavor.get_by_id(
+                                 self.context,
+                                 self.test_instance['instance_type_id'])
+        fake_flavour.extra_specs = {'hw_watchdog_action': 'none'}
 
         instance_ref = db.instance_create(self.context, self.test_instance)
 
@@ -1528,31 +1522,30 @@ class LibvirtConnTestCase(test.TestCase):
 
         image_meta = {"properties": {"hw_watchdog_action": "pause"}}
 
-        cfg = conn.get_guest_config(instance_ref, [], image_meta, disk_info)
+        with mock.patch.object(flavor_obj.Flavor, 'get_by_id',
+                               return_value=fake_flavour):
+            cfg = conn.get_guest_config(instance_ref, [],
+                                        image_meta, disk_info)
 
-        db.flavor_extra_specs_delete(self.context,
-                                     flavor['flavorid'],
-                                     'hw_watchdog_action')
+            self.assertEqual(8, len(cfg.devices))
+            self.assertIsInstance(cfg.devices[0],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertIsInstance(cfg.devices[1],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertIsInstance(cfg.devices[2],
+                                  vconfig.LibvirtConfigGuestSerial)
+            self.assertIsInstance(cfg.devices[3],
+                                  vconfig.LibvirtConfigGuestSerial)
+            self.assertIsInstance(cfg.devices[4],
+                                  vconfig.LibvirtConfigGuestInput)
+            self.assertIsInstance(cfg.devices[5],
+                                  vconfig.LibvirtConfigGuestGraphics)
+            self.assertIsInstance(cfg.devices[6],
+                                  vconfig.LibvirtConfigGuestVideo)
+            self.assertIsInstance(cfg.devices[7],
+                                  vconfig.LibvirtConfigGuestWatchdog)
 
-        self.assertEqual(8, len(cfg.devices))
-        self.assertIsInstance(cfg.devices[0],
-                              vconfig.LibvirtConfigGuestDisk)
-        self.assertIsInstance(cfg.devices[1],
-                              vconfig.LibvirtConfigGuestDisk)
-        self.assertIsInstance(cfg.devices[2],
-                              vconfig.LibvirtConfigGuestSerial)
-        self.assertIsInstance(cfg.devices[3],
-                              vconfig.LibvirtConfigGuestSerial)
-        self.assertIsInstance(cfg.devices[4],
-                              vconfig.LibvirtConfigGuestInput)
-        self.assertIsInstance(cfg.devices[5],
-                              vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[6],
-                              vconfig.LibvirtConfigGuestVideo)
-        self.assertIsInstance(cfg.devices[7],
-                              vconfig.LibvirtConfigGuestWatchdog)
-
-        self.assertEqual("pause", cfg.devices[7].action)
+            self.assertEqual("pause", cfg.devices[7].action)
 
     def test_unsupported_video_driver_through_image_meta(self):
         self.flags(virt_type='kvm', group='libvirt')
