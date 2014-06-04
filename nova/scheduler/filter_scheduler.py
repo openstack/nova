@@ -83,6 +83,11 @@ class FilterScheduler(driver.Scheduler):
                    'instance_uuids': instance_uuids})
         LOG.debug("Request Spec: %s" % request_spec)
 
+        # check retry policy.  Rather ugly use of instance_uuids[0]...
+        # but if we've exceeded max retries... then we really only
+        # have a single instance.
+        scheduler_utils.populate_retry(filter_properties,
+                                       instance_uuids[0])
         weighed_hosts = self._schedule(context, request_spec,
                                        filter_properties, instance_uuids)
 
@@ -198,63 +203,6 @@ class FilterScheduler(driver.Scheduler):
         if pci_requests:
             filter_properties['pci_requests'] = pci_requests
 
-    def _max_attempts(self):
-        max_attempts = CONF.scheduler_max_attempts
-        if max_attempts < 1:
-            raise exception.NovaException(_("Invalid value for "
-                "'scheduler_max_attempts', must be >= 1"))
-        return max_attempts
-
-    def _log_compute_error(self, instance_uuid, retry):
-        """If the request contained an exception from a previous compute
-        build/resize operation, log it to aid debugging
-        """
-        exc = retry.pop('exc', None)  # string-ified exception from compute
-        if not exc:
-            return  # no exception info from a previous attempt, skip
-
-        hosts = retry.get('hosts', None)
-        if not hosts:
-            return  # no previously attempted hosts, skip
-
-        last_host, last_node = hosts[-1]
-        LOG.error(_('Error from last host: %(last_host)s (node %(last_node)s):'
-                    ' %(exc)s'),
-                  {'last_host': last_host,
-                   'last_node': last_node,
-                   'exc': exc},
-                  instance_uuid=instance_uuid)
-
-    def _populate_retry(self, filter_properties, instance_properties):
-        """Populate filter properties with history of retries for this
-        request. If maximum retries is exceeded, raise NoValidHost.
-        """
-        max_attempts = self._max_attempts()
-        force_hosts = filter_properties.get('force_hosts', [])
-        force_nodes = filter_properties.get('force_nodes', [])
-
-        if max_attempts == 1 or force_hosts or force_nodes:
-            # re-scheduling is disabled.
-            return
-
-        # retry is enabled, update attempt count
-        retry = filter_properties.setdefault(
-            'retry', {
-                'num_attempts': 0,
-                'hosts': []  # list of compute hosts tried
-            })
-        retry['num_attempts'] += 1
-
-        instance_uuid = instance_properties.get('uuid')
-        self._log_compute_error(instance_uuid, retry)
-
-        if retry['num_attempts'] > max_attempts:
-            msg = (_('Exceeded max scheduling attempts %(max_attempts)d for '
-                     'instance %(instance_uuid)s')
-                   % {'max_attempts': max_attempts,
-                      'instance_uuid': instance_uuid})
-            raise exception.NoValidHost(reason=msg)
-
     @staticmethod
     def _setup_instance_group(context, filter_properties):
         update_group_hosts = False
@@ -286,14 +234,6 @@ class FilterScheduler(driver.Scheduler):
                 filter_properties)
 
         config_options = self._get_configuration_options()
-
-        # check retry policy.  Rather ugly use of instance_uuids[0]...
-        # but if we've exceeded max retries... then we really only
-        # have a single instance.
-        properties = instance_properties.copy()
-        if instance_uuids:
-            properties['uuid'] = instance_uuids[0]
-        self._populate_retry(filter_properties, properties)
 
         filter_properties.update({'context': context,
                                   'request_spec': request_spec,

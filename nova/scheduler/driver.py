@@ -41,9 +41,6 @@ scheduler_driver_opts = [
     cfg.StrOpt('scheduler_host_manager',
                default='nova.scheduler.host_manager.HostManager',
                help='The scheduler host manager class to use'),
-    cfg.IntOpt('scheduler_max_attempts',
-               default=3,
-               help='Maximum number of attempts to schedule an instance'),
     ]
 
 CONF = cfg.CONF

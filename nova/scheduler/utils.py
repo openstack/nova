@@ -16,9 +16,12 @@
 
 import sys
 
+from oslo.config import cfg
+
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova import db
+from nova import exception
 from nova import notifications
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
@@ -27,7 +30,17 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import rpc
 
+
 LOG = logging.getLogger(__name__)
+
+scheduler_opts = [
+    cfg.IntOpt('scheduler_max_attempts',
+               default=3,
+               help='Maximum number of attempts to schedule an instance'),
+    ]
+
+CONF = cfg.CONF
+CONF.register_opts(scheduler_opts)
 
 
 def build_request_spec(ctxt, image, instances, instance_type=None):
@@ -117,6 +130,62 @@ def populate_filter_properties(filter_properties, host_state):
     # Adds oversubscription policy
     if not filter_properties.get('force_hosts'):
         filter_properties['limits'] = limits
+
+
+def populate_retry(filter_properties, instance_uuid):
+    max_attempts = _max_attempts()
+    force_hosts = filter_properties.get('force_hosts', [])
+    force_nodes = filter_properties.get('force_nodes', [])
+
+    if max_attempts == 1 or force_hosts or force_nodes:
+        # re-scheduling is disabled.
+        return
+
+    # retry is enabled, update attempt count:
+    retry = filter_properties.setdefault(
+        'retry', {
+            'num_attempts': 0,
+            'hosts': []  # list of compute hosts tried
+    })
+    retry['num_attempts'] += 1
+
+    _log_compute_error(instance_uuid, retry)
+
+    if retry['num_attempts'] > max_attempts:
+        msg = (_('Exceeded max scheduling attempts %(max_attempts)d for '
+                 'instance %(instance_uuid)s')
+               % {'max_attempts': max_attempts,
+                  'instance_uuid': instance_uuid})
+        raise exception.NoValidHost(reason=msg)
+
+
+def _log_compute_error(instance_uuid, retry):
+    """If the request contained an exception from a previous compute
+    build/resize operation, log it to aid debugging
+    """
+    exc = retry.pop('exc', None)  # string-ified exception from compute
+    if not exc:
+        return  # no exception info from a previous attempt, skip
+
+    hosts = retry.get('hosts', None)
+    if not hosts:
+        return  # no previously attempted hosts, skip
+
+    last_host, last_node = hosts[-1]
+    LOG.error(_('Error from last host: %(last_host)s (node %(last_node)s):'
+                ' %(exc)s'),
+              {'last_host': last_host,
+               'last_node': last_node,
+               'exc': exc},
+              instance_uuid=instance_uuid)
+
+
+def _max_attempts():
+    max_attempts = CONF.scheduler_max_attempts
+    if max_attempts < 1:
+        raise exception.NovaException(_("Invalid value for "
+            "'scheduler_max_attempts', must be >= 1"))
+    return max_attempts
 
 
 def _add_retry_host(filter_properties, host, node):

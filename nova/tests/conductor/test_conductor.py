@@ -1364,7 +1364,8 @@ class _BaseTaskTestCase(object):
                         instances[0]),
                     'instance_type': instance_type,
                     'instance_uuids': [inst.uuid for inst in instances],
-                    'num_instances': 2}, {}).AndReturn(
+                    'num_instances': 2},
+                {'retry': {'num_attempts': 1, 'hosts': []}}).AndReturn(
                         [{'host': 'host1', 'nodename': 'node1', 'limits': []},
                          {'host': 'host2', 'nodename': 'node2', 'limits': []}])
         db.instance_get_by_uuid(self.context, instances[0].uuid,
@@ -1384,7 +1385,9 @@ class _BaseTaskTestCase(object):
                     'instance_type': instance_type,
                     'instance_uuids': [inst.uuid for inst in instances],
                     'num_instances': 2},
-                filter_properties={'limits': []},
+                filter_properties={'retry': {'num_attempts': 1,
+                                             'hosts': [['host1', 'node1']]},
+                                   'limits': []},
                 admin_password='admin_password',
                 injected_files='injected_files',
                 requested_networks='requested_networks',
@@ -1408,7 +1411,9 @@ class _BaseTaskTestCase(object):
                     'instance_type': instance_type,
                     'instance_uuids': [inst.uuid for inst in instances],
                     'num_instances': 2},
-                filter_properties={'limits': []},
+                filter_properties={'limits': [],
+                                   'retry': {'num_attempts': 1,
+                                             'hosts': [['host2', 'node2']]}},
                 admin_password='admin_password',
                 injected_files='injected_files',
                 requested_networks='requested_networks',
@@ -1435,7 +1440,8 @@ class _BaseTaskTestCase(object):
         instances = [fake_instance.fake_instance_obj(self.context)
                 for i in xrange(2)]
         image = {'fake-data': 'should_pass_silently'}
-        spec = {'fake': 'specs'}
+        spec = {'fake': 'specs',
+                'instance_properties': instances[0]}
         exception = exc.NoValidHost(reason='fake-reason')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(scheduler_driver, 'handle_schedule_error')
@@ -1445,7 +1451,9 @@ class _BaseTaskTestCase(object):
         scheduler_utils.build_request_spec(self.context, image,
                 mox.IgnoreArg()).AndReturn(spec)
         self.conductor_manager.scheduler_rpcapi.select_destinations(
-                self.context, spec, {}).AndRaise(exception)
+                self.context, spec,
+                {'retry': {'num_attempts': 1,
+                           'hosts': []}}).AndRaise(exception)
         for instance in instances:
             scheduler_driver.handle_schedule_error(self.context, exception,
                     instance.uuid, spec)
@@ -1932,7 +1940,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.mox.StubOutWithMock(instances[0], 'refresh')
         self.mox.StubOutWithMock(instances[1], 'refresh')
         image = {'fake-data': 'should_pass_silently'}
-        spec = {'fake': 'specs'}
+        spec = {'fake': 'specs',
+                'instance_properties': instances[0]}
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(scheduler_driver, 'handle_schedule_error')
         self.mox.StubOutWithMock(self.conductor_manager.scheduler_rpcapi,
@@ -1943,7 +1952,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         scheduler_utils.build_request_spec(self.context, image,
                 mox.IgnoreArg()).AndReturn(spec)
         self.conductor_manager.scheduler_rpcapi.select_destinations(
-                self.context, spec, {}).AndReturn(
+                self.context, spec,
+                {'retry': {'num_attempts': 1, 'hosts': []}}).AndReturn(
                         [{'host': 'host1', 'nodename': 'node1', 'limits': []},
                          {'host': 'host2', 'nodename': 'node2', 'limits': []}])
         instances[0].refresh().AndRaise(
@@ -1952,7 +1962,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.conductor_manager.compute_rpcapi.build_and_run_instance(
                 self.context, instance=instances[1], host='host2',
                 image={'fake-data': 'should_pass_silently'}, request_spec=spec,
-                filter_properties={'limits': []},
+                filter_properties={'limits': [],
+                                   'retry': {'num_attempts': 1,
+                                             'hosts': [['host2',
+                                                        'node2']]}},
                 admin_password='admin_password',
                 injected_files='injected_files',
                 requested_networks='requested_networks',
@@ -1982,7 +1995,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         image = {'fake-data': 'should_pass_silently'}
         destinations = [{'host': 'host1', 'nodename': 'node1', 'limits': []},
                 {'host': 'host2', 'nodename': 'node2', 'limits': []}]
-        spec = {'fake': 'specs'}
+        spec = {'fake': 'specs',
+                'instance_properties': instances[0]}
         build_request_spec.return_value = spec
         with contextlib.nested(
                 mock.patch.object(instances[0], 'refresh',
@@ -2013,7 +2027,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             build_and_run_instance.assert_called_once_with(self.context,
                     instance=instances[1], host='host2', image={'fake-data':
                         'should_pass_silently'}, request_spec=spec,
-                    filter_properties={'limits': []},
+                    filter_properties={'limits': [],
+                                       'retry': {'num_attempts': 1,
+                                                 'hosts': [['host2',
+                                                            'node2']]}},
                     admin_password='admin_password',
                     injected_files='injected_files',
                     requested_networks='requested_networks',

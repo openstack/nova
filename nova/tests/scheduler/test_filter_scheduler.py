@@ -132,19 +132,22 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.mox.StubOutWithMock(self.driver, '_schedule')
         self.mox.StubOutWithMock(self.driver, '_provision_resource')
 
-        self.driver._schedule(fake_context, request_spec, {},
+        expected_filter_properties = {'retry': {'num_attempts': 1,
+                                                'hosts': []}}
+        self.driver._schedule(fake_context, request_spec,
+                expected_filter_properties,
                 ['fake-uuid1', 'fake-uuid2']).AndReturn(['host1', 'host2'])
         # instance 1
         self.driver._provision_resource(
             fake_context, 'host1',
-            mox.Func(_has_launch_index(0)), {},
+            mox.Func(_has_launch_index(0)), expected_filter_properties,
             None, None, None, None,
             instance_uuid='fake-uuid1',
             legacy_bdm_in_spec=False).AndReturn(instance1)
         # instance 2
         self.driver._provision_resource(
             fake_context, 'host2',
-            mox.Func(_has_launch_index(1)), {},
+            mox.Func(_has_launch_index(1)), expected_filter_properties,
             None, None, None, None,
             instance_uuid='fake-uuid2',
             legacy_bdm_in_spec=False).AndReturn(instance2)
@@ -193,115 +196,138 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     def test_max_attempts(self):
         self.flags(scheduler_max_attempts=4)
-
-        sched = fakes.FakeFilterScheduler()
-        self.assertEqual(4, sched._max_attempts())
+        self.assertEqual(4, scheduler_utils._max_attempts())
 
     def test_invalid_max_attempts(self):
         self.flags(scheduler_max_attempts=0)
-
-        sched = fakes.FakeFilterScheduler()
-        self.assertRaises(exception.NovaException, sched._max_attempts)
+        self.assertRaises(exception.NovaException,
+                          scheduler_utils._max_attempts)
 
     def test_retry_disabled(self):
         # Retry info should not get populated when re-scheduling is off.
         self.flags(scheduler_max_attempts=1)
         sched = fakes.FakeFilterScheduler()
-
-        instance_properties = {'project_id': '12345', 'os_type': 'Linux'}
-        request_spec = dict(instance_properties=instance_properties,
-                            instance_type={})
+        request_spec = dict(instance_properties={},
+                            instance_uuids=['fake-uuid1'])
         filter_properties = {}
 
-        self.mox.StubOutWithMock(db, 'compute_node_get_all')
-        db.compute_node_get_all(mox.IgnoreArg()).AndReturn([])
+        self.mox.StubOutWithMock(sched, '_schedule')
+        self.mox.StubOutWithMock(sched, '_provision_resource')
+
+        sched._schedule(self.context, request_spec, filter_properties,
+                ['fake-uuid1']).AndReturn(['host1'])
+        sched._provision_resource(
+            self.context, 'host1',
+            request_spec, filter_properties,
+            None, None, None, None,
+            instance_uuid='fake-uuid1',
+            legacy_bdm_in_spec=False)
+
         self.mox.ReplayAll()
 
-        sched._schedule(self.context, request_spec,
-                filter_properties=filter_properties)
-
-        # should not have retry info in the populated filter properties:
-        self.assertNotIn("retry", filter_properties)
+        sched.schedule_run_instance(self.context, request_spec, None, None,
+                None, None, filter_properties, False)
 
     def test_retry_force_hosts(self):
         # Retry info should not get populated when re-scheduling is off.
         self.flags(scheduler_max_attempts=2)
         sched = fakes.FakeFilterScheduler()
+        request_spec = dict(instance_properties={},
+                            instance_uuids=['fake-uuid1'])
+        filter_properties = {'force_hosts': ['force_host']}
 
-        instance_properties = {'project_id': '12345', 'os_type': 'Linux'}
-        request_spec = dict(instance_properties=instance_properties)
-        filter_properties = dict(force_hosts=['force_host'])
+        self.mox.StubOutWithMock(sched, '_schedule')
+        self.mox.StubOutWithMock(sched, '_provision_resource')
 
-        self.mox.StubOutWithMock(db, 'compute_node_get_all')
-        db.compute_node_get_all(mox.IgnoreArg()).AndReturn([])
+        sched._schedule(self.context, request_spec, filter_properties,
+                ['fake-uuid1']).AndReturn(['host1'])
+        sched._provision_resource(
+            self.context, 'host1',
+            request_spec, filter_properties,
+            None, None, None, None,
+            instance_uuid='fake-uuid1',
+            legacy_bdm_in_spec=False)
+
         self.mox.ReplayAll()
 
-        sched._schedule(self.context, request_spec,
-                filter_properties=filter_properties)
-
-        # should not have retry info in the populated filter properties:
-        self.assertNotIn("retry", filter_properties)
+        sched.schedule_run_instance(self.context, request_spec, None, None,
+                None, None, filter_properties, False)
 
     def test_retry_force_nodes(self):
         # Retry info should not get populated when re-scheduling is off.
         self.flags(scheduler_max_attempts=2)
         sched = fakes.FakeFilterScheduler()
+        request_spec = dict(instance_properties={},
+                            instance_uuids=['fake-uuid1'])
+        filter_properties = {'force_nodes': ['force_node']}
 
-        instance_properties = {'project_id': '12345', 'os_type': 'Linux'}
-        request_spec = dict(instance_properties=instance_properties)
-        filter_properties = dict(force_nodes=['force_node'])
+        self.mox.StubOutWithMock(sched, '_schedule')
+        self.mox.StubOutWithMock(sched, '_provision_resource')
 
-        self.mox.StubOutWithMock(db, 'compute_node_get_all')
-        db.compute_node_get_all(mox.IgnoreArg()).AndReturn([])
+        sched._schedule(self.context, request_spec, filter_properties,
+                ['fake-uuid1']).AndReturn(['host1'])
+        sched._provision_resource(
+            self.context, 'host1',
+            request_spec, filter_properties,
+            None, None, None, None,
+            instance_uuid='fake-uuid1',
+            legacy_bdm_in_spec=False)
+
         self.mox.ReplayAll()
 
-        sched._schedule(self.context, request_spec,
-                filter_properties=filter_properties)
-
-        # should not have retry info in the populated filter properties:
-        self.assertNotIn("retry", filter_properties)
+        sched.schedule_run_instance(self.context, request_spec, None, None,
+                None, None, filter_properties, False)
 
     def test_retry_attempt_one(self):
         # Test retry logic on initial scheduling attempt.
         self.flags(scheduler_max_attempts=2)
         sched = fakes.FakeFilterScheduler()
-
-        instance_properties = {'project_id': '12345', 'os_type': 'Linux'}
-        request_spec = dict(instance_properties=instance_properties,
-                            instance_type={})
+        request_spec = dict(instance_properties={},
+                            instance_uuids=['fake-uuid1'])
         filter_properties = {}
+        expected_filter_properties = {'retry': {'num_attempts': 1,
+                                                'hosts': []}}
+        self.mox.StubOutWithMock(sched, '_schedule')
+        self.mox.StubOutWithMock(sched, '_provision_resource')
 
-        self.mox.StubOutWithMock(db, 'compute_node_get_all')
-        db.compute_node_get_all(mox.IgnoreArg()).AndReturn([])
+        sched._schedule(self.context, request_spec, expected_filter_properties,
+                        ['fake-uuid1']).AndReturn(['host1'])
+        sched._provision_resource(
+            self.context, 'host1',
+            request_spec, expected_filter_properties,
+            None, None, None, None,
+            instance_uuid='fake-uuid1',
+            legacy_bdm_in_spec=False)
+
         self.mox.ReplayAll()
 
-        sched._schedule(self.context, request_spec,
-                filter_properties=filter_properties)
-
-        num_attempts = filter_properties['retry']['num_attempts']
-        self.assertEqual(1, num_attempts)
+        sched.schedule_run_instance(self.context, request_spec, None, None,
+                None, None, filter_properties, False)
 
     def test_retry_attempt_two(self):
         # Test retry logic when re-scheduling.
         self.flags(scheduler_max_attempts=2)
         sched = fakes.FakeFilterScheduler()
+        request_spec = dict(instance_properties={},
+                            instance_uuids=['fake-uuid1'])
+        filter_properties = {'retry': {'num_attempts': 1}}
+        expected_filter_properties = {'retry': {'num_attempts': 2}}
+        self.mox.StubOutWithMock(sched, '_schedule')
+        self.mox.StubOutWithMock(sched, '_provision_resource')
 
-        instance_properties = {'project_id': '12345', 'os_type': 'Linux'}
-        request_spec = dict(instance_properties=instance_properties,
-                            instance_type={})
+        sched._schedule(self.context, request_spec, expected_filter_properties,
+                        ['fake-uuid1']).AndReturn(['host1'])
+        sched._provision_resource(
+            self.context, 'host1',
+            request_spec, expected_filter_properties,
+            None, None, None, None,
+            instance_uuid='fake-uuid1',
+            legacy_bdm_in_spec=False)
 
-        retry = dict(num_attempts=1)
-        filter_properties = dict(retry=retry)
-
-        self.mox.StubOutWithMock(db, 'compute_node_get_all')
-        db.compute_node_get_all(mox.IgnoreArg()).AndReturn([])
         self.mox.ReplayAll()
 
-        sched._schedule(self.context, request_spec,
-                filter_properties=filter_properties)
-
-        num_attempts = filter_properties['retry']['num_attempts']
-        self.assertEqual(2, num_attempts)
+        sched.schedule_run_instance(self.context, request_spec, None, None,
+                None, None, filter_properties, False)
 
     def test_retry_exceeded_max_attempts(self):
         # Test for necessary explosion when max retries is exceeded and that
@@ -309,23 +335,15 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # handling
         self.flags(scheduler_max_attempts=2)
         sched = fakes.FakeFilterScheduler()
+        request_spec = dict(instance_properties={},
+                            instance_uuids=['fake-uuid1'])
+        filter_properties = {'retry': {'num_attempts': 2}}
 
-        instance_properties = {'project_id': '12345', 'os_type': 'Linux'}
-        instance_uuids = ['fake-id']
-        request_spec = dict(instance_properties=instance_properties,
-                            instance_uuids=instance_uuids)
-
-        retry = dict(num_attempts=2)
-        filter_properties = dict(retry=retry)
+        self.mox.ReplayAll()
 
         self.assertRaises(exception.NoValidHost, sched.schedule_run_instance,
-                          self.context, request_spec, admin_password=None,
-                          injected_files=None, requested_networks=None,
-                          is_first_time=False,
-                          filter_properties=filter_properties,
-                          legacy_bdm_in_spec=False)
-        uuids = request_spec.get('instance_uuids')
-        self.assertEqual(uuids, instance_uuids)
+                          self.context, request_spec, None, None,
+                          None, None, filter_properties, False)
 
     def test_add_retry_host(self):
         retry = dict(num_attempts=1, hosts=[])

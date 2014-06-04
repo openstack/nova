@@ -798,6 +798,11 @@ class ComputeTaskManager(base.Base):
         request_spec = scheduler_utils.build_request_spec(context, image,
                                                           instances)
         try:
+            # check retry policy. Rather ugly use of instances[0]...
+            # but if we've exceeded max retries... then we really only
+            # have a single instance.
+            scheduler_utils.populate_retry(filter_properties,
+                instances[0].uuid)
             hosts = self.scheduler_rpcapi.select_destinations(context,
                     request_spec, filter_properties)
         except Exception as exc:
