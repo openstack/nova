@@ -396,6 +396,14 @@ class AggregateTestCase(test.NoDBTestCase):
         self.assertRaises(exc.HTTPBadRequest, self.controller.action,
                 self.req, "1", body={"add_host": {"asdf": "asdf"}})
 
+    def test_add_host_with_invalid_format_host(self):
+        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+                self.req, "1", body={"add_host": {"host": "a" * 300}})
+
+    def test_add_host_with_multiple_hosts(self):
+        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+                self.req, "1", body={"add_host": {"host": ["host1", "host2"]}})
+
     def test_add_host_raises_key_error(self):
         def stub_add_host_to_aggregate(context, aggregate, host):
             raise KeyError
@@ -465,6 +473,11 @@ class AggregateTestCase(test.NoDBTestCase):
     def test_remove_host_with_missing_host(self):
         self.assertRaises(exc.HTTPBadRequest, self.controller.action,
                 self.req, "1", body={"asdf": "asdf"})
+
+    def test_remove_host_with_multiple_hosts(self):
+        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+                self.req, "1", body={"remove_host": {"host":
+                                                     ["host1", "host2"]}})
 
     def test_remove_host_with_extra_param(self):
         self.assertRaises(exc.HTTPBadRequest, self.controller.action,

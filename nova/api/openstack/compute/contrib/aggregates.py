@@ -37,10 +37,19 @@ def _get_context(req):
 def get_host_from_body(fn):
     """Makes sure that the host exists."""
     def wrapped(self, req, id, body, *args, **kwargs):
-        if len(body) == 1 and "host" in body:
-            host = body['host']
-        else:
-            raise exc.HTTPBadRequest()
+        if len(body) != 1:
+            msg = _('Only host parameter can be specified')
+            raise exc.HTTPBadRequest(explanation=msg)
+        elif 'host' not in body:
+            msg = _('Host parameter must be specified')
+            raise exc.HTTPBadRequest(explanation=msg)
+        try:
+            utils.check_string_length(body['host'], 'host', 1, 255)
+        except exception.InvalidInput as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
+
+        host = body['host']
+
         return fn(self, req, id, host, *args, **kwargs)
     return wrapped
 
