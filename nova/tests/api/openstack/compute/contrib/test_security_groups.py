@@ -311,6 +311,47 @@ class TestSecurityGroups(test.TestCase):
 
         self.assertEqual(res_dict, expected)
 
+    def test_get_security_group_list_missing_group_id_rule(self):
+        groups = []
+        rule1 = security_group_rule_template(cidr='10.2.3.124/24',
+                                             parent_group_id=1,
+                                             group_id={}, id=88,
+                                             protocol='TCP')
+        rule2 = security_group_rule_template(cidr='10.2.3.125/24',
+                                             parent_group_id=1,
+                                             id=99, protocol=88,
+                                             group_id='HAS_BEEN_DELETED')
+        sg = security_group_template(id=1,
+                                     name='test',
+                                     description='test-desc',
+                                     rules=[rule1, rule2])
+
+        groups.append(sg)
+        # An expected rule here needs to be created as the api returns
+        # different attributes on the rule for a response than what was
+        # passed in. For exmaple:
+        #  "cidr": "0.0.0.0/0" ->"ip_range": {"cidr": "0.0.0.0/0"}
+        expected_rule = security_group_rule_template(
+            ip_range={'cidr': '10.2.3.124/24'}, parent_group_id=1,
+            group={}, id=88, ip_protocol='TCP')
+        expected = security_group_template(id=1,
+                                     name='test',
+                                     description='test-desc',
+                                     rules=[expected_rule])
+
+        expected = {'security_groups': [expected]}
+
+        def return_security_groups(context, project, search_opts):
+            return [security_group_db(sg) for sg in groups]
+
+        self.stubs.Set(self.controller.security_group_api, 'list',
+                       return_security_groups)
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
+        res_dict = self.controller.index(req)
+
+        self.assertEqual(res_dict, expected)
+
     def test_get_security_group_list_all_tenants(self):
         all_groups = []
         tenant_groups = []
