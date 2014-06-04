@@ -22,6 +22,7 @@ from nova.i18n import _
 from nova.network import model as network_model
 from nova import objects
 from nova.openstack.common import excutils
+from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 
 
@@ -67,8 +68,9 @@ def refresh_cache(f):
             msg = _('instance is a required argument to use @refresh_cache')
             raise Exception(msg)
 
-        update_instance_cache_with_nw_info(self, context, instance,
-                                           nw_info=res)
+        with lockutils.lock('refresh_cache-%s' % instance['uuid']):
+            update_instance_cache_with_nw_info(self, context, instance,
+                                               nw_info=res)
         # return the original function's return value
         return res
     return wrapper

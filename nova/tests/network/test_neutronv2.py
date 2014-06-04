@@ -2628,6 +2628,15 @@ class TestNeutronv2WithMock(test.TestCase):
             'fake-user', 'fake-project',
             auth_token='bff4a5a6b9eb4ea2a6efec6eefb77936')
 
+    @mock.patch('nova.openstack.common.lockutils.lock')
+    def test_get_instance_nw_info_locks_per_instance(self, mock_lock):
+        instance = objects.Instance(uuid=uuid.uuid4())
+        api = neutronapi.API()
+        mock_lock.side_effect = test.TestingException
+        self.assertRaises(test.TestingException,
+                          api.get_instance_nw_info, 'context', instance)
+        mock_lock.assert_called_once_with('refresh_cache-%s' % instance.uuid)
+
     def _test_validate_networks_fixed_ip_no_dup(self, nets, requested_networks,
                                                 ids, list_port_values):
 
