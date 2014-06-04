@@ -1893,6 +1893,15 @@ class ComputeManager(manager.Manager):
                         filter_properties)
             except exception.RescheduledException as e:
                 LOG.debug(e.format_message(), instance=instance)
+                retry = filter_properties.get('retry', None)
+                if not retry:
+                    # no retry information, do not reschedule.
+                    LOG.debug("Retry info not present, will not reschedule")
+                    self._cleanup_allocated_networks(context, instance,
+                        requested_networks)
+                    self._set_instance_error_state(context, instance.uuid)
+                    return
+                retry['exc'] = traceback.format_exception(*sys.exc_info())
                 # dhcp_options are per host, so if they're set we need to
                 # deallocate the networks and reallocate on the next host.
                 if self.driver.dhcp_options_for_instance(instance):

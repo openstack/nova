@@ -1335,7 +1335,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.requested_networks = []
         self.security_groups = []
         self.block_device_mapping = []
-        self.filter_properties = {}
+        self.filter_properties = {'retry': {'num_attempts': 1,
+                                            'hosts': [[self.compute.host,
+                                                       'fake-node']]}}
 
         def fake_network_info():
             return network_model.NetworkInfo()
@@ -1462,6 +1464,35 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.compute.build_and_run_instance(self.context, self.instance,
                 self.image, request_spec={},
                 filter_properties=self.filter_properties,
+                injected_files=self.injected_files,
+                admin_password=self.admin_pass,
+                requested_networks=self.requested_networks,
+                security_groups=self.security_groups,
+                block_device_mapping=self.block_device_mapping, node=self.node,
+                limits=self.limits)
+
+    def test_rescheduled_exception_without_retry(self):
+        self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
+        self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
+        self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
+        self._do_build_instance_update()
+        self.compute._build_and_run_instance(self.context, self.instance,
+                self.image, self.injected_files, self.admin_pass,
+                self.requested_networks, self.security_groups,
+                self.block_device_mapping, self.node, self.limits,
+                {}).AndRaise(
+                        exception.RescheduledException(reason='',
+                            instance_uuid=self.instance['uuid']))
+        self.compute._cleanup_allocated_networks(self.context, self.instance,
+            self.requested_networks)
+        self.compute._set_instance_error_state(self.context,
+                                               self.instance['uuid'])
+        self._instance_action_events()
+        self.mox.ReplayAll()
+
+        self.compute.build_and_run_instance(self.context, self.instance,
+                self.image, request_spec={},
+                filter_properties={},
                 injected_files=self.injected_files,
                 admin_password=self.admin_pass,
                 requested_networks=self.requested_networks,
