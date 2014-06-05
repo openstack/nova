@@ -710,6 +710,7 @@ class ComputeTaskManager(base.Base):
                                                      reservations,
                                                      instance=instance)
         try:
+            scheduler_utils.populate_retry(filter_properties, instance['uuid'])
             hosts = self.scheduler_rpcapi.select_destinations(
                     context, request_spec, filter_properties)
             host_state = hosts[0]

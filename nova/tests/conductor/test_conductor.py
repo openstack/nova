@@ -1299,7 +1299,8 @@ class _BaseTaskTestCase(object):
             self.context, instance_obj.Instance(), inst, [])
         flavor = flavors.get_default_flavor()
         flavor['extra_specs'] = 'extra_specs'
-        request_spec = {'instance_type': flavor}
+        request_spec = {'instance_type': flavor,
+                        'instance_properties': {}}
         compute_utils.get_image_metadata(
             self.context, self.conductor_manager.image_service,
             'image_ref', mox.IsA(instance_obj.Instance)).AndReturn('image')
@@ -1311,9 +1312,12 @@ class _BaseTaskTestCase(object):
 
         hosts = [dict(host='host1', nodename=None, limits={})]
         self.conductor_manager.scheduler_rpcapi.select_destinations(
-            self.context, request_spec, {}).AndReturn(hosts)
+            self.context, request_spec,
+            {'retry': {'num_attempts': 1, 'hosts': []}}).AndReturn(hosts)
 
-        filter_properties = {'limits': {}}
+        filter_properties = {'limits': {},
+                             'retry': {'num_attempts': 1,
+                                       'hosts': [['host1', None]]}}
 
         self.conductor_manager.compute_rpcapi.prep_resize(
             self.context, 'image', mox.IsA(instance_obj.Instance),
@@ -1763,7 +1767,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         inst_obj = instance_obj.Instance._from_db_object(
                 self.context, instance_obj.Instance(), inst,
                 expected_attrs=[])
-        request_spec = dict(instance_type=dict(extra_specs=dict()))
+        request_spec = dict(instance_type=dict(extra_specs=dict()),
+                            instance_properties=dict())
         filter_props = dict(context=None)
         resvs = 'fake-resvs'
         image = 'fake-image'
@@ -1815,7 +1820,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         inst_obj = instance_obj.Instance._from_db_object(
                 self.context, instance_obj.Instance(), inst,
                 expected_attrs=[])
-        request_spec = dict(instance_type=dict(extra_specs=dict()))
+        request_spec = dict(instance_type=dict(extra_specs=dict()),
+                            instance_properties=dict())
         filter_props = dict(context=None)
         resvs = 'fake-resvs'
         image = 'fake-image'
@@ -1867,7 +1873,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         inst_obj = instance_obj.Instance._from_db_object(
                 self.context, instance_obj.Instance(), inst,
                 expected_attrs=[])
-        request_spec = dict(instance_type=dict(extra_specs=dict()))
+        request_spec = dict(instance_type=dict(extra_specs=dict()),
+                            instance_properties=dict())
         filter_props = dict(context=None)
         resvs = 'fake-resvs'
         image = 'fake-image'
@@ -1893,23 +1900,25 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 self.context, image, [inst_obj],
                 instance_type='flavor').AndReturn(request_spec)
 
+        expected_filter_props = {'retry': {'num_attempts': 1,
+                                 'hosts': []},
+                                 'context': None}
+
         self.conductor.scheduler_rpcapi.select_destinations(
-                self.context, request_spec, filter_props).AndReturn(hosts)
+                self.context, request_spec,
+                expected_filter_props).AndReturn(hosts)
 
         scheduler_utils.populate_filter_properties(filter_props,
                                                    hosts[0])
-
-        # context popped
-        expected_filter_props = dict()
-        # extra_specs popped
-        expected_request_spec = dict(instance_type=dict())
-
         exc_info = test.TestingException('something happened')
+
+        expected_filter_props = {'retry': {'num_attempts': 1,
+                                 'hosts': []}}
 
         self.conductor.compute_rpcapi.prep_resize(
                 self.context, image, inst_obj,
                 'flavor', hosts[0]['host'], [resvs],
-                request_spec=expected_request_spec,
+                request_spec=request_spec,
                 filter_properties=expected_filter_props,
                 node=hosts[0]['nodename']).AndRaise(exc_info)
 
@@ -1919,7 +1928,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.conductor._set_vm_state_and_notify(self.context,
                                                 'migrate_server',
                                                 updates, exc_info,
-                                                expected_request_spec)
+                                                request_spec)
         # NOTE(mriedem): Validate that the quota rollback is using
         # the correct project_id and user_id.
         project_id, user_id = quotas_obj.ids_from_instance(self.context,
