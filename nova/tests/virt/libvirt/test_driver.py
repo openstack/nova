@@ -8443,6 +8443,82 @@ class LibvirtDriverTestCase(test.TestCase):
                       '-O', 'raw', path, _path_raw),
             mock.call('mv', _path_raw, path)])
 
+    @mock.patch('nova.virt.disk.api.extend')
+    def test_disk_resize_raw(self, mock_extend):
+        info = {'type': 'raw', 'path': '/test/disk'}
+
+        self.flags(use_cow_images=False)
+
+        self.libvirtconnection._disk_resize(info, 50)
+        mock_extend.assert_called_once_with(info['path'], 50, use_cow=False)
+
+    @mock.patch('nova.virt.disk.api.extend')
+    def test_disk_resize_raw_use_cow_images(self, mock_extend):
+        info = {'type': 'raw', 'path': '/test/disk'}
+
+        self.flags(use_cow_images=True)
+
+        with mock.patch.object(
+                self.libvirtconnection, '_disk_raw_to_qcow2') as mock_convert:
+
+            self.libvirtconnection._disk_resize(info, 50)
+
+            mock_convert.assert_called_once_with(info['path'])
+            mock_extend.assert_called_once_with(
+                info['path'], 50, use_cow=False)
+
+    @mock.patch('nova.virt.disk.api.can_resize_image')
+    @mock.patch('nova.virt.disk.api.is_image_partitionless')
+    @mock.patch('nova.virt.disk.api.extend')
+    def test_disk_resize_qcow2(
+            self, mock_extend, mock_can_resize, mock_is_partitionless):
+        info = {'type': 'qcow2', 'path': '/test/disk'}
+
+        self.flags(use_cow_images=False)
+
+        with contextlib.nested(
+                mock.patch.object(
+                    self.libvirtconnection, '_disk_qcow2_to_raw'),
+                mock.patch.object(
+                    self.libvirtconnection, '_disk_raw_to_qcow2'))\
+        as (mock_disk_qcow2_to_raw, mock_disk_raw_to_qcow2):
+
+            mock_can_resize.return_value = True
+            mock_is_partitionless.return_value = True
+
+            self.libvirtconnection._disk_resize(info, 50)
+
+            mock_disk_qcow2_to_raw.assert_called_once_with(info['path'])
+            mock_extend.assert_called_once_with(
+                info['path'], 50, use_cow=False)
+            self.assertFalse(mock_disk_raw_to_qcow2.called)
+
+    @mock.patch('nova.virt.disk.api.can_resize_image')
+    @mock.patch('nova.virt.disk.api.is_image_partitionless')
+    @mock.patch('nova.virt.disk.api.extend')
+    def test_disk_resize_qcow2_use_cow_images(
+            self, mock_extend, mock_can_resize, mock_is_partitionless):
+        info = {'type': 'qcow2', 'path': '/test/disk'}
+
+        self.flags(use_cow_images=True)
+
+        with contextlib.nested(
+                mock.patch.object(
+                    self.libvirtconnection, '_disk_qcow2_to_raw'),
+                mock.patch.object(
+                    self.libvirtconnection, '_disk_raw_to_qcow2'))\
+        as (mock_disk_qcow2_to_raw, mock_disk_raw_to_qcow2):
+
+            mock_can_resize.return_value = True
+            mock_is_partitionless.return_value = True
+
+            self.libvirtconnection._disk_resize(info, 50)
+
+            mock_disk_qcow2_to_raw.assert_called_once_with(info['path'])
+            mock_extend.assert_called_once_with(
+                info['path'], 50, use_cow=False)
+            mock_disk_raw_to_qcow2.assert_called_once_with(info['path'])
+
     def _test_finish_migration(self, power_on):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
         .finish_migration.
