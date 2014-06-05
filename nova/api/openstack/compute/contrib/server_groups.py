@@ -125,20 +125,6 @@ class ServerGroupXMLDeserializer(wsgi.MetadataXMLDeserializer):
                     policies.append(node.firstChild.nodeValue)
             return policies
 
-    def _extract_members(self, server_group_node):
-        """Marshal the server group members element of a parsed request."""
-        members_node = self.find_first_child_named(server_group_node,
-                                                   'members')
-        if members_node is not None:
-            member_nodes = self.find_children_named(members_node,
-                                                    'member')
-
-            members = []
-            if member_nodes is not None:
-                for node in member_nodes:
-                    members.append(node.firstChild.nodeValue)
-            return members
-
 
 class ServerGroupController(wsgi.Controller):
     """The Server group API controller for the OpenStack API."""
