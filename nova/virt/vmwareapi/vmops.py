@@ -195,7 +195,7 @@ class VMwareVMOps(object):
         (file_type, is_iso) = self._get_disk_format(image_meta)
 
         client_factory = self._session._get_vim().client.factory
-        datastore = vm_util.get_datastore(
+        datastore = ds_util.get_datastore(
                 self._session, self._cluster,
                 datastore_regex=self._datastore_regex)
         dc_info = self.get_datacenter_ref_and_name(datastore.ref)
@@ -1156,7 +1156,7 @@ class VMwareVMOps(object):
                                        step=2,
                                        total_steps=RESIZE_TOTAL_STEPS)
 
-        ds_ref = vm_util.get_datastore(
+        ds_ref = ds_util.get_datastore(
                             self._session, self._cluster, host_ref,
                             datastore_regex=self._datastore_regex).ref
         dc_info = self.get_datacenter_ref_and_name(ds_ref)
@@ -1470,7 +1470,7 @@ class VMwareVMOps(object):
             LOG.debug("Image aging disabled. Aging will not be done.")
             return
 
-        datastores = vm_util.get_available_datastores(self._session,
+        datastores = ds_util.get_available_datastores(self._session,
                                                       self._cluster,
                                                       self._datastore_regex)
         datastores_info = []

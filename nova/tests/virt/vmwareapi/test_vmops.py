@@ -569,7 +569,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         recorded_methods = [c[1][1] for c in mock_call_method.mock_calls]
         self.assertEqual(expected_methods, recorded_methods)
 
-    @mock.patch('nova.virt.vmwareapi.vm_util.get_datastore')
+    @mock.patch('nova.virt.vmwareapi.ds_util.get_datastore')
     @mock.patch(
         'nova.virt.vmwareapi.vmops.VMwareVCVMOps.get_datacenter_ref_and_name')
     @mock.patch('nova.virt.vmwareapi.vm_util.get_mo_id_from_instance',
