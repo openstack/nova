@@ -56,6 +56,7 @@ from nova.openstack.common import uuidutils
 from nova.pci import pci_manager
 from nova import test
 from nova.tests import fake_block_device
+from nova.tests import fake_instance
 from nova.tests import fake_network
 import nova.tests.image.fake
 from nova.tests import matchers
@@ -7100,6 +7101,93 @@ class LibvirtConnTestCase(test.TestCase):
     @mock.patch('nova.utils.is_neutron', return_value=False)
     def test_create_with_network_events_non_neutron(self, is_neutron):
         self._test_create_with_network_events()
+
+    @mock.patch('nova.volume.encryptors.get_encryption_metadata')
+    @mock.patch('nova.virt.libvirt.blockinfo.get_info_from_bdm')
+    def test_create_with_bdm(self, get_info_from_bdm, get_encryption_metadata):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
+        mock_dom = mock.MagicMock()
+        mock_encryption_meta = mock.MagicMock()
+        get_encryption_metadata.return_value = mock_encryption_meta
+
+        fake_xml = """
+            <domain>
+                <name>instance-00000001</name>
+                <memory>1048576</memory>
+                <vcpu>1</vcpu>
+                <devices>
+                    <disk type='file' device='disk'>
+                        <driver name='qemu' type='raw' cache='none'/>
+                        <source file='/path/fake-volume1'/>
+                        <target dev='vda' bus='virtio'/>
+                    </disk>
+                </devices>
+            </domain>
+        """
+        fake_volume_id = "fake-volume-id"
+        connection_info = {"driver_volume_type": "fake",
+                           "data": {"access_mode": "rw",
+                                    "volume_id": fake_volume_id}}
+
+        def fake_getitem(*args, **kwargs):
+            fake_bdm = {'connection_info': connection_info,
+                        'mount_device': '/dev/vda'}
+            return fake_bdm.get(args[0])
+
+        mock_volume = mock.MagicMock()
+        mock_volume.__getitem__.side_effect = fake_getitem
+        bdi = {'block_device_mapping': [mock_volume]}
+        network_info = [network_model.VIF(id='1'),
+                        network_model.VIF(id='2', active=True)]
+        disk_info = {'bus': 'virtio', 'type': 'file',
+                     'dev': 'vda'}
+        get_info_from_bdm.return_value = disk_info
+
+        with contextlib.nested(
+            mock.patch.object(conn, 'volume_driver_method'),
+            mock.patch.object(conn, '_get_volume_encryptor'),
+            mock.patch.object(conn, 'plug_vifs'),
+            mock.patch.object(conn.firewall_driver, 'setup_basic_filtering'),
+            mock.patch.object(conn.firewall_driver,
+                              'prepare_instance_filter'),
+            mock.patch.object(conn, '_create_domain'),
+            mock.patch.object(conn.firewall_driver, 'apply_instance_filter'),
+        ) as (volume_driver_method, get_volume_encryptor, plug_vifs,
+              setup_basic_filtering, prepare_instance_filter, create_domain,
+              apply_instance_filter):
+            volume_driver_method.return_value = mock.MagicMock(
+                source_path='/path/fake-volume1')
+            create_domain.return_value = mock_dom
+
+            domain = conn._create_domain_and_network(self.context, fake_xml,
+                                                     instance, network_info,
+                                                     block_device_info=bdi)
+
+            get_info_from_bdm.assert_called_once_with(CONF.libvirt.virt_type,
+                                                      mock_volume)
+            volume_driver_method.assert_called_once_with('connect_volume',
+                                                         connection_info,
+                                                         disk_info)
+            self.assertEqual(connection_info['data']['device_path'],
+                             '/path/fake-volume1')
+            mock_volume.save.assert_called_once_with(self.context)
+            get_encryption_metadata.assert_called_once_with(self.context,
+                conn._volume_api, fake_volume_id, connection_info)
+            get_volume_encryptor.assert_called_once_with(connection_info,
+                                                         mock_encryption_meta)
+            plug_vifs.assert_called_once_with(instance, network_info)
+            setup_basic_filtering.assert_called_once_with(instance,
+                                                          network_info)
+            prepare_instance_filter.assert_called_once_with(instance,
+                                                          network_info)
+
+            event = utils.is_neutron() and CONF.vif_plugging_timeout
+            flag = event and libvirt.VIR_DOMAIN_START_PAUSED or 0
+            create_domain.assert_called_once_with(fake_xml, instance=instance,
+                                                  launch_flags=flag,
+                                                  power_on=True)
+            self.assertEqual(mock_dom, domain)
 
     def test_get_neutron_events(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
