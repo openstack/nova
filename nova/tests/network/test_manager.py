@@ -1668,6 +1668,50 @@ class VlanNetworkTestCase(test.TestCase):
         fixed_update.assert_called_once_with(context1, fix_addr.address,
                                              {'allocated': False})
 
+    @mock.patch('nova.db.fixed_ip_get_by_address')
+    @mock.patch('nova.db.network_get')
+    @mock.patch('nova.db.fixed_ip_update')
+    def test_deallocate_fixed_with_dhcp_exception(self, fixed_update, net_get,
+                                                  fixed_get):
+        net_get.return_value = dict(test_network.fake_network,
+                                    **networks[1])
+
+        def vif_get(_context, _vif_id):
+            return vifs[0]
+
+        with contextlib.nested(
+            mock.patch.object(db, 'virtual_interface_get', vif_get),
+            mock.patch.object(
+                utils, 'execute',
+                side_effect=processutils.ProcessExecutionError()),
+        ) as (_vif_get, _execute):
+            context1 = context.RequestContext('user', 'project1')
+
+            instance = db.instance_create(context1,
+                    {'project_id': 'project1'})
+
+            elevated = context1.elevated()
+            fix_addr = db.fixed_ip_associate_pool(elevated, 1,
+                                                  instance['uuid'])
+            fixed_get.return_value = dict(test_fixed_ip.fake_fixed_ip,
+                                          address=fix_addr.address,
+                                          instance_uuid=instance.uuid,
+                                          allocated=True,
+                                          virtual_interface_id=3,
+                                          network=dict(
+                                              test_network.fake_network,
+                                              **networks[1]))
+            self.flags(force_dhcp_release=True)
+            self.network.deallocate_fixed_ip(context1, fix_addr.address,
+                                             'fake')
+            fixed_update.assert_called_once_with(context1, fix_addr.address,
+                                                 {'allocated': False})
+            _execute.assert_called_once_with('dhcp_release',
+                                             networks[1]['bridge'],
+                                             fix_addr.address,
+                                             'DE:AD:BE:EF:00:00',
+                                             run_as_root=True)
+
     def test_deallocate_fixed_deleted(self):
         # Verify doesn't deallocate deleted fixed_ip from deleted network.
 

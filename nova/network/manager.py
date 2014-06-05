@@ -39,7 +39,7 @@ from oslo import messaging
 from nova import conductor
 from nova import context
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova import ipv6
 from nova import manager
 from nova.network import api as network_api
@@ -1020,7 +1020,14 @@ class NetworkManager(manager.Manager):
                 self._teardown_network_on_host(context, network)
                 # NOTE(vish): This forces a packet so that the release_fixed_ip
                 #             callback will get called by nova-dhcpbridge.
-                self.driver.release_dhcp(dev, address, vif.address)
+                try:
+                    self.driver.release_dhcp(dev, address, vif.address)
+                except exception.NetworkDhcpReleaseFailed:
+                    LOG.error(_LE("Error releasing DHCP for IP %(address)s "
+                                  "with MAC %(mac_address)s"),
+                              {'address': address,
+                               'mac_address': vif.address},
+                              instance=instance)
 
                 # NOTE(yufang521247): This is probably a failed dhcp fixed ip.
                 # DHCPRELEASE packet sent to dnsmasq would not trigger
