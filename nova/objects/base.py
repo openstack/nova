@@ -188,7 +188,13 @@ def remotable(fn):
             for key, value in updates.iteritems():
                 if key in self.fields:
                     field = self.fields[key]
-                    self[key] = field.from_primitive(self, key, value)
+                    # NOTE(ndipanov): Since NovaObjectSerializer will have
+                    # deserialized any object fields into objects already,
+                    # we do not try to deserialize them again here.
+                    if isinstance(value, NovaObject):
+                        self[key] = value
+                    else:
+                        self[key] = field.from_primitive(self, key, value)
             self.obj_reset_changes()
             self._changed_fields = set(updates.get('obj_what_changed', []))
             return result
@@ -616,15 +622,19 @@ class NovaObjectSerializer(messaging.NoOpSerializer):
                   items from values having had action applied.
         """
         iterable = values.__class__
-        if iterable == set:
+        if issubclass(iterable, dict):
+            return iterable(**dict((k, action_fn(context, v))
+                            for k, v in six.iteritems(values)))
+        else:
             # NOTE(danms): A set can't have an unhashable value inside, such as
             # a dict. Convert sets to tuples, which is fine, since we can't
             # send them over RPC anyway.
-            iterable = tuple
-        return iterable([action_fn(context, value) for value in values])
+            if iterable == set:
+                iterable = tuple
+            return iterable([action_fn(context, value) for value in values])
 
     def serialize_entity(self, context, entity):
-        if isinstance(entity, (tuple, list, set)):
+        if isinstance(entity, (tuple, list, set, dict)):
             entity = self._process_iterable(context, self.serialize_entity,
                                             entity)
         elif (hasattr(entity, 'obj_to_primitive') and
@@ -635,7 +645,7 @@ class NovaObjectSerializer(messaging.NoOpSerializer):
     def deserialize_entity(self, context, entity):
         if isinstance(entity, dict) and 'nova_object.name' in entity:
             entity = self._process_object(context, entity)
-        elif isinstance(entity, (tuple, list, set)):
+        elif isinstance(entity, (tuple, list, set, dict)):
             entity = self._process_iterable(context, self.deserialize_entity,
                                             entity)
         return entity
