@@ -15,59 +15,54 @@
 
 """Policy Engine For Nova."""
 
-import os.path
-
-from oslo.config import cfg
-
 from nova import exception
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import policy
-from nova import utils
 
 
-policy_opts = [
-    cfg.StrOpt('policy_file',
-               default='policy.json',
-               help=_('JSON file representing policy')),
-    cfg.StrOpt('policy_default_rule',
-               default='default',
-               help=_('Rule checked when requested rule is not found')),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(policy_opts)
-
-_POLICY_PATH = None
-_POLICY_CACHE = {}
+_ENFORCER = None
 
 
 def reset():
-    global _POLICY_PATH
-    global _POLICY_CACHE
-    _POLICY_PATH = None
-    _POLICY_CACHE = {}
-    policy.reset()
+    global _ENFORCER
+    if _ENFORCER:
+        _ENFORCER.clear()
+        _ENFORCER = None
 
 
-def init():
-    global _POLICY_PATH
-    global _POLICY_CACHE
-    if not _POLICY_PATH:
-        _POLICY_PATH = CONF.policy_file
-        if not os.path.exists(_POLICY_PATH):
-            _POLICY_PATH = CONF.find_file(_POLICY_PATH)
-        if not _POLICY_PATH:
-            raise exception.ConfigNotFound(path=CONF.policy_file)
-    utils.read_cached_file(_POLICY_PATH, _POLICY_CACHE,
-                           reload_func=_set_rules)
+def init(policy_file=None, rules=None, default_rule=None, use_conf=True):
+    """Init an Enforcer class.
+
+       :param policy_file: Custom policy file to use, if none is specified,
+                           `CONF.policy_file` will be used.
+       :param rules: Default dictionary / Rules to use. It will be
+                     considered just in the first instantiation.
+       :param default_rule: Default rule to use, CONF.default_rule will
+                            be used if none is specified.
+       :param use_conf: Whether to load rules from config file.
+    """
+
+    global _ENFORCER
+    if not _ENFORCER:
+        _ENFORCER = policy.Enforcer(policy_file=policy_file,
+                                    rules=rules,
+                                    default_rule=default_rule,
+                                    use_conf=use_conf)
 
 
-def _set_rules(data):
-    default_rule = CONF.policy_default_rule
-    policy.set_rules(policy.Rules.load_json(data, default_rule))
+def set_rules(rules, overwrite=True, use_conf=False):
+    """Set rules based on the provided dict of rules.
+
+       :param rules: New rules to use. It should be an instance of dict.
+       :param overwrite: Whether to overwrite current rules or update them
+                         with the new rules.
+       :param use_conf: Whether to reload rules from config file.
+    """
+
+    init(use_conf=False)
+    _ENFORCER.set_rules(rules, overwrite, use_conf)
 
 
-def enforce(context, action, target, do_raise=True):
+def enforce(context, action, target, do_raise=True, exc=None):
     """Verifies that the action is valid on the target in this context.
 
        :param context: nova context
@@ -90,28 +85,23 @@ def enforce(context, action, target, do_raise=True):
            do_raise is False.
     """
     init()
-
     credentials = context.to_dict()
-
-    # Add the exception arguments if asked to do a raise
-    extra = {}
-    if do_raise:
-        extra.update(exc=exception.PolicyNotAuthorized, action=action)
-
-    return policy.check(action, target, credentials, **extra)
+    if not exc:
+        exc = exception.PolicyNotAuthorized
+    return _ENFORCER.enforce(action, target, credentials, do_raise=do_raise,
+                             exc=exc, action=action)
 
 
 def check_is_admin(context):
     """Whether or not roles contains 'admin' role according to policy setting.
 
     """
-    init()
 
-    #the target is user-self
+    init()
+    # the target is user-self
     credentials = context.to_dict()
     target = credentials
-
-    return policy.check('context_is_admin', target, credentials)
+    return _ENFORCER.enforce('context_is_admin', target, credentials)
 
 
 @policy.register('is_admin')
@@ -125,11 +115,12 @@ class IsAdminCheck(policy.Check):
 
         super(IsAdminCheck, self).__init__(kind, str(self.expected))
 
-    def __call__(self, target, creds):
+    def __call__(self, target, creds, enforcer):
         """Determine whether is_admin matches the requested value."""
 
         return creds['is_admin'] == self.expected
 
 
 def get_rules():
-    return policy._rules
+    if _ENFORCER:
+        return _ENFORCER.rules

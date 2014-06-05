@@ -20,6 +20,7 @@ from nova.compute import api as compute_api
 from nova import db
 from nova import exception
 from nova.openstack.common import policy as common_policy
+from nova import policy
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -69,7 +70,7 @@ class ServerStartStopTest(test.TestCase):
             "compute:start":
                 common_policy.parse_rule("project_id:non_fake")
         }
-        common_policy.set_rules(common_policy.Rules(rules))
+        policy.set_rules(rules)
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
         body = dict(start="")
@@ -117,7 +118,7 @@ class ServerStartStopTest(test.TestCase):
             "compute:stop":
                 common_policy.parse_rule("project_id:non_fake")
         }
-        common_policy.set_rules(common_policy.Rules(rules))
+        policy.set_rules(rules)
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
         body = dict(stop="")

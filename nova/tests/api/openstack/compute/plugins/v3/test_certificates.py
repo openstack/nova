@@ -20,6 +20,7 @@ from nova.api.openstack.compute.plugins.v3 import certificates
 from nova import context
 from nova import exception
 from nova.openstack.common import policy as common_policy
+from nova import policy
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -55,7 +56,7 @@ class CertificatesTest(test.NoDBTestCase):
             "compute_extension:v3:os-certificates:show":
             common_policy.parse_rule("!")
         }
-        common_policy.set_rules(common_policy.Rules(rules))
+        policy.set_rules(rules)
         req = fakes.HTTPRequestV3.blank('/os-certificates/root')
         exc = self.assertRaises(exception.PolicyNotAuthorized,
                                 self.controller.show, req, 'root')
@@ -87,7 +88,7 @@ class CertificatesTest(test.NoDBTestCase):
             "compute_extension:v3:os-certificates:create":
             common_policy.parse_rule("!")
         }
-        common_policy.set_rules(common_policy.Rules(rules))
+        policy.set_rules(rules)
         req = fakes.HTTPRequestV3.blank('/os-certificates/')
         exc = self.assertRaises(exception.PolicyNotAuthorized,
                                 self.controller.create, req)

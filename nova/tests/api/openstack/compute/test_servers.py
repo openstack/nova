@@ -788,7 +788,7 @@ class ServersControllerTest(ControllerTest):
                 common_policy.parse_rule("project_id:fake"),
         }
 
-        common_policy.set_rules(common_policy.Rules(rules))
+        policy.set_rules(rules)
 
         req = fakes.HTTPRequest.blank('/fake/servers?all_tenants=1')
         res = self.controller.index(req)
@@ -809,7 +809,7 @@ class ServersControllerTest(ControllerTest):
                 common_policy.parse_rule("project_id:fake"),
         }
 
-        common_policy.set_rules(common_policy.Rules(rules))
+        policy.set_rules(rules)
         self.stubs.Set(db, 'instance_get_all_by_filters',
                        fake_get_all)
 
@@ -1361,7 +1361,7 @@ class ServersControllerUpdateTest(ControllerTest):
 
     def test_update_server_policy_fail(self):
         rule = {'compute:update': common_policy.parse_rule('role:admin')}
-        common_policy.set_rules(common_policy.Rules(rule))
+        policy.set_rules(rule)
         body = {'server': {'name': 'server_test'}}
         req = self._get_request(body, {'name': 'server_test'})
         self.assertRaises(exception.PolicyNotAuthorized,
@@ -1659,7 +1659,7 @@ class ServerStatusTest(test.TestCase):
     def _req_with_policy_fail(self, policy_rule_name):
         rule = {'compute:%s' % policy_rule_name:
                 common_policy.parse_rule('role:admin')}
-        common_policy.set_rules(common_policy.Rules(rule))
+        policy.set_rules(rule)
         return fakes.HTTPRequest.blank('/fake/servers/1234/action')
 
     def test_active(self):

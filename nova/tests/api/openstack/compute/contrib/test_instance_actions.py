@@ -24,7 +24,8 @@ from nova.compute import api as compute_api
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
-from nova.openstack.common import policy
+from nova.openstack.common import policy as common_policy
+from nova import policy
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance
@@ -71,9 +72,9 @@ class InstanceActionsPolicyTest(test.NoDBTestCase):
         self.controller = instance_actions.InstanceActionsController()
 
     def test_list_actions_restricted_by_project(self):
-        rules = policy.Rules({'compute:get': policy.parse_rule(''),
-                              'compute_extension:instance_actions':
-                               policy.parse_rule('project_id:%(project_id)s')})
+        rules = {'compute:get': common_policy.parse_rule(''),
+                 'compute_extension:instance_actions':
+                     common_policy.parse_rule('project_id:%(project_id)s')}
         policy.set_rules(rules)
 
         def fake_instance_get_by_uuid(context, instance_id,
@@ -89,9 +90,9 @@ class InstanceActionsPolicyTest(test.NoDBTestCase):
                           str(uuid.uuid4()))
 
     def test_get_action_restricted_by_project(self):
-        rules = policy.Rules({'compute:get': policy.parse_rule(''),
-                              'compute_extension:instance_actions':
-                               policy.parse_rule('project_id:%(project_id)s')})
+        rules = {'compute:get': common_policy.parse_rule(''),
+                 'compute_extension:instance_actions':
+                     common_policy.parse_rule('project_id:%(project_id)s')}
         policy.set_rules(rules)
 
         def fake_instance_get_by_uuid(context, instance_id,
@@ -176,11 +177,11 @@ class InstanceActionsTest(test.NoDBTestCase):
 
         self.stubs.Set(db, 'action_get_by_request_id', fake_get_action)
         self.stubs.Set(db, 'action_events_get', fake_get_events)
-        rules = policy.Rules({'compute:get': policy.parse_rule(''),
-                              'compute_extension:instance_actions':
-                                policy.parse_rule(''),
-                              'compute_extension:instance_actions:events':
-                                policy.parse_rule('is_admin:True')})
+        rules = {'compute:get': common_policy.parse_rule(''),
+                 'compute_extension:instance_actions':
+                     common_policy.parse_rule(''),
+                 'compute_extension:instance_actions:events':
+                     common_policy.parse_rule('is_admin:True')}
         policy.set_rules(rules)
         req = fakes.HTTPRequest.blank(
                                 '/v2/123/servers/12/os-instance-actions/1')

@@ -19,7 +19,8 @@ from nova.api.openstack.compute.contrib import shelve
 from nova.compute import api as compute_api
 from nova import db
 from nova import exception
-from nova.openstack.common import policy
+from nova.openstack.common import policy as common_policy
+from nova import policy
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance
@@ -41,8 +42,8 @@ class ShelvePolicyTest(test.NoDBTestCase):
         self.controller = shelve.ShelveController()
 
     def test_shelve_restricted_by_role(self):
-        rules = policy.Rules({'compute_extension:shelve':
-                              policy.parse_rule('role:admin')})
+        rules = {'compute_extension:shelve':
+                     common_policy.parse_rule('role:admin')}
         policy.set_rules(rules)
 
         req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
@@ -50,9 +51,9 @@ class ShelvePolicyTest(test.NoDBTestCase):
                 req, str(uuid.uuid4()), {})
 
     def test_shelve_allowed(self):
-        rules = policy.Rules({'compute:get': policy.parse_rule(''),
-                              'compute_extension:shelve':
-                              policy.parse_rule('')})
+        rules = {'compute:get': common_policy.parse_rule(''),
+                 'compute_extension:shelve':
+                     common_policy.parse_rule('')}
         policy.set_rules(rules)
 
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
@@ -70,8 +71,8 @@ class ShelvePolicyTest(test.NoDBTestCase):
                           req, str(uuid.uuid4()), {})
 
     def test_unshelve_restricted_by_role(self):
-        rules = policy.Rules({'compute_extension:unshelve':
-                              policy.parse_rule('role:admin')})
+        rules = {'compute_extension:unshelve':
+                     common_policy.parse_rule('role:admin')}
         policy.set_rules(rules)
 
         req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
@@ -79,9 +80,8 @@ class ShelvePolicyTest(test.NoDBTestCase):
                 req, str(uuid.uuid4()), {})
 
     def test_unshelve_allowed(self):
-        rules = policy.Rules({'compute:get': policy.parse_rule(''),
-                              'compute_extension:unshelve':
-                              policy.parse_rule('')})
+        rules = {'compute:get': common_policy.parse_rule(''),
+                 'compute_extension:unshelve': common_policy.parse_rule('')}
         policy.set_rules(rules)
 
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
@@ -99,8 +99,8 @@ class ShelvePolicyTest(test.NoDBTestCase):
                           req, str(uuid.uuid4()), {})
 
     def test_shelve_offload_restricted_by_role(self):
-        rules = policy.Rules({'compute_extension:shelveOffload':
-                              policy.parse_rule('role:admin')})
+        rules = {'compute_extension:shelveOffload':
+                     common_policy.parse_rule('role:admin')}
         policy.set_rules(rules)
 
         req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
@@ -108,9 +108,9 @@ class ShelvePolicyTest(test.NoDBTestCase):
                 self.controller._shelve_offload, req, str(uuid.uuid4()), {})
 
     def test_shelve_offload_allowed(self):
-        rules = policy.Rules({'compute:get': policy.parse_rule(''),
-                              'compute_extension:shelveOffload':
-                              policy.parse_rule('')})
+        rules = {'compute:get': common_policy.parse_rule(''),
+                 'compute_extension:shelveOffload':
+                     common_policy.parse_rule('')}
         policy.set_rules(rules)
 
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
