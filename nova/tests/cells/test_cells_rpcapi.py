@@ -461,7 +461,7 @@ class CellsAPITestCase(test.NoDBTestCase):
 
         expected_args = {'bdm': fake_bdm, 'create': 'fake-create'}
         self._check_result(call_info, 'bdm_update_or_create_at_top',
-                expected_args, version='1.10')
+                expected_args, version='1.28')
 
     def test_bdm_destroy_at_top(self):
         call_info = self._stub_rpc_method('cast', None)

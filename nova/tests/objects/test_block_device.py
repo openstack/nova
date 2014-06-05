@@ -67,8 +67,11 @@ class _TestBlockDeviceMappingObject(object):
             if cell_type != 'compute':
                 self.assertFalse(cells_update_mock.called)
             else:
-                cells_update_mock.assert_called_once_with(
-                        self.context, fake_bdm)
+                self.assertEqual(1, cells_update_mock.call_count)
+                self.assertTrue(len(cells_update_mock.call_args[0]) > 1)
+                self.assertIsInstance(cells_update_mock.call_args[0][1],
+                                      block_device_obj.BlockDeviceMapping)
+                self.assertEqual(cells_update_mock.call_args[1], {})
 
     def test_save_nocells(self):
         self._test_save()
@@ -151,8 +154,12 @@ class _TestBlockDeviceMappingObject(object):
                 bdm.create(self.context)
                 bdm_create_mock.assert_called_once_with(
                     self.context, values, legacy=False)
-                cells_update_mock.assert_called_once_with(
-                        self.context, fake_bdm, create=True)
+                self.assertEqual(1, cells_update_mock.call_count)
+                self.assertTrue(len(cells_update_mock.call_args[0]) > 1)
+                self.assertIsInstance(cells_update_mock.call_args[0][1],
+                                      block_device_obj.BlockDeviceMapping)
+                self.assertEqual(cells_update_mock.call_args[1],
+                                 {'create': True})
             else:
                 bdm.create(self.context)
                 self.assertFalse(cells_update_mock.called)

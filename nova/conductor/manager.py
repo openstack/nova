@@ -204,9 +204,9 @@ class ConductorManager(manager.Manager):
             bdm = self.db.block_device_mapping_update(context,
                                                       values['id'],
                                                       values)
-        # NOTE:comstud): 'bdm' is always in the new format, so we
-        # account for this in cells/messaging.py
-        self.cells_rpcapi.bdm_update_or_create_at_top(context, bdm,
+        bdm_obj = objects.BlockDeviceMapping._from_db_object(
+                context, objects.BlockDeviceMapping(), bdm)
+        self.cells_rpcapi.bdm_update_or_create_at_top(context, bdm_obj,
                                                       create=create)
 
     def block_device_mapping_get_all_by_instance(self, context, instance,
