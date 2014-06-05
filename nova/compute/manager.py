@@ -3565,20 +3565,13 @@ class ComputeManager(manager.Manager):
                                      image, resize_instance,
                                      block_device_info, power_on)
 
-        # NOTE(lbragstad): Here we should make sure to update the instance
-        # object before the migration in the event the
-        # _poll_unconfirmed_resizes periodic task is run in between the
-        # instance and migration updates. If we update the instance first the
-        # migration record will sync in _confirm_resize the next time the
-        # periodic task is run, versus erroring out because the migration has
-        # 'finished' and the instance doesn't have task state RESIZE_FINISH.
+        migration.status = 'finished'
+        migration.save(context.elevated())
+
         instance.vm_state = vm_states.RESIZED
         instance.task_state = None
         instance.launched_at = timeutils.utcnow()
         instance.save(expected_task_state=task_states.RESIZE_FINISH)
-
-        migration.status = 'finished'
-        migration.save(context.elevated())
 
         self._notify_about_instance_usage(
             context, instance, "finish_resize.end",

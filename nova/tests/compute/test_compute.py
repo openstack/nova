@@ -4179,8 +4179,8 @@ class ComputeTestCase(BaseTestCase):
 
         def _mig_save(context):
             self.assertEqual(migration.status, 'finished')
-            self.assertEqual(vm_states.RESIZED, instance.vm_state)
-            self.assertIsNone(instance.task_state)
+            self.assertEqual(vm_state, instance.vm_state)
+            self.assertEqual(task_states.RESIZE_FINISH, instance.task_state)
             orig_mig_save()
 
         def _instance_save1():
@@ -4233,11 +4233,11 @@ class ComputeTestCase(BaseTestCase):
                                              'fake-nwinfo1',
                                              image, True,
                                              'fake-bdminfo', power_on)
-        # Ensure instance status update is before the migration finish
-        exp_kwargs = dict(expected_task_state=task_states.RESIZE_FINISH)
-        instance.save(**exp_kwargs).WithSideEffects(_instance_save3)
+        # Ensure instance status updates is after the migration finish
         self.context.elevated().AndReturn(self.context)
         migration.save(self.context).WithSideEffects(_mig_save)
+        exp_kwargs = dict(expected_task_state=task_states.RESIZE_FINISH)
+        instance.save(**exp_kwargs).WithSideEffects(_instance_save3)
         self.compute._notify_about_instance_usage(
                 self.context, instance, 'finish_resize.end',
                 network_info='fake-nwinfo1')
