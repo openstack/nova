@@ -806,7 +806,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def instance_exists(self, instance):
         """Efficient override of base instance_exists method."""
         try:
-            self._lookup_by_name(instance['name'])
+            self._lookup_by_name(instance.name)
             return True
         except exception.NovaException:
             return False

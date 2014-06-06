@@ -330,14 +330,18 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         vm_utils.lookup(mox.IgnoreArg(), 'foo').AndReturn(True)
         self.mox.ReplayAll()
 
-        self.assertTrue(self.conn.instance_exists(dict(name='foo')))
+        self.stubs.Set(instance_obj.Instance, 'name', 'foo')
+        instance = instance_obj.Instance(uuid='fake-uuid')
+        self.assertTrue(self.conn.instance_exists(instance))
 
     def test_instance_not_exists(self):
         self.mox.StubOutWithMock(vm_utils, 'lookup')
         vm_utils.lookup(mox.IgnoreArg(), 'bar').AndReturn(None)
         self.mox.ReplayAll()
 
-        self.assertFalse(self.conn.instance_exists(dict(name='bar')))
+        self.stubs.Set(instance_obj.Instance, 'name', 'bar')
+        instance = instance_obj.Instance(uuid='fake-uuid')
+        self.assertFalse(self.conn.instance_exists(instance))
 
     def test_list_instances_0(self):
         instances = self.conn.list_instances()

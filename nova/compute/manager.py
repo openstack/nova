@@ -1496,7 +1496,7 @@ class ComputeManager(manager.Manager):
     def _check_instance_exists(self, context, instance):
         """Ensure an instance with the same name is not already present."""
         if self.driver.instance_exists(instance):
-            raise exception.InstanceExists(name=instance['name'])
+            raise exception.InstanceExists(name=instance.name)
 
     def _start_building(self, context, instance):
         """Save the host and launched_on fields and log appropriately."""
