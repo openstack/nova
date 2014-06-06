@@ -10064,7 +10064,7 @@ class ComputeReschedulingTestCase(BaseTestCase):
         if not filter_properties:
             filter_properties = {}
 
-        instance_uuid = "12-34-56-78-90"
+        instance = self._create_fake_instance_obj()
 
         admin_password = None
         injected_files = None
@@ -10075,7 +10075,7 @@ class ComputeReschedulingTestCase(BaseTestCase):
         method_args = (request_spec, admin_password, injected_files,
                        requested_networks, is_first_time, filter_properties)
         return self.compute._reschedule(self.context, request_spec,
-                filter_properties, instance_uuid, scheduler_method,
+                filter_properties, instance, scheduler_method,
                 method_args, self.expected_task_state, exc_info=exc_info)
 
     def test_reschedule_no_filter_properties(self):
@@ -10135,7 +10135,7 @@ class ComputeReschedulingResizeTestCase(ComputeReschedulingTestCase):
                 filter_properties, reservations)
 
         return self.compute._reschedule(self.context, request_spec,
-                filter_properties, instance_uuid, scheduler_method,
+                filter_properties, instance, scheduler_method,
                 method_args, self.expected_task_state, exc_info=exc_info)
 
 
@@ -10254,7 +10254,7 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
                                         mox.IgnoreArg())
         self.compute._cleanup_volumes(self.context, instance_uuid,
                                         mox.IgnoreArg())
-        self.compute._reschedule(self.context, None, instance_uuid,
+        self.compute._reschedule(self.context, None, self.instance,
                 {}, self.compute.scheduler_rpcapi.run_instance,
                 method_args, task_states.SCHEDULING, exc_info).AndRaise(
                         InnerTestingException("Inner"))
@@ -10284,7 +10284,7 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
                                             mox.IgnoreArg())
             self.compute._cleanup_volumes(self.context, instance_uuid,
                                             mox.IgnoreArg())
-            self.compute._reschedule(self.context, None, {}, instance_uuid,
+            self.compute._reschedule(self.context, None, {}, self.instance,
                     self.compute.scheduler_rpcapi.run_instance, method_args,
                     task_states.SCHEDULING, exc_info).AndReturn(False)
 
@@ -10315,7 +10315,7 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
                                             mox.IgnoreArg())
             self.compute._cleanup_volumes(self.context, instance_uuid,
                                           mox.IgnoreArg())
-            self.compute._reschedule(self.context, None, {}, instance_uuid,
+            self.compute._reschedule(self.context, None, {}, self.instance,
                     self.compute.scheduler_rpcapi.run_instance,
                     method_args, task_states.SCHEDULING, exc_info).AndReturn(
                             True)
@@ -10424,7 +10424,7 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute, "_reschedule")
 
         self.compute._reschedule(
-                self.context, None, None, instance.uuid,
+                self.context, None, None, instance,
                 self.compute.scheduler_rpcapi.prep_resize, method_args,
                 task_states.RESIZE_PREP).AndRaise(
                         InnerTestingException("Inner"))
@@ -10448,7 +10448,7 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute, "_reschedule")
 
         self.compute._reschedule(
-                self.context, None, None, instance.uuid,
+                self.context, None, None, instance,
                 self.compute.scheduler_rpcapi.prep_resize, method_args,
                 task_states.RESIZE_PREP).AndReturn(False)
         self.mox.ReplayAll()
@@ -10475,7 +10475,7 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
             self.mox.StubOutWithMock(self.compute, "_reschedule")
             self.mox.StubOutWithMock(self.compute, "_log_original_error")
             self.compute._reschedule(self.context, {}, {},
-                    instance.uuid,
+                    instance,
                     self.compute.scheduler_rpcapi.prep_resize, method_args,
                     task_states.RESIZE_PREP, exc_info).AndReturn(True)
 
