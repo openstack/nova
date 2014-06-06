@@ -1820,6 +1820,30 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     mock.call(self.context, self.instance,
                         self.requested_networks, self.security_groups))
 
+    def test_build_resources_with_network_info_obj_on_spawn_failure(self):
+        self.mox.StubOutWithMock(self.compute, '_cleanup_build_resources')
+        self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
+        self.compute._build_networks_for_instance(self.context, self.instance,
+                self.requested_networks, self.security_groups).AndReturn(
+                        network_model.NetworkInfo())
+        self._build_resources_instance_update()
+        self.compute._cleanup_build_resources(self.context, self.instance,
+                self.block_device_mapping)
+        self.mox.ReplayAll()
+
+        test_exception = test.TestingException()
+
+        def fake_spawn():
+            raise test_exception
+
+        try:
+            with self.compute._build_resources(self.context, self.instance,
+                    self.requested_networks, self.security_groups,
+                    self.image, self.block_device_mapping):
+                fake_spawn()
+        except Exception as e:
+            self.assertEqual(test_exception, e)
+
     def test_build_resources_cleans_up_and_reraises_on_spawn_failure(self):
         self.mox.StubOutWithMock(self.compute, '_cleanup_build_resources')
         self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')

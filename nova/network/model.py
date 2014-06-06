@@ -380,6 +380,14 @@ class NetworkInfo(list):
     def json(self):
         return jsonutils.dumps(self)
 
+    def wait(self, do_raise=True):
+        """A no-op method.
+
+        This is useful to avoid type checking when NetworkInfo might be
+        subclassed with NetworkInfoAsyncWrapper.
+        """
+        pass
+
 
 class NetworkInfoAsyncWrapper(NetworkInfo):
     """Wrapper around NetworkInfo that allows retrieving NetworkInfo
