@@ -9431,10 +9431,10 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.event_type,
-                         'aggregate.updateprop.start')
+                         'aggregate.updatemetadata.start')
         msg = fake_notifier.NOTIFICATIONS[1]
         self.assertEqual(msg.event_type,
-                         'aggregate.updateprop.end')
+                         'aggregate.updatemetadata.end')
 
     def test_update_aggregate_az_fails(self):
         # Ensure aggregate's availability zone can't be updated,
@@ -9460,10 +9460,10 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 15)
         msg = fake_notifier.NOTIFICATIONS[13]
         self.assertEqual(msg.event_type,
-                         'aggregate.updateprop.start')
+                         'aggregate.updatemetadata.start')
         msg = fake_notifier.NOTIFICATIONS[14]
         self.assertEqual(msg.event_type,
-                         'aggregate.updateprop.end')
+                         'aggregate.updatemetadata.end')
 
     def test_update_aggregate_az_fails_with_nova_az(self):
         # Ensure aggregate's availability zone can't be updated,
@@ -9566,6 +9566,22 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         msg = fake_notifier.NOTIFICATIONS[1]
         self.assertEqual(msg.event_type,
                          'aggregate.updatemetadata.end')
+
+    def test_update_aggregate_az_do_not_replace_existing_metadata(self):
+        # Ensure that that update of the aggregate availability zone
+        # does not replace the aggregate existing metadata
+        aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
+                                         'fake_zone')
+        metadata = {'foo_key1': 'foo_value1'}
+        aggr = self.api.update_aggregate_metadata(self.context,
+                                                  aggr['id'],
+                                                  metadata)
+        metadata = {'availability_zone': 'new_fake_zone'}
+        aggr = self.api.update_aggregate(self.context,
+                                         aggr['id'],
+                                         metadata)
+        self.assertThat(aggr['metadata'], matchers.DictMatches(
+            {'availability_zone': 'new_fake_zone', 'foo_key1': 'foo_value1'}))
 
     def test_update_aggregate_metadata_az_fails(self):
         # Ensure aggregate's availability zone can't be updated,
