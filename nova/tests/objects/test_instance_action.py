@@ -15,10 +15,10 @@
 import mock
 import traceback
 
-from nova.compute import utils as compute_utils
 from nova import db
 from nova.objects import instance_action
 from nova.openstack.common import timeutils
+from nova import test
 from nova.tests.objects import test_objects
 
 
@@ -196,7 +196,8 @@ class _TestInstanceActionEventObject(object):
     @mock.patch.object(db, 'action_event_start')
     def test_event_start(self, mock_start):
         timeutils.set_time_override(override_time=NOW)
-        expected_packed_values = compute_utils.pack_action_event_start(
+        test_class = instance_action.InstanceActionEvent
+        expected_packed_values = test_class.pack_action_event_start(
             self.context, 'fake-uuid', 'fake-event')
         mock_start.return_value = fake_event
         event = instance_action.InstanceActionEvent.event_start(
@@ -208,7 +209,8 @@ class _TestInstanceActionEventObject(object):
     @mock.patch.object(db, 'action_event_start')
     def test_event_start_no_result(self, mock_start):
         timeutils.set_time_override(override_time=NOW)
-        expected_packed_values = compute_utils.pack_action_event_start(
+        test_class = instance_action.InstanceActionEvent
+        expected_packed_values = test_class.pack_action_event_start(
             self.context, 'fake-uuid', 'fake-event')
         mock_start.return_value = fake_event
         event = instance_action.InstanceActionEvent.event_start(
@@ -220,8 +222,10 @@ class _TestInstanceActionEventObject(object):
     @mock.patch.object(db, 'action_event_finish')
     def test_event_finish(self, mock_finish):
         timeutils.set_time_override(override_time=NOW)
-        expected_packed_values = compute_utils.pack_action_event_finish(
+        test_class = instance_action.InstanceActionEvent
+        expected_packed_values = test_class.pack_action_event_finish(
             self.context, 'fake-uuid', 'fake-event')
+        expected_packed_values['finish_time'] = timeutils.utcnow()
         mock_finish.return_value = fake_event
         event = instance_action.InstanceActionEvent.event_finish(
             self.context, 'fake-uuid', 'fake-event', want_result=True)
@@ -232,8 +236,10 @@ class _TestInstanceActionEventObject(object):
     @mock.patch.object(db, 'action_event_finish')
     def test_event_finish_no_result(self, mock_finish):
         timeutils.set_time_override(override_time=NOW)
-        expected_packed_values = compute_utils.pack_action_event_finish(
+        test_class = instance_action.InstanceActionEvent
+        expected_packed_values = test_class.pack_action_event_finish(
             self.context, 'fake-uuid', 'fake-event')
+        expected_packed_values['finish_time'] = timeutils.utcnow()
         mock_finish.return_value = fake_event
         event = instance_action.InstanceActionEvent.event_finish(
             self.context, 'fake-uuid', 'fake-event', want_result=False)
@@ -244,15 +250,34 @@ class _TestInstanceActionEventObject(object):
     @mock.patch.object(traceback, 'format_tb')
     @mock.patch.object(db, 'action_event_finish')
     def test_event_finish_with_failure(self, mock_finish, mock_tb):
-        mock_tb.return_value = 'fake-tb'
         timeutils.set_time_override(override_time=NOW)
-        expected_packed_values = compute_utils.pack_action_event_finish(
-            self.context, 'fake-uuid', 'fake-event', 'val', 'invalid-tb')
+        test_class = instance_action.InstanceActionEvent
+        expected_packed_values = test_class.pack_action_event_finish(
+            self.context, 'fake-uuid', 'fake-event', 'val', 'fake-tb')
+        expected_packed_values['finish_time'] = timeutils.utcnow()
 
         mock_finish.return_value = fake_event
-        test_class = instance_action.InstanceActionEvent
         event = test_class.event_finish_with_failure(
-            self.context, 'fake-uuid', 'fake-event', 'val', 'invalid-tb')
+            self.context, 'fake-uuid', 'fake-event', 'val', 'fake-tb',
+            want_result=True)
+        mock_finish.assert_called_once_with(self.context,
+                                            expected_packed_values)
+        self.compare_obj(event, fake_event)
+
+    @mock.patch.object(traceback, 'format_tb')
+    @mock.patch.object(db, 'action_event_finish')
+    def test_event_finish_with_failure_legacy(self, mock_finish, mock_tb):
+        mock_tb.return_value = 'fake-tb'
+        timeutils.set_time_override(override_time=NOW)
+        test_class = instance_action.InstanceActionEvent
+        expected_packed_values = test_class.pack_action_event_finish(
+            self.context, 'fake-uuid', 'fake-event', 'val', 'fake-tb')
+        expected_packed_values['finish_time'] = timeutils.utcnow()
+
+        mock_finish.return_value = fake_event
+        event = test_class.event_finish_with_failure(
+            self.context, 'fake-uuid', 'fake-event', exc_val='val',
+            exc_tb=mock.sentinel.fake_tb, want_result=True)
         mock_finish.assert_called_once_with(self.context,
                                             expected_packed_values)
         self.compare_obj(event, fake_event)
@@ -262,13 +287,14 @@ class _TestInstanceActionEventObject(object):
     def test_event_finish_with_failure_no_result(self, mock_finish, mock_tb):
         mock_tb.return_value = 'fake-tb'
         timeutils.set_time_override(override_time=NOW)
-        expected_packed_values = compute_utils.pack_action_event_finish(
-            self.context, 'fake-uuid', 'fake-event', 'val', 'invalid-tb')
+        test_class = instance_action.InstanceActionEvent
+        expected_packed_values = test_class.pack_action_event_finish(
+            self.context, 'fake-uuid', 'fake-event', 'val', 'fake-tb')
+        expected_packed_values['finish_time'] = timeutils.utcnow()
 
         mock_finish.return_value = fake_event
-        test_class = instance_action.InstanceActionEvent
         event = test_class.event_finish_with_failure(
-            self.context, 'fake-uuid', 'fake-event', 'val', 'invalid-tb',
+            self.context, 'fake-uuid', 'fake-event', 'val', 'fake-tb',
             want_result=False)
         mock_finish.assert_called_once_with(self.context,
                                             expected_packed_values)
@@ -284,3 +310,32 @@ class _TestInstanceActionEventObject(object):
         for index, event in enumerate(obj_list):
             self.compare_obj(event, fake_events[index])
         mock_get.assert_called_once_with(self.context, 'fake-action-id')
+
+    @mock.patch('nova.objects.instance_action.InstanceActionEvent.'
+                'pack_action_event_finish')
+    @mock.patch('traceback.format_tb')
+    def test_event_finish_with_failure_serialized(self, mock_format,
+                                                  mock_pack):
+        mock_format.return_value = 'traceback'
+        mock_pack.side_effect = test.TestingException
+        self.assertRaises(
+            test.TestingException,
+            instance_action.InstanceActionEvent.event_finish_with_failure,
+            self.context, 'fake-uuid', 'fake-event',
+            exc_val=mock.sentinel.exc_val,
+            exc_tb=mock.sentinel.exc_tb)
+        mock_pack.assert_called_once_with(self.context, 'fake-uuid',
+                                          'fake-event',
+                                          exc_val=str(mock.sentinel.exc_val),
+                                          exc_tb='traceback')
+        mock_format.assert_called_once_with(mock.sentinel.exc_tb)
+
+
+class TestInstanceActionEventObject(test_objects._LocalTest,
+                                    _TestInstanceActionEventObject):
+    pass
+
+
+class TestRemoteInstanceActionEventObject(test_objects._RemoteTest,
+                                          _TestInstanceActionEventObject):
+    pass

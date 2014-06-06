@@ -426,7 +426,7 @@ class EventReporter(object):
     def __enter__(self):
         for uuid in self.instance_uuids:
             instance_action_obj.InstanceActionEvent.event_start(
-                self.context, uuid, self.event_name)
+                self.context, uuid, self.event_name, want_result=False)
 
         return self
 
@@ -434,7 +434,7 @@ class EventReporter(object):
         for uuid in self.instance_uuids:
             instance_action_obj.InstanceActionEvent.event_finish_with_failure(
                 self.context, uuid, self.event_name, exc_val=exc_val,
-                exc_tb=exc_tb)
+                exc_tb=exc_tb, want_result=False)
         return False
 
 
