@@ -23,19 +23,6 @@ A connection to a hypervisor through libvirt.
 
 Supports KVM, LXC, QEMU, UML, and XEN.
 
-**Related Flags**
-
-:driver_type:  Libvirt domain type.  Can be kvm, qemu, uml, xen (default: kvm).
-:connection_uri:  Override for the default libvirt URI (depends on
-                  driver_type).
-:disk_prefix:  Override the default disk prefix for the devices
-               attached to a server.
-:rescue_image_id:  Rescue ami image (None = original image).
-:rescue_kernel_id:  Rescue aki image (None = original image).
-:rescue_ramdisk_id:  Rescue ari image (None = original image).
-:injected_network_template:  Template file for injected network
-:allow_same_net_traffic:  Whether to allow in project network traffic
-
 """
 
 import errno
