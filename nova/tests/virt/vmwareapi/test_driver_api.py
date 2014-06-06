@@ -2299,13 +2299,16 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase,
         uuidutils.generate_uuid().AndReturn(uuid_str)
 
         self.mox.StubOutWithMock(ds_util, 'file_delete')
+        disk_ds_path = ds_util.DatastorePath(
+                self.ds, "vmware_temp", "%s.vmdk" % uuid_str)
+        disk_ds_flat_path = ds_util.DatastorePath(
+                self.ds, "vmware_temp", "%s-flat.vmdk" % uuid_str)
         # Check calls for delete vmdk and -flat.vmdk pair
-        ds_util.file_delete(mox.IgnoreArg(),
-                "[%s] vmware_temp/%s-flat.vmdk" % (self.ds, uuid_str),
+        ds_util.file_delete(
+                mox.IgnoreArg(), disk_ds_flat_path,
                 mox.IgnoreArg()).AndReturn(None)
-        ds_util.file_delete(mox.IgnoreArg(),
-                "[%s] vmware_temp/%s.vmdk" % (self.ds, uuid_str),
-                mox.IgnoreArg()).AndReturn(None)
+        ds_util.file_delete(
+                mox.IgnoreArg(), disk_ds_path, mox.IgnoreArg()).AndReturn(None)
 
         self.mox.ReplayAll()
         self._test_snapshot()

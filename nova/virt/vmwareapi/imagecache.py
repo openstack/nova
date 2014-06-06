@@ -63,18 +63,18 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         self._base_folder = base_folder
         self._ds_browser = {}
 
-    def _folder_delete(self, path, dc_ref):
+    def _folder_delete(self, ds_path, dc_ref):
         try:
-            ds_util.file_delete(self._session, path, dc_ref)
+            ds_util.file_delete(self._session, ds_path, dc_ref)
         except (error_util.CannotDeleteFileException,
                 error_util.FileFaultException,
                 error_util.FileLockedException) as e:
             # There may be more than one process or thread that tries
             # to delete the file.
             LOG.warning(_("Unable to delete %(file)s. Exception: %(ex)s"),
-                        {'file': path, 'ex': e})
+                        {'file': ds_path, 'ex': e})
         except error_util.FileNotFoundException:
-            LOG.debug("File not found: %s", path)
+            LOG.debug("File not found: %s", ds_path)
 
     def timestamp_folder_get(self, ds_path, image_id):
         """Returns the timestamp folder."""
@@ -86,7 +86,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
             ts_path = ds_path.join(ts)
             LOG.debug("Timestamp path %s exists. Deleting!", ts_path)
             # Image is used - no longer need timestamp folder
-            self._folder_delete(str(ts_path), dc_ref)
+            self._folder_delete(ts_path, dc_ref)
 
     def _get_timestamp(self, ds_browser, ds_path):
         files = ds_util.get_sub_folders(self._session, ds_browser, ds_path)
@@ -141,7 +141,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                 if not ts:
                     ts_path = path.join(self._get_timestamp_filename())
                     try:
-                        ds_util.mkdir(self._session, str(ts_path), dc_info.ref)
+                        ds_util.mkdir(self._session, ts_path, dc_info.ref)
                     except error_util.FileAlreadyExistsException:
                         LOG.debug("Timestamp already exists.")
                     LOG.info(_("Image %s is no longer used by this node. "
@@ -152,7 +152,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                         LOG.info(_("Image %s is no longer used. "
                                    "Deleting!"), path)
                         # Image has aged - delete the image ID folder
-                        self._folder_delete(str(path), dc_info.ref)
+                        self._folder_delete(path, dc_info.ref)
 
         # If the image is used and the timestamp file exists then we delete
         # the timestamp.

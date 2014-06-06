@@ -184,7 +184,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 ref=dc_ref,
                 name='fake-name',
                 vmFolder='fake-folder')
-        path = ds_util.build_datastore_path(ds_name, base_name)
+        path = ds_util.DatastorePath(ds_name, base_name)
         ds_util.mkdir = mock.Mock()
         return ds_name, ds_ref, ops, path, dc_ref
 

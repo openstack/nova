@@ -68,9 +68,10 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             self._imagecache.timestamp_cleanup(
                     'fake-dc-ref', 'fake-ds-browser',
                     ds_util.DatastorePath('fake-ds', 'fake-path'))
+            expected_ds_path = ds_util.DatastorePath(
+                    'fake-ds', 'fake-path', self._file_name)
             _file_delete.assert_called_once_with(self._session,
-                    '[fake-ds] fake-path/ts-2012-11-22-12-00-00',
-                    'fake-dc-ref')
+                    expected_ds_path, 'fake-dc-ref')
 
     def test_get_timestamp(self):
         def fake_get_sub_folders(session, ds_browser, ds_path):
@@ -166,7 +167,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         def fake_mkdir(session, ts_path, dc_ref):
             self.assertEqual(
                     '[fake-ds] fake-path/fake-image-1/ts-2012-11-22-12-00-00',
-                    ts_path)
+                    str(ts_path))
 
         def fake_file_delete(session, ds_path, dc_ref):
             self.assertEqual('[fake-ds] fake-path/fake-image-3', str(ds_path))
