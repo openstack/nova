@@ -308,12 +308,13 @@ class VMwareVMOps(object):
             # will ensure that the aging will not delete a cache image if it
             # is going to be used now.
             if CONF.remove_unused_base_images:
-                ds_path = str(datastore.build_path(self._base_folder))
+                ds_path = datastore.build_path(self._base_folder)
                 path = self._imagecache.timestamp_folder_get(ds_path,
                                                              upload_name)
                 # Lock to ensure that the spawn will not try and access a image
                 # that is currently being deleted on the datastore.
-                with lockutils.lock(path, lock_file_prefix='nova-vmware-ts',
+                with lockutils.lock(str(path),
+                                    lock_file_prefix='nova-vmware-ts',
                                     external=True):
                     self._imagecache.timestamp_cleanup(dc_info.ref, ds_browser,
                                                        path)
@@ -1475,7 +1476,7 @@ class VMwareVMOps(object):
                                                       self._datastore_regex)
         datastores_info = []
         for ds in datastores:
-            ds_info = self.get_datacenter_ref_and_name(ds['ref'])
+            ds_info = self.get_datacenter_ref_and_name(ds.ref)
             datastores_info.append((ds, ds_info))
         self._imagecache.update(context, instances, datastores_info)
 
