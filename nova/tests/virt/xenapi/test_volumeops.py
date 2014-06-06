@@ -421,3 +421,80 @@ class AttachVolumeTestCase(VolumeOpsTestBase):
         mock_vbd.assert_called_once_with(self.session, "vm", "vdi", 2,
                                          bootable=False, osvol=True)
         self.assertFalse(mock_shutdown.called)
+
+
+class FindBadVolumeTestCase(VolumeOpsTestBase):
+    @mock.patch.object(volumeops.VolumeOps, "_get_all_volume_vbd_refs")
+    def test_find_bad_volumes_no_vbds(self, mock_get_all):
+        mock_get_all.return_value = []
+
+        result = self.ops.find_bad_volumes("vm_ref")
+
+        mock_get_all.assert_called_once_with("vm_ref")
+        self.assertEqual([], result)
+
+    @mock.patch.object(volume_utils, "find_sr_from_vbd")
+    @mock.patch.object(volumeops.VolumeOps, "_get_all_volume_vbd_refs")
+    def test_find_bad_volumes_no_bad_vbds(self, mock_get_all, mock_find_sr):
+        mock_get_all.return_value = ["1", "2"]
+        mock_find_sr.return_value = "sr_ref"
+
+        with mock.patch.object(self.session.SR, "scan") as mock_scan:
+            result = self.ops.find_bad_volumes("vm_ref")
+
+            mock_get_all.assert_called_once_with("vm_ref")
+            expected_find = [mock.call(self.session, "1"),
+                             mock.call(self.session, "2")]
+            self.assertEqual(expected_find, mock_find_sr.call_args_list)
+            expected_scan = [mock.call("sr_ref"), mock.call("sr_ref")]
+            self.assertEqual(expected_scan, mock_scan.call_args_list)
+            self.assertEqual([], result)
+
+    @mock.patch.object(volume_utils, "find_sr_from_vbd")
+    @mock.patch.object(volumeops.VolumeOps, "_get_all_volume_vbd_refs")
+    def test_find_bad_volumes_bad_vbds(self, mock_get_all, mock_find_sr):
+        mock_get_all.return_value = ["vbd_ref"]
+        mock_find_sr.return_value = "sr_ref"
+
+        class FakeException(Exception):
+            details = ['SR_BACKEND_FAILURE_40', "", "", ""]
+
+        session = mock.Mock()
+        session.XenAPI.Failure = FakeException
+        self.ops._session = session
+
+        with mock.patch.object(session.SR, "scan") as mock_scan:
+            with mock.patch.object(session.VBD,
+                                   "get_device") as mock_get:
+                mock_scan.side_effect = FakeException
+                mock_get.return_value = "xvdb"
+
+                result = self.ops.find_bad_volumes("vm_ref")
+
+                mock_get_all.assert_called_once_with("vm_ref")
+                mock_scan.assert_called_once_with("sr_ref")
+                mock_get.assert_called_once_with("vbd_ref")
+                self.assertEqual(["/dev/xvdb"], result)
+
+    @mock.patch.object(volume_utils, "find_sr_from_vbd")
+    @mock.patch.object(volumeops.VolumeOps, "_get_all_volume_vbd_refs")
+    def test_find_bad_volumes_raises(self, mock_get_all, mock_find_sr):
+        mock_get_all.return_value = ["vbd_ref"]
+        mock_find_sr.return_value = "sr_ref"
+
+        class FakeException(Exception):
+            details = ['foo', "", "", ""]
+
+        session = mock.Mock()
+        session.XenAPI.Failure = FakeException
+        self.ops._session = session
+
+        with mock.patch.object(session.SR, "scan") as mock_scan:
+            with mock.patch.object(session.VBD,
+                                   "get_device") as mock_get:
+                mock_scan.side_effect = FakeException
+                mock_get.return_value = "xvdb"
+
+                self.assertRaises(FakeException,
+                                  self.ops.find_bad_volumes, "vm_ref")
+                mock_scan.assert_called_once_with("sr_ref")
