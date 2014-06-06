@@ -21,6 +21,7 @@ from nova import exception
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_instance
 
 
 def fake_get_console_output(self, _context, _instance, tail_length):
@@ -44,8 +45,8 @@ def fake_get_console_output_all_characters(self, _ctx, _instance, _tail_len):
     return string.printable
 
 
-def fake_get(self, context, instance_uuid):
-    return {'uuid': instance_uuid}
+def fake_get(self, context, instance_uuid, want_objects=False):
+    return fake_instance.fake_instance_obj(context, **{'uuid': instance_uuid})
 
 
 def fake_get_not_found(*args, **kwargs):

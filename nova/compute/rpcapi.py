@@ -254,6 +254,7 @@ class ComputeAPI(object):
                rollback_live_migration_at_destination() take an object
         ...  - Removed run_instance()
         3.27 - Make run_instance() accept a new-world object
+        3.28 - Update get_console_output() to take an object
     '''
 
     VERSION_ALIASES = {
@@ -446,13 +447,16 @@ class ComputeAPI(object):
                    reservations=reservations)
 
     def get_console_output(self, ctxt, instance, tail_length):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.28'):
+            version = '3.28'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.0')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'get_console_output',
-                          instance=instance_p, tail_length=tail_length)
+                          instance=instance, tail_length=tail_length)
 
     def get_console_pool_info(self, ctxt, console_type, host):
         # NOTE(russellb) Havana compat

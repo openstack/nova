@@ -249,7 +249,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_get_console_output(self):
         self._test_compute_api('get_console_output', 'call',
-                instance=self.fake_instance, tail_length='tl')
+                instance=self.fake_instance, tail_length='tl',
+                version='3.28')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
