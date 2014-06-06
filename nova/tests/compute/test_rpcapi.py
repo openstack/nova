@@ -23,10 +23,10 @@ from oslo.config import cfg
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
-from nova import db
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests import fake_block_device
+from nova.tests.fake_instance import fake_instance_obj
 
 CONF = cfg.CONF
 
@@ -36,9 +36,11 @@ class ComputeRpcAPITestCase(test.TestCase):
     def setUp(self):
         super(ComputeRpcAPITestCase, self).setUp()
         self.context = context.get_admin_context()
-        inst = db.instance_create(self.context, {'host': 'fake_host',
-                                                 'instance_type_id': 1})
-        self.fake_instance = jsonutils.to_primitive(inst)
+        instance_attr = {'host': 'fake_host',
+                         'instance_type_id': 1}
+        self.fake_instance_obj = fake_instance_obj(self.context,
+                                                   **instance_attr)
+        self.fake_instance = jsonutils.to_primitive(self.fake_instance_obj)
         self.fake_volume_bdm = jsonutils.to_primitive(
                 fake_block_device.FakeDbBlockDeviceDict(
                     {'source_type': 'volume', 'destination_type': 'volume',
@@ -571,7 +573,8 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_rescue_instance(self):
         self.flags(compute='3.9', group='upgrade_levels')
         self._test_compute_api('rescue_instance', 'cast',
-            instance=self.fake_instance, rescue_password='pw', version='3.9')
+            instance=self.fake_instance_obj, rescue_password='pw',
+            version='3.9')
 
     def test_rescue_instance_with_rescue_image_ref_passed(self):
         self._test_compute_api('rescue_instance', 'cast',
