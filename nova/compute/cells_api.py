@@ -199,7 +199,7 @@ class ComputeCellsAPI(compute_api.API):
         """
         return super(ComputeCellsAPI, self).create(*args, **kwargs)
 
-    def _update_block_device_mapping(self, *args, **kwargs):
+    def _create_block_device_mapping(self, *args, **kwargs):
         """Don't create block device mappings in the API cell.
 
         The child cell will create it and propagate it up to the parent cell.

@@ -449,7 +449,8 @@ class ComputeTaskAPI(object):
             kw['requested_networks'] = kw['requested_networks'].as_tuples()
         if not self.client.can_send_version('1.7'):
             version = '1.5'
-            kw.update({'block_device_mapping': block_device_mapping,
+            bdm_p = objects_base.obj_to_primitive(block_device_mapping)
+            kw.update({'block_device_mapping': bdm_p,
                        'legacy_bdm': legacy_bdm})
 
         cctxt = self.client.prepare(version=version)

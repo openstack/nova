@@ -902,7 +902,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         instance = self._create_fake_instance_obj()
         instance_type = {'swap': 1, 'ephemeral_gb': 2}
         mappings = [
-            {
+            fake_block_device.FakeDbBlockDeviceDict({
                 'device_name': '/dev/sdb4',
                 'source_type': 'blank',
                 'destination_type': 'local',
@@ -910,8 +910,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                 'guest_format': 'swap',
                 'boot_index': -1,
                 'volume_size': 1
-            },
-            {
+            }, anon=True),
+            fake_block_device.FakeDbBlockDeviceDict({
                 'device_name': '/dev/sda1',
                 'source_type': 'volume',
                 'destination_type': 'volume',
@@ -920,8 +920,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                 'guest_format': None,
                 'boot_index': 1,
                 'volume_size': 6
-            },
-            {
+            }, anon=True),
+            fake_block_device.FakeDbBlockDeviceDict({
                 'device_name': '/dev/sda2',
                 'source_type': 'snapshot',
                 'destination_type': 'volume',
@@ -930,8 +930,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                 'guest_format': None,
                 'boot_index': 0,
                 'volume_size': 4
-            },
-            {
+            }, anon=True),
+            fake_block_device.FakeDbBlockDeviceDict({
                 'device_name': '/dev/sda3',
                 'source_type': 'image',
                 'destination_type': 'local',
@@ -939,20 +939,22 @@ class ComputeVolumeTestCase(BaseTestCase):
                 'guest_format': None,
                 'boot_index': 2,
                 'volume_size': 1
-            }
+            }, anon=True)
         ]
+        mappings = block_device_obj.block_device_make_list_from_dicts(
+                self.context, mappings)
 
         # Make sure it passes at first
         self.compute_api._validate_bdm(self.context, instance,
                                        instance_type, mappings)
 
         # Boot sequence
-        mappings[2]['boot_index'] = 2
+        mappings[2].boot_index = 2
         self.assertRaises(exception.InvalidBDMBootSequence,
                           self.compute_api._validate_bdm,
                           self.context, instance, instance_type,
                           mappings)
-        mappings[2]['boot_index'] = 0
+        mappings[2].boot_index = 0
 
         # number of local block_devices
         self.flags(max_local_block_devices=1)
@@ -961,7 +963,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                           self.context, instance, instance_type,
                           mappings)
         ephemerals = [
-            {
+            fake_block_device.FakeDbBlockDeviceDict({
                 'device_name': '/dev/vdb',
                 'source_type': 'blank',
                 'destination_type': 'local',
@@ -970,8 +972,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                 'guest_format': None,
                 'boot_index': -1,
                 'volume_size': 1
-            },
-            {
+            }, anon=True),
+            fake_block_device.FakeDbBlockDeviceDict({
                 'device_name': '/dev/vdc',
                 'source_type': 'blank',
                 'destination_type': 'local',
@@ -980,34 +982,37 @@ class ComputeVolumeTestCase(BaseTestCase):
                 'guest_format': None,
                 'boot_index': -1,
                 'volume_size': 1
-            }]
+            }, anon=True)
+        ]
+        ephemerals = block_device_obj.block_device_make_list_from_dicts(
+                self.context, ephemerals)
 
         self.flags(max_local_block_devices=4)
         # More ephemerals are OK as long as they are not over the size limit
+        mappings_ = mappings[:]
+        mappings_.objects.extend(ephemerals)
         self.compute_api._validate_bdm(self.context, instance,
-                                       instance_type, mappings + ephemerals)
+                                       instance_type, mappings_)
 
         # Ephemerals over the size limit
-        ephemerals[0]['volume_size'] = 3
+        ephemerals[0].volume_size = 3
+        mappings_ = mappings[:]
+        mappings_.objects.extend(ephemerals)
         self.assertRaises(exception.InvalidBDMEphemeralSize,
                           self.compute_api._validate_bdm,
                           self.context, instance, instance_type,
-                          mappings + ephemerals)
-        self.assertRaises(exception.InvalidBDMEphemeralSize,
-                          self.compute_api._validate_bdm,
-                          self.context, instance, instance_type,
-                          mappings + [ephemerals[0]])
+                          mappings_)
 
         # Swap over the size limit
-        mappings[0]['volume_size'] = 3
+        mappings[0].volume_size = 3
         self.assertRaises(exception.InvalidBDMSwapSize,
                           self.compute_api._validate_bdm,
                           self.context, instance, instance_type,
                           mappings)
-        mappings[0]['volume_size'] = 1
+        mappings[0].volume_size = 1
 
         additional_swap = [
-            {
+            fake_block_device.FakeDbBlockDeviceDict({
                 'device_name': '/dev/vdb',
                 'source_type': 'blank',
                 'destination_type': 'local',
@@ -1015,31 +1020,42 @@ class ComputeVolumeTestCase(BaseTestCase):
                 'guest_format': 'swap',
                 'boot_index': -1,
                 'volume_size': 1
-            }]
+            }, anon=True)
+        ]
+        additional_swap = block_device_obj.block_device_make_list_from_dicts(
+                self.context, additional_swap)
 
         # More than one swap
+        mappings_ = mappings[:]
+        mappings_.objects.extend(additional_swap)
         self.assertRaises(exception.InvalidBDMFormat,
                           self.compute_api._validate_bdm,
                           self.context, instance, instance_type,
-                          mappings + additional_swap)
+                          mappings_)
 
         image_no_size = [
-            {
+            fake_block_device.FakeDbBlockDeviceDict({
                 'device_name': '/dev/sda4',
                 'source_type': 'image',
                 'image_id': image_id,
                 'destination_type': 'volume',
                 'boot_index': -1,
                 'volume_size': None,
-            }]
+            }, anon=True)
+        ]
+        image_no_size = block_device_obj.block_device_make_list_from_dicts(
+                self.context, image_no_size)
+        mappings_ = mappings[:]
+        mappings_.objects.extend(image_no_size)
         self.assertRaises(exception.InvalidBDM,
                           self.compute_api._validate_bdm,
                           self.context, instance, instance_type,
-                          mappings + image_no_size)
+                          mappings_)
 
     def test_validate_bdm_media_service_exceptions(self):
         instance_type = {'swap': 1, 'ephemeral_gb': 1}
-        all_mappings = [{'id': 1,
+        all_mappings = [fake_block_device.FakeDbBlockDeviceDict({
+                         'id': 1,
                          'no_device': None,
                          'source_type': 'volume',
                          'destination_type': 'volume',
@@ -1047,7 +1063,9 @@ class ComputeVolumeTestCase(BaseTestCase):
                          'volume_id': self.volume_id,
                          'device_name': 'vda',
                          'boot_index': 0,
-                         'delete_on_termination': False}]
+                         'delete_on_termination': False}, anon=True)]
+        all_mappings = block_device_obj.block_device_make_list_from_dicts(
+                self.context, all_mappings)
 
         # First we test a list of invalid status values that should result
         # in an InvalidVolume exception being raised.
@@ -8312,7 +8330,12 @@ class ComputeAPITestCase(BaseTestCase):
 
         return bdm
 
-    def test_update_block_device_mapping(self):
+    def test_create_block_device_mapping(self):
+        def _compare_bdm_object(obj1, obj2, extra_keys=()):
+            for key in (('device_name', 'source_type', 'destination_type')
+                    + extra_keys):
+                self.assertEqual(getattr(obj1, key), getattr(obj2, key))
+
         swap_size = ephemeral_size = 1
         instance_type = {'swap': swap_size, 'ephemeral_gb': ephemeral_size}
         instance = self._create_fake_instance_obj()
@@ -8377,12 +8400,13 @@ class ComputeAPITestCase(BaseTestCase):
 
         image_mapping = self.compute_api._prepare_image_mapping(
             instance_type, mappings)
-        self.compute_api._update_block_device_mapping(
-            self.context, instance_type, instance['uuid'], image_mapping)
+        image_mapping = block_device_obj.block_device_make_list_from_dicts(
+                self.context, image_mapping)
+        self.compute_api._create_block_device_mapping(
+            instance_type, instance['uuid'], image_mapping)
 
-        bdms = [block_device.BlockDeviceDict(bdm) for bdm in
-                db.block_device_mapping_get_all_by_instance(
-                    self.context, instance['uuid'])]
+        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                    self.context, instance['uuid'])
         expected_result = [
             {'source_type': 'blank', 'destination_type': 'local',
              'guest_format': 'swap', 'device_name': '/dev/sdb1',
@@ -8397,21 +8421,32 @@ class ComputeAPITestCase(BaseTestCase):
              'guest_format': CONF.default_ephemeral_format,
              'device_name': '/dev/sdc2', 'delete_on_termination': True},
             ]
-        bdms.sort(key=operator.itemgetter('device_name'))
-        expected_result.sort(key=operator.itemgetter('device_name'))
+        expected_result = block_device_obj.block_device_make_list_from_dicts(
+                    self.context,
+                    map(fake_block_device.AnonFakeDbBlockDeviceDict,
+                        expected_result))
+        bdms.sort(key=operator.attrgetter('device_name'))
+        expected_result.sort(key=operator.attrgetter('device_name'))
         self.assertEqual(len(bdms), len(expected_result))
         for expected, got in zip(expected_result, bdms):
-            self.assertThat(expected, matchers.IsSubDictOf(got))
+            _compare_bdm_object(
+                    expected, got,
+                    extra_keys=('guest_format', 'delete_on_termination'))
 
-        self.compute_api._update_block_device_mapping(
-            self.context, flavors.get_default_flavor(),
-            instance['uuid'], block_device_mapping)
-        bdms = [block_device.BlockDeviceDict(bdm) for bdm in
-                db.block_device_mapping_get_all_by_instance(
-                        self.context, instance['uuid'])]
+        block_device_mapping = (
+                block_device_obj.block_device_make_list_from_dicts(
+                    self.context,
+                    map(fake_block_device.AnonFakeDbBlockDeviceDict,
+                        block_device_mapping)))
+        self.compute_api._create_block_device_mapping(
+            flavors.get_default_flavor(), instance['uuid'],
+            block_device_mapping)
+        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                    self.context, instance['uuid'])
         expected_result = [
             {'snapshot_id': '00000000-aaaa-bbbb-cccc-000000000000',
-               'device_name': '/dev/sda1'},
+             'device_name': '/dev/sda1', 'source_type': 'snapshot',
+             'destination_type': 'volume'},
 
             {'source_type': 'blank', 'destination_type': 'local',
              'guest_format': 'swap', 'device_name': '/dev/sdb1',
@@ -8449,11 +8484,17 @@ class ComputeAPITestCase(BaseTestCase):
              'source_type': 'snapshot', 'destination_type': 'volume',
              'snapshot_id': '77777777-aaaa-bbbb-cccc-888888888888'},
             {'no_device': True, 'device_name': '/dev/sdd4'}]
+        expected_result = block_device_obj.block_device_make_list_from_dicts(
+                    self.context,
+                    map(fake_block_device.AnonFakeDbBlockDeviceDict,
+                        expected_result))
         bdms.sort(key=operator.itemgetter('device_name'))
         expected_result.sort(key=operator.itemgetter('device_name'))
         self.assertEqual(len(bdms), len(expected_result))
         for expected, got in zip(expected_result, bdms):
-            self.assertThat(expected, matchers.IsSubDictOf(got))
+            _compare_bdm_object(
+                    expected, got,
+                    extra_keys=('snapshot_id', 'delete_on_termination'))
 
     def _test_check_and_transform_bdm(self, bdms, expected_bdms,
                                       image_bdms=None, base_options=None,
@@ -8468,9 +8509,11 @@ class ComputeAPITestCase(BaseTestCase):
         base_options = base_options or {'root_device_name': 'vda',
                                         'image_ref': FAKE_IMAGE_REF}
         transformed_bdm = self.compute_api._check_and_transform_bdm(
-                base_options, {}, image_meta, 1, 1, bdms, legacy_bdms)
-        self.assertThat(expected_bdms,
-                            matchers.DictListMatches(transformed_bdm))
+                self.context, base_options, {},
+                image_meta, 1, 1, bdms, legacy_bdms)
+        for expected, got in zip(expected_bdms, transformed_bdm):
+            self.assertThat(dict(expected.items()),
+                            matchers.DictMatches(dict(got.items())))
 
     def test_check_and_transform_legacy_bdm_no_image_bdms(self):
         legacy_bdms = [
@@ -8480,6 +8523,8 @@ class ComputeAPITestCase(BaseTestCase):
         expected_bdms = [block_device.BlockDeviceDict.from_legacy(
             legacy_bdms[0])]
         expected_bdms[0]['boot_index'] = 0
+        expected_bdms = block_device_obj.block_device_make_list_from_dicts(
+                self.context, expected_bdms)
         self._test_check_and_transform_bdm(legacy_bdms, expected_bdms,
                                            legacy_bdms=True)
 
@@ -8497,6 +8542,8 @@ class ComputeAPITestCase(BaseTestCase):
                 block_device.BlockDeviceDict.from_legacy(image_bdms[0])]
         expected_bdms[0]['boot_index'] = -1
         expected_bdms[1]['boot_index'] = 0
+        expected_bdms = block_device_obj.block_device_make_list_from_dicts(
+                self.context, expected_bdms)
         self._test_check_and_transform_bdm(legacy_bdms, expected_bdms,
                                            image_bdms=image_bdms,
                                            legacy_bdms=True,
@@ -8515,6 +8562,8 @@ class ComputeAPITestCase(BaseTestCase):
                 block_device.BlockDeviceDict.from_legacy(legacy_bdms[0]),
                 image_bdms[0]]
         expected_bdms[0]['boot_index'] = -1
+        expected_bdms = block_device_obj.block_device_make_list_from_dicts(
+                self.context, expected_bdms)
         self._test_check_and_transform_bdm(legacy_bdms, expected_bdms,
                                            image_bdms=image_bdms,
                                            legacy_bdms=True)
@@ -8524,7 +8573,8 @@ class ComputeAPITestCase(BaseTestCase):
                                               'destination_type': 'local',
                                               'image_id': FAKE_IMAGE_REF,
                                               'boot_index': 0})]
-        expected_bdms = bdms
+        expected_bdms = block_device_obj.block_device_make_list_from_dicts(
+                self.context, bdms)
         self._test_check_and_transform_bdm(bdms, expected_bdms)
 
     def test_check_and_transform_bdm_image_bdms(self):
@@ -8536,6 +8586,8 @@ class ComputeAPITestCase(BaseTestCase):
             {'source_type': 'volume', 'destination_type': 'volume',
              'volume_id': '33333333-aaaa-bbbb-cccc-444444444444'})]
         expected_bdms = bdms + image_bdms
+        expected_bdms = block_device_obj.block_device_make_list_from_dicts(
+                self.context, expected_bdms)
         self._test_check_and_transform_bdm(bdms, expected_bdms,
                                            image_bdms=image_bdms)
 
@@ -8550,6 +8602,8 @@ class ComputeAPITestCase(BaseTestCase):
         expected_bdms = [block_device.BlockDeviceDict.from_legacy(
             image_bdms[0])]
         expected_bdms[0]['boot_index'] = 0
+        expected_bdms = block_device_obj.block_device_make_list_from_dicts(
+                self.context, expected_bdms)
         self._test_check_and_transform_bdm(bdms, expected_bdms,
                                            image_bdms=image_bdms,
                                            legacy_image_bdms=True)
@@ -8569,29 +8623,25 @@ class ComputeAPITestCase(BaseTestCase):
 
         # We get an image BDM
         transformed_bdm = self.compute_api._check_and_transform_bdm(
-            base_options, {}, {}, 1, 1, fake_legacy_bdms, True)
+            self.context, base_options, {}, {}, 1, 1, fake_legacy_bdms, True)
         self.assertEqual(len(transformed_bdm), 2)
 
         # No image BDM created if image already defines a root BDM
         base_options['root_device_name'] = 'vda'
         base_options['image_ref'] = None
         transformed_bdm = self.compute_api._check_and_transform_bdm(
-            base_options, {}, image_meta, 1, 1, [], True)
+            self.context, base_options, {}, image_meta, 1, 1, [], True)
         self.assertEqual(len(transformed_bdm), 1)
 
         # No image BDM created
         transformed_bdm = self.compute_api._check_and_transform_bdm(
-            base_options, {}, {}, 1, 1, fake_legacy_bdms, True)
+            self.context, base_options, {}, {}, 1, 1, fake_legacy_bdms, True)
         self.assertEqual(len(transformed_bdm), 1)
 
         # Volumes with multiple instances fails
         self.assertRaises(exception.InvalidRequest,
-            self.compute_api._check_and_transform_bdm,
+            self.compute_api._check_and_transform_bdm, self.context,
             base_options, {}, {}, 1, 2, fake_legacy_bdms, True)
-
-        checked_bdm = self.compute_api._check_and_transform_bdm(
-            base_options, {}, {}, 1, 1, transformed_bdm, True)
-        self.assertEqual(checked_bdm, transformed_bdm)
 
         # Volume backed so no image_ref in base_options
         # v2 bdms contains a root image to volume mapping
@@ -8608,7 +8658,8 @@ class ComputeAPITestCase(BaseTestCase):
                          'volume_size': 1}]
         base_options['image_ref'] = None
         transformed_bdm = self.compute_api._check_and_transform_bdm(
-            base_options, {}, image_meta, 1, 1, fake_v2_bdms, False)
+            self.context, base_options, {}, image_meta, 1, 1,
+            fake_v2_bdms, False)
         self.assertEqual(len(transformed_bdm), 1)
 
     def test_volume_size(self):
