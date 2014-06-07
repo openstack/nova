@@ -207,6 +207,20 @@ class BlockDeviceTestCase(test.NoDBTestCase):
             res = block_device.new_format_is_ephemeral(bdm)
             self.assertEqual(expected, res)
 
+    def test_validate_device_name(self):
+        for value in [' ', 10, None, 'a' * 260]:
+            self.assertRaises(exception.InvalidBDMFormat,
+                              block_device.validate_device_name,
+                              value)
+
+    def test_validate_and_default_volume_size(self):
+        bdm = {}
+        for value in [-1, 'a', 2.5]:
+            bdm['volume_size'] = value
+            self.assertRaises(exception.InvalidBDMFormat,
+                              block_device.validate_and_default_volume_size,
+                              bdm)
+
 
 class TestBlockDeviceDict(test.NoDBTestCase):
     def setUp(self):
