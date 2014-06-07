@@ -46,7 +46,8 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
     # Version 1.4: Instance version 1.16
     # Version 1.5: Instance version 1.17
     # Version 1.6: Instance version 1.18
-    VERSION = '1.6'
+    # Version 1.7: Add update_or_create method
+    VERSION = '1.7'
 
     fields = {
         'id': fields.IntegerField(),
@@ -92,8 +93,20 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
         block_device_obj.obj_reset_changes()
         return block_device_obj
 
-    @base.remotable
-    def create(self, context):
+    def _create(self, context, update_or_create=False):
+        """Create the block device record in the database.
+
+        In case the id field is set on the object, and if the instance is set
+        raise an ObjectActionError. Resets all the changes on the object.
+
+        Returns None
+
+        :param context: security context used for database calls
+        :param update_or_create: consider existing block devices for the
+                instance based on the device name and swap, and only update
+                the ones that match. Normally only used when creating the
+                instance for the first time.
+        """
         cell_type = cells_opts.get_cell_type()
         if cell_type == 'api':
             raise exception.ObjectActionError(
@@ -109,11 +122,27 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
             raise exception.ObjectActionError(action='create',
                                               reason='instance assigned')
 
-        db_bdm = db.block_device_mapping_create(context, updates, legacy=False)
+        cells_create = update_or_create or None
+        if update_or_create:
+            db_bdm = db.block_device_mapping_update_or_create(
+                    context, updates, legacy=False)
+        else:
+            db_bdm = db.block_device_mapping_create(
+                    context, updates, legacy=False)
+
         self._from_db_object(context, self, db_bdm)
         if cell_type == 'compute':
             cells_api = cells_rpcapi.CellsAPI()
-            cells_api.bdm_update_or_create_at_top(context, self, create=True)
+            cells_api.bdm_update_or_create_at_top(
+                    context, self, create=cells_create)
+
+    @base.remotable
+    def create(self, context):
+        self._create(context)
+
+    @base.remotable
+    def update_or_create(self, context):
+        self._create(context, update_or_create=True)
 
     @base.remotable
     def destroy(self, context):
@@ -206,7 +235,8 @@ class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
     # Version 1.5: BlockDeviceMapping <= version 1.4
     # Version 1.6: BlockDeviceMapping <= version 1.5
     # Version 1.7: BlockDeviceMapping <= version 1.6
-    VERSION = '1.7'
+    # Version 1.8: BlockDeviceMapping <= version 1.7
+    VERSION = '1.8'
 
     fields = {
         'objects': fields.ListOfObjectsField('BlockDeviceMapping'),
@@ -220,6 +250,7 @@ class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
         '1.5': '1.4',
         '1.6': '1.5',
         '1.7': '1.6',
+        '1.8': '1.7',
     }
 
     @base.remotable_classmethod
