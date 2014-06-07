@@ -8010,7 +8010,8 @@ class NWFilterTestCase(test.TestCase):
 
         self.fw.setup_basic_filtering(instance, network_info)
 
-        def assert_filterref(instance, vif, expected=[]):
+        def assert_filterref(instance, vif, expected=None):
+            expected = expected or []
             nic_id = vif['address'].replace(':', '')
             filter_name = self.fw._instance_filter_name(instance, nic_id)
             f = fakefilter.nwfilterLookupByName(filter_name)

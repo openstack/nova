@@ -3345,8 +3345,9 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
                 self._objectify(instance), [], [])
 
-    def test_run_instance_usage_notification(self, request_spec={}):
+    def test_run_instance_usage_notification(self, request_spec=None):
         # Ensure run instance generates appropriate usage notification.
+        request_spec = request_spec or {}
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
         expected_image_name = request_spec.get('image', {}).get('name', '')

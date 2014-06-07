@@ -118,9 +118,10 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         vmwareapi_fake.cleanup()
         nova.tests.image.fake.FakeImageService_reset()
 
-    def _spawn_vm(self, injected_files=[], admin_password=None,
+    def _spawn_vm(self, injected_files=None, admin_password=None,
                   block_device_info=None):
 
+        injected_files = injected_files or []
         read_file_handle = mock.MagicMock()
         write_file_handle = mock.MagicMock()
         self.image_ref = self.instance['image_ref']

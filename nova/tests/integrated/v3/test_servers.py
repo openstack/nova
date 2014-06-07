@@ -72,7 +72,8 @@ class ServersActionsJsonTest(ServersSampleBase):
     sample_dir = 'servers'
 
     def _test_server_action(self, uuid, action,
-                            subs={}, resp_tpl=None, code=202):
+                            subs=None, resp_tpl=None, code=202):
+        subs = subs or {}
         subs.update({'action': action,
                      'glance_host': self._get_glance_host()})
         response = self._do_post('servers/%s/action' % uuid,

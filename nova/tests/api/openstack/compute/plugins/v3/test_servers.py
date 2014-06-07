@@ -652,7 +652,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(compute_self, context, search_opts=None,
                          sort_key=None, sort_dir='desc',
                          limit=None, marker=None, want_objects=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             db_list = [fakes.stub_instance(100, uuid=server_uuid)]
             return instance_obj._make_instance_list(
                 context, objects.InstanceList(), db_list, FIELDS)
@@ -671,7 +671,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(compute_self, context, search_opts=None,
                          sort_key=None, sort_dir='desc',
                          limit=None, marker=None, want_objects=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('image', search_opts)
             self.assertEqual(search_opts['image'], '12345')
@@ -691,7 +691,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
                          columns_to_join=None, use_slave=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertIsNotNone(filters)
             self.assertEqual(filters['project_id'], 'newfake')
             self.assertFalse(filters.get('tenant_id'))
@@ -711,7 +711,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
                          columns_to_join=None, use_slave=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertNotEqual(filters, None)
             self.assertEqual(filters['project_id'], 'fake')
             return [fakes.stub_instance(100)]
@@ -727,7 +727,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
                          columns_to_join=None, use_slave=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertNotEqual(filters, None)
             # The project_id assertion checks that the project_id
             # filter is set to that specified in the request url and
@@ -749,7 +749,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
                          columns_to_join=None, use_slave=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertNotIn('project_id', filters)
             return [fakes.stub_instance(100)]
 
@@ -766,7 +766,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
                          columns_to_join=None, use_slave=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertNotIn('project_id', filters)
             return [fakes.stub_instance(100)]
 
@@ -783,7 +783,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
                          columns_to_join=None, use_slave=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertNotIn('all_tenants', filters)
             return [fakes.stub_instance(100)]
 
@@ -800,7 +800,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
                          columns_to_join=None, use_slave=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertNotIn('all_tenants', filters)
             return [fakes.stub_instance(100)]
 
@@ -817,7 +817,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
                          columns_to_join=None,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertNotIn('all_tenants', filters)
             return [fakes.stub_instance(100)]
 
@@ -833,7 +833,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
                          columns_to_join=None, use_slave=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertIsNotNone(filters)
             self.assertEqual(filters['project_id'], 'fake')
             return [fakes.stub_instance(100)]
@@ -851,7 +851,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
                          columns_to_join=None, use_slave=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertIsNotNone(filters)
             self.assertNotIn('project_id', filters)
             return [fakes.stub_instance(100)]
@@ -901,7 +901,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(compute_self, context, search_opts=None,
                          sort_key=None, sort_dir='desc',
                          limit=None, marker=None, want_objects=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('flavor', search_opts)
             # flavor is an integer ID
@@ -936,7 +936,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(compute_self, context, search_opts=None,
                          sort_key=None, sort_dir='desc',
                          limit=None, marker=None, want_objects=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('vm_state', search_opts)
             self.assertEqual(search_opts['vm_state'], [vm_states.ACTIVE])
@@ -959,7 +959,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(compute_self, context, search_opts=None,
                          sort_key=None, sort_dir='desc',
                          limit=None, marker=None, want_objects=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('task_state', search_opts)
             self.assertEqual([task_states.REBOOT_PENDING,
@@ -986,7 +986,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(compute_self, context, search_opts=None,
                          sort_key=None, sort_dir='desc',
                          limit=None, marker=None, want_objects=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertIn('vm_state', search_opts)
             self.assertEqual(search_opts['vm_state'],
                              [vm_states.ACTIVE, vm_states.STOPPED])
@@ -1022,7 +1022,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(compute_self, context, search_opts=None,
                          sort_key=None, sort_dir='desc',
                          limit=None, marker=None, want_objects=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertIn('vm_state', search_opts)
             self.assertEqual(search_opts['vm_state'], ['deleted'])
 
@@ -1045,7 +1045,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(compute_self, context, search_opts=None,
                          sort_key=None, sort_dir='desc',
                          limit=None, marker=None, want_objects=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('name', search_opts)
             self.assertEqual(search_opts['name'], 'whee.*')
@@ -1067,7 +1067,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(compute_self, context, search_opts=None,
                          sort_key=None, sort_dir='desc',
                          limit=None, marker=None, want_objects=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('changes-since', search_opts)
             changes_since = datetime.datetime(2011, 1, 24, 17, 8, 1,
@@ -1102,7 +1102,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(compute_self, context, search_opts=None,
                          sort_key=None, sort_dir='desc',
                          limit=None, marker=None, want_objects=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertIsNotNone(search_opts)
             # Allowed by user
             self.assertIn('name', search_opts)
@@ -1134,7 +1134,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(compute_self, context, search_opts=None,
                          sort_key=None, sort_dir='desc',
                          limit=None, marker=None, want_objects=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertIsNotNone(search_opts)
             # Allowed by user
             self.assertIn('name', search_opts)
@@ -1165,7 +1165,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(compute_self, context, search_opts=None,
                          sort_key=None, sort_dir='desc',
                          limit=None, marker=None, want_objects=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('ip', search_opts)
             self.assertEqual(search_opts['ip'], '10\..*')
@@ -1190,7 +1190,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(compute_self, context, search_opts=None,
                          sort_key=None, sort_dir='desc',
                          limit=None, marker=None, want_objects=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('ip6', search_opts)
             self.assertEqual(search_opts['ip6'], 'ffff.*')
@@ -1272,7 +1272,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(compute_self, context, search_opts=None,
                          sort_key=None, sort_dir='desc',
                          limit=None, marker=None, want_objects=False,
-                         expected_attrs=[]):
+                         expected_attrs=None):
             self.expected_attrs = expected_attrs
             return []
 

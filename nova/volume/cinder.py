@@ -221,7 +221,8 @@ class API(object):
         item = cinderclient(context).volumes.get(volume_id)
         return _untranslate_volume_summary_view(context, item)
 
-    def get_all(self, context, search_opts={}):
+    def get_all(self, context, search_opts=None):
+        search_opts = search_opts or {}
         items = cinderclient(context).volumes.list(detailed=True)
         rval = []
 

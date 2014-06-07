@@ -33,7 +33,7 @@ class fake_bad_extension(object):
 
 class fake_stevedore_enabled_extensions(object):
     def __init__(self, namespace, check_func, invoke_on_load=False,
-                 invoke_args=(), invoke_kwds={}):
+                 invoke_args=(), invoke_kwds=None):
         self.extensions = []
 
     def map(self, func, *args, **kwds):

@@ -34,6 +34,7 @@ Nova Specific Commandments
 - [N320] Setting CONF.* attributes directly in tests is forbidden. Use
   self.flags(option=value) instead.
 - [N321] Validate that LOG messages, except debug ones, have translations
+- [N322] Method's default argument shouldn't be mutable
 
 Creating Unit Tests
 -------------------
