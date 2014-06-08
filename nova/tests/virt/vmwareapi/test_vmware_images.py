@@ -28,12 +28,6 @@ from nova.virt.vmwareapi import vmware_images
 class VMwareImagesTestCase(test.NoDBTestCase):
     """Unit tests for Vmware API connection calls."""
 
-    def setUp(self):
-        super(VMwareImagesTestCase, self).setUp()
-
-    def tearDown(self):
-        super(VMwareImagesTestCase, self).tearDown()
-
     def test_fetch_image(self):
         """Test fetching images."""
 
@@ -62,22 +56,16 @@ class VMwareImagesTestCase(test.NoDBTestCase):
                               file_path, file_size):
             return write_file_handle
 
-        def fake_download(context, image_id):
-            return read_iter
-
-        def fake_image_show(context, image_id):
-            return image_data
-
         with contextlib.nested(
              mock.patch.object(read_write_util, 'GlanceFileRead',
                                side_effect=fake_read_handle),
              mock.patch.object(read_write_util, 'VMwareHTTPWriteFile',
                                side_effect=fake_write_handle),
              mock.patch.object(vmware_images, 'start_transfer'),
-             mock.patch.object(nova.image.glance.GlanceImageService, 'show',
-                side_effect=fake_image_show),
-             mock.patch.object(nova.image.glance.GlanceImageService,
-                     'download', side_effect=fake_download),
+             mock.patch.object(vmware_images.IMAGE_API, 'get',
+                return_value=image_data),
+             mock.patch.object(vmware_images.IMAGE_API, 'download',
+                     return_value=read_iter),
         ) as (glance_read, http_write, start_transfer, image_show,
                 image_download):
             vmware_images.fetch_image(context, instance,

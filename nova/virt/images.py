@@ -24,7 +24,7 @@ import os
 from oslo.config import cfg
 
 from nova import exception
-from nova.image import glance
+from nova import image
 from nova.openstack.common import fileutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import imageutils
@@ -41,6 +41,7 @@ image_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(image_opts)
+IMAGE_API = image.API()
 
 
 def qemu_img_info(path):
@@ -62,14 +63,8 @@ def convert_image(source, dest, out_format, run_as_root=False):
 
 
 def fetch(context, image_href, path, _user_id, _project_id, max_size=0):
-    # TODO(vish): Improve context handling and add owner and auth data
-    #             when it is added to glance.  Right now there is no
-    #             auth checking in glance, so we assume that access was
-    #             checked before we got here.
-    (image_service, image_id) = glance.get_remote_image_service(context,
-                                                                image_href)
     with fileutils.remove_path_on_error(path):
-        image_service.download(context, image_id, dst_path=path)
+        IMAGE_API.download(context, image_href, dest_path=path)
 
 
 def fetch_to_raw(context, image_href, path, user_id, project_id, max_size=0):

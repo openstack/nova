@@ -19,20 +19,14 @@ from nova import test
 from nova.virt.vmwareapi import io_util
 
 
+@mock.patch.object(io_util, 'IMAGE_API')
 class GlanceWriteThreadTestCase(test.NoDBTestCase):
 
-    def setUp(self):
-        super(GlanceWriteThreadTestCase, self).setUp()
-
-    def tearDown(self):
-        super(GlanceWriteThreadTestCase, self).tearDown()
-
-    def test_start_image_update_service_exception(self):
-        image_service = mock.MagicMock()
-        image_service.update.side_effect = exception.ImageNotAuthorized(
+    def test_start_image_update_service_exception(self, mocked):
+        mocked.update.side_effect = exception.ImageNotAuthorized(
             image_id='image')
         write_thread = io_util.GlanceWriteThread(
-            None, None, image_service, image_id=None)
+            None, None, image_id=None)
         write_thread.start()
         self.assertRaises(exception.ImageNotAuthorized, write_thread.wait)
         write_thread.stop()

@@ -128,3 +128,44 @@ class API(object):
         """
         session, image_id = self._get_session_and_image_id(context, id_or_uri)
         return session.delete(context, image_id)
+
+    def download(self, context, id_or_uri, data=None, dest_path=None):
+        """Transfer image bits from Glance or a known source location to the
+        supplied destination filepath.
+
+        :param context: The `nova.context.RequestContext` object for the
+                        request
+        :param id_or_uri: A UUID identifier or an image URI to look up image
+                          information for.
+        :param data: A file object to use in downloading image data.
+        :param dest_path: Filepath to transfer image bits to.
+
+        Note that because of the poor design of the
+        `glance.ImageService.download` method, the function returns different
+        things depending on what arguments are passed to it. If a data argument
+        is supplied but no dest_path is specified (only done in the XenAPI virt
+        driver's image.utils module) then None is returned from the method. If
+        the data argument is not specified but a destination path *is*
+        specified, then a writeable file handle to the destination path is
+        constructed in the method and the image bits written to that file, and
+        again, None is returned from the method. If no data argument is
+        supplied and no dest_path argument is supplied (VMWare and XenAPI virt
+        drivers), then the method returns an iterator to the image bits that
+        the caller uses to write to wherever location it wants. Finally, if the
+        allow_direct_url_schemes CONF option is set to something, then the
+        nova.image.download modules are used to attempt to do an SCP copy of
+        the image bits from a file location to the dest_path and None is
+        returned after retrying one or more download locations (libvirt and
+        Hyper-V virt drivers through nova.virt.images.fetch).
+
+        I think the above points to just how hacky/wacky all of this code is,
+        and the reason it needs to be cleaned up and standardized across the
+        virt driver callers.
+        """
+        # TODO(jaypipes): Deprecate and remove this method entirely when we
+        #                 move to a system that simply returns a file handle
+        #                 to a bytestream iterator and allows the caller to
+        #                 handle streaming/copying/zero-copy as they see fit.
+        session, image_id = self._get_session_and_image_id(context, id_or_uri)
+        return session.download(context, image_id, data=data,
+                                dst_path=dest_path)
