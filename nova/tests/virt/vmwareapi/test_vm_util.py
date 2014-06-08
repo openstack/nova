@@ -825,3 +825,20 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                     destName='fake-dest',
                     destSpec='fake-spec')
             fake_wait_for_task.assert_called_once_with('fake-task')
+
+    def _create_fake_vm_objects(self):
+        fake_objects = fake.FakeRetrieveResult()
+        fake_objects.add_object(fake.VirtualMachine())
+        return fake_objects
+
+    def test_get_values(self):
+        objects = self._create_fake_vm_objects()
+        lst_properties = ['runtime.powerState',
+                          'summary.guest.toolsStatus',
+                          'summary.guest.toolsRunningStatus']
+        query = vm_util.get_values_from_object_properties(
+                fake_session(objects), objects, lst_properties)
+        self.assertEqual('poweredOn', query['runtime.powerState'])
+        self.assertEqual('guestToolsRunning',
+                         query['summary.guest.toolsRunningStatus'])
+        self.assertEqual('toolsOk', query['summary.guest.toolsStatus'])
