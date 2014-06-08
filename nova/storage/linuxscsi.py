@@ -15,6 +15,7 @@
 """Generic linux scsi subsystem utilities."""
 
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _LW
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.openstack.common import processutils
@@ -97,7 +98,7 @@ def find_multipath_device(device):
         (out, err) = utils.execute('multipath', '-l', device,
                                run_as_root=True)
     except processutils.ProcessExecutionError as exc:
-        LOG.warn(_("Multipath call failed exit (%(code)s)")
+        LOG.warn(_LW("Multipath call failed exit (%(code)s)")
                  % {'code': exc.exit_code})
         return None
 
@@ -110,21 +111,26 @@ def find_multipath_device(device):
             # device line output is different depending
             # on /etc/multipath.conf settings.
             if info[1][:2] == "dm":
-                mdev = "/dev/%s" % info[1]
                 mdev_id = info[0]
+                mdev = '/dev/mapper/%s' % mdev_id
             elif info[2][:2] == "dm":
-                mdev = "/dev/%s" % info[2]
                 mdev_id = info[1].replace('(', '')
                 mdev_id = mdev_id.replace(')', '')
+                mdev = '/dev/mapper/%s' % mdev_id
 
             if mdev is None:
-                LOG.warn(_("Couldn't find multipath device %s"), line)
+                LOG.warn(_LW("Couldn't find multipath device %s"), line)
                 return None
 
             LOG.debug(_("Found multipath device = %s"), mdev)
             device_lines = lines[3:]
             for dev_line in device_lines:
                 if dev_line.find("policy") != -1:
+                    continue
+                if '#' in dev_line:
+                    LOG.warn(_LW('Skip faulty line "%(dev_line)s" of'
+                                 ' multipath device %(mdev)s')
+                             % {'mdev': mdev, 'dev_line': dev_line})
                     continue
 
                 dev_line = dev_line.lstrip(' |-`')

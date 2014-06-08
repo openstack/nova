@@ -27,6 +27,7 @@ import six.moves.urllib.parse as urlparse
 
 from nova import exception
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _LW
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.openstack.common import processutils
@@ -993,7 +994,6 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
         """Detach the volume from instance_name."""
         super(LibvirtFibreChannelVolumeDriver,
               self).disconnect_volume(connection_info, mount_device)
-        devices = connection_info['data']['devices']
 
         # If this is a multipath device, we need to search again
         # and make sure we remove all the devices. Some of them
@@ -1003,6 +1003,11 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
             mdev_info = linuxscsi.find_multipath_device(multipath_id)
             devices = mdev_info['devices']
             LOG.debug(_("devices to remove = %s"), devices)
+        else:
+            # only needed when multipath-tools work improperly
+            devices = connection_info['data'].get('devices', [])
+            LOG.warn(_LW("multipath-tools probably work improperly. "
+                       "devices to remove = %s.") % devices)
 
         # There may have been more than 1 device mounted
         # by the kernel for this volume.  We have to remove
