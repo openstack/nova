@@ -21,6 +21,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ class PauseServerController(wsgi.Controller):
         super(PauseServerController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    @extensions.expected_errors((404, 409))
+    @extensions.expected_errors((404, 409, 501))
     @wsgi.action('pause')
     def _pause(self, req, id, body):
         """Permit Admins to pause the server."""
@@ -54,9 +55,12 @@ class PauseServerController(wsgi.Controller):
                     'pause')
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
+        except NotImplementedError:
+            msg = _("Virt driver does not implement pause function.")
+            raise exc.HTTPNotImplemented(explanation=msg)
         return webob.Response(status_int=202)
 
-    @extensions.expected_errors((404, 409))
+    @extensions.expected_errors((404, 409, 501))
     @wsgi.action('unpause')
     def _unpause(self, req, id, body):
         """Permit Admins to unpause the server."""
@@ -73,6 +77,9 @@ class PauseServerController(wsgi.Controller):
                     'unpause')
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
+        except NotImplementedError:
+            msg = _("Virt driver does not implement pause function.")
+            raise exc.HTTPNotImplemented(explanation=msg)
         return webob.Response(status_int=202)
 
 
