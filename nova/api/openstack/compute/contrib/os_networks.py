@@ -100,6 +100,8 @@ class NetworkController(wsgi.Controller):
         LOG.info(_("Deleting network with id %s") % id)
         try:
             self.network_api.delete(context, id)
+        except exception.NetworkInUse as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.NetworkNotFound:
             msg = _("Network not found")
             raise exc.HTTPNotFound(explanation=msg)

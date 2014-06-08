@@ -106,6 +106,8 @@ class FakeNetworkAPI(object):
         self._vlan_is_disabled = True
 
     def delete(self, context, network_id):
+        if network_id == -1:
+            raise exception.NetworkInUse(network_id=network_id)
         for i, network in enumerate(self.networks):
             if network['id'] == network_id:
                 del self.networks[0]
@@ -303,6 +305,11 @@ class NetworksTest(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank('/v2/1234/os-networks/100')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.delete, req, 100)
+
+    def test_network_delete_in_use(self):
+        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/-1')
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller.delete, req, -1)
 
     def test_network_add_vlan_disabled(self):
         self.fake_network_api.disable_vlan()
