@@ -287,8 +287,7 @@ def notify_about_instance_usage(notifier, context, instance, event_suffix,
     if fault:
         # NOTE(johngarbutt) mirrors the format in wrap_exception
         fault_payload = exception_to_dict(fault)
-        LOG.debug(fault_payload["message"], instance=instance,
-                  exc_info=True)
+        LOG.debug(fault_payload["message"], instance=instance)
         usage_info.update(fault_payload)
 
     if event_suffix.endswith("error"):
