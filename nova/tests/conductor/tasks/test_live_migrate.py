@@ -238,7 +238,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
 
         compute_utils.get_image_metadata(self.context,
-                self.task.image_service, self.instance_image,
+                self.task.image_api, self.instance_image,
                 self.instance).AndReturn("image")
         scheduler_utils.build_request_spec(self.context, mox.IgnoreArg(),
                                            mox.IgnoreArg()).AndReturn({})
@@ -282,7 +282,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
 
         compute_utils.get_image_metadata(self.context,
-                self.task.image_service, self.instance_image,
+                self.task.image_api, self.instance_image,
                 self.instance).AndReturn("image")
         scheduler_utils.build_request_spec(self.context, mox.IgnoreArg(),
                                            mox.IgnoreArg()).AndReturn({})
@@ -320,7 +320,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
 
         compute_utils.get_image_metadata(self.context,
-                self.task.image_service, self.instance_image,
+                self.task.image_api, self.instance_image,
                 self.instance).AndReturn("image")
         scheduler_utils.build_request_spec(self.context, mox.IgnoreArg(),
                                            mox.IgnoreArg()).AndReturn({})
@@ -350,7 +350,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 '_check_compatible_with_source_hypervisor')
 
         compute_utils.get_image_metadata(self.context,
-                self.task.image_service, self.instance_image,
+                self.task.image_api, self.instance_image,
                 self.instance).AndReturn("image")
         scheduler_utils.build_request_spec(self.context, mox.IgnoreArg(),
                                            mox.IgnoreArg()).AndReturn({})
@@ -369,7 +369,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.task.scheduler_rpcapi,
                                  'select_destinations')
         compute_utils.get_image_metadata(self.context,
-                self.task.image_service, self.instance_image,
+                self.task.image_api, self.instance_image,
                 self.instance).AndReturn("image")
         scheduler_utils.build_request_spec(self.context, mox.IgnoreArg(),
                                            mox.IgnoreArg()).AndReturn({})

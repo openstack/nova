@@ -1301,7 +1301,7 @@ class _BaseTaskTestCase(object):
         flavor['extra_specs'] = 'extra_specs'
         request_spec = {'instance_type': flavor}
         compute_utils.get_image_metadata(
-            self.context, self.conductor_manager.image_service,
+            self.context, self.conductor_manager.image_api,
             'image_ref', mox.IsA(instance_obj.Instance)).AndReturn('image')
 
         scheduler_utils.build_request_spec(
@@ -1512,10 +1512,10 @@ class _BaseTaskTestCase(object):
         instance.save()
         system_metadata = instance.system_metadata
 
-        self.mox.StubOutWithMock(self.conductor_manager.image_service, 'show')
+        self.mox.StubOutWithMock(self.conductor_manager.image_api, 'get')
 
         e = exc.ImageNotFound(image_id=shelved_image_id)
-        self.conductor_manager.image_service.show(
+        self.conductor_manager.image_api.get(
             self.context, shelved_image_id).AndRaise(e)
         self.mox.ReplayAll()
 
@@ -1538,12 +1538,12 @@ class _BaseTaskTestCase(object):
         filter_properties = {}
         system_metadata = instance.system_metadata
 
-        self.mox.StubOutWithMock(self.conductor_manager.image_service, 'show')
+        self.mox.StubOutWithMock(self.conductor_manager.image_api, 'get')
         self.mox.StubOutWithMock(self.conductor_manager, '_schedule_instances')
         self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
                 'unshelve_instance')
 
-        self.conductor_manager.image_service.show(self.context,
+        self.conductor_manager.image_api.get(self.context,
                 'fake_image_id').AndReturn('fake_image')
         self.conductor_manager._schedule_instances(self.context,
                 'fake_image', filter_properties, instance).AndReturn(
@@ -1573,7 +1573,7 @@ class _BaseTaskTestCase(object):
             raise exc.NoValidHost(reason='')
 
         with contextlib.nested(
-            mock.patch.object(self.conductor_manager.image_service, 'show',
+            mock.patch.object(self.conductor_manager.image_api, 'get',
                               return_value='fake_image'),
             mock.patch.object(self.conductor_manager, '_schedule_instances',
                               fake_schedule_instances)
@@ -1595,12 +1595,12 @@ class _BaseTaskTestCase(object):
         filter_properties = {}
         system_metadata = instance.system_metadata
 
-        self.mox.StubOutWithMock(self.conductor_manager.image_service, 'show')
+        self.mox.StubOutWithMock(self.conductor_manager.image_api, 'get')
         self.mox.StubOutWithMock(self.conductor_manager, '_schedule_instances')
         self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
                 'unshelve_instance')
 
-        self.conductor_manager.image_service.show(self.context,
+        self.conductor_manager.image_api.get(self.context,
                 'fake_image_id').AndReturn(None)
         self.conductor_manager._schedule_instances(self.context,
                 None, filter_properties, instance).AndReturn(
@@ -1784,7 +1784,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
 
         compute_utils.get_image_metadata(
-            self.context, self.conductor_manager.image_service,
+            self.context, self.conductor_manager.image_api,
             'fake-image_ref', mox.IsA(instance_obj.Instance)).AndReturn(image)
 
         scheduler_utils.build_request_spec(
@@ -1836,7 +1836,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
 
         compute_utils.get_image_metadata(
-            self.context, self.conductor_manager.image_service,
+            self.context, self.conductor_manager.image_api,
             'fake-image_ref', mox.IsA(instance_obj.Instance)).AndReturn(image)
 
         scheduler_utils.build_request_spec(
@@ -1893,7 +1893,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
 
         compute_utils.get_image_metadata(
-            self.context, self.conductor_manager.image_service,
+            self.context, self.conductor_manager.image_api,
             'fake-image_ref', mox.IsA(instance_obj.Instance)).AndReturn(image)
 
         scheduler_utils.build_request_spec(

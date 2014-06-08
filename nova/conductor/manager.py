@@ -31,7 +31,7 @@ from nova.compute import vm_states
 from nova.conductor.tasks import live_migrate
 from nova.db import base
 from nova import exception
-from nova.image import glance
+from nova import image
 from nova import manager
 from nova import network
 from nova.network.security_group import openstack_driver
@@ -661,7 +661,7 @@ class ComputeTaskManager(base.Base):
         super(ComputeTaskManager, self).__init__()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
-        self.image_service = glance.get_default_image_service()
+        self.image_api = image.API()
 
     @messaging.expected_exceptions(exception.NoValidHost,
                                    exception.ComputeServiceUnavailable,
@@ -701,7 +701,7 @@ class ComputeTaskManager(base.Base):
                       reservations):
         image_ref = instance.image_ref
         image = compute_utils.get_image_metadata(
-            context, self.image_service, image_ref, instance)
+            context, self.image_api, image_ref, instance)
 
         request_spec = scheduler_utils.build_request_spec(
             context, image, [instance], instance_type=flavor)
@@ -838,9 +838,7 @@ class ComputeTaskManager(base.Base):
                     limits=host['limits'])
 
     def _delete_image(self, context, image_id):
-        (image_service, image_id) = glance.get_remote_image_service(context,
-                image_id)
-        return image_service.delete(context, image_id)
+        return self.image_api.delete(context, image_id)
 
     def _schedule_instances(self, context, image, filter_properties,
             *instances):
@@ -856,7 +854,7 @@ class ComputeTaskManager(base.Base):
 
         def safe_image_show(ctx, image_id):
             if image_id:
-                return self.image_service.show(ctx, image_id)
+                return self.image_api.get(ctx, image_id)
 
         if instance.vm_state == vm_states.SHELVED:
             instance.task_state = task_states.POWERING_ON
