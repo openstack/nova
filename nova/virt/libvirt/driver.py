@@ -3645,6 +3645,7 @@ class LibvirtDriver(driver.ComputeDriver):
             events = []
 
         launch_flags = events and libvirt.VIR_DOMAIN_START_PAUSED or 0
+        domain = None
         try:
             with self.virtapi.wait_for_instance_event(
                     instance, events, deadline=timeout,
@@ -3664,7 +3665,8 @@ class LibvirtDriver(driver.ComputeDriver):
         except exception.NovaException:
             # Neutron reported failure and we didn't swallow it, so
             # bail here
-            domain.destroy()
+            if domain:
+                domain.destroy()
             self.cleanup(context, instance, network_info=network_info,
                          block_device_info=block_device_info)
             raise exception.VirtualInterfaceCreateException()
@@ -3673,7 +3675,8 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.warn(_('Timeout waiting for vif plugging callback for '
                        'instance %(uuid)s'), {'uuid': instance['uuid']})
             if CONF.vif_plugging_is_fatal:
-                domain.destroy()
+                if domain:
+                    domain.destroy()
                 self.cleanup(context, instance, network_info=network_info,
                              block_device_info=block_device_info)
                 raise exception.VirtualInterfaceCreateException()
