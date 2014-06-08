@@ -75,7 +75,7 @@ class ImagePropertiesFilter(_FilterTestClass):
     def test_missing_hypervisor_version_requires(self):
         self.filter_props['request_spec'] = {'image': {'properties': {}}}
         for cell in self.cells:
-            cell.capabilities = {"prominent_hypervisor_version": [u"6.2"]}
+            cell.capabilities = {"prominent_hypervisor_version": set([u"6.2"])}
         self.assertEqual(self.cells,
                          self._filter_cells(self.cells, self.filter_props))
 
@@ -89,10 +89,18 @@ class ImagePropertiesFilter(_FilterTestClass):
         image = {'properties': {'hypervisor_version_requires': '>6.0, <=6.3'}}
         self.filter_props['request_spec'] = {'image': image}
 
-        self.cell1.capabilities = {"prominent_hypervisor_version": [u"6.2"]}
-        self.cell2.capabilities = {"prominent_hypervisor_version": [u"6.3"]}
-        self.cell3.capabilities = {"prominent_hypervisor_version": [u"6.0"]}
+        self.cell1.capabilities = {"prominent_hypervisor_version":
+                set([u"6.2"])}
+        self.cell2.capabilities = {"prominent_hypervisor_version":
+                set([u"6.3"])}
+        self.cell3.capabilities = {"prominent_hypervisor_version":
+                set([u"6.0"])}
 
+        self.assertEqual([self.cell1, self.cell2],
+                         self._filter_cells(self.cells, self.filter_props))
+
+        # assert again to verify filter doesn't mutate state
+        # LP bug #1325705
         self.assertEqual([self.cell1, self.cell2],
                          self._filter_cells(self.cells, self.filter_props))
 
