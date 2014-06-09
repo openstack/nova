@@ -200,3 +200,7 @@ def get_arch(image_meta):
 
 def is_valid_hostname(name):
     return True
+
+
+def chown_for_id_maps(path, id_maps):
+    pass

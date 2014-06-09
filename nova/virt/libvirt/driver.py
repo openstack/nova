@@ -234,7 +234,17 @@ libvirt_opts = [
                 default=10,
                 help='A number of seconds to memory usage statistics period. '
                      'Zero or negative value mean to disable memory usage '
-                     'statistics.')
+                     'statistics.'),
+    cfg.ListOpt('uid_maps',
+                default=[],
+                help='List of uid targets and ranges.'
+                     'Syntax is guest-uid:host-uid:count'
+                     'Maximum of 5 allowed.'),
+    cfg.ListOpt('gid_maps',
+                default=[],
+                help='List of guid targets and ranges.'
+                     'Syntax is guest-gid:host-gid:count'
+                     'Maximum of 5 allowed.')
     ]
 
 CONF = cfg.CONF
@@ -662,6 +672,14 @@ class LibvirtDriver(driver.ComputeDriver):
         libvirt.registerErrorHandler(libvirt_error_handler, None)
         libvirt.virEventRegisterDefaultImpl()
         self._do_quality_warnings()
+
+        if (CONF.libvirt.virt_type == 'lxc' and
+                not (CONF.libvirt.uid_maps and CONF.libvirt.gid_maps)):
+            LOG.warn(_LW("Running libvirt-lxc without user namespaces is "
+                         "dangerous. Containers spawned by Nova will be run "
+                         "as the host's root user. It is highly suggested "
+                         "that user namespaces be used in a public or "
+                         "multi-tenant environment."))
 
         # Stop libguestfs using KVM unless we're also configured
         # to use this. This solves problem where people need to
@@ -3491,6 +3509,36 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return mach_type
 
+    @staticmethod
+    def _create_idmaps(klass, map_strings):
+        idmaps = []
+        if len(map_strings) > 5:
+            map_strings = map_strings[0:5]
+            LOG.warn(_LW("Too many id maps, only included first five."))
+        for map_string in map_strings:
+            try:
+                idmap = klass()
+                values = [int(i) for i in map_string.split(":")]
+                idmap.start = values[0]
+                idmap.target = values[1]
+                idmap.count = values[2]
+                idmaps.append(idmap)
+            except (ValueError, IndexError):
+                LOG.warn(_LW("Invalid value for id mapping %s"), map_string)
+        return idmaps
+
+    def _get_guest_idmaps(self):
+        id_maps = []
+        if CONF.libvirt.virt_type == 'lxc' and CONF.libvirt.uid_maps:
+            uid_maps = self._create_idmaps(vconfig.LibvirtConfigGuestUIDMap,
+                                           CONF.libvirt.uid_maps)
+            id_maps.extend(uid_maps)
+        if CONF.libvirt.virt_type == 'lxc' and CONF.libvirt.gid_maps:
+            gid_maps = self._create_idmaps(vconfig.LibvirtConfigGuestGIDMap,
+                                           CONF.libvirt.gid_maps)
+            id_maps.extend(gid_maps)
+        return id_maps
+
     def _get_guest_config(self, instance, network_info, image_meta,
                           disk_info, rescue=None, block_device_info=None,
                           context=None):
@@ -3522,6 +3570,7 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.metadata.append(self._get_guest_config_meta(context,
                                                           instance,
                                                           flavor))
+        guest.idmaps = self._get_guest_idmaps()
 
         cputuning = ['shares', 'period', 'quota']
         for name in cputuning:
@@ -3958,6 +4007,10 @@ class LibvirtDriver(driver.ComputeDriver):
             if rootfs_dev:
                 instance.system_metadata['rootfs_device_name'] = rootfs_dev
                 instance.save()
+
+            if CONF.libvirt.uid_maps or CONF.libvirt.gid_maps:
+                id_maps = self._get_guest_idmaps()
+                libvirt_utils.chown_for_id_maps(container_dir, id_maps)
         except Exception:
             with excutils.save_and_reraise_exception():
                 self._create_domain_cleanup_lxc(instance)
