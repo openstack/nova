@@ -75,10 +75,11 @@ class BlockDeviceDict(dict):
 
     _required_fields = set(['source_type'])
 
-    def __init__(self, bdm_dict=None, do_not_default=None):
+    def __init__(self, bdm_dict=None, do_not_default=None, **kwargs):
         super(BlockDeviceDict, self).__init__()
 
         bdm_dict = bdm_dict or {}
+        bdm_dict.update(kwargs)
         do_not_default = do_not_default or set()
 
         self._validate(bdm_dict)
