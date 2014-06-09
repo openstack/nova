@@ -265,7 +265,7 @@ class DataObject(object):
 
 
 class HostInternetScsiHba(DataObject):
-    """iSCSI Host Bus Adapter"""
+    """iSCSI Host Bus Adapter."""
 
     def __init__(self):
         super(HostInternetScsiHba, self).__init__()

@@ -279,7 +279,7 @@ class JSONDeserializerTest(test.NoDBTestCase):
         self.assertEqual(deserializer.deserialize(data), as_dict)
 
     def test_json_invalid_utf8(self):
-        """ Send invalid utf-8 to JSONDeserializer"""
+        """Send invalid utf-8 to JSONDeserializer."""
         data = """{"server": {"min_count": 1, "flavorRef": "1",
                 "name": "\xf0\x28\x8c\x28",
                 "imageRef": "10bab10c-1304-47d",
@@ -327,7 +327,7 @@ class XMLDeserializerTest(test.NoDBTestCase):
         self.assertEqual(deserializer.deserialize(xml), as_dict)
 
     def test_xml_invalid_utf8(self):
-        """ Send invalid utf-8 to XMLDeserializer"""
+        """Send invalid utf-8 to XMLDeserializer."""
         xml = """ <a><name>\xf0\x28\x8c\x28</name></a> """
         deserializer = wsgi.XMLDeserializer()
         self.assertRaises(exception.MalformedRequestBody,
