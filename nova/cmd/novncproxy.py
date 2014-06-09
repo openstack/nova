@@ -27,6 +27,7 @@ from oslo.config import cfg
 
 from nova import config
 from nova.console import websocketproxy
+from nova.openstack.common import log as logging
 from nova.openstack.common.report import guru_meditation_report as gmr
 from nova import version
 
@@ -55,6 +56,7 @@ def main():
     # Setup flags
     CONF.set_default('web', '/usr/share/novnc')
     config.parse_args(sys.argv)
+    logging.setup("nova")
 
     if CONF.ssl_only and not os.path.exists(CONF.cert):
         print("SSL only and %s not found" % CONF.cert)
