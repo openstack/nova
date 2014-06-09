@@ -22,6 +22,8 @@ from nova import context
 from nova import exception
 from nova.network import model as network_model
 from nova.objects import instance as instance_obj
+from nova.openstack.common import units
+from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests import fake_instance
 import nova.tests.image.fake
@@ -33,6 +35,7 @@ from nova.virt.vmwareapi import fake as vmwareapi_fake
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
+from nova.virt.vmwareapi import vmware_images
 
 
 class VMwareVMOpsTestCase(test.NoDBTestCase):
@@ -41,12 +44,15 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         vmwareapi_fake.reset()
         stubs.set_stubs(self.stubs)
         self.flags(image_cache_subdirectory_name='vmware_base',
-                   my_ip='')
+                   my_ip='',
+                   flat_injected=True,
+                   vnc_enabled=True)
         self._context = context.RequestContext('fake_user', 'fake_project')
         self._session = driver.VMwareAPISession()
 
         self._virtapi = mock.Mock()
-        self._vmops = vmops.VMwareVMOps(self._session, self._virtapi, None)
+        self._vmops = vmops.VMwareVCVMOps(self._session, self._virtapi, None)
+
         self._image_id = nova.tests.image.fake.get_valid_image_id()
         values = {
             'name': 'fake_name',
@@ -55,11 +61,20 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             'memory_mb': 512,
             'image_ref': self._image_id,
             'root_gb': 1,
-            'node': 'respool-1001(MyResPoolName)',
+            'node': 'respool-1001(MyResPoolName)'
         }
-        self._context = context.RequestContext('fake_user', 'fake_project')
-        self._instance = fake_instance.fake_instance_obj(self._context,
-                                                         **values)
+        self._instance = fake_instance.fake_instance_obj(
+                                 self._context, **values)
+
+        fake_ds_ref = vmwareapi_fake.ManagedObjectReference('fake-ds')
+
+        self._ds_record = vm_util.DSRecord(
+                datastore=fake_ds_ref, name='fake_ds',
+                capacity=10 * units.Gi,
+                freespace=10 * units.Gi)
+        self._dc_info = vmops.DcInfo(
+                ref='fake_dc_ref', name='fake_dc',
+                vmFolder='fake_vm_folder')
 
         subnet_4 = network_model.Subnet(cidr='192.168.0.1/24',
                                         dns=[network_model.IP('192.168.0.1')],
@@ -536,3 +551,174 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 'get_dynamic_property', moref, 'Datastore', 'browser')
             self.assertIs(ds_browser, ret)
             self.assertIs(ds_browser, cache.get(moref.value))
+
+    def _verify_spawn_method_calls(self, mock_call_method):
+        # TODO(vui): More explicit assertions of spawn() behavior
+        # are waiting on additional refactoring pertaining to image
+        # handling/manipulation. Till then, we continue to assert on the
+        # sequence of VIM operations invoked.
+        expected_methods = ['get_dynamic_property',
+                            'SearchDatastore_Task',
+                            'SearchDatastore_Task',
+                            'CreateVirtualDisk_Task',
+                            'DeleteDatastoreFile_Task',
+                            'MoveDatastoreFile_Task',
+                            'DeleteDatastoreFile_Task',
+                            'SearchDatastore_Task',
+                            'ExtendVirtualDisk_Task',
+        ]
+
+        recorded_methods = [c[1][1] for c in mock_call_method.mock_calls]
+        self.assertEqual(expected_methods, recorded_methods)
+
+    @mock.patch('nova.virt.vmwareapi.vm_util.get_datastore_ref_and_name')
+    @mock.patch(
+        'nova.virt.vmwareapi.vmops.VMwareVCVMOps.get_datacenter_ref_and_name')
+    @mock.patch('nova.virt.vmwareapi.vm_util.get_mo_id_from_instance',
+                return_value='fake_node_mo_id')
+    @mock.patch('nova.virt.vmwareapi.vm_util.get_res_pool_ref',
+                return_value='fake_rp_ref')
+    @mock.patch('nova.virt.vmwareapi.vif.get_vif_info',
+                return_value=[])
+    @mock.patch('nova.utils.is_neutron',
+                return_value=False)
+    @mock.patch('nova.virt.vmwareapi.vm_util.get_vm_create_spec',
+                return_value='fake_create_spec')
+    @mock.patch('nova.virt.vmwareapi.vm_util.create_vm',
+                return_value='fake_vm_ref')
+    @mock.patch('nova.virt.vmwareapi.ds_util.mkdir')
+    @mock.patch('nova.virt.vmwareapi.vmops.VMwareVMOps._set_machine_id')
+    @mock.patch('nova.virt.vmwareapi.vm_util.get_vnc_port', return_value=5900)
+    @mock.patch('nova.virt.vmwareapi.vmops.VMwareVMOps._set_vnc_config')
+    @mock.patch('nova.virt.vmwareapi.vm_util.power_on_instance')
+    @mock.patch('nova.virt.vmwareapi.vm_util.copy_virtual_disk')
+    # TODO(dims): Need to add tests for create_virtual_disk after the
+    #             disk/image code in spawn gets refactored
+    def _test_spawn(self,
+                   mock_copy_virtual_disk,
+                   mock_power_on_instance,
+                   mock_set_vnc_config,
+                   mock_get_vnc_port,
+                   mock_set_machine_id,
+                   mock_mkdir,
+                   mock_create_vm,
+                   mock_get_create_spec,
+                   mock_is_neutron,
+                   mock_get_vif_info,
+                   mock_get_res_pool_ref,
+                   mock_get_mo_id_for_instance,
+                   mock_get_datacenter_ref_and_name,
+                   mock_get_datastore_ref_and_name,
+                   block_device_info=None,
+                   power_on=True):
+
+        self._vmops._volumeops = mock.Mock()
+        image = {
+            'id': 'fake-image-d',
+            'disk_format': 'vmdk',
+            'size': 1 * units.Gi,
+        }
+        network_info = mock.Mock()
+        mock_get_datastore_ref_and_name.return_value = self._ds_record
+        mock_get_datacenter_ref_and_name.return_value = self._dc_info
+        mock_call_method = mock.Mock(return_value='fake_task')
+
+        with contextlib.nested(
+                mock.patch.object(self._session, '_wait_for_task'),
+                mock.patch.object(self._session, '_call_method',
+                                  mock_call_method),
+                mock.patch.object(uuidutils, 'generate_uuid',
+                                  return_value='tmp-uuid'),
+                mock.patch.object(vmware_images, 'fetch_image')
+        ) as (_wait_for_task, _call_method, _generate_uuid, _fetch_image):
+            self._vmops.spawn(self._context, self._instance, image,
+                              injected_files='fake_files',
+                              admin_password='password',
+                              network_info=network_info,
+                              block_device_info=block_device_info,
+                              power_on=power_on)
+
+            mock_is_neutron.assert_called_once_with()
+            self.assertTrue(3, len(mock_mkdir.mock_calls))
+            mock_get_vnc_port.assert_called_once_with(self._session)
+            mock_get_mo_id_for_instance.assert_called_once_with(self._instance)
+            mock_get_res_pool_ref.assert_called_once_with(
+                    self._session, None, 'fake_node_mo_id')
+            mock_get_vif_info.assert_called_once_with(
+                    self._session, None, False, network_model.VIF_MODEL_E1000,
+                    network_info)
+            mock_get_create_spec.assert_called_once_with(
+                    self._session._get_vim().client.factory,
+                    self._instance,
+                    'fake_uuid',
+                    'fake_ds',
+                    [],
+                    'otherGuest')
+            mock_create_vm.assert_called_once_with(
+                    self._session,
+                    self._instance,
+                    'fake_vm_folder',
+                    'fake_create_spec',
+                    'fake_rp_ref')
+            mock_set_vnc_config.assert_called_once_with(
+                self._session._get_vim().client.factory,
+                self._instance,
+                5900)
+            mock_set_machine_id.assert_called_once_with(
+                self._session._get_vim().client.factory,
+                self._instance,
+                network_info)
+            if power_on:
+                mock_power_on_instance.assert_called_once_with(
+                    self._session, self._instance, vm_ref='fake_vm_ref')
+            else:
+                self.assertFalse(mock_power_on_instance.called)
+
+            if block_device_info:
+                root_disk = block_device_info['block_device_mapping'][0]
+                mock_attach = self._vmops._volumeops.attach_root_volume
+                mock_attach.assert_called_once_with(
+                        root_disk['connection_info'], self._instance, 'vda',
+                        self._ds_record.datastore)
+                self.assertFalse(_wait_for_task.called)
+                self.assertFalse(_fetch_image.called)
+                self.assertFalse(_call_method.called)
+            else:
+                upload_file_name = 'vmware_temp/tmp-uuid/%s/%s-flat.vmdk' % (
+                        self._image_id, self._image_id)
+                _fetch_image.assert_called_once_with(
+                        self._context,
+                        self._instance,
+                        self._session._host_ip,
+                        self._dc_info.name,
+                        self._ds_record.name,
+                        upload_file_name,
+                        cookies='Fake-CookieJar')
+                self.assertTrue(len(_wait_for_task.mock_calls) > 0)
+                self._verify_spawn_method_calls(_call_method)
+
+                dc_ref = 'fake_dc_ref'
+                source_file = unicode('[fake_ds] vmware_base/%s/%s.vmdk' %
+                              (self._image_id, self._image_id))
+                dest_file = unicode('[fake_ds] vmware_base/%s/%s.%d.vmdk' %
+                              (self._image_id, self._image_id,
+                              self._instance['root_gb']))
+                # TODO(dims): add more tests for copy_virtual_disk after
+                # the disk/image code in spawn gets refactored
+                mock_copy_virtual_disk.assert_called_with(self._session,
+                                                          dc_ref,
+                                                          source_file,
+                                                          dest_file,
+                                                          None)
+
+    def test_spawn(self):
+        self._test_spawn()
+
+    def test_spawn_no_power_on(self):
+        self._test_spawn(power_on=False)
+
+    def test_spawn_with_block_device_info(self):
+        block_device_info = {
+            'block_device_mapping': [{'connection_info': 'fake'}]
+        }
+        self._test_spawn(block_device_info=block_device_info)
