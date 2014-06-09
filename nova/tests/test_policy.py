@@ -17,7 +17,8 @@
 
 import os.path
 import StringIO
-import urllib2
+
+import six.moves.urllib.request as urlrequest
 
 from nova import context
 from nova import exception
@@ -102,7 +103,7 @@ class PolicyTestCase(test.NoDBTestCase):
 
         def fakeurlopen(url, post_data):
             return StringIO.StringIO("True")
-        self.stubs.Set(urllib2, 'urlopen', fakeurlopen)
+        self.stubs.Set(urlrequest, 'urlopen', fakeurlopen)
         action = "example:get_http"
         target = {}
         result = policy.enforce(self.context, action, target)
@@ -112,7 +113,7 @@ class PolicyTestCase(test.NoDBTestCase):
 
         def fakeurlopen(url, post_data):
             return StringIO.StringIO("False")
-        self.stubs.Set(urllib2, 'urlopen', fakeurlopen)
+        self.stubs.Set(urlrequest, 'urlopen', fakeurlopen)
         action = "example:get_http"
         target = {}
         self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
