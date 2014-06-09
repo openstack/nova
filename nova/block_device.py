@@ -214,8 +214,8 @@ class BlockDeviceDict(dict):
             legacy_block_device['virtual_name'] = None
         elif source_type == 'image':
             if destination_type != 'volume':
-            # NOTE(ndipanov): Image bdms with local destination
-            # have no meaning in the legacy format - raise
+                # NOTE(ndipanov): Image bdms with local destination
+                # have no meaning in the legacy format - raise
                 raise exception.InvalidBDMForLegacy()
             legacy_block_device['virtual_name'] = None
 

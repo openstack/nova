@@ -93,8 +93,8 @@ def fake_show_port(self, context, port_id, **kwargs):
 def fake_attach_interface(self, context, instance, network_id, port_id,
                           requested_ip='192.168.1.3'):
     if not network_id:
-    # if no network_id is given when add a port to an instance, use the
-    # first default network.
+        # if no network_id is given when add a port to an instance, use the
+        # first default network.
         network_id = fake_networks[0]
     if network_id == 'bad_id':
         raise exception.NetworkNotFound(network_id=network_id)

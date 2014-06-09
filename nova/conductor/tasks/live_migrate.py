@@ -61,13 +61,13 @@ class LiveMigrationTask(object):
             self._check_requested_destination()
 
         #TODO(johngarbutt) need to move complexity out of compute manager
+        #TODO(johngarbutt) disk_over_commit?
         return self.compute_rpcapi.live_migration(self.context,
                 host=self.source,
                 instance=self.instance,
                 dest=self.destination,
                 block_migration=self.block_migration,
                 migrate_data=self.migrate_data)
-                #TODO(johngarbutt) disk_over_commit?
 
     def rollback(self):
         #TODO(johngarbutt) need to implement the clean up operation

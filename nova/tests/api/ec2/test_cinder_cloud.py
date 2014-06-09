@@ -557,7 +557,7 @@ class CinderCloudTestCase(test.TestCase):
          'ebs': {'status': 'attached',
                  'deleteOnTermination': False,
                  'volumeId': 'vol-0000000b', }}]
-        # NOTE(yamahata): swap/ephemeral device case isn't supported yet.
+    # NOTE(yamahata): swap/ephemeral device case isn't supported yet.
 
     _expected_instance_bdm2 = {
         'instanceId': 'i-00000002',

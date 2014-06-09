@@ -1457,8 +1457,8 @@ def console_get(context, console_id, instance_uuid=None):
     """Get a specific console (possibly on a given instance)."""
     return IMPL.console_get(context, console_id, instance_uuid)
 
+##################
 
-    ##################
 
 def flavor_create(context, values, projects=None):
     """Create a new instance type."""

@@ -688,7 +688,7 @@ class CloudController(object):
 
     def _get_source_project_id(self, context, source_security_group_owner_id):
         if source_security_group_owner_id:
-        # Parse user:project for source group.
+            # Parse user:project for source group.
             source_parts = source_security_group_owner_id.split(':')
 
             # If no project name specified, assume it's same as user name.
