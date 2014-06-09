@@ -109,9 +109,10 @@ class HostState(object):
     previously used and lock down access.
     """
 
-    def __init__(self, host, node, compute=None):
+    def __init__(self, host, node, capabilities=None, service=None):
         self.host = host
         self.nodename = node
+        self.update_capabilities(capabilities, service)
 
         # Mutable available resources.
         # These will change as resources are virtually "consumed".
@@ -146,10 +147,15 @@ class HostState(object):
         self.metrics = {}
 
         self.updated = None
-        if compute:
-            self.update_from_compute_node(compute)
 
-    def update_service(self, service):
+    def update_capabilities(self, capabilities=None, service=None):
+        # Read-only capability dicts
+
+        if capabilities is None:
+            capabilities = {}
+        self.capabilities = ReadOnlyDict(capabilities)
+        if service is None:
+            service = {}
         self.service = ReadOnlyDict(service)
 
     def _update_metrics_from_compute_node(self, compute):
@@ -319,6 +325,8 @@ class HostManager(object):
     host_state_cls = HostState
 
     def __init__(self):
+        # { (host, hypervisor_hostname) : { <service> : { cap k : v }}}
+        self.service_states = {}
         self.host_state_map = {}
         self.filter_handler = filters.HostFilterHandler()
         self.filter_classes = self.filter_handler.get_matching_classes(
@@ -446,13 +454,17 @@ class HostManager(object):
             host = service['host']
             node = compute.get('hypervisor_hostname')
             state_key = (host, node)
+            capabilities = self.service_states.get(state_key, None)
             host_state = self.host_state_map.get(state_key)
             if host_state:
-                host_state.update_from_compute_node(compute)
+                host_state.update_capabilities(capabilities,
+                                               dict(service.iteritems()))
             else:
-                host_state = self.host_state_cls(host, node, compute)
+                host_state = self.host_state_cls(host, node,
+                        capabilities=capabilities,
+                        service=dict(service.iteritems()))
                 self.host_state_map[state_key] = host_state
-            host_state.update_service(dict(service.iteritems()))
+            host_state.update_from_compute_node(compute)
             seen_nodes.add(state_key)
 
         # remove compute nodes from host_state_map if they are not active
