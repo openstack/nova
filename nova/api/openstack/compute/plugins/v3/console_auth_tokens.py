@@ -62,7 +62,6 @@ class ConsoleAuthTokens(extensions.V3APIExtensionBase):
     """Console token authentication support."""
     name = "ConsoleAuthTokens"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/%s/api/v3" % ALIAS
     version = 1
 
     def get_resources(self):
