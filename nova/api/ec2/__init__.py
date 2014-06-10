@@ -123,7 +123,7 @@ class RequestLogging(wsgi.Middleware):
             request.user_agent,
             request.content_type,
             response.content_type,
-            context=ctxt)
+            context=ctxt)    # noqa
 
 
 class Lockout(wsgi.Middleware):

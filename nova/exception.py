@@ -123,7 +123,7 @@ class NovaException(Exception):
                 # log the issue and the kwargs
                 LOG.exception(_('Exception in string format operation'))
                 for name, value in kwargs.iteritems():
-                    LOG.error("%s: %s" % (name, value))
+                    LOG.error("%s: %s" % (name, value))    # noqa
 
                 if CONF.fatal_exception_format_errors:
                     raise exc_info[0], exc_info[1], exc_info[2]

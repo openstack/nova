@@ -817,8 +817,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
 class _LibvirtDeprecatedDriver(LibvirtGenericVIFDriver):
     def __init__(self, *args, **kwargs):
-        LOG.warn('VIF driver \"%s\" is marked as deprecated and will be '
-                 'removed in the Juno release.',
+        LOG.warn(_('VIF driver \"%s\" is marked as deprecated and will be '
+                   'removed in the Juno release.'),
                  self.__class__.__name__)
         super(_LibvirtDeprecatedDriver, self).__init__(*args, **kwargs)
 

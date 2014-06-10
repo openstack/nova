@@ -52,7 +52,7 @@ class NovaWebSocketProxy(websockify.WebSocketProxy):
         connect_info = rpcapi.check_token(ctxt, token=token)
 
         if not connect_info:
-            LOG.audit("Invalid Token: %s", token)
+            LOG.audit(_("Invalid Token: %s"), token)
             raise Exception(_("Invalid Token"))
 
         host = connect_info['host']
@@ -60,7 +60,8 @@ class NovaWebSocketProxy(websockify.WebSocketProxy):
 
         # Connect to the target
         self.msg("connecting to: %s:%s" % (host, port))
-        LOG.audit("connecting to: %s:%s" % (host, port))
+        LOG.audit(_("connecting to: %(host)s:%(port)s"),
+                  {'host': host, 'port': port})
         tsock = self.socket(host, port, connect=True)
 
         # Handshake as necessary
@@ -71,7 +72,7 @@ class NovaWebSocketProxy(websockify.WebSocketProxy):
                 data = tsock.recv(4096, socket.MSG_PEEK)
                 if data.find("\r\n\r\n") != -1:
                     if not data.split("\r\n")[0].find("200"):
-                        LOG.audit("Invalid Connection Info %s", token)
+                        LOG.audit(_("Invalid Connection Info %s"), token)
                         raise Exception(_("Invalid Connection Info"))
                     tsock.recv(len(data))
                     break
@@ -84,5 +85,6 @@ class NovaWebSocketProxy(websockify.WebSocketProxy):
                 tsock.shutdown(socket.SHUT_RDWR)
                 tsock.close()
                 self.vmsg("%s:%s: Target closed" % (host, port))
-                LOG.audit("%s:%s: Target closed" % (host, port))
+                LOG.audit(_("%(host)s:%(port)s: Target closed"),
+                          {'host': host, 'port': port})
             raise
