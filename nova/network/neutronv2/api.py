@@ -605,7 +605,7 @@ class API(base_api.NetworkAPI):
             instance_on_net_ids = []
             net_ids_requested = []
 
-            for (net_id, _i, port_id) in requested_networks:
+            for (net_id, fixed_ip, port_id) in requested_networks:
                 if port_id:
                     try:
                         port = neutron.show_port(port_id).get('port')
@@ -626,6 +626,28 @@ class API(base_api.NetworkAPI):
                 else:
                     ports_needed_per_instance += 1
                     net_ids_requested.append(net_id)
+
+                    # NOTE(jecarey) There is currently a race condition.
+                    # That is, if you have more than one request for a specific
+                    # fixed IP at the same time then only one will be allocated
+                    # the ip. The fixed IP will be allocated to only one of the
+                    # instances that will run. The second instance will fail on
+                    # spawn. That instance will go into error state.
+                    # TODO(jecarey) Need to address this race condition once we
+                    # have the ability to update mac addresses in Neutron.
+                    if fixed_ip:
+                        # TODO(jecarey) Need to look at consolidating list_port
+                        # calls once able to OR filters.
+                        search_opts = {'network_id': net_id,
+                                       'fixed_ips': 'ip_address=%s' % fixed_ip,
+                                       'fields': 'device_id'}
+                        existing_ports = neutron.list_ports(
+                                                    **search_opts)['ports']
+                        if existing_ports:
+                            i_uuid = existing_ports[0]['device_id']
+                            raise exception.FixedIpAlreadyInUse(
+                                                    address=fixed_ip,
+                                                    instance_uuid=i_uuid)
 
                 if net_id in instance_on_net_ids:
                     raise exception.NetworkDuplicated(network_id=net_id)

@@ -989,6 +989,7 @@ class Controller(wsgi.Controller):
                 exception.MultiplePortsNotApplicable,
                 exception.NetworkNotFound,
                 exception.PortNotFound,
+                exception.FixedIpAlreadyInUse,
                 exception.SecurityGroupNotFound,
                 exception.InvalidBDM,
                 exception.PortRequiresFixedIP,

@@ -1133,8 +1133,8 @@ class TestNeutronv2(TestNeutronv2Base):
         neutronapi.API().show_port(self.context, 'foo')
 
     def test_validate_networks(self):
-        requested_networks = [('my_netid1', 'test', None),
-                              ('my_netid2', 'test2', None)]
+        requested_networks = [('my_netid1', None, None),
+                              ('my_netid2', None, None)]
         ids = ['my_netid1', 'my_netid2']
         self.moxed_client.list_networks(
             id=mox.SameElementsAs(ids)).AndReturn(
@@ -1149,7 +1149,7 @@ class TestNeutronv2(TestNeutronv2Base):
         api.validate_networks(self.context, requested_networks, 1)
 
     def test_validate_networks_ex_1(self):
-        requested_networks = [('my_netid1', 'test', None)]
+        requested_networks = [('my_netid1', None, None)]
         self.moxed_client.list_networks(
             id=mox.SameElementsAs(['my_netid1'])).AndReturn(
                 {'networks': self.nets1})
@@ -1166,9 +1166,9 @@ class TestNeutronv2(TestNeutronv2Base):
             self.assertIn("my_netid2", str(ex))
 
     def test_validate_networks_ex_2(self):
-        requested_networks = [('my_netid1', 'test', None),
-                              ('my_netid2', 'test2', None),
-                              ('my_netid3', 'test3', None)]
+        requested_networks = [('my_netid1', None, None),
+                              ('my_netid2', None, None),
+                              ('my_netid3', None, None)]
         ids = ['my_netid1', 'my_netid2', 'my_netid3']
         self.moxed_client.list_networks(
             id=mox.SameElementsAs(ids)).AndReturn(
@@ -1329,8 +1329,8 @@ class TestNeutronv2(TestNeutronv2Base):
         # Test validation for a request for one instance needing
         # two ports, where the quota is 2 and 2 ports are in use
         #  => instances which can be created = 0
-        requested_networks = [('my_netid1', 'test', None),
-                              ('my_netid2', 'test2', None)]
+        requested_networks = [('my_netid1', None, None),
+                              ('my_netid2', None, None)]
         ids = ['my_netid1', 'my_netid2']
         self.moxed_client.list_networks(
             id=mox.SameElementsAs(ids)).AndReturn(
@@ -1352,7 +1352,7 @@ class TestNeutronv2(TestNeutronv2Base):
         port_b = self.port_data2[1]
         port_b['device_id'] = None
         port_b['device_owner'] = None
-        requested_networks = [('my_netid1', 'test', None),
+        requested_networks = [('my_netid1', None, None),
                               (None, None, port_b['id'])]
         self.moxed_client.show_port(port_b['id']).AndReturn({'port': port_b})
         ids = ['my_netid1']
@@ -1388,8 +1388,8 @@ class TestNeutronv2(TestNeutronv2Base):
         # Test validation for a request for two instance needing
         # two ports each, where the quota is 5 and 2 ports are in use
         #  => instances which can be created = 1
-        requested_networks = [('my_netid1', 'test', None),
-                              ('my_netid2', 'test2', None)]
+        requested_networks = [('my_netid1', None, None),
+                              ('my_netid2', None, None)]
         ids = ['my_netid1', 'my_netid2']
         self.moxed_client.list_networks(
             id=mox.SameElementsAs(ids)).AndReturn(
@@ -1409,8 +1409,8 @@ class TestNeutronv2(TestNeutronv2Base):
         # Test validation for a request for two instance needing
         # two ports each, where the quota is -1 (unlimited)
         #  => instances which can be created = 1
-        requested_networks = [('my_netid1', 'test', None),
-                              ('my_netid2', 'test2', None)]
+        requested_networks = [('my_netid1', None, None),
+                              ('my_netid2', None, None)]
         ids = ['my_netid1', 'my_netid2']
         self.moxed_client.list_networks(
             id=mox.SameElementsAs(ids)).AndReturn(
@@ -2184,6 +2184,113 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertRaises(NotImplementedError,
                           api.get_floating_ips_by_fixed_address,
                           self.context, fake_fixed)
+
+
+class TestNeutronv2WithMock(test.TestCase):
+    """Used to test Neutron V2 API with mock."""
+
+    def setUp(self):
+        super(TestNeutronv2WithMock, self).setUp()
+        self.api = neutronapi.API()
+        self.context = context.RequestContext(
+            'fake-user', 'fake-project',
+            auth_token='bff4a5a6b9eb4ea2a6efec6eefb77936')
+
+    def _test_validate_networks_fixed_ip_no_dup(self, nets, requested_networks,
+                                                ids, list_port_values):
+
+        def _fake_list_ports(**search_opts):
+            for args, return_value in list_port_values:
+                if args == search_opts:
+                    return return_value
+            self.fail('Unexpected call to list_ports %s' % search_opts)
+
+        with contextlib.nested(
+            mock.patch.object(client.Client, 'list_ports',
+                              side_effect=_fake_list_ports),
+            mock.patch.object(client.Client, 'list_networks',
+                              return_value={'networks': nets}),
+            mock.patch.object(client.Client, 'show_quota',
+                              return_value={'quota': {'port': 50}})) as (
+                list_ports_mock, list_networks_mock, show_quota_mock):
+
+            self.api.validate_networks(self.context, requested_networks, 1)
+
+            self.assertEqual(len(list_port_values),
+                             len(list_ports_mock.call_args_list))
+            list_networks_mock.assert_called_once_with(id=ids)
+            show_quota_mock.assert_called_once_with(tenant_id='fake-project')
+
+    def test_validate_networks_fixed_ip_no_dup1(self):
+        # Test validation for a request for a network with a
+        # fixed ip that is not already in use because no fixed ips in use
+
+        nets1 = [{'id': 'my_netid1',
+                  'name': 'my_netname1',
+                  'subnets': ['mysubnid1'],
+                  'tenant_id': 'fake-project'}]
+
+        requested_networks = [('my_netid1', '10.0.1.2', None)]
+        ids = ['my_netid1']
+        list_port_values = [({'network_id': 'my_netid1',
+                              'fixed_ips': 'ip_address=10.0.1.2',
+                              'fields': 'device_id'},
+                             {'ports': []}),
+                            ({'tenant_id': 'fake-project'},
+                             {'ports': []})]
+        self._test_validate_networks_fixed_ip_no_dup(nets1, requested_networks,
+                                                     ids, list_port_values)
+
+    def test_validate_networks_fixed_ip_no_dup2(self):
+        # Test validation for a request for a network with a
+        # fixed ip that is not already in use because not used on this net id
+
+        nets2 = [{'id': 'my_netid1',
+                  'name': 'my_netname1',
+                  'subnets': ['mysubnid1'],
+                  'tenant_id': 'fake-project'},
+                 {'id': 'my_netid2',
+                  'name': 'my_netname2',
+                  'subnets': ['mysubnid2'],
+                  'tenant_id': 'fake-project'}]
+
+        requested_networks = [('my_netid1', '10.0.1.2', None),
+                              ('my_netid2', '10.0.1.3', None)]
+        ids = ['my_netid1', 'my_netid2']
+        list_port_values = [({'network_id': 'my_netid1',
+                              'fixed_ips': 'ip_address=10.0.1.2',
+                              'fields': 'device_id'},
+                             {'ports': []}),
+                            ({'network_id': 'my_netid2',
+                              'fixed_ips': 'ip_address=10.0.1.3',
+                              'fields': 'device_id'},
+                             {'ports': []}),
+
+                            ({'tenant_id': 'fake-project'},
+                             {'ports': []})]
+
+        self._test_validate_networks_fixed_ip_no_dup(nets2, requested_networks,
+                                                     ids, list_port_values)
+
+    def test_validate_networks_fixed_ip_dup(self):
+        # Test validation for a request for a network with a
+        # fixed ip that is already in use
+
+        requested_networks = [('my_netid1', '10.0.1.2', None)]
+        list_port_mock_params = {'network_id': 'my_netid1',
+                                 'fixed_ips': 'ip_address=10.0.1.2',
+                                 'fields': 'device_id'}
+        list_port_mock_return = {'ports': [({'device_id': 'my_deviceid'})]}
+
+        with mock.patch.object(client.Client, 'list_ports',
+                               return_value=list_port_mock_return) as (
+            list_ports_mock):
+
+            self.assertRaises(exception.FixedIpAlreadyInUse,
+                              self.api.validate_networks,
+                              self.context, requested_networks, 1)
+
+            list_ports_mock.assert_called_once_with(**list_port_mock_params)
 
 
 class TestNeutronv2ModuleMethods(test.TestCase):
