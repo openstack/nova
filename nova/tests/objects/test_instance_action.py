@@ -267,6 +267,7 @@ class _TestInstanceActionEventObject(object):
     @mock.patch.object(traceback, 'format_tb')
     @mock.patch.object(db, 'action_event_finish')
     def test_event_finish_with_failure_legacy(self, mock_finish, mock_tb):
+        # Tests that exc_tb is serialized when it's not a string type.
         mock_tb.return_value = 'fake-tb'
         timeutils.set_time_override(override_time=NOW)
         test_class = instance_action.InstanceActionEvent
@@ -275,9 +276,28 @@ class _TestInstanceActionEventObject(object):
         expected_packed_values['finish_time'] = timeutils.utcnow()
 
         mock_finish.return_value = fake_event
+        fake_tb = mock.sentinel.fake_tb
         event = test_class.event_finish_with_failure(
             self.context, 'fake-uuid', 'fake-event', exc_val='val',
-            exc_tb=mock.sentinel.fake_tb, want_result=True)
+            exc_tb=fake_tb, want_result=True)
+        mock_finish.assert_called_once_with(self.context,
+                                            expected_packed_values)
+        self.compare_obj(event, fake_event)
+        mock_tb.assert_called_once_with(fake_tb)
+
+    @mock.patch.object(db, 'action_event_finish')
+    def test_event_finish_with_failure_legacy_unicode(self, mock_finish):
+        # Tests that traceback.format_tb is not called when exc_tb is unicode.
+        timeutils.set_time_override(override_time=NOW)
+        test_class = instance_action.InstanceActionEvent
+        expected_packed_values = test_class.pack_action_event_finish(
+            self.context, 'fake-uuid', 'fake-event', 'val', unicode('fake-tb'))
+        expected_packed_values['finish_time'] = timeutils.utcnow()
+
+        mock_finish.return_value = fake_event
+        event = test_class.event_finish_with_failure(
+            self.context, 'fake-uuid', 'fake-event', exc_val='val',
+            exc_tb=unicode('fake-tb'), want_result=True)
         mock_finish.assert_called_once_with(self.context,
                                             expected_packed_values)
         self.compare_obj(event, fake_event)
@@ -285,6 +305,8 @@ class _TestInstanceActionEventObject(object):
     @mock.patch.object(traceback, 'format_tb')
     @mock.patch.object(db, 'action_event_finish')
     def test_event_finish_with_failure_no_result(self, mock_finish, mock_tb):
+        # Tests that traceback.format_tb is not called when exc_tb is a str
+        # and want_result is False, so no event should come back.
         mock_tb.return_value = 'fake-tb'
         timeutils.set_time_override(override_time=NOW)
         test_class = instance_action.InstanceActionEvent
@@ -299,6 +321,7 @@ class _TestInstanceActionEventObject(object):
         mock_finish.assert_called_once_with(self.context,
                                             expected_packed_values)
         self.assertIsNone(event)
+        self.assertFalse(mock_tb.called)
 
     @mock.patch.object(db, 'action_events_get')
     def test_get_by_action(self, mock_get):
