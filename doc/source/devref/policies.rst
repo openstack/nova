@@ -12,3 +12,11 @@
       under the License.
 
 Development policies
+
+Out Of Tree Support
+===================
+
+While nova has many entrypoints and other places in the code that allow for
+wiring in out of tree code. Upstream doesn't actively make any guarantees
+about these extensibility points; we don't support them, make any guarantees
+about compatibility, stability, etc.
