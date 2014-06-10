@@ -45,6 +45,14 @@ Background Concepts for Nova
    rpc
    hooks
 
+Development policies
+--------------------
+.. toctree::
+   :maxdepth: 3
+
+   policies
+
+
 Other Resources
 ---------------
 .. toctree::
