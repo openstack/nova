@@ -2298,8 +2298,9 @@ class LibvirtDriver(driver.ComputeDriver):
     def _append_to_file(self, data, fpath):
         LOG.info(_('data: %(data)r, fpath: %(fpath)r'),
                  {'data': data, 'fpath': fpath})
-        fp = open(fpath, 'a+')
-        fp.write(data)
+        with open(fpath, 'a+') as fp:
+            fp.write(data)
+
         return fpath
 
     def get_console_output(self, context, instance):
@@ -3863,7 +3864,8 @@ class LibvirtDriver(driver.ComputeDriver):
         if sys.platform.upper() not in ['LINUX2', 'LINUX3']:
             return 0
 
-        m = open('/proc/meminfo').read().split()
+        with open('/proc/meminfo') as fp:
+            m = fp.read().split()
         idx1 = m.index('MemFree:')
         idx2 = m.index('Buffers:')
         idx3 = m.index('Cached:')
