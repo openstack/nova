@@ -1260,6 +1260,27 @@ class LibvirtConfigGuestWatchdog(LibvirtConfigGuestDevice):
         return dev
 
 
+class LibvirtConfigGuestCPUTuneVCPUPin(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestCPUTuneVCPUPin, self).__init__(
+            root_name="vcpupin",
+            **kwargs)
+
+        self.id = None
+        self.cpuset = None
+
+    def format_dom(self):
+        root = super(LibvirtConfigGuestCPUTuneVCPUPin, self).format_dom()
+
+        root.set("vcpu", str(self.id))
+        if self.cpuset is not None:
+            root.set("cpuset",
+                     hardware.format_cpu_spec(self.cpuset))
+
+        return root
+
+
 class LibvirtConfigGuestCPUTune(LibvirtConfigObject):
 
     def __init__(self, **kwargs):
@@ -1268,6 +1289,7 @@ class LibvirtConfigGuestCPUTune(LibvirtConfigObject):
         self.shares = None
         self.quota = None
         self.period = None
+        self.vcpupin = []
 
     def format_dom(self):
         root = super(LibvirtConfigGuestCPUTune, self).format_dom()
@@ -1278,6 +1300,9 @@ class LibvirtConfigGuestCPUTune(LibvirtConfigObject):
             root.append(self._text_node("quota", str(self.quota)))
         if self.period is not None:
             root.append(self._text_node("period", str(self.period)))
+
+        for vcpu in self.vcpupin:
+            root.append(vcpu.format_dom())
 
         return root
 
