@@ -76,9 +76,6 @@ class NovaWebSocketProxy(websockify.WebSocketProxy):
                     tsock.recv(len(data))
                     break
 
-        if self.verbose and not self.daemon:
-            print(self.traffic_legend)
-
         # Start proxying
         try:
             self.do_proxy(tsock)
