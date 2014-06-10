@@ -224,7 +224,8 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
                            httplib.REQUEST_ENTITY_TOO_LARGE,
                            httplib.PRECONDITION_FAILED,
                            httplib.CONFLICT,
-                           httplib.FORBIDDEN):
+                           httplib.FORBIDDEN,
+                           httplib.INTERNAL_SERVER_ERROR):
             # No point in retrying for these conditions
             raise PluginError("Got Error response [%i] while uploading "
                               "image [%s] "
