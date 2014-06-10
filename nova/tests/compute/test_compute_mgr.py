@@ -1537,10 +1537,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
 
-    def test_unexpected_exception(self):
+    def _test_build_and_run_exceptions(self, exc, set_error=False):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
-        self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                 'build_instances')
         self._do_build_instance_update()
@@ -1548,12 +1547,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
                 self.block_device_mapping, self.node, self.limits,
-                self.filter_properties).AndRaise(
-                        test.TestingException())
+                self.filter_properties).AndRaise(exc)
         self.compute._cleanup_allocated_networks(self.context, self.instance,
                 self.requested_networks)
-        self.compute._set_instance_error_state(self.context,
-                self.instance['uuid'])
+        if set_error:
+            self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
+            self.compute._set_instance_error_state(self.context,
+                    self.instance['uuid'])
         self._instance_action_events()
         self.mox.ReplayAll()
 
@@ -1566,6 +1566,21 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
+        self.mox.UnsetStubs()
+
+    def test_build_and_run_instance_exceptions(self):
+        exceptions = [
+                exception.InstanceNotFound(instance_id=''),
+                exception.UnexpectedDeletingTaskStateError(expected='',
+                    actual='')]
+        error_exceptions = [
+                exception.BuildAbortException(instance_uuid='', reason=''),
+                test.TestingException()]
+
+        for exc in exceptions:
+            self._test_build_and_run_exceptions(exc)
+        for exc in error_exceptions:
+            self._test_build_and_run_exceptions(exc, set_error=True)
 
     def test_instance_not_found(self):
         exc = exception.InstanceNotFound(instance_id=1)
@@ -1931,6 +1946,19 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
         self.compute._build_networks_for_instance(self.context, instance,
                 self.requested_networks, self.security_groups)
+
+    def test_cleanup_allocated_networks_instance_not_found(self):
+        with contextlib.nested(
+                mock.patch.object(self.compute, '_deallocate_network'),
+                mock.patch.object(self.instance, 'save',
+                    side_effect=exception.InstanceNotFound(instance_id=''))
+        ) as (_deallocate_network, save):
+            # Testing that this doesn't raise an exeption
+            self.compute._cleanup_allocated_networks(self.context,
+                    self.instance, self.requested_networks)
+            save.assert_called_once_with()
+            self.assertEqual('False',
+                    self.instance.system_metadata['network_allocated'])
 
 
 class ComputeManagerMigrationTestCase(test.NoDBTestCase):

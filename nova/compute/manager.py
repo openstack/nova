@@ -1906,19 +1906,17 @@ class ComputeManager(manager.Manager):
                         image, filter_properties, admin_password,
                         injected_files, requested_networks, security_groups,
                         block_device_mapping)
-            except exception.InstanceNotFound:
+            except (exception.InstanceNotFound,
+                    exception.UnexpectedDeletingTaskStateError):
                 msg = _('Instance disappeared during build.')
                 LOG.debug(msg, instance=instance)
+                self._cleanup_allocated_networks(context, instance,
+                        requested_networks)
             except exception.BuildAbortException as e:
                 LOG.exception(e.format_message(), instance=instance)
                 self._cleanup_allocated_networks(context, instance,
                         requested_networks)
                 self._set_instance_error_state(context, instance.uuid)
-            except exception.UnexpectedDeletingTaskStateError as e:
-                # The instance is deleting, so clean up but don't error.
-                LOG.debug(e.format_message(), instance=instance)
-                self._cleanup_allocated_networks(context, instance,
-                        requested_networks)
             except Exception:
                 # Should not reach here.
                 msg = _('Unexpected build failure, not rescheduling build.')
@@ -2057,9 +2055,12 @@ class ComputeManager(manager.Manager):
 
         try:
             yield resources
-        except Exception:
+        except Exception as exc:
             with excutils.save_and_reraise_exception() as ctxt:
-                LOG.exception(_('Instance failed to spawn'), instance=instance)
+                if not isinstance(exc, (exception.InstanceNotFound,
+                    exception.UnexpectedDeletingTaskStateError)):
+                        LOG.exception(_('Instance failed to spawn'),
+                                instance=instance)
                 # Make sure the async call finishes
                 if network_info is not None:
                     network_info.wait(do_raise=False)
@@ -2077,11 +2078,19 @@ class ComputeManager(manager.Manager):
             requested_networks):
         try:
             self._deallocate_network(context, instance, requested_networks)
-            instance.system_metadata['network_allocated'] = 'False'
-            instance.save()
         except Exception:
             msg = _('Failed to deallocate networks')
             LOG.exception(msg, instance=instance)
+            return
+
+        instance.system_metadata['network_allocated'] = 'False'
+        try:
+            instance.save()
+        except exception.InstanceNotFound:
+            # NOTE(alaski): It's possible that we're cleaning up the networks
+            # because the instance was deleted.  If that's the case then this
+            # exception will be raised by instance.save()
+            pass
 
     def _cleanup_build_resources(self, context, instance,
             block_device_mapping):
