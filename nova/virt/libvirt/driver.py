@@ -70,7 +70,7 @@ from nova.compute import vm_mode
 from nova import context as nova_context
 from nova import exception
 from nova import image
-from nova.objects import block_device as block_device_obj
+from nova import objects
 from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.objects import service as service_obj
@@ -1795,8 +1795,8 @@ class LibvirtDriver(driver.ComputeDriver):
             raise
 
     def _volume_refresh_connection_info(self, context, instance, volume_id):
-        bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(context,
-                                                                   volume_id)
+        bdm = objects.BlockDeviceMapping.get_by_volume_id(context,
+                                                          volume_id)
         driver_bdm = driver_block_device.DriverVolumeBlockDevice(bdm)
         driver_bdm.refresh_connection_info(context, instance,
                                            self._volume_api, self)

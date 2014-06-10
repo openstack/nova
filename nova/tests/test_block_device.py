@@ -19,7 +19,7 @@ Tests for Block Device utility functions.
 
 from nova import block_device
 from nova import exception
-from nova.objects import block_device as block_device_obj
+from nova import objects
 from nova import test
 from nova.tests import fake_block_device
 from nova.tests import matchers
@@ -424,15 +424,15 @@ class TestBlockDeviceDict(test.NoDBTestCase):
             self.assertThat(expected, matchers.IsSubDictOf(legacy))
 
     def test_legacy_mapping_from_object_list(self):
-        bdm1 = block_device_obj.BlockDeviceMapping()
-        bdm1 = block_device_obj.BlockDeviceMapping._from_db_object(
+        bdm1 = objects.BlockDeviceMapping()
+        bdm1 = objects.BlockDeviceMapping._from_db_object(
             None, bdm1, fake_block_device.FakeDbBlockDeviceDict(
                 self.new_mapping[0]))
-        bdm2 = block_device_obj.BlockDeviceMapping()
-        bdm2 = block_device_obj.BlockDeviceMapping._from_db_object(
+        bdm2 = objects.BlockDeviceMapping()
+        bdm2 = objects.BlockDeviceMapping._from_db_object(
             None, bdm2, fake_block_device.FakeDbBlockDeviceDict(
                 self.new_mapping[1]))
-        bdmlist = block_device_obj.BlockDeviceMappingList()
+        bdmlist = objects.BlockDeviceMappingList()
         bdmlist.objects = [bdm1, bdm2]
         block_device.legacy_mapping(bdmlist)
 
@@ -460,8 +460,8 @@ class TestBlockDeviceDict(test.NoDBTestCase):
 
     def test_snapshot_from_object(self):
         for bdm in self.new_mapping[:-1]:
-            obj = block_device_obj.BlockDeviceMapping()
-            obj = block_device_obj.BlockDeviceMapping._from_db_object(
+            obj = objects.BlockDeviceMapping()
+            obj = objects.BlockDeviceMapping._from_db_object(
                    None, obj, fake_block_device.FakeDbBlockDeviceDict(
                        bdm))
             self._test_snapshot_from_bdm(obj)

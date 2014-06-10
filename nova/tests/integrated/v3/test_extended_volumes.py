@@ -17,7 +17,7 @@ from nova.compute import api as compute_api
 from nova.compute import manager as compute_manager
 from nova import context
 from nova import db
-from nova.objects import block_device as block_device_obj
+from nova import objects
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_block_device
 from nova.tests import fake_instance
@@ -88,7 +88,7 @@ class ExtendedVolumesSampleJsonTests(test_servers.ServersSampleBase):
         self.stubs.Set(compute_manager.ComputeManager,
                        'attach_volume',
                        lambda *a, **k: None)
-        self.stubs.Set(block_device_obj.BlockDeviceMapping, 'get_by_volume_id',
+        self.stubs.Set(objects.BlockDeviceMapping, 'get_by_volume_id',
                        classmethod(lambda *a, **k: None))
 
         volume = fakes.stub_volume_get(None, context.get_admin_context(),

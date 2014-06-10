@@ -51,7 +51,6 @@ from nova.network.security_group import security_group_base
 from nova import notifications
 from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import block_device as block_device_obj
 from nova.objects import flavor as flavor_obj
 from nova.objects import instance_action
 from nova.objects import instance_group as instance_group_obj
@@ -1402,7 +1401,7 @@ class API(base.Base):
             return
 
         host = instance['host']
-        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
         reservations = None
 
@@ -2025,7 +2024,7 @@ class API(base.Base):
             properties['root_device_name'] = instance['root_device_name']
         properties.update(extra_properties or {})
 
-        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance['uuid'])
 
         mapping = []
@@ -2180,7 +2179,7 @@ class API(base.Base):
         # system metadata... and copy in the properties for the new image.
         orig_sys_metadata = _reset_image_metadata()
 
-        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
 
         self._record_action_start(context, instance, instance_actions.REBUILD)
@@ -2573,7 +2572,7 @@ class API(base.Base):
                rescue_image_ref=None):
         """Rescue the given instance."""
 
-        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)
         for bdm in bdms:
             if bdm.volume_id:
@@ -2754,7 +2753,7 @@ class API(base.Base):
         device = self.compute_rpcapi.reserve_block_device_name(
             context, device=device, instance=instance, volume_id=volume_id,
             disk_bus=disk_bus, device_type=device_type)
-        volume_bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(
+        volume_bdm = objects.BlockDeviceMapping.get_by_volume_id(
             context, volume_id)
         try:
             volume = self.volume_api.get(context, volume_id)
@@ -2988,8 +2987,8 @@ class API(base.Base):
             return True
 
         if bdms is None:
-            bdms = block_device_obj.BlockDeviceMappingList.\
-                        get_by_instance_uuid(context, instance['uuid'])
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                    context, instance['uuid'])
 
         root_bdm = bdms.root_bdm()
         if not root_bdm:
@@ -3056,7 +3055,7 @@ class API(base.Base):
 
     @wrap_check_policy
     def volume_snapshot_create(self, context, volume_id, create_info):
-        bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(
+        bdm = objects.BlockDeviceMapping.get_by_volume_id(
                 context, volume_id, expected_attrs=['instance'])
         self.compute_rpcapi.volume_snapshot_create(context, bdm.instance,
                 volume_id, create_info)
@@ -3071,7 +3070,7 @@ class API(base.Base):
     @wrap_check_policy
     def volume_snapshot_delete(self, context, volume_id, snapshot_id,
                                delete_info):
-        bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(
+        bdm = objects.BlockDeviceMapping.get_by_volume_id(
                 context, volume_id, expected_attrs=['instance'])
         self.compute_rpcapi.volume_snapshot_delete(context, bdm.instance,
                 volume_id, snapshot_id, delete_info)

@@ -97,7 +97,7 @@ class ComputeValidateDeviceTestCase(test.TestCase):
                                             self.flavor.items()]
 
     def _validate_device(self, device=None):
-        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 self.context, self.instance['uuid'])
         return compute_utils.get_device_name_for_instance(
                 self.context, self.instance, bdms, device)
@@ -295,7 +295,7 @@ class DefaultDeviceNamesForInstanceTestCase(test.NoDBTestCase):
 
         self.patchers = []
         self.patchers.append(
-                mock.patch.object(block_device_obj.BlockDeviceMapping, 'save'))
+                mock.patch.object(objects.BlockDeviceMapping, 'save'))
         self.patchers.append(
                 mock.patch.object(
                     flavors, 'extract_flavor',

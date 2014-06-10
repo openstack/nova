@@ -19,6 +19,7 @@ import mock
 from nova.cells import rpcapi as cells_rpcapi
 from nova import db
 from nova import exception
+from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
 from nova.tests import fake_block_device
@@ -51,7 +52,7 @@ class _TestBlockDeviceMappingObject(object):
             mock.patch.object(
                 cells_rpcapi.CellsAPI, 'bdm_update_or_create_at_top')
         ) as (bdm_update_mock, cells_update_mock):
-            bdm_object = block_device_obj.BlockDeviceMapping()
+            bdm_object = objects.BlockDeviceMapping()
             bdm_object.id = 123
             bdm_object.volume_id = 'fake_volume_id'
             bdm_object.save(self.context)
@@ -62,7 +63,7 @@ class _TestBlockDeviceMappingObject(object):
             cells_update_mock.assert_called_once_with(self.context, fake_bdm)
 
     def test_save_instance_changed(self):
-        bdm_object = block_device_obj.BlockDeviceMapping()
+        bdm_object = objects.BlockDeviceMapping()
         bdm_object.instance = instance_obj.Instance()
         self.assertRaises(exception.ObjectActionError,
                           bdm_object.save, self.context)
@@ -71,7 +72,7 @@ class _TestBlockDeviceMappingObject(object):
     def test_get_by_volume_id(self, get_by_vol_id):
         get_by_vol_id.return_value = self.fake_bdm()
 
-        vol_bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(
+        vol_bdm = objects.BlockDeviceMapping.get_by_volume_id(
                 self.context, 'fake-volume-id')
         for attr in block_device_obj.BLOCK_DEVICE_OPTIONAL_ATTRS:
             self.assertFalse(vol_bdm.obj_attr_is_set(attr))
@@ -82,7 +83,7 @@ class _TestBlockDeviceMappingObject(object):
         get_by_vol_id.return_value = None
 
         self.assertRaises(exception.VolumeBDMNotFound,
-                          block_device_obj.BlockDeviceMapping.get_by_volume_id,
+                          objects.BlockDeviceMapping.get_by_volume_id,
                           self.context, 'fake-volume-id')
 
     @mock.patch.object(db, 'block_device_mapping_get_by_volume_id')
@@ -91,7 +92,7 @@ class _TestBlockDeviceMappingObject(object):
         get_by_vol_id.return_value = fake_bdm_vol
 
         self.assertRaises(exception.InvalidVolume,
-                          block_device_obj.BlockDeviceMapping.get_by_volume_id,
+                          objects.BlockDeviceMapping.get_by_volume_id,
                           self.context, 'fake-volume-id',
                           instance_uuid='fake-instance')
 
@@ -100,7 +101,7 @@ class _TestBlockDeviceMappingObject(object):
         get_by_vol_id.return_value = self.fake_bdm(
                 fake_instance.fake_db_instance())
 
-        vol_bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(
+        vol_bdm = objects.BlockDeviceMapping.get_by_volume_id(
                 self.context, 'fake-volume-id', expected_attrs=['instance'])
         for attr in block_device_obj.BLOCK_DEVICE_OPTIONAL_ATTRS:
             self.assertTrue(vol_bdm.obj_attr_is_set(attr))
@@ -120,7 +121,7 @@ class _TestBlockDeviceMappingObject(object):
             mock.patch.object(cells_rpcapi.CellsAPI,
                               'bdm_update_or_create_at_top')
         ) as (bdm_create_mock, cells_update_mock):
-            bdm = block_device_obj.BlockDeviceMapping(**values)
+            bdm = objects.BlockDeviceMapping(**values)
             bdm.create(self.context)
             bdm_create_mock.assert_called_once_with(
                     self.context, values, legacy=False)
@@ -131,7 +132,7 @@ class _TestBlockDeviceMappingObject(object):
         values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
                   'destination_type': 'volume',
                   'instance_uuid': 'fake-instance'}
-        bdm = block_device_obj.BlockDeviceMapping(**values)
+        bdm = objects.BlockDeviceMapping(**values)
         with mock.patch.object(cells_rpcapi.CellsAPI,
                                'bdm_update_or_create_at_top'):
             bdm.create(self.context)
@@ -143,7 +144,7 @@ class _TestBlockDeviceMappingObject(object):
         values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
                   'destination_type': 'volume',
                   'instance_uuid': 'fake-instance'}
-        bdm = block_device_obj.BlockDeviceMapping(**values)
+        bdm = objects.BlockDeviceMapping(**values)
         bdm.create(self.context)
 
         self.assertRaises(exception.ObjectActionError,
@@ -154,7 +155,7 @@ class _TestBlockDeviceMappingObject(object):
                   'destination_type': 'volume',
                   'instance_uuid': 'fake-instance',
                   'instance': instance_obj.Instance()}
-        bdm = block_device_obj.BlockDeviceMapping(**values)
+        bdm = objects.BlockDeviceMapping(**values)
         self.assertRaises(exception.ObjectActionError,
                           bdm.create, self.context)
 
@@ -166,7 +167,7 @@ class _TestBlockDeviceMappingObject(object):
             mock.patch.object(db, 'block_device_mapping_destroy'),
             mock.patch.object(cells_rpcapi.CellsAPI, 'bdm_destroy_at_top')
         ) as (bdm_del, cells_destroy):
-            bdm = block_device_obj.BlockDeviceMapping(**values)
+            bdm = objects.BlockDeviceMapping(**values)
             bdm.destroy(self.context)
             bdm_del.assert_called_once_with(self.context, values['id'])
             cells_destroy.assert_called_once_with(
@@ -203,17 +204,17 @@ class _TestBlockDeviceMappingListObject(object):
         fakes = [self.fake_bdm(123), self.fake_bdm(456)]
         get_all_by_inst.return_value = fakes
         bdm_list = (
-                block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                objects.BlockDeviceMappingList.get_by_instance_uuid(
                     self.context, 'fake_instance_uuid'))
         for faked, got in zip(fakes, bdm_list):
-            self.assertIsInstance(got, block_device_obj.BlockDeviceMapping)
+            self.assertIsInstance(got, objects.BlockDeviceMapping)
             self.assertEqual(faked['id'], got.id)
 
     @mock.patch.object(db, 'block_device_mapping_get_all_by_instance')
     def test_get_by_instance_uuid_no_result(self, get_all_by_inst):
         get_all_by_inst.return_value = None
         bdm_list = (
-                block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                objects.BlockDeviceMappingList.get_by_instance_uuid(
                     self.context, 'fake_instance_uuid'))
         self.assertEqual(0, len(bdm_list))
 

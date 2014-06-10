@@ -33,7 +33,6 @@ from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import block_device as block_device_obj
 from nova.objects import external_event as external_event_obj
 from nova.objects import instance_info_cache
 from nova.objects import migration as migration_obj
@@ -517,7 +516,7 @@ class _ComputeAPIUnitTestMixIn(object):
         if delete_type == 'soft_delete':
             updates['deleted_at'] = delete_time
         self.mox.StubOutWithMock(inst, 'save')
-        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
+        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
                                  'get_by_instance_uuid')
         self.mox.StubOutWithMock(quota.QUOTAS, 'reserve')
         self.mox.StubOutWithMock(self.context, 'elevated')
@@ -548,7 +547,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(rpcapi, 'terminate_instance')
         self.mox.StubOutWithMock(rpcapi, 'soft_delete_instance')
 
-        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        objects.BlockDeviceMappingList.get_by_instance_uuid(
             self.context, inst.uuid).AndReturn([])
         inst.save()
         if inst.task_state == task_states.RESIZE_FINISH:
@@ -707,7 +706,7 @@ class _ComputeAPIUnitTestMixIn(object):
         if self.cell_type == 'api':
             rpcapi.terminate_instance(
                     self.context, inst,
-                    mox.IsA(block_device_obj.BlockDeviceMappingList),
+                    mox.IsA(objects.BlockDeviceMappingList),
                     reservations=None)
         else:
             compute_utils.notify_about_instance_usage(
@@ -733,7 +732,7 @@ class _ComputeAPIUnitTestMixIn(object):
             self.assertEqual(inst[k], v)
 
     def test_local_delete_with_deleted_volume(self):
-        bdms = [block_device_obj.BlockDeviceMapping(
+        bdms = [objects.BlockDeviceMapping(
                 **fake_block_device.FakeDbBlockDeviceDict(
                 {'id': 42, 'volume_id': 'volume_id',
                  'source_type': 'volume', 'destination_type': 'volume',
@@ -756,8 +755,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                  'notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute_api.volume_api,
                                  'terminate_connection')
-        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMapping,
-                                 'destroy')
+        self.mox.StubOutWithMock(objects.BlockDeviceMapping, 'destroy')
 
         inst.info_cache.delete()
         compute_utils.notify_about_instance_usage(
@@ -1633,16 +1631,16 @@ class _ComputeAPIUnitTestMixIn(object):
                     'boot_index': -1})
         fake_bdm['instance'] = fake_instance.fake_db_instance()
         fake_bdm['instance_uuid'] = fake_bdm['instance']['uuid']
-        fake_bdm = block_device_obj.BlockDeviceMapping._from_db_object(
-                self.context, block_device_obj.BlockDeviceMapping(),
+        fake_bdm = objects.BlockDeviceMapping._from_db_object(
+                self.context, objects.BlockDeviceMapping(),
                 fake_bdm, expected_attrs=['instance'])
 
-        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMapping,
+        self.mox.StubOutWithMock(objects.BlockDeviceMapping,
                                  'get_by_volume_id')
         self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
                 'volume_snapshot_create')
 
-        block_device_obj.BlockDeviceMapping.get_by_volume_id(
+        objects.BlockDeviceMapping.get_by_volume_id(
                 self.context, volume_id,
                 expected_attrs=['instance']).AndReturn(fake_bdm)
         self.compute_api.compute_rpcapi.volume_snapshot_create(self.context,
@@ -1674,16 +1672,16 @@ class _ComputeAPIUnitTestMixIn(object):
                     'boot_index': -1})
         fake_bdm['instance'] = fake_instance.fake_db_instance()
         fake_bdm['instance_uuid'] = fake_bdm['instance']['uuid']
-        fake_bdm = block_device_obj.BlockDeviceMapping._from_db_object(
-                self.context, block_device_obj.BlockDeviceMapping(),
+        fake_bdm = objects.BlockDeviceMapping._from_db_object(
+                self.context, objects.BlockDeviceMapping(),
                 fake_bdm, expected_attrs=['instance'])
 
-        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMapping,
+        self.mox.StubOutWithMock(objects.BlockDeviceMapping,
                                  'get_by_volume_id')
         self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
                 'volume_snapshot_delete')
 
-        block_device_obj.BlockDeviceMapping.get_by_volume_id(
+        objects.BlockDeviceMapping.get_by_volume_id(
                 self.context, volume_id,
                 expected_attrs=['instance']).AndReturn(fake_bdm)
         self.compute_api.compute_rpcapi.volume_snapshot_delete(self.context,
@@ -1745,8 +1743,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(objects.Instance, 'get_flavor')
-    @mock.patch.object(block_device_obj.BlockDeviceMappingList,
-            'get_by_instance_uuid')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(compute_api.API, '_get_image')
     @mock.patch.object(compute_api.API, '_check_auto_disk_config')
     @mock.patch.object(compute_api.API, '_checks_for_create_and_rebuild')
@@ -1791,8 +1788,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(objects.Instance, 'get_flavor')
-    @mock.patch.object(block_device_obj.BlockDeviceMappingList,
-            'get_by_instance_uuid')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(compute_api.API, '_get_image')
     @mock.patch.object(compute_api.API, '_check_auto_disk_config')
     @mock.patch.object(compute_api.API, '_checks_for_create_and_rebuild')
@@ -1906,7 +1902,7 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(cinder.API, 'get',
              side_effect=exception.CinderConnectionFailed(reason='error'))
     def test_get_bdm_image_metadata_with_cinder_down(self, mock_get):
-        bdms = [block_device_obj.BlockDeviceMapping(
+        bdms = [objects.BlockDeviceMapping(
                 **fake_block_device.FakeDbBlockDeviceDict(
                 {
                  'id': 1,
@@ -1927,7 +1923,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_validate_bdm_with_cinder_down(self, mock_get, mock_get_snapshot):
         instance = self._create_instance_obj()
         instance_type = self._create_flavor()
-        bdm = [block_device_obj.BlockDeviceMapping(
+        bdm = [objects.BlockDeviceMapping(
                 **fake_block_device.FakeDbBlockDeviceDict(
                 {
                  'id': 1,
@@ -1937,7 +1933,7 @@ class _ComputeAPIUnitTestMixIn(object):
                  'device_name': 'vda',
                  'boot_index': 0,
                  }))]
-        bdms = [block_device_obj.BlockDeviceMapping(
+        bdms = [objects.BlockDeviceMapping(
                 **fake_block_device.FakeDbBlockDeviceDict(
                 {
                  'id': 1,
@@ -1982,7 +1978,7 @@ class _ComputeAPIUnitTestMixIn(object):
         fake_security_group = None
         fake_num_instances = 1
         fake_index = 1
-        bdm = [block_device_obj.BlockDeviceMapping(
+        bdm = [objects.BlockDeviceMapping(
                 **fake_block_device.FakeDbBlockDeviceDict(
                 {
                  'id': 1,
@@ -2009,7 +2005,7 @@ class _ComputeAPIUnitTestMixIn(object):
         instance = self._create_instance_obj(params={'vm_state': vm_state})
         bdms = []
         with contextlib.nested(
-            mock.patch.object(block_device_obj.BlockDeviceMappingList,
+            mock.patch.object(objects.BlockDeviceMappingList,
                               'get_by_instance_uuid', return_value=bdms),
             mock.patch.object(self.compute_api, 'is_volume_backed_instance',
                               return_value=False),

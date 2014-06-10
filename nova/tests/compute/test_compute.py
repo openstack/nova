@@ -400,7 +400,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.stubs.Set(db, 'block_device_mapping_update', store_cinfo)
 
     def test_attach_volume_serial(self):
-        fake_bdm = block_device_obj.BlockDeviceMapping(**self.fake_volume)
+        fake_bdm = objects.BlockDeviceMapping(**self.fake_volume)
         with (mock.patch.object(cinder.API, 'get_volume_encryption_metadata',
                                 return_value={})):
             instance = self._create_fake_instance()
@@ -409,7 +409,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             self.assertEqual(self.cinfo.get('serial'), self.volume_id)
 
     def test_attach_volume_raises(self):
-        fake_bdm = block_device_obj.BlockDeviceMapping(**self.fake_volume)
+        fake_bdm = objects.BlockDeviceMapping(**self.fake_volume)
         instance = self._create_fake_instance()
 
         def fake_attach(*args, **kwargs):
@@ -419,7 +419,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             mock.patch.object(driver_block_device.DriverVolumeBlockDevice,
                               'attach'),
             mock.patch.object(cinder.API, 'unreserve_volume'),
-            mock.patch.object(block_device_obj.BlockDeviceMapping,
+            mock.patch.object(objects.BlockDeviceMapping,
                               'destroy')
         ) as (mock_attach, mock_unreserve, mock_destroy):
             mock_attach.side_effect = fake_attach
@@ -431,13 +431,13 @@ class ComputeVolumeTestCase(BaseTestCase):
             self.assertTrue(mock_destroy.called)
 
     def test_detach_volume_api_raises(self):
-        fake_bdm = block_device_obj.BlockDeviceMapping(**self.fake_volume)
+        fake_bdm = objects.BlockDeviceMapping(**self.fake_volume)
         instance = self._create_fake_instance()
 
         with contextlib.nested(
             mock.patch.object(self.compute, '_detach_volume'),
             mock.patch.object(self.compute.volume_api, 'detach'),
-            mock.patch.object(block_device_obj.BlockDeviceMapping,
+            mock.patch.object(objects.BlockDeviceMapping,
                               'get_by_volume_id'),
             mock.patch.object(fake_bdm, 'destroy')
         ) as (mock_internal_detach, mock_detach, mock_get, mock_destroy):
@@ -452,11 +452,11 @@ class ComputeVolumeTestCase(BaseTestCase):
             self.assertTrue(mock_destroy.called)
 
     def test_attach_volume_no_bdm(self):
-        fake_bdm = block_device_obj.BlockDeviceMapping(**self.fake_volume)
+        fake_bdm = objects.BlockDeviceMapping(**self.fake_volume)
         instance = self._create_fake_instance()
 
         with contextlib.nested(
-            mock.patch.object(block_device_obj.BlockDeviceMapping,
+            mock.patch.object(objects.BlockDeviceMapping,
                 'get_by_volume_id', return_value=fake_bdm),
             mock.patch.object(self.compute, '_attach_volume')
         ) as (mock_get_by_id, mock_attach):
@@ -501,7 +501,7 @@ class ComputeVolumeTestCase(BaseTestCase):
 
     def test_boot_volume_serial(self):
         with (
-            mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
+            mock.patch.object(objects.BlockDeviceMapping, 'save')
         ) as mock_save:
             block_device_mapping = [
             block_device.BlockDeviceDict({
@@ -635,7 +635,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.mox.UnsetStubs()
 
     @mock.patch.object(objects.InstanceList, 'get_by_host')
-    @mock.patch.object(block_device_obj.BlockDeviceMappingList,
+    @mock.patch.object(objects.BlockDeviceMappingList,
                        'get_by_instance_uuid')
     def test_get_host_volume_bdms(self, mock_get_by_inst, mock_get_by_host):
         fake_instance = mock.Mock(uuid='fake-instance-uuid')
@@ -1707,7 +1707,7 @@ class ComputeTestCase(BaseTestCase):
         bdms = []
 
         def fake_rpc_reserve_block_device_name(self, context, **kwargs):
-            bdm = block_device_obj.BlockDeviceMapping(
+            bdm = objects.BlockDeviceMapping(
                         **{'source_type': 'volume',
                            'destination_type': 'volume',
                            'volume_id': 1,
@@ -2570,7 +2570,7 @@ class ComputeTestCase(BaseTestCase):
         })])
 
         with (mock.patch.object(
-                block_device_obj.BlockDeviceMappingList,
+                objects.BlockDeviceMappingList,
                 'get_by_instance_uuid',
                 return_value=bdms)
         ) as mock_get_by_instance:
@@ -2603,7 +2603,7 @@ class ComputeTestCase(BaseTestCase):
                     'destination_type': 'volume'})
                ])
         with (mock.patch.object(
-                block_device_obj.BlockDeviceMappingList,
+                objects.BlockDeviceMappingList,
                 'get_by_instance_uuid')) as mock_get_by_instance:
             block_device_info = (
                 self.compute._get_instance_block_device_info(
@@ -2667,7 +2667,7 @@ class ComputeTestCase(BaseTestCase):
             [swap, ephemeral0, ephemeral1])
 
         with (
-              mock.patch.object(block_device_obj.BlockDeviceMappingList,
+              mock.patch.object(objects.BlockDeviceMappingList,
                                 'get_by_instance_uuid', return_value=bdms)
         ) as mock_get_by_instance_uuid:
             expected_block_device_info = {
@@ -4259,7 +4259,7 @@ class ComputeTestCase(BaseTestCase):
         volume = {'instance_uuid': None,
                   'device_name': None,
                   'id': volume_id}
-        bdm = block_device_obj.BlockDeviceMapping(
+        bdm = objects.BlockDeviceMapping(
                         **{'source_type': 'volume',
                            'destination_type': 'volume',
                            'volume_id': volume_id,
@@ -4793,7 +4793,7 @@ class ComputeTestCase(BaseTestCase):
                 instance.uuid, 'pre-migrating')
 
         with contextlib.nested(
-            mock.patch.object(block_device_obj.BlockDeviceMappingList,
+            mock.patch.object(objects.BlockDeviceMappingList,
                 'get_by_instance_uuid', return_value='fake_bdms'),
             mock.patch.object(
                 self.compute, '_get_instance_block_device_info',
@@ -5218,11 +5218,11 @@ class ComputeTestCase(BaseTestCase):
                                                {'host': 'fake-dest-host'})
         dest_host = updated_instance['host']
         fake_bdms = [
-                block_device_obj.BlockDeviceMapping(
+                objects.BlockDeviceMapping(
                     **fake_block_device.FakeDbBlockDeviceDict(
                         {'volume_id': 'vol1-id', 'source_type': 'volume',
                          'destination_type': 'volume'})),
-                block_device_obj.BlockDeviceMapping(
+                objects.BlockDeviceMapping(
                     **fake_block_device.FakeDbBlockDeviceDict(
                         {'volume_id': 'vol2-id', 'source_type': 'volume',
                          'destination_type': 'volume'}))
@@ -5233,7 +5233,7 @@ class ComputeTestCase(BaseTestCase):
                                  'get_instance_disk_info')
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
                                  'pre_live_migration')
-        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
+        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
                                  'get_by_instance_uuid')
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'setup_networks_on_host')
@@ -5250,7 +5250,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.network_api.setup_networks_on_host(c,
                 instance, self.compute.host)
-        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(c,
+        objects.BlockDeviceMappingList.get_by_instance_uuid(c,
                 instance.uuid).AndReturn(fake_bdms)
         self.compute.compute_rpcapi.remove_volume_connection(
                 c, instance, 'vol1-id', dest_host)
@@ -5458,7 +5458,7 @@ class ComputeTestCase(BaseTestCase):
                               'clear_events_for_instance'),
             mock.patch.object(self.compute,
                               '_get_instance_block_device_info'),
-            mock.patch.object(block_device_obj.BlockDeviceMappingList,
+            mock.patch.object(objects.BlockDeviceMappingList,
                               'get_by_instance_uuid'),
             mock.patch.object(self.compute.driver, 'get_volume_connector'),
             mock.patch.object(cinder.API, 'terminate_connection')
@@ -5797,14 +5797,14 @@ class ComputeTestCase(BaseTestCase):
         bdms = block_device_obj.block_device_make_list(ctxt, [])
 
         self.mox.StubOutWithMock(self.compute, "_shutdown_instance")
-        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
+        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
                                  "get_by_instance_uuid")
         # Simulate an error and make sure cleanup proceeds with next instance.
         self.compute._shutdown_instance(ctxt, inst1, bdms, notify=False).\
                                         AndRaise(test.TestingException)
-        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(ctxt,
+        objects.BlockDeviceMappingList.get_by_instance_uuid(ctxt,
                 inst1.uuid, use_slave=True).AndReturn(bdms)
-        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(ctxt,
+        objects.BlockDeviceMappingList.get_by_instance_uuid(ctxt,
                 inst2.uuid, use_slave=True).AndReturn(bdms)
         self.compute._shutdown_instance(ctxt, inst2, bdms, notify=False).\
                                         AndReturn(None)
@@ -6549,7 +6549,7 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(objects.InstanceList,
                                  'get_by_filters')
         self.mox.StubOutWithMock(self.compute, '_deleted_old_enough')
-        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
+        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
                                  'get_by_instance_uuid')
         self.mox.StubOutWithMock(self.compute, '_delete_instance')
 
@@ -6561,7 +6561,7 @@ class ComputeTestCase(BaseTestCase):
 
         # The first instance delete fails.
         self.compute._deleted_old_enough(instance1, 3600).AndReturn(True)
-        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        objects.BlockDeviceMappingList.get_by_instance_uuid(
                 ctxt, instance1.uuid).AndReturn([])
         self.compute._delete_instance(ctxt, instance1,
                                       [], self.none_quotas).AndRaise(
@@ -6569,7 +6569,7 @@ class ComputeTestCase(BaseTestCase):
 
         # The second instance delete that follows.
         self.compute._deleted_old_enough(instance2, 3600).AndReturn(True)
-        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        objects.BlockDeviceMappingList.get_by_instance_uuid(
                 ctxt, instance2.uuid).AndReturn([])
         self.compute._delete_instance(ctxt, instance2,
                                       [], self.none_quotas)
@@ -6719,7 +6719,7 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute, '_instance_update')
         self.mox.StubOutWithMock(self.compute,
                                  '_default_device_names_for_instance')
-        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMapping, 'save')
+        self.mox.StubOutWithMock(objects.BlockDeviceMapping, 'save')
         bdms[0].save().AndReturn(None)
         self.compute._default_device_names_for_instance(instance,
                                                         '/dev/vda', [], [],
@@ -6734,7 +6734,7 @@ class ComputeTestCase(BaseTestCase):
         instance['root_device_name'] = None
         bdms[0]['device_name'] = None
         self.mox.StubOutWithMock(self.compute, '_instance_update')
-        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMapping, 'save')
+        self.mox.StubOutWithMock(objects.BlockDeviceMapping, 'save')
         self.mox.StubOutWithMock(self.compute,
                                  '_default_root_device_name')
         self.mox.StubOutWithMock(self.compute,
@@ -6756,7 +6756,7 @@ class ComputeTestCase(BaseTestCase):
     def test_reserve_block_device_name(self):
         instance = self._create_fake_instance_obj(
                 params={'root_device_name': '/dev/vda'})
-        bdm = block_device_obj.BlockDeviceMapping(
+        bdm = objects.BlockDeviceMapping(
                 **{'source_type': 'image', 'destination_type': 'local',
                    'image_id': 'fake-image-id', 'device_name': '/dev/vda',
                    'instance_uuid': instance.uuid})
@@ -6766,7 +6766,7 @@ class ComputeTestCase(BaseTestCase):
                                                '/dev/vdb', 'fake-volume-id',
                                                'virtio', 'disk')
 
-        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 self.context, instance.uuid)
         bdms = list(bdms)
         self.assertEqual(len(bdms), 2)
@@ -7439,7 +7439,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         return fake_bdms, volume
 
-    @mock.patch.object(block_device_obj.BlockDeviceMappingList,
+    @mock.patch.object(objects.BlockDeviceMappingList,
                        'get_by_instance_uuid')
     @mock.patch.object(cinder.API, 'get')
     def test_rescue_volume_backed_no_image(self, mock_get_vol, mock_get_bdms):
@@ -7463,7 +7463,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, volume_backed_inst_1,
                                         [], [])
 
-    @mock.patch.object(block_device_obj.BlockDeviceMappingList,
+    @mock.patch.object(objects.BlockDeviceMappingList,
                        'get_by_instance_uuid')
     @mock.patch.object(cinder.API, 'get')
     def test_rescue_volume_backed_placeholder_image(self,
@@ -8339,9 +8339,9 @@ class ComputeAPITestCase(BaseTestCase):
         ctxt = self.context
         instance = self._create_fake_instance()
 
-        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
+        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
                                  'get_by_instance_uuid')
-        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        objects.BlockDeviceMappingList.get_by_instance_uuid(
                     ctxt, instance['uuid']).AndReturn(
                             block_device_obj.block_device_make_list(ctxt, []))
         self.mox.ReplayAll()
@@ -8510,7 +8510,7 @@ class ComputeAPITestCase(BaseTestCase):
                 self.compute_api.detach_volume,
                 self.context, instance, volume)
 
-    @mock.patch.object(block_device_obj.BlockDeviceMappingList,
+    @mock.patch.object(objects.BlockDeviceMappingList,
                        'get_by_instance_uuid')
     @mock.patch.object(cinder.API, 'get')
     def test_no_rescue_in_volume_state_attaching(self,
@@ -8786,9 +8786,9 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(compute_rpcapi.ComputeAPI, 'attach_volume',
                        fake_rpc_attach_volume)
 
-        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMapping,
+        self.mox.StubOutWithMock(objects.BlockDeviceMapping,
                                  'get_by_volume_id')
-        block_device_obj.BlockDeviceMapping.get_by_volume_id(
+        objects.BlockDeviceMapping.get_by_volume_id(
                 self.context, mox.IgnoreArg()).AndReturn('fake-bdm')
         self.mox.ReplayAll()
 
@@ -8896,10 +8896,10 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, "detach_volume",
                        fake_libvirt_driver_detach_volume_fails)
 
-        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMapping,
+        self.mox.StubOutWithMock(objects.BlockDeviceMapping,
                                  'get_by_volume_id')
-        block_device_obj.BlockDeviceMapping.get_by_volume_id(
-                self.context, 1).AndReturn(block_device_obj.BlockDeviceMapping(
+        objects.BlockDeviceMapping.get_by_volume_id(
+                self.context, 1).AndReturn(objects.BlockDeviceMapping(
                     **fake_bdm))
         self.mox.ReplayAll()
 
@@ -8964,7 +8964,7 @@ class ComputeAPITestCase(BaseTestCase):
                      'volume_id': 'fake_vol'}
         bdms = []
         for bdm in img_bdm, vol_bdm:
-            bdm_obj = block_device_obj.BlockDeviceMapping(**bdm)
+            bdm_obj = objects.BlockDeviceMapping(**bdm)
             bdm_obj.create(admin)
             bdms.append(bdm_obj)
 
@@ -10225,14 +10225,14 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
         """Basic sanity check to make sure _reschedule_or_error is called
         when a build fails.
         """
-        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
+        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
                                  'get_by_instance_uuid')
         self.mox.StubOutWithMock(self.compute, '_spawn')
         self.mox.StubOutWithMock(self.compute, '_reschedule_or_error')
 
         bdms = block_device_obj.block_device_make_list(self.context, [])
 
-        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        objects.BlockDeviceMappingList.get_by_instance_uuid(
                 mox.IgnoreArg(), self.instance.uuid).AndReturn(bdms)
         self.compute._spawn(mox.IgnoreArg(), self.instance, mox.IgnoreArg(),
                 [], mox.IgnoreArg(), [], None, set_access_ip=False).AndRaise(

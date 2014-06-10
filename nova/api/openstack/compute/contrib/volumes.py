@@ -24,7 +24,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
-from nova.objects import block_device as block_device_obj
+from nova import objects
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
@@ -355,7 +355,7 @@ class VolumeAttachmentController(wsgi.Controller):
         except exception.NotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
 
-        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance['uuid'])
 
         if not bdms:
@@ -468,7 +468,7 @@ class VolumeAttachmentController(wsgi.Controller):
         except exception.NotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
 
-        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
         found = False
         try:
@@ -513,7 +513,7 @@ class VolumeAttachmentController(wsgi.Controller):
 
         volume = self.volume_api.get(context, volume_id)
 
-        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance['uuid'])
         if not bdms:
             msg = _("Instance %s is not attached.") % server_id
@@ -557,7 +557,7 @@ class VolumeAttachmentController(wsgi.Controller):
         except exception.NotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
 
-        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance['uuid'])
         limited_list = common.limited(bdms, req)
         results = []

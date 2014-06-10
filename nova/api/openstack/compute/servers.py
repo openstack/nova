@@ -33,7 +33,7 @@ from nova import block_device
 from nova import compute
 from nova.compute import flavors
 from nova import exception
-from nova.objects import block_device as block_device_obj
+from nova import objects
 from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -1435,7 +1435,7 @@ class Controller(wsgi.Controller):
 
         instance = self._get_server(context, req, id)
 
-        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)
 
         try:

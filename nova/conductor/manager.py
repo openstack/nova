@@ -36,8 +36,8 @@ from nova import manager
 from nova import network
 from nova.network.security_group import openstack_driver
 from nova import notifications
+from nova import objects
 from nova.objects import base as nova_object
-from nova.objects import block_device as block_device_object
 from nova.objects import instance as instance_obj
 from nova.objects import migration as migration_obj
 from nova.objects import quotas as quotas_obj
@@ -818,9 +818,8 @@ class ComputeTaskManager(base.Base):
                 host)
             # The block_device_mapping passed from the api doesn't contain
             # instance specific information
-            bdo = block_device_object
-            bdms = bdo.BlockDeviceMappingList.get_by_instance_uuid(context,
-                    instance.uuid)
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                    context, instance.uuid)
 
             self.compute_rpcapi.build_and_run_instance(context,
                     instance=instance, host=host['host'], image=image,
