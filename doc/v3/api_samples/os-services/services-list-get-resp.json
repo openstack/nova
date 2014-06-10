@@ -23,7 +23,7 @@
         {
             "id": 3,
             "binary": "nova-scheduler",
-            "disabled_reason": "",
+            "disabled_reason": null,
             "host": "host2",
             "state": "down",
             "status": "enabled",

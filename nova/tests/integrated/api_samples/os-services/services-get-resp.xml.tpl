@@ -2,6 +2,6 @@
 <services>
   <service status="disabled" binary="nova-scheduler" zone="internal" state="up" updated_at="%(xmltime)s" host="host1" disabled_reason="test1"/>
   <service status="disabled" binary="nova-compute" zone="nova" state="up" updated_at="%(xmltime)s" host="host1" disabled_reason="test2"/>
-  <service status="enabled" binary="nova-scheduler" zone="internal" state="down" updated_at="%(xmltime)s" host="host2" disabled_reason=""/>
+  <service status="enabled" binary="nova-scheduler" zone="internal" state="down" updated_at="%(xmltime)s" host="host2" disabled_reason="None"/>
   <service status="disabled" binary="nova-compute" zone="nova" state="down" updated_at="%(xmltime)s" host="host2" disabled_reason="test4"/>
 </services>

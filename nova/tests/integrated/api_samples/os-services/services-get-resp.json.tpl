@@ -21,7 +21,7 @@
         {
             "binary": "nova-scheduler",
             "host": "host2",
-            "disabled_reason": "",
+            "disabled_reason": null,
             "state": "down",
             "status": "enabled",
             "updated_at": "%(strtime)s",

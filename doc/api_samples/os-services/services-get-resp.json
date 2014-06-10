@@ -25,7 +25,7 @@
             "status": "enabled",
             "updated_at": "2012-09-19T06:55:34.000000",
             "zone": "internal",
-            "disabled_reason": ""
+            "disabled_reason": null
         },
         {
             "binary": "nova-compute",
