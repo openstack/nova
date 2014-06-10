@@ -14,6 +14,8 @@
 
 import traceback
 
+import six
+
 from nova import db
 from nova.objects import base
 from nova.objects import fields
@@ -115,7 +117,7 @@ def serialize_args(fn):
         exc_tb = kwargs.get('exc_tb')
         if exc_val is not None:
             kwargs['exc_val'] = str(exc_val)
-        if not isinstance(exc_tb, str) and exc_tb is not None:
+        if not isinstance(exc_tb, six.string_types) and exc_tb is not None:
             kwargs['exc_tb'] = ''.join(traceback.format_tb(exc_tb))
         # NOTE(danms): We wrap a descriptor, so use that protocol
         return fn.__get__(None, cls)(*args, **kwargs)
