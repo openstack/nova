@@ -505,6 +505,14 @@
             "updated": "2013-12-17T00:00:00Z"
         },
         {
+            "alias": "os-quota-class-sets",
+            "description": "Quota classes management support.",
+            "links": [],
+            "name": "QuotaClasses",
+            "namespace": "http://docs.openstack.org/compute/ext/quota-classes-sets/api/v1.1",
+            "updated": "2012-03-12T00:00:00Z"
+        },
+        {
             "alias": "os-quota-sets",
             "description": "Quotas management support.",
             "links": [],

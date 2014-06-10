@@ -228,6 +228,7 @@ class ExtensionControllerTest(ExtensionTestCase):
             "Keypairs",
             "Multinic",
             "MultipleCreate",
+            "QuotaClasses",
             "Quotas",
             "ExtendedQuotas",
             "Rescue",
