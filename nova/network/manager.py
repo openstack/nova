@@ -42,6 +42,7 @@ topologies.  All of the network commands are issued to a subclass of
 """
 
 import datetime
+import functools
 import itertools
 import math
 import re
@@ -866,6 +867,9 @@ class NetworkManager(manager.Manager):
         LOG.debug('Allocate fixed ip on network %s', network['uuid'],
                   instance=instance)
 
+        # A list of cleanup functions to call on error
+        cleanup = []
+
         # Check the quota; can't put this in the API because we get
         # called into from other places
         quotas = self.quotas_cls()
@@ -874,6 +878,7 @@ class NetworkManager(manager.Manager):
         try:
             quotas.reserve(context, fixed_ips=1, project_id=quota_project,
                            user_id=quota_user)
+            cleanup.append(functools.partial(quotas.rollback, context))
         except exception.OverQuota:
             LOG.warn(_("Quota exceeded for %s, tried to allocate "
                        "fixed IP"), context.project_id)
@@ -895,18 +900,34 @@ class NetworkManager(manager.Manager):
                 fip.allocated = True
                 fip.virtual_interface_id = vif.id
                 fip.save()
+                cleanup.append(fip.disassociate)
+
                 self._do_trigger_security_group_members_refresh_for_instance(
                     instance_id)
+                cleanup.append(functools.partial(
+                    self._do_trigger_security_group_members_refresh_for_instance,  # noqa
+                    instance_id))
 
             name = instance.display_name
 
             if self._validate_instance_zone_for_dns_domain(context, instance):
                 self.instance_dns_manager.create_entry(
                     name, str(fip.address), "A", self.instance_dns_domain)
+                cleanup.append(functools.partial(
+                        self.instance_dns_manager.delete_entry,
+                        name, self.instance_dns_domain))
+
                 self.instance_dns_manager.create_entry(
                     instance_id, str(fip.address), "A",
                     self.instance_dns_domain)
+                cleanup.append(functools.partial(
+                        self.instance_dns_manager.delete_entry,
+                        instance_id, self.instance_dns_domain))
+
             self._setup_network_on_host(context, network)
+            cleanup.append(functools.partial(
+                    self._teardown_network_on_host,
+                    context, network))
 
             quotas.commit(context)
             LOG.debug('Allocated fixed ip %s on network %s', address,
@@ -915,7 +936,13 @@ class NetworkManager(manager.Manager):
 
         except Exception:
             with excutils.save_and_reraise_exception():
-                quotas.rollback(context)
+                for f in cleanup:
+                    try:
+                        f()
+                    except Exception:
+                        LOG.warn(_('Error cleaning up fixed ip allocation. '
+                                   'Manual cleanup may be required.'),
+                                 exc_info=True)
 
     def deallocate_fixed_ip(self, context, address, host=None, teardown=True,
             instance=None):
