@@ -237,16 +237,13 @@ class FilterScheduler(driver.Scheduler):
             # re-scheduling is disabled.
             return
 
-        retry = filter_properties.pop('retry', {})
-        # retry is enabled, update attempt count:
-        if retry:
-            retry['num_attempts'] += 1
-        else:
-            retry = {
-                'num_attempts': 1,
+        # retry is enabled, update attempt count
+        retry = filter_properties.setdefault(
+            'retry', {
+                'num_attempts': 0,
                 'hosts': []  # list of compute hosts tried
-            }
-        filter_properties['retry'] = retry
+            })
+        retry['num_attempts'] += 1
 
         instance_uuid = instance_properties.get('uuid')
         self._log_compute_error(instance_uuid, retry)
