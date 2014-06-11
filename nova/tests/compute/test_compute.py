@@ -10058,7 +10058,8 @@ class ComputeReschedulingTestCase(BaseTestCase):
             raise test.TestingException("just need an exception")
         except test.TestingException:
             exc_info = sys.exc_info()
-            exc_str = traceback.format_exception(*exc_info)
+            exc_str = traceback.format_exception_only(exc_info[0],
+                                                      exc_info[1])
 
         self.assertTrue(self._reschedule(filter_properties=filter_properties,
             request_spec=request_spec, exc_info=exc_info))
