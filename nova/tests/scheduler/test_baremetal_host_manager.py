@@ -13,9 +13,37 @@
 Tests For BaremetalHostManager
 """
 
+import mock
+
 from nova.openstack.common import jsonutils
 from nova.scheduler import baremetal_host_manager
+from nova.scheduler import host_manager
 from nova import test
+
+
+class BaremetalHostManagerTestCase(test.NoDBTestCase):
+    """Test case for BaremetalHostManager class."""
+
+    def setUp(self):
+        super(BaremetalHostManagerTestCase, self).setUp()
+        self.host_manager = baremetal_host_manager.BaremetalHostManager()
+
+    @mock.patch.object(baremetal_host_manager.BaremetalNodeState, '__init__')
+    def test_create_baremetal_node_state(self, init_mock):
+        init_mock.return_value = None
+        compute = {'cpu_info': 'baremetal cpu'}
+        host_state = self.host_manager.host_state_cls('fake-host', 'fake-node',
+                                                      compute=compute)
+        self.assertIs(baremetal_host_manager.BaremetalNodeState,
+                      type(host_state))
+
+    @mock.patch.object(host_manager.HostState, '__init__')
+    def test_create_non_baremetal_host_state(self, init_mock):
+        init_mock.return_value = None
+        compute = {'cpu_info': 'other cpu'}
+        host_state = self.host_manager.host_state_cls('fake-host', 'fake-node',
+                                                      compute=compute)
+        self.assertIs(host_manager.HostState, type(host_state))
 
 
 class BaremetalNodeStateTestCase(test.NoDBTestCase):
