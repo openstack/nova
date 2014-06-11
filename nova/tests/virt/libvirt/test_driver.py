@@ -5717,9 +5717,10 @@ class LibvirtConnTestCase(test.TestCase,
         else:
             libvirt_driver.LibvirtDriver._disconnect_volume(
                         mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
-        self.mox.StubOutWithMock(shutil, "rmtree")
-        shutil.rmtree(os.path.join(CONF.instances_path,
-                                   'instance-%08x' % int(instance['id'])))
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
+                                 'delete_instance_files')
+        (libvirt_driver.LibvirtDriver.delete_instance_files(mox.IgnoreArg()).
+         AndReturn(True))
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_cleanup_lvm')
         libvirt_driver.LibvirtDriver._cleanup_lvm(instance)
 
@@ -5797,44 +5798,6 @@ class LibvirtConnTestCase(test.TestCase,
                        'unfilter_instance', fake_unfilter_instance)
         self.stubs.Set(os.path, 'exists', fake_os_path_exists)
         conn.destroy(self.context, instance, [], None, False)
-
-    def test_delete_instance_files(self):
-        instance = {"name": "instancename", "id": "42",
-                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64",
-                    "cleaned": 0, 'info_cache': None, 'security_groups': []}
-
-        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
-        self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(shutil, "rmtree")
-
-        db.instance_get_by_uuid(mox.IgnoreArg(), mox.IgnoreArg(),
-                                columns_to_join=['info_cache',
-                                                 'security_groups'],
-                                use_slave=False
-                                ).AndReturn(instance)
-        os.path.exists(mox.IgnoreArg()).AndReturn(False)
-        os.path.exists(mox.IgnoreArg()).AndReturn(True)
-        shutil.rmtree(os.path.join(CONF.instances_path, instance['uuid']))
-        os.path.exists(mox.IgnoreArg()).AndReturn(True)
-        os.path.exists(mox.IgnoreArg()).AndReturn(False)
-        os.path.exists(mox.IgnoreArg()).AndReturn(True)
-        shutil.rmtree(os.path.join(CONF.instances_path, instance['uuid']))
-        os.path.exists(mox.IgnoreArg()).AndReturn(False)
-        self.mox.ReplayAll()
-
-        def fake_obj_load_attr(self, attrname):
-            if not hasattr(self, attrname):
-                self[attrname] = {}
-
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(objects.Instance, 'fields',
-                       {'id': int, 'uuid': str, 'cleaned': int})
-        self.stubs.Set(objects.Instance, 'obj_load_attr',
-                       fake_obj_load_attr)
-
-        inst_obj = objects.Instance.get_by_uuid(None, instance['uuid'])
-        self.assertFalse(conn.delete_instance_files(inst_obj))
-        self.assertTrue(conn.delete_instance_files(inst_obj))
 
     def test_reboot_different_ids(self):
         class FakeLoopingCall:
@@ -10204,6 +10167,146 @@ class LibvirtDriverTestCase(test.TestCase):
         self.libvirtconnection.rescue(self.context, instance, network_info,
                                                 image_meta, rescue_password)
         self.mox.VerifyAll()
+
+    @mock.patch('shutil.rmtree')
+    @mock.patch('nova.utils.execute')
+    @mock.patch('os.path.exists')
+    @mock.patch('nova.virt.libvirt.utils.get_instance_path')
+    def test_delete_instance_files(self, get_instance_path, exists, exe,
+                                   shutil):
+        lv = self.libvirtconnection
+        get_instance_path.return_value = '/path'
+        instance = objects.Instance(uuid='fake-uuid', id=1)
+
+        exists.side_effect = [False, False, True, False]
+
+        result = lv.delete_instance_files(instance)
+        get_instance_path.assert_called_with(instance)
+        exe.assert_called_with('mv', '/path', '/path_del')
+        shutil.assert_called_with('/path_del')
+        self.assertTrue(result)
+
+    @mock.patch('shutil.rmtree')
+    @mock.patch('nova.utils.execute')
+    @mock.patch('os.path.exists')
+    @mock.patch('nova.virt.libvirt.utils.get_instance_path')
+    def test_delete_instance_files_resize(self, get_instance_path, exists,
+                                          exe, shutil):
+        lv = self.libvirtconnection
+        get_instance_path.return_value = '/path'
+        instance = objects.Instance(uuid='fake-uuid', id=1)
+
+        nova.utils.execute.side_effect = [Exception(), None]
+        exists.side_effect = [False, False, True, False]
+
+        result = lv.delete_instance_files(instance)
+        get_instance_path.assert_called_with(instance)
+        expected = [mock.call('mv', '/path', '/path_del'),
+                    mock.call('mv', '/path_resize', '/path_del')]
+        self.assertEqual(expected, exe.mock_calls)
+        shutil.assert_called_with('/path_del')
+        self.assertTrue(result)
+
+    @mock.patch('shutil.rmtree')
+    @mock.patch('nova.utils.execute')
+    @mock.patch('os.path.exists')
+    @mock.patch('nova.virt.libvirt.utils.get_instance_path')
+    def test_delete_instance_files_failed(self, get_instance_path, exists, exe,
+                                          shutil):
+        lv = self.libvirtconnection
+        get_instance_path.return_value = '/path'
+        instance = objects.Instance(uuid='fake-uuid', id=1)
+
+        exists.side_effect = [False, False, True, True]
+
+        result = lv.delete_instance_files(instance)
+        get_instance_path.assert_called_with(instance)
+        exe.assert_called_with('mv', '/path', '/path_del')
+        shutil.assert_called_with('/path_del')
+        self.assertFalse(result)
+
+    @mock.patch('shutil.rmtree')
+    @mock.patch('nova.utils.execute')
+    @mock.patch('os.path.exists')
+    @mock.patch('nova.virt.libvirt.utils.get_instance_path')
+    def test_delete_instance_files_mv_failed(self, get_instance_path, exists,
+                                             exe, shutil):
+        lv = self.libvirtconnection
+        get_instance_path.return_value = '/path'
+        instance = objects.Instance(uuid='fake-uuid', id=1)
+
+        nova.utils.execute.side_effect = Exception()
+        exists.side_effect = [True, True]
+
+        result = lv.delete_instance_files(instance)
+        get_instance_path.assert_called_with(instance)
+        expected = [mock.call('mv', '/path', '/path_del'),
+                    mock.call('mv', '/path_resize', '/path_del')] * 2
+        self.assertEqual(expected, exe.mock_calls)
+        self.assertFalse(result)
+
+    @mock.patch('shutil.rmtree')
+    @mock.patch('nova.utils.execute')
+    @mock.patch('os.path.exists')
+    @mock.patch('nova.virt.libvirt.utils.get_instance_path')
+    def test_delete_instance_files_resume(self, get_instance_path, exists,
+                                             exe, shutil):
+        lv = self.libvirtconnection
+        get_instance_path.return_value = '/path'
+        instance = objects.Instance(uuid='fake-uuid', id=1)
+
+        nova.utils.execute.side_effect = Exception()
+        exists.side_effect = [False, False, True, False]
+
+        result = lv.delete_instance_files(instance)
+        get_instance_path.assert_called_with(instance)
+        expected = [mock.call('mv', '/path', '/path_del'),
+                    mock.call('mv', '/path_resize', '/path_del')] * 2
+        self.assertEqual(expected, exe.mock_calls)
+        self.assertTrue(result)
+
+    @mock.patch('shutil.rmtree')
+    @mock.patch('nova.utils.execute')
+    @mock.patch('os.path.exists')
+    @mock.patch('nova.virt.libvirt.utils.get_instance_path')
+    def test_delete_instance_files_none(self, get_instance_path, exists,
+                                        exe, shutil):
+        lv = self.libvirtconnection
+        get_instance_path.return_value = '/path'
+        instance = objects.Instance(uuid='fake-uuid', id=1)
+
+        nova.utils.execute.side_effect = Exception()
+        exists.side_effect = [False, False, False, False]
+
+        result = lv.delete_instance_files(instance)
+        get_instance_path.assert_called_with(instance)
+        expected = [mock.call('mv', '/path', '/path_del'),
+                    mock.call('mv', '/path_resize', '/path_del')] * 2
+        self.assertEqual(expected, exe.mock_calls)
+        self.assertEqual(0, len(shutil.mock_calls))
+        self.assertTrue(result)
+
+    @mock.patch('shutil.rmtree')
+    @mock.patch('nova.utils.execute')
+    @mock.patch('os.path.exists')
+    @mock.patch('nova.virt.libvirt.utils.get_instance_path')
+    def test_delete_instance_files_concurrent(self, get_instance_path, exists,
+                                              exe, shutil):
+        lv = self.libvirtconnection
+        get_instance_path.return_value = '/path'
+        instance = objects.Instance(uuid='fake-uuid', id=1)
+
+        nova.utils.execute.side_effect = [Exception(), Exception(), None]
+        exists.side_effect = [False, False, True, False]
+
+        result = lv.delete_instance_files(instance)
+        get_instance_path.assert_called_with(instance)
+        expected = [mock.call('mv', '/path', '/path_del'),
+                    mock.call('mv', '/path_resize', '/path_del')]
+        expected.append(expected[0])
+        self.assertEqual(expected, exe.mock_calls)
+        shutil.assert_called_with('/path_del')
+        self.assertTrue(result)
 
 
 class LibvirtVolumeUsageTestCase(test.TestCase):

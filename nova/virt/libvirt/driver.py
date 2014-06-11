@@ -46,6 +46,7 @@ from eventlet import tpool
 from eventlet import util as eventlet_util
 from lxml import etree
 from oslo.config import cfg
+import six
 
 from nova.api.metadata import base as instance_metadata
 from nova import block_device
@@ -5413,23 +5414,59 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def delete_instance_files(self, instance):
         target = libvirt_utils.get_instance_path(instance)
-        if os.path.exists(target):
-            LOG.info(_LI('Deleting instance files %s'), target,
-                     instance=instance)
+        # A resize may be in progress
+        target_resize = target + '_resize'
+        # Other threads may attempt to rename the path, so renaming the path
+        # to target + '_del' (because it is atomic) and iterating through
+        # twice in the unlikely event that a concurrent rename occurs between
+        # the two rename attempts in this method. In general this method
+        # should be fairly thread-safe without these additional checks, since
+        # other operations involving renames are not permitted when the task
+        # state is not None and the task state should be set to something
+        # other than None by the time this method is invoked.
+        target_del = target + '_del'
+        for i in six.moves.range(2):
             try:
-                shutil.rmtree(target)
+                utils.execute('mv', target, target_del)
+                break
+            except Exception:
+                pass
+            try:
+                utils.execute('mv', target_resize, target_del)
+                break
+            except Exception:
+                pass
+        # Either the target or target_resize path may still exist if all
+        # rename attempts failed.
+        remaining_path = None
+        for p in (target, target_resize):
+            if os.path.exists(p):
+                remaining_path = p
+                break
+
+        # A previous delete attempt may have been interrupted, so target_del
+        # may exist even if all rename attempts during the present method
+        # invocation failed due to the absence of both target and
+        # target_resize.
+        if not remaining_path and os.path.exists(target_del):
+            LOG.info(_LI('Deleting instance files %s'), target_del,
+                     instance=instance)
+            remaining_path = target_del
+            try:
+                shutil.rmtree(target_del)
             except OSError as e:
                 LOG.error(_LE('Failed to cleanup directory %(target)s: '
-                              '%(e)s'), {'target': target, 'e': e},
+                              '%(e)s'), {'target': target_del, 'e': e},
                             instance=instance)
 
         # It is possible that the delete failed, if so don't mark the instance
         # as cleaned.
-        if os.path.exists(target):
-            LOG.info(_LI('Deletion of %s failed'), target, instance=instance)
+        if remaining_path and os.path.exists(remaining_path):
+            LOG.info(_LI('Deletion of %s failed'), remaining_path,
+                     instance=instance)
             return False
 
-        LOG.info(_LI('Deletion of %s complete'), target, instance=instance)
+        LOG.info(_LI('Deletion of %s complete'), target_del, instance=instance)
         return True
 
     @property
