@@ -30,13 +30,6 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class StorageError(Exception):
-    """To raise errors related to Volume commands."""
-
-    def __init__(self, message=None):
-        super(StorageError, self).__init__(message)
-
-
 class VMwareVolumeOps(object):
     """Management class for Volume-related tasks."""
 
@@ -379,7 +372,8 @@ class VMwareVolumeOps(object):
         # Discover iSCSI Target
         device_name = self._iscsi_discover_target(data)[0]
         if device_name is None:
-            raise StorageError(_("Unable to find iSCSI Target"))
+            raise exception.StorageError(
+                reason=_("Unable to find iSCSI Target"))
 
         # Get the vmdk file name that the VM is pointing to
         hardware_devices = self._session._call_method(vim_util,
@@ -515,7 +509,7 @@ class VMwareVolumeOps(object):
         device = vm_util.get_vmdk_backed_disk_device(hardware_devices,
                                                      disk_uuid)
         if not device:
-            raise StorageError(_("Unable to find volume"))
+            raise exception.StorageError(reason=_("Unable to find volume"))
         return device
 
     def _detach_volume_vmdk(self, connection_info, instance, mountpoint):
@@ -553,7 +547,8 @@ class VMwareVolumeOps(object):
         # Discover iSCSI Target
         device_name, uuid = self._iscsi_get_target(data)
         if device_name is None:
-            raise StorageError(_("Unable to find iSCSI Target"))
+            raise exception.StorageError(
+                reason=_("Unable to find iSCSI Target"))
 
         # Get the vmdk file name that the VM is pointing to
         hardware_devices = self._session._call_method(vim_util,
@@ -561,7 +556,7 @@ class VMwareVolumeOps(object):
                         "VirtualMachine", "config.hardware.device")
         device = vm_util.get_rdm_disk(hardware_devices, uuid)
         if device is None:
-            raise StorageError(_("Unable to find volume"))
+            raise exception.StorageError(reason=_("Unable to find volume"))
         self.detach_disk_from_vm(vm_ref, instance, device, destroy_disk=True)
         LOG.info(_("Mountpoint %(mountpoint)s detached from "
                    "instance %(instance_name)s"),
