@@ -48,6 +48,39 @@ def security_group_default_rule_db(security_group_default_rule, id=None):
     return AttrDict(attrs)
 
 
+class TestSecurityGroupDefaultRulesNeutron(test.TestCase):
+    def setUp(self):
+        self.flags(security_group_api='neutron')
+        super(TestSecurityGroupDefaultRulesNeutron, self).setUp()
+        self.controller = \
+            security_group_default_rules.SecurityGroupDefaultRulesController()
+
+    def test_create_security_group_default_rule_not_implemented_neutron(self):
+        sgr = security_group_default_rule_template()
+        req = fakes.HTTPRequest.blank(
+            '/v2/fake/os-security-group-default-rules', use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.create,
+                          req, {'security_group_default_rule': sgr})
+
+    def test_security_group_default_rules_list_not_implemented_neturon(self):
+        req = fakes.HTTPRequest.blank(
+            '/v2/fake/os-security-group-default-rules', use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.index,
+                          req)
+
+    def test_security_group_default_rules_show_not_implemented_neturon(self):
+        req = fakes.HTTPRequest.blank(
+            '/v2/fake/os-security-group-default-rules', use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.show,
+                          req, '602ed77c-a076-4f9b-a617-f93b847b62c5')
+
+    def test_security_group_default_rules_delete_not_implemented_neturon(self):
+        req = fakes.HTTPRequest.blank(
+            '/v2/fake/os-security-group-default-rules', use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.delete,
+                          req, '602ed77c-a076-4f9b-a617-f93b847b62c5')
+
+
 class TestSecurityGroupDefaultRules(test.TestCase):
     def setUp(self):
         super(TestSecurityGroupDefaultRules, self).setUp()
