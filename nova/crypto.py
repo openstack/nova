@@ -274,13 +274,18 @@ def ssh_encrypt_text(ssh_public_key, text):
 def revoke_cert(project_id, file_name):
     """Revoke a cert by file name."""
     start = os.getcwd()
-    os.chdir(ca_folder(project_id))
-    # NOTE(vish): potential race condition here
-    utils.execute('openssl', 'ca', '-config', './openssl.cnf', '-revoke',
-                  file_name)
-    utils.execute('openssl', 'ca', '-gencrl', '-config', './openssl.cnf',
-                  '-out', CONF.crl_file)
-    os.chdir(start)
+    if not os.chdir(ca_folder(project_id)):
+        raise exception.ProjectNotFound(project_id=project_id)
+    try:
+        # NOTE(vish): potential race condition here
+        utils.execute('openssl', 'ca', '-config', './openssl.cnf', '-revoke',
+                      file_name)
+        utils.execute('openssl', 'ca', '-gencrl', '-config', './openssl.cnf',
+                      '-out', CONF.crl_file)
+    except processutils.ProcessExecutionError:
+        raise exception.RevokeCertFailure(project_id=project_id)
+    finally:
+        os.chdir(start)
 
 
 def revoke_certs_by_user(user_id):
