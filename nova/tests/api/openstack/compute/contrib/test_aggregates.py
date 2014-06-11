@@ -108,7 +108,7 @@ class AggregateTestCase(test.NoDBTestCase):
         self.stubs.Set(self.controller.api, "create_aggregate",
                        stub_create_aggregate)
 
-        self.assertRaises(exception.InvalidAggregateAction,
+        self.assertRaises(exc.HTTPBadRequest,
                           self.controller.create,
                           self.req, {"aggregate":
                                      {"name": "test",
