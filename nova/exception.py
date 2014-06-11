@@ -1385,6 +1385,10 @@ class IncompatibleObjectVersion(NovaException):
     msg_fmt = _('Version %(objver)s of %(objname)s is not supported')
 
 
+class ReadOnlyFieldError(NovaException):
+    msg_fmt = _('Cannot modify readonly field %(field)s')
+
+
 class ObjectActionError(NovaException):
     msg_fmt = _('Object action %(action)s failed because: %(reason)s')
 

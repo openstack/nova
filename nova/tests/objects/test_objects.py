@@ -35,10 +35,11 @@ from nova.tests import fake_notifier
 
 
 class MyObj(base.NovaPersistentObject, base.NovaObject):
-    VERSION = '1.5'
+    VERSION = '1.6'
     fields = {'foo': fields.Field(fields.Integer()),
               'bar': fields.Field(fields.String()),
               'missing': fields.Field(fields.String()),
+              'readonly': fields.Field(fields.Integer(), read_only=True),
               }
 
     @staticmethod
@@ -47,6 +48,7 @@ class MyObj(base.NovaPersistentObject, base.NovaObject):
         self.foo = db_obj['foo']
         self.bar = db_obj['bar']
         self.missing = db_obj['missing']
+        self.readonly = 1
         return self
 
     def obj_load_attr(self, attrname):
@@ -93,7 +95,7 @@ class MyObj(base.NovaPersistentObject, base.NovaObject):
 
 
 class MyObjDiffVers(MyObj):
-    VERSION = '1.4'
+    VERSION = '1.5'
 
     @classmethod
     def obj_name(cls):
@@ -389,7 +391,7 @@ class _TestObject(object):
         objects.InstanceInfoCache
         objects.SecurityGroup
         # Now check the test one in this file. Should be newest version
-        self.assertEqual('1.5', objects.MyObj.VERSION)
+        self.assertEqual('1.6', objects.MyObj.VERSION)
 
     def test_hydration_type_error(self):
         primitive = {'nova_object.name': 'MyObj',
@@ -434,7 +436,7 @@ class _TestObject(object):
     def test_dehydration(self):
         expected = {'nova_object.name': 'MyObj',
                     'nova_object.namespace': 'nova',
-                    'nova_object.version': '1.5',
+                    'nova_object.version': '1.6',
                     'nova_object.data': {'foo': 1}}
         obj = MyObj(foo=1)
         obj.obj_reset_changes()
@@ -482,7 +484,7 @@ class _TestObject(object):
         self.assertEqual(obj.bar, 'loaded!')
         expected = {'nova_object.name': 'MyObj',
                     'nova_object.namespace': 'nova',
-                    'nova_object.version': '1.5',
+                    'nova_object.version': '1.6',
                     'nova_object.changes': ['bar'],
                     'nova_object.data': {'foo': 1,
                                          'bar': 'loaded!'}}
@@ -499,12 +501,12 @@ class _TestObject(object):
         self.assertEqual(obj2.obj_what_changed(), set())
 
     def test_obj_class_from_name(self):
-        obj = base.NovaObject.obj_class_from_name('MyObj', '1.4')
-        self.assertEqual('1.4', obj.VERSION)
+        obj = base.NovaObject.obj_class_from_name('MyObj', '1.5')
+        self.assertEqual('1.5', obj.VERSION)
 
     def test_obj_class_from_name_latest_compatible(self):
         obj = base.NovaObject.obj_class_from_name('MyObj', '1.1')
-        self.assertEqual('1.5', obj.VERSION)
+        self.assertEqual('1.6', obj.VERSION)
 
     def test_unknown_objtype(self):
         self.assertRaises(exception.UnsupportedObjectError,
@@ -518,7 +520,7 @@ class _TestObject(object):
             pass
 
         self.assertIsNotNone(error)
-        self.assertEqual('1.5', error.kwargs['supported'])
+        self.assertEqual('1.6', error.kwargs['supported'])
 
     def test_with_alternate_context(self):
         ctxt1 = context.RequestContext('foo', 'foo')
@@ -610,7 +612,7 @@ class _TestObject(object):
                     deleted=False)
         expected = {'nova_object.name': 'MyObj',
                     'nova_object.namespace': 'nova',
-                    'nova_object.version': '1.5',
+                    'nova_object.version': '1.6',
                     'nova_object.changes':
                         ['deleted', 'created_at', 'deleted_at', 'updated_at'],
                     'nova_object.data':
@@ -654,7 +656,7 @@ class _TestObject(object):
 
     def test_object_inheritance(self):
         base_fields = base.NovaPersistentObject.fields.keys()
-        myobj_fields = ['foo', 'bar', 'missing'] + base_fields
+        myobj_fields = ['foo', 'bar', 'missing', 'readonly'] + base_fields
         myobj3_fields = ['new_field']
         self.assertTrue(issubclass(TestSubclassedObject, MyObj))
         self.assertEqual(len(myobj_fields), len(MyObj.fields))
@@ -692,6 +694,12 @@ class _TestObject(object):
         self.assertEqual('abc', obj.bar)
         self.assertEqual(set(['foo', 'bar']), obj.obj_what_changed())
 
+    def test_obj_read_only(self):
+        obj = MyObj(context=self.context, foo=123, bar='abc')
+        obj.readonly = 1
+        self.assertRaises(exception.ReadOnlyFieldError, setattr,
+                          obj, 'readonly', 2)
+
 
 class TestObject(_LocalTest, _TestObject):
     pass
@@ -704,7 +712,7 @@ class TestRemoteObject(_RemoteTest, _TestObject):
                           MyObj2.query, self.context)
 
     def test_minor_version_greater(self):
-        MyObj2.VERSION = '1.6'
+        MyObj2.VERSION = '1.7'
         self.assertRaises(exception.IncompatibleObjectVersion,
                           MyObj2.query, self.context)
 
@@ -825,7 +833,7 @@ class TestObjectSerializer(_BaseTestCase):
         self.assertEqual('backported', result)
         ser._conductor.object_backport.assert_called_with(self.context,
                                                           primitive,
-                                                          '1.5')
+                                                          '1.6')
 
     def test_object_serialization(self):
         ser = base.NovaObjectSerializer()
@@ -885,7 +893,7 @@ object_data = {
     'KeyPairList': '1.0-ab564b050224c1945febb24ce84c9524',
     'Migration': '1.1-c90e531ec87739decb31026c05100964',
     'MigrationList': '1.1-add1d472f38ee759f9d717b9824e07a4',
-    'MyObj': '1.5-2cb1447b872ebaf439eff9c678af8bf4',
+    'MyObj': '1.6-f441a9b820e323c45b92d66d2f9ebbf2',
     'Network': '1.1-faba26d0290395456f9a040584c4364b',
     'NetworkList': '1.1-eaafb55cf6b571581df685127cd687c1',
     'OtherTestableObject': '1.0-b43ae164bcf53764db6a54270af71b86',
@@ -900,7 +908,7 @@ object_data = {
     'Service': '1.2-16a7d0f0d41e423deefb804ca2aeb51d',
     'ServiceList': '1.0-35c5e3a116de08c1655d5fc3ecbe6549',
     'TestableObject': '1.0-b43ae164bcf53764db6a54270af71b86',
-    'TestSubclassedObject': '1.5-f5f524f005954e2e351f20bd58cb74fb',
+    'TestSubclassedObject': '1.6-cd6574f48c2bc3ccebe7306a06dfaa1c',
     'VirtualInterface': '1.0-022c3e84a172f8302a0f8c4407bc92a2',
     'VirtualInterfaceList': '1.0-59568968ee1ac0e796c7ebbf8354d65d',
     'VolumeMapping': '1.0-b97464d4e338688d04a46d5c1740423d',
