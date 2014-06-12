@@ -125,8 +125,8 @@ def resize2fs(image, check_exit_code=False, run_as_root=False):
                       check_exit_code=[0, 1, 2],
                       run_as_root=run_as_root)
     except processutils.ProcessExecutionError as exc:
-        LOG.debug(_("Checking the file system with e2fsck has failed, "
-                    "the resize will be aborted. (%s)"), exc)
+        LOG.debug("Checking the file system with e2fsck has failed, "
+                  "the resize will be aborted. (%s)", exc)
     else:
         utils.execute('resize2fs',
                       image,
@@ -159,8 +159,8 @@ def extend(image, size, use_cow=False):
         try:
             resize2fs(dev, run_as_root=run_as_root, check_exit_code=[0])
         except processutils.ProcessExecutionError as exc:
-            LOG.debug(_("Resizing the file system with resize2fs "
-                        "has failed with error: %s"), exc)
+            LOG.debug("Resizing the file system with resize2fs "
+                      "has failed with error: %s", exc)
         finally:
             finally_call()
 
@@ -181,13 +181,13 @@ def extend(image, size, use_cow=False):
 
 def can_resize_image(image, size):
     """Check whether we can resize the container image file."""
-    LOG.debug(_('Checking if we can resize image %(image)s. '
-                'size=%(size)s'), {'image': image, 'size': size})
+    LOG.debug('Checking if we can resize image %(image)s. '
+              'size=%(size)s', {'image': image, 'size': size})
 
     # Check that we're increasing the size
     virt_size = get_disk_size(image)
     if virt_size >= size:
-        LOG.debug(_('Cannot resize image %s to a smaller size.'),
+        LOG.debug('Cannot resize image %s to a smaller size.',
                   image)
         return False
     return True
@@ -195,8 +195,8 @@ def can_resize_image(image, size):
 
 def is_image_partitionless(image, use_cow=False):
     """Check whether we can resize contained file system."""
-    LOG.debug(_('Checking if we can resize filesystem inside %(image)s. '
-                'CoW=%(use_cow)s'), {'image': image, 'use_cow': use_cow})
+    LOG.debug('Checking if we can resize filesystem inside %(image)s. '
+              'CoW=%(use_cow)s', {'image': image, 'use_cow': use_cow})
 
     # Check the image is unpartitioned
     if use_cow:
@@ -205,8 +205,8 @@ def is_image_partitionless(image, use_cow=False):
             fs.setup()
             fs.teardown()
         except exception.NovaException as e:
-            LOG.debug(_('Unable to mount image %(image)s with '
-                        'error %(error)s. Cannot resize.'),
+            LOG.debug('Unable to mount image %(image)s with '
+                      'error %(error)s. Cannot resize.',
                       {'image': image,
                        'error': e})
             return False
@@ -215,8 +215,8 @@ def is_image_partitionless(image, use_cow=False):
         try:
             utils.execute('e2label', image)
         except processutils.ProcessExecutionError as e:
-            LOG.debug(_('Unable to determine label for image %(image)s with '
-                        'error %(error)s. Cannot resize.'),
+            LOG.debug('Unable to determine label for image %(image)s with '
+                      'error %(error)s. Cannot resize.',
                       {'image': image,
                        'error': e})
             return False
@@ -338,9 +338,9 @@ def inject_data(image, key=None, net=None, metadata=None, admin_password=None,
     Returns True if all requested operations completed without issue.
     Raises an exception if a mandatory item can't be injected.
     """
-    LOG.debug(_("Inject data image=%(image)s key=%(key)s net=%(net)s "
-                "metadata=%(metadata)s admin_password=<SANITIZED> "
-                "files=%(files)s partition=%(partition)s use_cow=%(use_cow)s"),
+    LOG.debug("Inject data image=%(image)s key=%(key)s net=%(net)s "
+              "metadata=%(metadata)s admin_password=<SANITIZED> "
+              "files=%(files)s partition=%(partition)s use_cow=%(use_cow)s",
               {'image': image, 'key': key, 'net': net, 'metadata': metadata,
                'files': files, 'partition': partition, 'use_cow': use_cow})
     fmt = "raw"
@@ -400,11 +400,11 @@ def teardown_container(container_dir, container_root_device=None):
         # Make sure container_root_device is released when teardown container.
         if container_root_device:
             if 'loop' in container_root_device:
-                LOG.debug(_("Release loop device %s"), container_root_device)
+                LOG.debug("Release loop device %s", container_root_device)
                 utils.execute('losetup', '--detach', container_root_device,
                               run_as_root=True, attempts=3)
             else:
-                LOG.debug(_('Release nbd device %s'), container_root_device)
+                LOG.debug('Release nbd device %s', container_root_device)
                 utils.execute('qemu-nbd', '-d', container_root_device,
                               run_as_root=True)
     except Exception as exn:
@@ -465,7 +465,7 @@ def _inject_files_into_fs(files, fs):
 
 
 def _inject_file_into_fs(fs, path, contents, append=False):
-    LOG.debug(_("Inject file fs=%(fs)s path=%(path)s append=%(append)s"),
+    LOG.debug("Inject file fs=%(fs)s path=%(path)s append=%(append)s",
               {'fs': fs, 'path': path, 'append': append})
     if append:
         fs.append_file(path, contents)
@@ -474,7 +474,7 @@ def _inject_file_into_fs(fs, path, contents, append=False):
 
 
 def _inject_metadata_into_fs(metadata, fs):
-    LOG.debug(_("Inject metadata fs=%(fs)s metadata=%(metadata)s"),
+    LOG.debug("Inject metadata fs=%(fs)s metadata=%(metadata)s",
               {'fs': fs, 'metadata': metadata})
     _inject_file_into_fs(fs, 'meta.js', jsonutils.dumps(metadata))
 
@@ -514,7 +514,7 @@ def _inject_key_into_fs(key, fs):
     fs is the path to the base of the filesystem into which to inject the key.
     """
 
-    LOG.debug(_("Inject key fs=%(fs)s key=%(key)s"), {'fs': fs, 'key': key})
+    LOG.debug("Inject key fs=%(fs)s key=%(key)s", {'fs': fs, 'key': key})
     sshdir = os.path.join('root', '.ssh')
     fs.make_path(sshdir)
     fs.set_ownership(sshdir, "root", "root")
@@ -542,7 +542,7 @@ def _inject_net_into_fs(net, fs):
     net is the contents of /etc/network/interfaces.
     """
 
-    LOG.debug(_("Inject key fs=%(fs)s net=%(net)s"), {'fs': fs, 'net': net})
+    LOG.debug("Inject key fs=%(fs)s net=%(net)s", {'fs': fs, 'net': net})
     netdir = os.path.join('etc', 'network')
     fs.make_path(netdir)
     fs.set_ownership(netdir, "root", "root")
@@ -567,8 +567,8 @@ def _inject_admin_password_into_fs(admin_passwd, fs):
     # files from the instance filesystem to local files, make any
     # necessary changes, and then copy them back.
 
-    LOG.debug(_("Inject admin password fs=%(fs)s "
-                "admin_passwd=<SANITIZED>"), {'fs': fs})
+    LOG.debug("Inject admin password fs=%(fs)s "
+              "admin_passwd=<SANITIZED>", {'fs': fs})
     admin_user = 'root'
 
     passwd_path = os.path.join('etc', 'passwd')

@@ -119,7 +119,7 @@ class VMOps(object):
 
     def get_info(self, instance):
         """Get information about the VM."""
-        LOG.debug(_("get_info called for instance"), instance=instance)
+        LOG.debug("get_info called for instance", instance=instance)
 
         instance_name = instance['name']
         if not self._vmutils.vm_exists(instance_name):
@@ -142,16 +142,16 @@ class VMOps(object):
 
         try:
             if CONF.use_cow_images:
-                LOG.debug(_("Creating differencing VHD. Parent: "
-                            "%(base_vhd_path)s, Target: %(root_vhd_path)s"),
+                LOG.debug("Creating differencing VHD. Parent: "
+                          "%(base_vhd_path)s, Target: %(root_vhd_path)s",
                           {'base_vhd_path': base_vhd_path,
                            'root_vhd_path': root_vhd_path},
                           instance=instance)
                 self._vhdutils.create_differencing_vhd(root_vhd_path,
                                                        base_vhd_path)
             else:
-                LOG.debug(_("Copying VHD image %(base_vhd_path)s to target: "
-                            "%(root_vhd_path)s"),
+                LOG.debug("Copying VHD image %(base_vhd_path)s to target: "
+                          "%(root_vhd_path)s",
                           {'base_vhd_path': base_vhd_path,
                            'root_vhd_path': root_vhd_path},
                           instance=instance)
@@ -173,8 +173,8 @@ class VMOps(object):
                                        'root_vhd_size': root_vhd_internal_size}
                     raise vmutils.HyperVException(error_msg)
                 elif root_vhd_internal_size > base_vhd_size:
-                    LOG.debug(_("Resizing VHD %(root_vhd_path)s to new "
-                                "size %(root_vhd_size)s"),
+                    LOG.debug("Resizing VHD %(root_vhd_path)s to new "
+                              "size %(root_vhd_size)s",
                               {'root_vhd_size': root_vhd_internal_size,
                                'root_vhd_path': root_vhd_path},
                               instance=instance)
@@ -265,7 +265,7 @@ class VMOps(object):
                                        root_vhd_path is None)
 
         for vif in network_info:
-            LOG.debug(_('Creating nic for instance'), instance=instance)
+            LOG.debug('Creating nic for instance', instance=instance)
             self._vmutils.create_nic(instance_name,
                                      vif['id'],
                                      vif['address'])
@@ -350,7 +350,7 @@ class VMOps(object):
                 self._vmutils.destroy_vm(instance_name)
                 self._disconnect_volumes(volume_drives)
             else:
-                LOG.debug(_("Instance not found"), instance=instance)
+                LOG.debug("Instance not found", instance=instance)
 
             if destroy_disks:
                 self._delete_disk_files(instance_name)
@@ -361,51 +361,51 @@ class VMOps(object):
 
     def reboot(self, instance, network_info, reboot_type):
         """Reboot the specified instance."""
-        LOG.debug(_("Rebooting instance"), instance=instance)
+        LOG.debug("Rebooting instance", instance=instance)
         self._set_vm_state(instance['name'],
                            constants.HYPERV_VM_STATE_REBOOT)
 
     def pause(self, instance):
         """Pause VM instance."""
-        LOG.debug(_("Pause instance"), instance=instance)
+        LOG.debug("Pause instance", instance=instance)
         self._set_vm_state(instance["name"],
                            constants.HYPERV_VM_STATE_PAUSED)
 
     def unpause(self, instance):
         """Unpause paused VM instance."""
-        LOG.debug(_("Unpause instance"), instance=instance)
+        LOG.debug("Unpause instance", instance=instance)
         self._set_vm_state(instance["name"],
                            constants.HYPERV_VM_STATE_ENABLED)
 
     def suspend(self, instance):
         """Suspend the specified instance."""
-        LOG.debug(_("Suspend instance"), instance=instance)
+        LOG.debug("Suspend instance", instance=instance)
         self._set_vm_state(instance["name"],
                            constants.HYPERV_VM_STATE_SUSPENDED)
 
     def resume(self, instance):
         """Resume the suspended VM instance."""
-        LOG.debug(_("Resume instance"), instance=instance)
+        LOG.debug("Resume instance", instance=instance)
         self._set_vm_state(instance["name"],
                            constants.HYPERV_VM_STATE_ENABLED)
 
     def power_off(self, instance):
         """Power off the specified instance."""
-        LOG.debug(_("Power off instance"), instance=instance)
+        LOG.debug("Power off instance", instance=instance)
         self._set_vm_state(instance["name"],
                            constants.HYPERV_VM_STATE_DISABLED)
 
     def power_on(self, instance):
         """Power on the specified instance."""
-        LOG.debug(_("Power on instance"), instance=instance)
+        LOG.debug("Power on instance", instance=instance)
         self._set_vm_state(instance["name"],
                            constants.HYPERV_VM_STATE_ENABLED)
 
     def _set_vm_state(self, vm_name, req_state):
         try:
             self._vmutils.set_vm_state(vm_name, req_state)
-            LOG.debug(_("Successfully changed state of VM %(vm_name)s"
-                        " to: %(req_state)s"),
+            LOG.debug("Successfully changed state of VM %(vm_name)s"
+                      " to: %(req_state)s",
                       {'vm_name': vm_name, 'req_state': req_state})
         except Exception:
             with excutils.save_and_reraise_exception():

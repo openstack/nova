@@ -331,7 +331,7 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
         rec['platform']['device_id'] = device_id
 
     vm_ref = session.VM.create(rec)
-    LOG.debug(_('Created VM'), instance=instance)
+    LOG.debug('Created VM', instance=instance)
     return vm_ref
 
 
@@ -343,7 +343,7 @@ def destroy_vm(session, instance, vm_ref):
         LOG.exception(exc)
         return
 
-    LOG.debug(_("VM destroyed"), instance=instance)
+    LOG.debug("VM destroyed", instance=instance)
 
 
 def clean_shutdown_vm(session, instance, vm_ref):
@@ -352,7 +352,7 @@ def clean_shutdown_vm(session, instance, vm_ref):
                  instance=instance)
         return True
 
-    LOG.debug(_("Shutting down VM (cleanly)"), instance=instance)
+    LOG.debug("Shutting down VM (cleanly)", instance=instance)
     try:
         session.call_xenapi('VM.clean_shutdown', vm_ref)
     except session.XenAPI.Failure as exc:
@@ -367,7 +367,7 @@ def hard_shutdown_vm(session, instance, vm_ref):
                  instance=instance)
         return True
 
-    LOG.debug(_("Shutting down VM (hard)"), instance=instance)
+    LOG.debug("Shutting down VM (hard)", instance=instance)
     try:
         session.call_xenapi('VM.hard_shutdown', vm_ref)
     except session.XenAPI.Failure as exc:
@@ -478,12 +478,12 @@ def create_vbd(session, vm_ref, vdi_ref, userdevice, vbd_type='disk',
     vbd_rec['qos_algorithm_type'] = ''
     vbd_rec['qos_algorithm_params'] = {}
     vbd_rec['qos_supported_algorithms'] = []
-    LOG.debug(_('Creating %(vbd_type)s-type VBD for VM %(vm_ref)s,'
-                ' VDI %(vdi_ref)s ... '),
+    LOG.debug('Creating %(vbd_type)s-type VBD for VM %(vm_ref)s,'
+              ' VDI %(vdi_ref)s ... ',
               {'vbd_type': vbd_type, 'vm_ref': vm_ref, 'vdi_ref': vdi_ref})
     vbd_ref = session.call_xenapi('VBD.create', vbd_rec)
-    LOG.debug(_('Created VBD %(vbd_ref)s for VM %(vm_ref)s,'
-                ' VDI %(vdi_ref)s.'),
+    LOG.debug('Created VBD %(vbd_ref)s for VM %(vm_ref)s,'
+              ' VDI %(vdi_ref)s.',
               {'vbd_ref': vbd_ref, 'vm_ref': vm_ref, 'vdi_ref': vdi_ref})
     if osvol:
         # set osvol=True in other-config to indicate this is an
@@ -507,8 +507,9 @@ def destroy_vdi(session, vdi_ref):
     try:
         session.call_xenapi('VDI.destroy', vdi_ref)
     except session.XenAPI.Failure:
-        msg = _("Unable to destroy VDI %s") % vdi_ref
+        msg = "Unable to destroy VDI %s" % vdi_ref
         LOG.debug(msg, exc_info=True)
+        msg = _("Unable to destroy VDI %s") % vdi_ref
         LOG.error(msg)
         raise exception.StorageError(reason=msg)
 
@@ -519,7 +520,7 @@ def safe_destroy_vdis(session, vdi_refs):
         try:
             destroy_vdi(session, vdi_ref)
         except exception.StorageError:
-            msg = _("Ignoring error while destroying VDI: %s") % vdi_ref
+            msg = "Ignoring error while destroying VDI: %s" % vdi_ref
             LOG.debug(msg)
 
 
@@ -538,8 +539,8 @@ def create_vdi(session, sr_ref, instance, name_label, disk_type, virtual_size,
           'other_config': _get_vdi_other_config(disk_type, instance=instance),
           'sm_config': {},
           'tags': []})
-    LOG.debug(_('Created VDI %(vdi_ref)s (%(name_label)s,'
-                ' %(virtual_size)s, %(read_only)s) on %(sr_ref)s.'),
+    LOG.debug('Created VDI %(vdi_ref)s (%(name_label)s,'
+              ' %(virtual_size)s, %(read_only)s) on %(sr_ref)s.',
               {'vdi_ref': vdi_ref, 'name_label': name_label,
                'virtual_size': virtual_size, 'read_only': read_only,
                'sr_ref': sr_ref})
@@ -670,8 +671,8 @@ def _safe_copy_vdi(session, sr_ref, instance, vdi_to_copy_ref):
 def _clone_vdi(session, vdi_to_clone_ref):
     """Clones a VDI and return the new VDIs reference."""
     vdi_ref = session.call_xenapi('VDI.clone', vdi_to_clone_ref)
-    LOG.debug(_('Cloned VDI %(vdi_ref)s from VDI '
-                '%(vdi_to_clone_ref)s'),
+    LOG.debug('Cloned VDI %(vdi_ref)s from VDI '
+              '%(vdi_to_clone_ref)s',
               {'vdi_ref': vdi_ref, 'vdi_to_clone_ref': vdi_to_clone_ref})
     return vdi_ref
 
@@ -755,7 +756,7 @@ def _try_strip_base_mirror_from_vdi(session, vdi_ref):
         session.call_xenapi("VDI.remove_from_sm_config", vdi_ref,
                             "base_mirror")
     except session.XenAPI.Failure:
-        LOG.debug(_("Error while removing sm_config"), exc_info=True)
+        LOG.debug("Error while removing sm_config", exc_info=True)
 
 
 def strip_base_mirror_from_vdis(session, vm_ref):
@@ -779,7 +780,7 @@ def _snapshot_attached_here_impl(session, instance, vm_ref, label, userdevice,
     """Snapshot the root disk only.  Return a list of uuids for the vhds
     in the chain.
     """
-    LOG.debug(_("Starting snapshot for VM"), instance=instance)
+    LOG.debug("Starting snapshot for VM", instance=instance)
 
     # Memorize the VDI chain so we can poll for coalesce
     vm_vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref,
@@ -854,7 +855,7 @@ def destroy_cached_images(session, sr_ref, all_cached=False, dry_run=False):
     destroyed = set()
 
     def destroy_cached_vdi(vdi_uuid, vdi_ref):
-        LOG.debug(_("Destroying cached VDI '%(vdi_uuid)s'"))
+        LOG.debug("Destroying cached VDI '%(vdi_uuid)s'")
         if not dry_run:
             destroy_vdi(session, vdi_ref)
         destroyed.add(vdi_uuid)
@@ -946,8 +947,8 @@ def update_vdi_virtual_size(session, instance, vdi_ref, new_gb):
     virtual_size = _vdi_get_virtual_size(session, vdi_ref)
     new_disk_size = new_gb * units.Gi
 
-    msg = _("Resizing up VDI %(vdi_ref)s from %(virtual_size)d "
-            "to %(new_disk_size)d")
+    msg = ("Resizing up VDI %(vdi_ref)s from %(virtual_size)d "
+           "to %(new_disk_size)d")
     LOG.debug(msg, {'vdi_ref': vdi_ref, 'virtual_size': virtual_size,
                     'new_disk_size': new_disk_size},
               instance=instance)
@@ -957,7 +958,7 @@ def update_vdi_virtual_size(session, instance, vdi_ref, new_gb):
         _vdi_resize(session, vdi_ref, new_disk_size)
 
     elif virtual_size == new_disk_size:
-        LOG.debug(_("No need to change vdi virtual size."),
+        LOG.debug("No need to change vdi virtual size.",
                   instance=instance)
 
     else:
@@ -1020,7 +1021,7 @@ def _auto_configure_disk(session, vdi_ref, new_gb):
         3. The file-system on the one partition must be ext3 or ext4.
     """
     if new_gb == 0:
-        LOG.debug(_("Skipping auto_config_disk as destination size is 0GB"))
+        LOG.debug("Skipping auto_config_disk as destination size is 0GB")
         return
 
     with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
@@ -1124,7 +1125,7 @@ def _generate_disk(session, instance, vm_ref, userdevice, name_label,
             create_vbd(session, vm_ref, vdi_ref, userdevice, bootable=False)
     except Exception:
         with excutils.save_and_reraise_exception():
-            msg = _("Error while generating disk number: %s") % userdevice
+            msg = "Error while generating disk number: %s" % userdevice
             LOG.debug(msg, instance=instance, exc_info=True)
             safe_destroy_vdis(session, [vdi_ref])
 
@@ -1187,9 +1188,9 @@ def generate_ephemeral(session, instance, vm_ref, first_userdevice,
             vdi_refs.append(ref)
     except Exception as exc:
         with excutils.save_and_reraise_exception():
-            LOG.debug(_("Error when generating ephemeral disk. "
-                        "Device: %(userdevice)s Size GB: %(size_gb)s "
-                        "Error: %(exc)s"), {
+            LOG.debug("Error when generating ephemeral disk. "
+                      "Device: %(userdevice)s Size GB: %(size_gb)s "
+                      "Error: %(exc)s", {
                             'userdevice': userdevice,
                             'size_gb': size_gb,
                             'exc': exc})
@@ -1232,7 +1233,7 @@ def generate_configdrive(session, instance, vm_ref, userdevice,
                    read_only=True)
     except Exception:
         with excutils.save_and_reraise_exception():
-            msg = _("Error while generating config drive")
+            msg = "Error while generating config drive"
             LOG.debug(msg, instance=instance, exc_info=True)
             safe_destroy_vdis(session, [vdi_ref])
 
@@ -1284,7 +1285,7 @@ def destroy_kernel_ramdisk(session, instance, kernel, ramdisk):
     if ramdisk:
         args['ramdisk-file'] = ramdisk
     if args:
-        LOG.debug(_("Removing kernel/ramdisk files from dom0"),
+        LOG.debug("Removing kernel/ramdisk files from dom0",
                     instance=instance)
         session.call_plugin('kernel', 'remove_kernel_ramdisk', args)
 
@@ -1418,8 +1419,8 @@ def _fetch_image(context, session, instance, name_label, image_id, image_type):
 
     for vdi_type, vdi in vdis.iteritems():
         vdi_uuid = vdi['uuid']
-        LOG.debug(_("Fetched VDIs of type '%(vdi_type)s' with UUID"
-                    " '%(vdi_uuid)s'"),
+        LOG.debug("Fetched VDIs of type '%(vdi_type)s' with UUID"
+                  " '%(vdi_uuid)s'",
                   {'vdi_type': vdi_type, 'vdi_uuid': vdi_uuid},
                   instance=instance)
 
@@ -1484,7 +1485,7 @@ def _fetch_vhd_image(context, session, instance, image_id):
 
     Returns: A list of dictionaries that describe VDIs
     """
-    LOG.debug(_("Asking xapi to fetch vhd image %s"), image_id,
+    LOG.debug("Asking xapi to fetch vhd image %s", image_id,
               instance=instance)
 
     handler = _choose_download_handler(context, instance)
@@ -1516,7 +1517,7 @@ def _fetch_vhd_image(context, session, instance, image_id):
         _check_vdi_size(context, session, instance, vdi_uuid)
     except Exception:
         with excutils.save_and_reraise_exception():
-            msg = _("Error while checking vdi size")
+            msg = "Error while checking vdi size"
             LOG.debug(msg, instance=instance, exc_info=True)
             for vdi in vdis.values():
                 vdi_uuid = vdi['uuid']
@@ -1537,8 +1538,8 @@ def _get_vdi_chain_size(session, vdi_uuid):
     for vdi_rec in _walk_vdi_chain(session, vdi_uuid):
         cur_vdi_uuid = vdi_rec['uuid']
         vdi_size_bytes = int(vdi_rec['physical_utilisation'])
-        LOG.debug(_('vdi_uuid=%(cur_vdi_uuid)s vdi_size_bytes='
-                    '%(vdi_size_bytes)d'),
+        LOG.debug('vdi_uuid=%(cur_vdi_uuid)s vdi_size_bytes='
+                  '%(vdi_size_bytes)d',
                   {'cur_vdi_uuid': cur_vdi_uuid,
                    'vdi_size_bytes': vdi_size_bytes})
         size_bytes += vdi_size_bytes
@@ -1579,7 +1580,7 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
     # VHD disk, it may be worth using the plugin for both VHD and RAW and
     # DISK restores
     image_type_str = ImageType.to_string(image_type)
-    LOG.debug(_("Fetching image %(image_id)s, type %(image_type_str)s"),
+    LOG.debug("Fetching image %(image_id)s, type %(image_type_str)s",
               {'image_id': image_id, 'image_type_str': image_type_str},
               instance=instance)
 
@@ -1596,7 +1597,7 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
 
     virtual_size = image.get_size()
     vdi_size = virtual_size
-    LOG.debug(_("Size for image %(image_id)s: %(virtual_size)d"),
+    LOG.debug("Size for image %(image_id)s: %(virtual_size)d",
               {'image_id': image_id, 'virtual_size': virtual_size},
               instance=instance)
     if image_type == ImageType.DISK:
@@ -1625,7 +1626,7 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
         if image_type in (ImageType.KERNEL, ImageType.RAMDISK):
             # We need to invoke a plugin for copying the
             # content of the VDI into the proper path.
-            LOG.debug(_("Copying VDI %s to /boot/guest on dom0"),
+            LOG.debug("Copying VDI %s to /boot/guest on dom0",
                       vdi_ref, instance=instance)
 
             args = {}
@@ -1639,7 +1640,7 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
 
             # Remove the VDI as it is not needed anymore.
             destroy_vdi(session, vdi_ref)
-            LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi_ref,
+            LOG.debug("Kernel/Ramdisk VDI %s destroyed", vdi_ref,
                       instance=instance)
             vdi_role = ImageType.get_role(image_type)
             return {vdi_role: dict(uuid=None, file=filename)}
@@ -1692,7 +1693,7 @@ def determine_disk_image_type(image_meta):
         'image_type_str': ImageType.to_string(image_type),
         'image_ref': image_ref
     }
-    LOG.debug(_("Detected %(image_type_str)s format for image %(image_ref)s"),
+    LOG.debug("Detected %(image_type_str)s format for image %(image_ref)s",
               params)
 
     return image_type
@@ -1743,7 +1744,7 @@ def lookup_vm_vdis(session, vm_ref):
                 vdi_ref = session.call_xenapi("VBD.get_VDI", vbd_ref)
                 # Test valid VDI
                 vdi_uuid = session.call_xenapi("VDI.get_uuid", vdi_ref)
-                LOG.debug(_('VDI %s is still available'), vdi_uuid)
+                LOG.debug('VDI %s is still available', vdi_uuid)
                 vbd_other_config = session.call_xenapi("VBD.get_other_config",
                                                        vbd_ref)
                 if not vbd_other_config.get('osvol'):
@@ -1875,7 +1876,7 @@ def _scan_sr(session, sr_ref=None, max_attempts=4):
         # in host.update_status starts racing the sr.scan after a plugin call.
         @utils.synchronized('sr-scan-' + sr_ref)
         def do_scan(sr_ref):
-            LOG.debug(_("Scanning SR %s"), sr_ref)
+            LOG.debug("Scanning SR %s", sr_ref)
 
             attempt = 1
             while True:
@@ -1961,30 +1962,30 @@ def _find_iso_sr(session):
     """Return the storage repository to hold ISO images."""
     host = session.host_ref
     for sr_ref, sr_rec in session.get_all_refs_and_recs('SR'):
-        LOG.debug(_("ISO: looking at SR %s"), sr_rec)
+        LOG.debug("ISO: looking at SR %s", sr_rec)
         if not sr_rec['content_type'] == 'iso':
-            LOG.debug(_("ISO: not iso content"))
+            LOG.debug("ISO: not iso content")
             continue
         if 'i18n-key' not in sr_rec['other_config']:
-            LOG.debug(_("ISO: iso content_type, no 'i18n-key' key"))
+            LOG.debug("ISO: iso content_type, no 'i18n-key' key")
             continue
         if not sr_rec['other_config']['i18n-key'] == 'local-storage-iso':
-            LOG.debug(_("ISO: iso content_type, i18n-key value not "
-                        "'local-storage-iso'"))
+            LOG.debug("ISO: iso content_type, i18n-key value not "
+                      "'local-storage-iso'")
             continue
 
-        LOG.debug(_("ISO: SR MATCHing our criteria"))
+        LOG.debug("ISO: SR MATCHing our criteria")
         for pbd_ref in sr_rec['PBDs']:
-            LOG.debug(_("ISO: ISO, looking to see if it is host local"))
+            LOG.debug("ISO: ISO, looking to see if it is host local")
             pbd_rec = session.get_rec('PBD', pbd_ref)
             if not pbd_rec:
-                LOG.debug(_("ISO: PBD %s disappeared"), pbd_ref)
+                LOG.debug("ISO: PBD %s disappeared", pbd_ref)
                 continue
             pbd_rec_host = pbd_rec['host']
-            LOG.debug(_("ISO: PBD matching, want %(pbd_rec)s, have %(host)s"),
+            LOG.debug("ISO: PBD matching, want %(pbd_rec)s, have %(host)s",
                       {'pbd_rec': pbd_rec, 'host': host})
             if pbd_rec_host == host:
-                LOG.debug(_("ISO: SR with local PBD"))
+                LOG.debug("ISO: SR with local PBD")
                 return sr_ref
     return None
 
@@ -2041,7 +2042,7 @@ def _get_vhd_parent_uuid(session, vdi_ref, vdi_rec=None):
 
     parent_uuid = vdi_rec['sm_config']['vhd-parent']
     vdi_uuid = vdi_rec['uuid']
-    LOG.debug(_('VHD %(vdi_uuid)s has parent %(parent_uuid)s'),
+    LOG.debug('VHD %(vdi_uuid)s has parent %(parent_uuid)s',
               {'vdi_uuid': vdi_uuid, 'parent_uuid': parent_uuid})
     return parent_uuid
 
@@ -2122,8 +2123,8 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
         _scan_sr(session, sr_ref)
         parent_uuid = _get_vhd_parent_uuid(session, vdi_ref)
         if parent_uuid and (parent_uuid not in vdi_uuid_list):
-            LOG.debug(_("Parent %(parent_uuid)s not yet in parent list"
-                        " %(vdi_uuid_list)s, waiting for coalesce..."),
+            LOG.debug("Parent %(parent_uuid)s not yet in parent list"
+                      " %(vdi_uuid_list)s, waiting for coalesce...",
                       {'parent_uuid': parent_uuid,
                        'vdi_uuid_list': vdi_uuid_list},
                       instance=instance)
@@ -2202,23 +2203,23 @@ def vdi_attached_here(session, vdi_ref, read_only=False):
     vbd_ref = create_vbd(session, this_vm_ref, vdi_ref, 'autodetect',
                          read_only=read_only, bootable=False)
     try:
-        LOG.debug(_('Plugging VBD %s ... '), vbd_ref)
+        LOG.debug('Plugging VBD %s ... ', vbd_ref)
         session.VBD.plug(vbd_ref, this_vm_ref)
         try:
-            LOG.debug(_('Plugging VBD %s done.'), vbd_ref)
+            LOG.debug('Plugging VBD %s done.', vbd_ref)
             orig_dev = session.call_xenapi("VBD.get_device", vbd_ref)
-            LOG.debug(_('VBD %(vbd_ref)s plugged as %(orig_dev)s'),
+            LOG.debug('VBD %(vbd_ref)s plugged as %(orig_dev)s',
                       {'vbd_ref': vbd_ref, 'orig_dev': orig_dev})
             dev = _remap_vbd_dev(orig_dev)
             if dev != orig_dev:
-                LOG.debug(_('VBD %(vbd_ref)s plugged into wrong dev, '
-                            'remapping to %(dev)s'),
+                LOG.debug('VBD %(vbd_ref)s plugged into wrong dev, '
+                          'remapping to %(dev)s',
                           {'vbd_ref': vbd_ref, 'dev': dev})
             _wait_for_device(dev)
             yield dev
         finally:
             utils.execute('sync', run_as_root=True)
-            LOG.debug(_('Destroying VBD for VDI %s ... '), vdi_ref)
+            LOG.debug('Destroying VBD for VDI %s ... ', vdi_ref)
             unplug_vbd(session, vbd_ref, this_vm_ref)
     finally:
         try:
@@ -2226,7 +2227,7 @@ def vdi_attached_here(session, vdi_ref, read_only=False):
         except exception.StorageError:
             # destroy_vbd() will log error
             pass
-        LOG.debug(_('Destroying VBD for VDI %s done.'), vdi_ref)
+        LOG.debug('Destroying VBD for VDI %s done.', vdi_ref)
 
 
 def _get_sys_hypervisor_uuid():
@@ -2268,7 +2269,7 @@ def _get_partitions(dev):
     lines = [line for line in out.split('\n') if line]
     partitions = []
 
-    LOG.debug(_("Partitions:"))
+    LOG.debug("Partitions:")
     for line in lines[2:]:
         line = line.rstrip(';')
         num, start, end, size, fstype, name, flags = line.split(':')
@@ -2276,7 +2277,7 @@ def _get_partitions(dev):
         start = int(start.rstrip('s'))
         end = int(end.rstrip('s'))
         size = int(size.rstrip('s'))
-        LOG.debug(_("  %(num)s: %(fstype)s %(size)d sectors"),
+        LOG.debug("  %(num)s: %(fstype)s %(size)d sectors",
                   {'num': num, 'fstype': fstype, 'size': size})
         partitions.append((num, start, size, fstype, name, flags))
 
@@ -2302,8 +2303,8 @@ def _write_partition(session, virtual_size, dev):
     primary_first = MBR_SIZE_SECTORS
     primary_last = MBR_SIZE_SECTORS + (virtual_size / SECTOR_SIZE) - 1
 
-    LOG.debug(_('Writing partition table %(primary_first)d %(primary_last)d'
-                ' to %(dev_path)s...'),
+    LOG.debug('Writing partition table %(primary_first)d %(primary_last)d'
+              ' to %(dev_path)s...',
               {'primary_first': primary_first, 'primary_last': primary_last,
                'dev_path': dev_path})
 
@@ -2311,7 +2312,7 @@ def _write_partition(session, virtual_size, dev):
         return utils.execute(*cmd, **kwargs)
 
     _make_partition(session, dev, "%ds" % primary_first, "%ds" % primary_last)
-    LOG.debug(_('Writing partition table %s done.'), dev_path)
+    LOG.debug('Writing partition table %s done.', dev_path)
 
 
 def _repair_filesystem(partition_path):
@@ -2376,9 +2377,9 @@ def _log_progress_if_required(left, last_log_time, virtual_size):
     if timeutils.is_older_than(last_log_time, PROGRESS_INTERVAL_SECONDS):
         last_log_time = timeutils.utcnow()
         complete_pct = float(virtual_size - left) / virtual_size * 100
-        LOG.debug(_("Sparse copy in progress, "
-                    "%(complete_pct).2f%% complete. "
-                    "%(left)s bytes left to copy"),
+        LOG.debug("Sparse copy in progress, "
+                  "%(complete_pct).2f%% complete. "
+                  "%(left)s bytes left to copy",
             {"complete_pct": complete_pct, "left": left})
     return last_log_time
 
@@ -2391,8 +2392,8 @@ def _sparse_copy(src_path, dst_path, virtual_size, block_size=4096):
     skipped_bytes = 0
     left = virtual_size
 
-    LOG.debug(_("Starting sparse_copy src=%(src_path)s dst=%(dst_path)s "
-                "virtual_size=%(virtual_size)d block_size=%(block_size)d"),
+    LOG.debug("Starting sparse_copy src=%(src_path)s dst=%(dst_path)s "
+              "virtual_size=%(virtual_size)d block_size=%(block_size)d",
               {'src_path': src_path, 'dst_path': dst_path,
                'virtual_size': virtual_size, 'block_size': block_size})
 
@@ -2427,8 +2428,8 @@ def _sparse_copy(src_path, dst_path, virtual_size, block_size=4096):
     duration = timeutils.delta_seconds(start_time, timeutils.utcnow())
     compression_pct = float(skipped_bytes) / bytes_read * 100
 
-    LOG.debug(_("Finished sparse_copy in %(duration).2f secs, "
-                "%(compression_pct).2f%% reduction in size"),
+    LOG.debug("Finished sparse_copy in %(duration).2f secs, "
+              "%(compression_pct).2f%% reduction in size",
               {'duration': duration, 'compression_pct': compression_pct})
 
 
@@ -2659,7 +2660,7 @@ def _import_migrated_vhds(session, instance, chain_label, disk_type,
 
 def migrate_vhd(session, instance, vdi_uuid, dest, sr_path, seq_num,
                 ephemeral_number=0):
-    LOG.debug(_("Migrating VHD '%(vdi_uuid)s' with seq_num %(seq_num)d"),
+    LOG.debug("Migrating VHD '%(vdi_uuid)s' with seq_num %(seq_num)d",
               {'vdi_uuid': vdi_uuid, 'seq_num': seq_num},
               instance=instance)
     chain_label = instance['uuid']

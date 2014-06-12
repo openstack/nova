@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import hostops
 from nova.virt.hyperv import utilsfactory
@@ -28,12 +27,12 @@ class RDPConsoleOps(object):
         self._rdpconsoleutils = utilsfactory.get_rdpconsoleutils()
 
     def get_rdp_console(self, instance):
-        LOG.debug(_("get_rdp_console called"), instance=instance)
+        LOG.debug("get_rdp_console called", instance=instance)
         host = self._hostops.get_host_ip_addr()
         port = self._rdpconsoleutils.get_rdp_console_port()
         vm_id = self._vmutils.get_vm_id(instance['name'])
 
-        LOG.debug(_("RDP console: %(host)s:%(port)s, %(vm_id)s") %
+        LOG.debug("RDP console: %(host)s:%(port)s, %(vm_id)s",
                   {"host": host, "port": port, "vm_id": vm_id})
 
         return {'host': host,

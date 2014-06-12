@@ -250,7 +250,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
                     # This happens when the instance filter is still in
                     # use (ie. when the instance has not terminated properly)
                     raise
-                LOG.debug(_('The nwfilter(%s) is not found.'),
+                LOG.debug('The nwfilter(%s) is not found.',
                           instance_filter_name, instance=instance)
 
     @staticmethod
@@ -268,8 +268,8 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
                 self._conn.nwfilterLookupByName(instance_filter_name)
             except libvirt.libvirtError:
                 name = instance['name']
-                LOG.debug(_('The nwfilter(%(instance_filter_name)s) for'
-                            '%(name)s is not found.'),
+                LOG.debug('The nwfilter(%(instance_filter_name)s) for'
+                          '%(name)s is not found.',
                           {'instance_filter_name': instance_filter_name,
                            'name': name},
                           instance=instance)
@@ -286,7 +286,7 @@ class IptablesFirewallDriver(base_firewall.IptablesFirewallDriver):
         """Set up provider rules and basic NWFilter."""
         self.nwfilter.setup_basic_filtering(instance, network_info)
         if not self.basically_filtered:
-            LOG.debug(_('iptables firewall: Setup Basic Filtering'),
+            LOG.debug('iptables firewall: Setup Basic Filtering',
                       instance=instance)
             self.refresh_provider_fw_rules()
             self.basically_filtered = True

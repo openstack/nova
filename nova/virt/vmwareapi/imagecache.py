@@ -74,7 +74,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
             LOG.warning(_("Unable to delete %(file)s. Exception: %(ex)s"),
                         {'file': path, 'ex': e})
         except error_util.FileNotFoundException:
-            LOG.debug(_("File not found: %s"), path)
+            LOG.debug("File not found: %s", path)
 
     def timestamp_folder_get(self, ds_path, image_id):
         """Returns the timestamp folder."""
@@ -85,7 +85,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         ts = self._get_timestamp(ds_browser, ds_path)
         if ts:
             ts_path = '%s/%s' % (ds_path, ts)
-            LOG.debug(_("Timestamp path %s exists. Deleting!"), ts_path)
+            LOG.debug("Timestamp path %s exists. Deleting!", ts_path)
             # Image is used - no longer need timestamp folder
             self._folder_delete(ts_path, dc_ref)
 
@@ -145,7 +145,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                     try:
                         ds_util.mkdir(self._session, ts_path, dc_info.ref)
                     except error_util.FileAlreadyExistsException:
-                        LOG.debug(_("Timestamp already exists."))
+                        LOG.debug("Timestamp already exists.")
                     LOG.info(_("Image %s is no longer used by this node. "
                                "Pending deletion!"), image)
                 else:

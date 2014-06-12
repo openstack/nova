@@ -43,7 +43,7 @@ LOG = logging.getLogger(__name__)
 
 def log_db_contents(msg=None):
     """Log DB Contents."""
-    LOG.debug(_("%(text)s: _db_content => %(content)s"),
+    LOG.debug("%(text)s: _db_content => %(content)s",
               {'text': msg or "", 'content': pprint.pformat(_db_content)})
 
 
@@ -1064,7 +1064,7 @@ class FakeVim(object):
         """Checks if the session is active."""
         if (self._session is None or self._session not in
                  _db_content['session']):
-            LOG.debug(_("Session is faulty"))
+            LOG.debug("Session is faulty")
             raise error_util.VimFaultException(
                                [error_util.NOT_AUTHENTICATED],
                                _("Session Invalid"))

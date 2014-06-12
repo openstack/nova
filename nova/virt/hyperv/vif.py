@@ -18,7 +18,6 @@ import abc
 
 from oslo.config import cfg
 
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import utilsfactory
 
@@ -69,7 +68,7 @@ class HyperVNovaNetworkVIFDriver(HyperVBaseVIFDriver):
             CONF.hyperv.vswitch_name)
 
         vm_name = instance['name']
-        LOG.debug(_('Creating vswitch port for instance: %s') % vm_name)
+        LOG.debug('Creating vswitch port for instance: %s', vm_name)
         if self._netutils.vswitch_port_needed():
             vswitch_data = self._netutils.create_vswitch_port(vswitch_path,
                                                               vm_name)

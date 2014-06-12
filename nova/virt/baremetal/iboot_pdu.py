@@ -122,6 +122,6 @@ class IBootManager(base.PowerManager):
         return self.state
 
     def is_power_on(self):
-        LOG.debug(_("Checking if %s is running"), self.node_name)
+        LOG.debug("Checking if %s is running", self.node_name)
         self._create_connection()
         return self._get_relay(self.relay_id)

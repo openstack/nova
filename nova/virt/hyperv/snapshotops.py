@@ -50,7 +50,7 @@ class SnapshotOps(object):
         """Create snapshot from a running VM instance."""
         instance_name = instance["name"]
 
-        LOG.debug(_("Creating snapshot for instance %s"), instance_name)
+        LOG.debug("Creating snapshot for instance %s", instance_name)
         snapshot_path = self._vmutils.take_vm_snapshot(instance_name)
         update_task_state(task_state=task_states.IMAGE_PENDING_UPLOAD)
 
@@ -59,7 +59,7 @@ class SnapshotOps(object):
         try:
             src_vhd_path = self._pathutils.lookup_root_vhd_path(instance_name)
 
-            LOG.debug(_("Getting info for VHD %s"), src_vhd_path)
+            LOG.debug("Getting info for VHD %s", src_vhd_path)
             src_base_disk_path = self._vhdutils.get_vhd_parent_path(
                 src_vhd_path)
 
@@ -67,7 +67,7 @@ class SnapshotOps(object):
 
             dest_vhd_path = os.path.join(export_dir, os.path.basename(
                 src_vhd_path))
-            LOG.debug(_('Copying VHD %(src_vhd_path)s to %(dest_vhd_path)s'),
+            LOG.debug('Copying VHD %(src_vhd_path)s to %(dest_vhd_path)s',
                       {'src_vhd_path': src_vhd_path,
                        'dest_vhd_path': dest_vhd_path})
             self._pathutils.copyfile(src_vhd_path, dest_vhd_path)
@@ -78,46 +78,46 @@ class SnapshotOps(object):
             else:
                 basename = os.path.basename(src_base_disk_path)
                 dest_base_disk_path = os.path.join(export_dir, basename)
-                LOG.debug(_('Copying base disk %(src_vhd_path)s to '
-                            '%(dest_base_disk_path)s'),
+                LOG.debug('Copying base disk %(src_vhd_path)s to '
+                          '%(dest_base_disk_path)s',
                           {'src_vhd_path': src_vhd_path,
                            'dest_base_disk_path': dest_base_disk_path})
                 self._pathutils.copyfile(src_base_disk_path,
                                          dest_base_disk_path)
 
-                LOG.debug(_("Reconnecting copied base VHD "
-                            "%(dest_base_disk_path)s and diff "
-                            "VHD %(dest_vhd_path)s"),
+                LOG.debug("Reconnecting copied base VHD "
+                          "%(dest_base_disk_path)s and diff "
+                          "VHD %(dest_vhd_path)s",
                           {'dest_base_disk_path': dest_base_disk_path,
                            'dest_vhd_path': dest_vhd_path})
                 self._vhdutils.reconnect_parent_vhd(dest_vhd_path,
                                                     dest_base_disk_path)
 
-                LOG.debug(_("Merging base disk %(dest_base_disk_path)s and "
-                            "diff disk %(dest_vhd_path)s"),
+                LOG.debug("Merging base disk %(dest_base_disk_path)s and "
+                          "diff disk %(dest_vhd_path)s",
                           {'dest_base_disk_path': dest_base_disk_path,
                            'dest_vhd_path': dest_vhd_path})
                 self._vhdutils.merge_vhd(dest_vhd_path, dest_base_disk_path)
                 image_vhd_path = dest_base_disk_path
 
-            LOG.debug(_("Updating Glance image %(name)s with content from "
-                        "merged disk %(image_vhd_path)s"),
+            LOG.debug("Updating Glance image %(name)s with content from "
+                      "merged disk %(image_vhd_path)s",
                       {'name': name, 'image_vhd_path': image_vhd_path})
             update_task_state(task_state=task_states.IMAGE_UPLOADING,
                               expected_state=task_states.IMAGE_PENDING_UPLOAD)
             self._save_glance_image(context, name, image_vhd_path)
 
-            LOG.debug(_("Snapshot image %(name)s updated for VM "
-                        "%(instance_name)s"),
+            LOG.debug("Snapshot image %(name)s updated for VM "
+                      "%(instance_name)s",
                       {'name': name, 'instance_name': instance_name})
         finally:
             try:
-                LOG.debug(_("Removing snapshot %s"), name)
+                LOG.debug("Removing snapshot %s", name)
                 self._vmutils.remove_vm_snapshot(snapshot_path)
             except Exception as ex:
                 LOG.exception(ex)
                 LOG.warning(_('Failed to remove snapshot for VM %s')
                             % instance_name)
             if export_dir:
-                LOG.debug(_('Removing directory: %s'), export_dir)
+                LOG.debug('Removing directory: %s', export_dir)
                 self._pathutils.rmtree(export_dir)

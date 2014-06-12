@@ -90,12 +90,12 @@ class PathUtils(object):
 
     def _check_create_dir(self, path):
         if not self.exists(path):
-            LOG.debug(_('Creating directory: %s') % path)
+            LOG.debug('Creating directory: %s', path)
             self.makedirs(path)
 
     def _check_remove_dir(self, path):
         if self.exists(path):
-            LOG.debug(_('Removing directory: %s') % path)
+            LOG.debug('Removing directory: %s', path)
             self.rmtree(path)
 
     def _get_instances_sub_dir(self, dir_name, remote_server=None,

@@ -107,7 +107,7 @@ def build_pxe_config(deployment_id, deployment_key, deployment_iscsi_iqn,
     to the two phases of booting. This may be extended later.
 
     """
-    LOG.debug(_("Building PXE config for deployment %s.") % deployment_id)
+    LOG.debug("Building PXE config for deployment %s.", deployment_id)
 
     network_config = None
     if network_info and CONF.baremetal.pxe_network_config:
@@ -245,8 +245,8 @@ class PXE(base.NodeDriver):
         fileutils.ensure_tree(
                 os.path.join(CONF.baremetal.tftp_root, instance['uuid']))
 
-        LOG.debug(_("Fetching kernel and ramdisk for instance %s") %
-                        instance['name'])
+        LOG.debug("Fetching kernel and ramdisk for instance %s",
+                  instance['name'])
         for label in image_info.keys():
             (uuid, path) = image_info[label]
             bm_utils.cache_image(
@@ -277,8 +277,8 @@ class PXE(base.NodeDriver):
         fileutils.ensure_tree(get_image_dir_path(instance))
         image_path = get_image_file_path(instance)
 
-        LOG.debug(_("Fetching image %(ami)s for instance %(name)s") %
-                        {'ami': image_meta['id'], 'name': instance['name']})
+        LOG.debug("Fetching image %(ami)s for instance %(name)s",
+                  {'ami': image_meta['id'], 'name': instance['name']})
         bm_utils.cache_image(context=context,
                              target=image_path,
                              image_id=image_meta['id'],
@@ -318,8 +318,8 @@ class PXE(base.NodeDriver):
         if instance['hostname']:
             injected_files.append(('/etc/hostname', instance['hostname']))
 
-        LOG.debug(_("Injecting files into image for instance %(name)s") %
-                        {'name': instance['name']})
+        LOG.debug("Injecting files into image for instance %(name)s",
+                  {'name': instance['name']})
 
         bm_utils.inject_into_image(
                     image=get_image_file_path(instance),

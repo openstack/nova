@@ -229,7 +229,7 @@ class HostState(object):
         """Since under Xenserver, a compute node runs on a given host,
         we can get host status information using xenapi.
         """
-        LOG.debug(_("Updating host stats"))
+        LOG.debug("Updating host stats")
         data = call_xenhost(self._session, "host_data", {})
         if data:
             sr_ref = vm_utils.scan_default_sr(self._session)

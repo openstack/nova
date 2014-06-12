@@ -103,8 +103,8 @@ class BittorrentStore(object):
                                  " found. Failing."))
         else:
             ep = matches[0]
-            LOG.debug(_("Loading torrent URL fetcher from entry points"
-                        " %(ep)s"), {'ep': ep})
+            LOG.debug("Loading torrent URL fetcher from entry points"
+                      " %(ep)s", {'ep': ep})
             fn = ep.load()
 
         return fn

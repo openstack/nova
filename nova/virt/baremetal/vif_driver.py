@@ -35,8 +35,8 @@ class BareMetalVIFDriver(object):
         pass
 
     def plug(self, instance, vif):
-        LOG.debug(_("plug: instance_uuid=%(uuid)s vif=%(vif)s")
-                  % {'uuid': instance['uuid'], 'vif': vif})
+        LOG.debug("plug: instance_uuid=%(uuid)s vif=%(vif)s",
+                  {'uuid': instance['uuid'], 'vif': vif})
         vif_uuid = vif['id']
         ctx = context.get_admin_context()
         node = bmdb.bm_node_get_by_instance_uuid(ctx, instance['uuid'])
@@ -47,8 +47,8 @@ class BareMetalVIFDriver(object):
         for pif in pifs:
             if not pif['vif_uuid']:
                 bmdb.bm_interface_set_vif_uuid(ctx, pif['id'], vif_uuid)
-                LOG.debug(_("pif:%(id)s is plugged (vif_uuid=%(vif_uuid)s)")
-                          % {'id': pif['id'], 'vif_uuid': vif_uuid})
+                LOG.debug("pif:%(id)s is plugged (vif_uuid=%(vif_uuid)s)",
+                          {'id': pif['id'], 'vif_uuid': vif_uuid})
                 self._after_plug(instance, vif, pif)
                 return
 
@@ -60,15 +60,15 @@ class BareMetalVIFDriver(object):
                 % {'id': node['id'], 'vif_uuid': vif_uuid})
 
     def unplug(self, instance, vif):
-        LOG.debug(_("unplug: instance_uuid=%(uuid)s vif=%(vif)s"),
+        LOG.debug("unplug: instance_uuid=%(uuid)s vif=%(vif)s",
                   {'uuid': instance['uuid'], 'vif': vif})
         vif_uuid = vif['id']
         ctx = context.get_admin_context()
         try:
             pif = bmdb.bm_interface_get_by_vif_uuid(ctx, vif_uuid)
             bmdb.bm_interface_set_vif_uuid(ctx, pif['id'], None)
-            LOG.debug(_("pif:%(id)s is unplugged (vif_uuid=%(vif_uuid)s)")
-                      % {'id': pif['id'], 'vif_uuid': vif_uuid})
+            LOG.debug("pif:%(id)s is unplugged (vif_uuid=%(vif_uuid)s)",
+                      {'id': pif['id'], 'vif_uuid': vif_uuid})
             self._after_unplug(instance, vif, pif)
         except exception.NovaException:
             LOG.warn(_("no pif for vif_uuid=%s") % vif_uuid)

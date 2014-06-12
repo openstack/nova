@@ -16,7 +16,6 @@
 #    under the License.
 
 from nova import context
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.virt import firewall
@@ -72,7 +71,7 @@ class Dom0IptablesFirewallDriver(firewall.IptablesFirewallDriver):
         ipv6_rules = []
         rules = self._virtapi.provider_fw_rule_get_all(ctxt)
         for rule in rules:
-            LOG.debug(_('Adding provider rule: %s'), rule['cidr'])
+            LOG.debug('Adding provider rule: %s', rule['cidr'])
             version = netutils.get_ip_version(rule['cidr'])
             if version == 4:
                 fw_rules = ipv4_rules

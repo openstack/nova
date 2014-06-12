@@ -77,13 +77,13 @@ class ImageCache(object):
             def copy_and_resize_vhd():
                 if not self._pathutils.exists(resized_vhd_path):
                     try:
-                        LOG.debug(_("Copying VHD %(vhd_path)s to "
-                                    "%(resized_vhd_path)s"),
+                        LOG.debug("Copying VHD %(vhd_path)s to "
+                                  "%(resized_vhd_path)s",
                                   {'vhd_path': vhd_path,
                                    'resized_vhd_path': resized_vhd_path})
                         self._pathutils.copyfile(vhd_path, resized_vhd_path)
-                        LOG.debug(_("Resizing VHD %(resized_vhd_path)s to new "
-                                    "size %(root_vhd_size)s"),
+                        LOG.debug("Resizing VHD %(resized_vhd_path)s to new "
+                                  "size %(root_vhd_size)s",
                                   {'resized_vhd_path': resized_vhd_path,
                                    'root_vhd_size': root_vhd_size})
                         self._vhdutils.resize_vhd(resized_vhd_path,

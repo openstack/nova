@@ -1382,13 +1382,13 @@ def get_vmdk_adapter_type(adapter_type):
 
 def create_vm(session, instance, vm_folder, config_spec, res_pool_ref):
     """Create VM on ESX host."""
-    LOG.debug(_("Creating VM on the ESX host"), instance=instance)
+    LOG.debug("Creating VM on the ESX host", instance=instance)
     vm_create_task = session._call_method(
         session._get_vim(),
         "CreateVM_Task", vm_folder,
         config=config_spec, pool=res_pool_ref)
     task_info = session._wait_for_task(vm_create_task)
-    LOG.debug(_("Created VM on the ESX host"), instance=instance)
+    LOG.debug("Created VM on the ESX host", instance=instance)
     return task_info.result
 
 
@@ -1473,15 +1473,15 @@ def clone_vmref_for_instance(session, instance, vm_ref, host_ref, ds_ref,
     clone_spec = clone_vm_spec(client_factory, rel_spec, config=config_spec)
 
     # Clone VM on ESX host
-    LOG.debug(_("Cloning VM for instance %s"), instance['uuid'],
-               instance=instance)
+    LOG.debug("Cloning VM for instance %s", instance['uuid'],
+              instance=instance)
     vm_clone_task = session._call_method(session._get_vim(), "CloneVM_Task",
                                          vm_ref, folder=vmfolder_ref,
                                          name=instance['uuid'],
                                          spec=clone_spec)
     session._wait_for_task(vm_clone_task)
-    LOG.debug(_("Cloned VM for instance %s"), instance['uuid'],
-               instance=instance)
+    LOG.debug("Cloned VM for instance %s", instance['uuid'],
+              instance=instance)
     # Invalidate the cache, so that it is refetched the next time
     vm_ref_cache_delete(instance['uuid'])
 
@@ -1503,13 +1503,13 @@ def disassociate_vmref_from_instance(session, instance, vm_ref=None,
     reconfig_spec = get_vm_extra_config_spec(client_factory, extra_opts)
     reconfig_spec.name = instance['uuid'] + suffix
     reconfig_spec.instanceUuid = ''
-    LOG.debug(_("Disassociating VM from instance %s"), instance['uuid'],
-               instance=instance)
+    LOG.debug("Disassociating VM from instance %s", instance['uuid'],
+              instance=instance)
     reconfig_task = session._call_method(session._get_vim(), "ReconfigVM_Task",
                                          vm_ref, spec=reconfig_spec)
     session._wait_for_task(reconfig_task)
-    LOG.debug(_("Disassociated VM from instance %s"), instance['uuid'],
-               instance=instance)
+    LOG.debug("Disassociated VM from instance %s", instance['uuid'],
+              instance=instance)
     # Invalidate the cache, so that it is refetched the next time
     vm_ref_cache_delete(instance['uuid'])
 
@@ -1535,13 +1535,13 @@ def associate_vmref_for_instance(session, instance, vm_ref=None,
     reconfig_spec = get_vm_extra_config_spec(client_factory, extra_opts)
     reconfig_spec.name = instance['uuid']
     reconfig_spec.instanceUuid = instance['uuid']
-    LOG.debug(_("Associating VM to instance %s"), instance['uuid'],
-               instance=instance)
+    LOG.debug("Associating VM to instance %s", instance['uuid'],
+              instance=instance)
     reconfig_task = session._call_method(session._get_vim(), "ReconfigVM_Task",
                                          vm_ref, spec=reconfig_spec)
     session._wait_for_task(reconfig_task)
-    LOG.debug(_("Associated VM to instance %s"), instance['uuid'],
-               instance=instance)
+    LOG.debug("Associated VM to instance %s", instance['uuid'],
+              instance=instance)
     # Invalidate the cache, so that it is refetched the next time
     vm_ref_cache_delete(instance['uuid'])
 

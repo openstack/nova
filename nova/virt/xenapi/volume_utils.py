@@ -51,17 +51,17 @@ def _handle_sr_params(params):
 
 
 def introduce_sr(session, sr_uuid, label, params):
-    LOG.debug(_('Introducing SR %s'), label)
+    LOG.debug('Introducing SR %s', label)
 
     sr_type, sr_desc = _handle_sr_params(params)
 
     sr_ref = session.call_xenapi('SR.introduce', sr_uuid, label, sr_desc,
             sr_type, '', False, params)
 
-    LOG.debug(_('Creating PBD for SR'))
+    LOG.debug('Creating PBD for SR')
     pbd_ref = create_pbd(session, sr_ref, params)
 
-    LOG.debug(_('Plugging SR'))
+    LOG.debug('Plugging SR')
     session.call_xenapi("PBD.plug", pbd_ref)
 
     session.call_xenapi("SR.scan", sr_ref)
@@ -70,7 +70,7 @@ def introduce_sr(session, sr_uuid, label, params):
 
 def forget_sr(session, sr_ref):
     """Forgets the storage repository without destroying the VDIs within."""
-    LOG.debug(_('Forgetting SR...'))
+    LOG.debug('Forgetting SR...')
     _unplug_pbds(session, sr_ref)
     session.call_xenapi("SR.forget", sr_ref)
 
@@ -248,8 +248,8 @@ def _parse_volume_info(connection_data):
         "port": target_port,
         "iqn": target_iqn
     }
-    LOG.debug(_('(vol_id,host,port,iqn): '
-              '(%(vol_id)s,%(host)s,%(port)s,%(iqn)s)'), log_params)
+    LOG.debug('(vol_id,host,port,iqn): '
+              '(%(vol_id)s,%(host)s,%(port)s,%(iqn)s)', log_params)
 
     if (volume_id is None or
         target_host is None or

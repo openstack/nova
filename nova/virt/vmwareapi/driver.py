@@ -160,7 +160,7 @@ class VMwareESXDriver(driver.ComputeDriver):
         try:
             vim.client.service.Logout(session_manager)
         except suds.WebFault:
-            LOG.debug(_("No vSphere session was open during cleanup_host."))
+            LOG.debug("No vSphere session was open during cleanup_host.")
 
     def list_instances(self):
         """List VM instances."""
@@ -609,7 +609,7 @@ class VMwareVCDriver(VMwareESXDriver):
             nodename = self._create_nodename(node,
                                           self.dict_mors.get(node)['name'])
             node_list.append(nodename)
-        LOG.debug(_("The available nodes are: %s") % node_list)
+        LOG.debug("The available nodes are: %s", node_list)
         return node_list
 
     def get_host_stats(self, refresh=True):
@@ -864,7 +864,7 @@ class VMwareAPISession(object):
         except Exception as e:
             LOG.warning(_("Unable to validate session %s!"),
                         self._session.key)
-            LOG.debug(_("Exception: %(ex)s"), {'ex': e})
+            LOG.debug("Exception: %(ex)s", {'ex': e})
         return active
 
     def _call_method(self, module, method, *args, **kwargs):
@@ -930,13 +930,13 @@ class VMwareAPISession(object):
                 exc = excep
                 break
 
-            LOG.debug(_("_call_method(session=%(key)s) failed. "
-                        "Module: %(module)s. "
-                        "Method: %(method)s. "
-                        "args: %(args)s. "
-                        "kwargs: %(kwargs)s. "
-                        "Iteration: %(n)s. "
-                        "Exception: %(ex)s. "),
+            LOG.debug("_call_method(session=%(key)s) failed. "
+                      "Module: %(module)s. "
+                      "Method: %(method)s. "
+                      "args: %(args)s. "
+                      "kwargs: %(kwargs)s. "
+                      "Iteration: %(n)s. "
+                      "Exception: %(ex)s. ",
                       {'key': self._session.key,
                        'module': module,
                        'method': method,
@@ -989,8 +989,8 @@ class VMwareAPISession(object):
             if task_info.state in ['queued', 'running']:
                 return
             elif task_info.state == 'success':
-                LOG.debug(_("Task [%(task_name)s] %(task_ref)s "
-                            "status: success"),
+                LOG.debug("Task [%(task_name)s] %(task_ref)s "
+                          "status: success",
                           {'task_name': task_name, 'task_ref': task_ref})
                 done.send(task_info)
             else:

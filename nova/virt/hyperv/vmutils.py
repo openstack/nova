@@ -220,15 +220,15 @@ class VMUtils(object):
         """Creates a VM."""
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
 
-        LOG.debug(_('Creating VM %s'), vm_name)
+        LOG.debug('Creating VM %s', vm_name)
         vm = self._create_vm_obj(vs_man_svc, vm_name)
 
         vmsetting = self._get_vm_setting_data(vm)
 
-        LOG.debug(_('Setting memory for vm %s'), vm_name)
+        LOG.debug('Setting memory for vm %s', vm_name)
         self._set_vm_memory(vm, vmsetting, memory_mb, dynamic_memory_ratio)
 
-        LOG.debug(_('Set vCPUs for vm %s'), vm_name)
+        LOG.debug('Set vCPUs for vm %s', vm_name)
         self._set_vm_vcpus(vm, vmsetting, vcpus_num, limit_cpu_features)
 
     def _create_vm_obj(self, vs_man_svc, vm_name):
@@ -389,8 +389,8 @@ class VMUtils(object):
         #Invalid state for current operation (32775) typically means that
         #the VM is already in the state requested
         self.check_ret_val(ret_val, job_path, [0, 32775])
-        LOG.debug(_("Successfully changed vm state of %(vm_name)s "
-                    "to %(req_state)s"),
+        LOG.debug("Successfully changed vm state of %(vm_name)s "
+                  "to %(req_state)s",
                   {'vm_name': vm_name, 'req_state': req_state})
 
     def _get_disk_resource_disk_path(self, disk_resource):
@@ -477,7 +477,7 @@ class VMUtils(object):
                                           job_state)
         desc = job.Description
         elap = job.ElapsedTime
-        LOG.debug(_("WMI job succeeded: %(desc)s, Elapsed=%(elap)s"),
+        LOG.debug("WMI job succeeded: %(desc)s, Elapsed=%(elap)s",
                   {'desc': desc, 'elap': elap})
         return job
 

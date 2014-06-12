@@ -47,11 +47,11 @@ def get_network_with_the_name(session, network_name="vmnet0", cluster=None):
     # in the parent property field rather than a [] in the
     # ManagedObjectReference property field of the parent
     if not vm_networks_ret:
-        LOG.debug(_("No networks configured on host!"))
+        LOG.debug("No networks configured on host!")
         return
     vm_networks = vm_networks_ret.ManagedObjectReference
     network_obj = {}
-    LOG.debug(_("Configured networks: %s"), vm_networks)
+    LOG.debug("Configured networks: %s", vm_networks)
     for network in vm_networks:
         # Get network properties
         if network._type == 'DistributedVirtualPortgroup':
@@ -77,7 +77,7 @@ def get_network_with_the_name(session, network_name="vmnet0", cluster=None):
                 network_obj['name'] = network_name
     if (len(network_obj) > 0):
         return network_obj
-    LOG.debug(_("Network %s not found on host!"), network_name)
+    LOG.debug("Network %s not found on host!", network_name)
 
 
 def get_vswitch_for_vlan_interface(session, vlan_interface, cluster=None):
@@ -154,8 +154,8 @@ def create_port_group(session, pg_name, vswitch_name, vlan_id=0, cluster=None):
     network_system_mor = session._call_method(vim_util,
         "get_dynamic_property", host_mor,
         "HostSystem", "configManager.networkSystem")
-    LOG.debug(_("Creating Port Group with name %s on "
-                "the ESX host") % pg_name)
+    LOG.debug("Creating Port Group with name %s on "
+              "the ESX host", pg_name)
     try:
         session._call_method(session._get_vim(),
                 "AddPortGroup", network_system_mor,
@@ -166,6 +166,6 @@ def create_port_group(session, pg_name, vswitch_name, vlan_id=0, cluster=None):
         # the other one will get an exception. Since we are
         # concerned with the port group being created, which is done
         # by the other call, we can ignore the exception.
-        LOG.debug(_("Port Group %s already exists."), pg_name)
-    LOG.debug(_("Created Port Group with name %s on "
-                "the ESX host") % pg_name)
+        LOG.debug("Port Group %s already exists.", pg_name)
+    LOG.debug("Created Port Group with name %s on "
+              "the ESX host", pg_name)

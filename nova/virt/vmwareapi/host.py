@@ -18,7 +18,6 @@ Management class for host-related functions (start, reboot, etc).
 """
 
 from nova import exception
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import units
 from nova import utils
@@ -36,7 +35,7 @@ class Host(object):
     def host_power_action(self, host, action):
         """Reboots or shuts down the host."""
         host_mor = vm_util.get_host_ref(self._session)
-        LOG.debug(_("%(action)s %(host)s"), {'action': action, 'host': host})
+        LOG.debug("%(action)s %(host)s", {'action': action, 'host': host})
         if action == "reboot":
             host_task = self._session._call_method(
                                     self._session._get_vim(),
@@ -59,7 +58,7 @@ class Host(object):
         guest VMs evacuation.
         """
         host_mor = vm_util.get_host_ref(self._session)
-        LOG.debug(_("Set maintenance mod on %(host)s to %(mode)s"),
+        LOG.debug("Set maintenance mod on %(host)s to %(mode)s",
                   {'host': host, 'mode': mode})
         if mode:
             host_task = self._session._call_method(

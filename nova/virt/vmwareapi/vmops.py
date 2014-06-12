@@ -104,18 +104,18 @@ class VMwareVMOps(object):
 
     def list_instances(self):
         """Lists the VM instances that are registered with the ESX host."""
-        LOG.debug(_("Getting list of instances"))
+        LOG.debug("Getting list of instances")
         vms = self._session._call_method(vim_util, "get_objects",
                      "VirtualMachine",
                      ["name", "runtime.connectionState"])
         lst_vm_names = self._get_valid_vms_from_retrieve_result(vms)
 
-        LOG.debug(_("Got total of %s instances") % str(len(lst_vm_names)))
+        LOG.debug("Got total of %s instances", str(len(lst_vm_names)))
         return lst_vm_names
 
     def _extend_virtual_disk(self, instance, requested_size, name, dc_ref):
         service_content = self._session._get_vim().get_service_content()
-        LOG.debug(_("Extending root virtual disk to %s"), requested_size)
+        LOG.debug("Extending root virtual disk to %s", requested_size)
         vmdk_extend_task = self._session._call_method(
                 self._session._get_vim(),
                 "ExtendVirtualDisk_Task",
@@ -135,7 +135,7 @@ class VMwareVMOps(object):
                 for file in files:
                     self._delete_datastore_file(instance, file, dc_ref)
 
-        LOG.debug(_("Extended root virtual disk"))
+        LOG.debug("Extended root virtual disk")
 
     def _delete_datastore_file(self, instance, datastore_path, dc_ref):
         try:
@@ -144,9 +144,9 @@ class VMwareVMOps(object):
                 error_util.FileFaultException,
                 error_util.FileLockedException,
                 error_util.FileNotFoundException) as e:
-            LOG.debug(_("Unable to delete %(ds)s. There may be more than "
-                        "one process or thread that tries to delete the file. "
-                        "Exception: %(ex)s"),
+            LOG.debug("Unable to delete %(ds)s. There may be more than "
+                      "one process or thread that tries to delete the file. "
+                      "Exception: %(ex)s",
                       {'ds': datastore_path, 'ex': e})
 
     def _get_vmdk_path(self, ds_name, folder, name):
@@ -406,7 +406,7 @@ class VMwareVMOps(object):
                     # process or thread has already completed the opertaion.
                     # In the event of a FileAlreadyExists we continue,
                     # all other exceptions will be raised.
-                    LOG.debug(_("File %s already exists"), dest_folder)
+                    LOG.debug("File %s already exists", dest_folder)
 
                 # Delete the temp upload folder
                 self._delete_datastore_file(instance,
@@ -423,7 +423,7 @@ class VMwareVMOps(object):
                     dest_vmdk_path = self._get_vmdk_path(data_store_name,
                             instance['uuid'], instance_name)
                     # Create the blank virtual disk for the VM
-                    LOG.debug(_("Create blank virtual disk on %s"),
+                    LOG.debug("Create blank virtual disk on %s",
                               data_store_name, instance=instance)
                     vm_util.create_virtual_disk(self._session,
                                                 dc_info.ref,
@@ -431,7 +431,7 @@ class VMwareVMOps(object):
                                                 disk_type,
                                                 dest_vmdk_path,
                                                 root_gb_in_kb)
-                    LOG.debug(_("Blank virtual disk created on %s."),
+                    LOG.debug("Blank virtual disk created on %s.",
                               data_store_name, instance=instance)
                     root_vmdk_path = dest_vmdk_path
                 else:
@@ -467,7 +467,7 @@ class VMwareVMOps(object):
                                         data_store_ref, data_store_name,
                                         upload_folder,
                                         upload_name + ".%s.vmdk" % root_gb):
-                        LOG.debug(_("Copying root disk of size %sGb"), root_gb)
+                        LOG.debug("Copying root disk of size %sGb", root_gb)
                         try:
                             copy_spec = self.get_copy_virtual_disk_spec(
                                 client_factory, adapter_type, disk_type)
@@ -577,16 +577,16 @@ class VMwareVMOps(object):
         if controller_spec:
             cdrom_attach_config_spec.deviceChange.append(controller_spec)
 
-        LOG.debug(_("Reconfiguring VM instance %(instance_name)s to attach "
-                    "cdrom %(file_path)s"),
+        LOG.debug("Reconfiguring VM instance %(instance_name)s to attach "
+                  "cdrom %(file_path)s",
                   {'instance_name': instance_name, 'file_path': file_path})
         reconfig_task = self._session._call_method(
                                         self._session._get_vim(),
                                         "ReconfigVM_Task", vm_ref,
                                         spec=cdrom_attach_config_spec)
         self._session._wait_for_task(reconfig_task)
-        LOG.debug(_("Reconfigured VM instance %(instance_name)s to attach "
-                    "cdrom %(file_path)s"),
+        LOG.debug("Reconfigured VM instance %(instance_name)s to attach "
+                  "cdrom %(file_path)s",
                   {'instance_name': instance_name, 'file_path': file_path})
 
     @staticmethod
@@ -642,7 +642,7 @@ class VMwareVMOps(object):
                                                   disk_type)
 
     def _create_vm_snapshot(self, instance, vm_ref):
-        LOG.debug(_("Creating Snapshot of the VM instance"), instance=instance)
+        LOG.debug("Creating Snapshot of the VM instance", instance=instance)
         snapshot_task = self._session._call_method(
                     self._session._get_vim(),
                     "CreateSnapshot_Task", vm_ref,
@@ -651,7 +651,7 @@ class VMwareVMOps(object):
                     memory=False,
                     quiesce=True)
         self._session._wait_for_task(snapshot_task)
-        LOG.debug(_("Created Snapshot of the VM instance"), instance=instance)
+        LOG.debug("Created Snapshot of the VM instance", instance=instance)
         task_info = self._session._call_method(vim_util,
                                                "get_dynamic_property",
                                                snapshot_task, "Task", "info")
@@ -659,13 +659,13 @@ class VMwareVMOps(object):
         return snapshot
 
     def _delete_vm_snapshot(self, instance, vm_ref, snapshot):
-        LOG.debug(_("Deleting Snapshot of the VM instance"), instance=instance)
+        LOG.debug("Deleting Snapshot of the VM instance", instance=instance)
         delete_snapshot_task = self._session._call_method(
                     self._session._get_vim(),
                     "RemoveSnapshot_Task", snapshot,
                     removeChildren=False, consolidate=True)
         self._session._wait_for_task(delete_snapshot_task)
-        LOG.debug(_("Deleted Snapshot of the VM instance"), instance=instance)
+        LOG.debug("Deleted Snapshot of the VM instance", instance=instance)
 
     def snapshot(self, context, instance, image_id, update_task_state):
         """Create snapshot from a running VM instance.
@@ -741,7 +741,7 @@ class VMwareVMOps(object):
             copy_spec = self.get_copy_virtual_disk_spec(client_factory,
                                                         adapter_type,
                                                         disk_type)
-            LOG.debug(_('Copying snapshotted disk %s.'),
+            LOG.debug('Copying snapshotted disk %s.',
                       vmdk_file_path_before_snapshot,
                       instance=instance)
             copy_disk_task = self._session._call_method(
@@ -755,7 +755,7 @@ class VMwareVMOps(object):
                 destSpec=copy_spec,
                 force=False)
             self._session._wait_for_task(copy_disk_task)
-            LOG.debug(_('Copied snapshotted disk %s.'),
+            LOG.debug('Copied snapshotted disk %s.',
                       vmdk_file_path_before_snapshot,
                       instance=instance)
 
@@ -767,7 +767,7 @@ class VMwareVMOps(object):
 
         def _upload_vmdk_to_image_repository():
             # Upload the contents of -flat.vmdk file which has the disk data.
-            LOG.debug(_("Uploading image %s") % image_id,
+            LOG.debug("Uploading image %s", image_id,
                       instance=instance)
             vmware_images.upload_image(
                 context,
@@ -782,7 +782,7 @@ class VMwareVMOps(object):
                 datastore_name=datastore_name,
                 cookies=cookies,
                 file_path="%s/%s-flat.vmdk" % (self._tmp_folder, random_name))
-            LOG.debug(_("Uploaded image %s") % image_id,
+            LOG.debug("Uploaded image %s", image_id,
                       instance=instance)
 
         update_task_state(task_state=task_states.IMAGE_UPLOADING,
@@ -826,16 +826,16 @@ class VMwareVMOps(object):
         # are running, then only do a guest reboot. Otherwise do a hard reset.
         if (tools_status == "toolsOk" and
                 tools_running_status == "guestToolsRunning"):
-            LOG.debug(_("Rebooting guest OS of VM"), instance=instance)
+            LOG.debug("Rebooting guest OS of VM", instance=instance)
             self._session._call_method(self._session._get_vim(), "RebootGuest",
                                        vm_ref)
-            LOG.debug(_("Rebooted guest OS of VM"), instance=instance)
+            LOG.debug("Rebooted guest OS of VM", instance=instance)
         else:
-            LOG.debug(_("Doing hard reboot of VM"), instance=instance)
+            LOG.debug("Doing hard reboot of VM", instance=instance)
             reset_task = self._session._call_method(self._session._get_vim(),
                                                     "ResetVM_Task", vm_ref)
             self._session._wait_for_task(reset_task)
-            LOG.debug(_("Did hard reboot of VM"), instance=instance)
+            LOG.debug("Did hard reboot of VM", instance=instance)
 
     def _destroy_instance(self, instance, network_info, destroy_disks=True,
                           instance_name=None):
@@ -861,19 +861,19 @@ class VMwareVMOps(object):
                 datastore_name, vmx_file_path = _ds_path
             # Power off the VM if it is in PoweredOn state.
             if pwr_state == "poweredOn":
-                LOG.debug(_("Powering off the VM"), instance=instance)
+                LOG.debug("Powering off the VM", instance=instance)
                 poweroff_task = self._session._call_method(
                        self._session._get_vim(),
                        "PowerOffVM_Task", vm_ref)
                 self._session._wait_for_task(poweroff_task)
-                LOG.debug(_("Powered off the VM"), instance=instance)
+                LOG.debug("Powered off the VM", instance=instance)
 
             # Un-register the VM
             try:
-                LOG.debug(_("Unregistering the VM"), instance=instance)
+                LOG.debug("Unregistering the VM", instance=instance)
                 self._session._call_method(self._session._get_vim(),
                                            "UnregisterVM", vm_ref)
-                LOG.debug(_("Unregistered the VM"), instance=instance)
+                LOG.debug("Unregistered the VM", instance=instance)
             except Exception as excep:
                 LOG.warn(_("In vmwareapi:vmops:_destroy_instance, got this "
                            "exception while un-registering the VM: %s"),
@@ -885,9 +885,9 @@ class VMwareVMOps(object):
                     dir_ds_compliant_path = ds_util.build_datastore_path(
                                      datastore_name,
                                      os.path.dirname(vmx_file_path))
-                    LOG.debug(_("Deleting contents of the VM from "
-                                "datastore %(datastore_name)s") %
-                               {'datastore_name': datastore_name},
+                    LOG.debug("Deleting contents of the VM from "
+                              "datastore %(datastore_name)s",
+                              {'datastore_name': datastore_name},
                               instance=instance)
                     ds_ref_ret = query['datastore']
                     ds_ref = ds_ref_ret.ManagedObjectReference[0]
@@ -895,9 +895,9 @@ class VMwareVMOps(object):
                     ds_util.file_delete(self._session,
                                         dir_ds_compliant_path,
                                         dc_info.ref)
-                    LOG.debug(_("Deleted contents of the VM from "
-                                "datastore %(datastore_name)s") %
-                               {'datastore_name': datastore_name},
+                    LOG.debug("Deleted contents of the VM from "
+                              "datastore %(datastore_name)s",
+                              {'datastore_name': datastore_name},
                               instance=instance)
                 except Exception as excep:
                     LOG.warn(_("In vmwareapi:vmops:_destroy_instance, "
@@ -918,12 +918,12 @@ class VMwareVMOps(object):
         3. Delete the contents of the folder holding the VM related data.
         """
         # If there is a rescue VM then we need to destroy that one too.
-        LOG.debug(_("Destroying instance"), instance=instance)
+        LOG.debug("Destroying instance", instance=instance)
         if instance['vm_state'] == vm_states.RESCUED:
-            LOG.debug(_("Rescue VM configured"), instance=instance)
+            LOG.debug("Rescue VM configured", instance=instance)
             try:
                 self.unrescue(instance, power_on=False)
-                LOG.debug(_("Rescue VM destroyed"), instance=instance)
+                LOG.debug("Rescue VM destroyed", instance=instance)
             except Exception:
                 rescue_name = instance['uuid'] + self._rescue_suffix
                 self._destroy_instance(instance, network_info,
@@ -931,7 +931,7 @@ class VMwareVMOps(object):
                                        instance_name=rescue_name)
         self._destroy_instance(instance, network_info,
                                destroy_disks=destroy_disks)
-        LOG.debug(_("Instance destroyed"), instance=instance)
+        LOG.debug("Instance destroyed", instance=instance)
 
     def pause(self, instance):
         msg = _("pause not supported for vmwareapi")
@@ -949,18 +949,18 @@ class VMwareVMOps(object):
                     "VirtualMachine", "runtime.powerState")
         # Only PoweredOn VMs can be suspended.
         if pwr_state == "poweredOn":
-            LOG.debug(_("Suspending the VM"), instance=instance)
+            LOG.debug("Suspending the VM", instance=instance)
             suspend_task = self._session._call_method(self._session._get_vim(),
                     "SuspendVM_Task", vm_ref)
             self._session._wait_for_task(suspend_task)
-            LOG.debug(_("Suspended the VM"), instance=instance)
+            LOG.debug("Suspended the VM", instance=instance)
         # Raise Exception if VM is poweredOff
         elif pwr_state == "poweredOff":
             reason = _("instance is powered off and cannot be suspended.")
             raise exception.InstanceSuspendFailure(reason=reason)
         else:
-            LOG.debug(_("VM was already in suspended state. So returning "
-                      "without doing anything"), instance=instance)
+            LOG.debug("VM was already in suspended state. So returning "
+                      "without doing anything", instance=instance)
 
     def resume(self, instance):
         """Resume the specified instance."""
@@ -969,12 +969,12 @@ class VMwareVMOps(object):
                                      "get_dynamic_property", vm_ref,
                                      "VirtualMachine", "runtime.powerState")
         if pwr_state.lower() == "suspended":
-            LOG.debug(_("Resuming the VM"), instance=instance)
+            LOG.debug("Resuming the VM", instance=instance)
             suspend_task = self._session._call_method(
                                         self._session._get_vim(),
                                        "PowerOnVM_Task", vm_ref)
             self._session._wait_for_task(suspend_task)
-            LOG.debug(_("Resumed the VM"), instance=instance)
+            LOG.debug("Resumed the VM", instance=instance)
         else:
             reason = _("instance is not in a suspended state")
             raise exception.InstanceResumeFailure(reason=reason)
@@ -1059,16 +1059,16 @@ class VMwareVMOps(object):
                     "VirtualMachine", "runtime.powerState")
         # Only PoweredOn VMs can be powered off.
         if pwr_state == "poweredOn":
-            LOG.debug(_("Powering off the VM"), instance=instance)
+            LOG.debug("Powering off the VM", instance=instance)
             self._power_off_vm_ref(vm_ref)
-            LOG.debug(_("Powered off the VM"), instance=instance)
+            LOG.debug("Powered off the VM", instance=instance)
         # Raise Exception if VM is suspended
         elif pwr_state == "suspended":
             reason = _("instance is suspended and cannot be powered off.")
             raise exception.InstancePowerOffFailure(reason=reason)
         else:
-            LOG.debug(_("VM was already in powered off state. So returning "
-                        "without doing anything"), instance=instance)
+            LOG.debug("VM was already in powered off state. So returning "
+                      "without doing anything", instance=instance)
 
     def power_on(self, instance):
         vm_util.power_on_instance(self._session, instance)
@@ -1088,8 +1088,8 @@ class VMwareVMOps(object):
         # has been streamed to the destination host.
         progress = round(float(step) / total_steps * 100)
         instance_uuid = instance.uuid
-        LOG.debug(_("Updating instance '%(instance_uuid)s' progress to"
-                    " %(progress)d"),
+        LOG.debug("Updating instance '%(instance_uuid)s' progress to"
+                  " %(progress)d",
                   {'instance_uuid': instance_uuid, 'progress': progress},
                   instance=instance)
         instance.progress = progress
@@ -1144,16 +1144,16 @@ class VMwareVMOps(object):
         vm_ref = vm_util.search_vm_ref_by_identifier(self._session,
                                     instance['uuid'] + self._migrate_suffix)
         if vm_ref is None:
-            LOG.debug(_("instance not present"), instance=instance)
+            LOG.debug("instance not present", instance=instance)
             return
 
         try:
-            LOG.debug(_("Destroying the VM"), instance=instance)
+            LOG.debug("Destroying the VM", instance=instance)
             destroy_task = self._session._call_method(
                                         self._session._get_vim(),
                                         "Destroy_Task", vm_ref)
             self._session._wait_for_task(destroy_task)
-            LOG.debug(_("Destroyed the VM"), instance=instance)
+            LOG.debug("Destroyed the VM", instance=instance)
         except Exception as excep:
             LOG.warn(_("In vmwareapi:vmops:confirm_migration, got this "
                      "exception while destroying the VM: %s") % str(excep))
@@ -1199,7 +1199,7 @@ class VMwareVMOps(object):
         if host_ref is None:
             raise exception.HostNotFound(host=dest)
 
-        LOG.debug(_("Migrating VM to host %s") % dest, instance=instance_ref)
+        LOG.debug("Migrating VM to host %s", dest, instance=instance_ref)
         try:
             vm_migrate_task = self._session._call_method(
                                     self._session._get_vim(),
@@ -1211,7 +1211,7 @@ class VMwareVMOps(object):
             with excutils.save_and_reraise_exception():
                 recover_method(context, instance_ref, dest, block_migration)
         post_method(context, instance_ref, dest, block_migration)
-        LOG.debug(_("Migrated VM to host %s") % dest, instance=instance_ref)
+        LOG.debug("Migrated VM to host %s", dest, instance=instance_ref)
 
     def poll_rebooting_instances(self, timeout, instances):
         """Poll for rebooting instances."""
@@ -1326,13 +1326,13 @@ class VMwareVMOps(object):
                                  client_factory,
                                  self._get_machine_id_str(network_info))
 
-        LOG.debug(_("Reconfiguring VM instance to set the machine id"),
+        LOG.debug("Reconfiguring VM instance to set the machine id",
                   instance=instance)
         reconfig_task = self._session._call_method(self._session._get_vim(),
                            "ReconfigVM_Task", vm_ref,
                            spec=machine_id_change_spec)
         self._session._wait_for_task(reconfig_task)
-        LOG.debug(_("Reconfigured VM instance to set the machine id"),
+        LOG.debug("Reconfigured VM instance to set the machine id",
                   instance=instance)
 
     def _set_vnc_config(self, client_factory, instance, port):
@@ -1342,15 +1342,15 @@ class VMwareVMOps(object):
         vnc_config_spec = vm_util.get_vnc_config_spec(
                                       client_factory, port)
 
-        LOG.debug(_("Reconfiguring VM instance to enable vnc on "
-                  "port - %(port)s") % {'port': port},
+        LOG.debug("Reconfiguring VM instance to enable vnc on "
+                  "port - %(port)s", {'port': port},
                   instance=instance)
         reconfig_task = self._session._call_method(self._session._get_vim(),
                            "ReconfigVM_Task", vm_ref,
                            spec=vnc_config_spec)
         self._session._wait_for_task(reconfig_task)
-        LOG.debug(_("Reconfigured VM instance to enable vnc on "
-                  "port - %(port)s") % {'port': port},
+        LOG.debug("Reconfigured VM instance to enable vnc on "
+                  "port - %(port)s", {'port': port},
                   instance=instance)
 
     def _get_ds_browser(self, ds_ref):
@@ -1412,7 +1412,7 @@ class VMwareVMOps(object):
         dc_info = self.get_datacenter_ref_and_name(ds_ref)
         try:
             ds_util.mkdir(self._session, path, dc_info.ref)
-            LOG.debug(_("Folder %s created."), path)
+            LOG.debug("Folder %s created.", path)
         except error_util.FileAlreadyExistsException:
             # NOTE(hartsocks): if the folder already exists, that
             # just means the folder was prepped by another process.
@@ -1445,7 +1445,7 @@ class VMwareVMOps(object):
 
     def manage_image_cache(self, context, instances):
         if not CONF.remove_unused_base_images:
-            LOG.debug(_("Image aging disabled. Aging will not be done."))
+            LOG.debug("Image aging disabled. Aging will not be done.")
             return
 
         datastores = vm_util.get_available_datastores(self._session,
@@ -1492,10 +1492,10 @@ class VMwareVCVMOps(VMwareVMOps):
 
     def get_copy_virtual_disk_spec(self, client_factory, adapter_type,
                                    disk_type):
-        LOG.debug(_("Will copy while retaining adapter type "
-                    "%(adapter_type)s and disk type %(disk_type)s") %
-                    {"disk_type": disk_type,
-                     "adapter_type": adapter_type})
+        LOG.debug("Will copy while retaining adapter type "
+                  "%(adapter_type)s and disk type %(disk_type)s",
+                  {"disk_type": disk_type,
+                   "adapter_type": adapter_type})
         # Passing of the destination copy spec is not supported when
         # VirtualDiskManager.CopyVirtualDisk is called on VC. The behavior of a
         # spec-less copy is to consolidate to the target disk while keeping its
@@ -1544,7 +1544,7 @@ class VMwareVCVMOps(VMwareVMOps):
     def list_instances(self):
         """Lists the VM instances that are registered with vCenter cluster."""
         properties = ['name', 'runtime.connectionState']
-        LOG.debug(_("Getting list of instances from cluster %s"),
+        LOG.debug("Getting list of instances from cluster %s",
                   self._cluster)
         vms = []
         root_res_pool = self._session._call_method(
@@ -1556,7 +1556,7 @@ class VMwareVCVMOps(VMwareVMOps):
                 'VirtualMachine', properties)
         lst_vm_names = self._get_valid_vms_from_retrieve_result(vms)
 
-        LOG.debug(_("Got total of %s instances") % str(len(lst_vm_names)))
+        LOG.debug("Got total of %s instances", str(len(lst_vm_names)))
         return lst_vm_names
 
     def get_vnc_console(self, instance):
@@ -1574,7 +1574,7 @@ class VMwareVCVMOps(VMwareVMOps):
         vnc_console['host'] = host_name
 
         # NOTE: VM can move hosts in some situations. Debug for admins.
-        LOG.debug(_("VM %(uuid)s is currently on host %(host_name)s"),
+        LOG.debug("VM %(uuid)s is currently on host %(host_name)s",
                   {'uuid': instance['name'], 'host_name': host_name},
                   instance=instance)
         return vnc_console

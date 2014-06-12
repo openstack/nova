@@ -36,7 +36,7 @@ class LoopMount(api.Mount):
             return False
 
         self.device = out.strip()
-        LOG.debug(_("Got loop device %s"), self.device)
+        LOG.debug("Got loop device %s", self.device)
         self.linked = True
         return True
 
@@ -54,7 +54,7 @@ class LoopMount(api.Mount):
         # NOTE(mikal): On some kernels, losetup -d will intermittently fail,
         # thus leaking a loop device unless the losetup --detach is retried:
         # https://lkml.org/lkml/2012/9/28/62
-        LOG.debug(_("Release loop device %s"), self.device)
+        LOG.debug("Release loop device %s", self.device)
         utils.execute('losetup', '--detach', self.device, run_as_root=True,
                       attempts=3)
         self.linked = False

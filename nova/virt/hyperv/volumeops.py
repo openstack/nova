@@ -90,15 +90,15 @@ class VolumeOps(object):
         target_portal = data['target_portal']
         # Check if we already logged in
         if self._volutils.get_device_number_for_target(target_iqn, target_lun):
-            LOG.debug(_("Already logged in on storage target. No need to "
-                        "login. Portal: %(target_portal)s, "
-                        "IQN: %(target_iqn)s, LUN: %(target_lun)s"),
+            LOG.debug("Already logged in on storage target. No need to "
+                      "login. Portal: %(target_portal)s, "
+                      "IQN: %(target_iqn)s, LUN: %(target_lun)s",
                       {'target_portal': target_portal,
                        'target_iqn': target_iqn, 'target_lun': target_lun})
         else:
-            LOG.debug(_("Logging in on storage target. Portal: "
-                        "%(target_portal)s, IQN: %(target_iqn)s, "
-                        "LUN: %(target_lun)s"),
+            LOG.debug("Logging in on storage target. Portal: "
+                      "%(target_portal)s, IQN: %(target_iqn)s, "
+                      "LUN: %(target_lun)s",
                       {'target_portal': target_portal,
                        'target_iqn': target_iqn, 'target_lun': target_lun})
             self._volutils.login_storage_target(target_lun, target_iqn,
@@ -111,7 +111,7 @@ class VolumeOps(object):
         ebs_root is True
         """
         target_iqn = None
-        LOG.debug(_("Attach_volume: %(connection_info)s to %(instance_name)s"),
+        LOG.debug("Attach_volume: %(connection_info)s to %(instance_name)s",
                   {'connection_info': connection_info,
                    'instance_name': instance_name})
         try:
@@ -158,13 +158,13 @@ class VolumeOps(object):
             self.detach_volume(vol['connection_info'], instance_name)
 
     def logout_storage_target(self, target_iqn):
-        LOG.debug(_("Logging off storage target %s"), target_iqn)
+        LOG.debug("Logging off storage target %s", target_iqn)
         self._volutils.logout_storage_target(target_iqn)
 
     def detach_volume(self, connection_info, instance_name):
         """Detach a volume to the SCSI controller."""
-        LOG.debug(_("Detach_volume: %(connection_info)s "
-                    "from %(instance_name)s"),
+        LOG.debug("Detach_volume: %(connection_info)s "
+                  "from %(instance_name)s",
                   {'connection_info': connection_info,
                    'instance_name': instance_name})
 
@@ -176,7 +176,7 @@ class VolumeOps(object):
         mounted_disk_path = self._get_mounted_disk_from_lun(target_iqn,
                                                             target_lun)
 
-        LOG.debug(_("Detaching physical disk from instance: %s"),
+        LOG.debug("Detaching physical disk from instance: %s",
                   mounted_disk_path)
         self._vmutils.detach_vm_disk(instance_name, mounted_disk_path)
 
@@ -204,9 +204,9 @@ class VolumeOps(object):
                 target_iqn, target_lun)
             if device_number in (None, -1):
                 attempt = i + 1
-                LOG.debug(_('Attempt %d to get device_number '
+                LOG.debug('Attempt %d to get device_number '
                           'from get_device_number_for_target failed. '
-                          'Retrying...') % attempt)
+                          'Retrying...', attempt)
                 time.sleep(CONF.hyperv.mounted_disk_query_retry_interval)
             else:
                 break
@@ -214,8 +214,8 @@ class VolumeOps(object):
         if device_number in (None, -1):
             raise exception.NotFound(_('Unable to find a mounted disk for '
                                        'target_iqn: %s') % target_iqn)
-        LOG.debug(_('Device number: %(device_number)s, '
-                    'target lun: %(target_lun)s'),
+        LOG.debug('Device number: %(device_number)s, '
+                  'target lun: %(target_lun)s',
                   {'device_number': device_number, 'target_lun': target_lun})
         #Finding Mounted disk drive
         for i in range(0, CONF.hyperv.volume_attach_retry_count):

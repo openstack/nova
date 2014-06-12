@@ -16,7 +16,6 @@
 Datastore utility functions
 """
 
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import vm_util
@@ -45,7 +44,7 @@ def split_datastore_path(datastore_path):
 
 
 def file_delete(session, datastore_path, dc_ref):
-    LOG.debug(_("Deleting the datastore file %s"), datastore_path)
+    LOG.debug("Deleting the datastore file %s", datastore_path)
     vim = session._get_vim()
     file_delete_task = session._call_method(
             session._get_vim(),
@@ -54,7 +53,7 @@ def file_delete(session, datastore_path, dc_ref):
             name=datastore_path,
             datacenter=dc_ref)
     session._wait_for_task(file_delete_task)
-    LOG.debug(_("Deleted the datastore file"))
+    LOG.debug("Deleted the datastore file")
 
 
 def file_move(session, dc_ref, src_file, dst_file):
@@ -79,7 +78,7 @@ def file_move(session, dc_ref, src_file, dst_file):
                     is not covered by the other faults; for example,
                     a communication error.
     """
-    LOG.debug(_("Moving file from %(src)s to %(dst)s."),
+    LOG.debug("Moving file from %(src)s to %(dst)s.",
               {'src': src_file, 'dst': dst_file})
     vim = session._get_vim()
     move_task = session._call_method(
@@ -91,7 +90,7 @@ def file_move(session, dc_ref, src_file, dst_file):
             destinationName=dst_file,
             destinationDatacenter=dc_ref)
     session._wait_for_task(move_task)
-    LOG.debug(_("File moved"))
+    LOG.debug("File moved")
 
 
 def file_exists(session, ds_browser, ds_path, file_name):
@@ -118,12 +117,12 @@ def mkdir(session, ds_path, dc_ref):
     then a directory with this name is created at the topmost level of the
     DataStore.
     """
-    LOG.debug(_("Creating directory with path %s"), ds_path)
+    LOG.debug("Creating directory with path %s", ds_path)
     session._call_method(session._get_vim(), "MakeDirectory",
             session._get_vim().get_service_content().fileManager,
             name=ds_path, datacenter=dc_ref,
             createParentDirectories=True)
-    LOG.debug(_("Created directory with path %s"), ds_path)
+    LOG.debug("Created directory with path %s", ds_path)
 
 
 def get_sub_folders(session, ds_browser, ds_path):

@@ -21,7 +21,6 @@ import os
 
 from nova import exception
 from nova.image import glance
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import io_util
 from nova.virt.vmwareapi import read_write_util
@@ -89,7 +88,7 @@ def start_transfer(context, read_file_handle, data_size,
 
 
 def upload_iso_to_datastore(iso_path, instance, **kwargs):
-    LOG.debug(_("Uploading iso %s to datastore") % iso_path,
+    LOG.debug("Uploading iso %s to datastore", iso_path,
               instance=instance)
     with open(iso_path, 'r') as iso_file:
         write_file_handle = read_write_util.VMwareHTTPWriteFile(
@@ -100,7 +99,7 @@ def upload_iso_to_datastore(iso_path, instance, **kwargs):
             kwargs.get("file_path"),
             os.fstat(iso_file.fileno()).st_size)
 
-        LOG.debug(_("Uploading iso of size : %s ") %
+        LOG.debug("Uploading iso of size : %s ",
                   os.fstat(iso_file.fileno()).st_size)
         block_size = 0x10000
         data = iso_file.read(block_size)
@@ -109,7 +108,7 @@ def upload_iso_to_datastore(iso_path, instance, **kwargs):
             data = iso_file.read(block_size)
         write_file_handle.close()
 
-    LOG.debug(_("Uploaded iso %s to datastore") % iso_path,
+    LOG.debug("Uploaded iso %s to datastore", iso_path,
               instance=instance)
 
 
@@ -144,7 +143,7 @@ def fetch_image(context, instance, host, dc_name, ds_name, file_path,
 
 def upload_image(context, image, instance, **kwargs):
     """Upload the snapshotted vm disk file to Glance image server."""
-    LOG.debug(_("Uploading image %s to the Glance image server") % image,
+    LOG.debug("Uploading image %s to the Glance image server", image,
               instance=instance)
     read_file_handle = read_write_util.VMwareHTTPReadFile(
                                 kwargs.get("host"),
@@ -174,7 +173,7 @@ def upload_image(context, image, instance, **kwargs):
     start_transfer(context, read_file_handle, file_size,
                    image_service=image_service,
                    image_id=image_id, image_meta=image_metadata)
-    LOG.debug(_("Uploaded image %s to the Glance image server") % image,
+    LOG.debug("Uploaded image %s to the Glance image server", image,
               instance=instance)
 
 
@@ -184,11 +183,11 @@ def get_vmdk_size_and_properties(context, image, instance):
     geometry of the disk created depends on the size.
     """
 
-    LOG.debug(_("Getting image size for the image %s") % image,
+    LOG.debug("Getting image size for the image %s", image,
               instance=instance)
     (image_service, image_id) = glance.get_remote_image_service(context, image)
     meta_data = image_service.show(context, image_id)
     size, properties = meta_data["size"], meta_data["properties"]
-    LOG.debug(_("Got image size of %(size)s for the image %(image)s"),
+    LOG.debug("Got image size of %(size)s for the image %(image)s",
               {'size': size, 'image': image}, instance=instance)
     return size, properties

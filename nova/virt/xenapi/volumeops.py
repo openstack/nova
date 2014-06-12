@@ -90,7 +90,7 @@ class VolumeOps(object):
         return (sr_ref, sr_uuid)
 
     def _connect_hypervisor_to_volume(self, sr_ref, connection_data):
-        LOG.debug(_("Connect volume to hypervisor: %s"), connection_data)
+        LOG.debug("Connect volume to hypervisor: %s", connection_data)
         if 'vdi_uuid' in connection_data:
             vdi_ref = volume_utils.introduce_vdi(
                     self._session, sr_ref,
@@ -120,7 +120,7 @@ class VolumeOps(object):
             # NOTE(johngarbutt) can only call VBD.plug on a running vm
             running = not vm_utils.is_vm_shutdown(self._session, vm_ref)
             if running:
-                LOG.debug(_("Plugging VBD: %s") % vbd_ref)
+                LOG.debug("Plugging VBD: %s", vbd_ref)
                 self._session.VBD.plug(vbd_ref, vm_ref)
 
         LOG.info(_('Dev %(dev_number)s attached to'
@@ -129,7 +129,7 @@ class VolumeOps(object):
 
     def detach_volume(self, connection_info, instance_name, mountpoint):
         """Detach volume storage to VM instance."""
-        LOG.debug(_("Detach_volume: %(instance_name)s, %(mountpoint)s"),
+        LOG.debug("Detach_volume: %(instance_name)s, %(mountpoint)s",
                   {'instance_name': instance_name, 'mountpoint': mountpoint})
 
         vm_ref = vm_utils.vm_ref_or_raise(self._session, instance_name)
