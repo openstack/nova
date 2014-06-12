@@ -3067,6 +3067,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                                     connection_info,
                                                     info)
                     devices.append(cfg)
+                    vol['connection_info'] = connection_info
+                    vol.save(nova_context.get_admin_context())
 
             if 'disk.config' in disk_mapping:
                 diskconfig = self.get_guest_disk_config(instance,
