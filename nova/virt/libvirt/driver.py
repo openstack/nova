@@ -3214,13 +3214,15 @@ class LibvirtDriver(driver.ComputeDriver):
                                                         CONSOLE))
                 if instance['ramdisk_id']:
                     guest.os_initrd = os.path.join(inst_path, "ramdisk")
+                # we only support os_command_line with images with an explicit
+                # kernel set and don't want to break nova if there's an
+                # os_command_line property without a specified kernel_id param
+                if image_meta:
+                    img_props = image_meta.get('properties', {})
+                    if img_props.get('os_command_line'):
+                        guest.os_cmdline = img_props.get('os_command_line')
             else:
                 guest.os_boot_dev = blockinfo.get_boot_order(disk_info)
-
-        if (image_meta and
-                image_meta.get('properties', {}).get('os_command_line')):
-            guest.os_cmdline = \
-                    image_meta['properties'].get('os_command_line')
 
         if ((CONF.libvirt.virt_type != "lxc" and
              CONF.libvirt.virt_type != "uml")):

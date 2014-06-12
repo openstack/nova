@@ -2033,6 +2033,8 @@ class LibvirtConnTestCase(test.TestCase):
                    cpu_mode=None,
                    group='libvirt')
 
+        self.test_instance['kernel_id'] = "fake_kernel_id"
+
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = db.instance_create(self.context, self.test_instance)
 
@@ -2045,6 +2047,52 @@ class LibvirtConnTestCase(test.TestCase):
                                     _fake_network_info(self.stubs, 1),
                                     image_meta, disk_info)
         self.assertEqual(cfg.os_cmdline, "fake_os_command_line")
+
+    def test_get_guest_config_os_command_line_without_kernel_id(self):
+        self.flags(virt_type="kvm",
+                cpu_mode=None,
+                group='libvirt')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        image_meta = {"properties": {"os_command_line":
+            "fake_os_command_line"}}
+
+        cfg = conn.get_guest_config(instance_ref,
+                                    _fake_network_info(self.stubs, 1),
+                                    image_meta, disk_info)
+        self.assertIsNone(cfg.os_cmdline)
+
+    def test_get_guest_config_os_command_empty(self):
+        self.flags(virt_type="kvm",
+                   cpu_mode=None,
+                   group='libvirt')
+
+        self.test_instance['kernel_id'] = "fake_kernel_id"
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        # the instance has 'root=/dev/vda console=tty0 console=ttyS0' set by
+        # default, so testing an empty string and None value in the
+        # os_command_line image property must pass
+        image_meta = {"properties": {"os_command_line": ""}}
+        cfg = conn.get_guest_config(instance_ref,
+                                    _fake_network_info(self.stubs, 1),
+                                    image_meta, disk_info)
+        self.assertNotEqual(cfg.os_cmdline, "")
+
+        image_meta = {"properties": {"os_command_line": None}}
+        cfg = conn.get_guest_config(instance_ref,
+                                    _fake_network_info(self.stubs, 1),
+                                    image_meta, disk_info)
+        self.assertIsNotNone(cfg.os_cmdline)
 
     def test_get_guest_config_armv7(self):
         def get_host_capabilities_stub(self):
