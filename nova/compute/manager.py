@@ -2879,6 +2879,10 @@ class ComputeManager(manager.Manager):
 
         This is generally only called by API password resets after an
         image has been built.
+
+        @param context: Nova auth context.
+        @param instance: Nova instance object.
+        @param new_pass: The admin password for the instance.
         """
 
         context = context.elevated()
@@ -2893,9 +2897,9 @@ class ComputeManager(manager.Manager):
             instance.task_state = None
             instance.save(expected_task_state=task_states.UPDATING_PASSWORD)
             _msg = _('Failed to set admin password. Instance %s is not'
-                     ' running') % instance["uuid"]
+                     ' running') % instance.uuid
             raise exception.InstancePasswordSetFailed(
-                instance=instance['uuid'], reason=_msg)
+                instance=instance.uuid, reason=_msg)
         else:
             try:
                 self.driver.set_admin_password(instance, new_pass)
@@ -2919,14 +2923,13 @@ class ComputeManager(manager.Manager):
                 # Catch all here because this could be anything.
                 LOG.exception(_('set_admin_password failed: %s') % e,
                               instance=instance)
-                self._set_instance_error_state(context,
-                                               instance['uuid'])
+                self._set_instance_error_state(context, instance.uuid)
                 # We create a new exception here so that we won't
                 # potentially reveal password information to the
                 # API caller.  The real exception is logged above
                 _msg = _('error setting admin password')
                 raise exception.InstancePasswordSetFailed(
-                    instance=instance['uuid'], reason=_msg)
+                    instance=instance.uuid, reason=_msg)
 
     @wrap_exception()
     @reverts_task_state
