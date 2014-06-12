@@ -3852,7 +3852,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return total
 
     def get_memory_mb_used(self):
-        """Get the free memory size(MB) of physical computer.
+        """Get the used memory size(MB) of physical computer.
 
         :returns: the total usage of memory(MB).
 
