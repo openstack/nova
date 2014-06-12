@@ -2756,7 +2756,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest_config.parse_dom(xml_doc)
 
                 for hdev in [d for d in guest_config.devices
-                             if d.type == 'pci']:
+                    if isinstance(d, vconfig.LibvirtConfigGuestHostdevPCI)]:
                     hdbsf = [hdev.domain, hdev.bus, hdev.slot, hdev.function]
                     dbsf = pci_utils.parse_address(dev['address'])
                     if [int(x, 16) for x in hdbsf] ==\
