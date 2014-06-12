@@ -216,37 +216,8 @@ def no_translate_debug_logs(logical_line, filename):
 
     N319
     """
-    dirs = ["nova/scheduler",
-            "nova/network",
-            "nova/volume",
-            "nova/api",
-            "nova/cells",
-            "nova/conductor",
-            "nova/compute",
-            "nova/objects",
-            "nova/cmd",
-            "nova/db",
-            "nova/cert",
-            "nova/console",
-            "nova/consoleauth",
-            "nova/cloudpipe",
-            "nova/image",
-            "nova/hacking",
-            "nova/ipv6",
-            "nova/keymgr",
-            "nova/objectstore",
-            "nova/pci",
-            "nova/rdp",
-            "nova/servicegroup",
-            "nova/spice",
-            "nova/storage",
-            "nova/tests",
-            "nova/vnc",
-            "nova/virt",
-           ]
-    if max([name in filename for name in dirs]):
-        if logical_line.startswith("LOG.debug(_("):
-            yield(0, "N319 Don't translate debug level logs")
+    if logical_line.startswith("LOG.debug(_("):
+        yield(0, "N319 Don't translate debug level logs")
 
 
 def no_setting_conf_directly_in_tests(logical_line, filename):
