@@ -324,7 +324,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance.obj_load_attr('system_metadata')
         objects.BlockDeviceMappingList.get_by_instance_uuid(
                 self.context, instance.uuid).AndReturn(bdms)
-        self.compute._delete_instance(self.context, instance, bdms)
+        self.compute._delete_instance(self.context, instance, bdms,
+                                      mox.IgnoreArg())
 
         self.mox.ReplayAll()
         self.compute._init_instance(self.context, instance)
@@ -497,7 +498,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance.obj_load_attr('system_metadata')
         objects.BlockDeviceMappingList.get_by_instance_uuid(
                 self.context, instance.uuid).AndReturn(bdms)
-        self.compute._delete_instance(self.context, instance, bdms)
+        self.compute._delete_instance(self.context, instance, bdms,
+                                      mox.IgnoreArg())
         self.mox.ReplayAll()
 
         self.compute._init_instance(self.context, instance)
