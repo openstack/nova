@@ -36,6 +36,7 @@ _CLASSES = ['Datacenter', 'Datastore', 'ResourcePool', 'VirtualMachine',
             'files', 'ClusterComputeResource', 'HostStorageSystem']
 
 _FAKE_FILE_SIZE = 1024
+_FAKE_VCENTER_UUID = '497c514c-ef5e-4e7f-8d93-ec921993b93a'
 
 _db_content = {}
 _array_types = {}
@@ -1180,6 +1181,8 @@ class FakeVim(object):
         about_info = DataObject()
         about_info.name = "VMware vCenter Server"
         about_info.version = "5.1.0"
+        about_info.instanceUuid = _FAKE_VCENTER_UUID
+
         service_content.about = about_info
 
         self._service_content = service_content
