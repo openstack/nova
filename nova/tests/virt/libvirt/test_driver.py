@@ -2227,7 +2227,13 @@ class LibvirtConnTestCase(test.TestCase):
         conf = conn._get_guest_config(instance_ref,
                                       _fake_network_info(self.stubs, 1),
                                       {}, disk_info)
-        self.assertIsNone(conf.cpu)
+        self.assertIsInstance(conf.cpu,
+                              vconfig.LibvirtConfigGuestCPU)
+        self.assertIsNone(conf.cpu.mode)
+        self.assertIsNone(conf.cpu.model)
+        self.assertEqual(conf.cpu.sockets, 1)
+        self.assertEqual(conf.cpu.cores, 1)
+        self.assertEqual(conf.cpu.threads, 1)
 
     def test_get_guest_cpu_config_default_kvm(self):
         self.flags(virt_type="kvm",
@@ -2252,6 +2258,9 @@ class LibvirtConnTestCase(test.TestCase):
                               vconfig.LibvirtConfigGuestCPU)
         self.assertEqual(conf.cpu.mode, "host-model")
         self.assertIsNone(conf.cpu.model)
+        self.assertEqual(conf.cpu.sockets, 1)
+        self.assertEqual(conf.cpu.cores, 1)
+        self.assertEqual(conf.cpu.threads, 1)
 
     def test_get_guest_cpu_config_default_uml(self):
         self.flags(virt_type="uml",
@@ -2303,6 +2312,9 @@ class LibvirtConnTestCase(test.TestCase):
                               vconfig.LibvirtConfigGuestCPU)
         self.assertEqual(conf.cpu.mode, "host-passthrough")
         self.assertIsNone(conf.cpu.model)
+        self.assertEqual(conf.cpu.sockets, 1)
+        self.assertEqual(conf.cpu.cores, 1)
+        self.assertEqual(conf.cpu.threads, 1)
 
     def test_get_guest_cpu_config_host_model_new(self):
         def get_lib_version_stub():
@@ -2324,6 +2336,9 @@ class LibvirtConnTestCase(test.TestCase):
                               vconfig.LibvirtConfigGuestCPU)
         self.assertEqual(conf.cpu.mode, "host-model")
         self.assertIsNone(conf.cpu.model)
+        self.assertEqual(conf.cpu.sockets, 1)
+        self.assertEqual(conf.cpu.cores, 1)
+        self.assertEqual(conf.cpu.threads, 1)
 
     def test_get_guest_cpu_config_custom_new(self):
         def get_lib_version_stub():
@@ -2347,6 +2362,9 @@ class LibvirtConnTestCase(test.TestCase):
                               vconfig.LibvirtConfigGuestCPU)
         self.assertEqual(conf.cpu.mode, "custom")
         self.assertEqual(conf.cpu.model, "Penryn")
+        self.assertEqual(conf.cpu.sockets, 1)
+        self.assertEqual(conf.cpu.cores, 1)
+        self.assertEqual(conf.cpu.threads, 1)
 
     def test_get_guest_cpu_config_host_passthrough_old(self):
         def get_lib_version_stub():
@@ -2409,6 +2427,9 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(len(conf.cpu.features), 2)
         self.assertEqual(conf.cpu.features.pop().name, "tm2")
         self.assertEqual(conf.cpu.features.pop().name, "ht")
+        self.assertEqual(conf.cpu.sockets, 1)
+        self.assertEqual(conf.cpu.cores, 1)
+        self.assertEqual(conf.cpu.threads, 1)
 
     def test_get_guest_cpu_config_custom_old(self):
         def get_lib_version_stub():
@@ -2432,6 +2453,33 @@ class LibvirtConnTestCase(test.TestCase):
                               vconfig.LibvirtConfigGuestCPU)
         self.assertIsNone(conf.cpu.mode)
         self.assertEqual(conf.cpu.model, "Penryn")
+        self.assertEqual(conf.cpu.sockets, 1)
+        self.assertEqual(conf.cpu.cores, 1)
+        self.assertEqual(conf.cpu.threads, 1)
+
+    def test_get_guest_cpu_topology(self):
+        fake_flavour = flavor_obj.Flavor.get_by_id(
+                                 self.context,
+                                 self.test_instance['instance_type_id'])
+        fake_flavour.vcpus = 8
+        fake_flavour.extra_specs = {'hw:cpu_max_sockets': '4'}
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        with mock.patch.object(flavor_obj.Flavor, 'get_by_id',
+                               return_value=fake_flavour):
+            conf = conn._get_guest_config(instance_ref,
+                                          _fake_network_info(self.stubs, 1),
+                                          {}, disk_info)
+            self.assertIsInstance(conf.cpu,
+                                  vconfig.LibvirtConfigGuestCPU)
+            self.assertEqual(conf.cpu.mode, "host-model")
+            self.assertEqual(conf.cpu.sockets, 4)
+            self.assertEqual(conf.cpu.cores, 2)
+            self.assertEqual(conf.cpu.threads, 1)
 
     def test_xml_and_uri_no_ramdisk_no_kernel(self):
         instance_data = dict(self.test_instance)
