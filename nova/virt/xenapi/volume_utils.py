@@ -300,3 +300,18 @@ def _get_target_port(iscsi_string):
         return iscsi_string.split(':')[1]
 
     return CONF.xenserver.target_port
+
+
+def find_vbd_by_number(session, vm_ref, dev_number):
+    """Get the VBD reference from the device number."""
+    vbd_refs = session.VM.get_VBDs(vm_ref)
+    requested_device = str(dev_number)
+    if vbd_refs:
+        for vbd_ref in vbd_refs:
+            try:
+                user_device = session.VBD.get_userdevice(vbd_ref)
+                if user_device == requested_device:
+                    return vbd_ref
+            except session.XenAPI.Failure:
+                msg = "Error looking up VBD %s for %s" % (vbd_ref, vm_ref)
+                LOG.debug(msg, exc_info=True)

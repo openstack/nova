@@ -43,7 +43,7 @@ class VolumeDetachTestCase(VolumeOpsTestBase):
 
         ops = volumeops.VolumeOps('session')
         self.mox.StubOutWithMock(volumeops.vm_utils, 'lookup')
-        self.mox.StubOutWithMock(volumeops.vm_utils, 'find_vbd_by_number')
+        self.mox.StubOutWithMock(volumeops.volume_utils, 'find_vbd_by_number')
         self.mox.StubOutWithMock(volumeops.vm_utils, 'is_vm_shutdown')
         self.mox.StubOutWithMock(volumeops.vm_utils, 'unplug_vbd')
         self.mox.StubOutWithMock(volumeops.vm_utils, 'destroy_vbd')
@@ -57,7 +57,7 @@ class VolumeDetachTestCase(VolumeOpsTestBase):
         volumeops.volume_utils.get_device_number('mountpoint').AndReturn(
             'devnumber')
 
-        volumeops.vm_utils.find_vbd_by_number(
+        volumeops.volume_utils.find_vbd_by_number(
             'session', 'vmref', 'devnumber').AndReturn('vbdref')
 
         volumeops.vm_utils.is_vm_shutdown('session', 'vmref').AndReturn(
@@ -84,7 +84,7 @@ class VolumeDetachTestCase(VolumeOpsTestBase):
             ['find_sr_from_vbd', 'destroy_vbd'], registered_calls)
 
     @mock.patch.object(volumeops.VolumeOps, "_detach_vbds_and_srs")
-    @mock.patch.object(vm_utils, "find_vbd_by_number")
+    @mock.patch.object(volume_utils, "find_vbd_by_number")
     @mock.patch.object(vm_utils, "vm_ref_or_raise")
     def test_detach_volume(self, mock_vm, mock_vbd, mock_detach):
         mock_vm.return_value = "vm_ref"
@@ -97,19 +97,19 @@ class VolumeDetachTestCase(VolumeOpsTestBase):
         mock_detach.assert_called_once_with("vm_ref", ["vbd_ref"])
 
     @mock.patch.object(volumeops.VolumeOps, "_detach_vbds_and_srs")
-    @mock.patch.object(vm_utils, "find_vbd_by_number")
+    @mock.patch.object(volume_utils, "find_vbd_by_number")
     @mock.patch.object(vm_utils, "vm_ref_or_raise")
     def test_detach_volume_skips_error_skip_attach(self, mock_vm, mock_vbd,
                                                    mock_detach):
         mock_vm.return_value = "vm_ref"
-        mock_vbd.side_effect = exception.StorageError(reason="")
+        mock_vbd.return_value = None
 
         self.ops.detach_volume({}, "name", "/dev/xvdd")
 
         self.assertFalse(mock_detach.called)
 
     @mock.patch.object(volumeops.VolumeOps, "_detach_vbds_and_srs")
-    @mock.patch.object(vm_utils, "find_vbd_by_number")
+    @mock.patch.object(volume_utils, "find_vbd_by_number")
     @mock.patch.object(vm_utils, "vm_ref_or_raise")
     def test_detach_volume_raises(self, mock_vm, mock_vbd,
                                   mock_detach):
