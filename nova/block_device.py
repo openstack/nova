@@ -96,7 +96,7 @@ class BlockDeviceDict(dict):
         if not (dict_fields <=
                 (self._fields | self._db_only_fields)):
             raise exception.InvalidBDMFormat(
-                details="Some fields are invalid.")
+                details=_("Some fields are invalid."))
 
         if bdm_dict.get('no_device'):
             return
@@ -106,7 +106,7 @@ class BlockDeviceDict(dict):
                 not ((dict_fields & self._required_fields) ==
                       self._required_fields)):
             raise exception.InvalidBDMFormat(
-                details="Some required fields are missing")
+                details=_("Some required fields are missing"))
 
         if 'delete_on_termination' in bdm_dict:
             bdm_dict['delete_on_termination'] = strutils.bool_from_string(
@@ -122,7 +122,7 @@ class BlockDeviceDict(dict):
                 bdm_dict['boot_index'] = int(bdm_dict['boot_index'])
             except ValueError:
                 raise exception.InvalidBDMFormat(
-                    details="Boot index is invalid.")
+                    details=_("Boot index is invalid."))
 
     @classmethod
     def from_legacy(cls, legacy_bdm):
@@ -165,7 +165,7 @@ class BlockDeviceDict(dict):
 
         else:
             raise exception.InvalidBDMFormat(
-                details="Unrecognized legacy format.")
+                details=_("Unrecognized legacy format."))
 
         return cls(new_bdm, non_computable_fields)
 
@@ -182,11 +182,11 @@ class BlockDeviceDict(dict):
 
             if source_type not in ('volume', 'image', 'snapshot', 'blank'):
                 raise exception.InvalidBDMFormat(
-                    details="Invalid source_type field.")
+                    details=_("Invalid source_type field."))
             elif source_type != 'blank':
                 if not device_uuid:
                     raise exception.InvalidBDMFormat(
-                        details="Missing device UUID.")
+                        details=_("Missing device UUID."))
                 api_dict[source_type + '_id'] = device_uuid
 
         api_dict.pop('uuid', None)
@@ -365,11 +365,11 @@ def validate_device_name(value):
                                   min_length=1, max_length=255)
     except exception.InvalidInput:
         raise exception.InvalidBDMFormat(
-            details="Device name empty or too long.")
+            details=_("Device name empty or too long."))
 
     if ' ' in value:
         raise exception.InvalidBDMFormat(
-            details="Device name contains spaces.")
+            details=_("Device name contains spaces."))
 
 
 def validate_and_default_volume_size(bdm):
@@ -379,7 +379,7 @@ def validate_and_default_volume_size(bdm):
                 bdm['volume_size'], 'volume_size', min_value=0)
         except exception.InvalidInput:
             raise exception.InvalidBDMFormat(
-                details="Invalid volume_size.")
+                details=_("Invalid volume_size."))
 
 
 _ephemeral = re.compile('^ephemeral(\d|[1-9]\d+)$')
