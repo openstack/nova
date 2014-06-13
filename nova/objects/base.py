@@ -16,6 +16,7 @@
 
 import collections
 import copy
+import datetime
 import functools
 import traceback
 
@@ -29,6 +30,7 @@ from nova.i18n import _, _LE
 from nova import objects
 from nova.objects import fields
 from nova.openstack.common import log as logging
+from nova.openstack.common import timeutils
 from nova.openstack.common import versionutils
 
 
@@ -709,18 +711,23 @@ def obj_make_list(context, list_obj, item_cls, db_list, **extra_args):
 
 def serialize_args(fn):
     """Decorator that will do the arguments serialization before remoting."""
-    def wrapper(cls, *args, **kwargs):
+    def wrapper(obj, *args, **kwargs):
         for kw in kwargs:
             value_arg = kwargs.get(kw)
             if kw == 'exc_val' and value_arg:
                 kwargs[kw] = str(value_arg)
-            if kw == 'exc_tb' and (
+            elif kw == 'exc_tb' and (
                     not isinstance(value_arg, six.string_types) and value_arg):
                 kwargs[kw] = ''.join(traceback.format_tb(value_arg))
+            elif isinstance(value_arg, datetime.datetime):
+                kwargs[kw] = timeutils.isotime(value_arg)
+        if hasattr(fn, '__call__'):
+            return fn(obj, *args, **kwargs)
         # NOTE(danms): We wrap a descriptor, so use that protocol
-        return fn.__get__(None, cls)(*args, **kwargs)
+        return fn.__get__(None, obj)(*args, **kwargs)
 
     # NOTE(danms): Make this discoverable
     wrapper.remotable = getattr(fn, 'remotable', False)
     wrapper.original_fn = fn
-    return classmethod(wrapper)
+    return (functools.wraps(fn)(wrapper) if hasattr(fn, '__call__')
+            else classmethod(wrapper))
