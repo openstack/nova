@@ -254,7 +254,8 @@ class ComputeAPI(object):
                rollback_live_migration_at_destination() take an object
         ...  - Removed run_instance()
         3.27 - Make run_instance() accept a new-world object
-        3.28 - Update get_console_output() to take an object
+        3.28 - Update get_console_output() to accept a new-world object
+        3.29 - Make check_instance_shared_storage accept a new-world object
     '''
 
     VERSION_ALIASES = {
@@ -384,13 +385,16 @@ class ComputeAPI(object):
                           dest_check_data=dest_check_data)
 
     def check_instance_shared_storage(self, ctxt, instance, data):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.28')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.29'):
+            version = '3.29'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.28')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'check_instance_shared_storage',
-                          instance=instance_p,
+                          instance=instance,
                           data=data)
 
     def confirm_resize(self, ctxt, instance, migration, host,
