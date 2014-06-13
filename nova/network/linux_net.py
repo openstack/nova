@@ -826,7 +826,7 @@ def initialize_gateway_device(dev, network_ref):
     _enable_ipv4_forwarding()
 
     # NOTE(vish): The ip for dnsmasq has to be the first address on the
-    #             bridge for it to respond to reqests properly
+    #             bridge for it to respond to requests properly
     try:
         prefix = network_ref.cidr.prefixlen
     except AttributeError:
