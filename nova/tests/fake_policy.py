@@ -199,7 +199,6 @@ policy_data = """
     "compute_extension:floating_ip_dns": "",
     "compute_extension:floating_ip_pools": "",
     "compute_extension:floating_ips": "",
-    "compute_extension:floating_ips:all_tenants": "rule:admin_api",
     "compute_extension:floating_ips_bulk": "",
     "compute_extension:fping": "",
     "compute_extension:fping:all_tenants": "is_admin:True",
@@ -346,7 +345,6 @@ policy_data = """
     "network:setup_networks_on_host": "",
 
     "network:get_floating_ip": "",
-    "network:get_floating_ips": "",
     "network:get_floating_ip_pools": "",
     "network:get_floating_ip_by_address": "",
     "network:get_floating_ips_by_project": "",
