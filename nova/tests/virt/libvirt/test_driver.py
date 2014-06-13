@@ -8418,6 +8418,66 @@ class LibvirtDriverTestCase(test.TestCase):
                None, ins_ref, '10.0.0.1', flavor, None)
         self.assertEqual(out, disk_info_text)
 
+    @mock.patch('nova.utils.execute')
+    @mock.patch('nova.virt.libvirt.utils.copy_image')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._destroy')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_host_ip_addr')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
+                '.get_instance_disk_info')
+    def test_migrate_disk_and_power_off_swap(self, mock_get_disk_info,
+                                             get_host_ip_addr,
+                                             mock_destroy,
+                                             mock_copy_image,
+                                             mock_execute):
+        """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
+        .migrate_disk_and_power_off.
+        """
+        self.copy_or_move_swap_called = False
+
+        # 10G root and 512M swap disk
+        disk_info = [{'disk_size': 1, 'type': 'qcow2',
+                      'virt_disk_size': 10737418240, 'path': '/test/disk',
+                      'backing_file': '/base/disk'},
+                     {'disk_size': 1, 'type': 'qcow2',
+                      'virt_disk_size': 536870912, 'path': '/test/disk.swap',
+                      'backing_file': '/base/swap_512'}]
+        disk_info_text = jsonutils.dumps(disk_info)
+        mock_get_disk_info.return_value = disk_info_text
+        get_host_ip_addr.return_value = '10.0.0.1'
+
+        def fake_copy_image(*args, **kwargs):
+            # disk.swap should not be touched since it is skipped over
+            if '/test/disk.swap' in list(args):
+                self.copy_or_move_swap_called = True
+
+        def fake_execute(*args, **kwargs):
+            # disk.swap should not be touched since it is skipped over
+            if set(['mv', '/test/disk.swap']).issubset(list(args)):
+                self.copy_or_move_swap_called = True
+
+        mock_copy_image.side_effect = fake_copy_image
+        mock_execute.side_effect = fake_execute
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        # Original instance config
+        instance = self._create_instance({'root_gb': 10,
+                                          'ephemeral_gb': 0})
+
+        # Re-size fake instance to 20G root and 1024M swap disk
+        flavor = {'root_gb': 20, 'ephemeral_gb': 0, 'swap': 1024}
+
+        # Destination is same host
+        out = conn.migrate_disk_and_power_off(None, instance, '10.0.0.1',
+                                              flavor, None)
+
+        mock_get_disk_info.assert_called_once_with(instance.name,
+                                                   block_device_info=None)
+        self.assertTrue(get_host_ip_addr.called)
+        mock_destroy.assert_called_once_with(instance)
+        self.assertFalse(self.copy_or_move_swap_called)
+        self.assertEqual(disk_info_text, out)
+
     def test_migrate_disk_and_power_off_resize_error(self):
         instance = self._create_instance()
         flavor = {'root_gb': 5}

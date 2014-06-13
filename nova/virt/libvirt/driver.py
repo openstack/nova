@@ -4958,11 +4958,26 @@ class LibvirtDriver(driver.ComputeDriver):
             if shared_storage:
                 dest = None
                 utils.execute('mkdir', '-p', inst_base)
+
+            active_flavor = flavors.extract_flavor(instance)
             for info in disk_info:
                 # assume inst_base == dirname(info['path'])
                 img_path = info['path']
                 fname = os.path.basename(img_path)
                 from_path = os.path.join(inst_base_resize, fname)
+
+                if (fname == 'disk.swap' and
+                    active_flavor.get('swap', 0) != flavor.get('swap', 0)):
+                    # To properly resize the swap partition, it must be
+                    # re-created with the proper size.  This is acceptable
+                    # because when an OS is shut down, the contents of the
+                    # swap space are just garbage, the OS doesn't bother about
+                    # what is in it.
+
+                    # We will not copy over the swap disk here, and rely on
+                    # finish_migration/_create_image to re-create it for us.
+                    continue
+
                 if info['type'] == 'qcow2' and info['backing_file']:
                     tmp_path = from_path + "_rbase"
                     # merge backing file
