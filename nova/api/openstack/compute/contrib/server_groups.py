@@ -156,7 +156,7 @@ class ServerGroupController(wsgi.Controller):
         members = []
         if group.members:
             # Display the instances that are not deleted.
-            filters = {'uuid': group.members, 'deleted_at': None}
+            filters = {'uuid': group.members, 'deleted': False}
             instances = instance_obj.InstanceList.get_by_filters(
                 context, filters=filters)
             members = [instance.uuid for instance in instances]

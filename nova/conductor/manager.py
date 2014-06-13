@@ -758,6 +758,7 @@ class ComputeTaskManager(base.Base):
         except (exception.NoValidHost,
                 exception.ComputeServiceUnavailable,
                 exception.InvalidHypervisorType,
+                exception.InvalidCPUInfo,
                 exception.UnableToMigrateToSelf,
                 exception.DestinationHypervisorTooOld,
                 exception.InvalidLocalStorage,

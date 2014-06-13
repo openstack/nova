@@ -6,42 +6,42 @@
                     "nova-consoleauth": {
                         "active": true,
                         "available": true,
-                        "updated_at": null
+                        "updated_at": %(timestamp_or_none)s
                     }
                 },
                 "cert": {
                     "nova-cert": {
                         "active": true,
                         "available": true,
-                        "updated_at": null
+                        "updated_at": %(timestamp_or_none)s
                     }
                 },
                 "conductor": {
                     "nova-conductor": {
                         "active": true,
                         "available": true,
-                        "updated_at": null
+                        "updated_at": %(timestamp_or_none)s
                     }
                 },
                 "cells": {
                     "nova-cells": {
                         "active": true,
                         "available": true,
-                        "updated_at": null
+                        "updated_at": %(timestamp_or_none)s
                     }
                 },
                 "scheduler": {
                     "nova-scheduler": {
                         "active": true,
                         "available": true,
-                        "updated_at": null
+                        "updated_at": %(timestamp_or_none)s
                     }
                 },
                 "network": {
                     "nova-network": {
                         "active": true,
                         "available": true,
-                        "updated_at": null
+                        "updated_at": %(timestamp_or_none)s
                     }
                 }
             },
@@ -56,7 +56,7 @@
                     "nova-compute": {
                         "active": true,
                         "available": true,
-                        "updated_at": null
+                        "updated_at": %(timestamp_or_none)s
                     }
                 }
             },

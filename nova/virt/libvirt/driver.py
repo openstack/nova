@@ -647,9 +647,12 @@ class LibvirtDriver(driver.ComputeDriver):
                         {'type': CONF.libvirt.virt_type, 'arch': arch})
 
     def init_host(self, host):
-        self._do_quality_warnings()
+        # NOTE(dkliban): Error handler needs to be registered before libvirt
+        #                connection is used for the first time.  Otherwise, the
+        #                handler does not get registered.
         libvirt.registerErrorHandler(libvirt_error_handler, None)
         libvirt.virEventRegisterDefaultImpl()
+        self._do_quality_warnings()
 
         if not self.has_min_version(MIN_LIBVIRT_VERSION):
             major = MIN_LIBVIRT_VERSION[0]
@@ -854,10 +857,14 @@ class LibvirtDriver(driver.ComputeDriver):
         for vif in network_info:
             self.vif_driver.plug(instance, vif)
 
-    def unplug_vifs(self, instance, network_info):
+    def unplug_vifs(self, instance, network_info, ignore_errors=False):
         """Unplug VIFs from networks."""
         for vif in network_info:
-            self.vif_driver.unplug(instance, vif)
+            try:
+                self.vif_driver.unplug(instance, vif)
+            except exception.NovaException:
+                if not ignore_errors:
+                    raise
 
     def _teardown_container(self, instance):
         inst_path = libvirt_utils.get_instance_path(instance)
@@ -986,7 +993,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def cleanup(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True):
         self._undefine_domain(instance)
-        self.unplug_vifs(instance, network_info)
+        self.unplug_vifs(instance, network_info, ignore_errors=True)
         retry = True
         while retry:
             try:
@@ -1373,6 +1380,11 @@ class LibvirtDriver(driver.ComputeDriver):
                     encryptor = self._get_volume_encryptor(connection_info,
                                                            encryption)
                     encryptor.detach_volume(**encryption)
+        except exception.InstanceNotFound:
+            # NOTE(zhaoqin): If the instance does not exist, _lookup_by_name()
+            #                will throw InstanceNotFound exception. Need to
+            #                disconnect volume under this circumstance.
+            LOG.warn(_("During detach_volume, instance disappeared."))
         except libvirt.libvirtError as ex:
             # NOTE(vish): This is called to cleanup volumes after live
             #             migration, so we should still disconnect even if
@@ -3623,7 +3635,7 @@ class LibvirtDriver(driver.ComputeDriver):
         timeout = CONF.vif_plugging_timeout
         if (self._conn_supports_start_paused() and
             utils.is_neutron() and not
-            vifs_already_plugged and timeout):
+            vifs_already_plugged and power_on and timeout):
             events = self._get_neutron_events(network_info)
         else:
             events = []

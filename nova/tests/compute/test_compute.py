@@ -1720,40 +1720,6 @@ class ComputeTestCase(BaseTestCase):
         instances = db.instance_get_all(self.context)
         LOG.info(_("Running instances: %s"), instances)
         self.assertEqual(len(instances), 1)
-
-        # Make it look like this is no instance
-        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
-        self.compute._get_instance_nw_info(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndRaise(
-                    exception.NetworkNotFound(network_id='fake')
-                )
-        self.mox.ReplayAll()
-
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
-
-        instances = db.instance_get_all(self.context)
-        LOG.info(_("After terminating instances: %s"), instances)
-        self.assertEqual(len(instances), 0)
-
-    def test_terminate_no_fixed_ips(self):
-        # This is as reported in LP bug 1192893
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-
-        self.compute.run_instance(self.context, instance, {}, {}, [], None,
-                None, True, None, False)
-
-        instances = db.instance_get_all(self.context)
-        LOG.info(_("Running instances: %s"), instances)
-        self.assertEqual(len(instances), 1)
-
-        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
-        self.compute._get_instance_nw_info(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndRaise(
-                    exception.NoMoreFixedIps()
-                )
         self.mox.ReplayAll()
 
         self.compute.terminate_instance(self.context,
@@ -3786,6 +3752,7 @@ class ComputeTestCase(BaseTestCase):
     def test_state_revert(self):
         # ensure that task_state is reverted after a failed operation.
         migration = migration_obj.Migration()
+        migration.instance_uuid = 'b48316c5-71e8-45e4-9884-6c78055b9b13'
         migration.new_instance_type_id = '1'
 
         actions = [
@@ -5763,7 +5730,8 @@ class ComputeTestCase(BaseTestCase):
             if instance_uuid not in instance_map:
                 raise exception.InstanceNotFound(instance_id=instance_uuid)
             call_info['get_by_uuid'] += 1
-            self.assertEqual(['system_metadata'], columns_to_join)
+            self.assertEqual(['system_metadata', 'info_cache'],
+                             columns_to_join)
             return instance_map[instance_uuid]
 
         # NOTE(comstud): Override the stub in setUp()
@@ -9064,6 +9032,7 @@ class ComputeAPITestCase(BaseTestCase):
             return False
 
         def fake_rebuild_instance(*args, **kwargs):
+            self.assertIn('info_cache', kwargs['instance'])
             db.instance_update(self.context, instance_uuid,
                                {'host': kwargs['host']})
 

@@ -41,7 +41,8 @@ class AvailabilityZoneJsonTest(test_servers.ServersSampleBase):
 
     def test_availability_zone_detail(self):
         response = self._do_get('os-availability-zone/detail')
-        self._verify_response('availability-zone-detail-resp', {}, response,
+        subs = self._get_regexes()
+        self._verify_response('availability-zone-detail-resp', subs, response,
                               200)
 
     def test_availability_zone_post(self):

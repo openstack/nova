@@ -235,23 +235,17 @@ def errors_out_migration(function):
             return function(self, context, *args, **kwargs)
         except Exception:
             with excutils.save_and_reraise_exception():
-                # Find migration argument. The argument cannot be
-                # defined by position because the wrapped functions
-                # do not have the same signature.
-                for arg in args:
-                    if not isinstance(arg, migration_obj.Migration):
-                        continue
-                    status = arg.status
-                    if status not in ['migrating', 'post-migrating']:
-                        continue
-                    arg.status = 'error'
-                    try:
-                        arg.save(context.elevated())
-                    except Exception:
-                        LOG.debug(_('Error setting migration status '
-                                    'for instance %s.') %
-                                  arg.instance_uuid, exc_info=True)
-                    break
+                migration = kwargs['migration']
+                status = migration.status
+                if status not in ['migrating', 'post-migrating']:
+                    return
+                migration.status = 'error'
+                try:
+                    migration.save(context.elevated())
+                except Exception:
+                    LOG.debug(_('Error setting migration status '
+                                'for instance %s.') %
+                              migration.instance_uuid, exc_info=True)
 
     return decorated_function
 
@@ -875,9 +869,9 @@ class ComputeManager(manager.Manager):
                         {'task_state': instance['task_state'],
                          'power_state': current_power_state},
                         instance=instance)
-            instance = self._instance_update(context, instance.uuid,
-                                             vm_state=vm_states.ACTIVE,
-                                             task_state=None)
+            instance.task_state = None
+            instance.vm_state = vm_states.ACTIVE
+            instance.save()
 
         net_info = compute_utils.get_nw_info_for_instance(instance)
         try:
@@ -2096,12 +2090,7 @@ class ComputeManager(manager.Manager):
             self._notify_about_instance_usage(context, instance,
                                               "shutdown.start")
 
-        # get network info before tearing down
-        try:
-            network_info = self._get_instance_nw_info(context, instance)
-        except (exception.NetworkNotFound, exception.NoMoreFixedIps,
-                exception.InstanceInfoCacheNotFound):
-            network_info = network_model.NetworkInfo()
+        network_info = compute_utils.get_nw_info_for_instance(instance)
 
         # NOTE(vish) get bdms before destroying the instance
         vol_bdms = [bdm for bdm in bdms if bdm.is_volume]
@@ -2496,8 +2485,7 @@ class ComputeManager(manager.Manager):
                 self.network_api.setup_networks_on_host(
                         context, instance, self.host)
 
-            network_info = self._get_instance_nw_info(context, instance)
-
+            network_info = compute_utils.get_nw_info_for_instance(instance)
             if bdms is None:
                 bdms = (block_device_obj.BlockDeviceMappingList.
                         get_by_instance_uuid(context, instance.uuid))
@@ -4833,7 +4821,7 @@ class ComputeManager(manager.Manager):
                 try:
                     inst = instance_obj.Instance.get_by_uuid(
                             context, instance_uuids.pop(0),
-                            expected_attrs=['system_metadata'],
+                            expected_attrs=['system_metadata', 'info_cache'],
                             use_slave=True)
                 except exception.InstanceNotFound:
                     # Instance is gone.  Try to grab another.

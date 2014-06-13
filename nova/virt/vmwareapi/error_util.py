@@ -30,6 +30,7 @@ FILE_FAULT = 'FileFault'
 FILE_LOCKED = 'FileLocked'
 FILE_NOT_FOUND = 'FileNotFound'
 INVALID_PROPERTY = 'InvalidProperty'
+NO_PERMISSION = 'NoPermission'
 NOT_AUTHENTICATED = 'NotAuthenticated'
 
 
@@ -68,15 +69,18 @@ class VimAttributeError(VimException):
 class VimFaultException(Exception):
     """The VIM Fault exception class."""
 
-    def __init__(self, fault_list, excep):
+    def __init__(self, fault_list, fault_string, details=None):
         Exception.__init__(self)
         if not isinstance(fault_list, list):
             raise ValueError("fault_list must be a list")
         self.fault_list = fault_list
-        self.exception_obj = excep
+        self.fault_string = fault_string
+        self.details = details
 
     def __str__(self):
-        return str(self.exception_obj)
+        if self.details:
+            return '%s %s' % (self.fault_string, self.details)
+        return self.fault_string
 
 
 class FaultCheckers(object):
@@ -92,6 +96,7 @@ class FaultCheckers(object):
         For example NotAuthenticated fault.
         """
         fault_list = []
+        details = {}
         if not resp_obj:
             # This is the case when the session has timed out. ESX SOAP server
             # sends an empty RetrievePropertiesResponse. Normally missingSet in
@@ -104,15 +109,18 @@ class FaultCheckers(object):
             for obj_cont in resp_obj.objects:
                 if hasattr(obj_cont, "missingSet"):
                     for missing_elem in obj_cont.missingSet:
-                        fault_type = missing_elem.fault.fault.__class__
+                        fault_type = missing_elem.fault.fault
                         # Fault needs to be added to the type of fault for
                         # uniformity in error checking as SOAP faults define
-                        fault_list.append(fault_type.__name__)
+                        fault_list.append(fault_type.__class__.__name__)
+                        if fault_type.__class__.__name__ == NO_PERMISSION:
+                            details['object'] = fault_type.object.value
+                            details['privilegeId'] = fault_type.privilegeId
         if fault_list:
             exc_msg_list = ', '.join(fault_list)
-            raise VimFaultException(fault_list, Exception(_("Error(s) %s "
-                    "occurred in the call to RetrievePropertiesEx") %
-                    exc_msg_list))
+            fault_string = _("Error(s) %s occurred in the call to "
+                             "RetrievePropertiesEx") % exc_msg_list
+            raise VimFaultException(fault_list, fault_string, details)
 
 
 class VMwareDriverException(exception.NovaException):
@@ -176,6 +184,11 @@ class InvalidPropertyException(VMwareDriverException):
     code = 400
 
 
+class NoPermissionException(VMwareDriverException):
+    msg_fmt = _("No Permission.")
+    code = 403
+
+
 class NotAuthenticatedException(VMwareDriverException):
     msg_fmt = _("Not Authenticated.")
     code = 403
@@ -191,7 +204,8 @@ _fault_classes_registry = {
     FILE_LOCKED: FileLockedException,
     FILE_NOT_FOUND: FileNotFoundException,
     INVALID_PROPERTY: InvalidPropertyException,
-    NOT_AUTHENTICATED: NotAuthenticatedException,
+    NO_PERMISSION: NoPermissionException,
+    NOT_AUTHENTICATED: NotAuthenticatedException
 }
 
 

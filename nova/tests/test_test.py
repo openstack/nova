@@ -19,8 +19,11 @@
 from oslo.config import cfg
 from oslo import messaging
 
+from nova.openstack.common import log as logging
 from nova import rpc
 from nova import test
+
+LOG = logging.getLogger(__name__)
 
 CONF = cfg.CONF
 CONF.import_opt('use_local', 'nova.conductor.api', group='conductor')
@@ -47,3 +50,11 @@ class IsolationTestCase(test.TestCase):
                                                  server=CONF.host),
                                 endpoints=[NeverCalled()])
         server.start()
+
+
+class BadLogTestCase(test.TestCase):
+    """Make sure a mis-formatted debug log will get caught."""
+
+    def test_bad_debug_log(self):
+        self.assertRaises(KeyError,
+            LOG.debug, "this is a misformated %(log)s", {'nothing': 'nothing'})

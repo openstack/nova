@@ -1518,6 +1518,36 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             {'host': 'destination'}, True, False, None, 'block_migration',
             'disk_over_commit')
 
+    def test_migrate_server_deals_with_invalidcpuinfo_exception(self):
+        instance = fake_instance.fake_db_instance(uuid='uuid',
+                                                  vm_state=vm_states.ACTIVE)
+        inst_obj = instance_obj.Instance._from_db_object(
+            self.context, instance_obj.Instance(), instance, [])
+        self.mox.StubOutWithMock(live_migrate, 'execute')
+        self.mox.StubOutWithMock(scheduler_utils,
+                'set_vm_state_and_notify')
+
+        ex = exc.InvalidCPUInfo(reason="invalid cpu info.")
+        live_migrate.execute(self.context, mox.IsA(instance_obj.Instance),
+                             'destination', 'block_migration',
+                             'disk_over_commit').AndRaise(ex)
+
+        scheduler_utils.set_vm_state_and_notify(self.context,
+                'compute_task', 'migrate_server',
+                {'vm_state': vm_states.ACTIVE,
+                 'task_state': None,
+                 'expected_task_state': task_states.MIGRATING},
+                ex, self._build_request_spec(inst_obj),
+                self.conductor_manager.db)
+        self.mox.ReplayAll()
+
+        self.conductor = utils.ExceptionHelper(self.conductor)
+
+        self.assertRaises(exc.InvalidCPUInfo,
+            self.conductor.migrate_server, self.context, inst_obj,
+            {'host': 'destination'}, True, False, None, 'block_migration',
+            'disk_over_commit')
+
     def test_migrate_server_deals_with_unexpected_exceptions(self):
         instance = fake_instance.fake_db_instance()
         inst_obj = instance_obj.Instance._from_db_object(
