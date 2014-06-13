@@ -256,6 +256,7 @@ class ComputeAPI(object):
         3.27 - Make run_instance() accept a new-world object
         3.28 - Update get_console_output() to accept a new-world object
         3.29 - Make check_instance_shared_storage accept a new-world object
+        3.30 - Make remove_volume_connection() accept a new-world object
     '''
 
     VERSION_ALIASES = {
@@ -707,12 +708,15 @@ class ComputeAPI(object):
                    instance=instance, address=address)
 
     def remove_volume_connection(self, ctxt, instance, volume_id, host):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.30'):
+            version = '3.30'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.0')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'remove_volume_connection',
-                          instance=instance_p, volume_id=volume_id)
+                          instance=instance, volume_id=volume_id)
 
     def rescue_instance(self, ctxt, instance, rescue_password,
                         rescue_image_ref=None):
