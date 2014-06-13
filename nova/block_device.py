@@ -422,6 +422,14 @@ def get_root_bdm(bdms):
         return None
 
 
+def get_bdms_to_connect(bdms, exclude_root_mapping=False):
+    """Will return non-root mappings, when exclude_root_mapping is true.
+       Otherwise all mappings will be returned.
+    """
+    return (bdm for bdm in bdms if bdm.get('boot_index', -1) != 0 or
+            not exclude_root_mapping)
+
+
 def mappings_prepend_dev(mappings):
     """Prepend '/dev/' to 'device' entry of swap/ephemeral virtual type."""
     for m in mappings:

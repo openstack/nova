@@ -230,6 +230,17 @@ class BlockDeviceTestCase(test.NoDBTestCase):
                               block_device.validate_and_default_volume_size,
                               bdm)
 
+    def test_get_bdms_to_connect(self):
+        root_bdm = {'device_name': 'vda', 'boot_index': 0}
+        bdms = [root_bdm,
+                {'device_name': 'vdb', 'boot_index': 1},
+                {'device_name': 'vdc', 'boot_index': -1},
+                {'device_name': 'vde', 'boot_index': None},
+                {'device_name': 'vdd'}]
+        self.assertNotIn(root_bdm, block_device.get_bdms_to_connect(bdms,
+                                                exclude_root_mapping=True))
+        self.assertIn(root_bdm, block_device.get_bdms_to_connect(bdms))
+
 
 class TestBlockDeviceDict(test.NoDBTestCase):
     def setUp(self):
