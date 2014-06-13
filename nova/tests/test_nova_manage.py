@@ -131,6 +131,7 @@ class NetworkCommandsTestCase(test.TestCase):
                     'dns1': '8.8.8.8',
                     'dns2': '8.8.4.4',
                     'vlan': 200,
+                    'vlan_start': 201,
                     'vpn_public_address': '10.0.0.2',
                     'vpn_public_port': '2222',
                     'vpn_private_address': '192.168.0.2',
@@ -168,7 +169,8 @@ class NetworkCommandsTestCase(test.TestCase):
             self.assertEqual(kwargs['multi_host'], False)
             self.assertEqual(kwargs['num_networks'], 1)
             self.assertEqual(kwargs['network_size'], 256)
-            self.assertEqual(kwargs['vlan_start'], 200)
+            self.assertEqual(kwargs['vlan'], 200)
+            self.assertEqual(kwargs['vlan_start'], 201)
             self.assertEqual(kwargs['vpn_start'], 2000)
             self.assertEqual(kwargs['cidr_v6'], 'fd00:2::/120')
             self.assertEqual(kwargs['gateway'], '10.2.0.1')
@@ -187,7 +189,8 @@ class NetworkCommandsTestCase(test.TestCase):
                             num_networks=1,
                             network_size=256,
                             multi_host='F',
-                            vlan_start=200,
+                            vlan=200,
+                            vlan_start=201,
                             vpn_start=2000,
                             cidr_v6='fd00:2::/120',
                             gateway='10.2.0.1',
