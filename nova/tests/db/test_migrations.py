@@ -119,6 +119,9 @@ class CommonTestsMixIn(object):
     BaseMigrationTestCase.
     """
     def test_walk_versions(self):
+        if not self.engines:
+            self.skipTest("No engines initialized")
+
         for key, engine in self.engines.items():
             # We start each walk with a completely blank slate.
             self._reset_database(key)
