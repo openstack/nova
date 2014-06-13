@@ -90,6 +90,7 @@ from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import firewall as libvirt_firewall
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import imagecache
+from nova.virt.libvirt import lvm
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt import netutils
 from nova.virt import watchdog_actions
@@ -1047,7 +1048,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """Delete all LVM disks for given instance object."""
         disks = self._lvm_disks(instance)
         if disks:
-            libvirt_utils.remove_logical_volumes(disks)
+            lvm.remove_volumes(disks)
 
     def _lvm_disks(self, instance):
         """Returns all LVM disks for given instance object."""
@@ -1078,7 +1079,7 @@ class LibvirtDriver(driver.ComputeDriver):
             def fullpath(name):
                 return os.path.join(vg, name)
 
-            logical_volumes = libvirt_utils.list_logical_volumes(vg)
+            logical_volumes = lvm.list_volumes(vg)
 
             disk_names = filter(belongs_to_instance, logical_volumes)
             # TODO(sdague): remove in Juno
@@ -3785,8 +3786,8 @@ class LibvirtDriver(driver.ComputeDriver):
         """
 
         if CONF.libvirt.images_type == 'lvm':
-            info = libvirt_utils.get_volume_group_info(
-                                 CONF.libvirt.images_volume_group)
+            info = lvm.get_volume_group_info(
+                               CONF.libvirt.images_volume_group)
         else:
             info = libvirt_utils.get_fs_info(CONF.instances_path)
 
