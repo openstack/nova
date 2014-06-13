@@ -498,3 +498,52 @@ class FindBadVolumeTestCase(VolumeOpsTestBase):
                 self.assertRaises(FakeException,
                                   self.ops.find_bad_volumes, "vm_ref")
                 mock_scan.assert_called_once_with("sr_ref")
+
+
+class CleanupFromVDIsTestCase(VolumeOpsTestBase):
+    def _check_find_purge_calls(self, find_sr_from_vdi, purge_sr, vdi_refs,
+            sr_refs):
+        find_sr_calls = [mock.call(self.ops._session, vdi_ref) for vdi_ref
+                in vdi_refs]
+        find_sr_from_vdi.assert_has_calls(find_sr_calls)
+        purge_sr_calls = [mock.call(self.ops._session, sr_ref) for sr_ref
+                in sr_refs]
+        purge_sr.assert_has_calls(purge_sr_calls)
+
+    @mock.patch.object(volume_utils, 'find_sr_from_vdi')
+    @mock.patch.object(volume_utils, 'purge_sr')
+    def test_safe_cleanup_from_vdis(self, purge_sr, find_sr_from_vdi):
+        vdi_refs = ['vdi_ref1', 'vdi_ref2']
+        sr_refs = ['sr_ref1', 'sr_ref2']
+        find_sr_from_vdi.side_effect = sr_refs
+        self.ops.safe_cleanup_from_vdis(vdi_refs)
+
+        self._check_find_purge_calls(find_sr_from_vdi, purge_sr, vdi_refs,
+                sr_refs)
+
+    @mock.patch.object(volume_utils, 'find_sr_from_vdi',
+            side_effect=[exception.StorageError(reason=''), 'sr_ref2'])
+    @mock.patch.object(volume_utils, 'purge_sr')
+    def test_safe_cleanup_from_vdis_handles_find_sr_exception(self, purge_sr,
+            find_sr_from_vdi):
+        vdi_refs = ['vdi_ref1', 'vdi_ref2']
+        sr_refs = ['sr_ref2']
+        find_sr_from_vdi.side_effect = [exception.StorageError(reason=''),
+                sr_refs[0]]
+        self.ops.safe_cleanup_from_vdis(vdi_refs)
+
+        self._check_find_purge_calls(find_sr_from_vdi, purge_sr, vdi_refs,
+                sr_refs)
+
+    @mock.patch.object(volume_utils, 'find_sr_from_vdi')
+    @mock.patch.object(volume_utils, 'purge_sr')
+    def test_safe_cleanup_from_vdis_handles_purge_sr_exception(self, purge_sr,
+            find_sr_from_vdi):
+        vdi_refs = ['vdi_ref1', 'vdi_ref2']
+        sr_refs = ['sr_ref1', 'sr_ref2']
+        find_sr_from_vdi.side_effect = sr_refs
+        purge_sr.side_effects = [test.TestingException, None]
+        self.ops.safe_cleanup_from_vdis(vdi_refs)
+
+        self._check_find_purge_calls(find_sr_from_vdi, purge_sr, vdi_refs,
+                sr_refs)

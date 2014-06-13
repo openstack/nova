@@ -213,6 +213,8 @@ class SpawnTestCase(VMOpsTestBase):
         self.mox.StubOutWithMock(vm_utils, 'determine_disk_image_type')
         self.mox.StubOutWithMock(vm_utils, 'get_vdis_for_instance')
         self.mox.StubOutWithMock(vm_utils, 'safe_destroy_vdis')
+        self.mox.StubOutWithMock(self.vmops._volumeops,
+                                 'safe_cleanup_from_vdis')
         self.mox.StubOutWithMock(self.vmops, '_resize_up_vdis')
         self.mox.StubOutWithMock(vm_utils,
                                  'create_kernel_and_ramdisk')
@@ -370,6 +372,7 @@ class SpawnTestCase(VMOpsTestBase):
             vm_utils.destroy_kernel_ramdisk(self.vmops._session, instance,
                                             kernel_file, ramdisk_file)
             vm_utils.safe_destroy_vdis(self.vmops._session, ["fake_ref"])
+            self.vmops._volumeops.safe_cleanup_from_vdis(["fake_ref_2"])
 
         self.mox.ReplayAll()
         self.vmops.spawn(context, instance, image_meta, injected_files,
