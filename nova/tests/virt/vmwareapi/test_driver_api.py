@@ -2368,7 +2368,7 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
                           self.conn.get_host_uptime, 'host')
 
     def _test_finish_migration(self, power_on, resize_instance=False):
-        """Tests the finish_migration method on VC Driver"""
+        """Tests the finish_migration method on VC Driver."""
         # setup the test instance in the database
         self._create_vm()
         vm_ref = vm_util.get_vm_ref(self.conn._session,
@@ -2431,7 +2431,7 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
     @mock.patch.object(vm_util, 'power_on_instance')
     def _test_finish_revert_migration(self, fake_power_on,
                                       fake_associate_vmref, power_on):
-        """Tests the finish_revert_migration method on VC Driver"""
+        """Tests the finish_revert_migration method on VC Driver."""
 
         # setup the test instance in the database
         self._create_instance()

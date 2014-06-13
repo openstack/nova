@@ -1297,7 +1297,7 @@ class LibvirtConfigGuestSnapshot(LibvirtConfigObject):
 
 
 class LibvirtConfigNodeDevice(LibvirtConfigObject):
-    """Libvirt Node Devices parser"""
+    """Libvirt Node Devices parser."""
 
     def __init__(self, **kwargs):
         super(LibvirtConfigNodeDevice, self).__init__(root_name="device",
@@ -1322,7 +1322,7 @@ class LibvirtConfigNodeDevice(LibvirtConfigObject):
 
 
 class LibvirtConfigNodeDevicePciCap(LibvirtConfigObject):
-    """Libvirt Node Devices pci capability parser"""
+    """Libvirt Node Devices pci capability parser."""
 
     def __init__(self, **kwargs):
         super(LibvirtConfigNodeDevicePciCap, self).__init__(
