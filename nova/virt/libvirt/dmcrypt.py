@@ -35,7 +35,7 @@ def create_volume(target, device, cipher, key_size, key):
     :param target: device mapper logical device name
     :param device: underlying block device
     :param cipher: encryption cipher string digestible by cryptsetup
-    :param cipher: encryption key size
+    :param key_size: encryption key size
     :param key: encryption key as an array of unsigned bytes
     """
     cmd = ('cryptsetup',
