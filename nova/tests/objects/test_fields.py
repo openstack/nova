@@ -220,6 +220,8 @@ class TestListOfStrings(TestField):
 
 class TestObject(TestField):
     def setUp(self):
+        super(TestObject, self).setUp()
+
         class TestableObject(obj_base.NovaObject):
             def __eq__(self, value):
                 # NOTE(danms): Be rather lax about this equality thing to
@@ -231,7 +233,6 @@ class TestObject(TestField):
             pass
 
         test_inst = TestableObject()
-        super(TestObject, self).setUp()
         self.field = fields.Field(fields.Object('TestableObject'))
         self.coerce_good_values = [(test_inst, test_inst)]
         self.coerce_bad_values = [OtherTestableObject(), 1, 'foo']
