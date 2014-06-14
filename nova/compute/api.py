@@ -876,12 +876,14 @@ class API(base.Base):
                 try:
                     volume_id = bdm['volume_id']
                     volume = self.volume_api.get(context, volume_id)
-                    return volume.get('volume_image_metadata', {})
                 except exception.CinderConnectionFailed:
                     raise
                 except Exception:
                     raise exception.InvalidBDMVolume(id=volume_id)
 
+                if not volume.get('bootable', True):
+                    raise exception.InvalidBDMVolumeNotBootable(id=volume_id)
+                return volume.get('volume_image_metadata', {})
         return {}
 
     @staticmethod

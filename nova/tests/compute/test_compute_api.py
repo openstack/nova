@@ -1692,6 +1692,36 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api.volume_snapshot_delete(self.context, volume_id,
                 snapshot_id, {})
 
+    def _test_boot_volume_bootable(self, is_bootable=False):
+        def get_vol_data(*args, **kwargs):
+            return {'bootable': is_bootable}
+        block_device_mapping = [{
+            'id': 1,
+            'device_name': 'vda',
+            'no_device': None,
+            'virtual_name': None,
+            'snapshot_id': None,
+            'volume_id': '1',
+            'delete_on_termination': False,
+        }]
+
+        with mock.patch.object(self.compute_api.volume_api, 'get',
+                               side_effect=get_vol_data):
+            if not is_bootable:
+                self.assertRaises(exception.InvalidBDMVolumeNotBootable,
+                                  self.compute_api._get_bdm_image_metadata,
+                                  self.context, block_device_mapping)
+            else:
+                meta = self.compute_api._get_bdm_image_metadata(self.context,
+                                    block_device_mapping)
+                self.assertEqual({}, meta)
+
+    def test_boot_volume_non_bootable(self):
+        self._test_boot_volume_bootable(False)
+
+    def test_boot_volume_bootable(self):
+        self._test_boot_volume_bootable(True)
+
     def _create_instance_with_disabled_disk_config(self, object=False):
         sys_meta = {"image_auto_disk_config": "Disabled"}
         params = {"system_metadata": sys_meta}

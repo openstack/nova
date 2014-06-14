@@ -246,6 +246,10 @@ class InvalidBDMForLegacy(InvalidBDM):
                 "be converted to legacy format. ")
 
 
+class InvalidBDMVolumeNotBootable(InvalidBDM):
+    msg_fmt = _("Block Device %(id)s is not bootable.")
+
+
 class InvalidAttribute(Invalid):
     msg_fmt = _("Attribute not supported: %(attr)s")
 

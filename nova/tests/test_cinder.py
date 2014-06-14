@@ -35,6 +35,7 @@ def _stub_volume(**kwargs):
         "snapshot_id": None,
         "status": "available",
         "volume_type": "None",
+        "bootable": "true"
     }
     volume.update(kwargs)
     return volume

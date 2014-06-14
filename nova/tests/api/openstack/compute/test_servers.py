@@ -2645,6 +2645,21 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
         self._test_create_extra(params)
 
+    @mock.patch('nova.compute.api.API._get_bdm_image_metadata')
+    def test_create_instance_non_bootable_volume_fails(self, fake_bdm_meta):
+        self.ext_mgr.extensions = {'os-volumes': 'fake'}
+        bdm = [{
+            'id': 1,
+            'bootable': False,
+            'volume_id': self.volume_id,
+            'status': 'active',
+            'device_name': 'vda',
+        }]
+        params = {'block_device_mapping': bdm}
+        fake_bdm_meta.side_effect = exception.InvalidBDMVolumeNotBootable(id=1)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra, params, no_image=True)
+
     def test_create_instance_with_device_name_not_string(self):
         self.ext_mgr.extensions = {'os-volumes': 'fake'}
         old_create = compute_api.API.create
