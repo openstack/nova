@@ -30,17 +30,14 @@ imagecache_opts = [
                default='_base',
                help='Where cached images are stored under $instances_path. '
                     'This is NOT the full path - just a folder name. '
-                    'For per-compute-host cached images, set to _base_$my_ip',
-               deprecated_name='base_dir_name'),
+                    'For per-compute-host cached images, set to _base_$my_ip'),
     cfg.BoolOpt('remove_unused_base_images',
                 default=True,
-                help='Should unused base images be removed?',
-                deprecated_group='libvirt'),
+                help='Should unused base images be removed?'),
     cfg.IntOpt('remove_unused_original_minimum_age_seconds',
                default=(24 * 3600),
                help='Unused unresized base images younger than this will not '
-                    'be removed',
-               deprecated_group='libvirt'),
+                    'be removed'),
     ]
 
 CONF = cfg.CONF

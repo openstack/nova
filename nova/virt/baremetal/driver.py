@@ -53,8 +53,7 @@ opts = [
                help='A list of additional capabilities corresponding to '
                'flavor_extra_specs for this compute '
                'host to advertise. Valid entries are name=value, pairs '
-               'For example, "key1:val1, key2:val2"',
-               deprecated_name='instance_type_extra_specs'),
+               'For example, "key1:val1, key2:val2"'),
     cfg.StrOpt('driver',
                default='nova.virt.baremetal.pxe.PXE',
                help='Baremetal driver back-end (pxe or tilera)'),

@@ -48,25 +48,17 @@ LOG = logging.getLogger(__name__)
 xenapi_agent_opts = [
     cfg.IntOpt('agent_timeout',
                default=30,
-               deprecated_name='agent_timeout',
-               deprecated_group='DEFAULT',
                help='Number of seconds to wait for agent reply'),
     cfg.IntOpt('agent_version_timeout',
                default=300,
-               deprecated_name='agent_version_timeout',
-               deprecated_group='DEFAULT',
                help='Number of seconds to wait for agent '
                     'to be fully operational'),
     cfg.IntOpt('agent_resetnetwork_timeout',
-               deprecated_name='agent_resetnetwork_timeout',
-               deprecated_group='DEFAULT',
                default=60,
                help='Number of seconds to wait for agent reply '
                     'to resetnetwork request'),
     cfg.StrOpt('agent_path',
                default='usr/sbin/xe-update-networking',
-               deprecated_name='xenapi_agent_path',
-               deprecated_group='DEFAULT',
                help='Specifies the path in which the XenAPI guest agent '
                     'should be located. If the agent is present, network '
                     'configuration is not injected into the image. '
@@ -74,14 +66,10 @@ xenapi_agent_opts = [
                     'flat_injected=True'),
     cfg.BoolOpt('disable_agent',
                 default=False,
-                deprecated_name='xenapi_disable_agent',
-                deprecated_group='DEFAULT',
                 help='Disables the use of the XenAPI agent in any image '
                      'regardless of what image properties are present.'),
     cfg.BoolOpt('use_agent_default',
                 default=False,
-                deprecated_name='xenapi_use_agent_default',
-                deprecated_group='DEFAULT',
                 help='Determines if the XenAPI agent should be used when '
                      'the image used does not contain a hint to declare if '
                      'the agent is present or not. '
@@ -92,7 +80,6 @@ xenapi_agent_opts = [
 ]
 
 CONF = cfg.CONF
-# xenapi_agent options in the DEFAULT group were deprecated in Icehouse
 CONF.register_opts(xenapi_agent_opts, 'xenserver')
 
 

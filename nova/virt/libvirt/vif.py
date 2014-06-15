@@ -36,9 +36,7 @@ LOG = logging.getLogger(__name__)
 libvirt_vif_opts = [
     cfg.BoolOpt('use_virtio_for_bridges',
                 default=True,
-                help='Use virtio for bridge interfaces with KVM/QEMU',
-                deprecated_group='DEFAULT',
-                deprecated_name='libvirt_use_virtio_for_bridges'),
+                help='Use virtio for bridge interfaces with KVM/QEMU'),
 ]
 
 CONF = cfg.CONF

@@ -41,9 +41,7 @@ libvirt_opts = [
     cfg.BoolOpt('snapshot_compression',
                 default=False,
                 help='Compress snapshot images when possible. This '
-                     'currently applies exclusively to qcow2 images',
-                deprecated_group='DEFAULT',
-                deprecated_name='libvirt_snapshot_compression'),
+                     'currently applies exclusively to qcow2 images'),
     ]
 
 CONF = cfg.CONF

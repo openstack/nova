@@ -63,37 +63,25 @@ LOG = logging.getLogger(__name__)
 xenapi_vm_utils_opts = [
     cfg.StrOpt('cache_images',
                default='all',
-               deprecated_name='cache_images',
-               deprecated_group='DEFAULT',
                help='Cache glance images locally. `all` will cache all'
                     ' images, `some` will only cache images that have the'
                     ' image_property `cache_in_nova=True`, and `none` turns'
                     ' off caching entirely'),
     cfg.IntOpt('image_compression_level',
-               deprecated_name='xenapi_image_compression_level',
-               deprecated_group='DEFAULT',
                help='Compression level for images, e.g., 9 for gzip -9.'
                     ' Range is 1-9, 9 being most compressed but most CPU'
                     ' intensive on dom0.'),
     cfg.StrOpt('default_os_type',
                default='linux',
-               deprecated_name='default_os_type',
-               deprecated_group='DEFAULT',
                help='Default OS type'),
     cfg.IntOpt('block_device_creation_timeout',
                default=10,
-               deprecated_name='block_device_creation_timeout',
-               deprecated_group='DEFAULT',
                help='Time to wait for a block device to be created'),
     cfg.IntOpt('max_kernel_ramdisk_size',
                default=16 * units.Mi,
-               deprecated_name='max_kernel_ramdisk_size',
-               deprecated_group='DEFAULT',
                help='Maximum size in bytes of kernel or ramdisk images'),
     cfg.StrOpt('sr_matching_filter',
                default='default-sr:true',
-               deprecated_name='sr_matching_filter',
-               deprecated_group='DEFAULT',
                help='Filter for finding the SR to be used to install guest '
                     'instances on. To use the Local Storage in default '
                     'XenServer/XCP installations set this flag to '
@@ -104,41 +92,28 @@ xenapi_vm_utils_opts = [
                     'set this flag to: default-sr:true'),
     cfg.BoolOpt('sparse_copy',
                 default=True,
-                deprecated_name='xenapi_sparse_copy',
-                deprecated_group='DEFAULT',
                 help='Whether to use sparse_copy for copying data on a '
                      'resize down (False will use standard dd). This speeds '
                      'up resizes down considerably since large runs of zeros '
                      'won\'t have to be rsynced'),
     cfg.IntOpt('num_vbd_unplug_retries',
                default=10,
-               deprecated_name='xenapi_num_vbd_unplug_retries',
-               deprecated_group='DEFAULT',
                help='Maximum number of retries to unplug VBD'),
     cfg.StrOpt('torrent_images',
                default='none',
-               deprecated_name='xenapi_torrent_images',
-               deprecated_group='DEFAULT',
                help='Whether or not to download images via Bit Torrent '
                     '(all|some|none).'),
     cfg.StrOpt('ipxe_network_name',
-               deprecated_name='xenapi_ipxe_network_name',
-               deprecated_group='DEFAULT',
                help='Name of network to use for booting iPXE ISOs'),
     cfg.StrOpt('ipxe_boot_menu_url',
-               deprecated_name='xenapi_ipxe_boot_menu_url',
-               deprecated_group='DEFAULT',
                help='URL to the iPXE boot menu'),
     cfg.StrOpt('ipxe_mkisofs_cmd',
                default='mkisofs',
-               deprecated_name='xenapi_ipxe_mkisofs_cmd',
-               deprecated_group='DEFAULT',
                help='Name and optionally path of the tool used for '
                     'ISO image creation'),
     ]
 
 CONF = cfg.CONF
-# xenapi_vm_utils options in the DEFAULT group were deprecated in Icehouse
 CONF.register_opts(xenapi_vm_utils_opts, 'xenserver')
 CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
 CONF.import_opt('use_cow_images', 'nova.virt.driver')
