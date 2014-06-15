@@ -25,6 +25,7 @@ from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 
 LOG = logging.getLogger(__name__)
+ALLOWED_DATASTORE_TYPES = ['VMFS', 'NFS']
 
 
 class Datastore(object):
@@ -200,24 +201,41 @@ def _select_datastore(data_stores, best_match, datastore_regex=None):
             continue
 
         propdict = vm_util.propset_dict(obj_content.propSet)
-        # Local storage identifier vSphere doesn't support CIFS or
-        # vfat for datastores, therefore filtered
-        ds_type = propdict['summary.type']
-        ds_name = propdict['summary.name']
-        if ((ds_type == 'VMFS' or ds_type == 'NFS') and
-                propdict.get('summary.accessible')):
-            if datastore_regex is None or datastore_regex.match(ds_name):
-                new_ds = Datastore(
+        if _is_datastore_valid(propdict, datastore_regex):
+            new_ds = Datastore(
                     ref=obj_content.obj,
-                    name=ds_name,
+                    name=propdict['summary.name'],
                     capacity=propdict['summary.capacity'],
                     freespace=propdict['summary.freeSpace'])
-                # favor datastores with more free space
-                if (best_match is None or
-                    new_ds.freespace > best_match.freespace):
-                    best_match = new_ds
+            # favor datastores with more free space
+            if (best_match is None or
+                new_ds.freespace > best_match.freespace):
+                best_match = new_ds
 
     return best_match
+
+
+def _is_datastore_valid(propdict, datastore_regex):
+    """Checks if a datastore is valid based on the following criteria.
+
+       Criteria:
+       - Datastore is accessible
+       - Datastore is not in maintenance mode (optional)
+       - Datastore is of a supported disk type
+       - Datastore matches the supplied regex (optional)
+
+       :param propdict: datastore summary dict
+       :param datastore_regex : Regex to match the name of a datastore.
+    """
+
+    # Local storage identifier vSphere doesn't support CIFS or
+    # vfat for datastores, therefore filtered
+    return (propdict.get('summary.accessible') and
+            (propdict.get('summary.maintenanceMode') is None or
+             propdict.get('summary.maintenanceMode') == 'normal') and
+            propdict['summary.type'] in ALLOWED_DATASTORE_TYPES and
+            (datastore_regex is None or
+             datastore_regex.match(propdict['summary.name'])))
 
 
 def get_datastore(session, cluster=None, host=None, datastore_regex=None):
@@ -226,7 +244,8 @@ def get_datastore(session, cluster=None, host=None, datastore_regex=None):
         data_stores = session._call_method(vim_util, "get_objects",
                     "Datastore", ["summary.type", "summary.name",
                                   "summary.capacity", "summary.freeSpace",
-                                  "summary.accessible"])
+                                  "summary.accessible",
+                                  "summary.maintenanceMode"])
     else:
         if cluster is not None:
             datastore_ret = session._call_method(
@@ -247,7 +266,8 @@ def get_datastore(session, cluster=None, host=None, datastore_regex=None):
                                 "Datastore", data_store_mors,
                                 ["summary.type", "summary.name",
                                  "summary.capacity", "summary.freeSpace",
-                                 "summary.accessible"])
+                                 "summary.accessible",
+                                 "summary.maintenanceMode"])
     best_match = None
     while data_stores:
         best_match = _select_datastore(data_stores, best_match,
@@ -268,7 +288,7 @@ def get_datastore(session, cluster=None, host=None, datastore_regex=None):
         raise exception.DatastoreNotFound()
 
 
-def _get_allowed_datastores(data_stores, datastore_regex, allowed_types):
+def _get_allowed_datastores(data_stores, datastore_regex):
     allowed = []
     for obj_content in data_stores.objects:
         # the propset attribute "need not be set" by returning API
@@ -276,13 +296,9 @@ def _get_allowed_datastores(data_stores, datastore_regex, allowed_types):
             continue
 
         propdict = vm_util.propset_dict(obj_content.propSet)
-        # Local storage identifier vSphere doesn't support CIFS or
-        # vfat for datastores, therefore filtered
-        ds_type = propdict['summary.type']
-        ds_name = propdict['summary.name']
-        if (propdict['summary.accessible'] and ds_type in allowed_types):
-            if datastore_regex is None or datastore_regex.match(ds_name):
-                allowed.append(Datastore(ref=obj_content.obj, name=ds_name))
+        if _is_datastore_valid(propdict, datastore_regex):
+            allowed.append(Datastore(ref=obj_content.obj,
+                                     name=propdict['summary.name']))
 
     return allowed
 
@@ -304,12 +320,12 @@ def get_available_datastores(session, cluster=None, datastore_regex=None):
     data_stores = session._call_method(vim_util,
             "get_properties_for_a_collection_of_objects",
             "Datastore", data_store_mors,
-            ["summary.type", "summary.name", "summary.accessible"])
+            ["summary.type", "summary.name", "summary.accessible",
+            "summary.maintenanceMode"])
 
     allowed = []
     while data_stores:
-        allowed.extend(_get_allowed_datastores(data_stores, datastore_regex,
-                                               ['VMFS', 'NFS']))
+        allowed.extend(_get_allowed_datastores(data_stores, datastore_regex))
         token = _get_token(data_stores)
         if not token:
             break

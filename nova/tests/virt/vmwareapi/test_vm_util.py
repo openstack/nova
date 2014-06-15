@@ -251,6 +251,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                 },
                 'backing': {
                     'datastore': {
+                        "summary.maintenanceMode": "normal",
                         "summary.type": "VMFS",
                         "summary.accessible":true,
                         "summary.name": "fake-ds",
