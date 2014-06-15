@@ -5413,8 +5413,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(msg.event_type,
                          'compute.instance.live_migration.post.dest.end')
 
-        return self.compute.conductor_api.instance_get_by_uuid(self.admin_ctxt,
-                                                        self.instance['uuid'])
+        return objects.Instance.get_by_uuid(self.admin_ctxt,
+                                            self.instance['uuid'])
 
     def test_post_live_migration_at_destination_with_compute_info(self):
         """The instance's node property should be updated correctly."""
