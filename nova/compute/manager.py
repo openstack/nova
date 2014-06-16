@@ -2709,6 +2709,13 @@ class ComputeManager(manager.Manager):
 
         self._notify_about_instance_usage(context, instance, "reboot.end")
 
+    @delete_image_on_error
+    def _do_snapshot_instance(self, context, image_id, instance, rotation):
+        if rotation < 0:
+            raise exception.RotationRequiredForBackup()
+        self._snapshot_instance(context, image_id, instance,
+                                task_states.IMAGE_BACKUP)
+
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
@@ -2719,10 +2726,7 @@ class ComputeManager(manager.Manager):
         :param backup_type: daily | weekly
         :param rotation: int representing how many backups to keep around
         """
-        if rotation < 0:
-            raise exception.RotationRequiredForBackup()
-        self._snapshot_instance(context, image_id, instance,
-                                task_states.IMAGE_BACKUP)
+        self._do_snapshot_instance(context, image_id, instance, rotation)
         self._rotate_backups(context, instance, backup_type, rotation)
 
     @wrap_exception()
