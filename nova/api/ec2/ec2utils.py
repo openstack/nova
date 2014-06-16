@@ -315,18 +315,18 @@ def get_int_id_from_volume_uuid(context, volume_uuid):
     if volume_uuid is None:
         return
     try:
-        vmap = ec2_obj.VolumeMapping.get_by_uuid(context, volume_uuid)
+        vmap = ec2_obj.EC2VolumeMapping.get_by_uuid(context, volume_uuid)
         return vmap.id
     except exception.NotFound:
-        vmap = ec2_obj.VolumeMapping()
+        vmap = ec2_obj.EC2VolumeMapping(context)
         vmap.uuid = volume_uuid
-        vmap.create(context)
+        vmap.create()
         return vmap.id
 
 
 @memoize
 def get_volume_uuid_from_int_id(context, int_id):
-    vmap = ec2_obj.VolumeMapping.get_by_id(context, int_id)
+    vmap = ec2_obj.EC2VolumeMapping.get_by_id(context, int_id)
     return vmap.uuid
 
 

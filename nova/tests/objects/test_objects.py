@@ -874,6 +874,7 @@ object_data = {
     'DNSDomain': '1.0-54455ffc071515a2052a70a37d674435',
     'DNSDomainList': '1.0-7d1165619956062314f5f2c4d1bb61ba',
     'EC2InstanceMapping': '1.0-c9ebf3e641800d1f453ef9f19b159971',
+    'EC2VolumeMapping': '1.0-f376082f497bba08583119ef7cbbb07e',
     'FixedIP': '1.1-70b8c86daf93913c7bb11afc901dda76',
     'FixedIPList': '1.1-cbe7d8ff7eea9d3aecb7d537e1007742',
     'Flavor': '1.0-2956744a9d1edd729bf8bf0dcc98c235',
@@ -912,7 +913,6 @@ object_data = {
     'TestSubclassedObject': '1.6-5e9f181288c104ae0d1aad6f8c0d40b9',
     'VirtualInterface': '1.0-513adc400c9c4dfcbd0a638a0a415183',
     'VirtualInterfaceList': '1.0-15f2f3e0517805f585b402ab1547ba92',
-    'VolumeMapping': '1.0-f376082f497bba08583119ef7cbbb07e'
     }
 
 

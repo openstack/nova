@@ -852,9 +852,9 @@ class CloudController(object):
                                         kwargs.get('description'),
                                         **create_kwargs)
 
-        vmap = ec2_obj.VolumeMapping()
+        vmap = ec2_obj.EC2VolumeMapping(context)
         vmap.uuid = volume['id']
-        vmap.create(context)
+        vmap.create()
 
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into
