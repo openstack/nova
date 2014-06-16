@@ -5927,12 +5927,15 @@ class LibvirtDriver(driver.ComputeDriver):
         LOG.debug("Starting migrate_disk_and_power_off",
                    instance=instance)
 
+        ephemerals = driver.block_device_info_get_ephemerals(block_device_info)
+        eph_size = block_device.get_bdm_ephemeral_disk_size(ephemerals)
+
         # Checks if the migration needs a disk resize down.
-        for kind in ('root_gb', 'ephemeral_gb'):
-            if flavor[kind] < instance[kind]:
-                reason = _("Unable to resize disk down.")
-                raise exception.InstanceFaultRollback(
-                    exception.ResizeError(reason=reason))
+        if (flavor['root_gb'] < instance.root_gb or
+            flavor['ephemeral_gb'] < eph_size):
+            reason = _("Unable to resize disk down.")
+            raise exception.InstanceFaultRollback(
+                exception.ResizeError(reason=reason))
 
         disk_info_text = self.get_instance_disk_info(instance['name'],
                 block_device_info=block_device_info)
