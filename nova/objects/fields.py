@@ -571,6 +571,10 @@ class ListOfStringsField(AutoTypedField):
     AUTO_TYPE = List(String())
 
 
+class ListOfDictOfNullableStringsField(AutoTypedField):
+    AUTO_TYPE = List(Dict(String(), nullable=True))
+
+
 class ObjectField(AutoTypedField):
     def __init__(self, objtype, **kwargs):
         self.AUTO_TYPE = Object(objtype)
