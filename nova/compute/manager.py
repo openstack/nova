@@ -433,7 +433,7 @@ class InstanceEvents(object):
         :param event_name: the name of the event we're expecting
         :returns: an event object that should be wait()'d on
         """
-        @utils.synchronized(self._lock_name)
+        @utils.synchronized(self._lock_name(instance))
         def _create_or_get_event():
             if instance.uuid not in self._events:
                 self._events.setdefault(instance.uuid, {})
@@ -455,7 +455,7 @@ class InstanceEvents(object):
         :returns: the eventlet.event.Event object on which the waiters
                   are blocked
         """
-        @utils.synchronized(self._lock_name)
+        @utils.synchronized(self._lock_name(instance))
         def _pop_event():
             events = self._events.get(instance.uuid)
             if not events:
@@ -475,7 +475,7 @@ class InstanceEvents(object):
         :param instance: the instance for which events should be purged
         :returns: a dictionary of {event_name: eventlet.event.Event}
         """
-        @utils.synchronized(self._lock_name)
+        @utils.synchronized(self._lock_name(instance))
         def _clear_events():
             # NOTE(danms): Use getitem syntax for the instance until
             # all the callers are using objects
