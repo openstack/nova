@@ -16,6 +16,7 @@ import mock
 import netaddr
 
 from nova import exception
+from nova import objects
 from nova.objects import floating_ip
 from nova.tests.objects import test_fixed_ip
 from nova.tests.objects import test_network
@@ -188,6 +189,37 @@ class _TestFloatingIPObject(object):
             self.context, {'uuid': '1234'})
         self.assertEqual(expected, ips)
         get_all.assert_called_once_with(self.context, '1234')
+
+    def test_make_ip_info(self):
+        result = objects.FloatingIPList.make_ip_info('1.2.3.4', 'pool', 'eth0')
+        self.assertEqual({'address': '1.2.3.4', 'pool': 'pool',
+                          'interface': 'eth0'},
+                         result)
+
+    @mock.patch('nova.db.floating_ip_bulk_create')
+    def test_bulk_create(self, create_mock):
+        def fake_create(ctxt, ip_info):
+            return [{'id': 1, 'address': ip['address'], 'fixed_ip_id': 1,
+                     'project_id': 'foo', 'host': 'host',
+                     'auto_assigned': False, 'pool': ip['pool'],
+                     'interface': ip['interface'], 'fixed_ip': None,
+                     'created_at': None, 'updated_at': None,
+                     'deleted_at': None, 'deleted': False}
+                    for ip in ip_info]
+
+        create_mock.side_effect = fake_create
+        ips = [objects.FloatingIPList.make_ip_info('1.1.1.1', 'pool', 'eth0'),
+               objects.FloatingIPList.make_ip_info('1.1.1.2', 'loop', 'eth1')]
+        result = objects.FloatingIPList.create(None, ips)
+        self.assertIs(result, None)
+        result = objects.FloatingIPList.create(None, ips, want_result=True)
+        self.assertEqual('1.1.1.2', str(result[1].address))
+
+    @mock.patch('nova.db.floating_ip_bulk_destroy')
+    def test_bulk_destroy(self, destroy_mock):
+        ips = [{'address': '1.2.3.4'}, {'address': '4.5.6.7'}]
+        objects.FloatingIPList.destroy(None, ips)
+        destroy_mock.assert_called_once_with(None, ips)
 
 
 class TestFloatingIPObject(test_objects._LocalTest,
