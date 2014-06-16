@@ -24,7 +24,7 @@ from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova import conductor
 from nova import exception
-from nova.i18n import _, _LW
+from nova.i18n import _, _LE, _LW
 from nova.network import base_api
 from nova.network import model as network_model
 from nova.network import neutronv2
@@ -219,7 +219,7 @@ class API(base_api.NetworkAPI):
             raise exception.NoMoreFixedIps()
         except neutron_client_exc.NeutronClientException:
             with excutils.save_and_reraise_exception():
-                LOG.exception(_('Neutron error creating port on network %s'),
+                LOG.exception(_LE('Neutron error creating port on network %s'),
                               network_id, instance=instance)
 
     def allocate_for_instance(self, context, instance, **kwargs):
@@ -287,7 +287,7 @@ class API(base_api.NetworkAPI):
                                             net_ids)
 
         if not nets:
-            LOG.warn(_("No network configured!"), instance=instance)
+            LOG.warn(_LW("No network configured!"), instance=instance)
             return network_model.NetworkInfo([])
 
         security_groups = kwargs.get('security_groups', [])
@@ -377,14 +377,14 @@ class API(base_api.NetworkAPI):
                                 port_client = neutron
                             port_client.update_port(port_id, port_req_body)
                         except Exception:
-                            msg = _("Failed to update port %s")
+                            msg = _LE("Failed to update port %s")
                             LOG.exception(msg, port_id)
 
                     for port_id in created_port_ids:
                         try:
                             neutron.delete_port(port_id)
                         except Exception:
-                            msg = _("Failed to delete port %s")
+                            msg = _LE("Failed to delete port %s")
                             LOG.exception(msg, port_id)
 
         nw_info = self.get_instance_nw_info(context, instance, networks=nets,
@@ -455,10 +455,10 @@ class API(base_api.NetworkAPI):
                 neutron.delete_port(port)
             except neutronv2.exceptions.NeutronClientException as e:
                 if e.status_code == 404:
-                    LOG.warning(_("Port %s does not exist"), port)
+                    LOG.warning(_LW("Port %s does not exist"), port)
                 else:
                     with excutils.save_and_reraise_exception():
-                        LOG.exception(_("Failed to delete neutron port %s"),
+                        LOG.exception(_LE("Failed to delete neutron port %s"),
                                       port)
 
         # NOTE(arosen): This clears out the network_cache only if the instance
@@ -482,7 +482,7 @@ class API(base_api.NetworkAPI):
         try:
             neutronv2.get_client(context).delete_port(port_id)
         except Exception:
-            LOG.exception(_("Failed to delete neutron port %s") %
+            LOG.exception(_LE("Failed to delete neutron port %s"),
                           port_id)
 
         return self.get_instance_nw_info(context, instance)
@@ -655,7 +655,7 @@ class API(base_api.NetworkAPI):
                             port = None
                         else:
                             with excutils.save_and_reraise_exception():
-                                LOG.exception(_("Failed to access port %s"),
+                                LOG.exception(_LE("Failed to access port %s"),
                                               port_id)
                     if not port:
                         raise exception.PortNotFound(port_id=port_id)
@@ -884,7 +884,7 @@ class API(base_api.NetworkAPI):
                 raise exception.FloatingIpNotFound(id=id)
             else:
                 with excutils.save_and_reraise_exception():
-                    LOG.exception(_('Unable to access floating IP %s'), id)
+                    LOG.exception(_LE('Unable to access floating IP %s'), id)
         pool_dict = self._setup_net_dict(client,
                                          fip['floating_network_id'])
         port_dict = self._setup_port_dict(client, fip['port_id'])
@@ -1016,8 +1016,8 @@ class API(base_api.NetworkAPI):
             if e.status_code == 404:
                 return []
             with excutils.save_and_reraise_exception():
-                LOG.exception(_('Unable to access floating IP %(fixed_ip)s '
-                                'for port %(port_id)s'),
+                LOG.exception(_LE('Unable to access floating IP %(fixed_ip)s '
+                                  'for port %(port_id)s'),
                               {'fixed_ip': fixed_ip, 'port_id': port})
         return data['floatingips']
 
@@ -1075,7 +1075,7 @@ class API(base_api.NetworkAPI):
                 neutron.update_port(p['id'], port_req_body)
             except Exception:
                 with excutils.save_and_reraise_exception():
-                    msg = _("Unable to update host of port %s")
+                    msg = _LE("Unable to update host of port %s")
                     LOG.exception(msg, p['id'])
 
     def add_network_to_project(self, context, project_id, network_uuid=None):
@@ -1111,9 +1111,9 @@ class API(base_api.NetworkAPI):
                 break
         else:
             tenant_id = port['tenant_id']
-            LOG.warning(_("Network %(id)s not matched with the tenants "
-                          "network! The ports tenant %(tenant_id)s will be "
-                          "used."),
+            LOG.warning(_LW("Network %(id)s not matched with the tenants "
+                            "network! The ports tenant %(tenant_id)s will be "
+                            "used."),
                         {'id': port['network_id'], 'tenant_id': tenant_id})
 
         bridge = None
