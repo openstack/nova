@@ -17,8 +17,8 @@ from oslo.config import cfg
 import webob.exc
 
 from nova.api.openstack import extensions
-from nova import db
 from nova import exception
+from nova import objects
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
@@ -52,22 +52,22 @@ class FloatingIPBulkController(object):
 
         if host is None:
             try:
-                floating_ips = db.floating_ip_get_all(context)
+                floating_ips = objects.FloatingIPList.get_all(context)
             except exception.NoFloatingIpsDefined:
                 return floating_ip_info
         else:
             try:
-                floating_ips = db.floating_ip_get_all_by_host(context, host)
+                floating_ips = objects.FloatingIPList.get_by_host(context,
+                                                                  host)
             except exception.FloatingIpNotFoundForHost as e:
                 raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         for floating_ip in floating_ips:
             instance_uuid = None
-            if floating_ip['fixed_ip_id']:
-                fixed_ip = db.fixed_ip_get(context, floating_ip['fixed_ip_id'])
-                instance_uuid = fixed_ip['instance_uuid']
+            if floating_ip.fixed_ip:
+                instance_uuid = floating_ip.fixed_ip.instance_uuid
 
-            result = {'address': floating_ip['address'],
+            result = {'address': str(floating_ip['address']),
                       'pool': floating_ip['pool'],
                       'interface': floating_ip['interface'],
                       'project_id': floating_ip['project_id'],
@@ -95,15 +95,13 @@ class FloatingIPBulkController(object):
         interface = params.get('interface', CONF.public_interface)
 
         try:
-            ips = ({'address': str(address),
-                    'pool': pool,
-                    'interface': interface}
-                   for address in self._address_to_hosts(ip_range))
+            ips = [objects.FloatingIPList.make_ip_info(addr, pool, interface)
+                   for addr in self._address_to_hosts(ip_range)]
         except exception.InvalidInput as exc:
             raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
 
         try:
-            db.floating_ip_bulk_create(context, ips)
+            objects.FloatingIPList.create(context, ips)
         except exception.FloatingIpExists as exc:
             raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
 
@@ -126,11 +124,11 @@ class FloatingIPBulkController(object):
             raise webob.exc.HTTPUnprocessableEntity()
 
         try:
-            ips = ({'address': str(address)}
+            ips = (objects.FloatingIPList.make_ip_info(address, None, None)
                    for address in self._address_to_hosts(ip_range))
         except exception.InvalidInput as exc:
             raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
-        db.floating_ip_bulk_destroy(context, ips)
+        objects.FloatingIPList.destroy(context, ips)
 
         return {"floating_ips_bulk_delete": ip_range}
 
