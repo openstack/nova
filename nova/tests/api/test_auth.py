@@ -12,14 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 from oslo.config import cfg
 import webob
 import webob.exc
 
 import nova.api.auth
 from nova.i18n import _
+from nova.openstack.common import jsonutils
 from nova.openstack.common.middleware import request_id
 from nova import test
 
@@ -41,7 +40,7 @@ class TestNovaKeystoneContextMiddleware(test.NoDBTestCase):
         self.request = webob.Request.blank('/')
         self.request.headers['X_TENANT_ID'] = 'testtenantid'
         self.request.headers['X_AUTH_TOKEN'] = 'testauthtoken'
-        self.request.headers['X_SERVICE_CATALOG'] = json.dumps({})
+        self.request.headers['X_SERVICE_CATALOG'] = jsonutils.dumps({})
 
     def test_no_user_or_user_id(self):
         response = self.request.get_response(self.middleware)
@@ -102,7 +101,7 @@ class TestKeystoneMiddlewareRoles(test.NoDBTestCase):
         self.request.headers['X_USER'] = 'testuser'
         self.request.headers['X_TENANT_ID'] = 'testtenantid'
         self.request.headers['X_AUTH_TOKEN'] = 'testauthtoken'
-        self.request.headers['X_SERVICE_CATALOG'] = json.dumps({})
+        self.request.headers['X_SERVICE_CATALOG'] = jsonutils.dumps({})
 
         self.roles = "pawn, knight, rook"
 

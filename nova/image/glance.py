@@ -19,7 +19,6 @@ from __future__ import absolute_import
 
 import copy
 import itertools
-import json
 import random
 import sys
 import time
@@ -126,7 +125,7 @@ def generate_identity_headers(context, status='Confirmed'):
         'X-Tenant-Id': getattr(context, 'tenant', None),
         'X-Roles': ','.join(context.roles),
         'X-Identity-Status': status,
-        'X-Service-Catalog': json.dumps(context.service_catalog),
+        'X-Service-Catalog': jsonutils.dumps(context.service_catalog),
     }
 
 

@@ -12,9 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
 import re
 
+from nova.openstack.common import jsonutils
 from nova.tests.integrated.v3 import test_servers
 
 
@@ -23,7 +23,7 @@ class ConsoleAuthTokensSampleJsonTests(test_servers.ServersSampleBase):
     extra_extensions_to_load = ["os-remote-consoles"]
 
     def _get_console_url(self, data):
-        return json.loads(data)["console"]["url"]
+        return jsonutils.loads(data)["console"]["url"]
 
     def _get_console_token(self, uuid):
         response = self._do_post('servers/%s/action' % uuid,

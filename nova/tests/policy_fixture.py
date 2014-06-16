@@ -12,12 +12,12 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import json
 import os
 
 import fixtures
 from oslo.config import cfg
 
+from nova.openstack.common import jsonutils
 from nova.openstack.common import policy as common_policy
 import nova.policy
 from nova.tests import fake_policy
@@ -56,7 +56,7 @@ class RoleBasedPolicyFixture(fixtures.Fixture):
            allow users of the specified role only
         """
         super(RoleBasedPolicyFixture, self).setUp()
-        policy = json.load(open(CONF.policy_file))
+        policy = jsonutils.load(open(CONF.policy_file))
 
         # Convert all actions to require specified role
         for action, rule in policy.iteritems():
@@ -66,7 +66,7 @@ class RoleBasedPolicyFixture(fixtures.Fixture):
         self.policy_file_name = os.path.join(self.policy_dir.path,
                                             'policy.json')
         with open(self.policy_file_name, 'w') as policy_file:
-            json.dump(policy, policy_file)
+            jsonutils.dump(policy, policy_file)
         CONF.set_override('policy_file', self.policy_file_name)
         nova.policy.reset()
         nova.policy.init()

@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 import mock
 import webob
 
@@ -21,6 +19,7 @@ from nova.api.openstack.compute.plugins.v3 import server_external_events
 from nova import context
 from nova import exception
 from nova import objects
+from nova.openstack.common import jsonutils
 from nova import test
 
 fake_instances = {
@@ -66,7 +65,7 @@ class ServerExternalEventsTest(test.NoDBTestCase):
         req.method = 'POST'
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
-        req.body = json.dumps(body)
+        req.body = jsonutils.dumps(body)
         return req
 
     def _assert_call(self, req, body, expected_uuids, expected_events):
