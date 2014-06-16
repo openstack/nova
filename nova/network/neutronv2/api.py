@@ -170,7 +170,7 @@ class API(base_api.NetworkAPI):
             if available_macs is not None:
                 if not available_macs:
                     raise exception.PortNotFree(
-                        instance=instance['display_name'])
+                        instance=instance['uuid'])
                 mac_address = available_macs.pop()
                 port_req_body['port']['mac_address'] = mac_address
             if dhcp_opts is not None:
@@ -216,12 +216,11 @@ class API(base_api.NetworkAPI):
             # pre-allocated port we also remove it from this set.
             available_macs = set(hypervisor_macs)
         neutron = neutronv2.get_client(context)
-        LOG.debug('allocate_for_instance() for %s',
-                  instance['display_name'])
+        LOG.debug('allocate_for_instance()', instance=instance)
         if not instance['project_id']:
             msg = _('empty project id for instance %s')
             raise exception.InvalidInput(
-                reason=msg % instance['display_name'])
+                reason=msg % instance['uuid'])
         requested_networks = kwargs.get('requested_networks')
         dhcp_opts = kwargs.get('dhcp_options', None)
         ports = {}
@@ -236,7 +235,7 @@ class API(base_api.NetworkAPI):
                     if hypervisor_macs is not None:
                         if port['mac_address'] not in hypervisor_macs:
                             raise exception.PortNotUsable(port_id=port_id,
-                                instance=instance['display_name'])
+                                instance=instance['uuid'])
                         else:
                             # Don't try to use this MAC if we need to create a
                             # port on the fly later. Identical MACs may be
@@ -398,8 +397,7 @@ class API(base_api.NetworkAPI):
 
     def deallocate_for_instance(self, context, instance, **kwargs):
         """Deallocate all network resources related to the instance."""
-        LOG.debug('deallocate_for_instance() for %s',
-                  instance['display_name'])
+        LOG.debug('deallocate_for_instance()', instance=instance)
         search_opts = {'device_id': instance['uuid']}
         neutron = neutronv2.get_client(context)
         data = neutron.list_ports(**search_opts)
@@ -472,7 +470,7 @@ class API(base_api.NetworkAPI):
                               port_ids=None):
         # keep this caching-free version of the get_instance_nw_info method
         # because it is used by the caching logic itself.
-        LOG.debug('get_instance_nw_info() for %s', instance['display_name'])
+        LOG.debug('get_instance_nw_info()', instance=instance)
         nw_info = self._build_network_info_model(context, instance, networks,
                                                  port_ids)
         return network_model.NetworkInfo.hydrate(nw_info)
