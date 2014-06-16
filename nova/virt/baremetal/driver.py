@@ -115,8 +115,15 @@ class BareMetalDriver(driver.ComputeDriver):
         "supports_recreate": False,
         }
 
+    def _do_deprecation_warning(self):
+        LOG.warning(_('The baremetal driver is deprecated, untested, '
+                      'unmaintained and will be replaced by an Ironic '
+                      'driver in the future.'))
+
     def __init__(self, virtapi, read_only=False):
         super(BareMetalDriver, self).__init__(virtapi)
+
+        self._do_deprecation_warning()
 
         self.driver = importutils.import_object(
                 CONF.baremetal.driver, virtapi)
