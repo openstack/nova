@@ -64,7 +64,7 @@ def init():
     from nova.openstack.common import log as logging
     LOG = logging.getLogger(__name__)
 
-    LOG.debug(_('Listening on %(host)s:%(port)s for debug connection'),
+    LOG.debug('Listening on %(host)s:%(port)s for debug connection',
               {'host': CONF.remote_debug.host,
                'port': CONF.remote_debug.port})
 

@@ -181,7 +181,7 @@ class Service(service.Service):
         if self.backdoor_port is not None:
             self.manager.backdoor_port = self.backdoor_port
 
-        LOG.debug(_("Creating RPC server for service %s") % self.topic)
+        LOG.debug("Creating RPC server for service %s", self.topic)
 
         target = messaging.Target(topic=self.topic, server=self.host)
 
@@ -198,8 +198,8 @@ class Service(service.Service):
 
         self.manager.post_start_hook()
 
-        LOG.debug(_("Join ServiceGroup membership for this service %s")
-                  % self.topic)
+        LOG.debug("Join ServiceGroup membership for this service %s",
+                  self.topic)
         # Add service to the ServiceGroup membership group.
         self.servicegroup_api.join(self.host, self.topic, self)
 

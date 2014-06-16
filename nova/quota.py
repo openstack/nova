@@ -1300,7 +1300,7 @@ class QuotaEngine(object):
                                             project_id=project_id,
                                             user_id=user_id)
 
-        LOG.debug(_("Created reservations %s"), reservations)
+        LOG.debug("Created reservations %s", reservations)
 
         return reservations
 
@@ -1325,7 +1325,7 @@ class QuotaEngine(object):
             # logged, however, because this is less than optimal.
             LOG.exception(_("Failed to commit reservations %s"), reservations)
             return
-        LOG.debug(_("Committed reservations %s"), reservations)
+        LOG.debug("Committed reservations %s", reservations)
 
     def rollback(self, context, reservations, project_id=None, user_id=None):
         """Roll back reservations.
@@ -1349,7 +1349,7 @@ class QuotaEngine(object):
             LOG.exception(_("Failed to roll back reservations %s"),
                           reservations)
             return
-        LOG.debug(_("Rolled back reservations %s"), reservations)
+        LOG.debug("Rolled back reservations %s", reservations)
 
     def usage_reset(self, context, resources):
         """Reset the usage records for a particular user on a list of

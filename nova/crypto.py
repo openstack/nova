@@ -390,7 +390,7 @@ def _sign_csr(csr_text, ca_folder):
             with excutils.save_and_reraise_exception():
                 LOG.exception(_('Failed to write inbound.csr'))
 
-        LOG.debug(_('Flags path: %s'), ca_folder)
+        LOG.debug('Flags path: %s', ca_folder)
         start = os.getcwd()
 
         # Change working dir to CA
