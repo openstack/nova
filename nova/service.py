@@ -170,7 +170,8 @@ class Service(service.Service):
         except exception.NotFound:
             try:
                 self.service_ref = self._create_service_ref(ctxt)
-            except exception.ServiceTopicExists:
+            except (exception.ServiceTopicExists,
+                    exception.ServiceBinaryExists):
                 # NOTE(danms): If we race to create a record with a sibling
                 # worker, don't fail here.
                 self.service_ref = self.conductor_api.service_get_by_args(ctxt,
