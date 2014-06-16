@@ -88,7 +88,6 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject):
         if 'instance' in updates:
             raise exception.ObjectActionError(action='create',
                                               reason='instance assigned')
-        updates.pop('id', None)
 
         db_bdm = db.block_device_mapping_create(context, updates, legacy=False)
         cells_api = cells_rpcapi.CellsAPI()

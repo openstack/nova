@@ -330,7 +330,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
         updates = self.obj_get_changes()
-        updates.pop('id', None)
         expected_attrs = [attr for attr in INSTANCE_DEFAULT_FIELDS
                           if attr in updates]
         if 'security_groups' in updates:

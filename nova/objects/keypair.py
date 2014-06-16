@@ -54,7 +54,6 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
         updates = self.obj_get_changes()
-        updates.pop('id', None)
         db_keypair = db.key_pair_create(context, updates)
         self._from_db_object(context, self, db_keypair)
 

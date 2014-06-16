@@ -62,7 +62,6 @@ class Migration(base.NovaPersistentObject, base.NovaObject):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
         updates = self.obj_get_changes()
-        updates.pop('id', None)
         db_migration = db.migration_create(context, updates)
         self._from_db_object(context, self, db_migration)
 

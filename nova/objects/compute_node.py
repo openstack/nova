@@ -91,7 +91,6 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
         updates = self.obj_get_changes()
-        updates.pop('id', None)
         self._convert_stats_to_db_format(updates)
 
         db_compute = db.compute_node_create(context, updates)
