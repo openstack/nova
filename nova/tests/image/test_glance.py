@@ -197,17 +197,17 @@ class TestGlanceImageService(test.NoDBTestCase):
         writer = NullWriter()
 
         # When retries are disabled, we should get an exception
-        self.flags(glance_num_retries=0)
+        self.flags(num_retries=0, group='glance')
         self.assertRaises(exception.GlanceConnectionFailed,
                 service.download, self.context, image_id, data=writer)
 
         # Now lets enable retries. No exception should happen now.
         tries = [0]
-        self.flags(glance_num_retries=1)
+        self.flags(num_retries=1, group='glance')
         service.download(self.context, image_id, data=writer)
 
     def test_download_file_url(self):
-        self.flags(allowed_direct_url_schemes=['file'])
+        self.flags(allowed_direct_url_schemes=['file'], group='glance')
 
         class MyGlanceStubClient(glance_stubs.StubGlanceClient):
             """A client that returns a file url."""
@@ -264,7 +264,7 @@ class TestGlanceImageService(test.NoDBTestCase):
 
         image_id = 1  # doesn't matter
         client = MyGlanceStubClient()
-        self.flags(allowed_direct_url_schemes=['file'])
+        self.flags(allowed_direct_url_schemes=['file'], group='glance')
         self.flags(group='image_file_url', filesystems=['gluster'])
         service = self._create_image_service(client)
         #NOTE(Jbresnah) The following options must be added after the module
@@ -304,7 +304,7 @@ class TestGlanceImageService(test.NoDBTestCase):
 
         image_id = 1  # doesn't matter
         client = MyGlanceStubClient()
-        self.flags(allowed_direct_url_schemes=['file'])
+        self.flags(allowed_direct_url_schemes=['file'], group='glance')
         self.flags(group='image_file_url', filesystems=['gluster'])
         service = self._create_image_service(client)
         #NOTE(Jbresnah) The following options must be added after the module
@@ -345,7 +345,7 @@ class TestGlanceImageService(test.NoDBTestCase):
             self.copy_called = True
         self.stubs.Set(lv_utils, 'copy_image', _fake_copyfile)
 
-        self.flags(allowed_direct_url_schemes=['file'])
+        self.flags(allowed_direct_url_schemes=['file'], group='glance')
         self.flags(group='image_file_url', filesystems=['gluster'])
         image_id = 1  # doesn't matter
         client = MyGlanceStubClient()
@@ -372,10 +372,10 @@ class TestGlanceImageService(test.NoDBTestCase):
                 self.data_called = True
                 return "someData"
 
-        self.flags(allowed_direct_url_schemes=['applesauce'])
+        self.flags(allowed_direct_url_schemes=['applesauce'], group='glance')
 
         self.mox.StubOutWithMock(lv_utils, 'copy_image')
-        self.flags(allowed_direct_url_schemes=['file'])
+        self.flags(allowed_direct_url_schemes=['file'], group='glance')
         image_id = 1  # doesn't matter
         client = MyGlanceStubClient()
         service = self._create_image_service(client)
@@ -1023,8 +1023,8 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
     def setUp(self):
         super(TestGlanceClientWrapper, self).setUp()
         # host1 has no scheme, which is http by default
-        self.flags(glance_api_servers=['host1:9292', 'https://host2:9293',
-            'http://host3:9294'])
+        self.flags(api_servers=['host1:9292', 'https://host2:9293',
+            'http://host3:9294'], group='glance')
 
         # Make the test run fast
         def _fake_sleep(secs):
@@ -1059,7 +1059,7 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
         glance._create_glance_client(ctxt, fake_host, fake_port, fake_use_ssl)
 
     def test_static_client_without_retries(self):
-        self.flags(glance_num_retries=0)
+        self.flags(num_retries=0, group='glance')
 
         ctxt = context.RequestContext('fake', 'fake')
         fake_host = 'host4'
@@ -1084,7 +1084,7 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
         self.assertEqual(info['num_calls'], 1)
 
     def test_default_client_without_retries(self):
-        self.flags(glance_num_retries=0)
+        self.flags(num_retries=0, group='glance')
 
         ctxt = context.RequestContext('fake', 'fake')
 
@@ -1129,7 +1129,7 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
         self.assertEqual(info['num_calls'], 1)
 
     def test_static_client_with_retries(self):
-        self.flags(glance_num_retries=1)
+        self.flags(num_retries=1, group='glance')
 
         ctxt = context.RequestContext('fake', 'fake')
         fake_host = 'host4'
@@ -1153,7 +1153,7 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
         self.assertEqual(info['num_calls'], 2)
 
     def test_default_client_with_retries(self):
-        self.flags(glance_num_retries=1)
+        self.flags(num_retries=1, group='glance')
 
         ctxt = context.RequestContext('fake', 'fake')
 
@@ -1207,30 +1207,30 @@ class TestGlanceUrl(test.NoDBTestCase):
 
     def test_generate_glance_http_url(self):
         generated_url = glance.generate_glance_url()
-        glance_host = CONF.glance_host
+        glance_host = CONF.glance.host
         # ipv6 address, need to wrap it with '[]'
         if utils.is_valid_ipv6(glance_host):
             glance_host = '[%s]' % glance_host
-        http_url = "http://%s:%d" % (glance_host, CONF.glance_port)
+        http_url = "http://%s:%d" % (glance_host, CONF.glance.port)
         self.assertEqual(generated_url, http_url)
 
     def test_generate_glance_https_url(self):
-        self.flags(glance_protocol="https")
+        self.flags(protocol="https", group='glance')
         generated_url = glance.generate_glance_url()
-        glance_host = CONF.glance_host
+        glance_host = CONF.glance.host
         # ipv6 address, need to wrap it with '[]'
         if utils.is_valid_ipv6(glance_host):
             glance_host = '[%s]' % glance_host
-        https_url = "https://%s:%d" % (glance_host, CONF.glance_port)
+        https_url = "https://%s:%d" % (glance_host, CONF.glance.port)
         self.assertEqual(generated_url, https_url)
 
 
 class TestGlanceApiServers(test.TestCase):
 
     def test_get_ipv4_api_servers(self):
-        self.flags(glance_api_servers=['10.0.1.1:9292',
-                              'https://10.0.0.1:9293',
-                              'http://10.0.2.2:9294'])
+        self.flags(api_servers=['10.0.1.1:9292',
+                                'https://10.0.0.1:9293',
+                                'http://10.0.2.2:9294'], group='glance')
         glance_host = ['10.0.1.1', '10.0.0.1',
                         '10.0.2.2']
         api_servers = glance.get_api_servers()
@@ -1244,9 +1244,10 @@ class TestGlanceApiServers(test.TestCase):
     # Python 2.6 can not parse ipv6 address correctly
     @testtools.skipIf(sys.version_info < (2, 7), "py27 or greater only")
     def test_get_ipv6_api_servers(self):
-        self.flags(glance_api_servers=['[2001:2012:1:f101::1]:9292',
-                              'https://[2010:2013:1:f122::1]:9293',
-                              'http://[2001:2011:1:f111::1]:9294'])
+        self.flags(api_servers=['[2001:2012:1:f101::1]:9292',
+                                'https://[2010:2013:1:f122::1]:9293',
+                                'http://[2001:2011:1:f111::1]:9294'],
+                   group='glance')
         glance_host = ['2001:2012:1:f101::1', '2010:2013:1:f122::1',
                         '2001:2011:1:f111::1']
         api_servers = glance.get_api_servers()

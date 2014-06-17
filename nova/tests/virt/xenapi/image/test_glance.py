@@ -33,9 +33,9 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         super(TestGlanceStore, self).setUp()
         self.store = glance.GlanceStore()
 
-        self.flags(glance_host='1.1.1.1',
-                   glance_port=123,
-                   glance_api_insecure=False)
+        self.flags(host='1.1.1.1',
+                   port=123,
+                   api_insecure=False, group='glance')
         self.flags(connection_url='test_url',
                    connection_password='test_pass',
                    group='xenserver')
@@ -99,7 +99,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
                                   mock_sleep, mock_shuffle,
                                   mock_make_uuid_stack):
         params = self._get_download_params()
-        self.flags(glance_num_retries=2)
+        self.flags(num_retries=2, group='glance')
 
         params.pop("glance_port")
         params.pop("glance_host")
@@ -118,7 +118,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
 
         glance_api_servers = ['10.0.1.1:9292',
                               'http://10.0.0.1:9293']
-        self.flags(glance_api_servers=glance_api_servers)
+        self.flags(api_servers=glance_api_servers, group='glance')
 
         with (mock.patch.object(self.session, 'call_plugin_serialized')
           ) as mock_call_plugin_serialized:
@@ -181,7 +181,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         self.mox.VerifyAll()
 
     def test_upload_image_retries_then_raises_exception(self):
-        self.flags(glance_num_retries=2)
+        self.flags(num_retries=2, group='glance')
         params = self._get_upload_params()
 
         self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
@@ -205,7 +205,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         self.mox.VerifyAll()
 
     def test_upload_image_retries_on_signal_exception(self):
-        self.flags(glance_num_retries=2)
+        self.flags(num_retries=2, group='glance')
         params = self._get_upload_params()
 
         self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')

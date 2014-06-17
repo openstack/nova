@@ -193,7 +193,7 @@ class ServersControllerTest(ControllerTest):
 
     def setUp(self):
         super(ServersControllerTest, self).setUp()
-        CONF.set_override('glance_host', 'localhost')
+        CONF.set_override('host', 'localhost', group='glance')
 
     def test_requested_networks_prefix(self):
         uuid = 'br-00000000-0000-0000-0000-000000000000'
@@ -2552,7 +2552,7 @@ class ServersViewBuilderTest(test.TestCase):
 
     def setUp(self):
         super(ServersViewBuilderTest, self).setUp()
-        CONF.set_override('glance_host', 'localhost')
+        CONF.set_override('host', 'localhost', group='glance')
         self.flags(use_ipv6=True)
         db_inst = fakes.stub_instance(
             id=1,
