@@ -1,0 +1,92 @@
+# Translations template for nova.
+# Copyright (C) 2014 ORGANIZATION
+# This file is distributed under the same license as the nova project.
+#
+# Translators:
+msgid ""
+msgstr ""
+"Project-Id-Version: nova\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2014-06-17 06:07+0000\n"
+"PO-Revision-Date: 2014-06-14 19:30+0000\n"
+"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"Language-Team: English (United Kingdom) (http://www.transifex.com/projects/p/"
+"nova/language/en_GB/)\n"
+"Language: en_GB\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 1.3\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: nova/objects/instance_fault.py:86
+msgid "Failed to notify cells of instance fault"
+msgstr "Failed to notify cells of instance fault"
+
+#: nova/openstack/common/excutils.py:76
+#, python-format
+msgid "Original exception being dropped: %s"
+msgstr "Original exception being dropped: %s"
+
+#: nova/openstack/common/excutils.py:105
+#, python-format
+msgid "Unexpected exception occurred %d time(s)... retrying."
+msgstr "Unexpected exception occurred %d time(s)... retrying."
+
+#: nova/openstack/common/loopingcall.py:89
+msgid "in fixed duration looping call"
+msgstr "in fixed duration looping call"
+
+#: nova/openstack/common/loopingcall.py:136
+msgid "in dynamic looping call"
+msgstr "in dynamic looping call"
+
+#: nova/openstack/common/periodic_task.py:179
+#, python-format
+msgid "Error during %(full_task_name)s: %(e)s"
+msgstr "Error during %(full_task_name)s: %(e)s"
+
+#: nova/openstack/common/policy.py:511
+#, python-format
+msgid "Failed to understand rule %s"
+msgstr "Failed to understand rule %s"
+
+#: nova/openstack/common/policy.py:521
+#, python-format
+msgid "No handler for matches of kind %s"
+msgstr "No handler for matches of kind %s"
+
+#: nova/openstack/common/policy.py:791
+#, python-format
+msgid "Failed to understand rule %r"
+msgstr "Failed to understand rule %r"
+
+#: nova/openstack/common/service.py:188
+msgid "Exception during rpc cleanup."
+msgstr "Exception during rpc cleanup."
+
+#: nova/openstack/common/service.py:276
+msgid "Unhandled exception"
+msgstr "Unhandled exception"
+
+#: nova/openstack/common/db/api.py:72
+msgid "DB exceeded retry limit."
+msgstr ""
+
+#: nova/openstack/common/db/api.py:76
+msgid "DB connection error."
+msgstr ""
+
+#: nova/openstack/common/db/sqlalchemy/session.py:460
+msgid "DB exception wrapped."
+msgstr "DB exception wrapped."
+
+#: nova/openstack/common/db/sqlalchemy/test_migrations.py:267
+#, python-format
+msgid "Failed to migrate to version %s on engine %s"
+msgstr ""
+
+#: nova/virt/libvirt/utils.py:395
+#, python-format
+msgid "ignoring unrecognized volume_clear='%s' value"
+msgstr ""
