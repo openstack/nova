@@ -770,7 +770,8 @@ class CloudController(object):
             ec2_id = instance_id
         validate_ec2_id(ec2_id)
         instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_id)
-        instance = self.compute_api.get(context, instance_uuid)
+        instance = self.compute_api.get(context, instance_uuid,
+                                        want_objects=True)
         output = self.compute_api.get_console_output(context, instance)
         now = timeutils.utcnow()
         return {"InstanceId": ec2_id,

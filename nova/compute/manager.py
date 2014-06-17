@@ -561,7 +561,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.27')
+    target = messaging.Target(version='3.28')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -3992,14 +3992,13 @@ class ComputeManager(manager.Manager):
         network_info = self._get_instance_nw_info(context, instance)
         self._inject_network_info(context, instance, network_info)
 
+    @object_compat
     @messaging.expected_exceptions(NotImplementedError,
                                    exception.InstanceNotFound)
     @wrap_exception()
     @wrap_instance_fault
     def get_console_output(self, context, instance, tail_length):
         """Send the console output for the given instance."""
-        instance = objects.Instance._from_db_object(
-            context, objects.Instance(), instance)
         context = context.elevated()
         LOG.audit(_("Get console output"), context=context,
                   instance=instance)

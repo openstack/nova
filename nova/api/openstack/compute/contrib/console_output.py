@@ -39,7 +39,8 @@ class ConsoleOutputController(wsgi.Controller):
         authorize(context)
 
         try:
-            instance = self.compute_api.get(context, id)
+            instance = self.compute_api.get(context, id,
+                                            want_objects=True)
         except exception.NotFound:
             msg = _('Instance not found')
             raise webob.exc.HTTPNotFound(explanation=msg)
