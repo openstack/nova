@@ -20,15 +20,15 @@ import webob
 from nova.api.openstack.compute.contrib import server_external_events
 from nova import context
 from nova import exception
-from nova.objects import instance as instance_obj
+from nova import objects
 from nova import test
 
 fake_instances = {
-    '00000000-0000-0000-0000-000000000001': instance_obj.Instance(
+    '00000000-0000-0000-0000-000000000001': objects.Instance(
         uuid='00000000-0000-0000-0000-000000000001', host='host1'),
-    '00000000-0000-0000-0000-000000000002': instance_obj.Instance(
+    '00000000-0000-0000-0000-000000000002': objects.Instance(
         uuid='00000000-0000-0000-0000-000000000002', host='host1'),
-    '00000000-0000-0000-0000-000000000003': instance_obj.Instance(
+    '00000000-0000-0000-0000-000000000003': objects.Instance(
         uuid='00000000-0000-0000-0000-000000000003', host='host2'),
 }
 fake_instance_uuids = sorted(fake_instances.keys())

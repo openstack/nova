@@ -45,7 +45,6 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import ec2 as ec2_obj
 from nova.objects import flavor as flavor_obj
-from nova.objects import instance as instance_obj
 from nova.objects import security_group as sec_group_obj
 from nova.objects import service as service_obj
 from nova.openstack.common.gettextutils import _
@@ -801,8 +800,7 @@ class CloudController(object):
         if volume.get('instance_uuid', None):
             instance_uuid = volume['instance_uuid']
             # Make sure instance exists
-            instance_obj.Instance.get_by_uuid(context.elevated(),
-                    instance_uuid)
+            objects.Instance.get_by_uuid(context.elevated(), instance_uuid)
 
             instance_ec2_id = ec2utils.id_to_ec2_inst_id(instance_uuid)
 
@@ -900,7 +898,7 @@ class CloudController(object):
         if volume.get('instance_uuid'):
             try:
                 inst_uuid = volume['instance_uuid']
-                return instance_obj.Instance.get_by_uuid(context, inst_uuid)
+                return objects.Instance.get_by_uuid(context, inst_uuid)
             except exception.InstanceNotFound:
                 pass
         raise exception.VolumeUnattached(volume_id=volume['id'])
@@ -1362,7 +1360,7 @@ class CloudController(object):
         if client_token:
             for ec2_id in instance_ids:
                 instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_id)
-                instance = instance_obj.Instance.get_by_uuid(context,
+                instance = objects.Instance.get_by_uuid(context,
                         instance_uuid, expected_attrs=['system_metadata'])
                 instance.system_metadata.update(
                         {'EC2_client_token': client_token})
@@ -1370,7 +1368,7 @@ class CloudController(object):
 
     def _get_client_token(self, context, instance_uuid):
         """Get client token for a given instance."""
-        instance = instance_obj.Instance.get_by_uuid(context,
+        instance = objects.Instance.get_by_uuid(context,
                 instance_uuid, expected_attrs=['system_metadata'])
         return instance.system_metadata.get('EC2_client_token')
 
@@ -1379,7 +1377,7 @@ class CloudController(object):
 
         for ec2_id in instance_ids:
             instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_id)
-            instance = instance_obj.Instance.get_by_uuid(context,
+            instance = objects.Instance.get_by_uuid(context,
                     instance_uuid, expected_attrs=['system_metadata'])
             instance.system_metadata.pop('EC2_client_token', None)
             instance.save()
@@ -1393,24 +1391,21 @@ class CloudController(object):
 
         for sys_meta in sys_metas:
             if sys_meta and sys_meta.get('value') == client_token:
-                instance = instance_obj.Instance.get_by_uuid(
+                instance = objects.Instance.get_by_uuid(
                     context, sys_meta['instance_id'], expected_attrs=None)
                 resv_id = instance.get('reservation_id')
                 break
         return resv_id
 
-    def _ec2_ids_to_instances(self, context, instance_id, objects=False):
+    def _ec2_ids_to_instances(self, context, instance_id):
         """Get all instances first, to prevent partial executions."""
         instances = []
         extra = ['system_metadata', 'metadata', 'info_cache']
         for ec2_id in instance_id:
             validate_ec2_id(ec2_id)
             instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_id)
-            if objects:
-                instance = instance_obj.Instance.get_by_uuid(
+            instance = objects.Instance.get_by_uuid(
                     context, instance_uuid, expected_attrs=extra)
-            else:
-                instance = self.compute_api.get(context, instance_uuid)
             instances.append(instance)
         return instances
 
@@ -1418,8 +1413,7 @@ class CloudController(object):
         """Terminate each instance in instance_id, which is a list of ec2 ids.
         instance_id is a kwarg so its name cannot be modified.
         """
-        previous_states = self._ec2_ids_to_instances(context, instance_id,
-                                                     objects=True)
+        previous_states = self._ec2_ids_to_instances(context, instance_id)
         self._remove_client_token(context, instance_id)
         LOG.debug("Going to start terminating instances")
         for instance in previous_states:
@@ -1430,8 +1424,7 @@ class CloudController(object):
 
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids."""
-        instances = self._ec2_ids_to_instances(context, instance_id,
-                                               objects=True)
+        instances = self._ec2_ids_to_instances(context, instance_id)
         LOG.audit(_("Reboot instance %r"), instance_id, context=context)
         for instance in instances:
             self.compute_api.reboot(context, instance, 'HARD')
@@ -1441,7 +1434,7 @@ class CloudController(object):
         """Stop each instances in instance_id.
         Here instance_id is a list of instance ids
         """
-        instances = self._ec2_ids_to_instances(context, instance_id, True)
+        instances = self._ec2_ids_to_instances(context, instance_id)
         LOG.debug("Going to stop instances")
         for instance in instances:
             extensions.check_compute_policy(context, 'stop', instance)
@@ -1452,7 +1445,7 @@ class CloudController(object):
         """Start each instances in instance_id.
         Here instance_id is a list of instance ids
         """
-        instances = self._ec2_ids_to_instances(context, instance_id, True)
+        instances = self._ec2_ids_to_instances(context, instance_id)
         LOG.debug("Going to start instances")
         for instance in instances:
             extensions.check_compute_policy(context, 'start', instance)

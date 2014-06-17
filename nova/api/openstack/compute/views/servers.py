@@ -21,7 +21,7 @@ from nova.api.openstack.compute.views import addresses as views_addresses
 from nova.api.openstack.compute.views import flavors as views_flavors
 from nova.api.openstack.compute.views import images as views_images
 from nova.compute import flavors
-from nova.objects import instance as instance_obj
+from nova.objects import base as obj_base
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -148,7 +148,7 @@ class ViewBuilder(common.ViewBuilder):
     def _get_metadata(instance):
         # FIXME(danms): Transitional support for objects
         metadata = instance.get('metadata')
-        if isinstance(instance, instance_obj.Instance):
+        if isinstance(instance, obj_base.NovaObject):
             return metadata or {}
         else:
             return utils.instance_meta(instance)

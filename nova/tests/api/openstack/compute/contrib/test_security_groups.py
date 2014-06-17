@@ -27,6 +27,7 @@ from nova.compute import power_state
 from nova import context as context_maker
 import nova.db
 from nova import exception
+from nova import objects
 from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova import quota
@@ -1581,7 +1582,7 @@ def fake_compute_get_all(*args, **kwargs):
     ]
 
     return instance_obj._make_instance_list(args[1],
-                                            instance_obj.InstanceList(),
+                                            objects.InstanceList(),
                                             db_list,
                                             ['metadata', 'system_metadata',
                                              'security_groups', 'info_cache'])

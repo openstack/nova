@@ -22,8 +22,8 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.network import model as network_model
+from nova.objects import base as obj_base
 from nova.objects import ec2 as ec2_obj
-from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import memorycache
@@ -160,7 +160,7 @@ def get_ip_info_for_instance_from_nw_info(nw_info):
 def get_ip_info_for_instance(context, instance):
     """Return a dictionary of IP information for an instance."""
 
-    if isinstance(instance, instance_obj.Instance):
+    if isinstance(instance, obj_base.NovaObject):
         nw_info = instance.info_cache.network_info
     else:
         # FIXME(comstud): Temporary as we transition to objects.

@@ -20,6 +20,7 @@ from nova.api.openstack.compute.contrib import extended_server_attributes
 from nova import compute
 from nova import db
 from nova import exception
+from nova import objects
 from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova import test
@@ -36,8 +37,8 @@ UUID3 = '00000000-0000-0000-0000-000000000003'
 
 def fake_compute_get(*args, **kwargs):
     fields = instance_obj.INSTANCE_DEFAULT_FIELDS
-    return instance_obj.Instance._from_db_object(
-        args[1], instance_obj.Instance(),
+    return objects.Instance._from_db_object(
+        args[1], objects.Instance(),
         fakes.stub_instance(1, uuid=UUID3, host="host-fake",
                             node="node-fake"), fields)
 
@@ -49,7 +50,7 @@ def fake_compute_get_all(*args, **kwargs):
     ]
     fields = instance_obj.INSTANCE_DEFAULT_FIELDS
     return instance_obj._make_instance_list(args[1],
-                                            instance_obj.InstanceList(),
+                                            objects.InstanceList(),
                                             db_list, fields)
 
 

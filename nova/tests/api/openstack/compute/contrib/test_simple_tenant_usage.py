@@ -24,8 +24,8 @@ from nova.compute import flavors
 from nova.compute import vm_states
 from nova import context
 from nova import db
+from nova import objects
 from nova.objects import flavor as flavor_obj
-from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common import policy as common_policy
 from nova.openstack.common import timeutils
@@ -436,8 +436,8 @@ class SimpleTenantUsageControllerTest(test.TestCase):
                                              tenant_id=self.context.project_id,
                                              vm_state=vm_states.DELETED)
         # convert the fake instance dict to an object
-        self.inst_obj = instance_obj.Instance._from_db_object(
-            self.context, instance_obj.Instance(), self.baseinst)
+        self.inst_obj = objects.Instance._from_db_object(
+            self.context, objects.Instance(), self.baseinst)
 
     def test_get_flavor_from_sys_meta(self):
         # Non-deleted instances get their type information from their

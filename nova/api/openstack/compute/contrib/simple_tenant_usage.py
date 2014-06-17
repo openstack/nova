@@ -23,6 +23,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
+from nova import objects
 from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
@@ -132,7 +133,7 @@ class SimpleTenantUsageController(object):
     def _tenant_usages_for_period(self, context, period_start,
                                   period_stop, tenant_id=None, detailed=True):
 
-        instances = instance_obj.InstanceList.get_active_by_window_joined(
+        instances = objects.InstanceList.get_active_by_window_joined(
                         context, period_start, period_stop, tenant_id,
                         expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
         rval = {}
