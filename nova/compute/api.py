@@ -371,7 +371,7 @@ class API(base.Base):
 
             resource = overs[0]
             used = quotas[resource] - headroom[resource]
-            total_allowed = used + headroom[resource]
+            total_allowed = quotas[resource]
             overs = ','.join(overs)
             params = {'overs': overs, 'pid': context.project_id,
                       'min_count': min_count, 'max_count': max_count,
