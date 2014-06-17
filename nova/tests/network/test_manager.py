@@ -642,12 +642,13 @@ class FlatNetworkTestCase(test.TestCase):
     def test_allocate_calculates_quota_auth(self, util_method, reserve,
                                             get_by_uuid):
         inst = instance_obj.Instance()
+        inst['uuid'] = 'nosuch'
         get_by_uuid.return_value = inst
         reserve.side_effect = exception.OverQuota(overs='testing')
         util_method.return_value = ('foo', 'bar')
         self.assertRaises(exception.FixedIpLimitExceeded,
                           self.network.allocate_fixed_ip,
-                          self.context, 123, None)
+                          self.context, 123, {'uuid': 'nosuch'})
         util_method.assert_called_once_with(self.context, inst)
 
     @mock.patch('nova.objects.fixed_ip.FixedIP.get_by_address')
@@ -678,7 +679,7 @@ class FlatNetworkTestCase(test.TestCase):
         self.assertRaises(test.TestingException,
                           self.network.allocate_fixed_ip,
                           self.context, instance.uuid,
-                          {'cidr': '24', 'id': 1},
+                          {'cidr': '24', 'id': 1, 'uuid': 'nosuch'},
                           address=netaddr.IPAddress('1.2.3.4'))
         mock_associate.assert_called_once_with(self.context,
                                                '1.2.3.4',
@@ -840,7 +841,7 @@ class VlanNetworkTestCase(test.TestCase):
         self.assertRaises(test.TestingException,
                           self.network.allocate_fixed_ip,
                           self.context, instance.uuid,
-                          {'cidr': '24', 'id': 1},
+                          {'cidr': '24', 'id': 1, 'uuid': 'nosuch'},
                           address=netaddr.IPAddress('1.2.3.4'))
         mock_associate.assert_called_once_with(self.context,
                                                '1.2.3.4',
@@ -858,7 +859,7 @@ class VlanNetworkTestCase(test.TestCase):
         self.assertRaises(test.TestingException,
                           self.network.allocate_fixed_ip,
                           self.context, instance.uuid,
-                          {'cidr': '24', 'id': 1,
+                          {'cidr': '24', 'id': 1, 'uuid': 'nosuch',
                            'vpn_private_address': netaddr.IPAddress('1.2.3.4')
                            }, vpn=1)
         mock_associate.assert_called_once_with(self.context,
