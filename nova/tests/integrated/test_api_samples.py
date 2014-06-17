@@ -64,6 +64,7 @@ from nova.tests import fake_utils
 from nova.tests.image import fake
 from nova.tests.integrated import api_samples_test_base
 from nova.tests.integrated import integrated_helpers
+from nova.tests.objects import test_network
 from nova.tests import utils as test_utils
 from nova.tests.virt.baremetal.db import base as bm_db_base
 from nova import utils
@@ -1459,6 +1460,8 @@ class FixedIpJsonTest(ApiSampleTestBaseV2):
     def setUp(self):
         super(FixedIpJsonTest, self).setUp()
 
+        instance = dict(test_utils.get_test_instance(),
+                        hostname='openstack', host='host')
         fake_fixed_ips = [{'id': 1,
                    'address': '192.168.1.1',
                    'network_id': 1,
@@ -1467,6 +1470,12 @@ class FixedIpJsonTest(ApiSampleTestBaseV2):
                    'allocated': False,
                    'leased': False,
                    'reserved': False,
+                   'created_at': None,
+                   'deleted_at': None,
+                   'updated_at': None,
+                   'deleted': None,
+                   'instance': instance,
+                   'network': test_network.fake_network,
                    'host': None},
                   {'id': 2,
                    'address': '192.168.1.2',
@@ -1476,10 +1485,17 @@ class FixedIpJsonTest(ApiSampleTestBaseV2):
                    'allocated': False,
                    'leased': False,
                    'reserved': False,
+                   'created_at': None,
+                   'deleted_at': None,
+                   'updated_at': None,
+                   'deleted': None,
+                   'instance': instance,
+                   'network': test_network.fake_network,
                    'host': None},
                   ]
 
-        def fake_fixed_ip_get_by_address(context, address):
+        def fake_fixed_ip_get_by_address(context, address,
+                                         columns_to_join=None):
             for fixed_ip in fake_fixed_ips:
                 if fixed_ip['address'] == address:
                     return fixed_ip

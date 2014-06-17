@@ -20,6 +20,7 @@ from nova import db
 from nova import exception
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests.objects import test_network
 
 
 fake_fixed_ips = [{'id': 1,
@@ -31,6 +32,11 @@ fake_fixed_ips = [{'id': 1,
                    'leased': False,
                    'reserved': False,
                    'host': None,
+                   'instance': None,
+                   'network': test_network.fake_network,
+                   'created_at': None,
+                   'updated_at': None,
+                   'deleted_at': None,
                    'deleted': False},
                   {'id': 2,
                    'address': '192.168.1.2',
@@ -41,6 +47,11 @@ fake_fixed_ips = [{'id': 1,
                    'leased': False,
                    'reserved': False,
                    'host': None,
+                   'instance': None,
+                   'network': test_network.fake_network,
+                   'created_at': None,
+                   'updated_at': None,
+                   'deleted_at': None,
                    'deleted': False},
                   {'id': 3,
                    'address': '10.0.0.2',
@@ -51,11 +62,16 @@ fake_fixed_ips = [{'id': 1,
                    'leased': False,
                    'reserved': False,
                    'host': None,
+                   'instance': None,
+                   'network': test_network.fake_network,
+                   'created_at': None,
+                   'updated_at': None,
+                   'deleted_at': None,
                    'deleted': True},
                   ]
 
 
-def fake_fixed_ip_get_by_address(context, address):
+def fake_fixed_ip_get_by_address(context, address, columns_to_join=None):
     for fixed_ip in fake_fixed_ips:
         if fixed_ip['address'] == address and not fixed_ip['deleted']:
             return fixed_ip
