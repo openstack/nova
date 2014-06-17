@@ -151,10 +151,12 @@ class OpportunisticTestCase(DbTestCase):
 
 class MySQLOpportunisticFixture(OpportunisticFixture):
     DRIVER = 'mysql'
+    DBNAME = ''  # connect to MySQL server, but not to the openstack_citest db
 
 
 class PostgreSQLOpportunisticFixture(OpportunisticFixture):
     DRIVER = 'postgresql'
+    DBNAME = 'postgres'  # PostgreSQL requires the db name here,use service one
 
 
 class MySQLOpportunisticTestCase(OpportunisticTestCase):
