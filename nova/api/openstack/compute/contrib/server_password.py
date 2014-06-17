@@ -22,7 +22,6 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
-from nova import db
 from nova import exception
 
 
@@ -43,7 +42,7 @@ class ServerPasswordController(object):
 
     def _get_instance(self, context, server_id):
         try:
-            return self.compute_api.get(context, server_id)
+            return self.compute_api.get(context, server_id, want_objects=True)
         except exception.InstanceNotFound as exp:
             raise webob.exc.HTTPNotFound(explanation=exp.format_message())
 
@@ -62,8 +61,8 @@ class ServerPasswordController(object):
         authorize(context)
         instance = self._get_instance(context, server_id)
         meta = password.convert_password(context, None)
-        db.instance_system_metadata_update(context, instance['uuid'],
-                                           meta, False)
+        instance.system_metadata.update(meta)
+        instance.save()
 
 
 class Server_password(extensions.ExtensionDescriptor):
