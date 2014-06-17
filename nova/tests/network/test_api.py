@@ -399,3 +399,9 @@ class TestUpdateInstanceCache(test.TestCase):
                                                                 self.instance)
         db_mock.assert_called_once_with(self.context, self.instance['uuid'],
                                         {'network_info': self.nw_json})
+
+
+class NetworkHooksTestCase(test.BaseHookTestCase):
+    def test_instance_network_info_hook(self):
+        info_func = base_api.update_instance_cache_with_nw_info
+        self.assert_has_hook('instance_network_info', info_func)
