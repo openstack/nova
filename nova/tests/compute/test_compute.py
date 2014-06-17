@@ -251,8 +251,13 @@ class BaseTestCase(test.TestCase):
 
         self.stubs.Set(network_api.API, 'get_instance_nw_info',
                        fake_get_nw_info)
+
+        def fake_allocate_for_instance(cls, ctxt, instance, *args, **kwargs):
+            self.assertFalse(ctxt.is_admin)
+            return fake_network.fake_get_instance_nw_info(self.stubs, 1, 1)
+
         self.stubs.Set(network_api.API, 'allocate_for_instance',
-                       fake_get_nw_info)
+                       fake_allocate_for_instance)
         self.compute_api = compute.API()
 
         # Just to make long lines short
