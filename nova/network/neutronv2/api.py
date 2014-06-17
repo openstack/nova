@@ -35,53 +35,80 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 
 neutron_opts = [
-    cfg.StrOpt('neutron_url',
+    cfg.StrOpt('url',
                default='http://127.0.0.1:9696',
-               help='URL for connecting to neutron'),
-    cfg.IntOpt('neutron_url_timeout',
+               help='URL for connecting to neutron',
+               deprecated_group='DEFAULT',
+               deprecated_name='neutron_url'),
+    cfg.IntOpt('url_timeout',
                default=30,
-               help='Timeout value for connecting to neutron in seconds'),
-    cfg.StrOpt('neutron_admin_username',
-               help='Username for connecting to neutron in admin context'),
-    cfg.StrOpt('neutron_admin_password',
+               help='Timeout value for connecting to neutron in seconds',
+               deprecated_group='DEFAULT',
+               deprecated_name='neutron_url_timeout'),
+    cfg.StrOpt('admin_username',
+               help='Username for connecting to neutron in admin context',
+               deprecated_group='DEFAULT',
+               deprecated_name='neutron_admin_username'),
+    cfg.StrOpt('admin_password',
                help='Password for connecting to neutron in admin context',
-               secret=True),
-    cfg.StrOpt('neutron_admin_tenant_id',
-               help='Tenant id for connecting to neutron in admin context'),
-    cfg.StrOpt('neutron_admin_tenant_name',
+               secret=True,
+               deprecated_group='DEFAULT',
+               deprecated_name='neutron_admin_password'),
+    cfg.StrOpt('admin_tenant_id',
+               help='Tenant id for connecting to neutron in admin context',
+               deprecated_group='DEFAULT',
+               deprecated_name='neutron_admin_tenant_id'),
+    cfg.StrOpt('admin_tenant_name',
                help='Tenant name for connecting to neutron in admin context. '
                     'This option is mutually exclusive with '
-                    'neutron_admin_tenant_id. Note that with Keystone V3 '
-                    'tenant names are only unique within a domain.'),
-    cfg.StrOpt('neutron_region_name',
-               help='Region name for connecting to neutron in admin context'),
-    cfg.StrOpt('neutron_admin_auth_url',
+                    'admin_tenant_id. Note that with Keystone V3 '
+                    'tenant names are only unique within a domain.',
+               deprecated_group='DEFAULT',
+               deprecated_name='neutron_admin_tenant_name'),
+    cfg.StrOpt('region_name',
+               help='Region name for connecting to neutron in admin context',
+               deprecated_group='DEFAULT',
+               deprecated_name='neutron_region_name'),
+    cfg.StrOpt('admin_auth_url',
                default='http://localhost:5000/v2.0',
                help='Authorization URL for connecting to neutron in admin '
-               'context'),
-    cfg.BoolOpt('neutron_api_insecure',
+               'context',
+               deprecated_group='DEFAULT',
+               deprecated_name='neutron_admin_auth_url'),
+    cfg.BoolOpt('api_insecure',
                 default=False,
-                help='If set, ignore any SSL validation issues'),
-    cfg.StrOpt('neutron_auth_strategy',
+                help='If set, ignore any SSL validation issues',
+               deprecated_group='DEFAULT',
+               deprecated_name='neutron_api_insecure'),
+    cfg.StrOpt('auth_strategy',
                default='keystone',
                help='Authorization strategy for connecting to '
-                    'neutron in admin context'),
+                    'neutron in admin context',
+               deprecated_group='DEFAULT',
+               deprecated_name='neutron_auth_strategy'),
     # TODO(berrange) temporary hack until Neutron can pass over the
     # name of the OVS bridge it is configured with
-    cfg.StrOpt('neutron_ovs_bridge',
+    cfg.StrOpt('ovs_bridge',
                default='br-int',
-               help='Name of Integration Bridge used by Open vSwitch'),
-    cfg.IntOpt('neutron_extension_sync_interval',
+               help='Name of Integration Bridge used by Open vSwitch',
+               deprecated_group='DEFAULT',
+               deprecated_name='neutron_ovs_bridge'),
+    cfg.IntOpt('extension_sync_interval',
                 default=600,
                 help='Number of seconds before querying neutron for'
-                     ' extensions'),
-    cfg.StrOpt('neutron_ca_certificates_file',
+                     ' extensions',
+               deprecated_group='DEFAULT',
+               deprecated_name='neutron_extension_sync_interval'),
+    cfg.StrOpt('ca_certificates_file',
                 help='Location of CA certificates file to use for '
-                     'neutron client requests.'),
+                     'neutron client requests.',
+               deprecated_group='DEFAULT',
+               deprecated_name='neutron_ca_certificates_file'),
    ]
 
 CONF = cfg.CONF
-CONF.register_opts(neutron_opts)
+# neutron_opts options in the DEFAULT group were deprecated in Juno
+CONF.register_opts(neutron_opts, 'neutron')
 CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
 CONF.import_opt('flat_injected', 'nova.network.manager')
 LOG = logging.getLogger(__name__)
@@ -368,7 +395,7 @@ class API(base_api.NetworkAPI):
         """Refresh the neutron extensions cache when necessary."""
         if (not self.last_neutron_extension_sync or
             ((time.time() - self.last_neutron_extension_sync)
-             >= CONF.neutron_extension_sync_interval)):
+             >= CONF.neutron.extension_sync_interval)):
             neutron = neutronv2.get_client(context)
             extensions_list = neutron.list_extensions()['extensions']
             self.last_neutron_extension_sync = time.time()
@@ -1090,7 +1117,7 @@ class API(base_api.NetworkAPI):
         # TODO(berrange) Neutron should pass the bridge name
         # in another binding metadata field
         if vif_type == network_model.VIF_TYPE_OVS:
-            bridge = CONF.neutron_ovs_bridge
+            bridge = CONF.neutron.ovs_bridge
             ovs_interfaceid = port['id']
         elif vif_type == network_model.VIF_TYPE_BRIDGE:
             bridge = "brq" + port['network_id']

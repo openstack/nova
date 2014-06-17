@@ -121,9 +121,9 @@ def fake_get_instance(self, *args, **kwargs):
 class InterfaceAttachTests(test.NoDBTestCase):
     def setUp(self):
         super(InterfaceAttachTests, self).setUp()
-        self.flags(neutron_auth_strategy=None)
-        self.flags(neutron_url='http://anyhost/')
-        self.flags(neutron_url_timeout=30)
+        self.flags(auth_strategy=None, group='neutron')
+        self.flags(url='http://anyhost/', group='neutron')
+        self.flags(url_timeout=30, group='neutron')
         self.stubs.Set(network_api.API, 'show_port', fake_show_port)
         self.stubs.Set(network_api.API, 'list_ports', fake_list_ports)
         self.stubs.Set(compute_api.API, 'get', fake_get_instance)
@@ -369,9 +369,9 @@ class InterfaceAttachTests(test.NoDBTestCase):
 class InterfaceAttachTestsWithMock(test.NoDBTestCase):
     def setUp(self):
         super(InterfaceAttachTestsWithMock, self).setUp()
-        self.flags(neutron_auth_strategy=None)
-        self.flags(neutron_url='http://anyhost/')
-        self.flags(neutron_url_timeout=30)
+        self.flags(auth_strategy=None, group='neutron')
+        self.flags(url='http://anyhost/', group='neutron')
+        self.flags(url_timeout=30, group='neutron')
         self.context = context.get_admin_context()
 
     @mock.patch.object(compute_api.API, 'get')
