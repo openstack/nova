@@ -144,6 +144,14 @@ _fake_NodeDevXml = \
     </device>"""}
 
 
+def mocked_bdm(id, bdm_info):
+    bdm_mock = mock.MagicMock()
+    bdm_mock.__getitem__ = lambda s, k: bdm_info[k]
+    bdm_mock.get = lambda *k, **kw: bdm_info.get(*k, **kw)
+    bdm_mock.id = id
+    return bdm_mock
+
+
 def _concurrency(signal, wait, done, target, is_block_dev=False):
     signal.send()
     wait.wait()
@@ -1147,8 +1155,11 @@ class LibvirtConnTestCase(test.TestCase):
         instance_ref = db.instance_create(self.context, self.test_instance)
         conn_info = {'driver_volume_type': 'fake'}
         info = {'block_device_mapping': [
-                  {'connection_info': conn_info, 'mount_device': '/dev/vdc'},
-                  {'connection_info': conn_info, 'mount_device': '/dev/vdd'}]}
+                mocked_bdm(1, {'connection_info': conn_info,
+                               'mount_device': '/dev/vdc'}),
+                mocked_bdm(2, {'connection_info': conn_info,
+                               'mount_device': '/dev/vdd'}),
+                ]}
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref, info)
@@ -1160,6 +1171,8 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertIsInstance(cfg.devices[3],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertEqual(cfg.devices[3].target_dev, 'vdd')
+        self.assertTrue(info['block_device_mapping'][0].save.called)
+        self.assertTrue(info['block_device_mapping'][1].save.called)
 
     def test_get_guest_config_with_configdrive(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -1200,10 +1213,13 @@ class LibvirtConnTestCase(test.TestCase):
         instance_ref = db.instance_create(self.context, self.test_instance)
         conn_info = {'driver_volume_type': 'fake'}
         bd_info = {'block_device_mapping': [
-                  {'connection_info': conn_info, 'mount_device': '/dev/sdc',
-                   'disk_bus': 'scsi'},
-                  {'connection_info': conn_info, 'mount_device': '/dev/sdd',
-                   'disk_bus': 'scsi'}]}
+                mocked_bdm(1, {'connection_info': conn_info,
+                               'mount_device': '/dev/sdc',
+                               'disk_bus': 'scsi'}),
+                mocked_bdm(2, {'connection_info': conn_info,
+                               'mount_device': '/dev/sdd',
+                               'disk_bus': 'scsi'}),
+                ]}
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref, bd_info, image_meta)
@@ -7081,19 +7097,21 @@ class LibvirtConnTestCase(test.TestCase):
                        '_lookup_by_name',
                        fake_lookup_name)
         block_device_info = {'block_device_mapping': [
-                    {'guest_format': None,
-                     'boot_index': 0,
-                     'mount_device': '/dev/vda',
-                     'connection_info':
-                        {'driver_volume_type': 'iscsi'},
-                     'disk_bus': 'virtio',
-                     'device_type': 'disk',
-                     'delete_on_termination': False}
+                mocked_bdm(1, {'guest_format': None,
+                               'boot_index': 0,
+                               'mount_device': '/dev/vda',
+                               'connection_info':
+                                   {'driver_volume_type': 'iscsi'},
+                               'disk_bus': 'virtio',
+                               'device_type': 'disk',
+                               'delete_on_termination': False}),
                     ]}
         conn.post_live_migration_at_destination(self.context, instance,
                                         network_info, True,
                                         block_device_info=block_device_info)
         self.assertTrue('fake' in self.resultXML)
+        self.assertTrue(
+            block_device_info['block_device_mapping'][0].save.called)
 
     def test_create_propagates_exceptions(self):
         self.flags(virt_type='lxc', group='libvirt')
