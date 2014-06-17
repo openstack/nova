@@ -59,8 +59,7 @@ class MockEntryPoint(object):
         return self.cls
 
 
-class HookTestCase(test.NoDBTestCase):
-
+class HookTestCase(test.BaseHookTestCase):
     def _mock_load_plugins(self, iload, *iargs, **ikwargs):
         return [
             stevedore.extension.Extension('test_hook',
@@ -85,6 +84,7 @@ class HookTestCase(test.NoDBTestCase):
         self.assertEqual(42, self._hooked(1))
 
         mgr = hooks._HOOKS['test_hook']
+        self.assert_has_hook('test_hook', self._hooked)
         self.assertEqual(2, len(mgr.extensions))
         self.assertEqual(SampleHookA, mgr.extensions[0].plugin)
         self.assertEqual(SampleHookB, mgr.extensions[1].plugin)
@@ -110,6 +110,7 @@ class HookTestCaseWithFunction(HookTestCase):
         self.assertEqual(42, self._hooked(1))
         mgr = hooks._HOOKS['function_hook']
 
+        self.assert_has_hook('function_hook', self._hooked)
         self.assertEqual(1, len(mgr.extensions))
         self.assertEqual(SampleHookC, mgr.extensions[0].plugin)
 
