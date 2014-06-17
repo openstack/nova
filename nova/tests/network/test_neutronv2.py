@@ -310,14 +310,6 @@ class TestNeutronv2Base(test.TestCase):
                                  'port_id': None,
                                  'fixed_ip_address': None,
                                  'router_id': None}
-        self.fip_unassociated_not_my = {'tenant_id': 'not_my_tenantid',
-                                        'id': 'fip_id3',
-                                        'floating_ip_address': '172.24.4.227',
-                                        'floating_network_id': self.fip_pool[
-                                            'id'],
-                                        'port_id': None,
-                                        'fixed_ip_address': None,
-                                        'router_id': None}
         fixed_ip_address = self.port_data2[1]['fixed_ips'][0]['ip_address']
         self.fip_associated = {'tenant_id': 'my_tenantid',
                                'id': 'fip_id2',
@@ -1660,44 +1652,6 @@ class TestNeutronv2(TestNeutronv2Base):
         expected = [self._get_expected_fip_model(self.fip_unassociated),
                     self._get_expected_fip_model(self.fip_associated, idx=1)]
         fips = api.get_floating_ips_by_project(self.context)
-        self.assertEqual(expected, fips)
-
-    def test_get_floating_ips(self):
-        api = neutronapi.API()
-        project_id = self.context.project_id
-        self.moxed_client.list_floatingips(tenant_id=project_id).\
-            AndReturn({'floatingips': [self.fip_unassociated,
-                                       self.fip_associated]})
-
-        self.moxed_client.list_ports(tenant_id=project_id). \
-            AndReturn({'ports': self.port_data2})
-        search_opts = {'router:external': True}
-        self.moxed_client.list_networks(**search_opts). \
-            AndReturn({'networks': [self.fip_pool, self.fip_pool_nova]})
-        self.mox.ReplayAll()
-
-        expected = [self._get_expected_fip_model(self.fip_unassociated),
-                    self._get_expected_fip_model(self.fip_associated, idx=1)]
-        fips = api.get_floating_ips(self.context)
-        self.assertEqual(expected, fips)
-
-    def test_get_floating_ips_all_tenants(self):
-        api = neutronapi.API()
-        self.moxed_client.list_floatingips(). \
-            AndReturn({'floatingips': [self.fip_unassociated,
-                                       self.fip_associated,
-                                       self.fip_unassociated_not_my]})
-        self.moxed_client.list_ports().AndReturn({'ports': self.port_data2})
-        search_opts = {'router:external': True}
-        self.moxed_client.list_networks(**search_opts). \
-            AndReturn({'networks': [self.fip_pool, self.fip_pool_nova]})
-        self.mox.ReplayAll()
-
-        expected = [self._get_expected_fip_model(self.fip_unassociated),
-                    self._get_expected_fip_model(self.fip_associated, idx=1),
-                    self._get_expected_fip_model(self.fip_unassociated_not_my,
-                                                 idx=2)]
-        fips = api.get_floating_ips(self.context, all_tenants=True)
         self.assertEqual(expected, fips)
 
     def _test_get_instance_id_by_floating_address(self, fip_data,
