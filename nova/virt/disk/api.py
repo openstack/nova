@@ -627,7 +627,7 @@ def _set_passwd(username, admin_passwd, passwd_data, shadow_data):
     p_file = passwd_data.split("\n")
     s_file = shadow_data.split("\n")
 
-     # username MUST exist in passwd file or it's an error
+    # username MUST exist in passwd file or it's an error
     found = False
     for entry in p_file:
         split_entry = entry.split(':')
