@@ -17,7 +17,7 @@ import webob.exc
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova import db
+from nova import objects
 from nova.openstack.common.gettextutils import _
 
 authorize = extensions.extension_authorizer('compute', 'cloudpipe_update')
@@ -41,19 +41,19 @@ class CloudpipeUpdateController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         project_id = context.project_id
+        networks = objects.NetworkList.get_by_project(context, project_id)
 
         try:
             params = body['configure_project']
             vpn_ip = params['vpn_ip']
             vpn_port = params['vpn_port']
-        except (TypeError, KeyError):
+            for network in networks:
+                network.vpn_public_address = vpn_ip
+                network.vpn_public_port = vpn_port
+                network.save()
+        except (TypeError, KeyError, ValueError):
             raise webob.exc.HTTPUnprocessableEntity()
 
-        networks = db.project_get_networks(context, project_id)
-        for network in networks:
-            db.network_update(context, network['id'],
-                              {'vpn_public_address': vpn_ip,
-                               'vpn_public_port': int(vpn_port)})
         return webob.exc.HTTPAccepted()
 
 
