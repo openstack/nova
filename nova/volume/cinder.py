@@ -49,6 +49,8 @@ cinder_opts = [
     cfg.IntOpt('cinder_http_retries',
                default=3,
                help='Number of cinderclient retries on failed http calls'),
+    cfg.IntOpt('cinder_http_timeout', default=None,
+               help='HTTP inactivity timeout (in seconds)'),
     cfg.BoolOpt('cinder_api_insecure',
                default=False,
                help='Allow to perform insecure SSL requests to cinder'),
@@ -100,6 +102,7 @@ def cinderclient(context):
                              auth_url=url,
                              insecure=CONF.cinder_api_insecure,
                              retries=CONF.cinder_http_retries,
+                             timeout=CONF.cinder_http_timeout,
                              cacert=CONF.cinder_ca_certificates_file)
     # noauth extracts user_id:project_id from auth_token
     c.client.auth_token = context.auth_token or '%s:%s' % (context.user_id,

@@ -96,16 +96,17 @@ class FakeHTTPClient(cinder.cinder_client.client.HTTPClient):
 class FakeCinderClient(cinder.cinder_client.Client):
 
     def __init__(self, username, password, project_id=None, auth_url=None,
-                 insecure=False, retries=None, cacert=None):
+                 insecure=False, retries=None, cacert=None, timeout=None):
         super(FakeCinderClient, self).__init__(username, password,
                                                project_id=project_id,
                                                auth_url=auth_url,
                                                insecure=insecure,
                                                retries=retries,
-                                               cacert=cacert)
+                                               cacert=cacert,
+                                               timeout=timeout)
         self.client = FakeHTTPClient(username, password, project_id, auth_url,
                                      insecure=insecure, retries=retries,
-                                     cacert=cacert)
+                                     cacert=cacert, timeout=timeout)
         # keep a ref to the clients callstack for factory's assert_called
         self.callstack = self.client.callstack = []
 
@@ -202,3 +203,10 @@ class CinderTestCase(test.NoDBTestCase):
         self.assert_called('GET', '/volumes/1234')
         self.assertEqual(
             self.fake_client_factory.client.client.retries, retries)
+
+    def test_cinder_http_timeout(self):
+        timeout = 123
+        self.flags(cinder_http_timeout=timeout)
+        self.api.get(self.context, '1234')
+        self.assertEqual(timeout,
+            self.fake_client_factory.client.client.timeout)
