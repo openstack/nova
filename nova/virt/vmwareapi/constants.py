@@ -37,3 +37,6 @@ ADAPTER_TYPE_LSILOGICSAS = "lsiLogicsas"
 ADAPTER_TYPE_PARAVIRTUAL = "paraVirtual"
 
 SUPPORTED_FLAT_VARIANTS = ["thin", "preallocated", "thick", "eagerZeroedThick"]
+
+EXTENSION_KEY = 'org.openstack.compute'
+EXTENSION_TYPE_INSTANCE = 'instance'

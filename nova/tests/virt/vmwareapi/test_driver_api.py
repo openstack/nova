@@ -33,6 +33,7 @@ from oslo.utils import units
 from oslo.vmware import exceptions as vexc
 from oslo.vmware import pbm
 from oslo.vmware import vim
+from oslo.vmware import vim_util as oslo_vim_util
 import suds
 
 from nova import block_device
@@ -192,7 +193,8 @@ class VMwareSessionTestCase(test.NoDBTestCase):
 class VMwareAPIVMTestCase(test.NoDBTestCase):
     """Unit tests for Vmware API connection calls."""
 
-    def setUp(self, create_connection=True):
+    @mock.patch.object(driver.VMwareVCDriver, '_register_openstack_extension')
+    def setUp(self, mock_register, create_connection=True):
         super(VMwareAPIVMTestCase, self).setUp()
         vm_util.vm_refs_cache_reset()
         self.context = context.RequestContext('fake', 'fake', is_admin=False)
@@ -2036,8 +2038,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
 class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
 
-    def setUp(self):
-
+    @mock.patch.object(driver.VMwareVCDriver, '_register_openstack_extension')
+    def setUp(self, mock_register):
         super(VMwareAPIVCDriverTestCase, self).setUp(create_connection=False)
         cluster_name = 'test_cluster'
         cluster_name2 = 'test_cluster2'
@@ -2063,6 +2065,25 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
 
     def test_public_api_signatures(self):
         self.assertPublicAPISignatures(v_driver.ComputeDriver(None), self.conn)
+
+    def test_register_extension(self):
+        with mock.patch.object(self.conn._session, '_call_method',
+                               return_value=None) as mock_call_method:
+            self.conn._register_openstack_extension()
+            mock_call_method.assert_has_calls(
+                [mock.call(oslo_vim_util, 'find_extension',
+                           constants.EXTENSION_KEY),
+                 mock.call(oslo_vim_util, 'register_extension',
+                           constants.EXTENSION_KEY,
+                           constants.EXTENSION_TYPE_INSTANCE)])
+
+    def test_register_extension_already_exists(self):
+        with mock.patch.object(self.conn._session, '_call_method',
+                               return_value='fake-extension') as mock_find_ext:
+            self.conn._register_openstack_extension()
+            mock_find_ext.assert_called_once_with(oslo_vim_util,
+                                                  'find_extension',
+                                                  constants.EXTENSION_KEY)
 
     def test_list_instances(self):
         instances = self.conn.list_instances()

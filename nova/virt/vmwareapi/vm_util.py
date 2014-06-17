@@ -176,6 +176,12 @@ def get_vm_create_spec(client_factory, instance, name, data_store_name,
 
     config_spec.extraConfig = extra_config
 
+    # Set the VM to be 'managed' by 'OpenStack'
+    managed_by = client_factory.create('ns0:ManagedByInfo')
+    managed_by.extensionKey = constants.EXTENSION_KEY
+    managed_by.type = constants.EXTENSION_TYPE_INSTANCE
+    config_spec.managedBy = managed_by
+
     return config_spec
 
 

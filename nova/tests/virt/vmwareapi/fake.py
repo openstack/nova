@@ -1045,6 +1045,9 @@ class FakeService(DataObject):
     def Logout(self, session_manager):
         pass
 
+    def FindExtension(self, extension_manager, key):
+        return []
+
 
 class FakeClient(DataObject):
     """Fake client class."""
@@ -1116,6 +1119,7 @@ class FakeVim(object):
         service_content.fileManager = "FileManager"
         service_content.rootFolder = "RootFolder"
         service_content.sessionManager = "SessionManager"
+        service_content.extensionManager = "ExtensionManager"
         service_content.searchIndex = "SearchIndex"
 
         about_info = DataObject()

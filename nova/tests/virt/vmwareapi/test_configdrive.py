@@ -14,6 +14,7 @@
 #    under the License.
 
 import fixtures
+import mock
 import mox
 
 from nova import context
@@ -32,7 +33,8 @@ from nova.virt.vmwareapi import vmware_images
 
 
 class ConfigDriveTestCase(test.NoDBTestCase):
-    def setUp(self):
+    @mock.patch.object(driver.VMwareVCDriver, '_register_openstack_extension')
+    def setUp(self, mock_register):
         super(ConfigDriveTestCase, self).setUp()
         vm_util.vm_refs_cache_reset()
         self.context = context.RequestContext('fake', 'fake', is_admin=False)

@@ -34,6 +34,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova.virt import driver
+from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import host
 from nova.virt.vmwareapi import vm_util
@@ -191,6 +192,9 @@ class VMwareVCDriver(driver.ComputeDriver):
         self._volumeops = self._resources.get(first_cluster).get('volumeops')
         self._vc_state = self._resources.get(first_cluster).get('vcstate')
 
+        # Register the OpenStack extension
+        self._register_openstack_extension()
+
     def _update_pbm_location(self):
         if CONF.vmware.pbm_wsdl_location:
             pbm_wsdl_loc = CONF.vmware.pbm_wsdl_location
@@ -233,6 +237,19 @@ class VMwareVCDriver(driver.ComputeDriver):
             vim.client.service.Logout(session_manager)
         except suds.WebFault:
             LOG.debug("No vSphere session was open during cleanup_host.")
+
+    def _register_openstack_extension(self):
+        # Register an 'OpenStack' extension in vCenter
+        LOG.debug('Registering extension %s with vCenter',
+                  constants.EXTENSION_KEY)
+        os_extension = self._session._call_method(vim_util, 'find_extension',
+                                                  constants.EXTENSION_KEY)
+        if os_extension is None:
+            LOG.debug('Extension does not exist. Registering type %s.',
+                      constants.EXTENSION_TYPE_INSTANCE)
+            self._session._call_method(vim_util, 'register_extension',
+                                       constants.EXTENSION_KEY,
+                                       constants.EXTENSION_TYPE_INSTANCE)
 
     def cleanup(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True, migrate_data=None, destroy_vifs=True):
