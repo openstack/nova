@@ -80,8 +80,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         """Returns the timestamp folder."""
         return '%s/%s' % (ds_path, image_id)
 
-    def timestamp_cleanup(self, dc_ref, ds_browser,
-                          ds_ref, ds_name, ds_path):
+    def timestamp_cleanup(self, dc_ref, ds_browser, ds_path):
         ts = self._get_timestamp(ds_browser, ds_path)
         if ts:
             ts_path = '%s/%s' % (ds_path, ts)
@@ -163,7 +162,6 @@ class ImageCacheManager(imagecache.ImageCacheManager):
             with lockutils.lock(path, lock_file_prefix='nova-vmware-ts',
                                 external=True):
                 self.timestamp_cleanup(dc_info.ref, ds_browser,
-                                       datastore['ref'], datastore['name'],
                                        path)
 
     def update(self, context, instances, datastores_info):
