@@ -28,7 +28,7 @@ six>=1.6.0
 stevedore>=0.14
 websockify>=0.5.1,<0.6
 wsgiref>=0.1.2
-oslo.config>=1.2.0
+oslo.config>=1.2.1
 oslo.rootwrap
 oslotest
 pycadf>=0.5.1
