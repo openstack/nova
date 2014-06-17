@@ -62,9 +62,6 @@ class AdminActionsController(wsgi.Controller):
         except exception.InstanceNotFound:
             msg = _("Server not found")
             raise exc.HTTPNotFound(explanation=msg)
-        except NotImplementedError:
-            msg = _("Virt driver does not implement pause function.")
-            raise exc.HTTPNotImplemented(explanation=msg)
         except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::pause %s"), readable)
@@ -87,9 +84,6 @@ class AdminActionsController(wsgi.Controller):
         except exception.InstanceNotFound:
             msg = _("Server not found")
             raise exc.HTTPNotFound(explanation=msg)
-        except NotImplementedError:
-            msg = _("Virt driver does not implement unpause function.")
-            raise exc.HTTPNotImplemented(explanation=msg)
         except Exception:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::unpause %s"), readable)
