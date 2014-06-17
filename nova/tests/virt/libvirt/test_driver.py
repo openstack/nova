@@ -4155,8 +4155,8 @@ class LibvirtConnTestCase(test.TestCase):
                       self.compute._rollback_live_migration)
 
         instance_ref = db.instance_get(self.context, instance_ref['id'])
-        self.assertTrue(instance_ref['vm_state'] == vm_states.ACTIVE)
-        self.assertTrue(instance_ref['power_state'] == power_state.RUNNING)
+        self.assertEqual(vm_states.ACTIVE, instance_ref['vm_state'])
+        self.assertEqual(power_state.RUNNING, instance_ref['power_state'])
 
         db.instance_destroy(self.context, instance_ref['uuid'])
 
@@ -8010,7 +8010,7 @@ class NWFilterTestCase(test.TestCase):
             f = fakefilter.nwfilterLookupByName(filter_name)
             tree = etree.fromstring(f.xml)
             frefs = [fr.get('filter') for fr in tree.findall('filterref')]
-            self.assertTrue(set(expected) == set(frefs))
+            self.assertEqual(set(expected), set(frefs))
 
         assert_filterref(instance, network_info[0], expected=['nova-base'])
         assert_filterref(instance, network_info[1], expected=['nova-nodhcp'])

@@ -3430,7 +3430,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual('INFO', msg.priority)
         payload = msg.payload
         message = payload['message']
-        self.assertTrue(message.find("already deleted") != -1)
+        self.assertNotEqual(-1, message.find("already deleted"))
 
     def test_run_instance_error_notification_on_reschedule(self):
         # Test that error notif is sent if the build got rescheduled
@@ -3455,7 +3455,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual('ERROR', msg.priority)
         payload = msg.payload
         message = payload['message']
-        self.assertTrue(message.find("something bad happened") != -1)
+        self.assertNotEqual(-1, message.find("something bad happened"))
 
     def test_run_instance_error_notification_on_failure(self):
         # Test that error notif is sent if build fails hard
@@ -3479,7 +3479,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual('ERROR', msg.priority)
         payload = msg.payload
         message = payload['message']
-        self.assertTrue(message.find("i'm dying") != -1)
+        self.assertNotEqual(-1, message.find("i'm dying"))
 
     def test_terminate_usage_notification(self):
         # Ensure terminate_instance generates correct usage notification.
@@ -6349,7 +6349,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute._complete_partial_deletion(admin_context, instance)
 
-        self.assertFalse(instance.deleted == 0)
+        self.assertNotEqual(0, instance.deleted)
 
     def test_init_instance_for_partial_deletion(self):
         admin_context = context.get_admin_context()
@@ -6366,7 +6366,7 @@ class ComputeTestCase(BaseTestCase):
                        fake_partial_deletion)
         self.compute._init_instance(admin_context, instance)
 
-        self.assertFalse(instance['deleted'] == 0)
+        self.assertNotEqual(0, instance['deleted'])
 
     def test_partial_deletion_raise_exception(self):
         admin_context = context.get_admin_context()
@@ -6922,7 +6922,7 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertEqual(len(db.security_group_get_by_instance(
                              self.context, ref[0]['uuid'])), 1)
             group = db.security_group_get(self.context, group['id'])
-            self.assertTrue(len(group['instances']) == 1)
+            self.assertEqual(1, len(group['instances']))
         finally:
             db.security_group_destroy(self.context, group['id'])
             db.instance_destroy(self.context, ref[0]['uuid'])
@@ -7085,7 +7085,7 @@ class ComputeAPITestCase(BaseTestCase):
         try:
             db.instance_destroy(self.context, ref[0]['uuid'])
             group = db.security_group_get(self.context, group['id'])
-            self.assertTrue(len(group['instances']) == 0)
+            self.assertEqual(0, len(group['instances']))
         finally:
             db.security_group_destroy(self.context, group['id'])
 
@@ -7104,7 +7104,7 @@ class ComputeAPITestCase(BaseTestCase):
             admin_deleted_context = context.get_admin_context(
                     read_deleted="only")
             group = db.security_group_get(admin_deleted_context, group['id'])
-            self.assertTrue(len(group['instances']) == 0)
+            self.assertEqual(0, len(group['instances']))
         finally:
             db.instance_destroy(self.context, ref[0]['uuid'])
 
@@ -7744,20 +7744,20 @@ class ComputeAPITestCase(BaseTestCase):
         _context.project_id = 'project1'
         metadata = self.compute_api.get_all_instance_metadata(_context,
                                                               search_filts=[])
-        self.assertTrue(len(metadata) == 1)
+        self.assertEqual(1, len(metadata))
         self.assertEqual(metadata[0]['key'], 'key1')
 
         _context.user_id = 'user2'
         _context.project_id = 'project2'
         metadata = self.compute_api.get_all_instance_metadata(_context,
                                                               search_filts=[])
-        self.assertTrue(len(metadata) == 1)
+        self.assertEqual(1, len(metadata))
         self.assertEqual(metadata[0]['key'], 'key2')
 
         _context = context.get_admin_context()
         metadata = self.compute_api.get_all_instance_metadata(_context,
                                                               search_filts=[])
-        self.assertTrue(len(metadata) == 2)
+        self.assertEqual(2, len(metadata))
 
     def test_instance_metadata(self):
         meta_changes = [None]
