@@ -1459,6 +1459,35 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self._do_test_set_admin_password_driver_error(
             exc, vm_states.ACTIVE, None, expected_exception)
 
+    def test_init_host_with_partial_migration(self):
+        our_host = self.compute.host
+        instance_1 = objects.Instance(self.context)
+        instance_1.uuid = 'foo'
+        instance_1.task_state = task_states.MIGRATING
+        instance_1.host = 'not-' + our_host
+        instance_2 = objects.Instance(self.context)
+        instance_2.uuid = 'bar'
+        instance_2.task_state = None
+        instance_2.host = 'not-' + our_host
+
+        with contextlib.nested(
+            mock.patch.object(self.compute, '_get_instances_on_driver',
+                               return_value=[instance_1,
+                                             instance_2]),
+            mock.patch.object(self.compute, '_get_instance_nw_info',
+                               return_value=None),
+            mock.patch.object(self.compute, '_get_instance_block_device_info',
+                               return_value={}),
+            mock.patch.object(self.compute, '_is_instance_storage_shared',
+                               return_value=False),
+            mock.patch.object(self.compute.driver, 'destroy')
+        ) as (_get_instances_on_driver, _get_instance_nw_info,
+              _get_instance_block_device_info, _is_instance_storage_shared,
+              destroy):
+            self.compute._destroy_evacuated_instances(self.context)
+            destroy.assert_called_once_with(self.context, instance_2, None,
+                                            {}, True)
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):

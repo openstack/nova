@@ -676,13 +676,24 @@ class ComputeManager(manager.Manager):
         While nova-compute was down, the instances running on it could be
         evacuated to another host. Check that the instances reported
         by the driver are still associated with this host.  If they are
-        not, destroy them.
+        not, destroy them, with the exception of instances which are in
+        the MIGRATING state.
         """
         our_host = self.host
         filters = {'deleted': False}
         local_instances = self._get_instances_on_driver(context, filters)
         for instance in local_instances:
             if instance.host != our_host:
+                if instance.task_state in [task_states.MIGRATING]:
+                    LOG.debug('Will not delete instance as its host ('
+                              '%(instance_host)s) is not equal to our '
+                              'host (%(our_host)s) but its state is '
+                              '(%(task_state)s)',
+                              {'instance_host': instance.host,
+                               'our_host': our_host,
+                               'task_state': instance.task_state},
+                              instance=instance)
+                    continue
                 LOG.info(_('Deleting instance as its host ('
                            '%(instance_host)s) is not equal to our '
                            'host (%(our_host)s).'),
