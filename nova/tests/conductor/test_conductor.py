@@ -1639,7 +1639,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 'uuid': instance['uuid'], },
         }
 
-    def test_migrate_server_deals_with_expected_exceptions(self):
+    def _test_migrate_server_deals_with_expected_exceptions(self, ex):
         instance = fake_instance.fake_db_instance(uuid='uuid',
                                                   vm_state=vm_states.ACTIVE)
         inst_obj = instance_obj.Instance._from_db_object(
@@ -1648,7 +1648,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.mox.StubOutWithMock(scheduler_utils,
                 'set_vm_state_and_notify')
 
-        ex = exc.DestinationHypervisorTooOld()
         live_migrate.execute(self.context, mox.IsA(instance_obj.Instance),
                              'destination', 'block_migration',
                              'disk_over_commit').AndRaise(ex)
@@ -1664,7 +1663,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         self.conductor = utils.ExceptionHelper(self.conductor)
 
-        self.assertRaises(exc.DestinationHypervisorTooOld,
+        self.assertRaises(type(ex),
             self.conductor.migrate_server, self.context, inst_obj,
             {'host': 'destination'}, True, False, None, 'block_migration',
             'disk_over_commit')
@@ -1724,6 +1723,14 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                       task_state=None,
                       expected_task_state=task_states.MIGRATING),
                  error, request_spec, self.conductor_manager.db)
+
+    def test_migrate_server_deals_with_DestinationHypervisorTooOld(self):
+        ex = exc.DestinationHypervisorTooOld()
+        self._test_migrate_server_deals_with_expected_exceptions(ex)
+
+    def test_migrate_server_deals_with_HypervisorUnavailable(self):
+        ex = exc.HypervisorUnavailable(host='dummy')
+        self._test_migrate_server_deals_with_expected_exceptions(ex)
 
     def test_migrate_server_deals_with_unexpected_exceptions(self):
         instance = fake_instance.fake_db_instance()
