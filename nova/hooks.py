@@ -46,12 +46,21 @@ import functools
 
 import stevedore
 
+from nova.openstack.common.gettextutils import _LE
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 NS = 'nova.hooks'
 
 _HOOKS = {}  # hook name => hook manager
+
+
+class FatalHookException(Exception):
+    """Exception which should be raised by hooks to indicate that normal
+    execution of the hooked function should be terminated. Raised exception
+    will be logged and reraised.
+    """
+    pass
 
 
 class HookManager(stevedore.hook.HookManager):
@@ -66,10 +75,19 @@ class HookManager(stevedore.hook.HookManager):
             if pre:
                 LOG.debug("Running %(name)s pre-hook: %(obj)s",
                           {'name': name, 'obj': obj})
-                if f:
-                    pre(f, *args, **kwargs)
-                else:
-                    pre(*args, **kwargs)
+                try:
+                    if f:
+                        pre(f, *args, **kwargs)
+                    else:
+                        pre(*args, **kwargs)
+                except FatalHookException:
+                    msg = _LE("Fatal Exception running %(name)s "
+                              "pre-hook: %(obj)s")
+                    LOG.exception(msg, {'name': name, 'obj': obj})
+                    raise
+                except Exception:
+                    msg = _LE("Exception running %(name)s pre-hook: %(obj)s")
+                    LOG.exception(msg, {'name': name, 'obj': obj})
 
     def run_post(self, name, rv, args, kwargs, f=None):
         for e in reversed(self.extensions):
@@ -78,10 +96,19 @@ class HookManager(stevedore.hook.HookManager):
             if post:
                 LOG.debug("Running %(name)s post-hook: %(obj)s",
                           {'name': name, 'obj': obj})
-                if f:
-                    post(f, rv, *args, **kwargs)
-                else:
-                    post(rv, *args, **kwargs)
+                try:
+                    if f:
+                        post(f, rv, *args, **kwargs)
+                    else:
+                        post(rv, *args, **kwargs)
+                except FatalHookException:
+                    msg = _LE("Fatal Exception running %(name)s "
+                              "post-hook: %(obj)s")
+                    LOG.exception(msg, {'name': name, 'obj': obj})
+                    raise
+                except Exception:
+                    msg = _LE("Exception running %(name)s post-hook: %(obj)s")
+                    LOG.exception(msg, {'name': name, 'obj': obj})
 
 
 def add_hook(name, pass_function=False):

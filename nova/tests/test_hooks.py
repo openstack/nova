@@ -50,6 +50,22 @@ class SampleHookC(SampleHookA):
         self._add_called("post" + f.__name__, kwargs)
 
 
+class SampleHookExceptionPre(SampleHookA):
+    name = "epre"
+    exception = Exception()
+
+    def pre(self, f, *args, **kwargs):
+        raise self.exception
+
+
+class SampleHookExceptionPost(SampleHookA):
+    name = "epost"
+    exception = Exception()
+
+    def post(self, f, rv, *args, **kwargs):
+        raise self.exception
+
+
 class MockEntryPoint(object):
 
     def __init__(self, cls):
@@ -59,7 +75,20 @@ class MockEntryPoint(object):
         return self.cls
 
 
-class HookTestCase(test.BaseHookTestCase):
+class MockedHookTestCase(test.BaseHookTestCase):
+    def _mock_load_plugins(self, iload, *iargs, **ikwargs):
+        return []
+
+    def setUp(self):
+        super(MockedHookTestCase, self).setUp()
+
+        hooks.reset()
+
+        self.stubs.Set(stevedore.extension.ExtensionManager, '_load_plugins',
+                       self._mock_load_plugins)
+
+
+class HookTestCase(MockedHookTestCase):
     def _mock_load_plugins(self, iload, *iargs, **ikwargs):
         return [
             stevedore.extension.Extension('test_hook',
@@ -95,7 +124,7 @@ class HookTestCase(test.BaseHookTestCase):
         self.assertEqual(['prea', 'preb', 'postb'], called_order)
 
 
-class HookTestCaseWithFunction(HookTestCase):
+class HookTestCaseWithFunction(MockedHookTestCase):
     def _mock_load_plugins(self, iload, *iargs, **ikwargs):
         return [
             stevedore.extension.Extension('function_hook',
@@ -118,3 +147,59 @@ class HookTestCaseWithFunction(HookTestCase):
         called_order = []
         self._hooked(42, called=called_order)
         self.assertEqual(['pre_hookedc', 'post_hookedc'], called_order)
+
+
+class HookFailPreTestCase(MockedHookTestCase):
+    def _mock_load_plugins(self, iload, *iargs, **ikwargs):
+        return [
+            stevedore.extension.Extension('fail_pre',
+                MockEntryPoint(SampleHookExceptionPre),
+                SampleHookExceptionPre, SampleHookExceptionPre()),
+        ]
+
+    @hooks.add_hook('fail_pre', pass_function=True)
+    def _hooked(self, a, b=1, c=2, called=None):
+        return 42
+
+    def test_hook_fail_should_still_return(self):
+        self.assertEqual(42, self._hooked(1))
+
+        mgr = hooks._HOOKS['fail_pre']
+        self.assert_has_hook('fail_pre', self._hooked)
+        self.assertEqual(1, len(mgr.extensions))
+        self.assertEqual(SampleHookExceptionPre, mgr.extensions[0].plugin)
+
+    def test_hook_fail_should_raise_fatal(self):
+        self.stubs.Set(SampleHookExceptionPre, 'exception',
+                       hooks.FatalHookException())
+
+        self.assertRaises(hooks.FatalHookException,
+                          self._hooked, 1)
+
+
+class HookFailPostTestCase(MockedHookTestCase):
+    def _mock_load_plugins(self, iload, *iargs, **ikwargs):
+        return [
+            stevedore.extension.Extension('fail_post',
+                MockEntryPoint(SampleHookExceptionPost),
+                SampleHookExceptionPost, SampleHookExceptionPost()),
+        ]
+
+    @hooks.add_hook('fail_post', pass_function=True)
+    def _hooked(self, a, b=1, c=2, called=None):
+        return 42
+
+    def test_hook_fail_should_still_return(self):
+        self.assertEqual(42, self._hooked(1))
+
+        mgr = hooks._HOOKS['fail_post']
+        self.assert_has_hook('fail_post', self._hooked)
+        self.assertEqual(1, len(mgr.extensions))
+        self.assertEqual(SampleHookExceptionPost, mgr.extensions[0].plugin)
+
+    def test_hook_fail_should_raise_fatal(self):
+        self.stubs.Set(SampleHookExceptionPost, 'exception',
+                       hooks.FatalHookException())
+
+        self.assertRaises(hooks.FatalHookException,
+                          self._hooked, 1)
