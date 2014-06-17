@@ -17,6 +17,7 @@ import functools
 import inspect
 
 from nova.db import base
+from nova import hooks
 from nova.network import model as network_model
 from nova.objects import instance_info_cache as info_cache_obj
 from nova.openstack.common import excutils
@@ -27,6 +28,7 @@ from nova.openstack.common import log as logging
 LOG = logging.getLogger(__name__)
 
 
+@hooks.add_hook('instance_network_info')
 def update_instance_cache_with_nw_info(impl, context, instance,
                                        nw_info=None, update_cells=True):
     try:
