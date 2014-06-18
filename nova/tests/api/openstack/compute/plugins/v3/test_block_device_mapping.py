@@ -72,7 +72,7 @@ class BlockDeviceMappingTest(test.TestCase):
         }
 
         if no_image:
-            body['server']['image_ref'] = ''
+            del body['server']['image_ref']
 
         body['server'].update(params)
 
