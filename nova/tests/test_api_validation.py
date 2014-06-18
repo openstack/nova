@@ -603,3 +603,91 @@ class UuidTestCase(APIValidationTestCase):
                   " 'abc' is not a 'uuid'")
         self.check_validation_error(self.post, body={'foo': 'abc'},
                                     expected_detail=detail)
+
+
+class Ipv4TestCase(APIValidationTestCase):
+
+    def setUp(self):
+        super(Ipv4TestCase, self).setUp()
+        schema = {
+            'type': 'object',
+            'properties': {
+                'foo': {
+                    'type': 'string',
+                    'format': 'ipv4',
+                },
+            },
+        }
+
+        @validation.schema(request_body_schema=schema)
+        def post(body):
+            return 'Validation succeeded.'
+
+        self.post = post
+
+    def test_validate_ipv4(self):
+        self.assertEqual('Validation succeeded.',
+                         self.post(
+                         body={'foo': '192.168.0.100'}
+                         ))
+
+    def test_validate_ipv4_fails(self):
+        detail = ("Invalid input for field/attribute foo. Value: abc."
+                  " 'abc' is not a 'ipv4'")
+        self.check_validation_error(self.post, body={'foo': 'abc'},
+                                    expected_detail=detail)
+
+        detail = ("Invalid input for field/attribute foo. Value: localhost."
+                  " 'localhost' is not a 'ipv4'")
+        self.check_validation_error(self.post, body={'foo': 'localhost'},
+                                    expected_detail=detail)
+
+        detail = ("Invalid input for field/attribute foo."
+                  " Value: 2001:db8::1234:0:0:9abc."
+                  " '2001:db8::1234:0:0:9abc' is not a 'ipv4'")
+        self.check_validation_error(self.post,
+                                    body={'foo': '2001:db8::1234:0:0:9abc'},
+                                    expected_detail=detail)
+
+
+class Ipv6TestCase(APIValidationTestCase):
+
+    def setUp(self):
+        super(Ipv6TestCase, self).setUp()
+        schema = {
+            'type': 'object',
+            'properties': {
+                'foo': {
+                    'type': 'string',
+                    'format': 'ipv6',
+                },
+            },
+        }
+
+        @validation.schema(request_body_schema=schema)
+        def post(body):
+            return 'Validation succeeded.'
+
+        self.post = post
+
+    def test_validate_ipv6(self):
+        self.assertEqual('Validation succeeded.',
+                         self.post(
+                         body={'foo': '2001:db8::1234:0:0:9abc'}
+                         ))
+
+    def test_validate_ipv6_fails(self):
+        detail = ("Invalid input for field/attribute foo. Value: abc."
+                  " 'abc' is not a 'ipv6'")
+        self.check_validation_error(self.post, body={'foo': 'abc'},
+                                    expected_detail=detail)
+
+        detail = ("Invalid input for field/attribute foo. Value: localhost."
+                  " 'localhost' is not a 'ipv6'")
+        self.check_validation_error(self.post, body={'foo': 'localhost'},
+                                    expected_detail=detail)
+
+        detail = ("Invalid input for field/attribute foo."
+                  " Value: 192.168.0.100. '192.168.0.100' is not a 'ipv6'")
+        self.check_validation_error(self.post, body={'foo': '192.168.0.100'},
+                                    expected_detail=detail)
