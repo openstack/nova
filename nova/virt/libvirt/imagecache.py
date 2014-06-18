@@ -29,7 +29,9 @@ import time
 from oslo.config import cfg
 
 from nova.openstack.common import fileutils
-from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _LE
+from nova.openstack.common.gettextutils import _LI
+from nova.openstack.common.gettextutils import _LW
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
@@ -125,8 +127,8 @@ def _read_possible_json(serialized, info_file):
         d = jsonutils.loads(serialized)
 
     except ValueError as e:
-        LOG.error(_('Error reading image info file %(filename)s: '
-                    '%(error)s'),
+        LOG.error(_LE('Error reading image info file %(filename)s: '
+                      '%(error)s'),
                   {'filename': info_file,
                    'error': e})
         d = {}
@@ -186,7 +188,7 @@ def write_stored_info(target, field=None, value=None):
         return
 
     info_file = get_info_filename(target)
-    LOG.info(_('Writing stored info to %s'), info_file)
+    LOG.info(_LI('Writing stored info to %s'), info_file)
     fileutils.ensure_tree(os.path.dirname(info_file))
 
     lock_name = 'info-%s' % os.path.split(target)[-1]
@@ -313,10 +315,10 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                             inuse_images.append(backing_path)
 
                         if backing_path in self.unexplained_images:
-                            LOG.warning(_('Instance %(instance)s is using a '
-                                          'backing file %(backing)s which '
-                                          'does not appear in the image '
-                                          'service'),
+                            LOG.warn(_LW('Instance %(instance)s is using a '
+                                         'backing file %(backing)s which '
+                                         'does not appear in the image '
+                                         'service'),
                                         {'instance': ent,
                                          'backing': backing_file})
                             self.unexplained_images.remove(backing_path)
@@ -386,8 +388,8 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                 current_checksum = _hash_file(base_file)
 
                 if current_checksum != stored_checksum:
-                    LOG.error(_('image %(id)s at (%(base_file)s): image '
-                                'verification failed'),
+                    LOG.error(_LE('image %(id)s at (%(base_file)s): image '
+                                  'verification failed'),
                               {'id': img_id,
                                'base_file': base_file})
                     return False
@@ -396,8 +398,8 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                     return True
 
             else:
-                LOG.info(_('image %(id)s at (%(base_file)s): image '
-                           'verification skipped, no hash stored'),
+                LOG.info(_LI('image %(id)s at (%(base_file)s): image '
+                             'verification skipped, no hash stored'),
                          {'id': img_id,
                           'base_file': base_file})
 
@@ -405,7 +407,8 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                 # create one. We don't create checksums when we download images
                 # from glance because that would delay VM startup.
                 if CONF.libvirt.checksum_base_images and create_if_missing:
-                    LOG.info(_('%(id)s (%(base_file)s): generating checksum'),
+                    LOG.info(_LI('%(id)s (%(base_file)s): generating '
+                                 'checksum'),
                              {'id': img_id,
                               'base_file': base_file})
                     write_stored_checksum(base_file)
@@ -432,18 +435,18 @@ class ImageCacheManager(imagecache.ImageCacheManager):
             maxage = CONF.remove_unused_original_minimum_age_seconds
 
         if age < maxage:
-            LOG.info(_('Base file too young to remove: %s'),
+            LOG.info(_LI('Base file too young to remove: %s'),
                      base_file)
         else:
-            LOG.info(_('Removing base file: %s'), base_file)
+            LOG.info(_LI('Removing base file: %s'), base_file)
             try:
                 os.remove(base_file)
                 signature = get_info_filename(base_file)
                 if os.path.exists(signature):
                     os.remove(signature)
             except OSError as e:
-                LOG.error(_('Failed to remove %(base_file)s, '
-                            'error was %(error)s'),
+                LOG.error(_LE('Failed to remove %(base_file)s, '
+                              'error was %(error)s'),
                           {'base_file': base_file,
                            'error': e})
 
@@ -453,7 +456,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         image_bad = False
         image_in_use = False
 
-        LOG.info(_('image %(id)s at (%(base_file)s): checking'),
+        LOG.info(_LI('image %(id)s at (%(base_file)s): checking'),
                  {'id': img_id,
                   'base_file': base_file})
 
@@ -477,10 +480,10 @@ class ImageCacheManager(imagecache.ImageCacheManager):
 
             if local > 0 or remote > 0:
                 image_in_use = True
-                LOG.info(_('image %(id)s at (%(base_file)s): '
-                           'in use: on this node %(local)d local, '
-                           '%(remote)d on other nodes sharing this instance '
-                           'storage'),
+                LOG.info(_LI('image %(id)s at (%(base_file)s): '
+                             'in use: on this node %(local)d local, '
+                             '%(remote)d on other nodes sharing this instance '
+                             'storage'),
                          {'id': img_id,
                           'base_file': base_file,
                           'local': local,
@@ -489,9 +492,9 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                 self.active_base_files.append(base_file)
 
                 if not base_file:
-                    LOG.warning(_('image %(id)s at (%(base_file)s): warning '
-                                  '-- an absent base file is in use! '
-                                  'instances: %(instance_list)s'),
+                    LOG.warn(_LW('image %(id)s at (%(base_file)s): warning '
+                                 '-- an absent base file is in use! '
+                                 'instances: %(instance_list)s'),
                                 {'id': img_id,
                                  'base_file': base_file,
                                  'instance_list': ' '.join(instances)})
@@ -539,19 +542,19 @@ class ImageCacheManager(imagecache.ImageCacheManager):
 
         # Anything left is an unknown base image
         for img in self.unexplained_images:
-            LOG.warning(_('Unknown base file: %s'), img)
+            LOG.warn(_LW('Unknown base file: %s'), img)
             self.removable_base_files.append(img)
 
         # Dump these lists
         if self.active_base_files:
-            LOG.info(_('Active base files: %s'),
+            LOG.info(_LI('Active base files: %s'),
                      ' '.join(self.active_base_files))
         if self.corrupt_base_files:
-            LOG.info(_('Corrupt base files: %s'),
+            LOG.info(_LI('Corrupt base files: %s'),
                      ' '.join(self.corrupt_base_files))
 
         if self.removable_base_files:
-            LOG.info(_('Removable base files: %s'),
+            LOG.info(_LI('Removable base files: %s'),
                      ' '.join(self.removable_base_files))
 
             if self.remove_unused_base_images:
