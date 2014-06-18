@@ -752,6 +752,11 @@ class VMOps(object):
         LOG.debug("Finished snapshot and upload for VM",
                   instance=instance)
 
+    def post_interrupted_snapshot_cleanup(self, context, instance):
+        """Cleans up any resources left after a failed snapshot."""
+        vm_ref = self._get_vm_opaque_ref(instance)
+        vm_utils.remove_old_snapshots(self._session, instance, vm_ref)
+
     def _get_orig_vm_name_label(self, instance):
         return instance['name'] + '-orig'
 

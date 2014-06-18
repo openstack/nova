@@ -2310,6 +2310,102 @@ class CreateVmRecordTestCase(VMUtilsTestBase):
         self.assertIn(vm_ref, result_keys)
 
 
+class ChildVHDsTestCase(test.NoDBTestCase):
+    all_vdis = [
+        ("my-vdi-ref",
+         {"uuid": "my-uuid", "sm_config": {},
+          "is_a_snapshot": False, "other_config": {}}),
+        ("non-parent",
+         {"uuid": "uuid-1", "sm_config": {},
+          "is_a_snapshot": False, "other_config": {}}),
+        ("diff-parent",
+         {"uuid": "uuid-1", "sm_config": {"vhd-parent": "other-uuid"},
+          "is_a_snapshot": False, "other_config": {}}),
+        ("child",
+          {"uuid": "uuid-child", "sm_config": {"vhd-parent": "my-uuid"},
+           "is_a_snapshot": False, "other_config": {}}),
+        ("child-snap",
+         {"uuid": "uuid-child-snap", "sm_config": {"vhd-parent": "my-uuid"},
+          "is_a_snapshot": True, "other_config": {}}),
+    ]
+
+    @mock.patch.object(vm_utils, '_get_all_vdis_in_sr')
+    def test_child_vhds_defaults(self, mock_get_all):
+        mock_get_all.return_value = self.all_vdis
+
+        result = vm_utils._child_vhds("session", "sr_ref", "my-uuid")
+
+        self.assertEqual(['uuid-child', 'uuid-child-snap'], result)
+
+    @mock.patch.object(vm_utils, '_get_all_vdis_in_sr')
+    def test_child_vhds_only_snapshots(self, mock_get_all):
+        mock_get_all.return_value = self.all_vdis
+
+        result = vm_utils._child_vhds("session", "sr_ref", "my-uuid",
+                                      old_snapshots_only=True)
+
+        self.assertEqual(['uuid-child-snap'], result)
+
+    def test_is_vdi_a_snapshot_works(self):
+        vdi_rec = {"is_a_snapshot": True,
+                    "other_config": {}}
+
+        self.assertTrue(vm_utils._is_vdi_a_snapshot(vdi_rec))
+
+    def test_is_vdi_a_snapshot_base_images_false(self):
+        vdi_rec = {"is_a_snapshot": True,
+                    "other_config": {"image-id": "fake"}}
+
+        self.assertFalse(vm_utils._is_vdi_a_snapshot(vdi_rec))
+
+    def test_is_vdi_a_snapshot_false_for_non_snapshot(self):
+        vdi_rec = {"is_a_snapshot": False,
+                    "other_config": {}}
+
+        self.assertFalse(vm_utils._is_vdi_a_snapshot(vdi_rec))
+
+
+class RemoveOldSnapshotsTestCase(test.NoDBTestCase):
+
+    @mock.patch.object(vm_utils, '_child_vhds')
+    @mock.patch.object(vm_utils, '_get_vhd_parent_uuid')
+    @mock.patch.object(vm_utils, 'get_vdi_for_vm_safely')
+    @mock.patch.object(vm_utils, 'safe_find_sr')
+    def test_get_snapshots_for_vm(self, mock_find, mock_get_vdi,
+                                  mock_parent, mock_child_vhds):
+        session = mock.Mock()
+        instance = {"uuid": "uuid"}
+        mock_find.return_value = "sr_ref"
+        mock_get_vdi.return_value = ("vm_vdi_ref", "vm_vdi_rec")
+        mock_parent.return_value = "parent_uuid"
+        mock_child_vhds.return_value = []
+
+        result = vm_utils._get_snapshots_for_vm(session, instance, "vm_ref")
+
+        self.assertEqual([], result)
+        mock_find.assert_called_once_with(session)
+        mock_get_vdi.assert_called_once_with(session, "vm_ref")
+        mock_parent.assert_called_once_with(session, "vm_vdi_ref")
+        mock_child_vhds.assert_called_once_with(session, "sr_ref",
+                "parent_uuid", old_snapshots_only=True)
+
+    @mock.patch.object(vm_utils, 'scan_default_sr')
+    @mock.patch.object(vm_utils, 'safe_destroy_vdis')
+    @mock.patch.object(vm_utils, '_get_snapshots_for_vm')
+    def test_remove_old_snapshots(self, mock_get, mock_destroy, mock_scan):
+        session = mock.Mock()
+        instance = {"uuid": "uuid"}
+        mock_get.return_value = ["vdi_uuid1", "vdi_uuid2"]
+        session.VDI.get_by_uuid.return_value = "vdi_ref"
+
+        vm_utils.remove_old_snapshots(session, instance, "vm_ref")
+
+        self.assertTrue(mock_scan.called)
+        session.VDI.get_by_uuid.assert_called_once_with("vdi_uuid1")
+        mock_destroy.assert_called_once_with(session, ["vdi_ref"])
+        mock_scan.assert_called_once_with(session)
+
+
 class ResizeFunctionTestCase(test.NoDBTestCase):
     def _call_get_resize_func_name(self, brand, version):
         session = mock.Mock()

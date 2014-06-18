@@ -933,6 +933,18 @@ class ResizeVdisTestCase(VMOpsTestBase):
                                               None, 5, 1000)
 
 
+@mock.patch.object(vm_utils, 'remove_old_snapshots')
+class CleanupFailedSnapshotTestCase(VMOpsTestBase):
+    def test_post_interrupted_snapshot_cleanup(self, mock_remove):
+        self.vmops._get_vm_opaque_ref = mock.Mock()
+        self.vmops._get_vm_opaque_ref.return_value = "vm_ref"
+
+        self.vmops.post_interrupted_snapshot_cleanup("context", "instance")
+
+        mock_remove.assert_called_once_with(self.vmops._session,
+                "instance", "vm_ref")
+
+
 class LiveMigrateHelperTestCase(VMOpsTestBase):
     def test_connect_block_device_volumes_none(self):
         self.assertEqual({}, self.vmops.connect_block_device_volumes(None))

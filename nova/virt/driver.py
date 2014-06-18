@@ -486,6 +486,14 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def post_interrupted_snapshot_cleanup(self, context, instance):
+        """Cleans up any resources left after an interrupted snapshot.
+
+        :param context: security context
+        :param instance: nova.objects.instance.Instance
+        """
+        pass
+
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
                          block_device_info=None, power_on=True):
