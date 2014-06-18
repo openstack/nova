@@ -24,6 +24,7 @@ import os
 import re
 import shutil
 import tempfile
+import uuid
 
 from eventlet import greenthread
 from lxml import etree
@@ -170,8 +171,12 @@ class FakeVirDomainSnapshot(object):
 
 class FakeVirtDomain(object):
 
-    def __init__(self, fake_xml=None, uuidstr=None):
+    def __init__(self, fake_xml=None, uuidstr=None, id=None, name=None):
+        if uuidstr is None:
+            uuidstr = str(uuid.uuid4())
         self.uuidstr = uuidstr
+        self.id = id
+        self.domname = name
         if fake_xml:
             self._fake_dom_xml = fake_xml
         else:
@@ -186,7 +191,13 @@ class FakeVirtDomain(object):
             """
 
     def name(self):
-        return "fake-domain %s" % self
+        if self.domname is None:
+            return "fake-domain %s" % self
+        else:
+            return self.domname
+
+    def ID(self):
+        return self.id
 
     def info(self):
         return [power_state.RUNNING, None, None, None, None]
@@ -2674,6 +2685,176 @@ class LibvirtConnTestCase(test.TestCase,
                                      (expec_val,
                                       ("disk", "virtio", "vdb"),
                                       ("disk", "virtio", "vdc")))
+
+    def test_list_instance_domains_fast(self):
+        vm1 = FakeVirtDomain(id=3, name="instance00000001")
+        vm2 = FakeVirtDomain(id=17, name="instance00000002")
+        vm3 = FakeVirtDomain(name="instance00000003")
+        vm4 = FakeVirtDomain(name="instance00000004")
+
+        def fake_list_all(flags):
+            vms = []
+            if flags & libvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE:
+                vms.extend([vm1, vm2])
+            if flags & libvirt.VIR_CONNECT_LIST_DOMAINS_INACTIVE:
+                vms.extend([vm3, vm4])
+            return vms
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.listAllDomains = fake_list_all
+
+        self.mox.ReplayAll()
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        doms = drvr._list_instance_domains_fast()
+        self.assertEqual(len(doms), 2)
+        self.assertEqual(doms[0].name(), vm1.name())
+        self.assertEqual(doms[1].name(), vm2.name())
+
+        doms = drvr._list_instance_domains_fast(only_running=False)
+        self.assertEqual(len(doms), 4)
+        self.assertEqual(doms[0].name(), vm1.name())
+        self.assertEqual(doms[1].name(), vm2.name())
+        self.assertEqual(doms[2].name(), vm3.name())
+        self.assertEqual(doms[3].name(), vm4.name())
+
+    def test_list_instance_domains_slow(self):
+        vm1 = FakeVirtDomain(id=3, name="instance00000001")
+        vm2 = FakeVirtDomain(id=17, name="instance00000002")
+        vm3 = FakeVirtDomain(name="instance00000003")
+        vm4 = FakeVirtDomain(name="instance00000004")
+        vms = [vm1, vm2, vm3, vm4]
+
+        def fake_lookup_id(id):
+            for vm in vms:
+                if vm.ID() == id:
+                    return vm
+            ex = fakelibvirt.make_libvirtError(
+                libvirt.libvirtError,
+                "No such domain",
+                error_code=libvirt.VIR_ERR_NO_DOMAIN)
+            raise ex
+
+        def fake_lookup_name(name):
+            for vm in vms:
+                if vm.name() == name:
+                    return vm
+            ex = fakelibvirt.make_libvirtError(
+                libvirt.libvirtError,
+                "No such domain",
+                error_code=libvirt.VIR_ERR_NO_DOMAIN)
+            raise ex
+
+        def fake_list_doms():
+            # Include one ID that no longer exists
+            return [vm1.ID(), vm2.ID(), 666]
+
+        def fake_list_ddoms():
+            # Include one name that no longer exists and
+            # one dup from running list to show race in
+            # transition from inactive -> running
+            return [vm1.name(), vm3.name(), vm4.name(), "fishfood"]
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.listDomainsID = fake_list_doms
+        libvirt_driver.LibvirtDriver._conn.listDefinedDomains = fake_list_ddoms
+        libvirt_driver.LibvirtDriver._conn.lookupByID = fake_lookup_id
+        libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup_name
+        libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 2
+        libvirt_driver.LibvirtDriver._conn.numOfDefinedDomains = lambda: 2
+
+        self.mox.ReplayAll()
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        doms = drvr._list_instance_domains_slow()
+        self.assertEqual(len(doms), 2)
+        self.assertEqual(doms[0].name(), vm1.name())
+        self.assertEqual(doms[1].name(), vm2.name())
+
+        doms = drvr._list_instance_domains_slow(only_running=False)
+        self.assertEqual(len(doms), 4)
+        self.assertEqual(doms[0].name(), vm1.name())
+        self.assertEqual(doms[1].name(), vm2.name())
+        self.assertEqual(doms[2].name(), vm3.name())
+        self.assertEqual(doms[3].name(), vm4.name())
+
+    def test_list_instance_domains_fallback_no_support(self):
+        vm1 = FakeVirtDomain(id=3, name="instance00000001")
+        vm2 = FakeVirtDomain(id=17, name="instance00000002")
+        vms = [vm1, vm2]
+
+        def fake_lookup_id(id):
+            for vm in vms:
+                if vm.ID() == id:
+                    return vm
+            ex = fakelibvirt.make_libvirtError(
+                libvirt.libvirtError,
+                "No such domain",
+                error_code=libvirt.VIR_ERR_NO_DOMAIN)
+            raise ex
+
+        def fake_list_doms():
+            return [vm1.ID(), vm2.ID()]
+
+        def fake_list_all(flags):
+            ex = fakelibvirt.make_libvirtError(
+                libvirt.libvirtError,
+                "API is not supported",
+                error_code=libvirt.VIR_ERR_NO_SUPPORT)
+            raise ex
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.listDomainsID = fake_list_doms
+        libvirt_driver.LibvirtDriver._conn.lookupByID = fake_lookup_id
+        libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 2
+        libvirt_driver.LibvirtDriver._conn.listAllDomains = fake_list_all
+
+        self.mox.ReplayAll()
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        doms = drvr._list_instance_domains()
+        self.assertEqual(len(doms), 2)
+        self.assertEqual(doms[0].id, vm1.id)
+        self.assertEqual(doms[1].id, vm2.id)
+
+    def test_list_instance_domains_filtering(self):
+        vm0 = FakeVirtDomain(id=0, name="Domain-0")  # Xen dom-0
+        vm1 = FakeVirtDomain(id=3, name="instance00000001")
+        vm2 = FakeVirtDomain(id=17, name="instance00000002")
+        vm3 = FakeVirtDomain(name="instance00000003")
+        vm4 = FakeVirtDomain(name="instance00000004")
+
+        def fake_list_all(flags):
+            vms = []
+            if flags & libvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE:
+                vms.extend([vm0, vm1, vm2])
+            if flags & libvirt.VIR_CONNECT_LIST_DOMAINS_INACTIVE:
+                vms.extend([vm3, vm4])
+            return vms
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.listAllDomains = fake_list_all
+
+        self.mox.ReplayAll()
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        doms = drvr._list_instance_domains()
+        self.assertEqual(len(doms), 2)
+        self.assertEqual(doms[0].name(), vm1.name())
+        self.assertEqual(doms[1].name(), vm2.name())
+
+        doms = drvr._list_instance_domains(only_running=False)
+        self.assertEqual(len(doms), 4)
+        self.assertEqual(doms[0].name(), vm1.name())
+        self.assertEqual(doms[1].name(), vm2.name())
+        self.assertEqual(doms[2].name(), vm3.name())
+        self.assertEqual(doms[3].name(), vm4.name())
+
+        doms = drvr._list_instance_domains(only_guests=False)
+        self.assertEqual(len(doms), 3)
+        self.assertEqual(doms[0].name(), vm0.name())
+        self.assertEqual(doms[1].name(), vm1.name())
+        self.assertEqual(doms[2].name(), vm2.name())
 
     def test_list_instances(self):
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
