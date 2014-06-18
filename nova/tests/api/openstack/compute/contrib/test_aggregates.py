@@ -409,7 +409,7 @@ class AggregateTestCase(test.NoDBTestCase):
             raise KeyError
         self.stubs.Set(self.controller.api, "add_host_to_aggregate",
                        stub_add_host_to_aggregate)
-        #NOTE(mtreinish) The check for a KeyError here is to ensure that
+        # NOTE(mtreinish) The check for a KeyError here is to ensure that
         # if add_host_to_aggregate() raises a KeyError it propagates. At
         # one point the api code would mask the error as a HTTPBadRequest.
         # This test is to ensure that this doesn't occur again.

@@ -46,11 +46,11 @@ class API(base.Base):
         rpcapi.remove_console(context, console['id'])
 
     def create_console(self, context, instance_uuid):
-        #NOTE(mdragon): If we wanted to return this the console info
-        #               here, as we would need to do a call.
-        #               They can just do an index later to fetch
-        #               console info. I am not sure which is better
-        #               here.
+        # NOTE(mdragon): If we wanted to return this the console info
+        #                here, as we would need to do a call.
+        #                They can just do an index later to fetch
+        #                console info. I am not sure which is better
+        #                here.
         instance = self._get_instance(context, instance_uuid)
         topic = self._get_console_topic(context, instance['host'])
         server = None

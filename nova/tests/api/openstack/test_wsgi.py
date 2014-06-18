@@ -421,7 +421,7 @@ class ResourceTest(test.NoDBTestCase):
         expected_body = None
         response = req.get_response(app)
         self.assertEqual(response.status_int, 200)
-        #verify no content_type is contained in the request
+        # verify no content_type is contained in the request
         req.content_type = None
         req.body = '{"body": {"key": "value"}}'
         response = req.get_response(app)

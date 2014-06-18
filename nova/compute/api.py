@@ -1224,7 +1224,7 @@ class API(base.Base):
                                                          security_groups)
         return instance
 
-    #NOTE(bcwaldon): No policy check since this is only used by scheduler and
+    # NOTE(bcwaldon): No policy check since this is only used by scheduler and
     # the compute api. That should probably be cleaned up, though.
     def create_db_entry_for_new_instance(self, context, instance_type, image,
             instance, security_group, block_device_mapping, num_instances,
@@ -1833,7 +1833,7 @@ class API(base.Base):
         parameter.
         """
 
-        #TODO(bcwaldon): determine the best argument for target here
+        # TODO(bcwaldon): determine the best argument for target here
         target = {
             'project_id': context.project_id,
             'user_id': context.user_id,
@@ -3475,7 +3475,7 @@ class AggregateAPI(base.Base):
 
         aggregate.add_host(context, host_name)
         self._update_az_cache_for_host(context, host_name, aggregate.metadata)
-        #NOTE(jogo): Send message to host to support resource pools
+        # NOTE(jogo): Send message to host to support resource pools
         self.compute_rpcapi.add_aggregate_host(context,
                 aggregate=aggregate, host_param=host_name, host=host_name)
         aggregate_payload.update({'name': aggregate['name']})
@@ -3799,7 +3799,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
 
         instance_uuid = instance['uuid']
 
-        #check if the security group is associated with the server
+        # check if the security group is associated with the server
         if self.is_associated_with_server(security_group, instance_uuid):
             raise exception.SecurityGroupExistsForInstance(
                                         security_group_id=security_group['id'],
@@ -3822,7 +3822,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
 
         instance_uuid = instance['uuid']
 
-        #check if the security group is associated with the server
+        # check if the security group is associated with the server
         if not self.is_associated_with_server(security_group, instance_uuid):
             raise exception.SecurityGroupNotExistsForInstance(
                                     security_group_id=security_group['id'],

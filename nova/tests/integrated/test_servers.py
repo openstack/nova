@@ -282,7 +282,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
             LOG.debug("Found_server=%s" % found_server)
 
             # TODO(justinsb): Mock doesn't yet do accurate state changes
-            #if found_server['status'] != 'deleting':
+            # if found_server['status'] != 'deleting':
             #    break
             time.sleep(.1)
 

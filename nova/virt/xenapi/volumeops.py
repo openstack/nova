@@ -37,7 +37,7 @@ class VolumeOps(object):
     def attach_volume(self, connection_info, instance_name, mountpoint,
                       hotplug=True):
         """Attach volume to VM instance."""
-        #TODO(johngarbutt) move this into _attach_volume_to_vm
+        # TODO(johngarbutt) move this into _attach_volume_to_vm
         dev_number = volume_utils.get_device_number(mountpoint)
 
         vm_ref = vm_utils.vm_ref_or_raise(self._session, instance_name)

@@ -4241,7 +4241,7 @@ class ServersViewBuilderTest(test.TestCase):
         self.assertNotIn('fault', output['server'])
 
     def test_build_server_detail_active_status(self):
-        #set the power state of the instance to running
+        # set the power state of the instance to running
         self.instance['vm_state'] = vm_states.ACTIVE
         self.instance['progress'] = 100
 

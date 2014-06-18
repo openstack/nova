@@ -1124,7 +1124,7 @@ def generate_single_ephemeral(session, instance, vm_ref, userdevice,
         instance_name_label = instance["name"]
 
     name_label = "%s ephemeral" % instance_name_label
-    #TODO(johngarbutt) need to move DEVICE_EPHEMERAL from vmops to use it here
+    # TODO(johngarbutt) need to move DEVICE_EPHEMERAL from vmops to use it here
     label_number = int(userdevice) - 4
     if label_number > 0:
         name_label = "%s (%d)" % (name_label, label_number)

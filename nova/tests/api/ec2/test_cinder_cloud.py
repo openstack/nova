@@ -852,7 +852,7 @@ class CinderCloudTestCase(test.TestCase):
             self.assertEqual(vol['status'], "in-use")
             self.assertEqual(vol['attach_status'], "attached")
 
-        #Here we puke...
+        # Here we puke...
         self.cloud.terminate_instances(self.context, [ec2_instance_id])
 
         admin_ctxt = context.get_admin_context(read_deleted="no")
@@ -990,7 +990,7 @@ class CinderCloudTestCase(test.TestCase):
 
             self._assert_volume_attached(vol, instance_uuid, mountpoint)
 
-        #Just make sure we found them
+        # Just make sure we found them
         self.assertTrue(vol1_id)
         self.assertTrue(vol2_id)
 

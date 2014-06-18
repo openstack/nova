@@ -41,7 +41,6 @@ def upgrade(migrate_engine):
         Column('prov_vlan_id', Integer),
         Column('terminal_port', Integer),
         mysql_engine='InnoDB',
-        #mysql_charset='utf8'
     )
 
     bm_interfaces = Table('bm_interfaces', meta,
@@ -56,7 +55,6 @@ def upgrade(migrate_engine):
         Column('port_no', Integer),
         Column('vif_uuid', String(length=36), unique=True),
         mysql_engine='InnoDB',
-        #mysql_charset='utf8'
     )
 
     bm_pxe_ips = Table('bm_pxe_ips', meta,
@@ -69,7 +67,6 @@ def upgrade(migrate_engine):
         Column('bm_node_id', Integer),
         Column('server_address', String(length=255), unique=True),
         mysql_engine='InnoDB',
-        #mysql_charset='utf8'
     )
 
     bm_deployments = Table('bm_deployments', meta,
@@ -85,7 +82,6 @@ def upgrade(migrate_engine):
         Column('root_mb', Integer),
         Column('swap_mb', Integer),
         mysql_engine='InnoDB',
-        #mysql_charset='utf8'
     )
 
     bm_nodes.create()

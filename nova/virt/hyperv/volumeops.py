@@ -123,18 +123,18 @@ class VolumeOps(object):
             target_lun = data['target_lun']
             target_iqn = data['target_iqn']
 
-            #Getting the mounted disk
+            # Getting the mounted disk
             mounted_disk_path = self._get_mounted_disk_from_lun(target_iqn,
                                                                 target_lun)
 
             if ebs_root:
-                #Find the IDE controller for the vm.
+                # Find the IDE controller for the vm.
                 ctrller_path = self._vmutils.get_vm_ide_controller(
                     instance_name, 0)
-                #Attaching to the first slot
+                # Attaching to the first slot
                 slot = 0
             else:
-                #Find the SCSI controller for the vm
+                # Find the SCSI controller for the vm
                 ctrller_path = self._vmutils.get_vm_scsi_controller(
                     instance_name)
                 slot = self._get_free_controller_slot(ctrller_path)
@@ -179,7 +179,7 @@ class VolumeOps(object):
         target_lun = data['target_lun']
         target_iqn = data['target_iqn']
 
-        #Getting the mounted disk
+        # Getting the mounted disk
         mounted_disk_path = self._get_mounted_disk_from_lun(target_iqn,
                                                             target_lun)
 
@@ -224,7 +224,7 @@ class VolumeOps(object):
         LOG.debug('Device number: %(device_number)s, '
                   'target lun: %(target_lun)s',
                   {'device_number': device_number, 'target_lun': target_lun})
-        #Finding Mounted disk drive
+        # Finding Mounted disk drive
         for i in range(0, CONF.hyperv.volume_attach_retry_count):
             mounted_disk_path = self._vmutils.get_mounted_disk_by_drive_number(
                 device_number)
@@ -238,10 +238,10 @@ class VolumeOps(object):
         return mounted_disk_path
 
     def disconnect_volume(self, physical_drive_path):
-        #Get the session_id of the ISCSI connection
+        # Get the session_id of the ISCSI connection
         session_id = self._volutils.get_session_id_from_mounted_disk(
             physical_drive_path)
-        #Logging out the target
+        # Logging out the target
         self._volutils.execute_log_out(session_id)
 
     def get_target_from_disk_path(self, physical_drive_path):

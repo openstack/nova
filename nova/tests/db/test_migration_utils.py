@@ -90,7 +90,7 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
                           Column('c', String(256)))
             table.create()
 
-            #check missing shadow table
+            # check missing shadow table
             self.assertRaises(NoSuchTableError,
                               utils.check_shadow_table, engine, table_name)
 

@@ -4476,7 +4476,7 @@ class LibvirtConnTestCase(test.TestCase,
         self.compute._rollback_live_migration(self.context, instance_ref,
                                               'dest', False)
 
-        #start test
+        # start test
         migrate_data = {'pre_live_migration_result':
                 {'graphics_listen_addrs':
                     {'vnc': '10.0.0.1', 'spice': '10.0.0.2'}}}
@@ -4518,7 +4518,7 @@ class LibvirtConnTestCase(test.TestCase,
         self.compute._rollback_live_migration(self.context, instance_ref,
                                               'dest', False)
 
-        #start test
+        # start test
         migrate_data = {'pre_live_migration_result':
                 {'graphics_listen_addrs':
                     {'vnc': '0.0.0.0', 'spice': '0.0.0.0'}}}
@@ -4559,7 +4559,7 @@ class LibvirtConnTestCase(test.TestCase,
         self.compute._rollback_live_migration(self.context, instance_ref,
                                               'dest', False)
 
-        #start test
+        # start test
         migrate_data = {}
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -4595,7 +4595,7 @@ class LibvirtConnTestCase(test.TestCase,
         self.compute._rollback_live_migration(self.context, instance_ref,
                                               'dest', False)
 
-        #start test
+        # start test
         migrate_data = {'pre_live_migration_result':
                 {'graphics_listen_addrs':
                     {'vnc': '1.2.3.4', 'spice': '1.2.3.4'}}}
@@ -4650,7 +4650,7 @@ class LibvirtConnTestCase(test.TestCase,
         self.compute._rollback_live_migration(self.context, instance_ref,
                                               'dest', False)
 
-        #start test
+        # start test
         migrate_data = {'pre_live_migration_result':
                 {'graphics_listen_addrs':
                     {'vnc': '127.0.0.1', 'spice': '127.0.0.1'}}}

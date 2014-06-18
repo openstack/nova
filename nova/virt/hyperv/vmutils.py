@@ -111,7 +111,7 @@ class VMUtils(object):
             wmi_association_class=self._SETTINGS_DEFINE_STATE_CLASS,
             wmi_result_class=self._VIRTUAL_SYSTEM_SETTING_DATA_CLASS)
         settings_paths = [v.path_() for v in vmsettings]
-        #See http://msdn.microsoft.com/en-us/library/cc160706%28VS.85%29.aspx
+        # See http://msdn.microsoft.com/en-us/library/cc160706%28VS.85%29.aspx
         (ret_val, summary_info) = vs_man_svc.GetSummaryInformation(
             [constants.VM_SUMMARY_NUM_PROCS,
              constants.VM_SUMMARY_ENABLED_STATE,
@@ -309,10 +309,10 @@ class VMUtils(object):
 
         drive = self._get_new_resource_setting_data(res_sub_type)
 
-        #Set the IDE ctrller as parent.
+        # Set the IDE ctrller as parent.
         drive.Parent = ctrller_path
         drive.Address = drive_addr
-        #Add the cloned disk drive object to the vm.
+        # Add the cloned disk drive object to the vm.
         new_resources = self._add_virt_resource(drive, vm.path_())
         drive_path = new_resources[0]
 
@@ -322,11 +322,11 @@ class VMUtils(object):
             res_sub_type = self._IDE_DVD_RES_SUB_TYPE
 
         res = self._get_new_resource_setting_data(res_sub_type)
-        #Set the new drive as the parent.
+        # Set the new drive as the parent.
         res.Parent = drive_path
         res.Connection = [path]
 
-        #Add the new vhd object as a virtual hard disk to the vm.
+        # Add the new vhd object as a virtual hard disk to the vm.
         self._add_virt_resource(res, vm.path_())
 
     def create_scsi_controller(self, vm_name):
@@ -366,17 +366,17 @@ class VMUtils(object):
 
     def create_nic(self, vm_name, nic_name, mac_address):
         """Create a (synthetic) nic and attach it to the vm."""
-        #Create a new nic
+        # Create a new nic
         new_nic_data = self._get_new_setting_data(
             self._SYNTHETIC_ETHERNET_PORT_SETTING_DATA_CLASS)
 
-        #Configure the nic
+        # Configure the nic
         new_nic_data.ElementName = nic_name
         new_nic_data.Address = mac_address.replace(':', '')
         new_nic_data.StaticMacAddress = 'True'
         new_nic_data.VirtualSystemIdentifiers = ['{' + str(uuid.uuid4()) + '}']
 
-        #Add the new nic to the vm
+        # Add the new nic to the vm
         vm = self._lookup_vm_check(vm_name)
 
         self._add_virt_resource(new_nic_data, vm.path_())
@@ -386,8 +386,8 @@ class VMUtils(object):
         vm = self._lookup_vm_check(vm_name)
         (job_path,
          ret_val) = vm.RequestStateChange(self._vm_power_states_map[req_state])
-        #Invalid state for current operation (32775) typically means that
-        #the VM is already in the state requested
+        # Invalid state for current operation (32775) typically means that
+        # the VM is already in the state requested
         self.check_ret_val(ret_val, job_path, [0, 32775])
         LOG.debug("Successfully changed vm state of %(vm_name)s "
                   "to %(req_state)s",
@@ -430,7 +430,7 @@ class VMUtils(object):
         vm = self._lookup_vm_check(vm_name)
 
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
-        #Remove the VM. Does not destroy disks.
+        # Remove the VM. Does not destroy disks.
         (job_path, ret_val) = vs_man_svc.DestroyVirtualSystem(vm.path_())
         self.check_ret_val(ret_val, job_path)
 

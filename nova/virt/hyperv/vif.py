@@ -78,5 +78,5 @@ class HyperVNovaNetworkVIFDriver(HyperVBaseVIFDriver):
         self._vmutils.set_nic_connection(vm_name, vif['id'], vswitch_data)
 
     def unplug(self, instance, vif):
-        #TODO(alepilotti) Not implemented
+        # TODO(alepilotti) Not implemented
         pass

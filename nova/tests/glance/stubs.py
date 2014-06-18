@@ -32,12 +32,12 @@ class StubGlanceClient(object):
         _images = images or []
         map(lambda image: self.create(**image), _images)
 
-        #NOTE(bcwaldon): HACK to get client.images.* to work
+        # NOTE(bcwaldon): HACK to get client.images.* to work
         self.images = lambda: None
         for fn in ('list', 'get', 'data', 'create', 'update', 'delete'):
             setattr(self.images, fn, getattr(self, fn))
 
-    #TODO(bcwaldon): implement filters
+    # TODO(bcwaldon): implement filters
     def list(self, filters=None, marker=None, limit=30, page_size=20):
         if marker is None:
             index = 0

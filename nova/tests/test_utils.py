@@ -381,7 +381,7 @@ class AuditPeriodTest(test.NoDBTestCase):
 
     def setUp(self):
         super(AuditPeriodTest, self).setUp()
-        #a fairly random time to test with
+        # a fairly random time to test with
         self.test_time = datetime.datetime(second=23,
                                            minute=12,
                                            hour=8,

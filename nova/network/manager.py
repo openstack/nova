@@ -1372,7 +1372,7 @@ class NetworkManager(manager.Manager):
         for vif in vifs:
             network = objects.Network.get_by_id(context, vif.network_id)
             if not network.multi_host:
-                #NOTE (tr3buchet): if using multi_host, host is instance[host]
+                # NOTE (tr3buchet): if using multi_host, host is instance[host]
                 host = network['host']
             if self.host == host or host is None:
                 # at this point i am the correct host, or host doesn't

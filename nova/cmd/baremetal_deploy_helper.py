@@ -134,7 +134,7 @@ def mkswap(dev, label='swap1'):
 
 
 def mkfs_ephemeral(dev, label="ephemeral0"):
-    #TODO(jogo) support non-default mkfs options as well
+    # TODO(jogo) support non-default mkfs options as well
     disk.mkfs("default", label, dev)
 
 

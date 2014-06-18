@@ -692,9 +692,9 @@ class Controller(wsgi.Controller):
                                 "(%s)") % network_uuid
                         raise exc.HTTPBadRequest(explanation=msg)
 
-                #fixed IP address is optional
-                #if the fixed IP address is not provided then
-                #it will use one of the available IP address from the network
+                # fixed IP address is optional
+                # if the fixed IP address is not provided then
+                # it will use one of the available IP address from the network
                 address = network.get('fixed_ip', None)
                 if address is not None and not utils.is_valid_ip_address(
                         address):

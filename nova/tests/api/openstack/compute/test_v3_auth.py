@@ -41,7 +41,7 @@ class TestNoAuthMiddlewareV3(test.NoDBTestCase):
             "http://localhost/v3")
 
     def test_authorize_user_trailing_slash(self):
-        #make sure it works with trailing slash on the request
+        # make sure it works with trailing slash on the request
         req = webob.Request.blank('/v3/')
         req.headers['X-Auth-User'] = 'user1'
         req.headers['X-Auth-Key'] = 'user1_key'

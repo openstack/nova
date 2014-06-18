@@ -136,7 +136,7 @@ class VMwareESXDriver(driver.ComputeDriver):
         self._host = host.Host(self._session)
         self._host_state = None
 
-        #TODO(hartsocks): back-off into a configuration test module.
+        # TODO(hartsocks): back-off into a configuration test module.
         if CONF.vmware.use_linked_clone is None:
             raise error_util.UseLinkedCloneConfigurationFault()
 

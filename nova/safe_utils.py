@@ -30,7 +30,7 @@ def getcallargs(function, *args, **kwargs):
 
     keyed_args.update(kwargs)
 
-    #NOTE(alaski) the implicit 'self' or 'cls' argument shows up in
+    # NOTE(alaski) the implicit 'self' or 'cls' argument shows up in
     # argnames but not in args or kwargs.  Uses 'in' rather than '==' because
     # some tests use 'self2'.
     if 'self' in argnames[0] or 'cls' == argnames[0]:

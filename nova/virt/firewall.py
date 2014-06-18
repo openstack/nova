@@ -344,7 +344,7 @@ class IptablesFirewallDriver(FirewallDriver):
         # Set up rules to allow traffic to/from DHCP server
         self._do_dhcp_rules(ipv4_rules, network_info)
 
-        #Allow project network traffic
+        # Allow project network traffic
         if CONF.allow_same_net_traffic:
             self._do_project_network_rules(ipv4_rules, ipv6_rules,
                                            network_info)

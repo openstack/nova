@@ -42,7 +42,7 @@ LOG = log.getLogger(__name__)
 
 def exception_to_dict(fault):
     """Converts exceptions to a dict for use in notifications."""
-    #TODO(johngarbutt) move to nova/exception.py to share with wrap_exception
+    # TODO(johngarbutt) move to nova/exception.py to share with wrap_exception
 
     code = 500
     if hasattr(fault, "kwargs"):

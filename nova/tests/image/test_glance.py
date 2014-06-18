@@ -264,7 +264,7 @@ class TestGlanceImageService(test.NoDBTestCase):
         self.flags(allowed_direct_url_schemes=['file'], group='glance')
         self.flags(group='image_file_url', filesystems=['gluster'])
         service = self._create_image_service(client)
-        #NOTE(Jbresnah) The following options must be added after the module
+        # NOTE(Jbresnah) The following options must be added after the module
         # has added the specific groups.
         self.flags(group='image_file_url:gluster', id=fs_id)
         self.flags(group='image_file_url:gluster', mountpoint=mountpoint)
@@ -304,7 +304,7 @@ class TestGlanceImageService(test.NoDBTestCase):
         self.flags(allowed_direct_url_schemes=['file'], group='glance')
         self.flags(group='image_file_url', filesystems=['gluster'])
         service = self._create_image_service(client)
-        #NOTE(Jbresnah) The following options must be added after the module
+        # NOTE(Jbresnah) The following options must be added after the module
         # has added the specific groups.
         self.flags(group='image_file_url:gluster', id='someotherid')
         self.flags(group='image_file_url:gluster', mountpoint=mountpoint)

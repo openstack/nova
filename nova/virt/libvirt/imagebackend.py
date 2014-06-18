@@ -336,7 +336,7 @@ class Raw(Image):
         generating = 'image_id' not in kwargs
         if generating:
             if not self.check_image_exists():
-                #Generating image in place
+                # Generating image in place
                 prepare_template(target=self.path, *args, **kwargs)
         else:
             if not os.path.exists(base):
@@ -463,7 +463,7 @@ class Lvm(Image):
 
         generated = 'ephemeral_size' in kwargs
 
-        #Generate images with specified size right on volume
+        # Generate images with specified size right on volume
         if generated and size:
             lvm.create_volume(self.vg, self.lv,
                                          size, sparse=self.sparse)

@@ -1759,7 +1759,7 @@ def _build_instance_get(context, session=None,
             # Already always joined above
             continue
         query = query.options(joinedload(column))
-    #NOTE(alaski) Stop lazy loading of columns not needed.
+    # NOTE(alaski) Stop lazy loading of columns not needed.
     for col in ['metadata', 'system_metadata']:
         if col not in columns_to_join:
             query = query.options(noload(col))
@@ -2612,8 +2612,8 @@ def network_get_all_by_uuids(context, network_uuids, project_only):
     if not result:
         raise exception.NoNetworksFound()
 
-    #check if the result contains all the networks
-    #we are looking for
+    # check if the result contains all the networks
+    # we are looking for
     for network_uuid in network_uuids:
         for network in result:
             if network['uuid'] == network_uuid:
@@ -5181,7 +5181,7 @@ def aggregate_delete(context, aggregate_id):
         if count == 0:
             raise exception.AggregateNotFound(aggregate_id=aggregate_id)
 
-        #Delete Metadata
+        # Delete Metadata
         model_query(context,
                     models.AggregateMetadata, session=session).\
                     filter_by(aggregate_id=aggregate_id).\
@@ -5578,7 +5578,7 @@ def task_log_end_task(context, task_name, period_beginning, period_ending,
                                        period_ending, host, session=session).\
                         update(values)
         if rows == 0:
-            #It's not running!
+            # It's not running!
             raise exception.TaskNotRunning(task_name=task_name, host=host)
 
 

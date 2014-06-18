@@ -1088,7 +1088,7 @@ class ComputeManager(manager.Manager):
         Currently this is just set in the flags for each compute host.
 
         """
-        #TODO(mdragon): perhaps make this variable by console_type?
+        # TODO(mdragon): perhaps make this variable by console_type?
         return '%s.%s' % (CONF.console_topic, CONF.console_host)
 
     def get_console_pool_info(self, context, console_type):
@@ -2583,7 +2583,7 @@ class ComputeManager(manager.Manager):
             # This instance.exists message should contain the original
             # image_ref, not the new one.  Since the DB has been updated
             # to point to the new one... we have to override it.
-            #TODO(jaypipes): Move generate_image_url() into the nova.image.api
+            # TODO(jaypipes): Move generate_image_url() into the nova.image.api
             orig_image_ref_url = glance.generate_image_url(orig_image_ref)
             extra_usage_info = {'image_ref_url': orig_image_ref_url}
             self.conductor_api.notify_usage_exists(context,
@@ -5400,9 +5400,9 @@ class ComputeManager(manager.Manager):
                       'num_vm_instances': num_vm_instances})
 
         for db_instance in db_instances:
-            #NOTE(melwitt): This must be synchronized as we query state from
-            #               two separate sources, the driver and the database.
-            #               They are set (in stop_instance) and read, in sync.
+            # NOTE(melwitt): This must be synchronized as we query state from
+            #                two separate sources, the driver and the database.
+            #                They are set (in stop_instance) and read, in sync.
             @utils.synchronized(db_instance.uuid)
             def query_driver_power_state_and_sync():
                 self._query_driver_power_state_and_sync(context, db_instance)

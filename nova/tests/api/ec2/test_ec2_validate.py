@@ -106,7 +106,7 @@ class EC2ValidateTestCase(test.TestCase):
         super(EC2ValidateTestCase, self).tearDown()
         fake.FakeImageService_reset()
 
-    #EC2_API tests (InvalidInstanceID.Malformed)
+    # EC2_API tests (InvalidInstanceID.Malformed)
     def test_console_output(self):
         for ec2_id, e in self.ec2_id_exception_map:
             self.assertRaises(e,
@@ -215,7 +215,7 @@ class EC2TimestampValidationTestCase(test.TestCase):
 
     def test_validate_ec2_timestamp_advanced_time(self):
 
-        #EC2 request with Timestamp in advanced time
+        # EC2 request with Timestamp in advanced time
         timestamp = timeutils.utcnow() + datetime.timedelta(seconds=250)
         params = {'Timestamp': timeutils.strtime(timestamp,
                                            "%Y-%m-%dT%H:%M:%SZ")}
@@ -252,14 +252,14 @@ class EC2TimestampValidationTestCase(test.TestCase):
 
     def test_validate_Expires_timestamp_invalid_format(self):
 
-        #EC2 request with invalid Expires
+        # EC2 request with invalid Expires
         params = {'Expires': '2011-04-22T11:29:49'}
         expired = ec2utils.is_ec2_timestamp_expired(params)
         self.assertTrue(expired)
 
     def test_validate_ec2_req_timestamp_Expires(self):
 
-        #EC2 request with both Timestamp and Expires
+        # EC2 request with both Timestamp and Expires
         params = {'Timestamp': '2011-04-22T11:29:49Z',
                   'Expires': timeutils.isotime()}
         self.assertRaises(exception.InvalidRequest,

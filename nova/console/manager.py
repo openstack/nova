@@ -110,9 +110,9 @@ class ConsoleProxyManager(manager.Manager):
                                                          self.host,
                                                          console_type)
         except exception.NotFound:
-            #NOTE(mdragon): Right now, the only place this info exists is the
-            #               compute worker's flagfile, at least for
-            #               xenserver. Thus we ned to ask.
+            # NOTE(mdragon): Right now, the only place this info exists is the
+            #                compute worker's flagfile, at least for
+            #                xenserver. Thus we ned to ask.
             if CONF.stub_compute:
                 pool_info = {'address': '127.0.0.1',
                              'username': 'test',
