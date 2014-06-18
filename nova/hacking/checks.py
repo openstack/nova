@@ -54,6 +54,7 @@ asse_equal_start_with_none_re = re.compile(
 conf_attribute_set_re = re.compile(r"CONF\.[a-z0-9_.]+\s*=\s*\w")
 log_translation = re.compile(
     r"(.)*LOG\.(audit|error|info|warn|warning|critical|exception)\(\s*('|\")")
+mutable_default_args = re.compile(r"^\s*def .+\((.+=\{\}|.+=\[\])")
 
 
 def import_no_db_in_virt(logical_line, filename):
@@ -249,6 +250,12 @@ def validate_log_translations(logical_line, physical_line, filename):
         yield (0, msg)
 
 
+def no_mutable_default_args(logical_line):
+    msg = "N322: Method's default argument shouldn't be mutable!"
+    if mutable_default_args.match(logical_line):
+        yield (0, msg)
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -264,3 +271,4 @@ def factory(register):
     register(no_translate_debug_logs)
     register(no_setting_conf_directly_in_tests)
     register(validate_log_translations)
+    register(no_mutable_default_args)

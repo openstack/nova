@@ -70,9 +70,11 @@ class CommonMixin(object):
         self.mox.UnsetStubs()
 
     def _test_action(self, action, body=None, method=None,
-                     compute_api_args_map={}):
+                     compute_api_args_map=None):
         if method is None:
             method = action
+
+        compute_api_args_map = compute_api_args_map or {}
 
         instance = self._stub_instance_get()
 
@@ -121,10 +123,11 @@ class CommonMixin(object):
         self.mox.UnsetStubs()
 
     def _test_locked_instance(self, action, method=None, body=None,
-                              compute_api_args_map={}):
+                              compute_api_args_map=None):
         if method is None:
             method = action
 
+        compute_api_args_map = compute_api_args_map or {}
         instance = self._stub_instance_get()
 
         args, kwargs = compute_api_args_map.get(action, ((), {}))
@@ -143,9 +146,11 @@ class CommonMixin(object):
         self.mox.UnsetStubs()
 
     def _test_instance_not_found_in_compute_api(self, action,
-                         method=None, body=None, compute_api_args_map={}):
+                         method=None, body=None, compute_api_args_map=None):
         if method is None:
             method = action
+
+        compute_api_args_map = compute_api_args_map or {}
 
         instance = self._stub_instance_get()
 
@@ -166,8 +171,11 @@ class CommonMixin(object):
 
 
 class CommonTests(CommonMixin, test.NoDBTestCase):
-    def _test_actions(self, actions, method_translations={}, body_map={},
-                      args_map={}):
+    def _test_actions(self, actions, method_translations=None, body_map=None,
+                      args_map=None):
+        method_translations = method_translations or {}
+        body_map = body_map or {}
+        args_map = args_map or {}
         for action in actions:
             method = method_translations.get(action)
             body = body_map.get(action)
@@ -178,7 +186,11 @@ class CommonTests(CommonMixin, test.NoDBTestCase):
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
     def _test_actions_instance_not_found_in_compute_api(self,
-                  actions, method_translations={}, body_map={}, args_map={}):
+                  actions, method_translations=None, body_map=None,
+                  args_map=None):
+        method_translations = method_translations or {}
+        body_map = body_map or {}
+        args_map = args_map or {}
         for action in actions:
             method = method_translations.get(action)
             body = body_map.get(action)
@@ -189,7 +201,8 @@ class CommonTests(CommonMixin, test.NoDBTestCase):
             # Re-mock this.
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
-    def _test_actions_with_non_existed_instance(self, actions, body_map={}):
+    def _test_actions_with_non_existed_instance(self, actions, body_map=None):
+        body_map = body_map or {}
         for action in actions:
             self._test_non_existing_instance(action,
                                              body_map=body_map)
@@ -197,7 +210,11 @@ class CommonTests(CommonMixin, test.NoDBTestCase):
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
     def _test_actions_raise_conflict_on_invalid_state(
-            self, actions, method_translations={}, body_map={}, args_map={}):
+            self, actions, method_translations=None, body_map=None,
+            args_map=None):
+        method_translations = method_translations or {}
+        body_map = body_map or {}
+        args_map = args_map or {}
         for action in actions:
             method = method_translations.get(action)
             self.mox.StubOutWithMock(self.compute_api, method or action)
@@ -208,8 +225,11 @@ class CommonTests(CommonMixin, test.NoDBTestCase):
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
     def _test_actions_with_locked_instance(self, actions,
-                                           method_translations={},
-                                           body_map={}, args_map={}):
+                                           method_translations=None,
+                                           body_map=None, args_map=None):
+        method_translations = method_translations or {}
+        body_map = body_map or {}
+        args_map = args_map or {}
         for action in actions:
             method = method_translations.get(action)
             body = body_map.get(action)

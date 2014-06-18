@@ -416,8 +416,9 @@ class UsageInfoTestCase(test.TestCase):
         fake_network.set_stub_network_methods(self.stubs)
         fake_server_actions.stub_out_action_events(self.stubs)
 
-    def _create_instance(self, params={}):
+    def _create_instance(self, params=None):
         """Create a test instance."""
+        params = params or {}
         flavor = flavors.get_flavor_by_name('m1.tiny')
         sys_meta = flavors.save_flavor_info({}, flavor)
         inst = {}

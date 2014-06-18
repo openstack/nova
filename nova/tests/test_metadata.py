@@ -97,9 +97,10 @@ def return_non_existing_address(*args, **kwarg):
 
 
 def fake_InstanceMetadata(stubs, inst_data, address=None,
-                          sgroups=None, content=[], extra_md={},
+                          sgroups=None, content=None, extra_md=None,
                           vd_driver=None, network_info=None):
-
+    content = content or []
+    extra_md = extra_md or {}
     if sgroups is None:
         sgroups = [dict(test_security_group.fake_secgroup,
                         name='default')]

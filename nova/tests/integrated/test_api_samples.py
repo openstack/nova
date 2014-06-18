@@ -477,7 +477,8 @@ class LimitsSampleXmlTest(LimitsSampleJsonTest):
 
 class ServersActionsJsonTest(ServersSampleBase):
     def _test_server_action(self, uuid, action,
-                            subs={}, resp_tpl=None, code=202):
+                            subs=None, resp_tpl=None, code=202):
+        subs = subs or {}
         subs.update({'action': action})
         response = self._do_post('servers/%s/action' % uuid,
                                  'server-action-%s' % action.lower(),
@@ -4173,7 +4174,8 @@ class PreserveEphemeralOnRebuildJsonTest(ServersSampleBase):
                       'Preserve_ephemeral_rebuild')
 
     def _test_server_action(self, uuid, action,
-                            subs={}, resp_tpl=None, code=202):
+                            subs=None, resp_tpl=None, code=202):
+        subs = subs or {}
         subs.update({'action': action})
         response = self._do_post('servers/%s/action' % uuid,
                                  'server-action-%s' % action.lower(),

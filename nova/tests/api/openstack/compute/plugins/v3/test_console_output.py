@@ -63,7 +63,8 @@ class ConsoleOutputExtensionTest(test.NoDBTestCase):
         self.app = fakes.wsgi_app_v3(init_only=('servers',
                                                 'os-console-output'))
 
-    def _create_request(self, length_dict={}):
+    def _create_request(self, length_dict=None):
+        length_dict = length_dict or {}
         body = {'get_console_output': length_dict}
         req = fakes.HTTPRequestV3.blank('/v3/servers/1/action')
         req.method = "POST"
