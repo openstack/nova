@@ -61,7 +61,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute, '_instance_update')
         self.mox.StubOutWithMock(time, 'sleep')
 
-        instance = fake_instance.fake_db_instance(system_metadata={})
+        instance = fake_instance.fake_instance_obj(
+                       self.context, expected_attrs=['system_metadata'])
+
         is_vpn = 'fake-is-vpn'
         req_networks = 'fake-req-networks'
         macs = 'fake-macs'
