@@ -2538,7 +2538,7 @@ class ServersControllerCreateTestWithMock(test.TestCase):
             create_mock):
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         address = '10.0.2.3'
-        requested_networks = [{'uuid': network, 'fixed-ip': address}]
+        requested_networks = [{'uuid': network, 'fixed_ip': address}]
         params = {'networks': requested_networks}
         create_mock.side_effect = exception.FixedIpAlreadyInUse(
             address=address,
