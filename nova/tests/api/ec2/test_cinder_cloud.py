@@ -815,8 +815,7 @@ class CinderCloudTestCase(test.TestCase):
 
         self.assertEqual(len(vols), 2)
         for vol in vols:
-            self.assertTrue(str(vol['id']) == str(vol1_uuid) or
-                str(vol['id']) == str(vol2_uuid))
+            self.assertIn(str(vol['id']), [str(vol1_uuid), str(vol2_uuid)])
             if str(vol['id']) == str(vol1_uuid):
                 self.volume_api.attach(self.context, vol['id'],
                                        instance_uuid, '/dev/sdb')
@@ -847,10 +846,8 @@ class CinderCloudTestCase(test.TestCase):
         vols = [v for v in vols if v['instance_uuid'] == instance_uuid]
         self.assertEqual(len(vols), 2)
         for vol in vols:
-            self.assertTrue(str(vol['id']) == str(vol1_uuid) or
-                            str(vol['id']) == str(vol2_uuid))
-            self.assertTrue(vol['mountpoint'] == '/dev/sdb' or
-                            vol['mountpoint'] == '/dev/sdc')
+            self.assertIn(str(vol['id']), [str(vol1_uuid), str(vol2_uuid)])
+            self.assertIn(vol['mountpoint'], ['/dev/sdb', '/dev/sdc'])
             self.assertEqual(vol['instance_uuid'], instance_uuid)
             self.assertEqual(vol['status'], "in-use")
             self.assertEqual(vol['attach_status'], "attached")

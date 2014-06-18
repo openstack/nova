@@ -853,9 +853,9 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
                             func_call_matcher.call)
         self._mox.VerifyAll()
 
-        self.assertTrue(self._image_metadata and
-                        "disk_format" in self._image_metadata and
-                        self._image_metadata["disk_format"] == "vhd")
+        self.assertTrue(self._image_metadata)
+        self.assertIn("disk_format", self._image_metadata)
+        self.assertEqual("vhd", self._image_metadata["disk_format"])
 
         # Assert states changed in correct order
         self.assertIsNone(func_call_matcher.match())
