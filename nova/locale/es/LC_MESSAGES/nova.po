@@ -12,8 +12,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-06-17 06:06+0000\n"
-"PO-Revision-Date: 2014-06-16 18:37+0000\n"
+"POT-Creation-Date: 2014-06-18 06:05+0000\n"
+"PO-Revision-Date: 2014-06-17 22:51+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Spanish "
 "(http://www.transifex.com/projects/p/nova/language/es/)\n"
@@ -890,7 +890,7 @@ msgstr "No existe ninguna dirección IP flotante."
 msgid "Interface %(interface)s not found."
 msgstr "No se ha encontrado la interfaz %(interface)s."
 
-#: nova/exception.py:769 nova/api/openstack/compute/contrib/floating_ips.py:100
+#: nova/exception.py:769 nova/api/openstack/compute/contrib/floating_ips.py:97
 msgid "Cannot disassociate auto assigned floating ip"
 msgstr "No se puede desasociar la IP flotante asignada automáticamente"
 
@@ -2019,7 +2019,7 @@ msgstr "Se esperaba un objeto de tipo: %s"
 msgid "Invalid server_string: %s"
 msgstr "Serie de servidor no válida: %s"
 
-#: nova/utils.py:776 nova/virt/configdrive.py:176
+#: nova/utils.py:776 nova/virt/configdrive.py:177
 #, python-format
 msgid "Could not remove tmpdir: %s"
 msgstr "No se ha podido eliminar directorio temporal: %s"
@@ -2250,108 +2250,108 @@ msgstr "No hay regla para los parámetros especificados."
 msgid "Get console output for instance %s"
 msgstr "Obtener salida de la consola para la instancia %s"
 
-#: nova/api/ec2/cloud.py:835
+#: nova/api/ec2/cloud.py:836
 #, python-format
 msgid "Create volume from snapshot %s"
 msgstr "Crear volumen desde la instantánea %s"
 
-#: nova/api/ec2/cloud.py:839 nova/api/openstack/compute/contrib/volumes.py:243
+#: nova/api/ec2/cloud.py:840 nova/api/openstack/compute/contrib/volumes.py:243
 #, python-format
 msgid "Create volume of %s GB"
 msgstr "Crear volumen de %s GB"
 
-#: nova/api/ec2/cloud.py:879
+#: nova/api/ec2/cloud.py:880
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(instance_id)s at %(device)s"
 msgstr ""
 "Conectar el volumen %(volume_id)s a la instancia %(instance_id)s en "
 "%(device)s"
 
-#: nova/api/ec2/cloud.py:909 nova/api/openstack/compute/contrib/volumes.py:506
+#: nova/api/ec2/cloud.py:910 nova/api/openstack/compute/contrib/volumes.py:506
 #, python-format
 msgid "Detach volume %s"
 msgstr "Desasociar volumen %s"
 
-#: nova/api/ec2/cloud.py:1241
+#: nova/api/ec2/cloud.py:1242
 msgid "Allocate address"
 msgstr "Asignar dirección"
 
-#: nova/api/ec2/cloud.py:1246
+#: nova/api/ec2/cloud.py:1247
 #, python-format
 msgid "Release address %s"
 msgstr "Liberar dirección %s"
 
-#: nova/api/ec2/cloud.py:1251
+#: nova/api/ec2/cloud.py:1252
 #, python-format
 msgid "Associate address %(public_ip)s to instance %(instance_id)s"
 msgstr "Asociar dirección %(public_ip)s a instancia %(instance_id)s"
 
-#: nova/api/ec2/cloud.py:1261
+#: nova/api/ec2/cloud.py:1262
 msgid "Unable to associate IP Address, no fixed_ips."
 msgstr "No se puede asociar la dirección IP, sin fixed_ips."
 
-#: nova/api/ec2/cloud.py:1269
-#: nova/api/openstack/compute/contrib/floating_ips.py:260
+#: nova/api/ec2/cloud.py:1270
+#: nova/api/openstack/compute/contrib/floating_ips.py:249
 #, python-format
 msgid "multiple fixed_ips exist, using the first: %s"
 msgstr "existen múltiples fixed_ips, utilizando la primera: %s"
 
-#: nova/api/ec2/cloud.py:1282
+#: nova/api/ec2/cloud.py:1283
 #, python-format
 msgid "Disassociate address %s"
 msgstr "Desasociar dirección %s"
 
-#: nova/api/ec2/cloud.py:1299 nova/api/openstack/compute/servers.py:918
+#: nova/api/ec2/cloud.py:1300 nova/api/openstack/compute/servers.py:918
 #: nova/api/openstack/compute/plugins/v3/multiple_create.py:64
 msgid "min_count must be <= max_count"
 msgstr "min_count debe ser <= max_count "
 
-#: nova/api/ec2/cloud.py:1331
+#: nova/api/ec2/cloud.py:1332
 msgid "Image must be available"
 msgstr "La imagen debe estar disponible "
 
-#: nova/api/ec2/cloud.py:1428
+#: nova/api/ec2/cloud.py:1429
 #, python-format
 msgid "Reboot instance %r"
 msgstr "Reiniciar instancia %r"
 
-#: nova/api/ec2/cloud.py:1541
+#: nova/api/ec2/cloud.py:1542
 #, python-format
 msgid "De-registering image %s"
 msgstr "Des-registrando la imagen %s"
 
-#: nova/api/ec2/cloud.py:1557
+#: nova/api/ec2/cloud.py:1558
 msgid "imageLocation is required"
 msgstr "Se necesita imageLocation"
 
-#: nova/api/ec2/cloud.py:1577
+#: nova/api/ec2/cloud.py:1578
 #, python-format
 msgid "Registered image %(image_location)s with id %(image_id)s"
 msgstr "Imagen registrada %(image_location)s con el id %(image_id)s"
 
-#: nova/api/ec2/cloud.py:1638
+#: nova/api/ec2/cloud.py:1639
 msgid "user or group not specified"
 msgstr "usuario o grupo no especificado"
 
-#: nova/api/ec2/cloud.py:1641
+#: nova/api/ec2/cloud.py:1642
 msgid "only group \"all\" is supported"
 msgstr "sólo el grupo \"all\" está soportado"
 
-#: nova/api/ec2/cloud.py:1644
+#: nova/api/ec2/cloud.py:1645
 msgid "operation_type must be add or remove"
 msgstr "operation_type debe ser añadir o eliminar"
 
-#: nova/api/ec2/cloud.py:1646
+#: nova/api/ec2/cloud.py:1647
 #, python-format
 msgid "Updating image %s publicity"
 msgstr "Actualizando imagen %s públicamente"
 
-#: nova/api/ec2/cloud.py:1659
+#: nova/api/ec2/cloud.py:1660
 #, python-format
 msgid "Not allowed to modify attributes for image %s"
 msgstr "No está permitido modificar los atributos para la imagen %s"
 
-#: nova/api/ec2/cloud.py:1685
+#: nova/api/ec2/cloud.py:1686
 #, python-format
 msgid ""
 "Invalid value '%(ec2_instance_id)s' for instanceId. Instance does not "
@@ -2360,46 +2360,46 @@ msgstr ""
 "Valor no válido '%(ec2_instance_id)s' para el ID de instancia. La "
 "instancia no tiene ningún volumen conectado en la raíz (%(root)s)."
 
-#: nova/api/ec2/cloud.py:1716
+#: nova/api/ec2/cloud.py:1717
 #, python-format
 msgid "Couldn't stop instance within %d sec"
 msgstr "No se puede detener una instancia en menos de %d segundos"
 
-#: nova/api/ec2/cloud.py:1735
+#: nova/api/ec2/cloud.py:1736
 #, python-format
 msgid "image of %(instance)s at %(now)s"
 msgstr "imagen de %(instance)s en %(now)s"
 
-#: nova/api/ec2/cloud.py:1760 nova/api/ec2/cloud.py:1810
+#: nova/api/ec2/cloud.py:1761 nova/api/ec2/cloud.py:1811
 msgid "resource_id and tag are required"
 msgstr "resource_id y tag son necesarios"
 
-#: nova/api/ec2/cloud.py:1764 nova/api/ec2/cloud.py:1814
+#: nova/api/ec2/cloud.py:1765 nova/api/ec2/cloud.py:1815
 msgid "Expecting a list of resources"
 msgstr "Esperando una lista de recursos"
 
-#: nova/api/ec2/cloud.py:1769 nova/api/ec2/cloud.py:1819
-#: nova/api/ec2/cloud.py:1877
+#: nova/api/ec2/cloud.py:1770 nova/api/ec2/cloud.py:1820
+#: nova/api/ec2/cloud.py:1878
 msgid "Only instances implemented"
 msgstr "Sólo están implementadas instancias"
 
-#: nova/api/ec2/cloud.py:1773 nova/api/ec2/cloud.py:1823
+#: nova/api/ec2/cloud.py:1774 nova/api/ec2/cloud.py:1824
 msgid "Expecting a list of tagSets"
 msgstr "Esperando una lista de tagSets"
 
-#: nova/api/ec2/cloud.py:1779 nova/api/ec2/cloud.py:1832
+#: nova/api/ec2/cloud.py:1780 nova/api/ec2/cloud.py:1833
 msgid "Expecting tagSet to be key/value pairs"
 msgstr "Esperando que tagSet sea un par clave/valor"
 
-#: nova/api/ec2/cloud.py:1786
+#: nova/api/ec2/cloud.py:1787
 msgid "Expecting both key and value to be set"
 msgstr "Esperando establecimiento tanto de clave como valor"
 
-#: nova/api/ec2/cloud.py:1837
+#: nova/api/ec2/cloud.py:1838
 msgid "Expecting key to be set"
 msgstr "Esperando el establecimiento de la clave"
 
-#: nova/api/ec2/cloud.py:1911
+#: nova/api/ec2/cloud.py:1912
 msgid "Invalid CIDR"
 msgstr "CIDR no válido"
 
@@ -3194,7 +3194,7 @@ msgid "createBackup attribute 'rotation' must be greater than or equal to zero"
 msgstr "El atributo de createBackup 'rotation' debe ser mayor que o igual a cero"
 
 #: nova/api/openstack/compute/contrib/admin_actions.py:292
-#: nova/api/openstack/compute/contrib/console_output.py:44
+#: nova/api/openstack/compute/contrib/console_output.py:45
 #: nova/api/openstack/compute/contrib/server_start_stop.py:40
 msgid "Instance not found"
 msgstr "No se ha encontrado la instancia "
@@ -3229,51 +3229,56 @@ msgstr "Se debe especificar el estado deseado. Los estados válidos son: %s"
 msgid "Compute.api::resetState %s"
 msgstr "Compute.api::resetState %s"
 
-#: nova/api/openstack/compute/contrib/aggregates.py:96
+#: nova/api/openstack/compute/contrib/aggregates.py:99
 #, python-format
 msgid "Cannot show aggregate: %s"
 msgstr "No se puede mostrar el agregado: %s"
 
-#: nova/api/openstack/compute/contrib/aggregates.py:131
+#: nova/api/openstack/compute/contrib/aggregates.py:137
 #, python-format
 msgid "Cannot update aggregate: %s"
 msgstr "No se puede actualizar el agregado: %s"
 
-#: nova/api/openstack/compute/contrib/aggregates.py:145
+#: nova/api/openstack/compute/contrib/aggregates.py:151
 #, python-format
 msgid "Cannot delete aggregate: %s"
 msgstr "No se puede eliminar el agregado: %s"
 
-#: nova/api/openstack/compute/contrib/aggregates.py:156
+#: nova/api/openstack/compute/contrib/aggregates.py:162
 #, python-format
 msgid "Aggregates does not have %s action"
 msgstr "Los agregados no tienen la acción %s "
 
-#: nova/api/openstack/compute/contrib/aggregates.py:160
+#: nova/api/openstack/compute/contrib/aggregates.py:166
 #: nova/api/openstack/compute/contrib/flavormanage.py:55
 #: nova/api/openstack/compute/contrib/keypairs.py:86
 #: nova/api/openstack/compute/plugins/v3/aggregates.py:46
 #: nova/api/openstack/compute/plugins/v3/aggregates.py:82
-#: nova/api/openstack/compute/plugins/v3/aggregates.py:120
-#: nova/api/openstack/compute/plugins/v3/aggregates.py:205
+#: nova/api/openstack/compute/plugins/v3/aggregates.py:123
+#: nova/api/openstack/compute/plugins/v3/aggregates.py:211
 msgid "Invalid request body"
 msgstr "Cuerpo de solicitud no válido"
 
-#: nova/api/openstack/compute/contrib/aggregates.py:170
-#: nova/api/openstack/compute/contrib/aggregates.py:175
+#: nova/api/openstack/compute/contrib/aggregates.py:176
+#: nova/api/openstack/compute/contrib/aggregates.py:181
 #, python-format
 msgid "Cannot add host %(host)s in aggregate %(id)s"
 msgstr "No se puede añadir el host %(host)s en el agregado %(id)s"
 
-#: nova/api/openstack/compute/contrib/aggregates.py:189
-#: nova/api/openstack/compute/contrib/aggregates.py:193
-#: nova/api/openstack/compute/plugins/v3/aggregates.py:189
-#: nova/api/openstack/compute/plugins/v3/aggregates.py:193
+#: nova/api/openstack/compute/contrib/aggregates.py:195
+#: nova/api/openstack/compute/contrib/aggregates.py:199
+#: nova/api/openstack/compute/plugins/v3/aggregates.py:195
+#: nova/api/openstack/compute/plugins/v3/aggregates.py:199
 #, python-format
 msgid "Cannot remove host %(host)s in aggregate %(id)s"
 msgstr "No se puede eliminar el host %(host)s en el agregado %(id)s"
 
-#: nova/api/openstack/compute/contrib/aggregates.py:213
+#: nova/api/openstack/compute/contrib/aggregates.py:218
+#: nova/api/openstack/compute/plugins/v3/aggregates.py:219
+msgid "The value of metadata must be a dict"
+msgstr ""
+
+#: nova/api/openstack/compute/contrib/aggregates.py:230
 #, python-format
 msgid "Cannot set metadata %(metadata)s in aggregate %(id)s"
 msgstr "No se pueden establecer metadatos %(metadata)s en el agregado %(id)s"
@@ -3389,22 +3394,22 @@ msgstr "Token no encontrado"
 msgid "The requested console type details are not accessible"
 msgstr "Los detalles del tipo de consola solicitada no son accesibles"
 
-#: nova/api/openstack/compute/contrib/console_output.py:50
+#: nova/api/openstack/compute/contrib/console_output.py:51
 msgid "os-getConsoleOutput malformed or missing from request body"
 msgstr ""
 "os-getConsoleOutput formada incorrectamente u omitida en el cuerpo de "
 "solicitud"
 
-#: nova/api/openstack/compute/contrib/console_output.py:61
+#: nova/api/openstack/compute/contrib/console_output.py:62
 msgid "Length in request body must be an integer value"
 msgstr "La longitud del cuerpo de solicitud debe ser un valor entero "
 
-#: nova/api/openstack/compute/contrib/console_output.py:69
+#: nova/api/openstack/compute/contrib/console_output.py:70
 msgid "Unable to get console"
 msgstr "No se puede obtener consola "
 
-#: nova/api/openstack/compute/contrib/console_output.py:74
-#: nova/api/openstack/compute/plugins/v3/console_output.py:59
+#: nova/api/openstack/compute/contrib/console_output.py:75
+#: nova/api/openstack/compute/plugins/v3/console_output.py:60
 msgid "Unable to get console log, functionality not implemented"
 msgstr ""
 "Incapaz de obtener el registro de consola, la funcionalidad no está "
@@ -3485,66 +3490,66 @@ msgstr "Se han proporcionado extra_specs incorrectas"
 msgid "DNS entries not found."
 msgstr "No se han encontrado entradas DNS."
 
-#: nova/api/openstack/compute/contrib/floating_ips.py:132
-#: nova/api/openstack/compute/contrib/floating_ips.py:188
+#: nova/api/openstack/compute/contrib/floating_ips.py:129
+#: nova/api/openstack/compute/contrib/floating_ips.py:177
 #, python-format
 msgid "Floating ip not found for id %s"
 msgstr "No se ha encontrado la IP flotante para el id %s."
 
-#: nova/api/openstack/compute/contrib/floating_ips.py:173
+#: nova/api/openstack/compute/contrib/floating_ips.py:162
 #, python-format
 msgid "No more floating ips in pool %s."
 msgstr "No hay más IP flotantes en la agrupación %s."
 
-#: nova/api/openstack/compute/contrib/floating_ips.py:175
+#: nova/api/openstack/compute/contrib/floating_ips.py:164
 msgid "No more floating ips available."
 msgstr "No hay más IP flotantes disponibles."
 
-#: nova/api/openstack/compute/contrib/floating_ips.py:229
-#: nova/api/openstack/compute/contrib/floating_ips.py:294
+#: nova/api/openstack/compute/contrib/floating_ips.py:218
+#: nova/api/openstack/compute/contrib/floating_ips.py:283
 #: nova/api/openstack/compute/contrib/security_groups.py:481
 msgid "Missing parameter dict"
 msgstr "Falta el parámetro dict "
 
-#: nova/api/openstack/compute/contrib/floating_ips.py:232
-#: nova/api/openstack/compute/contrib/floating_ips.py:297
+#: nova/api/openstack/compute/contrib/floating_ips.py:221
+#: nova/api/openstack/compute/contrib/floating_ips.py:286
 msgid "Address not specified"
 msgstr "Dirección no especificada "
 
-#: nova/api/openstack/compute/contrib/floating_ips.py:238
+#: nova/api/openstack/compute/contrib/floating_ips.py:227
 msgid "No nw_info cache associated with instance"
 msgstr "No hay memoria caché nw_info asociada con la instancia "
 
-#: nova/api/openstack/compute/contrib/floating_ips.py:243
+#: nova/api/openstack/compute/contrib/floating_ips.py:232
 msgid "No fixed ips associated to instance"
 msgstr "No hay IP fijas asociadas a la instancia "
 
-#: nova/api/openstack/compute/contrib/floating_ips.py:254
+#: nova/api/openstack/compute/contrib/floating_ips.py:243
 msgid "Specified fixed address not assigned to instance"
 msgstr "Dirección fija especificada no asignada a la instancia"
 
-#: nova/api/openstack/compute/contrib/floating_ips.py:268
+#: nova/api/openstack/compute/contrib/floating_ips.py:257
 msgid "floating ip is already associated"
 msgstr "La IP flotante ya está asociada"
 
-#: nova/api/openstack/compute/contrib/floating_ips.py:271
+#: nova/api/openstack/compute/contrib/floating_ips.py:260
 msgid "l3driver call to add floating ip failed"
 msgstr "La llamada l3driver para añadir IP flotante ha fallado"
 
-#: nova/api/openstack/compute/contrib/floating_ips.py:274
-#: nova/api/openstack/compute/contrib/floating_ips.py:305
+#: nova/api/openstack/compute/contrib/floating_ips.py:263
+#: nova/api/openstack/compute/contrib/floating_ips.py:294
 msgid "floating ip not found"
 msgstr "No se ha encontrado IP flotante"
 
-#: nova/api/openstack/compute/contrib/floating_ips.py:279
+#: nova/api/openstack/compute/contrib/floating_ips.py:268
 msgid "Error. Unable to associate floating ip"
 msgstr "Error. No se puede asociar IP flotante"
 
-#: nova/api/openstack/compute/contrib/floating_ips.py:320
+#: nova/api/openstack/compute/contrib/floating_ips.py:309
 msgid "Floating ip is not associated"
 msgstr "La ip flotante no está asociada "
 
-#: nova/api/openstack/compute/contrib/floating_ips.py:324
+#: nova/api/openstack/compute/contrib/floating_ips.py:313
 #, python-format
 msgid "Floating ip %(address)s is not associated with instance %(id)s."
 msgstr ""
@@ -4029,16 +4034,16 @@ msgstr "El valor de anfitrión debe ser una cadena"
 msgid "Could not find %s parameter in the request"
 msgstr "No se ha podido encontrar el parámetro %s en la solicitud"
 
-#: nova/api/openstack/compute/plugins/v3/aggregates.py:124
+#: nova/api/openstack/compute/plugins/v3/aggregates.py:127
 msgid "Request body is empty"
 msgstr "El cuerpo de la solicitud está vacío"
 
-#: nova/api/openstack/compute/plugins/v3/aggregates.py:127
+#: nova/api/openstack/compute/plugins/v3/aggregates.py:130
 #, python-format
 msgid "Invalid key %s in request body."
 msgstr "Clave %s no válida en el cuerpo de la solicitud."
 
-#: nova/api/openstack/compute/plugins/v3/aggregates.py:208
+#: nova/api/openstack/compute/plugins/v3/aggregates.py:214
 msgid "Invalid request format for metadata"
 msgstr "Formato de solicitud inválido para metadatos"
 
@@ -5491,7 +5496,7 @@ msgid "Instance disappeared during terminate"
 msgstr "La instancia ha desaparecido durante la terminación"
 
 #: nova/compute/manager.py:2307 nova/compute/manager.py:3628
-#: nova/compute/manager.py:5647
+#: nova/compute/manager.py:5646
 msgid "Setting instance vm_state to ERROR"
 msgstr "Estableciendo el vm_state de la instancia a ERROR"
 
@@ -5514,7 +5519,7 @@ msgstr ""
 msgid "disk not on shared storage, rebuilding from: '%s'"
 msgstr "El disco on está en almacenamiento compartido, reconstruyendo desde: '%s'"
 
-#: nova/compute/manager.py:2512 nova/compute/manager.py:4766
+#: nova/compute/manager.py:2512 nova/compute/manager.py:4765
 #, python-format
 msgid "Failed to get compute_info for %s"
 msgstr "Fallo al obtener compute_info para %s"
@@ -5702,76 +5707,76 @@ msgstr "Recuperando diagnósticos"
 msgid "Resuming"
 msgstr "Reanudando"
 
-#: nova/compute/manager.py:4004
+#: nova/compute/manager.py:4003
 msgid "Get console output"
 msgstr "Obtener salida de consola "
 
-#: nova/compute/manager.py:4203
+#: nova/compute/manager.py:4202
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
 msgstr "Conectando el volumen %(volume_id)s a %(mountpoint)s"
 
-#: nova/compute/manager.py:4212
+#: nova/compute/manager.py:4211
 #, python-format
 msgid "Failed to attach %(volume_id)s at %(mountpoint)s"
 msgstr "Fallo al asociar %(volume_id)s en %(mountpoint)s"
 
-#: nova/compute/manager.py:4228
+#: nova/compute/manager.py:4227
 #, python-format
 msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
 msgstr "Desconectar el volumen %(volume_id)s del punto de montaje %(mp)s"
 
-#: nova/compute/manager.py:4239
+#: nova/compute/manager.py:4238
 msgid "Detaching volume from unknown instance"
 msgstr "Desconectando volumen de instancia desconocida "
 
-#: nova/compute/manager.py:4251
+#: nova/compute/manager.py:4250
 #, python-format
 msgid "Failed to detach volume %(volume_id)s from %(mp)s"
 msgstr "No se ha podido desconectar el volumen %(volume_id)s de %(mp)s"
 
-#: nova/compute/manager.py:4324
+#: nova/compute/manager.py:4323
 #, python-format
 msgid "Failed to swap volume %(old_volume_id)s for %(new_volume_id)s"
 msgstr "Fallo para intercambiar volúmen %(old_volume_id)s por %(new_volume_id)s"
 
-#: nova/compute/manager.py:4331
+#: nova/compute/manager.py:4330
 #, python-format
 msgid "Failed to connect to volume %(volume_id)s with volume at %(mountpoint)s"
 msgstr ""
 "Fallo al conectar hacia al volúmen %(volume_id)s con el volumen en "
 "%(mountpoint)s"
 
-#: nova/compute/manager.py:4418
+#: nova/compute/manager.py:4417
 #, python-format
 msgid "allocate_port_for_instance returned %(ports)s ports"
 msgstr "allocate_port_for_instance ha regresado %(ports)s puertos"
 
-#: nova/compute/manager.py:4438
+#: nova/compute/manager.py:4437
 #, python-format
 msgid "Port %s is not attached"
 msgstr "El puerto %s no se encuentra asignado"
 
-#: nova/compute/manager.py:4450 nova/tests/compute/test_compute.py:10524
+#: nova/compute/manager.py:4449 nova/tests/compute/test_compute.py:10524
 #, python-format
 msgid "Host %s not found"
 msgstr "No se ha encontrado el host %s"
 
-#: nova/compute/manager.py:4604
+#: nova/compute/manager.py:4603
 #, python-format
 msgid "Pre live migration failed at %s"
 msgstr "Previo a migración en vivo falló en %s"
 
-#: nova/compute/manager.py:4634
+#: nova/compute/manager.py:4633
 msgid "_post_live_migration() is started.."
 msgstr "Se ha iniciado _post_live_migration()."
 
-#: nova/compute/manager.py:4707
+#: nova/compute/manager.py:4706
 #, python-format
 msgid "Migrating instance to %s finished successfully."
 msgstr "La migración de la instancia hacia %s ha finalizado exitosamente."
 
-#: nova/compute/manager.py:4709
+#: nova/compute/manager.py:4708
 msgid ""
 "You may see the error \"libvirt: QEMU error: Domain not found: no domain "
 "with matching name.\" This error can be safely ignored."
@@ -5780,15 +5785,15 @@ msgstr ""
 "encontrado: ningún dominio con un nombre coincidente.\" Este error se "
 "puede ignorar sin ningún riesgo."
 
-#: nova/compute/manager.py:4734
+#: nova/compute/manager.py:4733
 msgid "Post operation of migration started"
 msgstr "Se ha iniciado la operación posterior de migración"
 
-#: nova/compute/manager.py:4943
+#: nova/compute/manager.py:4942
 msgid "An error occurred while refreshing the network cache."
 msgstr "Ha ocurrido un error al actualizar el cache de red."
 
-#: nova/compute/manager.py:4997
+#: nova/compute/manager.py:4996
 #, python-format
 msgid ""
 "Found %(migration_count)d unconfirmed migrations older than "
@@ -5797,12 +5802,12 @@ msgstr ""
 "Se han encontrado %(migration_count)d migraciones sin confirmar de más de"
 " %(confirm_window)d segundos"
 
-#: nova/compute/manager.py:5002
+#: nova/compute/manager.py:5001
 #, python-format
 msgid "Setting migration %(migration_id)s to error: %(reason)s"
 msgstr "Estableciendo la %(migration_id)s en error: %(reason)s"
 
-#: nova/compute/manager.py:5011
+#: nova/compute/manager.py:5010
 #, python-format
 msgid ""
 "Automatically confirming migration %(migration_id)s for instance "
@@ -5811,32 +5816,32 @@ msgstr ""
 "Confirmando automáticamente la migración %(migration_id)s para la "
 "instancia %(instance_uuid)s"
 
-#: nova/compute/manager.py:5021
+#: nova/compute/manager.py:5020
 #, python-format
 msgid "Instance %s not found"
 msgstr "No se ha encontrado la instancia %s"
 
-#: nova/compute/manager.py:5026
+#: nova/compute/manager.py:5025
 msgid "In ERROR state"
 msgstr "En estado de ERROR "
 
-#: nova/compute/manager.py:5033
+#: nova/compute/manager.py:5032
 #, python-format
 msgid "In states %(vm_state)s/%(task_state)s, not RESIZED/None"
 msgstr "En los estados %(vm_state)s/%(task_state)s, no REDIMENSIONADO/Ninguno"
 
-#: nova/compute/manager.py:5044
+#: nova/compute/manager.py:5043
 #, python-format
 msgid "Error auto-confirming resize: %s. Will retry later."
 msgstr ""
 "Error auto confirmando modificación de tamaño: %s. Se intentará "
 "posteriormente."
 
-#: nova/compute/manager.py:5073
+#: nova/compute/manager.py:5072
 msgid "Periodic task failed to offload instance."
 msgstr "Tarea periódica falló al descargar instancia."
 
-#: nova/compute/manager.py:5093
+#: nova/compute/manager.py:5092
 #, python-format
 msgid ""
 "Running instance usage audit for host %(host)s from %(begin_time)s to "
@@ -5845,20 +5850,20 @@ msgstr ""
 "Ejecutando auditoría de uso de instancia para %(host)s desde "
 "%(begin_time)s hasta %(end_time)s. %(number_instances)s instancias."
 
-#: nova/compute/manager.py:5113
+#: nova/compute/manager.py:5112
 #, python-format
 msgid "Failed to generate usage audit for instance on host %s"
 msgstr "No se ha podido generar auditoría de uso para la instancia en el host %s "
 
-#: nova/compute/manager.py:5142
+#: nova/compute/manager.py:5141
 msgid "Updating bandwidth usage cache"
 msgstr "Actualizando memoria caché de uso de ancho de banda"
 
-#: nova/compute/manager.py:5164
+#: nova/compute/manager.py:5163
 msgid "Bandwidth usage not supported by hypervisor."
 msgstr "Uso de ancho de banda no soportado por el hipervisor."
 
-#: nova/compute/manager.py:5287
+#: nova/compute/manager.py:5286
 #, python-format
 msgid ""
 "Found %(num_db_instances)s in the database and %(num_vm_instances)s on "
@@ -5867,20 +5872,20 @@ msgstr ""
 "Se han encontrado %(num_db_instances)s en la base de datos y "
 "%(num_vm_instances)s en el hipervisor."
 
-#: nova/compute/manager.py:5294 nova/compute/manager.py:5357
+#: nova/compute/manager.py:5293 nova/compute/manager.py:5356
 #, python-format
 msgid "During sync_power_state the instance has a pending task (%(task)s). Skip."
 msgstr ""
 "Durante sync_power_state la instancia ha dejado una tarea pendiente "
 "(%(task)s). Omitir."
 
-#: nova/compute/manager.py:5318
+#: nova/compute/manager.py:5317
 msgid "Periodic sync_power_state task had an error while processing an instance."
 msgstr ""
 "La tarea periódica sync_power_state ha tenido un error al procesar una "
 "instancia."
 
-#: nova/compute/manager.py:5344
+#: nova/compute/manager.py:5343
 #, python-format
 msgid ""
 "During the sync_power process the instance has moved from host %(src)s to"
@@ -5889,63 +5894,63 @@ msgstr ""
 "Durante el proceso sync_power, la instancia se ha movido del host %(src)s"
 " al host %(dst)s"
 
-#: nova/compute/manager.py:5382
+#: nova/compute/manager.py:5381
 msgid "Instance shutdown by itself. Calling the stop API."
 msgstr "Conclusión de instancia por sí misma. Llamando a la API de detención."
 
-#: nova/compute/manager.py:5394 nova/compute/manager.py:5403
-#: nova/compute/manager.py:5434 nova/compute/manager.py:5445
+#: nova/compute/manager.py:5393 nova/compute/manager.py:5402
+#: nova/compute/manager.py:5433 nova/compute/manager.py:5444
 msgid "error during stop() in sync_power_state."
 msgstr "error durante stop() en sync_power_state."
 
-#: nova/compute/manager.py:5398
+#: nova/compute/manager.py:5397
 msgid "Instance is suspended unexpectedly. Calling the stop API."
 msgstr ""
 "La instancia se ha suspendido inesperadamente. Llamando a la API de "
 "detención."
 
-#: nova/compute/manager.py:5414
+#: nova/compute/manager.py:5413
 msgid "Instance is paused unexpectedly. Ignore."
 msgstr "La instancia se ha puesto en pausa inesperadamente. Ignorar. "
 
-#: nova/compute/manager.py:5420
+#: nova/compute/manager.py:5419
 msgid "Instance is unexpectedly not found. Ignore."
 msgstr "La instancia no se encuentra inesperadamente. Ignorar. "
 
-#: nova/compute/manager.py:5426
+#: nova/compute/manager.py:5425
 msgid "Instance is not stopped. Calling the stop API."
 msgstr "La instancia no se ha detenido. Llamando a la API de detención."
 
-#: nova/compute/manager.py:5440
+#: nova/compute/manager.py:5439
 msgid "Paused instance shutdown by itself. Calling the stop API."
 msgstr ""
 "La instancia pausada se ha apagado a si misma. Llamando la API de "
 "detención."
 
-#: nova/compute/manager.py:5454
+#: nova/compute/manager.py:5453
 msgid "Instance is not (soft-)deleted."
 msgstr "La instancia no se suprime (de forma no permanente). "
 
-#: nova/compute/manager.py:5483
+#: nova/compute/manager.py:5482
 msgid "Reclaiming deleted instance"
 msgstr "Reclamando instancia suprimida"
 
-#: nova/compute/manager.py:5487
+#: nova/compute/manager.py:5486
 #, python-format
 msgid "Periodic reclaim failed to delete instance: %s"
 msgstr "Reclamación periódica falló al eliminar instancia: %s"
 
-#: nova/compute/manager.py:5512
+#: nova/compute/manager.py:5511
 #, python-format
 msgid "Deleting orphan compute node %s"
 msgstr "Eliminando nodo de cómputo huérfano %s"
 
-#: nova/compute/manager.py:5520 nova/compute/resource_tracker.py:392
+#: nova/compute/manager.py:5519 nova/compute/resource_tracker.py:392
 #, python-format
 msgid "No service record for host %s"
 msgstr "Ningún registro de servicio para el host %s "
 
-#: nova/compute/manager.py:5561
+#: nova/compute/manager.py:5560
 #, python-format
 msgid ""
 "Detected instance with name label '%s' which is marked as DELETED but "
@@ -5955,7 +5960,7 @@ msgstr ""
 " marcada como ELIMINADA pero todavía se encuentra presente en el "
 "anfitrión."
 
-#: nova/compute/manager.py:5567
+#: nova/compute/manager.py:5566
 #, python-format
 msgid ""
 "Powering off instance with name label '%s' which is marked as DELETED but"
@@ -5964,15 +5969,15 @@ msgstr ""
 "Apagando la instancia con nombre '%s' que está marcada como ELIMINADA "
 "pero sigue presente en el anfitrión."
 
-#: nova/compute/manager.py:5576
+#: nova/compute/manager.py:5575
 msgid "set_bootable is not implemented for the current driver"
 msgstr "set_bootable no está implementado en el controlador actual"
 
-#: nova/compute/manager.py:5581
+#: nova/compute/manager.py:5580
 msgid "Failed to power off instance"
 msgstr "Fallo al apagar la instancia"
 
-#: nova/compute/manager.py:5585
+#: nova/compute/manager.py:5584
 #, python-format
 msgid ""
 "Destroying instance with name label '%s' which is marked as DELETED but "
@@ -5981,22 +5986,22 @@ msgstr ""
 "Desrtuyendo instancia con etiqueta de nombre '%s' la cual ha sido marcada"
 " como ELIMINADA pero todavía se encuentra presente en el anfitrión."
 
-#: nova/compute/manager.py:5595
+#: nova/compute/manager.py:5594
 #, python-format
 msgid "Periodic cleanup failed to delete instance: %s"
 msgstr "Limpieza periódica falló al eliminar la instancia: %s"
 
-#: nova/compute/manager.py:5599
+#: nova/compute/manager.py:5598
 #, python-format
 msgid "Unrecognized value '%s' for CONF.running_deleted_instance_action"
 msgstr "Valor '%s' no reconocido para CONF.running_deleted_instance_action"
 
-#: nova/compute/manager.py:5630
+#: nova/compute/manager.py:5629
 #, python-format
 msgid "Setting instance back to %(state)s after: %(error)s"
 msgstr "Estableciendo la instancia de vuelta a %(state)s tras: %(error)s"
 
-#: nova/compute/manager.py:5640
+#: nova/compute/manager.py:5639
 #, python-format
 msgid "Setting instance back to ACTIVE after: %s"
 msgstr "Marcando la instancia de nuevo como ACTIVA después de: %s"
@@ -6600,16 +6605,16 @@ msgstr ""
 msgid "Not deleting key %s"
 msgstr "Sin eliminar la clave %s"
 
-#: nova/network/api.py:205 nova/network/neutronv2/api.py:761
+#: nova/network/api.py:197 nova/network/neutronv2/api.py:797
 #, python-format
 msgid "re-assign floating IP %(address)s from instance %(instance_id)s"
 msgstr "volver a asignar IP flotante %(address)s desde instancia %(instance_id)s"
 
-#: nova/network/base_api.py:47
+#: nova/network/base_api.py:49
 msgid "Failed storing info cache"
 msgstr "Ha fallado el almacenamiento de memoria caché de información"
 
-#: nova/network/base_api.py:66
+#: nova/network/base_api.py:68
 msgid "instance is a required argument to use @refresh_cache"
 msgstr "la instancia es un argumento necesario para utilizar @refresh_cache "
 
@@ -6935,25 +6940,25 @@ msgstr "No se puede suprimir el dominio |%s|"
 msgid "Invalid IP format %s"
 msgstr "Formato IP inválido %s"
 
-#: nova/network/neutronv2/api.py:185
+#: nova/network/neutronv2/api.py:212
 msgid "Neutron error: quota exceeded"
 msgstr "Error de Neutron: cuota excedida"
 
-#: nova/network/neutronv2/api.py:188
+#: nova/network/neutronv2/api.py:215
 #, python-format
 msgid "Neutron error creating port on network %s"
 msgstr "Error de Neutron al crear puerto en la red: %s"
 
-#: nova/network/neutronv2/api.py:221
+#: nova/network/neutronv2/api.py:248
 #, python-format
 msgid "empty project id for instance %s"
 msgstr "ID de proyecto vacío para la instancia %s"
 
-#: nova/network/neutronv2/api.py:256
+#: nova/network/neutronv2/api.py:283
 msgid "No network configured!"
 msgstr "No hay red configurada!"
 
-#: nova/network/neutronv2/api.py:276
+#: nova/network/neutronv2/api.py:303
 #, python-format
 msgid ""
 "Multiple security groups found matching '%s'. Use an ID to be more "
@@ -6962,27 +6967,32 @@ msgstr ""
 "Se han encontrado varios grupos de seguridad que coinciden con '%s'. "
 "Utilice un ID para ser más específico."
 
-#: nova/network/neutronv2/api.py:346
+#: nova/network/neutronv2/api.py:373
 #, python-format
 msgid "Failed to update port %s"
 msgstr "Falló al actualizar el puerto %s"
 
-#: nova/network/neutronv2/api.py:353
+#: nova/network/neutronv2/api.py:380
 #, python-format
 msgid "Failed to delete port %s"
 msgstr "Ha ocurrido un fallo al eliminar el puerto %s"
 
-#: nova/network/neutronv2/api.py:415
+#: nova/network/neutronv2/api.py:443
+#, python-format
+msgid "Unable to reset device ID for port %s"
+msgstr ""
+
+#: nova/network/neutronv2/api.py:451
 #, python-format
 msgid "Port %s does not exist"
 msgstr "El puerto %s no existe"
 
-#: nova/network/neutronv2/api.py:418 nova/network/neutronv2/api.py:442
+#: nova/network/neutronv2/api.py:454 nova/network/neutronv2/api.py:478
 #, python-format
 msgid "Failed to delete neutron port %s"
 msgstr "Fallo al eliminar el puerto de neutron %s"
 
-#: nova/network/neutronv2/api.py:540
+#: nova/network/neutronv2/api.py:576
 #, python-format
 msgid ""
 "Unable to update port %(portid)s on subnet %(subnet_id)s with failure: "
@@ -6991,47 +7001,47 @@ msgstr ""
 "No se ha podido actualizar el puerto %(portid)s en la subred "
 "%(subnet_id)s con la anomalía: %(exception)s"
 
-#: nova/network/neutronv2/api.py:569
+#: nova/network/neutronv2/api.py:605
 #, python-format
 msgid "Unable to update port %(portid)s with failure: %(exception)s"
 msgstr "No se puede actualizar el puerto %(portid)s con anomalía: %(exception)s"
 
-#: nova/network/neutronv2/api.py:596
+#: nova/network/neutronv2/api.py:632
 msgid "Multiple possible networks found, use a Network ID to be more specific."
 msgstr ""
 "Se han encontrado múltiples redes posibles, usa un identificador de red "
 "para ser más específico."
 
-#: nova/network/neutronv2/api.py:615
+#: nova/network/neutronv2/api.py:651
 #, python-format
 msgid "Failed to access port %s"
 msgstr "Fallo al acceder al puerto %s"
 
-#: nova/network/neutronv2/api.py:844
+#: nova/network/neutronv2/api.py:880
 #, python-format
 msgid "Unable to access floating IP %s"
 msgstr "Incapaz de acceder a la Ip flotante %s"
 
-#: nova/network/neutronv2/api.py:946
+#: nova/network/neutronv2/api.py:968
 #, python-format
 msgid "Multiple floating IP pools matches found for name '%s'"
 msgstr ""
 "Se han encontrado varias coincidencias de agrupaciones de IP flotante "
 "para el nombre '%s' "
 
-#: nova/network/neutronv2/api.py:990
+#: nova/network/neutronv2/api.py:1012
 #, python-format
 msgid "Unable to access floating IP %(fixed_ip)s for port %(port_id)s"
 msgstr ""
 "Incapaz de acceder a la IP flotante %(fixed_ip)s para el puerto "
 "%(port_id)s"
 
-#: nova/network/neutronv2/api.py:1049
+#: nova/network/neutronv2/api.py:1071
 #, python-format
 msgid "Unable to update host of port %s"
 msgstr "Incapaz de actualizar el anfitrión del puerto %s"
 
-#: nova/network/neutronv2/api.py:1085
+#: nova/network/neutronv2/api.py:1107
 #, python-format
 msgid ""
 "Network %(id)s not matched with the tenants network! The ports tenant "
@@ -7730,15 +7740,15 @@ msgstr "Intento de instanciar sigleton"
 msgid "status must be available"
 msgstr "el estado debe ser disponible"
 
-#: nova/tests/fake_volume.py:191 nova/volume/cinder.py:241
+#: nova/tests/fake_volume.py:191 nova/volume/cinder.py:244
 msgid "already attached"
 msgstr "ya está conectado"
 
-#: nova/tests/fake_volume.py:195 nova/volume/cinder.py:252
+#: nova/tests/fake_volume.py:195 nova/volume/cinder.py:255
 msgid "Instance and volume not in same availability_zone"
 msgstr "La instancia y el volumen no están en la misma availability_zone"
 
-#: nova/tests/fake_volume.py:200 nova/volume/cinder.py:258
+#: nova/tests/fake_volume.py:200 nova/volume/cinder.py:261
 msgid "already detached"
 msgstr "ya está desconectado"
 
@@ -9953,12 +9963,12 @@ msgstr "No se ha registrado aún ninguna máquina virtual "
 msgid "Unable to delete %(file)s. Exception: %(ex)s"
 msgstr "Incapaz de remover %(file)s. Excepción: %(ex)s"
 
-#: nova/virt/vmwareapi/imagecache.py:149
+#: nova/virt/vmwareapi/imagecache.py:148
 #, python-format
 msgid "Image %s is no longer used by this node. Pending deletion!"
 msgstr "La imagen %s ya no está en uso por este nodo. Remoción pendiente!"
 
-#: nova/virt/vmwareapi/imagecache.py:154
+#: nova/virt/vmwareapi/imagecache.py:153
 #, python-format
 msgid "Image %s is no longer used. Deleting!"
 msgstr "La imagen %s ya no está en uso. Eliminando!"
@@ -10902,11 +10912,11 @@ msgstr "Error inesperado: %s "
 msgid "Starting nova-xvpvncproxy node (version %s)"
 msgstr "Iniciando el nodo nova-xvpvncproxy (versión %s)"
 
-#: nova/volume/cinder.py:232
+#: nova/volume/cinder.py:235
 msgid "status must be 'in-use'"
 msgstr "el estado debe estar 'in-use'"
 
-#: nova/volume/cinder.py:238
+#: nova/volume/cinder.py:241
 msgid "status must be 'available'"
 msgstr "el estado debe ser 'available'"
 
