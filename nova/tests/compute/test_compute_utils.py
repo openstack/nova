@@ -21,6 +21,7 @@ import string
 
 import mock
 from oslo.config import cfg
+import testtools
 
 from nova.compute import flavors
 from nova.compute import power_state
@@ -668,9 +669,8 @@ class ComputeGetImageMetadataTestCase(test.TestCase):
         self.image['properties'] = 'DONTCARE'
         self.assertThat(self.image, matchers.DictMatches(image_meta))
 
-    def test_get_image_meta_no_image(self):
-        e = exception.ImageNotFound(image_id='fake-image')
-        self.mock_image_api.get.side_effect = e
+    def _test_get_image_meta_exception(self, error):
+        self.mock_image_api.get.side_effect = error
 
         image_meta = compute_utils.get_image_metadata(
             self.ctx, self.mock_image_api, 'fake-image', self.instance_obj)
@@ -680,6 +680,23 @@ class ComputeGetImageMetadataTestCase(test.TestCase):
         for key in self.image:
             self.image[key] = str(self.image[key])
         self.assertThat(self.image, matchers.DictMatches(image_meta))
+
+    def test_get_image_meta_no_image(self):
+        error = exception.ImageNotFound(image_id='fake-image')
+        self._test_get_image_meta_exception(error)
+
+    def test_get_image_meta_not_authorized(self):
+        error = exception.ImageNotAuthorized(image_id='fake-image')
+        self._test_get_image_meta_exception(error)
+
+    def test_get_image_meta_bad_request(self):
+        error = exception.Invalid()
+        self._test_get_image_meta_exception(error)
+
+    def test_get_image_meta_unexpected_exception(self):
+        error = test.TestingException()
+        with testtools.ExpectedException(test.TestingException):
+            self._test_get_image_meta_exception(error)
 
     def test_get_image_meta_no_image_system_meta(self):
         for k in self.instance['system_metadata'].keys():

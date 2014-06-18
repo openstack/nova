@@ -203,7 +203,9 @@ def get_image_metadata(context, image_api, image_id_or_uri, instance):
     # If the base image is still available, get its metadata
     try:
         image = image_api.get(context, image_id_or_uri)
-    except Exception as e:
+    except (exception.ImageNotAuthorized,
+            exception.ImageNotFound,
+            exception.Invalid) as e:
         LOG.warning(_("Can't access image %(image_id)s: %(error)s"),
                     {"image_id": image_id_or_uri, "error": e},
                     instance=instance)
