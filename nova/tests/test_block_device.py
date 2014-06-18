@@ -333,7 +333,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         self.assertIn('field1', dev_dict)
         self.assertIn('field2', dev_dict)
         self.assertIn('db_field1', dev_dict)
-        self.assertFalse('db_field2'in dev_dict)
+        self.assertNotIn('db_field2', dev_dict)
 
         # Make sure all expected fields are defaulted
         dev_dict = block_device.BlockDeviceDict({'field1': 'foo'})
@@ -341,7 +341,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         self.assertIn('field2', dev_dict)
         self.assertIsNone(dev_dict['field2'])
         self.assertNotIn('db_field1', dev_dict)
-        self.assertFalse('db_field2'in dev_dict)
+        self.assertNotIn('db_field2', dev_dict)
 
         # Unless they are not meant to be
         dev_dict = block_device.BlockDeviceDict({'field1': 'foo'},
@@ -349,7 +349,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         self.assertIn('field1', dev_dict)
         self.assertNotIn('field2', dev_dict)
         self.assertNotIn('db_field1', dev_dict)
-        self.assertFalse('db_field2'in dev_dict)
+        self.assertNotIn('db_field2', dev_dict)
 
     def test_validate(self):
         self.assertRaises(exception.InvalidBDMFormat,
@@ -497,7 +497,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
             mapping_bdm = fake_block_device.FakeDbBlockDeviceDict(
                     bdm).get_image_mapping()
             for fld in removed_fields:
-                self.assertTrue(fld not in mapping_bdm)
+                self.assertNotIn(fld, mapping_bdm)
 
     def _test_snapshot_from_bdm(self, template):
         snapshot = block_device.snapshot_from_bdm('new-snapshot-id', template)

@@ -7102,7 +7102,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn.post_live_migration_at_destination(self.context, instance,
                                         network_info, True,
                                         block_device_info=block_device_info)
-        self.assertTrue('fake' in self.resultXML)
+        self.assertIn('fake', self.resultXML)
         self.assertTrue(
             block_device_info['block_device_mapping'][0].save.called)
 

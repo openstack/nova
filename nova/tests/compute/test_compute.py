@@ -5585,8 +5585,7 @@ class ComputeTestCase(BaseTestCase):
         exc_info = None
 
         def fake_db_fault_create(ctxt, values):
-            self.assertTrue('raise messaging.RemoteError'
-                in values['details'])
+            self.assertIn('raise messaging.RemoteError', values['details'])
             del values['details']
 
             expected = {

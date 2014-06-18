@@ -446,7 +446,7 @@ class TestServerGroupXMLSerializer(test.TestCase):
                 for idx, gr_child in enumerate(child):
                     self.assertEqual(self._tag(gr_child), 'meta')
                     key = gr_child.get('key')
-                    self.assertTrue(key in ['key1', 'key2'])
+                    self.assertIn(key, ['key1', 'key2'])
                     metas[key] = gr_child.text
                 self.assertEqual(len(metas), len(metadata))
                 for k in metadata:

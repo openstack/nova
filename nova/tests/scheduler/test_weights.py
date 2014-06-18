@@ -207,7 +207,7 @@ class MetricsWeigherTestCase(test.NoDBTestCase):
         weigher._parse_setting()
         self.assertTrue(len(results) == len(weigher.setting))
         for item in results:
-            self.assertTrue(item in weigher.setting)
+            self.assertIn(item, weigher.setting)
 
     def test_parse_setting(self):
         weigher = self.weight_classes[0]()

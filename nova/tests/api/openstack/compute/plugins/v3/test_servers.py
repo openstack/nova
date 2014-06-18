@@ -721,7 +721,7 @@ class ServersControllerTest(ControllerTest):
 
         req = fakes.HTTPRequestV3.blank('/servers?tenant_id=newfake')
         res = self.controller.index(req)
-        self.assertTrue('servers' in res)
+        self.assertIn('servers', res)
 
     def test_tenant_id_filter_implies_all_tenants(self):
         def fake_get_all(context, filters=None, sort_key=None,
@@ -743,7 +743,7 @@ class ServersControllerTest(ControllerTest):
         req = fakes.HTTPRequestV3.blank('/servers?tenant_id=newfake',
                                       use_admin_context=True)
         res = self.controller.index(req)
-        self.assertTrue('servers' in res)
+        self.assertIn('servers', res)
 
     def test_all_tenants_param_normal(self):
         def fake_get_all(context, filters=None, sort_key=None,

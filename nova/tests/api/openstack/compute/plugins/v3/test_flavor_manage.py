@@ -314,8 +314,8 @@ class PrivateFlavorManageTest(test.TestCase):
             "tenant_id": "%s" % ctxt.project_id,
             "flavor_id": "%s" % body["flavor"]["id"]
         }
-        self.assertTrue(expected_flavor_access_body in
-                        flavor_access_body["flavor_access"])
+        self.assertIn(expected_flavor_access_body,
+                      flavor_access_body["flavor_access"])
 
     def test_create_public_flavor_should_not_create_flavor_access(self):
         req_body = {
