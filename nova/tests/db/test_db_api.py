@@ -3791,7 +3791,8 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
         ips = ['1.1.1.1', '1.1.1.2', '1.1.1.3', '1.1.1.4']
         prepare_ips = lambda x: {'address': x}
 
-        db.floating_ip_bulk_create(self.ctxt, map(prepare_ips, ips))
+        result = db.floating_ip_bulk_create(self.ctxt, map(prepare_ips, ips))
+        self.assertEqual('1.1.1.1', result[0].address)
         self.assertRaises(exception.FloatingIpExists,
                           db.floating_ip_bulk_create,
                           self.ctxt, map(prepare_ips, ['1.1.1.5', '1.1.1.4']))

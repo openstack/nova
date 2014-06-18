@@ -878,7 +878,7 @@ object_data = {
     'Flavor': '1.0-2956744a9d1edd729bf8bf0dcc98c235',
     'FlavorList': '1.0-07d83f9f303186954879949adf0ee60d',
     'FloatingIP': '1.1-e7c74bf87bda4370aba6d46253d2f8e6',
-    'FloatingIPList': '1.1-0fb3457b01f0e9dceedd0549a7fd22ab',
+    'FloatingIPList': '1.2-2b48d645da4c9a6af48c167df5307a87',
     'Instance': '1.13-33b01aa5bae61817ffd70761aa516b03',
     'InstanceAction': '1.1-6b21abed7121856422cd6160df4f4676',
     'InstanceActionEvent': '1.1-28326849b2dddc4dc457aa23ad8fb872',

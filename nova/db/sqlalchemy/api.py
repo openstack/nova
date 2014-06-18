@@ -783,10 +783,12 @@ def floating_ip_allocate_address(context, project_id, pool,
 @require_context
 def floating_ip_bulk_create(context, ips):
     session = get_session()
+    result = []
     with session.begin():
         for ip in ips:
             model = models.FloatingIp()
             model.update(ip)
+            result.append(model)
             try:
                 # NOTE(boris-42): To get existing address we have to do each
                 #                  time session.flush()..
@@ -794,6 +796,7 @@ def floating_ip_bulk_create(context, ips):
                 session.flush()
             except db_exc.DBDuplicateEntry:
                 raise exception.FloatingIpExists(address=ip['address'])
+    return result
 
 
 def _ip_range_splitter(ips, block_size=256):

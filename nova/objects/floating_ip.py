@@ -60,9 +60,11 @@ class FloatingIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
         if not self._context:
             raise exception.OrphanedObjectError(method='obj_load_attr',
                                                 objtype=self.obj_name())
-        self.fixed_ip = fixed_ip.FixedIP.get_by_id(self._context,
-                                                   self.fixed_ip_id,
-                                                   expected_attrs=['network'])
+        if self.fixed_ip_id is not None:
+            self.fixed_ip = fixed_ip.FixedIP.get_by_id(
+                self._context, self.fixed_ip_id, expected_attrs=['network'])
+        else:
+            self.fixed_ip = None
 
     @obj_base.remotable_classmethod
     def get_by_id(cls, context, id):
@@ -147,8 +149,9 @@ class FloatingIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     child_versions = {
         '1.0': '1.0',
         '1.1': '1.1',
+        '1.2': '1.1',
         }
-    VERSION = '1.1'
+    VERSION = '1.2'
 
     @obj_base.remotable_classmethod
     def get_all(cls, context):
@@ -181,3 +184,20 @@ class FloatingIPList(obj_base.ObjectListBase, obj_base.NovaObject):
                                                            fixed_ip_id)
         return obj_base.obj_make_list(context, cls(), FloatingIP,
                                       db_floatingips)
+
+    @staticmethod
+    def make_ip_info(address, pool, interface):
+        return {'address': str(address),
+                'pool': pool,
+                'interface': interface}
+
+    @obj_base.remotable_classmethod
+    def create(cls, context, ip_info, want_result=False):
+        db_floatingips = db.floating_ip_bulk_create(context, ip_info)
+        if want_result:
+            return obj_base.obj_make_list(context, cls(), FloatingIP,
+                                          db_floatingips)
+
+    @obj_base.remotable_classmethod
+    def destroy(cls, context, ips):
+        db.floating_ip_bulk_destroy(context, ips)
