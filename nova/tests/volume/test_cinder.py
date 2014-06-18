@@ -152,7 +152,7 @@ class CinderApiTestCase(test.NoDBTestCase):
                                side_effect=lambda context,
                                instance: 'zone1') as mock_get_instance_az:
 
-            cinder.CONF.set_override('cinder_cross_az_attach', False)
+            cinder.CONF.set_override('cross_az_attach', False, group='cinder')
             volume['availability_zone'] = 'zone1'
             self.assertIsNone(self.api.check_attach(self.ctx,
                                                     volume, instance))
@@ -179,7 +179,7 @@ class CinderApiTestCase(test.NoDBTestCase):
         volume['attach_status'] = "detached"
         volume['availability_zone'] = 'zone1'
         instance = {'availability_zone': 'zone1', 'host': 'fakehost'}
-        cinder.CONF.set_override('cinder_cross_az_attach', False)
+        cinder.CONF.set_override('cross_az_attach', False, group='cinder')
 
         with mock.patch.object(cinder.az, 'get_instance_availability_zone',
                                side_effect=lambda context, instance: 'zone1'):
