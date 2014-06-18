@@ -16,14 +16,14 @@
 import os.path
 
 import webob
-from webob import exc
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas.v3 import create_backup
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import compute
 from nova import exception
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
@@ -38,6 +38,7 @@ class CreateBackupController(wsgi.Controller):
 
     @extensions.expected_errors((400, 404, 409, 413))
     @wsgi.action('create_backup')
+    @validation.schema(create_backup.create_backup)
     def _create_backup(self, req, id, body):
         """Backup a server instance.
 
@@ -53,37 +54,14 @@ class CreateBackupController(wsgi.Controller):
         authorize(context)
         entity = body["create_backup"]
 
-        try:
-            image_name = entity["name"]
-            backup_type = entity["backup_type"]
-            rotation = entity["rotation"]
-
-        except KeyError as missing_key:
-            msg = _("create_backup entity requires %s attribute") % missing_key
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        except TypeError:
-            msg = _("Malformed create_backup entity")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        try:
-            rotation = int(rotation)
-        except ValueError:
-            msg = _("create_backup attribute 'rotation' must be an integer")
-            raise exc.HTTPBadRequest(explanation=msg)
-        if rotation < 0:
-            msg = _("create_backup attribute 'rotation' must be greater "
-                    "than or equal to zero")
-            raise exc.HTTPBadRequest(explanation=msg)
+        image_name = entity["name"]
+        backup_type = entity["backup_type"]
+        rotation = int(entity["rotation"])
 
         props = {}
         metadata = entity.get('metadata', {})
         common.check_img_metadata_properties_quota(context, metadata)
-        try:
-            props.update(metadata)
-        except ValueError:
-            msg = _("Invalid metadata")
-            raise exc.HTTPBadRequest(explanation=msg)
+        props.update(metadata)
 
         instance = common.get_instance(self.compute_api, context, id,
                                        want_objects=True)

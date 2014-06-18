@@ -109,6 +109,17 @@ class CreateBackupTests(admin_only_action_common.CommonMixin,
         res = self._make_request(self._make_url(), body)
         self.assertEqual(400, res.status_int)
 
+    def test_create_backup_negative_rotation_with_string_number(self):
+        body = {
+            'create_backup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': '-1',
+            },
+        }
+        res = self._make_request(self._make_url('fake'), body)
+        self.assertEqual(400, res.status_int)
+
     def test_create_backup_no_backup_type(self):
         # Backup Type (daily or weekly) is required for backup requests.
         body = {
@@ -118,6 +129,18 @@ class CreateBackupTests(admin_only_action_common.CommonMixin,
             },
         }
         res = self._make_request(self._make_url(), body)
+        self.assertEqual(400, res.status_int)
+
+    def test_create_backup_non_dict_metadata(self):
+        body = {
+            'create_backup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1,
+                'metadata': 'non_dict',
+            },
+        }
+        res = self._make_request(self._make_url('fake'), body)
         self.assertEqual(400, res.status_int)
 
     def test_create_backup_bad_entity(self):
@@ -170,6 +193,29 @@ class CreateBackupTests(admin_only_action_common.CommonMixin,
         self.mox.ReplayAll()
 
         res = self._make_request(self._make_url(instance.uuid), body)
+        self.assertEqual(202, res.status_int)
+        self.assertIn('fake-image-id', res.headers['Location'])
+
+    def test_create_backup_rotation_is_string_number(self):
+        body = {
+            'create_backup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': '1',
+            },
+        }
+
+        image = dict(id='fake-image-id', status='ACTIVE', name='Backup 1',
+                     properties={})
+        common.check_img_metadata_properties_quota(self.context, {})
+        instance = self._stub_instance_get()
+        self.compute_api.backup(self.context, instance, 'Backup 1',
+                                'daily', 1,
+                                extra_properties={}).AndReturn(image)
+
+        self.mox.ReplayAll()
+
+        res = self._make_request(self._make_url(instance['uuid']), body)
         self.assertEqual(202, res.status_int)
         self.assertIn('fake-image-id', res.headers['Location'])
 
