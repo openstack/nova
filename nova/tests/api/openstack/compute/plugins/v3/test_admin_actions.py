@@ -196,16 +196,16 @@ class ResetStateTests(test.NoDBTestCase):
         self.context = self.request.environ['nova.context']
 
     def test_no_state(self):
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.admin_api._reset_state,
                           self.request, self.uuid,
-                          {"reset_state": None})
+                          body={"reset_state": None})
 
     def test_bad_state(self):
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.admin_api._reset_state,
                           self.request, self.uuid,
-                          {"reset_state": {"state": "spam"}})
+                          body={"reset_state": {"state": "spam"}})
 
     def test_no_instance(self):
         self.mox.StubOutWithMock(self.compute_api, 'get')
@@ -218,7 +218,7 @@ class ResetStateTests(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.admin_api._reset_state,
                           self.request, self.uuid,
-                          {"reset_state": {"state": "active"}})
+                          body={"reset_state": {"state": "active"}})
 
     def _setup_mock(self, expected):
         instance = objects.Instance()
@@ -248,8 +248,8 @@ class ResetStateTests(test.NoDBTestCase):
         self.mox.ReplayAll()
 
         body = {"reset_state": {"state": "active"}}
-        result = self.admin_api._reset_state(self.request, self.uuid, body)
-
+        result = self.admin_api._reset_state(self.request, self.uuid,
+                                             body=body)
         self.assertEqual(202, result.status_int)
 
     def test_reset_error(self):
@@ -257,6 +257,6 @@ class ResetStateTests(test.NoDBTestCase):
                               task_state=None))
         self.mox.ReplayAll()
         body = {"reset_state": {"state": "error"}}
-        result = self.admin_api._reset_state(self.request, self.uuid, body)
-
+        result = self.admin_api._reset_state(self.request, self.uuid,
+                                             body=body)
         self.assertEqual(202, result.status_int)
