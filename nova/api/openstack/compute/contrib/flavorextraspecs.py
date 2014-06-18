@@ -21,8 +21,8 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.compute import flavors
-from nova import db
 from nova import exception
+from nova import objects
 from nova.openstack.common.gettextutils import _
 from nova import utils
 
@@ -48,8 +48,8 @@ class FlavorExtraSpecsController(object):
     """The flavor extra specs API controller for the OpenStack API."""
 
     def _get_extra_specs(self, context, flavor_id):
-        extra_specs = db.flavor_extra_specs_get(context, flavor_id)
-        return dict(extra_specs=extra_specs)
+        flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
+        return dict(extra_specs=flavor.extra_specs)
 
     def _check_body(self, body):
         if body is None or body == "":
@@ -90,11 +90,13 @@ class FlavorExtraSpecsController(object):
         specs = body.get('extra_specs')
         self._check_extra_specs(specs)
         try:
-            db.flavor_extra_specs_update_or_create(context,
-                                                              flavor_id,
-                                                              specs)
+            flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
+            flavor.extra_specs = dict(flavor.extra_specs, **specs)
+            flavor.save()
         except exception.MetadataLimitExceeded as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
+        except exception.FlavorNotFound as error:
+            raise exc.HTTPNotFound(explanation=error.format_message())
         return body
 
     @wsgi.serializers(xml=ExtraSpecTemplate)
@@ -109,11 +111,13 @@ class FlavorExtraSpecsController(object):
             expl = _('Request body contains too many items')
             raise exc.HTTPBadRequest(explanation=expl)
         try:
-            db.flavor_extra_specs_update_or_create(context,
-                                                               flavor_id,
-                                                               body)
+            flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
+            flavor.extra_specs = dict(flavor.extra_specs, **body)
+            flavor.save()
         except exception.MetadataLimitExceeded as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
+        except exception.FlavorNotFound as error:
+            raise exc.HTTPNotFound(explanation=error.format_message())
         return body
 
     @wsgi.serializers(xml=ExtraSpecTemplate)
@@ -122,20 +126,31 @@ class FlavorExtraSpecsController(object):
         context = req.environ['nova.context']
         authorize(context, action='show')
         try:
-            extra_spec = db.flavor_extra_specs_get_item(context,
-                                                               flavor_id, id)
-            return extra_spec
-        except exception.FlavorExtraSpecsNotFound:
-            raise exc.HTTPNotFound()
+            flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
+            return {id: flavor.extra_specs[id]}
+        except exception.FlavorNotFound as error:
+            raise exc.HTTPNotFound(explanation=error.format_message())
+        except KeyError:
+            msg = _("Flavor %(flavor_id)s has no extra specs with "
+                    "key %(key)s.") % dict(flavor_id=flavor_id,
+                                           key=id)
+            raise exc.HTTPNotFound(explanation=msg)
 
     def delete(self, req, flavor_id, id):
         """Deletes an existing extra spec."""
         context = req.environ['nova.context']
         authorize(context, action='delete')
         try:
-            db.flavor_extra_specs_delete(context, flavor_id, id)
-        except exception.FlavorExtraSpecsNotFound as e:
+            flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
+            del flavor.extra_specs[id]
+            flavor.save()
+        except exception.FlavorNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
+        except KeyError:
+            msg = _("Flavor %(flavor_id)s has no extra specs with "
+                    "key %(key)s.") % dict(flavor_id=flavor_id,
+                                           key=id)
+            raise exc.HTTPNotFound(explanation=msg)
 
 
 class Flavorextraspecs(extensions.ExtensionDescriptor):

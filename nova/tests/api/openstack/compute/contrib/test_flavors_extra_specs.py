@@ -21,6 +21,7 @@ import nova.db
 from nova import exception
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests.objects import test_flavor
 
 
 def return_create_flavor_extra_specs(context, flavor_id, extra_specs):
@@ -61,11 +62,13 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.controller = flavorextraspecs.FlavorExtraSpecsController()
 
     def test_index(self):
-        self.stubs.Set(nova.db, 'flavor_extra_specs_get',
-                       return_flavor_extra_specs)
+        flavor = dict(test_flavor.fake_flavor,
+                      extra_specs={'key1': 'value1'})
 
         req = fakes.HTTPRequest.blank('/v2/fake/flavors/1/os-extra_specs')
-        res_dict = self.controller.index(req, 1)
+        with mock.patch('nova.db.flavor_get_by_flavor_id') as mock_get:
+            mock_get.return_value = flavor
+            res_dict = self.controller.index(req, 1)
 
         self.assertEqual('value1', res_dict['extra_specs']['key1'])
 
@@ -79,12 +82,13 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.assertEqual(0, len(res_dict['extra_specs']))
 
     def test_show(self):
-        self.stubs.Set(nova.db, 'flavor_extra_specs_get_item',
-                       return_flavor_extra_specs_item)
-
+        flavor = dict(test_flavor.fake_flavor,
+                      extra_specs={'key5': 'value5'})
         req = fakes.HTTPRequest.blank('/v2/fake/flavors/1/os-extra_specs' +
                                       '/key5')
-        res_dict = self.controller.show(req, 1, 'key5')
+        with mock.patch('nova.db.flavor_get_by_flavor_id') as mock_get:
+            mock_get.return_value = flavor
+            res_dict = self.controller.show(req, 1, 'key5')
 
         self.assertEqual('value5', res_dict['key5'])
 
@@ -97,13 +101,36 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.show,
                           req, 1, 'key6')
 
+    def test_not_found_because_flavor(self):
+        req = fakes.HTTPRequestV3.blank('/flavors/1/extra-specs/key5',
+                                        use_admin_context=True)
+        with mock.patch('nova.db.flavor_get_by_flavor_id') as mock_get:
+            mock_get.side_effect = exception.FlavorNotFound(flavor_id='1')
+            self.assertRaises(webob.exc.HTTPNotFound, self.controller.show,
+                              req, 1, 'key5')
+            self.assertRaises(webob.exc.HTTPNotFound, self.controller.update,
+                              req, 1, 'key5', {'key5': 'value5'})
+            self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
+                              req, 1, 'key5')
+
+        req = fakes.HTTPRequestV3.blank('/flavors/1/extra-specs',
+                                        use_admin_context=True)
+        with mock.patch('nova.db.flavor_get_by_flavor_id') as mock_get:
+            mock_get.side_effect = exception.FlavorNotFound(flavor_id='1')
+            self.assertRaises(webob.exc.HTTPNotFound, self.controller.create,
+                              req, 1, {'extra_specs': {'key5': 'value5'}})
+
     def test_delete(self):
+        flavor = dict(test_flavor.fake_flavor,
+                      extra_specs={'key5': 'value5'})
         self.stubs.Set(nova.db, 'flavor_extra_specs_delete',
                        delete_flavor_extra_specs)
 
         req = fakes.HTTPRequest.blank('/v2/fake/flavors/1/os-extra_specs' +
                                       '/key5', use_admin_context=True)
-        self.controller.delete(req, 1, 'key5')
+        with mock.patch('nova.db.flavor_get_by_flavor_id') as mock_get:
+            mock_get.return_value = flavor
+            self.controller.delete(req, 1, 'key5')
 
     def test_delete_no_admin(self):
         self.stubs.Set(nova.db, 'flavor_extra_specs_delete',
