@@ -56,7 +56,7 @@ class EC2InstanceMapping(base.NovaPersistentObject, base.NovaObject):
             return cls._from_db_object(context, cls(), db_imap)
 
 
-class VolumeMapping(base.NovaPersistentObject, base.NovaObject):
+class EC2VolumeMapping(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
 

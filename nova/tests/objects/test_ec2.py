@@ -70,14 +70,14 @@ class TestRemoteEC2InstanceMapping(test_objects._RemoteTest,
     pass
 
 
-class _TestVolumeMapping(object):
+class _TestEC2VolumeMapping(object):
     @staticmethod
     def _compare(test, db, obj):
         for field, value in db.items():
             test.assertEqual(db[field], obj[field])
 
     def test_create(self):
-        vmap = ec2_obj.VolumeMapping()
+        vmap = ec2_obj.EC2VolumeMapping()
         vmap.uuid = 'fake-uuid-2'
 
         with mock.patch.object(db, 'ec2_volume_create') as create:
@@ -91,20 +91,21 @@ class _TestVolumeMapping(object):
     def test_get_by_uuid(self):
         with mock.patch.object(db, 'ec2_volume_get_by_uuid') as get:
             get.return_value = fake_map
-            vmap = ec2_obj.VolumeMapping.get_by_uuid(self.context,
+            vmap = ec2_obj.EC2VolumeMapping.get_by_uuid(self.context,
                                                      'fake-uuid-2')
             self._compare(self, fake_map, vmap)
 
     def test_get_by_ec2_id(self):
         with mock.patch.object(db, 'ec2_volume_get_by_id') as get:
             get.return_value = fake_map
-            vmap = ec2_obj.VolumeMapping.get_by_id(self.context, 1)
+            vmap = ec2_obj.EC2VolumeMapping.get_by_id(self.context, 1)
             self._compare(self, fake_map, vmap)
 
 
-class TestVolumeMapping(test_objects._LocalTest, _TestVolumeMapping):
+class TestEC2VolumeMapping(test_objects._LocalTest, _TestEC2VolumeMapping):
     pass
 
 
-class TestRemoteVolumeMapping(test_objects._RemoteTest, _TestVolumeMapping):
+class TestRemoteEC2VolumeMapping(test_objects._RemoteTest,
+                                 _TestEC2VolumeMapping):
     pass
