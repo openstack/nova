@@ -1060,6 +1060,17 @@ class CloudController(object):
             instances_set.append(i)
         return {'instancesSet': instances_set}
 
+    def _format_start_instances(self, context, instance_id, previous_states):
+        instances_set = []
+        for (ec2_id, previous_state) in zip(instance_id, previous_states):
+            i = {}
+            i['instanceId'] = ec2_id
+            i['previousState'] = _state_description(previous_state['vm_state'],
+                                        previous_state['shutdown_terminate'])
+            i['currentState'] = _state_description(vm_states.ACTIVE, True)
+            instances_set.append(i)
+        return {'instancesSet': instances_set}
+
     def _format_instance_bdm(self, context, instance_uuid, root_device_name,
                              result):
         """Format InstanceBlockDeviceMappingResponseItemType."""
@@ -1459,7 +1470,8 @@ class CloudController(object):
         for instance in instances:
             extensions.check_compute_policy(context, 'start', instance)
             self.compute_api.start(context, instance)
-        return True
+        return self._format_start_instances(context, instance_id,
+                                            instances)
 
     def _get_image(self, context, ec2_id):
         try:
