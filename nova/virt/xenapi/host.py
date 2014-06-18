@@ -19,6 +19,8 @@ Management class for host-related functions (start, reboot, etc).
 
 import re
 
+from oslo.config import cfg
+
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
@@ -33,6 +35,7 @@ from nova.pci import pci_whitelist
 from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils
 
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -113,12 +116,13 @@ class Host(object):
             raise exception.NoValidHost(reason='Unable to find suitable '
                                                    'host for VMs evacuation')
 
-    def set_host_enabled(self, host, enabled):
-        """Sets the specified host's ability to accept new instances."""
+    def set_host_enabled(self, enabled):
+        """Sets the compute host's ability to accept new instances."""
         # Since capabilities are gone, use service table to disable a node
         # in scheduler
         cntxt = context.get_admin_context()
-        service = service_obj.Service.get_by_args(cntxt, host, 'nova-compute')
+        service = service_obj.Service.get_by_args(cntxt, CONF.host,
+                                                  'nova-compute')
         service.disabled = not enabled
         service.disabled_reason = 'set by xenapi host_state'
         service.save()

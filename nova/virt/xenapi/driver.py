@@ -633,8 +633,8 @@ class XenAPIDriver(driver.ComputeDriver):
             raise NotImplementedError(msg)
 
     def set_host_enabled(self, host, enabled):
-        """Sets the specified host's ability to accept new instances."""
-        return self._host.set_host_enabled(host, enabled)
+        """Sets the compute host's ability to accept new instances."""
+        return self._host.set_host_enabled(enabled)
 
     def get_host_uptime(self, host):
         """Returns the result of calling "uptime" on the target host."""
