@@ -20,7 +20,6 @@ from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
-from nova import db
 
 
 ALIAS = 'os-server-password'
@@ -52,10 +51,11 @@ class ServerPasswordController(object):
 
         context = req.environ['nova.context']
         authorize(context)
-        instance = common.get_instance(self.compute_api, context, server_id)
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       want_objects=True)
         meta = password.convert_password(context, None)
-        db.instance_system_metadata_update(context, instance['uuid'],
-                                           meta, False)
+        instance.system_metadata.update(meta)
+        instance.save()
 
 
 class ServerPassword(extensions.V3APIExtensionBase):
