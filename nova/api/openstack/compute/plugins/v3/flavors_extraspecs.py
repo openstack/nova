@@ -18,8 +18,8 @@ import webob
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.compute import flavors
-from nova import db
 from nova import exception
+from nova import objects
 from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common.gettextutils import _
 
@@ -34,8 +34,8 @@ class FlavorExtraSpecsController(object):
                                                          'v3:' + self.ALIAS)
 
     def _get_extra_specs(self, context, flavor_id):
-        extra_specs = db.flavor_extra_specs_get(context, flavor_id)
-        return dict(extra_specs=extra_specs)
+        flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
+        return dict(extra_specs=flavor.extra_specs)
 
     def _check_body(self, body):
         if body is None or body == "":
@@ -66,8 +66,9 @@ class FlavorExtraSpecsController(object):
             raise webob.exc.HTTPBadRequest(_('No or bad extra_specs provided'))
         self._check_key_names(specs.keys())
         try:
-            db.flavor_extra_specs_update_or_create(context, flavor_id,
-                                                          specs)
+            flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
+            flavor.extra_specs = dict(flavor.extra_specs, **specs)
+            flavor.save()
         except db_exc.DBDuplicateEntry:
             msg = _("Concurrent transaction has been committed, try again")
             raise webob.exc.HTTPConflict(explanation=msg)
@@ -87,8 +88,9 @@ class FlavorExtraSpecsController(object):
             expl = _('Request body contains too many items')
             raise webob.exc.HTTPBadRequest(explanation=expl)
         try:
-            db.flavor_extra_specs_update_or_create(context, flavor_id,
-                                                          body)
+            flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
+            flavor.extra_specs = dict(flavor.extra_specs, **body)
+            flavor.save()
         except db_exc.DBDuplicateEntry:
             msg = _("Concurrent transaction has been committed, try again")
             raise webob.exc.HTTPConflict(explanation=msg)
@@ -102,11 +104,16 @@ class FlavorExtraSpecsController(object):
         context = req.environ['nova.context']
         self.authorize(context, action='show')
         try:
-            extra_spec = db.flavor_extra_specs_get_item(context,
-                                                               flavor_id, id)
-            return extra_spec
-        except exception.FlavorExtraSpecsNotFound as e:
+            flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
+            return {id: flavor.extra_specs[id]}
+        except (exception.FlavorExtraSpecsNotFound,
+                exception.FlavorNotFound) as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
+        except KeyError:
+            msg = _("Flavor %(flavor_id)s has no extra specs with "
+                    "key %(key)s.") % dict(flavor_id=flavor_id,
+                                           key=id)
+            raise webob.exc.HTTPNotFound(explanation=msg)
 
     @wsgi.response(204)
     @extensions.expected_errors(404)
@@ -115,9 +122,17 @@ class FlavorExtraSpecsController(object):
         context = req.environ['nova.context']
         self.authorize(context, action='delete')
         try:
-            db.flavor_extra_specs_delete(context, flavor_id, id)
-        except exception.FlavorExtraSpecsNotFound as e:
+            flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
+            del flavor.extra_specs[id]
+            flavor.save()
+        except (exception.FlavorExtraSpecsNotFound,
+                exception.FlavorNotFound) as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
+        except KeyError:
+            msg = _("Flavor %(flavor_id)s has no extra specs with "
+                    "key %(key)s.") % dict(flavor_id=flavor_id,
+                                           key=id)
+            raise webob.exc.HTTPNotFound(explanation=msg)
 
 
 class FlavorsExtraSpecs(extensions.V3APIExtensionBase):
