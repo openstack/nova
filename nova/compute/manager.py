@@ -2071,6 +2071,9 @@ class ComputeManager(manager.Manager):
                 if network_info is not None:
                     network_info.wait(do_raise=False)
                 try:
+                    self._shutdown_instance(context, instance,
+                            block_device_mapping, requested_networks,
+                            try_deallocate_networks=False)
                     self._cleanup_build_resources(context, instance,
                             block_device_mapping)
                 except Exception:
@@ -2150,7 +2153,8 @@ class ComputeManager(manager.Manager):
                 self._set_instance_error_state(context, instance['uuid'])
 
     def _shutdown_instance(self, context, instance,
-                           bdms, requested_networks=None, notify=True):
+                           bdms, requested_networks=None, notify=True,
+                           try_deallocate_networks=True):
         """Shutdown an instance on this host."""
         context = context.elevated()
         LOG.audit(_('%(action_str)s instance') % {'action_str': 'Terminating'},
@@ -2180,10 +2184,12 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 # deallocate ip and fail without proceeding to
                 # volume api calls, preserving current behavior
-                self._try_deallocate_network(context, instance,
-                                             requested_networks)
+                if try_deallocate_networks:
+                    self._try_deallocate_network(context, instance,
+                                                 requested_networks)
 
-        self._try_deallocate_network(context, instance, requested_networks)
+        if try_deallocate_networks:
+            self._try_deallocate_network(context, instance, requested_networks)
 
         for bdm in vol_bdms:
             try:
