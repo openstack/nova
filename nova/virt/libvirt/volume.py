@@ -27,6 +27,8 @@ import six.moves.urllib.parse as urlparse
 
 from nova import exception
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _LE
+from nova.openstack.common.gettextutils import _LW
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.openstack.common import processutils
@@ -127,8 +129,8 @@ class LibvirtBaseVolumeDriver(object):
                         new_key = 'disk_' + k
                         setattr(conf, new_key, v)
             else:
-                LOG.warn(_('Unknown content in connection_info/'
-                           'qos_specs: %s') % specs)
+                LOG.warn(_LW('Unknown content in connection_info/'
+                             'qos_specs: %s'), specs)
 
         # Extract access_mode control parameters
         if 'access_mode' in data and data['access_mode']:
@@ -136,9 +138,9 @@ class LibvirtBaseVolumeDriver(object):
             if access_mode in ('ro', 'rw'):
                 conf.readonly = access_mode == 'ro'
             else:
-                msg = (_('Unknown content in connection_info/access_mode: %s')
-                       % access_mode)
-                LOG.error(msg)
+                LOG.error(_LE('Unknown content in '
+                              'connection_info/access_mode: %s'),
+                          access_mode)
                 raise exception.InvalidVolumeAccessMode(
                                                     access_mode=access_mode)
 
@@ -289,10 +291,9 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                 raise exception.NovaException(_("iSCSI device not found at %s")
                                               % (host_device))
 
-            LOG.warn(_("ISCSI volume not yet found at: %(disk_dev)s. "
-                       "Will rescan & retry.  Try number: %(tries)s"),
-                     {'disk_dev': disk_dev,
-                      'tries': tries})
+            LOG.warn(_LW("ISCSI volume not yet found at: %(disk_dev)s. "
+                         "Will rescan & retry.  Try number: %(tries)s"),
+                     {'disk_dev': disk_dev, 'tries': tries})
 
             # The rescan isn't documented as being necessary(?), but it helps
             self._run_iscsiadm(iscsi_properties, ("--rescan",))
@@ -357,7 +358,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
             utils.execute('cp', '/dev/stdin', delete_control,
                           process_input='1', run_as_root=True)
         else:
-            LOG.warn(_("Unable to delete volume device %s"), device_name)
+            LOG.warn(_LW("Unable to delete volume device %s"), device_name)
 
     def _remove_multipath_device_descriptor(self, disk_descriptor):
         disk_descriptor = disk_descriptor.replace('/dev/mapper/', '')
@@ -368,8 +369,8 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
             # Because not all cinder drivers need to remove the dev mapper,
             # here just logs a warning to avoid affecting those drivers in
             # exceptional cases.
-            LOG.warn(_('Failed to remove multipath device descriptor '
-                       '%(dev_mapper)s. Exception message: %(msg)s')
+            LOG.warn(_LW('Failed to remove multipath device descriptor '
+                         '%(dev_mapper)s. Exception message: %(msg)s')
                      % {'dev_mapper': disk_descriptor,
                         'msg': exc.message})
 
@@ -690,7 +691,7 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
             utils.execute(*nfs_cmd, run_as_root=True)
         except processutils.ProcessExecutionError as exc:
             if ensure and 'already mounted' in exc.message:
-                LOG.warn(_("%s is already mounted"), nfs_share)
+                LOG.warn(_LW("%s is already mounted"), nfs_share)
             else:
                 raise
 
@@ -735,10 +736,9 @@ class LibvirtAOEVolumeDriver(LibvirtBaseVolumeDriver):
             if self.tries >= CONF.libvirt.num_aoe_discover_tries:
                 raise exception.NovaException(_("AoE device not found at %s") %
                                                 (aoedevpath))
-            LOG.warn(_("AoE volume not yet found at: %(aoedevpath)s. "
-                       "Try number: %(tries)s"),
-                     {'aoedevpath': aoedevpath,
-                      'tries': tries})
+            LOG.warn(_LW("AoE volume not yet found at: %(aoedevpath)s. "
+                         "Try number: %(tries)s"),
+                     {'aoedevpath': aoedevpath, 'tries': tries})
 
             self._aoe_discover()
             self.tries = self.tries + 1
@@ -840,7 +840,7 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
             utils.execute(*gluster_cmd, run_as_root=True)
         except processutils.ProcessExecutionError as exc:
             if ensure and 'already mounted' in exc.message:
-                LOG.warn(_("%s is already mounted"), glusterfs_share)
+                LOG.warn(_LW("%s is already mounted"), glusterfs_share)
             else:
                 raise
 
@@ -928,10 +928,9 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
                 msg = _("Fibre Channel device not found.")
                 raise exception.NovaException(msg)
 
-            LOG.warn(_("Fibre volume not yet found at: %(mount_device)s. "
-                       "Will rescan & retry.  Try number: %(tries)s"),
-                     {'mount_device': mount_device,
-                      'tries': tries})
+            LOG.warn(_LW("Fibre volume not yet found at: %(mount_device)s. "
+                         "Will rescan & retry.  Try number: %(tries)s"),
+                     {'mount_device': mount_device, 'tries': tries})
 
             linuxscsi.rescan_hosts(hbas)
             self.tries = self.tries + 1
@@ -1031,7 +1030,7 @@ class LibvirtScalityVolumeDriver(LibvirtBaseVolumeDriver):
         # config is mandatory
         config = CONF.libvirt.scality_sofs_config
         if not config:
-            msg = _("Value required for 'scality_sofs_config'")
+            msg = _LW("Value required for 'scality_sofs_config'")
             LOG.warn(msg)
             raise exception.NovaException(msg)
 
@@ -1042,13 +1041,13 @@ class LibvirtScalityVolumeDriver(LibvirtBaseVolumeDriver):
         try:
             urllib2.urlopen(config, timeout=5).close()
         except urllib2.URLError as e:
-            msg = _("Cannot access 'scality_sofs_config': %s") % e
+            msg = _LW("Cannot access 'scality_sofs_config': %s") % e
             LOG.warn(msg)
             raise exception.NovaException(msg)
 
         # mount.sofs must be installed
         if not os.access('/sbin/mount.sofs', os.X_OK):
-            msg = _("Cannot execute /sbin/mount.sofs")
+            msg = _LW("Cannot execute /sbin/mount.sofs")
             LOG.warn(msg)
             raise exception.NovaException(msg)
 
@@ -1063,6 +1062,6 @@ class LibvirtScalityVolumeDriver(LibvirtBaseVolumeDriver):
             utils.execute('mount', '-t', 'sofs', config, mount_path,
                           run_as_root=True)
         if not os.path.isdir(sysdir):
-            msg = _("Cannot mount Scality SOFS, check syslog for errors")
+            msg = _LW("Cannot mount Scality SOFS, check syslog for errors")
             LOG.warn(msg)
             raise exception.NovaException(msg)
