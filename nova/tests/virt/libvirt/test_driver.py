@@ -4904,6 +4904,34 @@ class LibvirtConnTestCase(test.TestCase):
             ]
         self.assertEqual(gotFiles, wantFiles)
 
+    def test_create_ephemeral_specified_fs_not_valid(self):
+        CONF.set_override('default_ephemeral_format', 'ext4')
+        ephemerals = [{'device_type': 'disk',
+                       'disk_bus': 'virtio',
+                       'device_name': '/dev/vdb',
+                       'guest_format': 'dummy',
+                       'size': 1}]
+        block_device_info = {
+                'ephemerals': ephemerals}
+        instance_ref = self.test_instance
+        instance_ref['image_ref'] = 1
+        instance = db.instance_create(self.context, instance_ref)
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        image_meta = {'id': instance['image_ref']}
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance,
+                                            None,
+                                            image_meta)
+        disk_info['mapping'].pop('disk.local')
+
+        with contextlib.nested(
+            mock.patch.object(utils, 'execute'),
+            mock.patch.object(conn, 'get_info'),
+            mock.patch.object(conn, '_create_domain_and_network')):
+            self.assertRaises(exception.InvalidBDMFormat, conn._create_image,
+                              context, instance, disk_info['mapping'],
+                              block_device_info=block_device_info)
+
     def test_create_ephemeral_default(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.mox.StubOutWithMock(utils, 'execute')
@@ -6918,6 +6946,18 @@ class LibvirtConnTestCase(test.TestCase):
         conn.default_device_names_for_instance(instance, root_device_name,
                                                ephemerals, swap,
                                                block_device_mapping)
+
+    def test_is_supported_fs_format(self):
+        supported_fs = [disk.FS_FORMAT_EXT2, disk.FS_FORMAT_EXT3,
+                        disk.FS_FORMAT_EXT4, disk.FS_FORMAT_XFS]
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        for fs in supported_fs:
+            self.assertTrue(conn.is_supported_fs_format(fs))
+
+        supported_fs = ['', 'dummy']
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        for fs in supported_fs:
+            self.assertFalse(conn.is_supported_fs_format(fs))
 
     def test_hypervisor_hostname_caching(self):
         # Make sure that the first hostname is always returned
