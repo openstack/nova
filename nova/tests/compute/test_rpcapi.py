@@ -176,7 +176,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_check_instance_shared_storage(self):
         self._test_compute_api('check_instance_shared_storage', 'call',
-                instance=self.fake_instance, data='foo')
+                instance=self.fake_instance, data='foo',
+                version='3.29')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
