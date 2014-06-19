@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import __builtin__
 import contextlib
 import copy
 import errno
@@ -6768,6 +6769,113 @@ class LibvirtConnTestCase(test.TestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         self.assertEqual(0, drvr._get_vcpu_used())
+
+    def test_get_memory_used_normal(self):
+        def fake_get_info():
+            return ['x86_64', 15814L, 8, 1208, 1, 1, 4, 2]
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.getInfo = fake_get_info
+
+        real_open = __builtin__.open
+
+        class fake_file(object):
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc_value, exc_traceback):
+                return False
+
+            def read(self):
+                return """
+MemTotal:       16194180 kB
+MemFree:          233092 kB
+MemAvailable:    8892356 kB
+Buffers:          567708 kB
+Cached:          8362404 kB
+SwapCached:            0 kB
+Active:          8381604 kB
+"""
+
+        def fake_open(path, *args, **kwargs):
+            if path == "/proc/meminfo":
+                return fake_file()
+            else:
+                return real_open(path, *args, **kwargs)
+
+        self.mox.StubOutWithMock(__builtin__, 'open')
+        __builtin__.open = fake_open
+
+        self.mox.ReplayAll()
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        self.assertEqual(6866, drvr._get_memory_mb_used())
+
+    def test_get_memory_used_xen(self):
+        self.flags(virt_type='xen', group='libvirt')
+
+        class DiagFakeDomain(object):
+            def __init__(self, id, memmb):
+                self.id = id
+                self.memmb = memmb
+
+            def info(self):
+                return [0, 0, self.memmb * 1024]
+
+            def ID(self):
+                return self.id
+
+            def name(self):
+                return "instance000001"
+
+            def UUIDString(self):
+                return str(uuid.uuid4())
+
+        def fake_list_all(flags):
+            return [DiagFakeDomain(0, 15814),
+                    DiagFakeDomain(1, 750),
+                    DiagFakeDomain(2, 1042)]
+
+        def fake_get_info():
+            return ['x86_64', 15814L, 8, 1208, 1, 1, 4, 2]
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.listAllDomains = fake_list_all
+        libvirt_driver.LibvirtDriver._conn.getInfo = fake_get_info
+
+        real_open = __builtin__.open
+
+        class fake_file(object):
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc_value, exc_traceback):
+                return False
+
+            def read(self):
+                return """
+MemTotal:       16194180 kB
+MemFree:          233092 kB
+MemAvailable:    8892356 kB
+Buffers:          567708 kB
+Cached:          8362404 kB
+SwapCached:            0 kB
+Active:          8381604 kB
+"""
+
+        def fake_open(path, *args, **kwargs):
+            if path == "/proc/meminfo":
+                return fake_file()
+            else:
+                return real_open(path, *args, **kwargs)
+
+        self.mox.StubOutWithMock(__builtin__, 'open')
+        __builtin__.open = fake_open
+
+        self.mox.ReplayAll()
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        self.assertEqual(8657, drvr._get_memory_mb_used())
 
     def test_get_instance_capabilities(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
