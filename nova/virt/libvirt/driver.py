@@ -2459,12 +2459,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _create_ephemeral(self, target, ephemeral_size,
                           fs_label, os_type, is_block_dev=False,
-                          max_size=None):
+                          max_size=None, specified_fs=None):
         if not is_block_dev:
             self._create_local(target, ephemeral_size)
 
         # Run as root only for block devices.
-        disk.mkfs(os_type, fs_label, target, run_as_root=is_block_dev)
+        disk.mkfs(os_type, fs_label, target, run_as_root=is_block_dev,
+                  specified_fs=specified_fs)
 
     @staticmethod
     def _create_swap(target, swap_mb, max_size=None):
@@ -2678,7 +2679,8 @@ class LibvirtDriver(driver.ComputeDriver):
                              fetch_func=fn,
                              filename=fname,
                              size=size,
-                             ephemeral_size=eph['size'])
+                             ephemeral_size=eph['size'],
+                             specified_fs=specified_fs)
 
         if 'disk.swap' in disk_mapping:
             mapping = disk_mapping['disk.swap']

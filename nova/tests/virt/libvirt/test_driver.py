@@ -4904,6 +4904,17 @@ class LibvirtConnTestCase(test.TestCase):
             ]
         self.assertEqual(gotFiles, wantFiles)
 
+    @mock.patch.object(utils, 'execute')
+    def test_create_ephemeral_specified_fs(self, mock_exec):
+        self.flags(default_ephemeral_format='ext3')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        conn._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
+                               is_block_dev=True, max_size=20,
+                               specified_fs='ext4')
+        mock_exec.assert_called_once_with('mkfs', '-t', 'ext4', '-F', '-L',
+                                          'myVol', '/dev/something',
+                                          run_as_root=True)
+
     def test_create_ephemeral_specified_fs_not_valid(self):
         CONF.set_override('default_ephemeral_format', 'ext4')
         ephemerals = [{'device_type': 'disk',
