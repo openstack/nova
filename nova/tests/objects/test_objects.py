@@ -812,6 +812,17 @@ class TestObjectListBase(test.TestCase):
         # This should now look clean because the child is clean
         self.assertEqual(set(), obj.obj_what_changed())
 
+    def test_initialize_objects(self):
+        class Foo(base.ObjectListBase, base.NovaObject):
+            fields = {'objects': fields.ListOfObjectsField('Bar')}
+
+        class Bar(base.NovaObject):
+            fields = {'foo': fields.StringField()}
+
+        obj = Foo()
+        self.assertEqual([], obj.objects)
+        self.assertEqual(set(), obj.obj_what_changed())
+
 
 class TestObjectSerializer(_BaseTestCase):
     def test_serialize_entity_primitive(self):
