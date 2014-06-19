@@ -21,7 +21,7 @@ from nova import utils
 from nova.virt.xenapi import vm_utils
 
 CONF = cfg.CONF
-CONF.import_opt('glance_num_retries', 'nova.image.glance')
+CONF.import_opt('num_retries', 'nova.image.glance', group='glance')
 
 
 class GlanceStore(object):
@@ -36,7 +36,7 @@ class GlanceStore(object):
             return g_host
 
         return session.call_plugin_serialized_with_retry(
-            'glance', fn, CONF.glance_num_retries, pick_glance, **params)
+            'glance', fn, CONF.glance.num_retries, pick_glance, **params)
 
     def _make_params(self, context, session, image_id):
         return {'image_id': image_id,

@@ -79,7 +79,7 @@ class ServerActionsControllerTest(test.TestCase):
     def setUp(self):
         super(ServerActionsControllerTest, self).setUp()
 
-        CONF.set_override('glance_host', 'localhost')
+        CONF.set_override('host', 'localhost', group='glance')
         self.stubs.Set(db, 'instance_get_by_uuid',
                        fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                                                host='fake_host'))
