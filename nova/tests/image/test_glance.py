@@ -1225,7 +1225,7 @@ class TestGlanceUrl(test.NoDBTestCase):
         self.assertEqual(generated_url, https_url)
 
 
-class TestGlanceApiServers(test.TestCase):
+class TestGlanceApiServers(test.NoDBTestCase):
 
     def test_get_ipv4_api_servers(self):
         self.flags(glance_api_servers=['10.0.1.1:9292',
