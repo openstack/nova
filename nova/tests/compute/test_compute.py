@@ -2266,7 +2266,7 @@ class ComputeTestCase(BaseTestCase):
         fake_network.unset_stub_network_methods(self.stubs)
 
         self.mox.StubOutWithMock(self.compute,
-                                 '_get_instance_volume_block_device_info')
+                                 '_get_instance_block_device_info')
         self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
         self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute, '_instance_update')
@@ -2318,7 +2318,7 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.context, 'elevated')
         self.context.elevated().AndReturn(econtext)
 
-        self.compute._get_instance_volume_block_device_info(
+        self.compute._get_instance_block_device_info(
             econtext, instance).AndReturn(fake_block_dev_info)
         self.compute._get_instance_nw_info(econtext,
                                            instance).AndReturn(
@@ -2465,7 +2465,7 @@ class ComputeTestCase(BaseTestCase):
         self._test_reboot(False, fail_reboot=True,
                           fail_running=True)
 
-    def test_get_instance_volume_block_device_info_source_image(self):
+    def test_get_instance_block_device_info_source_image(self):
         bdms = block_device_obj.block_device_make_list(self.context,
                 [fake_block_device.FakeDbBlockDeviceDict({
                 'id': 3,
@@ -2485,10 +2485,12 @@ class ComputeTestCase(BaseTestCase):
                 return_value=bdms)
         ) as mock_get_by_instance:
             block_device_info = (
-                self.compute._get_instance_volume_block_device_info(
+                self.compute._get_instance_block_device_info(
                     self.context, self._create_fake_instance())
             )
             expected = {
+                'swap': None,
+                'ephemerals': [],
                 'block_device_mapping': [{
                     'connection_info': {
                         'driver_volume_type': 'rbd'
@@ -2500,7 +2502,7 @@ class ComputeTestCase(BaseTestCase):
             self.assertTrue(mock_get_by_instance.called)
             self.assertEqual(block_device_info, expected)
 
-    def test_get_instance_volume_block_device_info_passed_bdms(self):
+    def test_get_instance_block_device_info_passed_bdms(self):
         bdms = block_device_obj.block_device_make_list(self.context,
                 [fake_block_device.FakeDbBlockDeviceDict({
                     'id': 3,
@@ -2514,10 +2516,12 @@ class ComputeTestCase(BaseTestCase):
                 block_device_obj.BlockDeviceMappingList,
                 'get_by_instance_uuid')) as mock_get_by_instance:
             block_device_info = (
-                self.compute._get_instance_volume_block_device_info(
+                self.compute._get_instance_block_device_info(
                     self.context, self._create_fake_instance(), bdms=bdms)
             )
             expected = {
+                'swap': None,
+                'ephemerals': [],
                 'block_device_mapping': [{
                     'connection_info': {
                         'driver_volume_type': 'rbd'
@@ -2528,6 +2532,57 @@ class ComputeTestCase(BaseTestCase):
             }
             self.assertFalse(mock_get_by_instance.called)
             self.assertEqual(block_device_info, expected)
+
+    def test_get_instance_block_device_info_swap_and_ephemeral(self):
+        instance = self._create_fake_instance()
+
+        ephemerals = fake_block_device.FakeDbBlockDeviceDict({
+            'id': 1, 'instance_uuid': 'fake-instance',
+            'device_name': '/dev/vdb',
+            'source_type': 'blank',
+            'destination_type': 'local',
+            'device_type': 'disk',
+            'disk_bus': 'virtio',
+            'delete_on_termination': True,
+            'guest_format': None,
+            'volume_size': 1,
+            'boot_index': -1
+        })
+        swap = fake_block_device.FakeDbBlockDeviceDict({
+            'id': 2, 'instance_uuid': 'fake-instance',
+            'device_name': '/dev/vdc',
+            'source_type': 'blank',
+            'destination_type': 'local',
+            'device_type': 'disk',
+            'disk_bus': 'virtio',
+            'delete_on_termination': True,
+            'guest_format': 'swap',
+            'volume_size': 1,
+            'boot_index': -1
+        })
+
+        bdms = block_device_obj.block_device_make_list(self.context,
+                                                       [swap, ephemerals])
+
+        with (
+              mock.patch.object(block_device_obj.BlockDeviceMappingList,
+                                'get_by_instance_uuid', return_value=bdms)
+        ) as mock_get_by_instance_uuid:
+            expected_block_device_info = {
+                'swap': {'device_name': '/dev/vdc', 'swap_size': 1},
+                'ephemerals': [{'device_name': '/dev/vdb', 'num': 0, 'size': 1,
+                                'virtual_name': 'ephemeral0'}],
+                'block_device_mapping': []
+            }
+
+            block_device_info = (
+                self.compute._get_instance_block_device_info(
+                    self.context, instance)
+            )
+
+            mock_get_by_instance_uuid.assert_called_once_with(self.context,
+                                                              instance.uuid)
+            self.assertEqual(expected_block_device_info, block_device_info)
 
     def test_set_admin_password(self):
         # Ensure instance can have its admin password set.
@@ -3953,7 +4008,7 @@ class ComputeTestCase(BaseTestCase):
                                  '_notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute.driver, 'finish_migration')
         self.mox.StubOutWithMock(self.compute,
-                                 '_get_instance_volume_block_device_info')
+                                 '_get_instance_block_device_info')
         self.mox.StubOutWithMock(migration, 'save')
         self.mox.StubOutWithMock(instance, 'save')
         self.mox.StubOutWithMock(self.context, 'elevated')
@@ -4003,7 +4058,7 @@ class ComputeTestCase(BaseTestCase):
                 self.context, instance, 'finish_resize.start',
                 network_info='fake-nwinfo1')
 
-        self.compute._get_instance_volume_block_device_info(
+        self.compute._get_instance_block_device_info(
                 self.context, instance,
                 refresh_conn_info=True).AndReturn('fake-bdminfo')
         # nova.conf sets the default flavor to m1.small and the test
@@ -4583,7 +4638,7 @@ class ComputeTestCase(BaseTestCase):
             mock.patch.object(block_device_obj.BlockDeviceMappingList,
                 'get_by_instance_uuid', return_value='fake_bdms'),
             mock.patch.object(
-                self.compute, '_get_instance_volume_block_device_info',
+                self.compute, '_get_instance_block_device_info',
                 return_value='fake_bdinfo'),
             mock.patch.object(self.compute, '_terminate_volume_connections')
         ) as (mock_get_by_inst_uuid, mock_get_instance_vol_bdinfo,
@@ -4960,7 +5015,8 @@ class ComputeTestCase(BaseTestCase):
         # creating mocks
         self.mox.StubOutWithMock(self.compute.driver, 'pre_live_migration')
         self.compute.driver.pre_live_migration(mox.IsA(c), mox.IsA(instance),
-                                               {'block_device_mapping': []},
+                                               {'swap': None, 'ephemerals': [],
+                                                'block_device_mapping': []},
                                                mox.IgnoreArg(),
                                                mox.IgnoreArg(),
                                                mox.IgnoreArg())
@@ -5202,7 +5258,8 @@ class ComputeTestCase(BaseTestCase):
             self.compute._post_live_migration(c, instance, dest)
 
             post_live_migration.assert_has_calls([
-                mock.call(c, instance, {'block_device_mapping': []}, None)])
+                mock.call(c, instance, {'swap': None, 'ephemerals': [],
+                                        'block_device_mapping': []}, None)])
             unfilter_instance.assert_has_calls([mock.call(instance, [])])
             migration = {'source_compute': srchost,
                          'dest_compute': dest, }
@@ -5244,7 +5301,7 @@ class ComputeTestCase(BaseTestCase):
             mock.patch.object(self.compute.instance_events,
                               'clear_events_for_instance'),
             mock.patch.object(self.compute,
-                              '_get_instance_volume_block_device_info'),
+                              '_get_instance_block_device_info'),
             mock.patch.object(block_device_obj.BlockDeviceMappingList,
                               'get_by_instance_uuid'),
             mock.patch.object(self.compute.driver, 'get_volume_connector'),
@@ -5359,7 +5416,8 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver,
                                  'rollback_live_migration_at_destination')
         self.compute.driver.rollback_live_migration_at_destination(c,
-                instance, [], {'block_device_mapping': []})
+                instance, [], {'swap': None, 'ephemerals': [],
+                               'block_device_mapping': []})
 
         # start test
         self.mox.ReplayAll()
@@ -6060,7 +6118,7 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute,
                                  '_get_instance_nw_info')
         self.mox.StubOutWithMock(self.compute,
-                                 '_get_instance_volume_block_device_info')
+                                 '_get_instance_block_device_info')
         self.mox.StubOutWithMock(self.compute,
                                  '_is_instance_storage_shared')
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
@@ -6070,7 +6128,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute._get_instance_nw_info(fake_context,
                                            evacuated_instance).AndReturn(
                                                    'fake_network_info')
-        self.compute._get_instance_volume_block_device_info(
+        self.compute._get_instance_block_device_info(
                 fake_context, evacuated_instance).AndReturn('fake_bdi')
         self.compute._is_instance_storage_shared(fake_context,
                         evacuated_instance).AndReturn(True)
@@ -6107,7 +6165,7 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute,
                                  '_get_instance_nw_info')
         self.mox.StubOutWithMock(self.compute,
-                                 '_get_instance_volume_block_device_info')
+                                 '_get_instance_block_device_info')
         self.mox.StubOutWithMock(self.compute.driver,
                                  'check_instance_shared_storage_local')
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
@@ -6121,7 +6179,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute._get_instance_nw_info(fake_context,
                                            evacuated_instance).AndReturn(
                                                    'fake_network_info')
-        self.compute._get_instance_volume_block_device_info(
+        self.compute._get_instance_block_device_info(
                 fake_context, evacuated_instance).AndReturn('fake_bdi')
         self.compute.driver.check_instance_shared_storage_local(fake_context,
                 evacuated_instance).AndReturn({'filename': 'tmpfilename'})
@@ -6163,7 +6221,7 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute,
                                  '_get_instance_nw_info')
         self.mox.StubOutWithMock(self.compute,
-                                 '_get_instance_volume_block_device_info')
+                                 '_get_instance_block_device_info')
         self.mox.StubOutWithMock(self.compute.driver,
                                  'check_instance_shared_storage_local')
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
@@ -6177,7 +6235,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute._get_instance_nw_info(fake_context,
                                            evacuated_instance).AndReturn(
                                                    'fake_network_info')
-        self.compute._get_instance_volume_block_device_info(
+        self.compute._get_instance_block_device_info(
                 fake_context, evacuated_instance).AndReturn('fake_bdi')
         self.compute.driver.check_instance_shared_storage_local(fake_context,
                 evacuated_instance).AndRaise(NotImplementedError())
@@ -10052,13 +10110,13 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
             mock.patch.object(self.compute, '_get_instance_nw_info',
                               side_effect=error),
             mock.patch.object(self.compute,
-                              '_get_instance_volume_block_device_info'),
+                              '_get_instance_block_device_info'),
             mock.patch.object(self.compute.driver, 'destroy'),
             mock.patch.object(self.compute, '_try_deallocate_network')
         ) as (
             elevated_mock,
             _get_instance_nw_info_mock,
-            _get_instance_volume_block_device_info_mock,
+            _get_instance_block_device_info_mock,
             destroy_mock,
             _try_deallocate_network_mock
         ):
