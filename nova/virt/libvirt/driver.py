@@ -3740,13 +3740,13 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_all_block_devices(self):
         """Return all block devices in use on this node."""
         devices = []
-        for dom_id in self._list_instance_ids():
+        for dom in self._list_instance_domains():
             try:
-                domain = self._lookup_by_id(dom_id)
-                doc = etree.fromstring(domain.XMLDesc(0))
-            except exception.InstanceNotFound:
-                LOG.info(_LI("libvirt can't find a domain with id: %s"),
-                         dom_id)
+                doc = etree.fromstring(dom.XMLDesc(0))
+            except libvirt.libvirtError as e:
+                LOG.warn(_LW("couldn't obtain the XML from domain:"
+                             " %(uuid)s, exception: %(ex)s") %
+                         {"uuid": dom.UUIDString(), "ex": e})
                 continue
             except Exception:
                 continue
