@@ -292,6 +292,6 @@ class LibvirtVolumeDriver(VolumeDriver):
         """Return all block devices in use on this node."""
         return _list_backingstore_path()
 
-    def get_hypervisor_version(self):
+    def _get_hypervisor_version(self):
         """A dummy method for LibvirtBaseVolumeDriver.connect_volume."""
         return 1

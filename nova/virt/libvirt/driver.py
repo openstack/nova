@@ -2954,7 +2954,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                   disk_info['type'],
                                   self.disk_cachemode,
                                   inst_type['extra_specs'],
-                                  self.get_hypervisor_version())
+                                  self._get_hypervisor_version())
 
     def _get_guest_storage_config(self, instance, image_meta,
                                   disk_info,
@@ -3733,7 +3733,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return interfaces
 
-    def get_vcpu_total(self):
+    def _get_vcpu_total(self):
         """Get available vcpu number of physical computer.
 
         :returns: the number of cpu core instances can be used.
@@ -3760,7 +3760,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._vcpu_total = len(available_ids)
         return self._vcpu_total
 
-    def get_memory_mb_total(self):
+    def _get_memory_mb_total(self):
         """Get the total memory size(MB) of physical computer.
 
         :returns: the total amount of memory(MB).
@@ -3770,7 +3770,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return self._conn.getInfo()[1]
 
     @staticmethod
-    def get_local_gb_info():
+    def _get_local_gb_info():
         """Get local storage info of the compute node in GB.
 
         :returns: A dict containing:
@@ -3790,7 +3790,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return info
 
-    def get_vcpu_used(self):
+    def _get_vcpu_used(self):
         """Get vcpu usage number of physical computer.
 
         :returns: The total number of vcpu(s) that are currently being used.
@@ -3823,7 +3823,7 @@ class LibvirtDriver(driver.ComputeDriver):
             greenthread.sleep(0)
         return total
 
-    def get_memory_mb_used(self):
+    def _get_memory_mb_used(self):
         """Get the used memory size(MB) of physical computer.
 
         :returns: the total usage of memory(MB).
@@ -3862,9 +3862,9 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             avail = (int(m[idx1 + 1]) + int(m[idx2 + 1]) + int(m[idx3 + 1]))
             # Convert it to MB
-            return self.get_memory_mb_total() - avail / units.Ki
+            return self._get_memory_mb_total() - avail / units.Ki
 
-    def get_hypervisor_type(self):
+    def _get_hypervisor_type(self):
         """Get hypervisor type.
 
         :returns: hypervisor type (ex. qemu)
@@ -3873,7 +3873,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return self._conn.getType()
 
-    def get_hypervisor_version(self):
+    def _get_hypervisor_version(self):
         """Get hypervisor version.
 
         :returns: hypervisor version (ex. 12003)
@@ -3893,7 +3893,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return method()
 
-    def get_hypervisor_hostname(self):
+    def _get_hypervisor_hostname(self):
         """Returns the hostname of the hypervisor."""
         hostname = self._conn.getHostname()
         if not hasattr(self, '_hypervisor_hostname'):
@@ -3905,7 +3905,7 @@ class LibvirtDriver(driver.ComputeDriver):
                            'new': hostname})
         return self._hypervisor_hostname
 
-    def get_instance_capabilities(self):
+    def _get_instance_capabilities(self):
         """Get hypervisor instance capabilities
 
         Returns a list of tuples that describe instances the
@@ -3923,7 +3923,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return instance_caps
 
-    def get_cpu_info(self):
+    def _get_cpu_info(self):
         """Get cpuinfo information.
 
         Obtains cpu feature from virConnect.getCapabilities,
@@ -4019,7 +4019,7 @@ class LibvirtDriver(driver.ComputeDriver):
             return False
         return self.dev_filter.device_assignable(device)
 
-    def get_pci_passthrough_devices(self):
+    def _get_pci_passthrough_devices(self):
         """Get host PCI devices information.
 
         Obtains pci devices information from libvirt, and returns
@@ -4314,7 +4314,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if 0 > return value, do live migration.
         'http://libvirt.org/html/libvirt-libvirt.html#virCPUCompareResult'
 
-        :param cpu_info: json string that shows cpu feature(see get_cpu_info())
+        :param cpu_info: json string of cpu feature from _get_cpu_info()
         :returns:
             None. if given cpu info is not compatible to this server,
             raise exception.
@@ -4786,7 +4786,7 @@ class LibvirtDriver(driver.ComputeDriver):
                               'over_committed_disk_size': over_commit_size})
         return jsonutils.dumps(disk_info)
 
-    def get_disk_over_committed_size_total(self):
+    def _get_disk_over_committed_size_total(self):
         """Return total over committed disk size for all instances."""
         # Disk size that all instance uses : virtual_size - disk_size
         instances_name = self.list_instances()
@@ -5296,13 +5296,13 @@ class HostState(object):
             """
             disk_free_gb = disk_info_dict['free']
             disk_over_committed = (self.driver.
-                    get_disk_over_committed_size_total())
+                    _get_disk_over_committed_size_total())
             # Disk available least size
             available_least = disk_free_gb * units.Gi - disk_over_committed
             return (available_least / units.Gi)
 
         LOG.debug("Updating host stats")
-        disk_info_dict = self.driver.get_local_gb_info()
+        disk_info_dict = self.driver._get_local_gb_info()
         data = {}
 
         #NOTE(dprince): calling capabilities before getVersion works around
@@ -5310,22 +5310,22 @@ class HostState(object):
         # See: https://bugzilla.redhat.com/show_bug.cgi?id=1000116
         # See: https://bugs.launchpad.net/nova/+bug/1215593
         data["supported_instances"] = \
-            self.driver.get_instance_capabilities()
+            self.driver._get_instance_capabilities()
 
-        data["vcpus"] = self.driver.get_vcpu_total()
-        data["memory_mb"] = self.driver.get_memory_mb_total()
+        data["vcpus"] = self.driver._get_vcpu_total()
+        data["memory_mb"] = self.driver._get_memory_mb_total()
         data["local_gb"] = disk_info_dict['total']
-        data["vcpus_used"] = self.driver.get_vcpu_used()
-        data["memory_mb_used"] = self.driver.get_memory_mb_used()
+        data["vcpus_used"] = self.driver._get_vcpu_used()
+        data["memory_mb_used"] = self.driver._get_memory_mb_used()
         data["local_gb_used"] = disk_info_dict['used']
-        data["hypervisor_type"] = self.driver.get_hypervisor_type()
-        data["hypervisor_version"] = self.driver.get_hypervisor_version()
-        data["hypervisor_hostname"] = self.driver.get_hypervisor_hostname()
-        data["cpu_info"] = self.driver.get_cpu_info()
+        data["hypervisor_type"] = self.driver._get_hypervisor_type()
+        data["hypervisor_version"] = self.driver._get_hypervisor_version()
+        data["hypervisor_hostname"] = self.driver._get_hypervisor_hostname()
+        data["cpu_info"] = self.driver._get_cpu_info()
         data['disk_available_least'] = _get_disk_available_least()
 
         data['pci_passthrough_devices'] = \
-            self.driver.get_pci_passthrough_devices()
+            self.driver._get_pci_passthrough_devices()
 
         self._stats = data
 

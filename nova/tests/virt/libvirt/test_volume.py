@@ -51,10 +51,10 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
                 self.hyperv = hyperv
                 self.version = version
 
-            def get_hypervisor_version(self):
+            def _get_hypervisor_version(self):
                 return self.version
 
-            def get_hypervisor_type(self):
+            def _get_hypervisor_type(self):
                 return self.hyperv
 
             def get_all_block_devices(self):
