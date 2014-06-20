@@ -3898,6 +3898,9 @@ class LibvirtConnTestCase(test.TestCase):
 
         fake_timer = FakeTime()
 
+        def fake_sleep(t):
+            fake_timer.sleep(t)
+
         # _fake_network_info must be called before create_fake_libvirt_mock(),
         # as _fake_network_info calls importutils.import_class() and
         # create_fake_libvirt_mock() mocks importutils.import_class().
@@ -3918,9 +3921,11 @@ class LibvirtConnTestCase(test.TestCase):
             self.stubs.Set(conn.firewall_driver,
                            'instance_filter_exists',
                            fake_none)
+            self.stubs.Set(greenthread,
+                           'sleep',
+                           fake_sleep)
             conn.ensure_filtering_rules_for_instance(instance_ref,
-                                                     network_info,
-                                                     time_module=fake_timer)
+                                                     network_info)
         except exception.NovaException as e:
             msg = ('The firewall filter for %s does not exist' %
                    instance_ref['name'])
