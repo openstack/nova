@@ -16,13 +16,15 @@
 import math
 
 from nova.openstack.common import units
+from nova.tests.virt import test_driver
 from nova.tests.virt.xenapi import stubs
 from nova.virt import fake
 from nova.virt import xenapi
 from nova.virt.xenapi import driver as xenapi_driver
 
 
-class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
+class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB,
+                           test_driver.DriverAPITestHelper):
     """Unit tests for Driver operations."""
 
     def host_stats(self, refresh=True):
@@ -86,3 +88,10 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
         self.mox.ReplayAll()
 
         driver.set_bootable('inst', True)
+
+    def test_public_api_signatures(self):
+        self.flags(connection_url='test_url', connection_password='test_pass',
+                   group='xenserver')
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        inst = xenapi.XenAPIDriver(fake.FakeVirtAPI(), False)
+        self.assertPublicAPISignatures(inst)
