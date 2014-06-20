@@ -6317,58 +6317,108 @@ class LibvirtConnTestCase(test.TestCase,
         # instance disappears
         conn._undefine_domain(instance)
 
-    def test_disk_over_committed_size_total(self):
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_list_instance_domains")
+    def test_disk_over_committed_size_total(self, mock_list):
         # Ensure destroy calls managedSaveRemove for saved instance.
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        class DiagFakeDomain(object):
+            def __init__(self, name):
+                self._name = name
 
-        def list_instances():
-            return ['fake1', 'fake2']
-        self.stubs.Set(conn, 'list_instances', list_instances)
+            def ID(self):
+                return 1
 
-        fake_disks = {'fake1': [{'type': 'qcow2', 'path': '/somepath/disk1',
-                                 'virt_disk_size': '10737418240',
-                                 'backing_file': '/somepath/disk1',
-                                 'disk_size': '83886080',
-                                 'over_committed_disk_size': '10653532160'}],
-                      'fake2': [{'type': 'raw', 'path': '/somepath/disk2',
-                                 'virt_disk_size': '0',
-                                 'backing_file': '/somepath/disk2',
-                                 'disk_size': '10737418240',
-                                 'over_committed_disk_size': '0'}]}
+            def name(self):
+                return self._name
 
-        def get_info(instance_name, block_device_mapping=None):
+            def UUIDString(self):
+                return "19479fee-07a5-49bb-9138-d3738280d63c"
+
+            def XMLDesc(self, flags):
+                return "<domain/>"
+
+        mock_list.return_value = [
+            DiagFakeDomain("instance0000001"),
+            DiagFakeDomain("instance0000002")]
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        fake_disks = {'instance0000001':
+                      [{'type': 'qcow2', 'path': '/somepath/disk1',
+                        'virt_disk_size': '10737418240',
+                        'backing_file': '/somepath/disk1',
+                        'disk_size': '83886080',
+                        'over_committed_disk_size': '10653532160'}],
+                      'instance0000002':
+                      [{'type': 'raw', 'path': '/somepath/disk2',
+                        'virt_disk_size': '0',
+                        'backing_file': '/somepath/disk2',
+                        'disk_size': '10737418240',
+                        'over_committed_disk_size': '0'}]}
+
+        def get_info(instance_name, xml, **kwargs):
             return jsonutils.dumps(fake_disks.get(instance_name))
-        self.stubs.Set(conn, 'get_instance_disk_info', get_info)
 
-        result = conn._get_disk_over_committed_size_total()
-        self.assertEqual(result, 10653532160)
+        with mock.patch.object(drvr,
+                               "_get_instance_disk_info") as mock_info:
+            mock_info.side_effect = get_info
 
-    def test_disk_over_committed_size_total_permission_denied(self):
-        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        driver.list_instances = mock.Mock(return_value=['fake1', 'fake2'])
+            result = drvr._get_disk_over_committed_size_total()
+            self.assertEqual(result, 10653532160)
+            mock_list.assert_called_with()
+            mock_info.assert_called()
 
-        fake_disks = {'fake1': [{'type': 'qcow2', 'path': '/somepath/disk1',
-                                 'virt_disk_size': '10737418240',
-                                 'backing_file': '/somepath/disk1',
-                                 'disk_size': '83886080',
-                                 'over_committed_disk_size': '10653532160'}],
-                      'fake2': [{'type': 'raw', 'path': '/somepath/disk2',
-                                 'virt_disk_size': '0',
-                                 'backing_file': '/somepath/disk2',
-                                 'disk_size': '10737418240',
-                                 'over_committed_disk_size': '21474836480'}]}
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_list_instance_domains")
+    def test_disk_over_committed_size_total_eperm(self, mock_list):
+        # Ensure destroy calls managedSaveRemove for saved instance.
+        class DiagFakeDomain(object):
+            def __init__(self, name):
+                self._name = name
 
-        def side_effect(arg):
-            if arg == 'fake1':
+            def ID(self):
+                return 1
+
+            def name(self):
+                return self._name
+
+            def UUIDString(self):
+                return "19479fee-07a5-49bb-9138-d3738280d63c"
+
+            def XMLDesc(self, flags):
+                return "<domain/>"
+
+        mock_list.return_value = [
+            DiagFakeDomain("instance0000001"),
+            DiagFakeDomain("instance0000002")]
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        fake_disks = {'instance0000001':
+                      [{'type': 'qcow2', 'path': '/somepath/disk1',
+                        'virt_disk_size': '10737418240',
+                        'backing_file': '/somepath/disk1',
+                        'disk_size': '83886080',
+                        'over_committed_disk_size': '10653532160'}],
+                      'instance0000002':
+                      [{'type': 'raw', 'path': '/somepath/disk2',
+                        'virt_disk_size': '0',
+                        'backing_file': '/somepath/disk2',
+                        'disk_size': '10737418240',
+                        'over_committed_disk_size': '21474836480'}]}
+
+        def side_effect(name, dom):
+            if name == 'instance0000001':
                 raise OSError(errno.EACCES, 'Permission denied')
-            if arg == 'fake2':
-                return jsonutils.dumps(fake_disks.get(arg))
+            if name == 'instance0000002':
+                return jsonutils.dumps(fake_disks.get(name))
         get_disk_info = mock.Mock()
         get_disk_info.side_effect = side_effect
-        driver.get_instance_disk_info = get_disk_info
+        drvr._get_instance_disk_info = get_disk_info
 
-        result = driver._get_disk_over_committed_size_total()
+        result = drvr._get_disk_over_committed_size_total()
         self.assertEqual(21474836480, result)
+        mock_list.assert_called_with()
 
     def test_cpu_info(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
