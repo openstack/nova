@@ -73,3 +73,8 @@ admin_password = {
     # and string pattern.
     'type': 'string',
 }
+
+
+image_ref = {
+    'type': 'string',
+}
