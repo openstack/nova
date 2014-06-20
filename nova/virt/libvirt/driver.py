@@ -818,7 +818,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for vif in network_info:
             self.vif_driver.plug(instance, vif)
 
-    def unplug_vifs(self, instance, network_info, ignore_errors=False):
+    def _unplug_vifs(self, instance, network_info, ignore_errors):
         """Unplug VIFs from networks."""
         for vif in network_info:
             try:
@@ -826,6 +826,9 @@ class LibvirtDriver(driver.ComputeDriver):
             except exception.NovaException:
                 if not ignore_errors:
                     raise
+
+    def unplug_vifs(self, instance, network_info):
+        self._unplug_vifs(instance, network_info, False)
 
     def _teardown_container(self, instance):
         inst_path = libvirt_utils.get_instance_path(instance)
@@ -955,7 +958,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def cleanup(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True):
         self._undefine_domain(instance)
-        self.unplug_vifs(instance, network_info, ignore_errors=True)
+        self._unplug_vifs(instance, network_info, True)
         retry = True
         while retry:
             try:
@@ -1429,7 +1432,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return metadata
 
-    def snapshot(self, context, instance, image_href, update_task_state):
+    def snapshot(self, context, instance, image_id, update_task_state):
         """Create snapshot from a running VM instance.
 
         This command only works with qemu 0.14+
@@ -1444,7 +1447,7 @@ class LibvirtDriver(driver.ComputeDriver):
         base = compute_utils.get_image_metadata(
             context, self._image_api, base_image_ref, instance)
 
-        snapshot = self._image_api.get(context, image_href)
+        snapshot = self._image_api.get(context, image_id)
 
         disk_path = libvirt_utils.find_disk(virt_dom)
         source_format = libvirt_utils.get_disk_type(disk_path)
@@ -1545,7 +1548,7 @@ class LibvirtDriver(driver.ComputeDriver):
                      expected_state=task_states.IMAGE_PENDING_UPLOAD)
             with libvirt_utils.file_open(out_path) as image_file:
                 self._image_api.update(context,
-                                       image_href,
+                                       image_id,
                                        metadata,
                                        image_file)
                 LOG.info(_LI("Snapshot image upload complete"),
@@ -1931,7 +1934,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 time.sleep(0.5)
 
     def volume_snapshot_delete(self, context, instance, volume_id, snapshot_id,
-                               delete_info=None):
+                               delete_info):
         try:
             self._volume_snapshot_delete(context, instance, volume_id,
                                          snapshot_id, delete_info=delete_info)
@@ -1946,7 +1949,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._volume_snapshot_update_status(context, snapshot_id, 'deleting')
         self._volume_refresh_connection_info(context, instance, volume_id)
 
-    def reboot(self, context, instance, network_info, reboot_type='SOFT',
+    def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None, bad_volumes_callback=None):
         """Reboot a virtual machine, given an instance reference."""
         if reboot_type == 'SOFT':
@@ -4085,26 +4088,26 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return vol_usage
 
-    def block_stats(self, instance_name, disk):
+    def block_stats(self, instance_name, disk_id):
         """Note that this function takes an instance name."""
         try:
             domain = self._lookup_by_name(instance_name)
-            return domain.blockStats(disk)
+            return domain.blockStats(disk_id)
         except libvirt.libvirtError as e:
             errcode = e.get_error_code()
             LOG.info(_LI('Getting block stats failed, device might have '
                          'been detached. Instance=%(instance_name)s '
                          'Disk=%(disk)s Code=%(errcode)s Error=%(e)s'),
-                     {'instance_name': instance_name, 'disk': disk,
+                     {'instance_name': instance_name, 'disk': disk_id,
                       'errcode': errcode, 'e': e})
         except exception.InstanceNotFound:
             LOG.info(_LI('Could not find domain in libvirt for instance %s. '
                          'Cannot get block stats for device'), instance_name)
 
-    def interface_stats(self, instance_name, interface):
+    def interface_stats(self, instance_name, iface_id):
         """Note that this function takes an instance name."""
         domain = self._lookup_by_name(instance_name)
-        return domain.interfaceStats(interface)
+        return domain.interfaceStats(iface_id)
 
     def get_console_pool_info(self, console_type):
         #TODO(mdragon): console proxy should be implemented for libvirt,
@@ -4228,7 +4231,7 @@ class LibvirtDriver(driver.ComputeDriver):
         block_migration = dest_check_data["block_migration"]
         is_volume_backed = dest_check_data.get('is_volume_backed', False)
         has_local_disks = bool(
-                jsonutils.loads(self.get_instance_disk_info(instance['name'])))
+            jsonutils.loads(self.get_instance_disk_info(instance['name'])))
 
         shared = self._check_shared_storage_test_file(filename)
 
@@ -4537,8 +4540,8 @@ class LibvirtDriver(driver.ComputeDriver):
             os.mkdir(instance_dir)
 
             # Ensure images and backing files are present.
-            self._create_images_and_backing(context, instance, instance_dir,
-                                            disk_info)
+            self._create_images_and_backing(context, instance,
+                                            instance_dir, disk_info)
 
         if is_volume_backed and not (is_block_migration or is_shared_storage):
             # Touch the console.log file, required by libvirt.
@@ -4651,7 +4654,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def post_live_migration_at_destination(self, context,
                                            instance,
                                            network_info,
-                                           block_migration,
+                                           block_migration=False,
                                            block_device_info=None):
         """Post operation of live migration at destination host.
 

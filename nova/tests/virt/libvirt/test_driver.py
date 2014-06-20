@@ -63,6 +63,7 @@ from nova.tests import matchers
 from nova.tests.objects import test_pci_device
 from nova.tests.virt.libvirt import fake_libvirt_utils
 from nova.tests.virt.libvirt import fakelibvirt
+from nova.tests.virt import test_driver
 from nova import utils
 from nova import version
 from nova.virt import configdrive
@@ -389,7 +390,8 @@ class FakeNodeDevice(object):
         return self.xml
 
 
-class LibvirtConnTestCase(test.TestCase):
+class LibvirtConnTestCase(test.TestCase,
+                          test_driver.DriverAPITestHelper):
 
     def setUp(self):
         super(LibvirtConnTestCase, self).setUp()
@@ -465,6 +467,25 @@ class LibvirtConnTestCase(test.TestCase):
             def lookupByName(self, name):
                 pass
 
+            def getHostname(self):
+                return "mustard"
+
+            def getType(self):
+                return "QEMU"
+
+            def numOfDomains(self):
+                return 0
+
+            def listDomainsID(self):
+                return []
+
+            def listDefinedDomains(self):
+                return []
+
+            def getInfo(self):
+                return ["x86_64", 123456, 2, 2000,
+                        2, 1, 1, 1]
+
         self.conn = FakeConn()
         self.stubs.Set(libvirt_driver.LibvirtDriver, '_connect',
                        lambda *a, **k: self.conn)
@@ -538,6 +559,10 @@ class LibvirtConnTestCase(test.TestCase):
     def _get_host_disabled(self, host):
         return db.service_get_by_compute_host(context.get_admin_context(),
                                               host)['disabled']
+
+    def test_public_api_signatures(self):
+        inst = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertPublicAPISignatures(inst)
 
     def test_set_host_enabled_with_disable(self):
         # Tests disabling an enabled host.
@@ -5368,7 +5393,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.stubs.Set(conn, '_create_domain', fake_create_domain)
         self.stubs.Set(loopingcall, 'FixedIntervalLoopingCall',
                        lambda *a, **k: FakeLoopingCall())
-        conn.reboot(None, instance, [])
+        conn.reboot(None, instance, [], 'SOFT')
         self.assertTrue(self.reboot_create_called)
 
     def test_reboot_same_ids(self):
@@ -5413,7 +5438,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.stubs.Set(conn, '_hard_reboot', fake_hard_reboot)
         self.stubs.Set(loopingcall, 'FixedIntervalLoopingCall',
                        lambda *a, **k: FakeLoopingCall())
-        conn.reboot(None, instance, [])
+        conn.reboot(None, instance, [], 'SOFT')
         self.assertTrue(self.reboot_hard_reboot_called)
 
     def test_soft_reboot_libvirt_exception(self):
@@ -5441,7 +5466,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.mox.ReplayAll()
 
-        conn.reboot(context, instance, network_info)
+        conn.reboot(context, instance, network_info, 'SOFT')
 
     def _test_resume_state_on_host_boot_with_state(self, state):
         called = {'count': 0}
@@ -7331,7 +7356,7 @@ class LibvirtConnTestCase(test.TestCase):
         with mock.patch.object(conn, 'vif_driver') as vif_driver:
             vif_driver.unplug.side_effect = exception.AgentError(
                 method='unplug')
-            conn.unplug_vifs('inst', [1], ignore_errors=True)
+            conn._unplug_vifs('inst', [1], ignore_errors=True)
             vif_driver.unplug.assert_called_once_with('inst', 1)
 
     def test_unplug_vifs_reports_errors(self):
@@ -7343,7 +7368,7 @@ class LibvirtConnTestCase(test.TestCase):
                               conn.unplug_vifs, 'inst', [1])
             vif_driver.unplug.assert_called_once_with('inst', 1)
 
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.unplug_vifs')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._unplug_vifs')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain')
     def test_cleanup_wants_vif_errors_ignored(self, undefine, unplug):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
@@ -7355,8 +7380,7 @@ class LibvirtConnTestCase(test.TestCase):
             unplug.side_effect = test.TestingException
             self.assertRaises(test.TestingException,
                               conn.cleanup, 'ctxt', fake_inst, 'netinfo')
-            unplug.assert_called_once_with(fake_inst, 'netinfo',
-                                           ignore_errors=True)
+            unplug.assert_called_once_with(fake_inst, 'netinfo', True)
 
 
 class HostStateTestCase(test.TestCase):
