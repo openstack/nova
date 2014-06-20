@@ -8972,7 +8972,7 @@ class LibvirtDriverTestCase(test.TestCase):
             instance_name)
 
     @mock.patch('os.path.exists')
-    @mock.patch('nova.virt.libvirt.utils.list_logical_volumes')
+    @mock.patch('nova.virt.libvirt.lvm.list_volumes')
     def test_lvm_disks(self, listlvs, exists):
         instance = instance_obj.Instance(uuid='fake-uuid',
                                          id=1)

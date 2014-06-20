@@ -32,6 +32,7 @@ from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import images
 from nova.virt.libvirt import config as vconfig
+from nova.virt.libvirt import lvm
 from nova.virt.libvirt import utils as libvirt_utils
 
 
@@ -418,7 +419,7 @@ class Lvm(Image):
         super(Lvm, self).__init__("block", "raw", is_block_dev=True)
 
         if path:
-            info = libvirt_utils.logical_volume_info(path)
+            info = lvm.volume_info(path)
             self.vg = info['VG']
             self.lv = info['LV']
             self.path = path
@@ -449,8 +450,8 @@ class Lvm(Image):
             self.verify_base_size(base, size, base_size=base_size)
             resize = size > base_size
             size = size if resize else base_size
-            libvirt_utils.create_lvm_image(self.vg, self.lv,
-                                           size, sparse=self.sparse)
+            lvm.create_volume(self.vg, self.lv,
+                                         size, sparse=self.sparse)
             images.convert_image(base, self.path, 'raw', run_as_root=True)
             if resize:
                 disk.resize2fs(self.path, run_as_root=True)
@@ -459,8 +460,8 @@ class Lvm(Image):
 
         #Generate images with specified size right on volume
         if generated and size:
-            libvirt_utils.create_lvm_image(self.vg, self.lv,
-                                           size, sparse=self.sparse)
+            lvm.create_volume(self.vg, self.lv,
+                                         size, sparse=self.sparse)
             with self.remove_volume_on_error(self.path):
                 prepare_template(target=self.path, *args, **kwargs)
         else:
@@ -475,7 +476,7 @@ class Lvm(Image):
             yield
         except Exception:
             with excutils.save_and_reraise_exception():
-                libvirt_utils.remove_logical_volumes(path)
+                lvm.remove_volumes(path)
 
     def snapshot_extract(self, target, out_format):
         images.convert_image(self.path, target, out_format,
