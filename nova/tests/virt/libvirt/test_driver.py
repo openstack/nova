@@ -3393,10 +3393,10 @@ class LibvirtConnTestCase(test.TestCase):
                  fakelibvirt.VIR_DOMAIN_AFFECT_LIVE)
 
         with contextlib.nested(
-            mock.patch.object(conn, 'volume_driver_method',
+            mock.patch.object(conn, '_connect_volume',
                               return_value=mock_conf),
             mock.patch.object(conn, '_set_cache_mode')
-        ) as (mock_volume_driver_method, mock_set_cache_mode):
+        ) as (mock_connect_volume, mock_set_cache_mode):
             for state in (power_state.RUNNING, power_state.PAUSED):
                 mock_dom.info.return_value = [state, 512, 512, 2, 1234, 5678]
 
@@ -3406,8 +3406,8 @@ class LibvirtConnTestCase(test.TestCase):
 
                 mock_lookup_by_name.assert_called_with(instance['name'])
                 mock_get_info.assert_called_with(CONF.libvirt.virt_type, bdm)
-                mock_volume_driver_method.assert_called_with(
-                    'connect_volume', connection_info, disk_info)
+                mock_connect_volume.assert_called_with(
+                    connection_info, disk_info)
                 mock_set_cache_mode.assert_called_with(mock_conf)
                 mock_dom.attachDeviceFlags.assert_called_with(
                     mock_conf.to_xml(), flags)
@@ -3434,8 +3434,8 @@ class LibvirtConnTestCase(test.TestCase):
         flags = (fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
                  fakelibvirt.VIR_DOMAIN_AFFECT_LIVE)
 
-        with mock.patch.object(conn, 'volume_driver_method') as \
-                mock_volume_driver_method:
+        with mock.patch.object(conn, '_disconnect_volume') as \
+                mock_disconnect_volume:
             for state in (power_state.RUNNING, power_state.PAUSED):
                 mock_dom.info.return_value = [state, 512, 512, 2, 1234, 5678]
                 mock_lookup_by_name.return_value = mock_dom
@@ -3446,8 +3446,8 @@ class LibvirtConnTestCase(test.TestCase):
                 mock_get_disk_xml.assert_called_with(mock_dom.XMLDesc(0),
                                                      'vdc')
                 mock_dom.detachDeviceFlags.assert_called_with(mock_xml, flags)
-                mock_volume_driver_method.assert_called_with(
-                    'disconnect_volume', connection_info, 'vdc')
+                mock_disconnect_volume.assert_called_with(
+                    connection_info, 'vdc')
 
     def test_multi_nic(self):
         instance_data = dict(self.test_instance)
@@ -4301,16 +4301,15 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.StubOutWithMock(driver, "block_device_info_get_mapping")
         driver.block_device_info_get_mapping(vol
             ).AndReturn(vol['block_device_mapping'])
-        self.mox.StubOutWithMock(conn, "volume_driver_method")
+        self.mox.StubOutWithMock(conn, "_connect_volume")
         for v in vol['block_device_mapping']:
             disk_info = {
                 'bus': "scsi",
                 'dev': v['mount_device'].rpartition("/")[2],
                 'type': "disk"
                 }
-            conn.volume_driver_method('connect_volume',
-                                      v['connection_info'],
-                                      disk_info)
+            conn._connect_volume(v['connection_info'],
+                                 disk_info)
         self.mox.StubOutWithMock(conn, 'plug_vifs')
         conn.plug_vifs(mox.IsA(inst_ref), nw_info)
 
@@ -4358,16 +4357,15 @@ class LibvirtConnTestCase(test.TestCase):
             c = context.get_admin_context()
             nw_info = FakeNetworkInfo()
             # Creating mocks
-            self.mox.StubOutWithMock(conn, "volume_driver_method")
+            self.mox.StubOutWithMock(conn, "_connect_volume")
             for v in vol['block_device_mapping']:
                 disk_info = {
                     'bus': "scsi",
                     'dev': v['mount_device'].rpartition("/")[2],
                     'type': "disk"
                     }
-                conn.volume_driver_method('connect_volume',
-                                          v['connection_info'],
-                                          disk_info)
+                conn._connect_volume(v['connection_info'],
+                                     disk_info)
             self.mox.StubOutWithMock(conn, 'plug_vifs')
             conn.plug_vifs(mox.IsA(inst_ref), nw_info)
             self.mox.ReplayAll()
@@ -4491,15 +4489,14 @@ class LibvirtConnTestCase(test.TestCase):
         with contextlib.nested(
             mock.patch.object(driver, 'block_device_info_get_mapping',
                               return_value=vol['block_device_mapping']),
-            mock.patch.object(conn, 'volume_driver_method')
-        ) as (block_device_info_get_mapping, volume_driver_method):
+            mock.patch.object(conn, '_disconnect_volume')
+        ) as (block_device_info_get_mapping, _disconnect_volume):
             conn.post_live_migration(cntx, inst_ref, vol)
 
             block_device_info_get_mapping.assert_has_calls([
                 mock.call(vol)])
-            volume_driver_method.assert_has_calls([
-                mock.call('disconnect_volume',
-                          v['connection_info'],
+            _disconnect_volume.assert_has_calls([
+                mock.call(v['connection_info'],
                           v['mount_device'].rpartition("/")[2])
                 for v in vol['block_device_mapping']])
 
@@ -5201,13 +5198,13 @@ class LibvirtConnTestCase(test.TestCase):
         driver.block_device_info_get_mapping(vol
                                  ).AndReturn(vol['block_device_mapping'])
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
-                                 "volume_driver_method")
+                                 "_disconnect_volume")
         if volume_fail:
-            libvirt_driver.LibvirtDriver.volume_driver_method(
+            libvirt_driver.LibvirtDriver._disconnect_volume(
                         mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg()).\
                                      AndRaise(exception.VolumeNotFound('vol'))
         else:
-            libvirt_driver.LibvirtDriver.volume_driver_method(
+            libvirt_driver.LibvirtDriver._disconnect_volume(
                         mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.StubOutWithMock(shutil, "rmtree")
         shutil.rmtree(os.path.join(CONF.instances_path,
@@ -6880,14 +6877,13 @@ class LibvirtConnTestCase(test.TestCase):
             mock.patch.object(conn, '_lookup_by_name',
                               side_effect=exception.InstanceNotFound(
                                   instance_id=instance.name)),
-            mock.patch.object(conn, 'volume_driver_method')
-        ) as (_lookup_by_name, volume_driver_method):
+            mock.patch.object(conn, '_disconnect_volume')
+        ) as (_lookup_by_name, _disconnect_volume):
             connection_info = {'driver_volume_type': 'fake'}
             conn.detach_volume(connection_info, instance, '/dev/sda')
             _lookup_by_name.assert_called_once_with(instance.name)
-            volume_driver_method.assert_called_once_with('disconnect_volume',
-                                                         connection_info,
-                                                         'sda')
+            _disconnect_volume.assert_called_once_with(connection_info,
+                                                       'sda')
 
     def _test_attach_detach_interface_get_config(self, method_name):
         """Tests that the get_config() method is properly called in

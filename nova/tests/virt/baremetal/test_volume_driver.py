@@ -204,42 +204,23 @@ class BareMetalLibVirtVolumeDriverTestCase(test.TestCase):
 
     def test_fake_connect_volume(self):
         """Check connect_volume returns without exceptions."""
-        self.driver._volume_driver_method('connect_volume',
-                                          self.connection_info,
-                                          self.disk_info)
+        self.driver._connect_volume(self.connection_info,
+                                    self.disk_info)
 
     def test_volume_driver_method_ok(self):
         fake_driver = self.driver.volume_drivers['fake']
         self.mox.StubOutWithMock(fake_driver, 'connect_volume')
         fake_driver.connect_volume(self.connection_info, self.disk_info)
         self.mox.ReplayAll()
-        self.driver._volume_driver_method('connect_volume',
-                                          self.connection_info,
-                                          self.disk_info)
+        self.driver._connect_volume(self.connection_info,
+                                    self.disk_info)
 
     def test_volume_driver_method_driver_type_not_found(self):
         self.connection_info['driver_volume_type'] = 'qwerty'
         self.assertRaises(exception.VolumeDriverNotFound,
-                          self.driver._volume_driver_method,
-                          'connect_volume',
+                          self.driver._connect_volume,
                           self.connection_info,
                           self.disk_info)
-
-    def test_connect_volume(self):
-        self.mox.StubOutWithMock(self.driver, '_volume_driver_method')
-        self.driver._volume_driver_method('connect_volume',
-                                          self.connection_info,
-                                          self.disk_info)
-        self.mox.ReplayAll()
-        self.driver._connect_volume(self.connection_info, self.disk_info)
-
-    def test_disconnect_volume(self):
-        self.mox.StubOutWithMock(self.driver, '_volume_driver_method')
-        self.driver._volume_driver_method('disconnect_volume',
-                                          self.connection_info,
-                                          self.mount_device)
-        self.mox.ReplayAll()
-        self.driver._disconnect_volume(self.connection_info, self.mount_device)
 
     def test_publish_iscsi(self):
         self.mox.StubOutWithMock(volume_driver, '_get_iqn')
