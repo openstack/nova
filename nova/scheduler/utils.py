@@ -152,10 +152,13 @@ def populate_retry(filter_properties, instance_uuid):
     _log_compute_error(instance_uuid, retry)
 
     if retry['num_attempts'] > max_attempts:
-        msg = (_('Exceeded max scheduling attempts %(max_attempts)d for '
-                 'instance %(instance_uuid)s')
+        exc = retry.pop('exc', None)
+        msg = (_('Exceeded max scheduling attempts %(max_attempts)d '
+                 'for instance %(instance_uuid)s. '
+                 'Last exception: %(exc)s.')
                % {'max_attempts': max_attempts,
-                  'instance_uuid': instance_uuid})
+                  'instance_uuid': instance_uuid,
+                  'exc': exc})
         raise exception.NoValidHost(reason=msg)
 
 

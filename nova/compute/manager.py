@@ -1474,7 +1474,8 @@ class ComputeManager(manager.Manager):
 
         if exc_info:
             # stringify to avoid circular ref problem in json serialization:
-            retry['exc'] = traceback.format_exception(*exc_info)
+            retry['exc'] = traceback.format_exception_only(exc_info[0],
+                                    exc_info[1])
 
         scheduler_method(context, *method_args)
         return True
