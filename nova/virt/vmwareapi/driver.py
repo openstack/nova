@@ -173,9 +173,9 @@ class VMwareESXDriver(driver.ComputeDriver):
         self._vmops.spawn(context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info)
 
-    def snapshot(self, context, instance, name, update_task_state):
+    def snapshot(self, context, instance, image_id, update_task_state):
         """Create snapshot from a running VM instance."""
-        self._vmops.snapshot(context, instance, name, update_task_state)
+        self._vmops.snapshot(context, instance, image_id, update_task_state)
 
     def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None, bad_volumes_callback=None):
@@ -353,9 +353,9 @@ class VMwareESXDriver(driver.ComputeDriver):
     def get_host_uptime(self, host):
         return 'Please refer to %s for the uptime' % CONF.vmware.host_ip
 
-    def inject_network_info(self, instance, network_info):
+    def inject_network_info(self, instance, nw_info):
         """inject network info for specified instance."""
-        self._vmops.inject_network_info(instance, network_info)
+        self._vmops.inject_network_info(instance, nw_info)
 
     def list_instance_uuids(self):
         """List VM instance UUIDs."""
@@ -452,7 +452,7 @@ class VMwareVCDriver(VMwareESXDriver):
                                        block_device_info, power_on)
 
     def finish_migration(self, context, migration, instance, disk_info,
-                         network_info, image_meta, resize_instance=False,
+                         network_info, image_meta, resize_instance,
                          block_device_info=None, power_on=True):
         """Completes a resize, turning on the migrated instance."""
         _vmops = self._get_vmops_for_compute_node(instance['node'])
@@ -460,11 +460,11 @@ class VMwareVCDriver(VMwareESXDriver):
                                 network_info, image_meta, resize_instance,
                                 block_device_info, power_on)
 
-    def live_migration(self, context, instance_ref, dest,
+    def live_migration(self, context, instance, dest,
                        post_method, recover_method, block_migration=False,
                        migrate_data=None):
         """Live migration of an instance to another host."""
-        self._vmops.live_migration(context, instance_ref, dest,
+        self._vmops.live_migration(context, instance, dest,
                                    post_method, recover_method,
                                    block_migration)
 
@@ -611,7 +611,7 @@ class VMwareVCDriver(VMwareESXDriver):
         LOG.debug("The available nodes are: %s", node_list)
         return node_list
 
-    def get_host_stats(self, refresh=True):
+    def get_host_stats(self, refresh=False):
         """Return currently known host stats."""
         stats_list = []
         nodes = self.get_available_nodes()
@@ -647,10 +647,10 @@ class VMwareVCDriver(VMwareESXDriver):
         _volumeops = self._get_volumeops_for_compute_node(instance['node'])
         return _volumeops.get_volume_connector(instance)
 
-    def snapshot(self, context, instance, name, update_task_state):
+    def snapshot(self, context, instance, image_id, update_task_state):
         """Create snapshot from a running VM instance."""
         _vmops = self._get_vmops_for_compute_node(instance['node'])
-        _vmops.snapshot(context, instance, name, update_task_state)
+        _vmops.snapshot(context, instance, image_id, update_task_state)
 
     def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None, bad_volumes_callback=None):
@@ -758,10 +758,10 @@ class VMwareVCDriver(VMwareESXDriver):
                 "uptime for just one host.")
         raise NotImplementedError(msg)
 
-    def inject_network_info(self, instance, network_info):
+    def inject_network_info(self, instance, nw_info):
         """inject network info for specified instance."""
         _vmops = self._get_vmops_for_compute_node(instance['node'])
-        _vmops.inject_network_info(instance, network_info)
+        _vmops.inject_network_info(instance, nw_info)
 
     def manage_image_cache(self, context, all_instances):
         """Manage the local cache of images."""
