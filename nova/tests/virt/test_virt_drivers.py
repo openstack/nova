@@ -119,7 +119,7 @@ class _FakeDriverBackendTestCase(object):
             pass
 
         self.stubs.Set(nova.virt.libvirt.driver.LibvirtDriver,
-                       'get_instance_disk_info',
+                       '_get_instance_disk_info',
                        fake_get_instance_disk_info)
 
         self.stubs.Set(nova.virt.libvirt.driver.disk,

@@ -2058,8 +2058,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                   write_to_disk=True)
 
         # NOTE (rmk): Re-populate any missing backing files.
-        disk_info_json = self.get_instance_disk_info(instance['name'], xml,
-                                                     block_device_info)
+        disk_info_json = self._get_instance_disk_info(instance['name'], xml,
+                                                      block_device_info)
         instance_dir = libvirt_utils.get_instance_path(instance)
         self._create_images_and_backing(context, instance, instance_dir,
                                         disk_info_json)
@@ -4675,42 +4675,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                       write_to_disk=True)
             self._conn.defineXML(xml)
 
-    def get_instance_disk_info(self, instance_name, xml=None,
-                               block_device_info=None):
-        """Retrieve information about actual disk sizes of an instance.
-
-        :param instance_name:
-            name of a nova instance as returned by list_instances()
-        :param xml:
-            Optional; Domain XML of given libvirt instance.
-            If omitted, this method attempts to extract it from the
-            pre-existing definition.
-        :param block_device_info:
-            Optional; Can be used to filter out devices which are
-            actually volumes.
-        :return:
-            json strings with below format::
-
-                "[{'path':'disk', 'type':'raw',
-                  'virt_disk_size':'10737418240',
-                  'backing_file':'backing_file',
-                  'disk_size':'83886080'},...]"
-
-        """
-        if xml is None:
-            try:
-                virt_dom = self._lookup_by_name(instance_name)
-                xml = virt_dom.XMLDesc(0)
-            except libvirt.libvirtError as ex:
-                error_code = ex.get_error_code()
-                LOG.warn(_LW('Error from libvirt while getting description of '
-                           '%(instance_name)s: [Error Code %(error_code)s] '
-                           '%(ex)s'),
-                         {'instance_name': instance_name,
-                         'error_code': error_code,
-                         'ex': ex})
-                raise exception.InstanceNotFound(instance_id=instance_name)
-
+    def _get_instance_disk_info(self, instance_name, xml,
+                                block_device_info=None):
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
 
@@ -4766,6 +4732,25 @@ class LibvirtDriver(driver.ComputeDriver):
                               'disk_size': dk_size,
                               'over_committed_disk_size': over_commit_size})
         return jsonutils.dumps(disk_info)
+
+    def get_instance_disk_info(self, instance_name,
+                               block_device_info=None):
+        try:
+            dom = self._lookup_by_name(instance_name)
+            xml = dom.XMLDesc(0)
+        except libvirt.libvirtError as ex:
+            error_code = ex.get_error_code()
+            msg = (_('Error from libvirt while getting description of '
+                     '%(instance_name)s: [Error Code %(error_code)s] '
+                     '%(ex)s') %
+                   {'instance_name': instance_name,
+                    'error_code': error_code,
+                    'ex': ex})
+            LOG.warn(msg)
+            raise exception.InstanceNotFound(instance_id=instance_name)
+
+        return self._get_instance_disk_info(instance_name, xml,
+                                            block_device_info)
 
     def _get_disk_over_committed_size_total(self):
         """Return total over committed disk size for all instances."""

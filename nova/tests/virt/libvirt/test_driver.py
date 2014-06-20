@@ -5528,7 +5528,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.mox.StubOutWithMock(conn, '_destroy')
-        self.mox.StubOutWithMock(conn, 'get_instance_disk_info')
+        self.mox.StubOutWithMock(conn, '_get_instance_disk_info')
         self.mox.StubOutWithMock(conn, '_get_guest_xml')
         self.mox.StubOutWithMock(conn, '_create_images_and_backing')
         self.mox.StubOutWithMock(conn, '_create_domain_and_network')
@@ -5550,7 +5550,7 @@ class LibvirtConnTestCase(test.TestCase):
                             block_device_info=block_device_info,
                             write_to_disk=True).AndReturn(dummyxml)
         disk_info_json = '[{"virt_disk_size": 2}]'
-        conn.get_instance_disk_info(instance["name"], dummyxml,
+        conn._get_instance_disk_info(instance["name"], dummyxml,
                             block_device_info).AndReturn(disk_info_json)
         conn._create_images_and_backing(self.context, instance,
                                 libvirt_utils.get_instance_path(instance),
@@ -5622,7 +5622,7 @@ class LibvirtConnTestCase(test.TestCase):
                        return_value=(image_service_mock,
                        instance['image_ref']))):
             conn.get_info = fake_get_info
-            conn.get_instance_disk_info = _check_xml_bus
+            conn._get_instance_disk_info = _check_xml_bus
             conn._hard_reboot(self.context, instance, network_info,
                               block_device_info)
 
@@ -5888,7 +5888,7 @@ class LibvirtConnTestCase(test.TestCase):
                                  'disk_size': '10737418240',
                                  'over_committed_disk_size': '0'}]}
 
-        def get_info(instance_name):
+        def get_info(instance_name, block_device_mapping=None):
             return jsonutils.dumps(fake_disks.get(instance_name))
         self.stubs.Set(conn, 'get_instance_disk_info', get_info)
 
@@ -8449,7 +8449,7 @@ class LibvirtDriverTestCase(test.TestCase):
         self.counter = 0
         self.checked_shared_storage = False
 
-        def fake_get_instance_disk_info(instance, xml=None,
+        def fake_get_instance_disk_info(instance,
                                         block_device_info=None):
             return '[]'
 
@@ -8503,7 +8503,7 @@ class LibvirtDriverTestCase(test.TestCase):
                       'disk_size': '83886080'}]
         disk_info_text = jsonutils.dumps(disk_info)
 
-        def fake_get_instance_disk_info(instance, xml=None,
+        def fake_get_instance_disk_info(instance,
                                         block_device_info=None):
             return disk_info_text
 
