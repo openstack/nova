@@ -41,178 +41,6 @@ CONF.register_opts(xenapi_volume_utils_opts, 'xenserver')
 LOG = logging.getLogger(__name__)
 
 
-def _handle_sr_params(params):
-    if 'id' in params:
-        del params['id']
-
-    sr_type = params.pop('sr_type', 'iscsi')
-    sr_desc = params.pop('name_description', '')
-    return sr_type, sr_desc
-
-
-def introduce_sr(session, sr_uuid, label, params):
-    LOG.debug('Introducing SR %s', label)
-
-    sr_type, sr_desc = _handle_sr_params(params)
-
-    sr_ref = session.call_xenapi('SR.introduce', sr_uuid, label, sr_desc,
-            sr_type, '', False, params)
-
-    LOG.debug('Creating PBD for SR')
-    pbd_ref = create_pbd(session, sr_ref, params)
-
-    LOG.debug('Plugging SR')
-    session.call_xenapi("PBD.plug", pbd_ref)
-
-    session.call_xenapi("SR.scan", sr_ref)
-    return sr_ref
-
-
-def forget_sr(session, sr_ref):
-    """Forgets the storage repository without destroying the VDIs within."""
-    LOG.debug('Forgetting SR...')
-    _unplug_pbds(session, sr_ref)
-    session.call_xenapi("SR.forget", sr_ref)
-
-
-def find_sr_by_uuid(session, sr_uuid):
-    """Return the storage repository given a uuid."""
-    try:
-        return session.call_xenapi("SR.get_by_uuid", sr_uuid)
-    except session.XenAPI.Failure as exc:
-        if exc.details[0] == 'UUID_INVALID':
-            return None
-        raise
-
-
-def find_sr_from_vbd(session, vbd_ref):
-    """Find the SR reference from the VBD reference."""
-    try:
-        vdi_ref = session.call_xenapi("VBD.get_VDI", vbd_ref)
-        sr_ref = session.call_xenapi("VDI.get_SR", vdi_ref)
-    except session.XenAPI.Failure as exc:
-        LOG.exception(exc)
-        raise exception.StorageError(
-                reason=_('Unable to find SR from VBD %s') % vbd_ref)
-    return sr_ref
-
-
-def create_pbd(session, sr_ref, params):
-    pbd_rec = {}
-    pbd_rec['host'] = session.host_ref
-    pbd_rec['SR'] = sr_ref
-    pbd_rec['device_config'] = params
-    pbd_ref = session.call_xenapi("PBD.create", pbd_rec)
-    return pbd_ref
-
-
-def _unplug_pbds(session, sr_ref):
-    try:
-        pbds = session.call_xenapi("SR.get_PBDs", sr_ref)
-    except session.XenAPI.Failure as exc:
-        LOG.warn(_('Ignoring exception %(exc)s when getting PBDs'
-                   ' for %(sr_ref)s'), {'exc': exc, 'sr_ref': sr_ref})
-        return
-
-    for pbd in pbds:
-        try:
-            session.call_xenapi("PBD.unplug", pbd)
-        except session.XenAPI.Failure as exc:
-            LOG.warn(_('Ignoring exception %(exc)s when unplugging'
-                       ' PBD %(pbd)s'), {'exc': exc, 'pbd': pbd})
-
-
-def _get_vdi_ref(session, sr_ref, vdi_uuid, target_lun):
-    if vdi_uuid:
-        LOG.debug("vdi_uuid: %s" % vdi_uuid)
-        return session.call_xenapi("VDI.get_by_uuid", vdi_uuid)
-    elif target_lun:
-        vdi_refs = session.call_xenapi("SR.get_VDIs", sr_ref)
-        for curr_ref in vdi_refs:
-            curr_rec = session.call_xenapi("VDI.get_record", curr_ref)
-            if ('sm_config' in curr_rec and
-                'LUNid' in curr_rec['sm_config'] and
-                curr_rec['sm_config']['LUNid'] == str(target_lun)):
-                return curr_ref
-    else:
-        return (session.call_xenapi("SR.get_VDIs", sr_ref))[0]
-
-    return None
-
-
-def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
-    """Introduce VDI in the host."""
-    try:
-        vdi_ref = _get_vdi_ref(session, sr_ref, vdi_uuid, target_lun)
-        if vdi_ref is None:
-            greenthread.sleep(CONF.xenserver.introduce_vdi_retry_wait)
-            session.call_xenapi("SR.scan", sr_ref)
-            vdi_ref = _get_vdi_ref(session, sr_ref, vdi_uuid, target_lun)
-    except session.XenAPI.Failure as exc:
-        LOG.exception(exc)
-        raise exception.StorageError(
-                reason=_('Unable to introduce VDI on SR %s') % sr_ref)
-
-    if not vdi_ref:
-        raise exception.StorageError(
-                reason=_('VDI not found on SR %(sr)s (vdi_uuid '
-                         '%(vdi_uuid)s, target_lun %(target_lun)s)') %
-                            {'sr': sr_ref, 'vdi_uuid': vdi_uuid,
-                             'target_lun': target_lun})
-
-    try:
-        vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
-        LOG.debug(vdi_rec)
-        LOG.debug(type(vdi_rec))
-    except session.XenAPI.Failure as exc:
-        LOG.exception(exc)
-        raise exception.StorageError(
-                reason=_('Unable to get record of VDI %s on') % vdi_ref)
-
-    if vdi_rec['managed']:
-        # We do not need to introduce the vdi
-        return vdi_ref
-
-    try:
-        return session.call_xenapi("VDI.introduce",
-                                    vdi_rec['uuid'],
-                                    vdi_rec['name_label'],
-                                    vdi_rec['name_description'],
-                                    vdi_rec['SR'],
-                                    vdi_rec['type'],
-                                    vdi_rec['sharable'],
-                                    vdi_rec['read_only'],
-                                    vdi_rec['other_config'],
-                                    vdi_rec['location'],
-                                    vdi_rec['xenstore_data'],
-                                    vdi_rec['sm_config'])
-    except session.XenAPI.Failure as exc:
-        LOG.exception(exc)
-        raise exception.StorageError(
-                reason=_('Unable to introduce VDI for SR %s') % sr_ref)
-
-
-def purge_sr(session, sr_ref):
-    # Make sure no VBDs are referencing the SR VDIs
-    vdi_refs = session.call_xenapi("SR.get_VDIs", sr_ref)
-    for vdi_ref in vdi_refs:
-        vbd_refs = session.call_xenapi("VDI.get_VBDs", vdi_ref)
-        if vbd_refs:
-            LOG.warn(_('Cannot purge SR with referenced VDIs'))
-            return
-
-    forget_sr(session, sr_ref)
-
-
-def get_device_number(mountpoint):
-    device_number = _mountpoint_to_number(mountpoint)
-    if device_number < 0:
-        raise exception.StorageError(
-                reason=_('Unable to obtain target information %s') %
-                       mountpoint)
-    return device_number
-
-
 def parse_sr_info(connection_data, description=''):
     label = connection_data.pop('name_label',
                                 'tempSR-%s' % connection_data.get('volume_id'))
@@ -270,21 +98,6 @@ def _parse_volume_info(connection_data):
     return volume_info
 
 
-def _mountpoint_to_number(mountpoint):
-    """Translate a mountpoint like /dev/sdc into a numeric."""
-    if mountpoint.startswith('/dev/'):
-        mountpoint = mountpoint[5:]
-    if re.match('^[hs]d[a-p]$', mountpoint):
-        return (ord(mountpoint[2:3]) - ord('a'))
-    elif re.match('^x?vd[a-p]$', mountpoint):
-        return (ord(mountpoint[-1]) - ord('a'))
-    elif re.match('^[0-9]+$', mountpoint):
-        return string.atoi(mountpoint, 10)
-    else:
-        LOG.warn(_('Mountpoint cannot be translated: %s'), mountpoint)
-        return -1
-
-
 def _get_target_host(iscsi_string):
     """Retrieve target host."""
     if iscsi_string:
@@ -300,6 +113,193 @@ def _get_target_port(iscsi_string):
         return iscsi_string.split(':')[1]
 
     return CONF.xenserver.target_port
+
+
+def introduce_sr(session, sr_uuid, label, params):
+    LOG.debug('Introducing SR %s', label)
+
+    sr_type, sr_desc = _handle_sr_params(params)
+
+    sr_ref = session.call_xenapi('SR.introduce', sr_uuid, label, sr_desc,
+            sr_type, '', False, params)
+
+    LOG.debug('Creating PBD for SR')
+    pbd_ref = _create_pbd(session, sr_ref, params)
+
+    LOG.debug('Plugging SR')
+    session.call_xenapi("PBD.plug", pbd_ref)
+
+    session.call_xenapi("SR.scan", sr_ref)
+    return sr_ref
+
+
+def _handle_sr_params(params):
+    if 'id' in params:
+        del params['id']
+
+    sr_type = params.pop('sr_type', 'iscsi')
+    sr_desc = params.pop('name_description', '')
+    return sr_type, sr_desc
+
+
+def _create_pbd(session, sr_ref, params):
+    pbd_rec = {}
+    pbd_rec['host'] = session.host_ref
+    pbd_rec['SR'] = sr_ref
+    pbd_rec['device_config'] = params
+    pbd_ref = session.call_xenapi("PBD.create", pbd_rec)
+    return pbd_ref
+
+
+def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
+    """Introduce VDI in the host."""
+    try:
+        vdi_ref = _get_vdi_ref(session, sr_ref, vdi_uuid, target_lun)
+        if vdi_ref is None:
+            greenthread.sleep(CONF.xenserver.introduce_vdi_retry_wait)
+            session.call_xenapi("SR.scan", sr_ref)
+            vdi_ref = _get_vdi_ref(session, sr_ref, vdi_uuid, target_lun)
+    except session.XenAPI.Failure as exc:
+        LOG.exception(exc)
+        raise exception.StorageError(
+                reason=_('Unable to introduce VDI on SR %s') % sr_ref)
+
+    if not vdi_ref:
+        raise exception.StorageError(
+                reason=_('VDI not found on SR %(sr)s (vdi_uuid '
+                         '%(vdi_uuid)s, target_lun %(target_lun)s)') %
+                            {'sr': sr_ref, 'vdi_uuid': vdi_uuid,
+                             'target_lun': target_lun})
+
+    try:
+        vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
+        LOG.debug(vdi_rec)
+        LOG.debug(type(vdi_rec))
+    except session.XenAPI.Failure as exc:
+        LOG.exception(exc)
+        raise exception.StorageError(
+                reason=_('Unable to get record of VDI %s on') % vdi_ref)
+
+    if vdi_rec['managed']:
+        # We do not need to introduce the vdi
+        return vdi_ref
+
+    try:
+        return session.call_xenapi("VDI.introduce",
+                                    vdi_rec['uuid'],
+                                    vdi_rec['name_label'],
+                                    vdi_rec['name_description'],
+                                    vdi_rec['SR'],
+                                    vdi_rec['type'],
+                                    vdi_rec['sharable'],
+                                    vdi_rec['read_only'],
+                                    vdi_rec['other_config'],
+                                    vdi_rec['location'],
+                                    vdi_rec['xenstore_data'],
+                                    vdi_rec['sm_config'])
+    except session.XenAPI.Failure as exc:
+        LOG.exception(exc)
+        raise exception.StorageError(
+                reason=_('Unable to introduce VDI for SR %s') % sr_ref)
+
+
+def _get_vdi_ref(session, sr_ref, vdi_uuid, target_lun):
+    if vdi_uuid:
+        LOG.debug("vdi_uuid: %s" % vdi_uuid)
+        return session.call_xenapi("VDI.get_by_uuid", vdi_uuid)
+    elif target_lun:
+        vdi_refs = session.call_xenapi("SR.get_VDIs", sr_ref)
+        for curr_ref in vdi_refs:
+            curr_rec = session.call_xenapi("VDI.get_record", curr_ref)
+            if ('sm_config' in curr_rec and
+                'LUNid' in curr_rec['sm_config'] and
+                curr_rec['sm_config']['LUNid'] == str(target_lun)):
+                return curr_ref
+    else:
+        return (session.call_xenapi("SR.get_VDIs", sr_ref))[0]
+
+    return None
+
+
+def purge_sr(session, sr_ref):
+    # Make sure no VBDs are referencing the SR VDIs
+    vdi_refs = session.call_xenapi("SR.get_VDIs", sr_ref)
+    for vdi_ref in vdi_refs:
+        vbd_refs = session.call_xenapi("VDI.get_VBDs", vdi_ref)
+        if vbd_refs:
+            LOG.warn(_('Cannot purge SR with referenced VDIs'))
+            return
+
+    forget_sr(session, sr_ref)
+
+
+def forget_sr(session, sr_ref):
+    """Forgets the storage repository without destroying the VDIs within."""
+    LOG.debug('Forgetting SR...')
+    _unplug_pbds(session, sr_ref)
+    session.call_xenapi("SR.forget", sr_ref)
+
+
+def _unplug_pbds(session, sr_ref):
+    try:
+        pbds = session.call_xenapi("SR.get_PBDs", sr_ref)
+    except session.XenAPI.Failure as exc:
+        LOG.warn(_('Ignoring exception %(exc)s when getting PBDs'
+                   ' for %(sr_ref)s'), {'exc': exc, 'sr_ref': sr_ref})
+        return
+
+    for pbd in pbds:
+        try:
+            session.call_xenapi("PBD.unplug", pbd)
+        except session.XenAPI.Failure as exc:
+            LOG.warn(_('Ignoring exception %(exc)s when unplugging'
+                       ' PBD %(pbd)s'), {'exc': exc, 'pbd': pbd})
+
+
+def get_device_number(mountpoint):
+    device_number = _mountpoint_to_number(mountpoint)
+    if device_number < 0:
+        raise exception.StorageError(
+                reason=_('Unable to obtain target information %s') %
+                       mountpoint)
+    return device_number
+
+
+def _mountpoint_to_number(mountpoint):
+    """Translate a mountpoint like /dev/sdc into a numeric."""
+    if mountpoint.startswith('/dev/'):
+        mountpoint = mountpoint[5:]
+    if re.match('^[hs]d[a-p]$', mountpoint):
+        return (ord(mountpoint[2:3]) - ord('a'))
+    elif re.match('^x?vd[a-p]$', mountpoint):
+        return (ord(mountpoint[-1]) - ord('a'))
+    elif re.match('^[0-9]+$', mountpoint):
+        return string.atoi(mountpoint, 10)
+    else:
+        LOG.warn(_('Mountpoint cannot be translated: %s'), mountpoint)
+        return -1
+
+
+def find_sr_by_uuid(session, sr_uuid):
+    """Return the storage repository given a uuid."""
+    try:
+        return session.call_xenapi("SR.get_by_uuid", sr_uuid)
+    except session.XenAPI.Failure as exc:
+        if exc.details[0] == 'UUID_INVALID':
+            return None
+        raise
+
+
+def find_sr_from_vbd(session, vbd_ref):
+    """Find the SR reference from the VBD reference."""
+    try:
+        vdi_ref = session.call_xenapi("VBD.get_VDI", vbd_ref)
+        sr_ref = session.call_xenapi("VDI.get_SR", vdi_ref)
+    except session.XenAPI.Failure as exc:
+        LOG.exception(exc)
+        raise exception.StorageError(
+                reason=_('Unable to find SR from VBD %s') % vbd_ref)
+    return sr_ref
 
 
 def find_vbd_by_number(session, vm_ref, dev_number):
