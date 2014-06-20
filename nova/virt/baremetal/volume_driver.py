@@ -288,7 +288,7 @@ class LibvirtVolumeDriver(VolumeDriver):
             LOG.warn(_('detach volume could not find tid for %s'), iqn,
                      instance=instance)
 
-    def get_all_block_devices(self):
+    def _get_all_block_devices(self):
         """Return all block devices in use on this node."""
         return _list_backingstore_path()
 

@@ -342,7 +342,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         device_prefix = ("/dev/disk/by-path/ip-%s-iscsi-%s-lun-" %
                          (iscsi_properties['target_portal'],
                           iscsi_properties['target_iqn']))
-        devices = self.connection.get_all_block_devices()
+        devices = self.connection._get_all_block_devices()
         devices = [dev for dev in devices if dev.startswith(device_prefix)]
         if not devices:
             self._disconnect_from_iscsi_portal(iscsi_properties)
@@ -378,7 +378,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                                            multipath_device):
         self._rescan_iscsi()
         self._rescan_multipath()
-        block_devices = self.connection.get_all_block_devices()
+        block_devices = self.connection._get_all_block_devices()
         devices = []
         for dev in block_devices:
             if "/mapper/" in dev:
