@@ -2746,8 +2746,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                                       dev=pci_devs)
         try:
             for dev in pci_devs:
-                dom.detachDeviceFlags(self.get_guest_pci_device(dev).to_xml(),
-                                            libvirt.VIR_DOMAIN_AFFECT_LIVE)
+                dom.detachDeviceFlags(self._get_guest_pci_device(dev).to_xml(),
+                                      libvirt.VIR_DOMAIN_AFFECT_LIVE)
                 # after detachDeviceFlags returned, we should check the dom to
                 # ensure the detaching is finished
                 xml = dom.XMLDesc(0)
@@ -2776,7 +2776,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _attach_pci_devices(self, dom, pci_devs):
         try:
             for dev in pci_devs:
-                dom.attachDevice(self.get_guest_pci_device(dev).to_xml())
+                dom.attachDevice(self._get_guest_pci_device(dev).to_xml())
 
         except libvirt.libvirtError:
             LOG.error(_('Attaching PCI devices %(dev)s to %(dom)s failed.')
@@ -2889,7 +2889,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return guestcpu
 
-    def get_guest_cpu_config(self):
+    def _get_guest_cpu_config(self):
         mode = CONF.libvirt.cpu_mode
         model = CONF.libvirt.cpu_model
 
@@ -2941,8 +2941,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return cpu
 
-    def get_guest_disk_config(self, instance, name, disk_mapping, inst_type,
-                              image_type=None):
+    def _get_guest_disk_config(self, instance, name, disk_mapping, inst_type,
+                               image_type=None):
         image = self.image_backend.image(instance,
                                          name,
                                          image_type)
@@ -2954,10 +2954,10 @@ class LibvirtDriver(driver.ComputeDriver):
                                   inst_type['extra_specs'],
                                   self.get_hypervisor_version())
 
-    def get_guest_storage_config(self, instance, image_meta,
-                                 disk_info,
-                                 rescue, block_device_info,
-                                 inst_type):
+    def _get_guest_storage_config(self, instance, image_meta,
+                                  disk_info,
+                                  rescue, block_device_info,
+                                  inst_type):
         devices = []
         disk_mapping = disk_info['mapping']
 
@@ -2973,30 +2973,30 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
 
             if rescue:
-                diskrescue = self.get_guest_disk_config(instance,
-                                                        'disk.rescue',
-                                                        disk_mapping,
-                                                        inst_type)
+                diskrescue = self._get_guest_disk_config(instance,
+                                                         'disk.rescue',
+                                                         disk_mapping,
+                                                         inst_type)
                 devices.append(diskrescue)
 
-                diskos = self.get_guest_disk_config(instance,
-                                                    'disk',
-                                                    disk_mapping,
-                                                    inst_type)
+                diskos = self._get_guest_disk_config(instance,
+                                                     'disk',
+                                                     disk_mapping,
+                                                     inst_type)
                 devices.append(diskos)
             else:
                 if 'disk' in disk_mapping:
-                    diskos = self.get_guest_disk_config(instance,
-                                                        'disk',
-                                                        disk_mapping,
-                                                        inst_type)
+                    diskos = self._get_guest_disk_config(instance,
+                                                         'disk',
+                                                         disk_mapping,
+                                                         inst_type)
                     devices.append(diskos)
 
                 if 'disk.local' in disk_mapping:
-                    disklocal = self.get_guest_disk_config(instance,
-                                                           'disk.local',
-                                                           disk_mapping,
-                                                           inst_type)
+                    disklocal = self._get_guest_disk_config(instance,
+                                                            'disk.local',
+                                                            disk_mapping,
+                                                            inst_type)
                     devices.append(disklocal)
                     instance.default_ephemeral_device = (
                         block_device.prepend_dev(disklocal.target_dev))
@@ -3005,17 +3005,17 @@ class LibvirtDriver(driver.ComputeDriver):
                 for idx, eph in enumerate(
                     driver.block_device_info_get_ephemerals(
                         block_device_info)):
-                    diskeph = self.get_guest_disk_config(
+                    diskeph = self._get_guest_disk_config(
                         instance,
                         blockinfo.get_eph_disk(idx),
                         disk_mapping, inst_type)
                     devices.append(diskeph)
 
                 if 'disk.swap' in disk_mapping:
-                    diskswap = self.get_guest_disk_config(instance,
-                                                          'disk.swap',
-                                                          disk_mapping,
-                                                          inst_type)
+                    diskswap = self._get_guest_disk_config(instance,
+                                                           'disk.swap',
+                                                           disk_mapping,
+                                                           inst_type)
                     devices.append(diskswap)
                     instance.default_swap_device = (
                         block_device.prepend_dev(diskswap.target_dev))
@@ -3033,11 +3033,11 @@ class LibvirtDriver(driver.ComputeDriver):
                     vol.save(nova_context.get_admin_context())
 
             if 'disk.config' in disk_mapping:
-                diskconfig = self.get_guest_disk_config(instance,
-                                                        'disk.config',
-                                                        disk_mapping,
-                                                        inst_type,
-                                                        'raw')
+                diskconfig = self._get_guest_disk_config(instance,
+                                                         'disk.config',
+                                                         disk_mapping,
+                                                         inst_type,
+                                                         'raw')
                 devices.append(diskconfig)
 
         for d in devices:
@@ -3053,7 +3053,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return devices
 
-    def get_guest_config_sysinfo(self, instance):
+    def _get_guest_config_sysinfo(self, instance):
         sysinfo = vconfig.LibvirtConfigGuestSysinfo()
 
         sysinfo.system_manufacturer = version.vendor_string()
@@ -3065,7 +3065,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return sysinfo
 
-    def get_guest_pci_device(self, pci_device):
+    def _get_guest_pci_device(self, pci_device):
 
         dbsf = pci_utils.parse_address(pci_device['address'])
         dev = vconfig.LibvirtConfigGuestHostdevPCI()
@@ -3079,8 +3079,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return dev
 
-    def get_guest_config(self, instance, network_info, image_meta,
-                         disk_info, rescue=None, block_device_info=None):
+    def _get_guest_config(self, instance, network_info, image_meta,
+                          disk_info, rescue=None, block_device_info=None):
         """Get config data for parameters.
 
         :param rescue: optional dictionary that should contain the key
@@ -3113,7 +3113,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 if scope[1] in quota_items:
                     setattr(guest, scope[1], value)
 
-        guest.cpu = self.get_guest_cpu_config()
+        guest.cpu = self._get_guest_cpu_config()
 
         if 'root' in disk_mapping:
             root_device_name = block_device.prepend_dev(
@@ -3145,7 +3145,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.libvirt.virt_type in ("kvm", "qemu"):
             caps = self.get_host_capabilities()
             if caps.host.cpu.arch in ("i686", "x86_64"):
-                guest.sysinfo = self.get_guest_config_sysinfo(instance)
+                guest.sysinfo = self._get_guest_config_sysinfo(instance)
                 guest.os_smbios = vconfig.LibvirtConfigGuestSMBIOS()
 
             # The underlying machine type can be set as an image attribute,
@@ -3246,12 +3246,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 tmhpet.present = False
                 clk.add_timer(tmhpet)
 
-        for cfg in self.get_guest_storage_config(instance,
-                                                 image_meta,
-                                                 disk_info,
-                                                 rescue,
-                                                 block_device_info,
-                                                 flavor):
+        for cfg in self._get_guest_storage_config(instance,
+                                                  image_meta,
+                                                  disk_info,
+                                                  rescue,
+                                                  block_device_info,
+                                                  flavor):
             guest.add_device(cfg)
 
         for vif in network_info:
@@ -3396,7 +3396,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if CONF.libvirt.virt_type in ('xen', 'qemu', 'kvm'):
             for pci_dev in pci_manager.get_instance_pci_devs(instance):
-                guest.add_device(self.get_guest_pci_device(pci_dev))
+                guest.add_device(self._get_guest_pci_device(pci_dev))
         else:
             if len(pci_manager.get_instance_pci_devs(instance)) > 0:
                 raise exception.PciDeviceUnsupportedHypervisor(
@@ -3442,8 +3442,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE(mriedem): block_device_info can contain auth_password so we
         # need to sanitize the password in the message.
         LOG.debug(logging.mask_password(msg), instance=instance)
-        conf = self.get_guest_config(instance, network_info, image_meta,
-                                     disk_info, rescue, block_device_info)
+        conf = self._get_guest_config(instance, network_info, image_meta,
+                                      disk_info, rescue, block_device_info)
         xml = conf.to_xml()
 
         if write_to_disk:
