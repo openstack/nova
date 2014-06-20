@@ -34,6 +34,7 @@ from nova.network.neutronv2 import api as neutronapi
 from nova.network.neutronv2 import constants
 from nova.openstack.common import jsonutils
 from nova import test
+from nova.tests import fake_instance
 from nova import utils
 
 CONF = cfg.CONF
@@ -932,9 +933,7 @@ class TestNeutronv2(TestNeutronv2Base):
                 self.moxed_client.create_port(
                     MyComparator(port_req_body)).AndReturn({'port': port})
             else:
-                NeutronOverQuota = exceptions.NeutronClientException(
-                            message="Quota exceeded for resources: ['port']",
-                            status_code=409)
+                NeutronOverQuota = exceptions.OverQuotaClient()
                 self.moxed_client.create_port(
                     MyComparator(port_req_body)).AndRaise(NeutronOverQuota)
             index += 1
@@ -2326,6 +2325,25 @@ class TestNeutronv2WithMock(test.TestCase):
             self.assertRaises(exception.FloatingIpLimitExceeded,
                           api.allocate_floating_ip,
                           self.context, pool_name)
+
+    def test_create_port_for_instance_no_more_ip(self):
+        instance = fake_instance.fake_instance_obj(self.context)
+        net = {'id': 'my_netid1',
+               'name': 'my_netname1',
+               'subnets': ['mysubnid1'],
+               'tenant_id': instance['project_id']}
+
+        with mock.patch.object(client.Client, 'create_port',
+            side_effect=exceptions.IpAddressGenerationFailureClient()) as (
+            create_port_mock):
+            zone = 'compute:%s' % instance['availability_zone']
+            port_req_body = {'port': {'device_id': instance['uuid'],
+                                      'device_owner': zone}}
+            self.assertRaises(exception.NoMoreFixedIps,
+                              self.api._create_port,
+                              neutronv2.get_client(self.context),
+                              instance, net['id'], port_req_body)
+            create_port_mock.assert_called_once_with(port_req_body)
 
 
 class TestNeutronv2ModuleMethods(test.TestCase):
