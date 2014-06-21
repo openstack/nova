@@ -64,11 +64,6 @@ test_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(test_opts)
-CONF.import_opt('connection',
-                'nova.openstack.common.db.options',
-                group='database')
-CONF.import_opt('sqlite_db', 'nova.openstack.common.db.options',
-                group='database')
 CONF.import_opt('enabled', 'nova.api.openstack', group='osapi_v3')
 CONF.set_override('use_stderr', False)
 

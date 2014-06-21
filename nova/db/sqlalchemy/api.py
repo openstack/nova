@@ -22,15 +22,17 @@ import copy
 import datetime
 import functools
 import sys
+import threading
 import time
 import uuid
 
 from oslo.config import cfg
+from oslo.db import exception as db_exc
+from oslo.db.sqlalchemy import session as db_session
+from oslo.db.sqlalchemy import utils as sqlalchemyutils
 import six
 from sqlalchemy import and_
 from sqlalchemy import Boolean
-from sqlalchemy.exc import DataError
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy import Integer
 from sqlalchemy import MetaData
@@ -56,9 +58,6 @@ import nova.context
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common.db import exception as db_exc
-from nova.openstack.common.db.sqlalchemy import session as db_session
-from nova.openstack.common.db.sqlalchemy import utils as sqlalchemyutils
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -73,57 +72,34 @@ db_opts = [
                     'Should be empty, "project" or "global".'),
 ]
 
-connection_opts = [
-    cfg.StrOpt('slave_connection',
-               secret=True,
-               help='The SQLAlchemy connection string used to connect to the '
-                    'slave database'),
-]
-
 CONF = cfg.CONF
 CONF.register_opts(db_opts)
-CONF.register_opts(connection_opts, group='database')
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
-CONF.import_opt('connection',
-                'nova.openstack.common.db.options',
-                group='database')
 
 LOG = logging.getLogger(__name__)
 
 
-_MASTER_FACADE = None
-_SLAVE_FACADE = None
+_ENGINE_FACADE = None
+_LOCK = threading.Lock()
 
 
-def _create_facade_lazily(use_slave=False):
-    global _MASTER_FACADE
-    global _SLAVE_FACADE
-
-    return_slave = use_slave and CONF.database.slave_connection
-    if not return_slave:
-        if _MASTER_FACADE is None:
-            _MASTER_FACADE = db_session.EngineFacade(
-                CONF.database.connection,
-                **dict(CONF.database.iteritems())
-            )
-        return _MASTER_FACADE
-    else:
-        if _SLAVE_FACADE is None:
-            _SLAVE_FACADE = db_session.EngineFacade(
-                CONF.database.slave_connection,
-                **dict(CONF.database.iteritems())
-            )
-        return _SLAVE_FACADE
+def _create_facade_lazily():
+    global _LOCK, _ENGINE_FACADE
+    if _ENGINE_FACADE is None:
+        with _LOCK:
+            if _ENGINE_FACADE is None:
+                _ENGINE_FACADE = db_session.EngineFacade.from_config(CONF)
+    return _ENGINE_FACADE
 
 
 def get_engine(use_slave=False):
-    facade = _create_facade_lazily(use_slave)
-    return facade.get_engine()
+    facade = _create_facade_lazily()
+    return facade.get_engine(use_slave=use_slave)
 
 
 def get_session(use_slave=False, **kwargs):
-    facade = _create_facade_lazily(use_slave)
-    return facade.get_session(**kwargs)
+    facade = _create_facade_lazily()
+    return facade.get_session(use_slave=use_slave, **kwargs)
 
 
 _SHADOW_TABLE_PREFIX = 'shadow_'
@@ -749,7 +725,7 @@ def floating_ip_get(context, id):
 
         if not result:
             raise exception.FloatingIpNotFound(id=id)
-    except DataError:
+    except db_exc.DBError:
         msg = _("Invalid floating ip id %s in request") % id
         LOG.warn(msg)
         raise exception.InvalidID(id=id)
@@ -1003,7 +979,7 @@ def _floating_ip_get_by_address(context, address, session=None):
 
         if not result:
             raise exception.FloatingIpNotFoundForAddress(address=address)
-    except DataError:
+    except db_exc.DBError:
         msg = _("Invalid floating IP %s in request") % address
         LOG.warn(msg)
         raise exception.InvalidIpAddressError(msg)
@@ -1306,7 +1282,7 @@ def _fixed_ip_get_by_address(context, address, session=None,
             result = result.filter_by(address=address).first()
             if not result:
                 raise exception.FixedIpNotFoundForAddress(address=address)
-        except DataError:
+        except db_exc.DBError:
             msg = _("Invalid fixed IP Address %s in request") % address
             LOG.warn(msg)
             raise exception.FixedIpInvalid(msg)
@@ -1345,7 +1321,7 @@ def fixed_ip_get_by_address_detailed(context, address):
         if not result:
             raise exception.FixedIpNotFoundForAddress(address=address)
 
-    except DataError:
+    except db_exc.DBError:
         msg = _("Invalid fixed IP Address %s in request") % address
         LOG.warn(msg)
         raise exception.FixedIpInvalid(msg)
@@ -1480,7 +1456,7 @@ def virtual_interface_get_by_address(context, address):
         vif_ref = _virtual_interface_query(context).\
                           filter_by(address=address).\
                           first()
-    except DataError:
+    except db_exc.DBError:
         msg = _("Invalid virtual interface address %s in request") % address
         LOG.warn(msg)
         raise exception.InvalidIpAddressError(msg)
@@ -1735,7 +1711,7 @@ def instance_get(context, instance_id, columns_to_join=None):
             raise exception.InstanceNotFound(instance_id=instance_id)
 
         return result
-    except DataError:
+    except db_exc.DBError:
         # NOTE(sdague): catch all in case the db engine chokes on the
         # id because it's too long of an int to store.
         msg = _("Invalid instance id %s in request") % instance_id
@@ -5729,7 +5705,9 @@ def archive_deleted_rows_for_table(context, tablename, max_rows):
         with conn.begin():
             conn.execute(insert_statement)
             result_delete = conn.execute(delete_statement)
-    except IntegrityError:
+    except db_exc.DBError:
+        # TODO(ekudryashova): replace by DBReferenceError when db layer
+        # raise it.
         # A foreign key constraint keeps us from deleting some of
         # these rows until we clean up a dependent table.  Just
         # skip this table for now; we'll come back to it later.

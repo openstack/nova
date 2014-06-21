@@ -15,6 +15,7 @@
 
 import uuid
 
+from oslo.db.sqlalchemy import utils as oslodbutils
 import sqlalchemy
 from sqlalchemy import Integer, String
 from sqlalchemy import MetaData, Table, Column
@@ -25,7 +26,6 @@ from sqlalchemy.types import UserDefinedType
 from nova.db.sqlalchemy import api as db
 from nova.db.sqlalchemy import utils
 from nova import exception
-from nova.openstack.common.db.sqlalchemy import utils as oslodbutils
 from nova.tests.db import test_migrations
 
 

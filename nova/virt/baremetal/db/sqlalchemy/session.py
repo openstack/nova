@@ -18,8 +18,8 @@
 """Session Handling for SQLAlchemy backend."""
 
 from oslo.config import cfg
+from oslo.db.sqlalchemy import session as db_session
 
-from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova import paths
 
 opts = [
@@ -51,12 +51,12 @@ def _create_facade_lazily():
     return _FACADE
 
 
-def get_session(autocommit=True, expire_on_commit=False):
+def get_session(autocommit=True, expire_on_commit=False, **kwargs):
     """Return a SQLAlchemy session."""
 
     facade = _create_facade_lazily()
     return facade.get_session(autocommit=autocommit,
-                              expire_on_commit=expire_on_commit)
+                              expire_on_commit=expire_on_commit, **kwargs)
 
 
 def get_engine():

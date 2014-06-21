@@ -31,6 +31,7 @@ import mock
 import mox
 from oslo.config import cfg
 from oslo import messaging
+from oslo.utils import timeutils as db_timeutils
 import six
 import testtools
 from testtools import matchers as testtools_matchers
@@ -266,6 +267,7 @@ class BaseTestCase(test.TestCase):
 
     def tearDown(self):
         timeutils.clear_time_override()
+        db_timeutils.clear_time_override()
         ctxt = context.get_admin_context()
         fake_image.FakeImageService_reset()
         instances = db.instance_get_all(ctxt)
@@ -3714,12 +3716,21 @@ class ComputeTestCase(BaseTestCase):
         # Ensure terminate_instance generates correct usage notification.
         old_time = datetime.datetime(2012, 4, 1)
         cur_time = datetime.datetime(2012, 12, 21, 12, 21)
+
+        # TODO(ekudryashova): remove this after both nova and oslo.db
+        # will use oslo.utils library
+        # NOTE: Both projects(nova and oslo.db) use `timeutils.utcnow`,
+        # which returns specified time(if override_time is set).
+        # So time overriding should be done for both timeutils to make
+        # them equal.
+        db_timeutils.set_time_override(old_time)
         timeutils.set_time_override(old_time)
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance, {}, {}, [], None,
                 None, True, None, False)
         fake_notifier.NOTIFICATIONS = []
+        db_timeutils.set_time_override(cur_time)
         timeutils.set_time_override(cur_time)
         self.compute.terminate_instance(self.context,
                 self._objectify(instance), [], [])

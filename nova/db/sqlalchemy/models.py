@@ -19,15 +19,15 @@
 SQLAlchemy models for nova data.
 """
 
+from oslo.config import cfg
+from oslo.db.sqlalchemy import models
 from sqlalchemy import Column, Index, Integer, BigInteger, Enum, String, schema
 from sqlalchemy.dialects.mysql import MEDIUMTEXT
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import orm
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float
-from oslo.config import cfg
 
 from nova.db.sqlalchemy import types
-from nova.openstack.common.db.sqlalchemy import models
 from nova.openstack.common import timeutils
 
 CONF = cfg.CONF
@@ -42,6 +42,16 @@ class NovaBase(models.SoftDeleteMixin,
                models.TimestampMixin,
                models.ModelBase):
     metadata = None
+
+    # TODO(ekudryashova): remove this after both nova and oslo.db
+    # will use oslo.utils library
+    # NOTE: Both projects(nova and oslo.db) use `timeutils.utcnow`, which
+    # returns specified time(if override_time is set). Time overriding is
+    # only used by unit tests, but in a lot of places, temporarily overriding
+    # this columns helps to avoid lots of calls of timeutils.set_override
+    # from different places in unit tests.
+    created_at = Column(DateTime, default=lambda: timeutils.utcnow())
+    updated_at = Column(DateTime, onupdate=lambda: timeutils.utcnow())
 
     def save(self, session=None):
         from nova.db.sqlalchemy import api

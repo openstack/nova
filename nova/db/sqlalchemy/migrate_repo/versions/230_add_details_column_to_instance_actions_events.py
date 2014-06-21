@@ -12,10 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.db.sqlalchemy import utils
 from sqlalchemy import Column, String, Text
 
 from nova.db.sqlalchemy import api
-from nova.openstack.common.db.sqlalchemy import utils
 
 
 def upgrade(migrate_engine):
