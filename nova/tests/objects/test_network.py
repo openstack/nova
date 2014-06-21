@@ -49,6 +49,10 @@ fake_network = {
     'priority': None,
     'host': None,
     'uuid': 'fake-uuid',
+    'mtu': None,
+    'dhcp_server': '192.168.1.1',
+    'enable_dhcp': True,
+    'share_address': False,
 }
 
 
@@ -206,6 +210,16 @@ class _TestNetworkObject(object):
         self.assertEqual(1, len(networks))
         get_nets.assert_called_once_with(self.context, 123, associate=True)
         self._compare(networks[0], fake_network)
+
+    def test_compat_version_1_1(self):
+        network = network_obj.Network._from_db_object(self.context,
+                                                      network_obj.Network(),
+                                                      fake_network)
+        primitive = network.obj_to_primitive(target_version='1.1')
+        self.assertNotIn('mtu', primitive)
+        self.assertNotIn('enable_dhcp', primitive)
+        self.assertNotIn('dhcp_server', primitive)
+        self.assertNotIn('share_address', primitive)
 
 
 class TestNetworkObject(test_objects._LocalTest,
