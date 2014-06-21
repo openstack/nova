@@ -609,17 +609,21 @@ class ComputeManager(manager.Manager):
             self._resource_tracker_dict[nodename] = rt
         return rt
 
+    def _update_resource_tracker(self, context, instance):
+        """Let the resource tracker know that an instance has changed state."""
+
+        if (instance['host'] == self.host and
+                self.driver.node_is_available(instance['node'])):
+            rt = self._get_resource_tracker(instance.get('node'))
+            rt.update_usage(context, instance)
+
     def _instance_update(self, context, instance_uuid, **kwargs):
         """Update an instance in the database using kwargs as value."""
 
         instance_ref = self.conductor_api.instance_update(context,
                                                           instance_uuid,
                                                           **kwargs)
-        if (instance_ref['host'] == self.host and
-                self.driver.node_is_available(instance_ref['node'])):
-            rt = self._get_resource_tracker(instance_ref.get('node'))
-            rt.update_usage(context, instance_ref)
-
+        self._update_resource_tracker(context, instance_ref)
         return instance_ref
 
     def _set_instance_error_state(self, context, instance_uuid):
@@ -1539,11 +1543,9 @@ class ComputeManager(manager.Manager):
                         dhcp_options=dhcp_options)
                 LOG.debug('Instance network_info: |%s|', nwinfo,
                           instance=instance)
-                # NOTE(alaski): This can be done more cleanly once we're sure
-                # we'll receive an object.
-                sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+                sys_meta = instance.system_metadata
                 sys_meta['network_allocated'] = 'True'
-                self._instance_update(context, instance['uuid'],
+                self._instance_update(context, instance.uuid,
                         system_metadata=sys_meta)
                 return nwinfo
             except Exception:
@@ -1610,11 +1612,12 @@ class ComputeManager(manager.Manager):
         # NOTE(comstud): Since we're allocating networks asynchronously,
         # this task state has little meaning, as we won't be in this
         # state for very long.
-        instance = self._instance_update(context, instance['uuid'],
-                                         vm_state=vm_states.BUILDING,
-                                         task_state=task_states.NETWORKING,
-                                         expected_task_state=[None])
-        is_vpn = pipelib.is_vpn_image(instance['image_ref'])
+        instance.vm_state = vm_states.BUILDING
+        instance.task_state = task_states.NETWORKING
+        instance.save(expected_task_state=[None])
+        self._update_resource_tracker(context, instance)
+
+        is_vpn = pipelib.is_vpn_image(instance.image_ref)
         return network_model.NetworkInfoAsyncWrapper(
                 self._allocate_network_async, context, instance,
                 requested_networks, macs, security_groups, is_vpn,
