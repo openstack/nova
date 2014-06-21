@@ -683,6 +683,30 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
             engine, 'volume_usage_cache')
         self.assertEqual(36, volume_usage_cache.c.user_id.type.length)
 
+    def _pre_upgrade_245(self, engine):
+        # create a fake network
+        networks = oslodbutils.get_table(engine, 'networks')
+        fake_network = {'id': 1}
+        networks.insert().execute(fake_network)
+
+    def _check_245(self, engine, data):
+        networks = oslodbutils.get_table(engine, 'networks')
+        network = networks.select(networks.c.id == 1).execute().first()
+        # mtu should default to None
+        self.assertIsNone(network.mtu)
+        # dhcp_server should default to None
+        self.assertIsNone(network.dhcp_server)
+        # enable dhcp should default to true
+        self.assertTrue(network.enable_dhcp)
+        # share address should default to false
+        self.assertFalse(network.share_address)
+
+    def _post_downgrade_245(self, engine):
+        self.assertColumnNotExists(engine, 'networks', 'mtu')
+        self.assertColumnNotExists(engine, 'networks', 'dhcp_server')
+        self.assertColumnNotExists(engine, 'networks', 'enable_dhcp')
+        self.assertColumnNotExists(engine, 'networks', 'share_address')
+
 
 class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
