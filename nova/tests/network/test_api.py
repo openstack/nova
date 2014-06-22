@@ -70,6 +70,30 @@ class ApiTestCase(test.TestCase):
         self.context = context.RequestContext('fake-user',
                                               'fake-project')
 
+    @mock.patch('nova.db.network_get_all')
+    def test_get_all(self, mock_get_all):
+        mock_get_all.return_value = mock.sentinel.get_all
+        self.assertEqual(mock.sentinel.get_all,
+                         self.network_api.get_all(self.context))
+        mock_get_all.assert_called_once_with(self.context,
+                                             project_only=True)
+
+    @mock.patch('nova.db.network_get_all')
+    def test_get_all_liberal(self, mock_get_all):
+        self.flags(network_manager='nova.network.manager.FlatDHCPManaager')
+        mock_get_all.return_value = mock.sentinel.get_all
+        self.assertEqual(mock.sentinel.get_all,
+                         self.network_api.get_all(self.context))
+        mock_get_all.assert_called_once_with(self.context,
+                                             project_only="allow_none")
+
+    @mock.patch('nova.db.network_get_all')
+    def test_get_all_no_networks(self, mock_get_all):
+        mock_get_all.side_effect = exception.NoNetworksFound
+        self.assertEqual([], self.network_api.get_all(self.context))
+        mock_get_all.assert_called_once_with(self.context,
+                                             project_only=True)
+
     def test_allocate_for_instance_handles_macs_passed(self):
         # If a macs argument is supplied to the 'nova-network' API, it is just
         # ignored. This test checks that the call down to the rpcapi layer
