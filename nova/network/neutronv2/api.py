@@ -412,10 +412,10 @@ class API(base_api.NetworkAPI):
                                            port_req_body):
         """Populate neutron extension values for the instance.
 
-        If the extension contains nvp-qos then get the rxtx_factor.
+        If the extensions loaded contain QOS_QUEUE then pass the rxtx_factor.
         """
         self._refresh_neutron_extensions_cache(context)
-        if 'nvp-qos' in self.extensions:
+        if constants.QOS_QUEUE in self.extensions:
             flavor = flavors.extract_flavor(instance)
             rxtx_factor = flavor.get('rxtx_factor')
             port_req_body['port']['rxtx_factor'] = rxtx_factor

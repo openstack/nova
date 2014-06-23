@@ -13,5 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+QOS_QUEUE = 'QoS Queue'
 NET_EXTERNAL = 'router:external'
 PORTBINDING_EXT = 'Port Binding'
