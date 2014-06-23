@@ -4534,7 +4534,6 @@ class ComputeManager(manager.Manager):
                                                          new_volume_id)
 
         save_volume_id = comp_ret['save_volume_id']
-        mountpoint = bdm.device_name
 
         # Update bdm
         values = {
@@ -4548,12 +4547,6 @@ class ComputeManager(manager.Manager):
             'no_device': None}
         bdm.update(values)
         bdm.save()
-        self.volume_api.attach(context,
-                               new_volume_id,
-                               instance.uuid,
-                               mountpoint)
-        # Remove old connection
-        self.volume_api.detach(context.elevated(), old_volume_id)
 
     @wrap_exception()
     def remove_volume_connection(self, context, volume_id, instance):
