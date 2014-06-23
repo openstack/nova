@@ -714,7 +714,7 @@ class API(base_api.NetworkAPI):
         if ports_needed_per_instance:
             ports = neutron.list_ports(tenant_id=context.project_id)['ports']
             quotas = neutron.show_quota(tenant_id=context.project_id)['quota']
-            if quotas.get('port') == -1:
+            if quotas.get('port', -1) == -1:
                 # Unlimited Port Quota
                 return num_instances
             else:
