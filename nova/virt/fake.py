@@ -472,10 +472,6 @@ class FakeVirtAPI(virtapi.VirtAPI):
     def provider_fw_rule_get_all(self, context):
         return db.provider_fw_rule_get_all(context)
 
-    def agent_build_get_by_triple(self, context, hypervisor, os, architecture):
-        return db.agent_build_get_by_triple(context,
-                                            hypervisor, os, architecture)
-
     @contextlib.contextmanager
     def wait_for_instance_event(self, instance, event_names, deadline=300,
                                 error_callback=None):

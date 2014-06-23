@@ -45,10 +45,6 @@ class VirtAPIBaseTest(test.NoDBTestCase, test.APICoverage):
     def test_provider_fw_rule_get_all(self):
         self.assertExpected('provider_fw_rule_get_all')
 
-    def test_agent_build_get_by_triple(self):
-        self.assertExpected('agent_build_get_by_triple',
-                            'fake-hv', 'gnu/hurd', 'fake-arch')
-
     def test_wait_for_instance_event(self):
         self.assertExpected('wait_for_instance_event',
                             'instance', ['event'])

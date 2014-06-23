@@ -497,10 +497,6 @@ class ComputeVirtAPI(virtapi.VirtAPI):
     def provider_fw_rule_get_all(self, context):
         return self._compute.conductor_api.provider_fw_rule_get_all(context)
 
-    def agent_build_get_by_triple(self, context, hypervisor, os, architecture):
-        return self._compute.conductor_api.agent_build_get_by_triple(
-            context, hypervisor, os, architecture)
-
     def _default_error_callback(self, event_name, instance):
         raise exception.NovaException(_('Instance event failed'))
 
