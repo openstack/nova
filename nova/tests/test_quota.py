@@ -2108,6 +2108,14 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
             return sync
         self.resources = {}
 
+        _existing_quota_sync_func_dict = dict(sqa_api.QUOTA_SYNC_FUNCTIONS)
+
+        def restore_sync_functions():
+            sqa_api.QUOTA_SYNC_FUNCTIONS.clear()
+            sqa_api.QUOTA_SYNC_FUNCTIONS.update(_existing_quota_sync_func_dict)
+
+        self.addCleanup(restore_sync_functions)
+
         for res_name in ('instances', 'cores', 'ram', 'fixed_ips'):
             method_name = '_sync_%s' % res_name
             sqa_api.QUOTA_SYNC_FUNCTIONS[method_name] = make_sync(res_name)
