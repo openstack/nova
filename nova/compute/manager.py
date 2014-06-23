@@ -2503,7 +2503,7 @@ class ComputeManager(manager.Manager):
             bdms = None
 
         orig_vm_state = instance.vm_state
-        with self._error_out_instance_on_exception(context, instance.uuid):
+        with self._error_out_instance_on_exception(context, instance):
             LOG.audit(_("Rebuilding instance"), context=context,
                       instance=instance)
 
@@ -3079,7 +3079,7 @@ class ComputeManager(manager.Manager):
         network_info = self._get_instance_nw_info(context, instance)
         self._notify_about_instance_usage(context, instance,
                 "unrescue.start", network_info=network_info)
-        with self._error_out_instance_on_exception(context, instance.uuid):
+        with self._error_out_instance_on_exception(context, instance):
             self.driver.unrescue(instance,
                                  network_info)
 
@@ -3183,7 +3183,7 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(context, instance,
                                           "resize.confirm.start")
 
-        with self._error_out_instance_on_exception(context, instance['uuid'],
+        with self._error_out_instance_on_exception(context, instance,
                                                    quotas=quotas):
             # NOTE(danms): delete stashed migration information
             sys_meta, instance_type = self._cleanup_stored_instance_types(
@@ -3254,7 +3254,7 @@ class ComputeManager(manager.Manager):
         self.conductor_api.notify_usage_exists(
                 context, instance, current_period=True)
 
-        with self._error_out_instance_on_exception(context, instance['uuid'],
+        with self._error_out_instance_on_exception(context, instance,
                                                    quotas=quotas):
             # NOTE(tr3buchet): tear down networks on destination host
             self.network_api.setup_networks_on_host(context, instance,
@@ -3303,7 +3303,7 @@ class ComputeManager(manager.Manager):
                                                      reservations,
                                                      instance=instance)
 
-        with self._error_out_instance_on_exception(context, instance.uuid,
+        with self._error_out_instance_on_exception(context, instance,
                                                    quotas=quotas):
             network_info = self._get_instance_nw_info(context, instance)
 
@@ -3420,7 +3420,7 @@ class ComputeManager(manager.Manager):
         quotas = quotas_obj.Quotas.from_reservations(context,
                                                      reservations,
                                                      instance=instance)
-        with self._error_out_instance_on_exception(context, instance['uuid'],
+        with self._error_out_instance_on_exception(context, instance,
                                                    quotas=quotas):
             self.conductor_api.notify_usage_exists(
                     context, instance, current_period=True)
@@ -3504,7 +3504,7 @@ class ComputeManager(manager.Manager):
         quotas = quotas_obj.Quotas.from_reservations(context,
                                                      reservations,
                                                      instance=instance)
-        with self._error_out_instance_on_exception(context, instance.uuid,
+        with self._error_out_instance_on_exception(context, instance,
                                                    quotas=quotas):
             if not instance_type:
                 instance_type = objects.Flavor.get_by_id(
@@ -3796,7 +3796,7 @@ class ComputeManager(manager.Manager):
         """Suspend the given instance."""
         context = context.elevated()
 
-        with self._error_out_instance_on_exception(context, instance['uuid'],
+        with self._error_out_instance_on_exception(context, instance,
              instance_state=instance['vm_state']):
             self.driver.suspend(instance)
         current_power_state = self._get_power_state(context, instance)
@@ -5644,9 +5644,10 @@ class ComputeManager(manager.Manager):
         return (not deleted_at or timeutils.is_older_than(deleted_at, timeout))
 
     @contextlib.contextmanager
-    def _error_out_instance_on_exception(self, context, instance_uuid,
+    def _error_out_instance_on_exception(self, context, instance,
                                          quotas=None,
                                          instance_state=vm_states.ACTIVE):
+        instance_uuid = instance['uuid']
         try:
             yield
         except NotImplementedError as error:
