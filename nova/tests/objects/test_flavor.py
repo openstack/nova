@@ -139,23 +139,20 @@ class _TestFlavor(object):
                                                    flavor_obj.Flavor(),
                                                    fake_flavor)
         flavor.flavorid = 'foo'
+        flavor.projects = ['project-1', 'project-2']
         flavor.obj_reset_changes()
         flavor.extra_specs = {'foo': 'baz'}
         flavor.projects = ['project-1', 'project-3']
 
         with contextlib.nested(
             mock.patch.object(db, 'flavor_extra_specs_update_or_create'),
-            mock.patch.object(db, 'flavor_access_get_by_flavor_id'),
             mock.patch.object(db, 'flavor_access_add'),
             mock.patch.object(db, 'flavor_access_remove')) as (
-                extra_specs_update, access_get, access_add, access_remove):
-            access_get.return_value = [{'project_id': 'project-1'},
-                                       {'project_id': 'project-2'}]
-            flavor.save(self.context)
+                extra_specs_update, access_add, access_remove):
+            flavor.save()
             extra_specs_update.assert_called_once_with(self.context,
                                                        flavor.flavorid,
                                                        {'foo': 'baz'})
-            access_get.assert_called_once_with(self.context, flavor.flavorid)
             access_add.assert_called_once_with(self.context, flavor.flavorid,
                                                'project-3')
             access_remove.assert_called_once_with(self.context,
@@ -166,20 +163,35 @@ class _TestFlavor(object):
         self.assertEqual(['project-1', 'project-3'], flavor.projects)
 
         flavor.projects = []
-        with contextlib.nested(
-            mock.patch.object(db, 'flavor_access_get_by_flavor_id'),
-            mock.patch.object(db, 'flavor_access_remove')) as (
-                access_get, access_remove):
-            access_get.return_value = [{'project_id': 'project-1'}]
-            flavor.save(self.context)
-            access_remove.assert_called_once_with(self.context,
-                                                  flavor.flavorid,
-                                                  'project-1')
+        with mock.patch.object(db, 'flavor_access_remove') as access_remove:
+            flavor.save()
+            access_remove.assert_any_call(self.context,
+                                          flavor.flavorid,
+                                          'project-1')
+            access_remove.assert_any_call(self.context,
+                                          flavor.flavorid,
+                                          'project-3')
+
+    @mock.patch('nova.db.flavor_create')
+    @mock.patch('nova.db.flavor_extra_specs_delete')
+    @mock.patch('nova.db.flavor_extra_specs_update_or_create')
+    def test_save_deleted_extra_specs(self, mock_update, mock_delete,
+                                      mock_create):
+        mock_create.return_value = dict(fake_flavor,
+                                        extra_specs={'key1': 'value1'})
+        ctxt = self.context.elevated()
+        flavor = flavor_obj.Flavor(context=ctxt)
+        flavor.flavorid = 'test'
+        flavor.extra_specs = {'key1': 'value1'}
+        flavor.create()
+        flavor.extra_specs = {}
+        flavor.save()
+        mock_delete.assert_called_once_with(ctxt, flavor.flavorid,
+                                            'key1')
 
     def test_save_invalid_fields(self):
         flavor = flavor_obj.Flavor(id=123)
-        self.assertRaises(exception.ObjectActionError, flavor.save,
-                          self.context)
+        self.assertRaises(exception.ObjectActionError, flavor.save)
 
     def test_destroy(self):
         flavor = flavor_obj.Flavor(id=123, name='foo')
