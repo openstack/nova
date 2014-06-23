@@ -15,6 +15,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import contextlib
 import fixtures
 import mock
 import mox
@@ -36,6 +37,7 @@ from nova.objects import floating_ip as floating_ip_obj
 from nova.objects import instance as instance_obj
 from nova.objects import network as network_obj
 from nova.objects import quotas as quotas_obj
+from nova.objects import virtual_interface as vif_obj
 from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
@@ -685,6 +687,52 @@ class FlatNetworkTestCase(test.TestCase):
                                                '1.2.3.4',
                                                instance.uuid,
                                                1)
+
+    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    @mock.patch('nova.objects.virtual_interface.VirtualInterface'
+                '.get_by_instance_and_network')
+    @mock.patch('nova.objects.fixed_ip.FixedIP.disassociate')
+    @mock.patch('nova.objects.fixed_ip.FixedIP.associate')
+    @mock.patch('nova.objects.fixed_ip.FixedIP.save')
+    def test_allocate_fixed_ip_cleanup(self,
+                                       mock_fixedip_save,
+                                       mock_fixedip_associate,
+                                       mock_fixedip_disassociate,
+                                       mock_vif_get,
+                                       mock_instance_get):
+        address = netaddr.IPAddress('1.2.3.4')
+
+        fip = fixed_ip_obj.FixedIP(instance_uuid='fake-uuid',
+                                   address=address,
+                                   virtual_interface_id=1)
+        mock_fixedip_associate.return_value = fip
+
+        instance = instance_obj.Instance(context=self.context)
+        instance.create()
+        mock_instance_get.return_value = instance
+
+        mock_vif_get.return_value = vif_obj.VirtualInterface(
+            instance_uuid='fake-uuid', id=1)
+
+        with contextlib.nested(
+            mock.patch.object(self.network, '_setup_network_on_host'),
+            mock.patch.object(self.network, 'instance_dns_manager'),
+            mock.patch.object(self.network,
+                '_do_trigger_security_group_members_refresh_for_instance')
+        ) as (mock_setup_network, mock_dns_manager, mock_ignored):
+            mock_setup_network.side_effect = test.TestingException
+            self.assertRaises(test.TestingException,
+                              self.network.allocate_fixed_ip,
+                              self.context, instance.uuid,
+                              {'cidr': '24', 'id': 1, 'uuid': 'nosuch'},
+                              address=address)
+
+            mock_dns_manager.delete_entry.assert_has_calls([
+                mock.call(instance.display_name, ''),
+                mock.call(instance.uuid, '')
+            ])
+
+        mock_fixedip_disassociate.assert_called_once()
 
 
 class FlatDHCPNetworkTestCase(test.TestCase):
