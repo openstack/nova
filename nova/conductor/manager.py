@@ -846,7 +846,6 @@ class ComputeTaskManager(base.Base):
             *instances):
         request_spec = scheduler_utils.build_request_spec(context, image,
                 instances)
-        # dict(host='', nodename='', limits='')
         hosts = self.scheduler_rpcapi.select_destinations(context,
                 request_spec, filter_properties)
         return hosts
