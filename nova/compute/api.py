@@ -3865,13 +3865,11 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
            defined in the default security group rules.
         """
         for rule in self.db.security_group_default_rule_list(context):
-            is_duplicate = True
             keys = ('cidr', 'from_port', 'to_port', 'protocol')
             for key in keys:
                 if rule.get(key) != values.get(key):
-                    is_duplicate = False
                     break
-            if is_duplicate:
+            else:
                 return rule.get('id') or True
         return False
 
