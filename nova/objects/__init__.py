@@ -24,6 +24,7 @@ def register_all():
     # NOTE(danms): You must make sure your object gets imported in this
     # function in order for it to be registered by services that may
     # need to receive it via RPC.
+    __import__('nova.objects.agent')
     __import__('nova.objects.aggregate')
     __import__('nova.objects.block_device')
     __import__('nova.objects.compute_node')
