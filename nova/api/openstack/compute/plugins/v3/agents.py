@@ -19,8 +19,8 @@ from nova.api.openstack.compute.schemas.v3 import agents as schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
-from nova import db
 from nova import exception
+from nova import objects
 
 
 ALIAS = "os-agents"
@@ -59,7 +59,8 @@ class AgentController(object):
         if 'hypervisor' in req.GET:
             hypervisor = req.GET['hypervisor']
 
-        for agent_build in db.agent_build_get_all(context, hypervisor):
+        builds = objects.AgentList.get_all(context, hypervisor=hypervisor)
+        for agent_build in builds:
             agents.append({'hypervisor': agent_build.hypervisor,
                            'os': agent_build.os,
                            'architecture': agent_build.architecture,
@@ -82,11 +83,13 @@ class AgentController(object):
         md5hash = para['md5hash']
         version = para['version']
 
+        agent = objects.Agent(context=context, id=id)
+        agent.obj_reset_changes()
+        agent.version = version
+        agent.url = url
+        agent.md5hash = md5hash
         try:
-            db.agent_build_update(context, id,
-                                {'version': version,
-                                 'url': url,
-                                 'md5hash': md5hash})
+            agent.save()
         except exception.AgentBuildNotFound as ex:
             raise webob.exc.HTTPNotFound(explanation=ex.format_message())
 
@@ -101,7 +104,8 @@ class AgentController(object):
         authorize(context)
 
         try:
-            db.agent_build_destroy(context, id)
+            agent = objects.Agent(context=context, id=id)
+            agent.destroy()
         except exception.AgentBuildNotFound as ex:
             raise webob.exc.HTTPNotFound(explanation=ex.format_message())
 
@@ -121,15 +125,17 @@ class AgentController(object):
         url = agent['url']
         md5hash = agent['md5hash']
 
+        agent_obj = objects.Agent(context=context)
+        agent_obj.hypervisor = hypervisor
+        agent_obj.os = os
+        agent_obj.architecture = architecture
+        agent_obj.version = version
+        agent_obj.url = url
+        agent_obj.md5hash = md5hash
+
         try:
-            agent_build_ref = db.agent_build_create(context,
-                                                {'hypervisor': hypervisor,
-                                                 'os': os,
-                                                 'architecture': architecture,
-                                                 'version': version,
-                                                 'url': url,
-                                                 'md5hash': md5hash})
-            agent['agent_id'] = agent_build_ref.id
+            agent_obj.create()
+            agent['agent_id'] = agent_obj.id
         except exception.AgentBuildExists as ex:
             raise webob.exc.HTTPConflict(explanation=ex.format_message())
         return {'agent': agent}
