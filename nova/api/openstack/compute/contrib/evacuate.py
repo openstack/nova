@@ -73,6 +73,9 @@ class Controller(wsgi.Controller):
 
         try:
             instance = self.compute_api.get(context, id)
+            if instance['host'] == host:
+                msg = _("The target host can't be the same one.")
+                raise exc.HTTPBadRequest(explanation=msg)
             self.compute_api.evacuate(context, instance, host,
                                       on_shared_storage, password)
         except exception.InstanceInvalidState as state_error:

@@ -237,3 +237,10 @@ class EvacuateTest(test.NoDBTestCase):
             self.assertIn('admin_password', resp_json)
         else:
             self.assertIsNone(resp_json.get('admin_password'))
+
+    def test_evacuate_to_same_host(self):
+        req, app = self._gen_request_with_app({'host': 'host1',
+                                               'on_shared_storage': 'False',
+                                               'admin_password': 'MyNewPass'})
+        res = req.get_response(app)
+        self.assertEqual(400, res.status_int)
