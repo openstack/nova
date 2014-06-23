@@ -133,16 +133,16 @@ class VirtDiskVFSLocalFSTestPaths(test.NoDBTestCase):
         self.stubs.Set(processutils, 'execute', nonroot_execute)
 
     def test_check_safe_path(self):
-        if tests_utils.is_osx():
-            self.skipTest("Unable to test on OSX")
+        if not tests_utils.coreutils_readlink_available():
+            self.skipTest("coreutils readlink(1) unavailable")
         vfs = vfsimpl.VFSLocalFS("dummy.img")
         vfs.imgdir = "/foo"
         ret = vfs._canonical_path('etc/something.conf')
         self.assertEqual(ret, '/foo/etc/something.conf')
 
     def test_check_unsafe_path(self):
-        if tests_utils.is_osx():
-            self.skipTest("Unable to test on OSX")
+        if not tests_utils.coreutils_readlink_available():
+            self.skipTest("coreutils readlink(1) unavailable")
         vfs = vfsimpl.VFSLocalFS("dummy.img")
         vfs.imgdir = "/foo"
         self.assertRaises(exception.Invalid,
