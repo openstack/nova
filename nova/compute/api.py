@@ -1900,6 +1900,8 @@ class API(base.Base):
             context, filters=filters, sort_key=sort_key, sort_dir=sort_dir,
             limit=limit, marker=marker, expected_attrs=fields)
 
+    # NOTE(melwitt): We don't check instance lock for backup because lock is
+    #                intended to prevent accidental change/delete of instances
     @wrap_check_policy
     @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
@@ -1932,6 +1934,8 @@ class API(base.Base):
                                             rotation)
         return image_meta
 
+    # NOTE(melwitt): We don't check instance lock for snapshot because lock is
+    #                intended to prevent accidental change/delete of instances
     @wrap_check_policy
     @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
@@ -1994,6 +1998,8 @@ class API(base.Base):
 
         return self.image_api.create(context, sent_meta)
 
+    # NOTE(melwitt): We don't check instance lock for snapshot because lock is
+    #                intended to prevent accidental change/delete of instances
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
     def snapshot_volume_backed(self, context, instance, image_meta, name,
                                extra_properties=None):

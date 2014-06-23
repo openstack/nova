@@ -1394,7 +1394,7 @@ class _ComputeAPIUnitTestMixIn(object):
                              user_id='meow')
         if with_base_ref:
             fake_sys_meta['image_base_image_ref'] = 'fake-base-ref'
-        params = dict(system_metadata=fake_sys_meta)
+        params = dict(system_metadata=fake_sys_meta, locked=True)
         instance = self._create_instance_obj(params=params)
         fake_sys_meta.update(instance.system_metadata)
         extra_props = dict(cow='moo', cat='meow')
@@ -1548,7 +1548,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                        with_base_ref=True)
 
     def test_snapshot_volume_backed(self):
-        instance = self._create_instance_obj()
+        params = dict(locked=True)
+        instance = self._create_instance_obj(params=params)
         instance['root_device_name'] = 'vda'
 
         instance_bdms = []
