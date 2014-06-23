@@ -617,7 +617,8 @@ class ComputeManager(manager.Manager):
         self._update_resource_tracker(context, instance_ref)
         return instance_ref
 
-    def _set_instance_error_state(self, context, instance_uuid):
+    def _set_instance_error_state(self, context, instance):
+        instance_uuid = instance['uuid']
         try:
             self._instance_update(context, instance_uuid,
                                   vm_state=vm_states.ERROR)
@@ -849,7 +850,7 @@ class ComputeManager(manager.Manager):
                 # we don't want that an exception blocks the init_host
                 msg = _('Failed to complete a deletion')
                 LOG.exception(msg, instance=instance)
-                self._set_instance_error_state(context, instance['uuid'])
+                self._set_instance_error_state(context, instance)
             return
 
         try_reboot, reboot_type = self._retry_reboot(context, instance)
@@ -961,7 +962,7 @@ class ComputeManager(manager.Manager):
                 # NOTE(vish): The instance failed to resume, so we set the
                 #             instance to error and attempt to continue.
                 LOG.warning(_('Failed to resume instance'), instance=instance)
-                self._set_instance_error_state(context, instance.uuid)
+                self._set_instance_error_state(context, instance)
 
         elif drv_state == power_state.RUNNING:
             # VMwareAPI drivers will raise an exception
@@ -1227,7 +1228,7 @@ class ComputeManager(manager.Manager):
         except Exception as e:
             # Instance build encountered a non-recoverable error:
             with excutils.save_and_reraise_exception():
-                self._set_instance_error_state(context, instance['uuid'])
+                self._set_instance_error_state(context, instance)
                 notify("error", fault=e)  # notify that build failed
 
     def _prebuild_instance(self, context, instance):
@@ -1489,7 +1490,7 @@ class ComputeManager(manager.Manager):
 
         for instance in building_insts:
             if timeutils.is_older_than(instance['created_at'], timeout):
-                self._set_instance_error_state(context, instance['uuid'])
+                self._set_instance_error_state(context, instance)
                 LOG.warn(_("Instance build timed out. Set to error state."),
                          instance=instance)
 
@@ -1924,14 +1925,14 @@ class ComputeManager(manager.Manager):
                 LOG.exception(e.format_message(), instance=instance)
                 self._cleanup_allocated_networks(context, instance,
                         requested_networks)
-                self._set_instance_error_state(context, instance.uuid)
+                self._set_instance_error_state(context, instance)
             except Exception:
                 # Should not reach here.
                 msg = _('Unexpected build failure, not rescheduling build.')
                 LOG.exception(msg, instance=instance)
                 self._cleanup_allocated_networks(context, instance,
                         requested_networks)
-                self._set_instance_error_state(context, instance.uuid)
+                self._set_instance_error_state(context, instance)
 
         do_build_and_run_instance(context, instance, image, request_spec,
                 filter_properties, admin_password, injected_files,
@@ -2161,7 +2162,7 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 LOG.error(_('Failed to deallocate network for instance.'),
                           instance=instance)
-                self._set_instance_error_state(context, instance['uuid'])
+                self._set_instance_error_state(context, instance)
 
     def _shutdown_instance(self, context, instance,
                            bdms, requested_networks=None, notify=True,
@@ -2333,7 +2334,7 @@ class ComputeManager(manager.Manager):
                 with excutils.save_and_reraise_exception():
                     LOG.exception(_('Setting instance vm_state to ERROR'),
                                   instance=instance)
-                    self._set_instance_error_state(context, instance['uuid'])
+                    self._set_instance_error_state(context, instance)
 
         do_terminate_instance(instance, bdms)
 
@@ -3371,13 +3372,13 @@ class ComputeManager(manager.Manager):
             filter_properties = {}
 
         if not instance['host']:
-            self._set_instance_error_state(context, instance['uuid'])
+            self._set_instance_error_state(context, instance)
             msg = _('Instance has no source host')
             raise exception.MigrationError(msg)
 
         same_host = instance['host'] == self.host
         if same_host and not CONF.allow_resize_to_same_host:
-            self._set_instance_error_state(context, instance['uuid'])
+            self._set_instance_error_state(context, instance)
             msg = _('destination same as source!')
             raise exception.MigrationError(msg)
 
@@ -3663,7 +3664,7 @@ class ComputeManager(manager.Manager):
                     LOG.exception(_("Failed to rollback quota for failed "
                                     "finish_resize: %s"),
                                   qr_error, instance=instance)
-                self._set_instance_error_state(context, instance['uuid'])
+                self._set_instance_error_state(context, instance)
 
     @object_compat
     @wrap_exception()
@@ -5676,7 +5677,7 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 if quotas:
                     quotas.rollback()
-                self._set_instance_error_state(context, instance_uuid)
+                self._set_instance_error_state(context, instance)
 
     @aggregate_object_compat
     @wrap_exception()
