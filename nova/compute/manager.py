@@ -2831,7 +2831,9 @@ class ComputeManager(manager.Manager):
             LOG.debug(msg, instance=instance)
             try:
                 image_service = glance.get_default_image_service()
-                image_service.delete(context, image_id)
+                image = image_service.show(context, image_id)
+                if image['status'] != 'active':
+                    image_service.delete(context, image_id)
             except Exception:
                 LOG.warning(_("Error while trying to clean up image %s"),
                             image_id, instance=instance)
