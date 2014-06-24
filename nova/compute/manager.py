@@ -256,7 +256,7 @@ def errors_out_migration(function):
                     migration.save(context.elevated())
                 except Exception:
                     LOG.debug('Error setting migration status '
-                              'for instance %s.' %
+                              'for instance %s.',
                               migration.instance_uuid, exc_info=True)
 
     return decorated_function
@@ -352,7 +352,7 @@ def delete_image_on_error(function):
                             *args, **kwargs)
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.debug("Cleaning up image %s" % image_id,
+                LOG.debug("Cleaning up image %s", image_id,
                           exc_info=True, instance=instance)
                 try:
                     self.image_api.delete(context, image_id)
@@ -871,7 +871,7 @@ class ComputeManager(manager.Manager):
                       "triggering reboot",
                       {'task_state': instance['task_state'],
                        'power_state': current_power_state},
-                       instance=instance)
+                      instance=instance)
             self.compute_rpcapi.reboot_instance(context, instance,
                                                 block_device_info=None,
                                                 reboot_type=reboot_type)
@@ -1034,9 +1034,9 @@ class ComputeManager(manager.Manager):
                 self.handle_lifecycle_event(event)
             except exception.InstanceNotFound:
                 LOG.debug("Event %s arrived for non-existent instance. The "
-                          "instance was probably deleted." % event)
+                          "instance was probably deleted.", event)
         else:
-            LOG.debug("Ignoring event %s" % event)
+            LOG.debug("Ignoring event %s", event)
 
     def init_virt_events(self):
         self.driver.register_event_listener(self.handle_events)
@@ -1470,9 +1470,9 @@ class ComputeManager(manager.Manager):
 
         request_spec['instance_uuids'] = [instance_uuid]
 
-        LOG.debug("Re-scheduling %(method)s: attempt %(num)d" %
-                {'method': scheduler_method.func_name,
-                 'num': retry['num_attempts']}, instance_uuid=instance_uuid)
+        LOG.debug("Re-scheduling %(method)s: attempt %(num)d",
+                  {'method': scheduler_method.func_name,
+                   'num': retry['num_attempts']}, instance_uuid=instance_uuid)
 
         # reset the task state:
         self._instance_update(context, instance_uuid, task_state=task_state)
@@ -1878,7 +1878,7 @@ class ComputeManager(manager.Manager):
                 instance.save(expected_task_state=
                         (task_states.SCHEDULING, None))
             except exception.InstanceNotFound:
-                msg = _('Instance disappeared before build.')
+                msg = 'Instance disappeared before build.'
                 LOG.debug(msg, instance=instance)
                 return
             except exception.UnexpectedTaskStateError as e:
@@ -1918,7 +1918,7 @@ class ComputeManager(manager.Manager):
                         block_device_mapping)
             except (exception.InstanceNotFound,
                     exception.UnexpectedDeletingTaskStateError):
-                msg = _('Instance disappeared during build.')
+                msg = 'Instance disappeared during build.'
                 LOG.debug(msg, instance=instance)
                 self._cleanup_allocated_networks(context, instance,
                         requested_networks)
@@ -2220,7 +2220,7 @@ class ComputeManager(manager.Manager):
 
     def _cleanup_volumes(self, context, instance_uuid, bdms):
         for bdm in bdms:
-            LOG.debug("terminating bdm %s" % bdm,
+            LOG.debug("terminating bdm %s", bdm,
                       instance_uuid=instance_uuid)
             if bdm.volume_id and bdm.delete_on_termination:
                 self.volume_api.delete(context, bdm.volume_id)
@@ -2775,7 +2775,7 @@ class ComputeManager(manager.Manager):
         except exception.InstanceNotFound:
             # possibility instance no longer exists, no point in continuing
             LOG.debug("Instance not found, could not set state %s "
-                        "for instance.",
+                      "for instance.",
                       task_states.IMAGE_SNAPSHOT, instance=instance)
             return
 
@@ -2827,7 +2827,7 @@ class ComputeManager(manager.Manager):
                 exception.UnexpectedDeletingTaskStateError):
             # the instance got deleted during the snapshot
             # Quickly bail out of here
-            msg = _("Instance disappeared during snapshot")
+            msg = 'Instance disappeared during snapshot'
             LOG.debug(msg, instance=instance)
             try:
                 image_service = glance.get_default_image_service()
@@ -3122,8 +3122,8 @@ class ComputeManager(manager.Manager):
         def do_confirm_resize(context, instance, migration_id):
             # NOTE(wangpan): Get the migration status from db, if it has been
             #                confirmed, we do nothing and return here
-            LOG.debug("Going to confirm migration %s" % migration_id,
-                        context=context, instance=instance)
+            LOG.debug("Going to confirm migration %s", migration_id,
+                      context=context, instance=instance)
             try:
                 # TODO(russellb) Why are we sending the migration object just
                 # to turn around and look it up from the db again?
@@ -4904,11 +4904,11 @@ class ComputeManager(manager.Manager):
                 # added to the list next time we build it.
                 if (inst.vm_state == vm_states.BUILDING):
                     LOG.debug('Skipping network cache update for instance '
-                                'because it is Building.', instance=inst)
+                              'because it is Building.', instance=inst)
                     continue
                 if (inst.task_state == task_states.DELETING):
                     LOG.debug('Skipping network cache update for instance '
-                                'because it is being deleted.', instance=inst)
+                              'because it is being deleted.', instance=inst)
                     continue
 
                 if not instance:
@@ -4934,12 +4934,12 @@ class ComputeManager(manager.Manager):
                 # Check the instance hasn't been migrated
                 if inst.host != self.host:
                     LOG.debug('Skipping network cache update for instance '
-                                'because it has been migrated to another '
-                                'host.', instance=inst)
+                              'because it has been migrated to another '
+                              'host.', instance=inst)
                 # Check the instance isn't being deleting
                 elif inst.task_state == task_states.DELETING:
                     LOG.debug('Skipping network cache update for instance '
-                                'because it is being deleted.', instance=inst)
+                              'because it is being deleted.', instance=inst)
                 else:
                     instance = inst
                     break
@@ -4957,7 +4957,7 @@ class ComputeManager(manager.Manager):
                             'cache.'), instance=instance, exc_info=True)
         else:
             LOG.debug("Didn't find any instances for network info cache "
-                        "update.")
+                      "update.")
 
     @periodic_task.periodic_task
     def _poll_rebooting_instances(self, context):
@@ -5673,7 +5673,7 @@ class ComputeManager(manager.Manager):
                                          slave_info=slave_info)
         except NotImplementedError:
             LOG.debug('Hypervisor driver does not support '
-                        'add_aggregate_host')
+                      'add_aggregate_host')
         except exception.AggregateError:
             with excutils.save_and_reraise_exception():
                 self.driver.undo_aggregate_operation(
@@ -5690,7 +5690,7 @@ class ComputeManager(manager.Manager):
                                               slave_info=slave_info)
         except NotImplementedError:
             LOG.debug('Hypervisor driver does not support '
-                        'remove_aggregate_host')
+                      'remove_aggregate_host')
         except (exception.AggregateError,
                 exception.InvalidAggregateAction) as e:
             with excutils.save_and_reraise_exception():
@@ -5769,10 +5769,10 @@ class ComputeManager(manager.Manager):
         for instance in instances:
             attempts = int(instance.system_metadata.get('clean_attempts', '0'))
             LOG.debug('Instance has had %(attempts)s of %(max)s '
-                        'cleanup attempts',
-                        {'attempts': attempts,
-                         'max': CONF.maximum_instance_delete_attempts},
-                         instance=instance)
+                      'cleanup attempts',
+                      {'attempts': attempts,
+                       'max': CONF.maximum_instance_delete_attempts},
+                      instance=instance)
             if attempts < CONF.maximum_instance_delete_attempts:
                 success = self.driver.delete_instance_files(instance)
 
