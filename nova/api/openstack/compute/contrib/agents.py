@@ -112,6 +112,11 @@ class AgentController(object):
         except exception.AgentBuildNotFound as ex:
             raise webob.exc.HTTPNotFound(explanation=ex.format_message())
 
+        # NOTE(alex_xu): The agent_id should be integer that consistent with
+        # create/index actions. But parameter 'id' is string type that parsed
+        # from url. This is a bug, but because back-compatibility, it can't be
+        # fixed for v2 API. This will be fixed after v3 API feature exposed by
+        # micro-version in the future. lp bug #1333494
         return {"agent": {'agent_id': id, 'version': version,
                 'url': url, 'md5hash': md5hash}}
 

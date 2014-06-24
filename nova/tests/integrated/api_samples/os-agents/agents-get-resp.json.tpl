@@ -7,7 +7,7 @@
             "version": "%(version)s",
             "md5hash": "%(md5hash)s",
             "url": "%(url)s",
-            "agent_id": "%(agent_id)d"
+            "agent_id": 1
         }
     ]
 }
