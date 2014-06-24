@@ -1427,7 +1427,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                           iface,
                           network, gateway)
 
-        if CONF.share_dhcp_address:
+        if network['share_address'] or CONF.share_dhcp_address:
             isolate_dhcp_address(iface, network['dhcp_server'])
         # NOTE(vish): applying here so we don't get a lock conflict
         iptables_manager.apply()
@@ -1444,7 +1444,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             LinuxBridgeInterfaceDriver.remove_bridge(network['bridge'],
                                                      gateway)
 
-        if CONF.share_dhcp_address:
+        if network['share_address'] or CONF.share_dhcp_address:
             remove_isolate_dhcp_address(iface, network['dhcp_server'])
 
         iptables_manager.apply()

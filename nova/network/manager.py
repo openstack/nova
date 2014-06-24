@@ -311,11 +311,15 @@ class NetworkManager(manager.Manager):
     def _import_ipam_lib(self, ipam_lib):
         self.ipam = importutils.import_module(ipam_lib).get_ipam_lib(self)
 
+    @staticmethod
+    def _uses_shared_ip(network):
+        shared = network.get('share_address') or CONF.share_dhcp_address
+        return not network.get('multi_host') or shared
+
     @utils.synchronized('get_dhcp')
     def _get_dhcp_ip(self, context, network_ref, host=None):
         """Get the proper dhcp address to listen on."""
-        # NOTE(vish): this is for compatibility
-        if not network_ref.get('multi_host') or CONF.share_dhcp_address:
+        if self._uses_shared_ip(network_ref):
             return network_ref['gateway']
 
         if not host:
@@ -2012,7 +2016,7 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
                 LOG.debug("Remove unused gateway %s", network['bridge'])
                 self.driver.kill_dhcp(dev)
                 self.l3driver.remove_gateway(network)
-                if not CONF.share_dhcp_address:
+                if not self._uses_shared_ip(network):
                     fip = fixed_ip_obj.FixedIP.get_by_address(
                         context, network.dhcp_server)
                     fip.allocated = False

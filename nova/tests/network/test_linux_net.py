@@ -490,8 +490,8 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.stubs.Set(linux_net.iptables_manager.ipv4['filter'],
                        'add_rule', verify_add_rule)
         driver = linux_net.LinuxBridgeInterfaceDriver()
-        driver.plug({"bridge": "br100", "bridge_interface": "eth0"},
-                    "fakemac")
+        driver.plug({"bridge": "br100", "bridge_interface": "eth0",
+                     "share_address": False}, "fakemac")
 
     def test_linux_ovs_driver_plug_exception(self):
         self.flags(fake_network=False)
@@ -529,6 +529,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         network = {
                 "bridge": "br100",
                 "bridge_interface": "base_interface",
+                "share_address": False,
                 "vlan": "fake"
         }
         self.flags(vlan_interface="")
@@ -559,6 +560,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         network = {
                 "bridge": "br100",
                 "bridge_interface": "base_interface",
+                "share_address": False,
         }
         driver.plug(network, "fakemac")
         self.assertEqual(info['passed_interface'], "base_interface")
@@ -676,6 +678,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         iface = 'eth0'
         dhcp = '192.168.1.1'
         network = {'dhcp_server': dhcp,
+                   'share_address': False,
                    'bridge': 'br100',
                    'bridge_interface': iface}
         driver.plug(network, 'fakemac')
@@ -767,6 +770,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         iface = 'eth0'
         dhcp = '192.168.1.1'
         network = {'dhcp_server': dhcp,
+                   'share_address': False,
                    'bridge': 'br100',
                    'bridge_interface': iface}
         driver.plug(network, 'fakemac')
