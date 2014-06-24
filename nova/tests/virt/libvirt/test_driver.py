@@ -6696,9 +6696,9 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.log_error_called = False
 
-        def fake_error(msg):
+        def fake_error(msg, *args):
             self.log_error_called = True
-            self.assertIn(fake_xml, msg)
+            self.assertIn(fake_xml, msg % args)
 
         self.stubs.Set(nova.virt.libvirt.driver.LOG, 'error', fake_error)
 
@@ -6721,9 +6721,9 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.log_error_called = False
 
-        def fake_error(msg):
+        def fake_error(msg, *args):
             self.log_error_called = True
-            self.assertIn(fake_xml, msg)
+            self.assertIn(fake_xml, msg % args)
 
         self.stubs.Set(fake_domain, 'createWithFlags', fake_createWithFlags)
         self.stubs.Set(nova.virt.libvirt.driver.LOG, 'error', fake_error)
@@ -6748,9 +6748,9 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.log_error_called = False
 
-        def fake_error(msg):
+        def fake_error(msg, *args):
             self.log_error_called = True
-            self.assertIn(fake_xml, msg)
+            self.assertIn(fake_xml, msg % args)
 
         self.stubs.Set(nova.virt.libvirt.driver.LOG, 'error', fake_error)
 

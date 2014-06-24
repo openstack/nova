@@ -18,7 +18,8 @@
 from oslo.config import cfg
 
 from nova.cloudpipe import pipelib
-from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _LI
+from nova.openstack.common.gettextutils import _LW
 from nova.openstack.common import log as logging
 import nova.virt.firewall as base_firewall
 from nova.virt import netutils
@@ -45,8 +46,8 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             try:
                 libvirt = __import__('libvirt')
             except ImportError:
-                LOG.warn(_("Libvirt module could not be loaded. "
-                           "NWFilterFirewall will not work correctly."))
+                LOG.warn(_LW("Libvirt module could not be loaded. "
+                             "NWFilterFirewall will not work correctly."))
         self._libvirt_get_connection = get_connection
         self.static_filters_configured = False
         self.handle_security_groups = False
@@ -101,7 +102,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
 
     def setup_basic_filtering(self, instance, network_info):
         """Set up basic filtering (MAC, IP, and ARP spoofing protection)."""
-        LOG.info(_('Called setup_basic_filtering in nwfilter'),
+        LOG.info(_LI('Called setup_basic_filtering in nwfilter'),
                  instance=instance)
 
         if self.handle_security_groups:
@@ -109,7 +110,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
             # anyway.
             return
 
-        LOG.info(_('Ensuring static filters'), instance=instance)
+        LOG.info(_LI('Ensuring static filters'), instance=instance)
         self._ensure_static_filters()
 
         nodhcp_base_filter = self.get_base_filter_list(instance, False)
@@ -302,8 +303,8 @@ class IptablesFirewallDriver(base_firewall.IptablesFirewallDriver):
             self.iptables.apply()
             self.nwfilter.unfilter_instance(instance, network_info)
         else:
-            LOG.info(_('Attempted to unfilter instance which is not '
-                     'filtered'), instance=instance)
+            LOG.info(_LI('Attempted to unfilter instance which is not '
+                         'filtered'), instance=instance)
 
     def instance_filter_exists(self, instance, network_info):
         """Check nova-instance-instance-xxx exists."""

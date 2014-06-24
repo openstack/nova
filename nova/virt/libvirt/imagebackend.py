@@ -25,6 +25,7 @@ from nova import exception
 from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _LE
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import units
@@ -198,9 +199,9 @@ class Image(object):
             can_fallocate = not err
             self.__class__.can_fallocate = can_fallocate
             if not can_fallocate:
-                LOG.error(_('Unable to preallocate_images=%(imgs)s at path: '
-                            '%(path)s'), {'imgs': CONF.preallocate_images,
-                                           'path': self.path})
+                LOG.error(_LE('Unable to preallocate_images=%(imgs)s at path: '
+                              '%(path)s'), {'imgs': CONF.preallocate_images,
+                                            'path': self.path})
         return can_fallocate
 
     @staticmethod
@@ -226,8 +227,8 @@ class Image(object):
             base_size = disk.get_disk_size(base)
 
         if size < base_size:
-            msg = _('%(base)s virtual size %(base_size)s '
-                    'larger than flavor root disk size %(size)s')
+            msg = _LE('%(base)s virtual size %(base_size)s '
+                      'larger than flavor root disk size %(size)s')
             LOG.error(msg % {'base': base,
                               'base_size': base_size,
                               'size': size})
@@ -497,7 +498,7 @@ class RBDVolumeProxy(object):
         try:
             self.volume = driver.rbd.Image(ioctx, str(name), snapshot=None)
         except driver.rbd.Error:
-            LOG.exception(_("error opening rbd image %s"), name)
+            LOG.exception(_LE("error opening rbd image %s"), name)
             driver._disconnect_from_rados(client, ioctx)
             raise
         self.driver = driver
