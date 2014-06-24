@@ -3183,6 +3183,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     else:
                         guest.os_cmdline = ("root=%s %s" % (root_device_name,
                                                             CONSOLE))
+                        if CONF.libvirt.virt_type == "qemu":
+                            guest.os_cmdline += " no_timer_check"
 
                 if rescue.get('ramdisk_id'):
                     guest.os_initrd = os.path.join(inst_path, "ramdisk.rescue")
@@ -3193,6 +3195,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 else:
                     guest.os_cmdline = ("root=%s %s" % (root_device_name,
                                                         CONSOLE))
+                    if CONF.libvirt.virt_type == "qemu":
+                        guest.os_cmdline += " no_timer_check"
                 if instance['ramdisk_id']:
                     guest.os_initrd = os.path.join(inst_path, "ramdisk")
             else:
