@@ -628,13 +628,11 @@ def _set_passwd(username, admin_passwd, passwd_data, shadow_data):
     s_file = shadow_data.split("\n")
 
     # username MUST exist in passwd file or it's an error
-    found = False
     for entry in p_file:
         split_entry = entry.split(':')
         if split_entry[0] == username:
-            found = True
             break
-    if not found:
+    else:
         msg = _('User %(username)s not found in password file.')
         raise exception.NovaException(msg % username)
 

@@ -2606,12 +2606,10 @@ def network_get_all_by_uuids(context, network_uuids, project_only):
     #check if the result contains all the networks
     #we are looking for
     for network_uuid in network_uuids:
-        found = False
         for network in result:
             if network['uuid'] == network_uuid:
-                found = True
                 break
-        if not found:
+        else:
             if project_only:
                 raise exception.NetworkNotFoundForProject(
                       network_uuid=network_uuid, project_id=context.project_id)
