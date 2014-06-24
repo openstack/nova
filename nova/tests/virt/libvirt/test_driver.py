@@ -656,10 +656,19 @@ class LibvirtConnTestCase(test.TestCase):
 
         fake_domXML1 =\
             """<domain> <devices>
-              <hostdev mode="subsystem" type="pci" managed="yes">
-                <source>
-            <address function="0x1" slot="0x10" domain="0x0000" bus="0x04"/>
-                </source>
+            <disk type='file' device='disk'>
+            <driver name='qemu' type='qcow2' cache='none'/>
+            <source file='xxx'/>
+            <target dev='vda' bus='virtio'/>
+            <alias name='virtio-disk0'/>
+            <address type='pci' domain='0x0000' bus='0x00'
+            slot='0x04' function='0x0'/>
+            </disk>
+            <hostdev mode="subsystem" type="pci" managed="yes">
+            <source>
+            <address function="0x1" slot="0x10" domain="0x0000"
+             bus="0x04"/>
+            </source>
             </hostdev></devices></domain>"""
 
         pci_devices = [dict(hypervisor_name='xxx',
