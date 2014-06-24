@@ -912,7 +912,7 @@ class ServersController(wsgi.Controller):
         robj = wsgi.ResponseObject(view)
         return self._add_location(robj)
 
-    @extensions.expected_errors((400, 404, 409, 413))
+    @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.response(202)
     @wsgi.action('create_image')
     @common.check_snapshots_enabled

@@ -287,8 +287,7 @@ class TestSecurityGroups(test.TestCase):
             self.assertEqual(res_dict['security_group']['name'], name)
 
         sg = security_group_template()
-        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
-                          self.controller.create,
+        self.assertRaises(webob.exc.HTTPForbidden, self.controller.create,
                           req, {'security_group': sg})
 
     def test_get_security_group_list(self):
@@ -1243,8 +1242,7 @@ class TestSecurityGroupRules(test.TestCase):
             'ip_protocol': 'tcp', 'from_port': '121', 'to_port': '121',
             'parent_group_id': self.sg2['id'], 'group_id': self.sg1['id']
         }
-        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
-                          self.controller.create,
+        self.assertRaises(webob.exc.HTTPForbidden, self.controller.create,
                           req, {'security_group_rule': rule})
 
     def test_create_rule_cidr_allow_all(self):

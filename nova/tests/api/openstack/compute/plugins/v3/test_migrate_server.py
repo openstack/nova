@@ -91,7 +91,7 @@ class MigrateServerTests(admin_only_action_common.CommonTests):
     def test_migrate_too_many_instances(self):
         exc_info = exception.TooManyInstances(overs='', req='', used=0,
                                               allowed=0, resource='')
-        self._test_migrate_exception(exc_info, 413)
+        self._test_migrate_exception(exc_info, 403)
 
     def _test_migrate_live_succeeded(self, param):
         self.mox.StubOutWithMock(self.compute_api, 'live_migrate')

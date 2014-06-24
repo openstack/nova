@@ -1263,7 +1263,7 @@ class ServerActionsControllerTest(test.TestCase):
             body['createImage']['metadata']['foo%i' % num] = "bar"
 
         req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
+        self.assertRaises(webob.exc.HTTPForbidden,
                           self.controller._action_create_image,
                           req, FAKE_UUID, body)
 

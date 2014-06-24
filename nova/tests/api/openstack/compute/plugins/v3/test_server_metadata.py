@@ -479,8 +479,8 @@ class ServerMetaDataTest(BaseTest):
         req.body = jsonutils.dumps(data)
         req.headers["content-type"] = "application/json"
 
-        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
-                          self.controller.create, req, self.uuid, data)
+        self.assertRaises(webob.exc.HTTPForbidden, self.controller.create, req,
+                          self.uuid, data)
 
     def test_create_item_value_too_long(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
@@ -505,8 +505,8 @@ class ServerMetaDataTest(BaseTest):
         req.body = jsonutils.dumps(data)
         req.headers["content-type"] = "application/json"
 
-        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
-                          self.controller.update_all, req, self.uuid, data)
+        self.assertRaises(webob.exc.HTTPForbidden, self.controller.update_all,
+                          req, self.uuid, data)
 
     def test_invalid_metadata_items_on_update_item(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',

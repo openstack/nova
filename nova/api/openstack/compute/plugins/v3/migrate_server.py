@@ -38,7 +38,7 @@ class MigrateServerController(wsgi.Controller):
         super(MigrateServerController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    @extensions.expected_errors((400, 404, 409, 413))
+    @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.action('migrate')
     def _migrate(self, req, id, body):
         """Permit admins to migrate a server to a new host."""
@@ -49,12 +49,8 @@ class MigrateServerController(wsgi.Controller):
                                        want_objects=True)
         try:
             self.compute_api.resize(req.environ['nova.context'], instance)
-        except exception.TooManyInstances as e:
-            raise exc.HTTPRequestEntityTooLarge(explanation=e.format_message())
-        except exception.QuotaError as error:
-            raise exc.HTTPRequestEntityTooLarge(
-                explanation=error.format_message(),
-                headers={'Retry-After': 0})
+        except (exception.TooManyInstances, exception.QuotaError) as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:

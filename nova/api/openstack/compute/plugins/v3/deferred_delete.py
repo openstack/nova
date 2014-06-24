@@ -33,7 +33,7 @@ class DeferredDeleteController(wsgi.Controller):
         super(DeferredDeleteController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    @extensions.expected_errors((404, 409, 413))
+    @extensions.expected_errors((404, 409, 403))
     @wsgi.action('restore')
     def _restore(self, req, id, body):
         """Restore a previously deleted instance."""
@@ -44,9 +44,7 @@ class DeferredDeleteController(wsgi.Controller):
         try:
             self.compute_api.restore(context, instance)
         except exception.QuotaError as error:
-            raise webob.exc.HTTPRequestEntityTooLarge(
-                                        explanation=error.format_message(),
-                                        headers={'Retry-After': 0})
+            raise webob.exc.HTTPForbidden(explanation=error.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'restore')
