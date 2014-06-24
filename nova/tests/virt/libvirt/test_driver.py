@@ -2857,17 +2857,29 @@ class LibvirtConnTestCase(test.TestCase,
         self.assertEqual(doms[2].name(), vm2.name())
 
     def test_list_instances(self):
+        vm1 = FakeVirtDomain(id=3, name="instance00000001")
+        vm2 = FakeVirtDomain(id=17, name="instance00000002")
+        vm3 = FakeVirtDomain(name="instance00000003")
+        vm4 = FakeVirtDomain(name="instance00000004")
+
+        def fake_list_all(flags):
+            vms = []
+            if flags & libvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE:
+                vms.extend([vm1, vm2])
+            if flags & libvirt.VIR_CONNECT_LIST_DOMAINS_INACTIVE:
+                vms.extend([vm3, vm4])
+            return vms
+
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByID = self.fake_lookup
-        libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 2
-        libvirt_driver.LibvirtDriver._conn.listDomainsID = lambda: [0, 1]
-        libvirt_driver.LibvirtDriver._conn.listDefinedDomains = lambda: []
+        libvirt_driver.LibvirtDriver._conn.listAllDomains = fake_list_all
 
         self.mox.ReplayAll()
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instances = conn.list_instances()
-        # Only one should be listed, since domain with ID 0 must be skipped
-        self.assertEqual(len(instances), 1)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        names = drvr.list_instances()
+        self.assertEqual(names[0], vm1.name())
+        self.assertEqual(names[1], vm2.name())
+        self.assertEqual(names[2], vm3.name())
+        self.assertEqual(names[3], vm4.name())
 
     def test_list_instance_uuids(self):
         vm1 = FakeVirtDomain(id=3, name="instance00000001")
@@ -2894,58 +2906,6 @@ class LibvirtConnTestCase(test.TestCase,
         self.assertEqual(uuids[1], vm2.UUIDString())
         self.assertEqual(uuids[2], vm3.UUIDString())
         self.assertEqual(uuids[3], vm4.UUIDString())
-
-    def test_list_defined_instances(self):
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByID = self.fake_lookup
-        libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 1
-        libvirt_driver.LibvirtDriver._conn.listDomainsID = lambda: [0]
-        libvirt_driver.LibvirtDriver._conn.listDefinedDomains = lambda: [1]
-
-        self.mox.ReplayAll()
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instances = conn.list_instances()
-        # Only one defined domain should be listed
-        self.assertEqual(len(instances), 1)
-
-    def test_list_instances_when_instance_deleted(self):
-
-        def fake_lookup(instance_name):
-            raise libvirt.libvirtError("we deleted an instance!")
-
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByID = fake_lookup
-        libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 1
-        libvirt_driver.LibvirtDriver._conn.listDomainsID = lambda: [0, 1]
-        libvirt_driver.LibvirtDriver._conn.listDefinedDomains = lambda: []
-
-        self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_code")
-        libvirt.libvirtError.get_error_code().AndReturn(
-            libvirt.VIR_ERR_NO_DOMAIN)
-
-        self.mox.ReplayAll()
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instances = conn.list_instances()
-        # None should be listed, since we fake deleted the last one
-        self.assertEqual(len(instances), 0)
-
-    def test_list_instances_throws_nova_exception(self):
-        def fake_lookup(instance_name):
-            raise libvirt.libvirtError("we deleted an instance!")
-
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.lookupByID = fake_lookup
-        libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 1
-        libvirt_driver.LibvirtDriver._conn.listDomainsID = lambda: [0, 1]
-        libvirt_driver.LibvirtDriver._conn.listDefinedDomains = lambda: []
-
-        self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_code")
-        libvirt.libvirtError.get_error_code().AndReturn(
-            libvirt.VIR_ERR_INTERNAL_ERROR)
-
-        self.mox.ReplayAll()
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.assertRaises(exception.NovaException, conn.list_instances)
 
     def test_get_all_block_devices(self):
         xml = [
