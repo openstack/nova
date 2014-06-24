@@ -239,29 +239,6 @@ def get_limit_and_marker(request, max_limit=CONF.osapi_max_limit):
     return limit, marker
 
 
-def limited_by_marker(items, request, max_limit=CONF.osapi_max_limit):
-    """Return a slice of items according to the requested marker and limit."""
-    limit, marker = get_limit_and_marker(request, max_limit)
-
-    limit = min(max_limit, limit)
-    start_index = 0
-    if marker:
-        start_index = -1
-        for i, item in enumerate(items):
-            if 'flavorid' in item:
-                if item['flavorid'] == marker:
-                    start_index = i + 1
-                    break
-            elif item['id'] == marker or item.get('uuid') == marker:
-                start_index = i + 1
-                break
-        if start_index < 0:
-            msg = _('marker [%s] not found') % marker
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-    range_end = start_index + limit
-    return items[start_index:range_end]
-
-
 def get_id_from_href(href):
     """Return the id or uuid portion of a url.
 
