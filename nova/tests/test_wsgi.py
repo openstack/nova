@@ -132,13 +132,13 @@ class TestWSGIServer(test.NoDBTestCase):
         server.start()
 
         uri = "http://127.0.0.1:%d/%s" % (server.port, 10000 * 'x')
-        resp = requests.get(uri)
+        resp = requests.get(uri, proxies={"http": ""})
         eventlet.sleep(0)
         self.assertNotEqual(resp.status_code,
                             requests.codes.REQUEST_URI_TOO_LARGE)
 
         uri = "http://127.0.0.1:%d/%s" % (server.port, 20000 * 'x')
-        resp = requests.get(uri)
+        resp = requests.get(uri, proxies={"http": ""})
         eventlet.sleep(0)
         self.assertEqual(resp.status_code,
                          requests.codes.REQUEST_URI_TOO_LARGE)
