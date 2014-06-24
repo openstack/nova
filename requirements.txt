@@ -5,6 +5,7 @@ argparse
 boto>=2.12.0,!=2.13.0
 eventlet>=0.13.0
 Jinja2
+keystonemiddleware
 kombu>=2.4.8
 lxml>=2.3
 Routes>=1.12.3
