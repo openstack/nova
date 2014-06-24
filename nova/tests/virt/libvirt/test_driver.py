@@ -1728,6 +1728,39 @@ class LibvirtConnTestCase(test.TestCase,
             self.assertEqual(cfg.devices[6].type, "qxl")
             self.assertEqual(cfg.devices[6].vram, 64)
 
+    @mock.patch('nova.virt.disk.api.teardown_container')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_info')
+    @mock.patch('nova.virt.disk.api.setup_container')
+    @mock.patch('nova.openstack.common.fileutils.ensure_tree')
+    @mock.patch.object(fake_libvirt_utils, 'get_instance_path')
+    def test_unmount_fs_if_error_during_lxc_create_domain(self,
+            mock_get_inst_path, mock_ensure_tree, mock_setup_container,
+            mock_get_info, mock_teardown):
+        """If we hit an error during a `_create_domain` call to `libvirt+lxc`
+        we need to ensure the guest FS is unmounted from the host so that any
+        future `lvremove` calls will work.
+        """
+        self.flags(virt_type='lxc', group='libvirt')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        mock_domain = mock.MagicMock()
+        mock_instance = mock.MagicMock()
+        mock_get_inst_path.return_value = '/tmp/'
+        mock_image_backend = mock.MagicMock()
+        conn.image_backend = mock_image_backend
+        mock_image = mock.MagicMock()
+        mock_image.path = '/tmp/test.img'
+        conn.image_backend.image.return_value = mock_image
+        mock_setup_container.return_value = '/dev/nbd0'
+        mock_get_info.side_effect = exception.InstanceNotFound(
+                instance_id='foo')
+
+        mock_domain.createWithFlags.side_effect = ValueError('somethingbad')
+
+        self.assertRaises(ValueError, conn._create_domain, domain=mock_domain,
+                          instance=mock_instance)
+
+        mock_teardown.assert_called_with(container_dir='/tmp/rootfs')
+
     def test_video_driver_flavor_limit_not_set(self):
         self.flags(virt_type='kvm', group='libvirt')
         self.flags(enabled=True,

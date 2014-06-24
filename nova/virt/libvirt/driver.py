@@ -3599,6 +3599,44 @@ class LibvirtDriver(driver.ComputeDriver):
                 'cpu_time': dom_info[4],
                 'id': virt_dom.ID()}
 
+    def _create_domain_setup_lxc(self, instance):
+        inst_path = libvirt_utils.get_instance_path(instance)
+        container_dir = os.path.join(inst_path, 'rootfs')
+        fileutils.ensure_tree(container_dir)
+
+        image = self.image_backend.image(instance, 'disk')
+        container_root_device = disk.setup_container(image.path,
+                                            container_dir=container_dir,
+                                            use_cow=CONF.use_cow_images)
+        try:
+            #Note(GuanQiang): save container root device name here, used for
+            #                 detaching the linked image device when deleting
+            #                 the lxc instance.
+            if container_root_device:
+                instance.root_device_name = container_root_device
+                instance.save()
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                self._create_domain_cleanup_lxc(instance)
+
+    def _create_domain_cleanup_lxc(self, instance):
+        inst_path = libvirt_utils.get_instance_path(instance)
+        container_dir = os.path.join(inst_path, 'rootfs')
+
+        try:
+            state = self.get_info(instance)['state']
+        except exception.InstanceNotFound:
+            # The domain may not be present if the instance failed to start
+            state = None
+
+        if state == power_state.RUNNING:
+            # NOTE(uni): Now the container is running with its own private
+            # mount namespace and so there is no need to keep the container
+            # rootfs mounted in the host namespace
+            disk.clean_lxc_namespace(container_dir=container_dir)
+        else:
+            disk.teardown_container(container_dir=container_dir)
+
     def _create_domain(self, xml=None, domain=None,
                        instance=None, launch_flags=0, power_on=True):
         """Create a domain.
@@ -3606,64 +3644,30 @@ class LibvirtDriver(driver.ComputeDriver):
         Either domain or xml must be passed in. If both are passed, then
         the domain definition is overwritten from the xml.
         """
-        inst_path = None
-        if instance:
-            inst_path = libvirt_utils.get_instance_path(instance)
-
-        if CONF.libvirt.virt_type == 'lxc':
-            if not inst_path:
-                inst_path = None
-
-            container_dir = os.path.join(inst_path, 'rootfs')
-            fileutils.ensure_tree(container_dir)
-            image = self.image_backend.image(instance, 'disk')
-            container_root_device = disk.setup_container(image.path,
-                                                container_dir=container_dir,
-                                                use_cow=CONF.use_cow_images)
-
-            #Note(GuanQiang): save container root device name here, used for
-            #                 detaching the linked image device when deleting
-            #                 the lxc instance.
-            if container_root_device:
-                instance.root_device_name = container_root_device
-                instance.save()
-
-        if xml:
-            try:
+        err = None
+        if instance and CONF.libvirt.virt_type == 'lxc':
+            self._create_domain_setup_lxc(instance)
+        try:
+            if xml:
+                err = _LE('Error defining a domain with XML: %s') % xml
                 domain = self._conn.defineXML(xml)
-            except Exception as e:
-                LOG.error(_LE("An error occurred while trying to define "
-                              "a domain with xml: %s"), xml)
-                raise e
 
-        if power_on:
-            try:
+            if power_on:
+                err = _LE('Error launching a defined domain with XML: %s') \
+                          % domain.XMLDesc(0)
                 domain.createWithFlags(launch_flags)
-            except Exception as e:
-                with excutils.save_and_reraise_exception():
-                    LOG.error(_LE("An error occurred while trying to launch a "
-                                  "defined domain with xml: %s"),
-                              domain.XMLDesc(0))
 
-        if not utils.is_neutron():
-            try:
+            if not utils.is_neutron():
+                err = _LE('Error enabling hairpin mode with XML: %s') \
+                          % domain.XMLDesc(0)
                 self._enable_hairpin(domain.XMLDesc(0))
-            except Exception:
-                with excutils.save_and_reraise_exception():
-                    LOG.error(_LE("An error occurred while enabling hairpin "
-                                  "mode on domain with xml: %s"),
-                              domain.XMLDesc(0))
-
-        # NOTE(uni): Now the container is running with its own private mount
-        # namespace and so there is no need to keep the container rootfs
-        # mounted in the host namespace
-        if CONF.libvirt.virt_type == 'lxc':
-            state = self.get_info(instance)['state']
-            container_dir = os.path.join(inst_path, 'rootfs')
-            if state == power_state.RUNNING:
-                disk.clean_lxc_namespace(container_dir=container_dir)
-            else:
-                disk.teardown_container(container_dir=container_dir)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                if err:
+                    LOG.error(err)
+        finally:
+            if instance and CONF.libvirt.virt_type == 'lxc':
+                self._create_domain_cleanup_lxc(instance)
 
         return domain
 
