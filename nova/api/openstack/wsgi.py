@@ -439,17 +439,6 @@ class XMLDictSerializer(DictSerializer):
             result.appendChild(node)
         return result
 
-    def _create_link_nodes(self, xml_doc, links):
-        link_nodes = []
-        for link in links:
-            link_node = xml_doc.createElement('atom:link')
-            link_node.setAttribute('rel', link['rel'])
-            link_node.setAttribute('href', link['href'])
-            if 'type' in link:
-                link_node.setAttribute('type', link['type'])
-            link_nodes.append(link_node)
-        return link_nodes
-
     def _to_xml(self, root):
         """Convert the xml object to an xml string."""
         return etree.tostring(root, encoding='UTF-8', xml_declaration=True)
