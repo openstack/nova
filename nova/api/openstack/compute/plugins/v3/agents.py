@@ -90,7 +90,7 @@ class AgentController(object):
         except exception.AgentBuildNotFound as ex:
             raise webob.exc.HTTPNotFound(explanation=ex.format_message())
 
-        return {"agent": {'agent_id': id, 'version': version,
+        return {"agent": {'agent_id': int(id), 'version': version,
                 'url': url, 'md5hash': md5hash}}
 
     @extensions.expected_errors(404)
