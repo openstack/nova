@@ -52,6 +52,13 @@ def make_usage(elem):
         subelem.text = subelem_tag
 
 
+def parse_strtime(dstr, fmt):
+    try:
+        return timeutils.parse_strtime(dstr, fmt)
+    except (TypeError, ValueError) as e:
+        raise exception.InvalidStrTime(reason=unicode(e))
+
+
 class SimpleTenantUsageTemplate(xmlutil.TemplateBuilder):
     def construct(self):
         root = xmlutil.TemplateElement('tenant_usage', selector='tenant_usage')
@@ -212,13 +219,17 @@ class SimpleTenantUsageController(object):
             value = timeutils.utcnow()
         elif isinstance(dtstr, datetime.datetime):
             value = dtstr
-        try:
-            value = timeutils.parse_strtime(dtstr, "%Y-%m-%dT%H:%M:%S")
-        except Exception:
+        for fmt in ["%Y-%m-%dT%H:%M:%S",
+                    "%Y-%m-%dT%H:%M:%S.%f",
+                    "%Y-%m-%d %H:%M:%S.%f"]:
             try:
-                value = timeutils.parse_strtime(dtstr, "%Y-%m-%dT%H:%M:%S.%f")
-            except Exception:
-                value = timeutils.parse_strtime(dtstr, "%Y-%m-%d %H:%M:%S.%f")
+                value = parse_strtime(dtstr, fmt)
+                break
+            except exception.InvalidStrTime:
+                pass
+        else:
+            msg = _("Datetime is in invalid format")
+            raise exception.InvalidStrTime(reason=msg)
 
         # NOTE(mriedem): Instance object DateTime fields are timezone-aware
         # so we have to force UTC timezone for comparing this datetime against
@@ -250,7 +261,12 @@ class SimpleTenantUsageController(object):
 
         authorize_list(context)
 
-        (period_start, period_stop, detailed) = self._get_datetime_range(req)
+        try:
+            (period_start, period_stop, detailed) = self._get_datetime_range(
+                req)
+        except exception.InvalidStrTime as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
+
         now = timeutils.parse_isotime(timeutils.strtime())
         if period_stop > now:
             period_stop = now
@@ -268,7 +284,12 @@ class SimpleTenantUsageController(object):
 
         authorize_show(context, {'project_id': tenant_id})
 
-        (period_start, period_stop, ignore) = self._get_datetime_range(req)
+        try:
+            (period_start, period_stop, ignore) = self._get_datetime_range(
+                req)
+        except exception.InvalidStrTime as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
+
         now = timeutils.parse_isotime(timeutils.strtime())
         if period_stop > now:
             period_stop = now
