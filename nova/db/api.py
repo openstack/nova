@@ -1769,6 +1769,10 @@ def aggregate_host_get_by_metadata_key(context, key):
     return IMPL.aggregate_host_get_by_metadata_key(context, key)
 
 
+def aggregate_get_by_metadata_key(context, key):
+    return IMPL.aggregate_get_by_metadata_key(context, key)
+
+
 def aggregate_update(context, aggregate_id, values):
     """Update the attributes of an aggregates.
 
