@@ -227,18 +227,21 @@ class GlanceClientWrapper(object):
             except retry_excs as e:
                 host = self.host
                 port = self.port
-                extra = "retrying"
+
+                if attempt < num_attempts:
+                    extra = "retrying"
+                else:
+                    extra = 'done trying'
+
                 error_msg = (_("Error contacting glance server "
                                "'%(host)s:%(port)s' for '%(method)s', "
                                "%(extra)s.") %
                              {'host': host, 'port': port,
                               'method': method, 'extra': extra})
+                LOG.exception(error_msg)
                 if attempt == num_attempts:
-                    extra = 'done trying'
-                    LOG.exception(error_msg)
                     raise exception.GlanceConnectionFailed(
                             host=host, port=port, reason=str(e))
-                LOG.exception(error_msg)
                 time.sleep(1)
 
 
