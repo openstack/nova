@@ -1,74 +1,76 @@
 # Translations template for nova.
 # Copyright (C) 2014 ORGANIZATION
 # This file is distributed under the same license as the nova project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2014.
 #
-#, fuzzy
+# Translators:
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 2014.2.dev250.gb62a138\n"
+"Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2014-06-24 06:06+0000\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
+"PO-Revision-Date: 2014-06-18 19:31+0000\n"
+"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"Language-Team: Japanese (http://www.transifex.com/projects/p/nova/language/"
+"ja/)\n"
+"Language: ja\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 1.3\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
 
 #: nova/openstack/common/eventlet_backdoor.py:141
 #, python-format
 msgid "Eventlet backdoor listening on %(port)s for process %(pid)d"
-msgstr ""
+msgstr "Eventlet backdoorは、プロセス%(pid)dの%(port)sをリスニングしています。"
 
 #: nova/openstack/common/periodic_task.py:125
 #, python-format
 msgid "Skipping periodic task %(task)s because its interval is negative"
-msgstr ""
+msgstr "タスクの間隔が負であるため、定期タスク %(task)s をスキップしています"
 
 #: nova/openstack/common/periodic_task.py:130
 #, python-format
 msgid "Skipping periodic task %(task)s because it is disabled"
-msgstr ""
+msgstr "タスクが使用不可であるため、定期タスク %(task)s をスキップしています"
 
 #: nova/openstack/common/service.py:176 nova/openstack/common/service.py:270
 #, python-format
 msgid "Caught %s, exiting"
-msgstr ""
+msgstr "%s が見つかりました。終了しています"
 
 #: nova/openstack/common/service.py:239
 msgid "Parent process has died unexpectedly, exiting"
-msgstr ""
+msgstr "親プロセスが予期せずに停止しました。終了しています"
 
 #: nova/openstack/common/service.py:309
 msgid "Forking too fast, sleeping"
-msgstr ""
+msgstr "fork が早すぎます。スリープ状態にしています"
 
 #: nova/openstack/common/service.py:328
 #, python-format
 msgid "Started child %d"
-msgstr ""
+msgstr "子 %d を開始しました"
 
 #: nova/openstack/common/service.py:338
 #, python-format
 msgid "Starting %d workers"
-msgstr ""
+msgstr "%d ワーカーを開始しています"
 
 #: nova/openstack/common/service.py:355
 #, python-format
 msgid "Child %(pid)d killed by signal %(sig)d"
-msgstr ""
+msgstr "子 %(pid)d がシグナル %(sig)d によって強制終了されました"
 
 #: nova/openstack/common/service.py:359
 #, python-format
 msgid "Child %(pid)s exited with status %(code)d"
-msgstr ""
+msgstr "子 %(pid)s が状況 %(code)d で終了しました"
 
 #: nova/openstack/common/service.py:394
 #, python-format
 msgid "Caught %s, stopping children"
-msgstr ""
+msgstr "%s が見つかりました。子を停止しています"
 
 #: nova/openstack/common/service.py:403
 msgid "Wait called after thread killed.  Cleaning up."
@@ -77,7 +79,7 @@ msgstr ""
 #: nova/openstack/common/service.py:414
 #, python-format
 msgid "Waiting on %d children to exit"
-msgstr ""
+msgstr "%d 個の子で終了を待機しています"
 
 #: nova/openstack/common/db/sqlalchemy/utils.py:387
 #, python-format
@@ -92,34 +94,35 @@ msgstr ""
 #: nova/virt/libvirt/imagecache.py:191
 #, python-format
 msgid "Writing stored info to %s"
-msgstr ""
+msgstr "保管された情報を %s に書き込んでいます"
 
 #: nova/virt/libvirt/imagecache.py:401
 #, python-format
 msgid ""
-"image %(id)s at (%(base_file)s): image verification skipped, no hash "
-"stored"
+"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
 msgstr ""
+"(%(base_file)s) にあるイメージ %(id)s: イメージの検査がスキップされました。"
+"ハッシュは保管されていません"
 
 #: nova/virt/libvirt/imagecache.py:410
 #, python-format
 msgid "%(id)s (%(base_file)s): generating checksum"
-msgstr ""
+msgstr "%(id)s (%(base_file)s): チェックサムの生成中"
 
 #: nova/virt/libvirt/imagecache.py:438
 #, python-format
 msgid "Base file too young to remove: %s"
-msgstr ""
+msgstr "基本ファイルは新しいため削除できません: %s"
 
 #: nova/virt/libvirt/imagecache.py:441
 #, python-format
 msgid "Removing base file: %s"
-msgstr ""
+msgstr "基本ファイルを削除しています: %s"
 
 #: nova/virt/libvirt/imagecache.py:459
 #, python-format
 msgid "image %(id)s at (%(base_file)s): checking"
-msgstr ""
+msgstr "(%(base_file)s) にあるイメージ %(id)s: 検査中"
 
 #: nova/virt/libvirt/imagecache.py:483
 #, python-format
@@ -127,21 +130,23 @@ msgid ""
 "image %(id)s at (%(base_file)s): in use: on this node %(local)d local, "
 "%(remote)d on other nodes sharing this instance storage"
 msgstr ""
+"(%(base_file)s) にあるイメージ %(id)s: 使用中: このノード上では %(local)d "
+"ローカル、このインスタンスのストレージを共有する他のノード上では %(remote)d"
 
 #: nova/virt/libvirt/imagecache.py:550
 #, python-format
 msgid "Active base files: %s"
-msgstr ""
+msgstr "アクティブな基本ファイル: %s"
 
 #: nova/virt/libvirt/imagecache.py:553
 #, python-format
 msgid "Corrupt base files: %s"
-msgstr ""
+msgstr "破損した基本ファイル: %s"
 
 #: nova/virt/libvirt/imagecache.py:557
 #, python-format
 msgid "Removable base files: %s"
-msgstr ""
+msgstr "削除可能な基本ファイル: %s"
 
 #: nova/virt/libvirt/utils.py:530
 msgid "findmnt tool is not installed"
@@ -153,4 +158,3 @@ msgid ""
 "Image creation data, cacheable: %(cache)s, downloaded: %(downloaded)s "
 "duration: %(duration).2f secs for image %(image_id)s"
 msgstr ""
-

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-06-17 06:06+0000\n"
+"POT-Creation-Date: 2014-06-24 06:06+0000\n"
 "PO-Revision-Date: 2014-06-14 19:30+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: English (Australia) (http://www.transifex.com/projects/p/nova/"
@@ -91,11 +91,64 @@ msgstr "Deleting duplicated row with id: %(id)s from table: %(table)s"
 msgid "%(num_values)d values found, of which the minimum value will be used."
 msgstr ""
 
-#: nova/virt/libvirt/utils.py:719
+#: nova/virt/libvirt/imagecache.py:191
+#, python-format
+msgid "Writing stored info to %s"
+msgstr ""
+
+#: nova/virt/libvirt/imagecache.py:401
+#, python-format
+msgid ""
+"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
+msgstr ""
+
+#: nova/virt/libvirt/imagecache.py:410
+#, python-format
+msgid "%(id)s (%(base_file)s): generating checksum"
+msgstr ""
+
+#: nova/virt/libvirt/imagecache.py:438
+#, python-format
+msgid "Base file too young to remove: %s"
+msgstr ""
+
+#: nova/virt/libvirt/imagecache.py:441
+#, python-format
+msgid "Removing base file: %s"
+msgstr ""
+
+#: nova/virt/libvirt/imagecache.py:459
+#, python-format
+msgid "image %(id)s at (%(base_file)s): checking"
+msgstr ""
+
+#: nova/virt/libvirt/imagecache.py:483
+#, python-format
+msgid ""
+"image %(id)s at (%(base_file)s): in use: on this node %(local)d local, "
+"%(remote)d on other nodes sharing this instance storage"
+msgstr ""
+
+#: nova/virt/libvirt/imagecache.py:550
+#, python-format
+msgid "Active base files: %s"
+msgstr ""
+
+#: nova/virt/libvirt/imagecache.py:553
+#, python-format
+msgid "Corrupt base files: %s"
+msgstr ""
+
+#: nova/virt/libvirt/imagecache.py:557
+#, python-format
+msgid "Removable base files: %s"
+msgstr ""
+
+#: nova/virt/libvirt/utils.py:530
 msgid "findmnt tool is not installed"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:1353
+#: nova/virt/xenapi/vm_utils.py:1352
 #, python-format
 msgid ""
 "Image creation data, cacheable: %(cache)s, downloaded: %(downloaded)s "

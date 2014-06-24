@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 2014.2.dev88.ged965df\n"
+"Project-Id-Version: nova 2014.2.dev250.gb62a138\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-06-17 06:07+0000\n"
+"POT-Creation-Date: 2014-06-24 06:06+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -86,25 +86,40 @@ msgstr ""
 msgid "Could not decode ram_allocation_ratio: '%s'"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1343
+#: nova/virt/libvirt/driver.py:1352
 msgid "During detach_volume, instance disappeared."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2847
+#: nova/virt/libvirt/driver.py:2857
 #, python-format
 msgid "URI %(uri)s does not support full set of host capabilities: %(error)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4051
+#: nova/virt/libvirt/driver.py:4062
 #, python-format
 msgid "URI %(uri)s does not support listDevices: %(error)s"
 msgstr ""
 
-#: nova/virt/libvirt/utils.py:72 nova/virt/libvirt/utils.py:78
-msgid "systool is not installed"
+#: nova/virt/libvirt/imagecache.py:318
+#, python-format
+msgid ""
+"Instance %(instance)s is using a backing file %(backing)s which does not "
+"appear in the image service"
 msgstr ""
 
-#: nova/virt/libvirt/utils.py:237
+#: nova/virt/libvirt/imagecache.py:495
+#, python-format
+msgid ""
+"image %(id)s at (%(base_file)s): warning -- an absent base file is in "
+"use! instances: %(instance_list)s"
+msgstr ""
+
+#: nova/virt/libvirt/imagecache.py:545
+#, python-format
+msgid "Unknown base file: %s"
+msgstr ""
+
+#: nova/virt/libvirt/lvm.py:68
 #, python-format
 msgid ""
 "Volume group %(vg)s will not be able to hold sparse volume %(lv)s. "
@@ -112,8 +127,70 @@ msgid ""
 "%(free_space)db."
 msgstr ""
 
-#: nova/virt/libvirt/utils.py:291
+#: nova/virt/libvirt/utils.py:69 nova/virt/libvirt/utils.py:75
+msgid "systool is not installed"
+msgstr ""
+
+#: nova/virt/libvirt/utils.py:242
 #, python-format
 msgid "rbd remove %(name)s in pool %(pool)s failed"
+msgstr ""
+
+#: nova/virt/libvirt/volume.py:132
+#, python-format
+msgid "Unknown content in connection_info/qos_specs: %s"
+msgstr ""
+
+#: nova/virt/libvirt/volume.py:294
+#, python-format
+msgid ""
+"ISCSI volume not yet found at: %(disk_dev)s. Will rescan & retry.  Try "
+"number: %(tries)s"
+msgstr ""
+
+#: nova/virt/libvirt/volume.py:361
+#, python-format
+msgid "Unable to delete volume device %s"
+msgstr ""
+
+#: nova/virt/libvirt/volume.py:372
+#, python-format
+msgid ""
+"Failed to remove multipath device descriptor %(dev_mapper)s. Exception "
+"message: %(msg)s"
+msgstr ""
+
+#: nova/virt/libvirt/volume.py:694 nova/virt/libvirt/volume.py:843
+#, python-format
+msgid "%s is already mounted"
+msgstr ""
+
+#: nova/virt/libvirt/volume.py:739
+#, python-format
+msgid "AoE volume not yet found at: %(aoedevpath)s. Try number: %(tries)s"
+msgstr ""
+
+#: nova/virt/libvirt/volume.py:931
+#, python-format
+msgid ""
+"Fibre volume not yet found at: %(mount_device)s. Will rescan & retry.  "
+"Try number: %(tries)s"
+msgstr ""
+
+#: nova/virt/libvirt/volume.py:1033
+msgid "Value required for 'scality_sofs_config'"
+msgstr ""
+
+#: nova/virt/libvirt/volume.py:1044
+#, python-format
+msgid "Cannot access 'scality_sofs_config': %s"
+msgstr ""
+
+#: nova/virt/libvirt/volume.py:1050
+msgid "Cannot execute /sbin/mount.sofs"
+msgstr ""
+
+#: nova/virt/libvirt/volume.py:1065
+msgid "Cannot mount Scality SOFS, check syslog for errors"
 msgstr ""
 

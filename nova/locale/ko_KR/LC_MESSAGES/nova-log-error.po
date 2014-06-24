@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-06-18 06:06+0000\n"
+"POT-Creation-Date: 2014-06-24 06:06+0000\n"
 "PO-Revision-Date: 2014-06-16 04:10+0000\n"
 "Last-Translator: jaekwon.park <jaekwon.park@rockplace.co.kr>\n"
 "Language-Team: Korean (Korea) (http://www.transifex.com/projects/p/nova/"
@@ -107,7 +107,27 @@ msgstr "DB 예외가 랩핑되었습니다."
 msgid "Failed to migrate to version %s on engine %s"
 msgstr ""
 
-#: nova/virt/libvirt/utils.py:395
+#: nova/virt/libvirt/imagecache.py:130
+#, python-format
+msgid "Error reading image info file %(filename)s: %(error)s"
+msgstr ""
+
+#: nova/virt/libvirt/imagecache.py:391
+#, python-format
+msgid "image %(id)s at (%(base_file)s): image verification failed"
+msgstr ""
+
+#: nova/virt/libvirt/imagecache.py:448
+#, python-format
+msgid "Failed to remove %(base_file)s, error was %(error)s"
+msgstr ""
+
+#: nova/virt/libvirt/lvm.py:201
 #, python-format
 msgid "ignoring unrecognized volume_clear='%s' value"
+msgstr ""
+
+#: nova/virt/libvirt/volume.py:141
+#, python-format
+msgid "Unknown content in connection_info/access_mode: %s"
 msgstr ""
