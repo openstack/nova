@@ -42,17 +42,22 @@ CONF.import_opt('use_forwarded_for', 'nova.api.auth')
 
 metadata_proxy_opts = [
     cfg.BoolOpt(
-        'service_neutron_metadata_proxy',
+        'service_metadata_proxy',
         default=False,
         help='Set flag to indicate Neutron will proxy metadata requests and '
-             'resolve instance ids.'),
+             'resolve instance ids.',
+        deprecated_group='DEFAULT',
+        deprecated_name='service_neutron_metadata_proxy'),
      cfg.StrOpt(
-         'neutron_metadata_proxy_shared_secret',
+         'metadata_proxy_shared_secret',
          default='', secret=True,
-         help='Shared secret to validate proxies Neutron metadata requests')
+         help='Shared secret to validate proxies Neutron metadata requests',
+         deprecated_group='DEFAULT',
+         deprecated_name='neutron_metadata_proxy_shared_secret')
 ]
 
-CONF.register_opts(metadata_proxy_opts)
+# metadata_proxy_opts options in the DEFAULT group were deprecated in Juno
+CONF.register_opts(metadata_proxy_opts, 'neutron')
 
 LOG = logging.getLogger(__name__)
 
@@ -106,13 +111,13 @@ class MetadataRequestHandler(wsgi.Application):
             req.response.content_type = base.MIME_TYPE_TEXT_PLAIN
             return req.response
 
-        if CONF.service_neutron_metadata_proxy:
+        if CONF.neutron.service_metadata_proxy:
             meta_data = self._handle_instance_id_request(req)
         else:
             if req.headers.get('X-Instance-ID'):
                 LOG.warn(
                     _LW("X-Instance-ID present in request headers. The "
-                        "'service_neutron_metadata_proxy' option must be"
+                        "'service_metadata_proxy' option must be "
                         "enabled to process this header."))
             meta_data = self._handle_remote_ip_request(req)
 
@@ -175,7 +180,7 @@ class MetadataRequestHandler(wsgi.Application):
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         expected_signature = hmac.new(
-            CONF.neutron_metadata_proxy_shared_secret,
+            CONF.neutron.metadata_proxy_shared_secret,
             instance_id,
             hashlib.sha256).hexdigest()
 

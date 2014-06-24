@@ -582,7 +582,8 @@ class MetadataHandlerTestCase(test.TestCase):
         self.assertEqual(response.body, expected)
 
     def test_root_metadata_proxy_enabled(self):
-        CONF.set_override("service_neutron_metadata_proxy", True)
+        self.flags(service_metadata_proxy=True,
+                   group='neutron')
 
         expected = "\n".join(base.VERSIONS) + "\nlatest"
         response = fake_request(self.stubs, self.mdinst, "/")
@@ -687,7 +688,7 @@ class MetadataHandlerTestCase(test.TestCase):
                                 (expected_instance_id, instance_id))
 
         signed = hmac.new(
-            CONF.neutron_metadata_proxy_shared_secret,
+            CONF.neutron.metadata_proxy_shared_secret,
             expected_instance_id,
             hashlib.sha256).hexdigest()
 
@@ -702,7 +703,8 @@ class MetadataHandlerTestCase(test.TestCase):
         self.assertEqual(response.status_int, 200)
 
         # now enable the service
-        self.flags(service_neutron_metadata_proxy=True)
+        self.flags(service_metadata_proxy=True,
+                   group='neutron')
         response = fake_request(
             self.stubs, self.mdinst,
             relpath="/2009-04-04/user-data",
@@ -771,7 +773,7 @@ class MetadataHandlerTestCase(test.TestCase):
 
         # unexpected Instance-ID
         signed = hmac.new(
-            CONF.neutron_metadata_proxy_shared_secret,
+            CONF.neutron.metadata_proxy_shared_secret,
            'z-z-z-z',
            hashlib.sha256).hexdigest()
 
