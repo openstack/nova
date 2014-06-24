@@ -123,15 +123,15 @@ def wsgi_app_v21(inner_app_v21=None, fake_auth_context=None,
     return mapper
 
 
-def stub_out_key_pair_funcs(stubs, have_key_pair=True):
+def stub_out_key_pair_funcs(stubs, have_key_pair=True, **kwargs):
     def key_pair(context, user_id):
         return [dict(test_keypair.fake_keypair,
-                     name='key', public_key='public_key')]
+                     name='key', public_key='public_key', **kwargs)]
 
     def one_key_pair(context, user_id, name):
         if name == 'key':
             return dict(test_keypair.fake_keypair,
-                        name='key', public_key='public_key')
+                        name='key', public_key='public_key', **kwargs)
         else:
             raise exc.KeypairNotFound(user_id=user_id, name=name)
 

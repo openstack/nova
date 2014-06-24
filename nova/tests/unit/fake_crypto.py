@@ -107,3 +107,28 @@ YZhQPOYoNPEOYru116HdHzjGDVifgWf/nDL8Un5tjJFDSf7jSLtA
 -----END CERTIFICATE-----
 """
     return pk, csr
+
+
+def get_x509_cert_and_fingerprint():
+    fingerprint = "A1:6F:6D:EA:A6:36:D0:3A:C6:EB:B6:EE:07:94:3E:2A:90:98:2B:C9"
+    certif = (
+        "-----BEGIN CERTIFICATE-----\n"
+        "MIIDIjCCAgqgAwIBAgIJAIE8EtWfZhhFMA0GCSqGSIb3DQEBCwUAMCQxIjAgBgNV\n"
+        "BAMTGWNsb3VkYmFzZS1pbml0LXVzZXItMTM1NTkwHhcNMTUwMTI5MTgyMzE4WhcN\n"
+        "MjUwMTI2MTgyMzE4WjAkMSIwIAYDVQQDExljbG91ZGJhc2UtaW5pdC11c2VyLTEz\n"
+        "NTU5MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv4lv95ofkXLIbALU\n"
+        "UEb1f949TYNMUvMGNnLyLgGOY+D61TNG7RZn85cRg9GVJ7KDjSLN3e3LwH5rgv5q\n"
+        "pU+nM/idSMhG0CQ1lZeExTsMEJVT3bG7LoU5uJ2fJSf5+hA0oih2M7/Kap5ggHgF\n"
+        "h+h8MWvDC9Ih8x1aadkk/OEmJsTrziYm0C/V/FXPHEuXfZn8uDNKZ/tbyfI6hwEj\n"
+        "nLz5Zjgg29n6tIPYMrnLNDHScCwtNZOcnixmWzsxCt1bxsAEA/y9gXUT7xWUf52t\n"
+        "2+DGQbLYxo0PHjnPf3YnFXNavfTt+4c7ZdHhOQ6ZA8FGQ2LJHDHM1r2/8lK4ld2V\n"
+        "qgNTcQIDAQABo1cwVTATBgNVHSUEDDAKBggrBgEFBQcDAjA+BgNVHREENzA1oDMG\n"
+        "CisGAQQBgjcUAgOgJQwjY2xvdWRiYXNlLWluaXQtdXNlci0xMzU1OUBsb2NhbGhv\n"
+        "c3QwDQYJKoZIhvcNAQELBQADggEBAHHX/ZUOMR0ZggQnfXuXLIHWlffVxxLOV/bE\n"
+        "7JC/dtedHqi9iw6sRT5R6G1pJo0xKWr2yJVDH6nC7pfxCFkby0WgVuTjiu6iNRg2\n"
+        "4zNJd8TGrTU+Mst+PPJFgsxrAY6vjwiaUtvZ/k8PsphHXu4ON+oLurtVDVgog7Vm\n"
+        "fQCShx434OeJj1u8pb7o2WyYS5nDVrHBhlCAqVf2JPKu9zY+i9gOG2kimJwH7fJD\n"
+        "xXpMIwAQ+flwlHR7OrE0L8TNcWwKPRAY4EPcXrT+cWo1k6aTqZDSK54ygW2iWtni\n"
+        "ZBcstxwcB4GIwnp1DrPW9L2gw5eLe1Sl6wdz443TW8K/KPV9rWQ=\n"
+        "-----END CERTIFICATE-----\n")
+    return certif, fingerprint

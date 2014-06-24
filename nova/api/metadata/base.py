@@ -35,6 +35,7 @@ from nova import context
 from nova import network
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import keypair as keypair_obj
 from nova import utils
 from nova.virt import netutils
 
@@ -309,6 +310,16 @@ class InstanceMetadata(object):
             metadata['public_keys'] = {
                 self.instance.key_name: self.instance.key_data
             }
+
+            keypair = keypair_obj.KeyPair.get_by_name(
+                context.get_admin_context(), self.instance.user_id,
+                self.instance.key_name)
+            metadata['keys'] = [
+                {'name': keypair.name,
+                 'type': keypair.type,
+                 'data': keypair.public_key}
+            ]
+
         metadata['hostname'] = self._get_hostname()
         metadata['name'] = self.instance.display_name
         metadata['launch_index'] = self.instance.launch_index

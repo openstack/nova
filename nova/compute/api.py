@@ -3731,7 +3731,8 @@ class KeypairAPI(base.Base):
         notify.info(context, 'keypair.%s' % event_suffix, payload)
 
     def _validate_new_key_pair(self, context, user_id, key_name, key_type):
-        if key_type is not keypair_obj.KEYPAIR_TYPE_SSH:
+        if key_type not in [keypair_obj.KEYPAIR_TYPE_SSH,
+                            keypair_obj.KEYPAIR_TYPE_X509]:
             raise exception.InvalidKeypair(
                 reason=_('Specified Keypair type "%s" is invalid') % key_type)
 
@@ -3763,7 +3764,7 @@ class KeypairAPI(base.Base):
 
         self._notify(context, 'import.start', key_name)
 
-        fingerprint = crypto.generate_fingerprint(public_key)
+        fingerprint = self._generate_fingerprint(public_key, key_type)
 
         keypair = objects.KeyPair(context)
         keypair.user_id = user_id
@@ -3785,7 +3786,8 @@ class KeypairAPI(base.Base):
 
         self._notify(context, 'create.start', key_name)
 
-        private_key, public_key, fingerprint = crypto.generate_key_pair()
+        private_key, public_key, fingerprint = self._generate_key_pair(
+            context, user_id, key_type)
 
         keypair = objects.KeyPair(context)
         keypair.user_id = user_id
@@ -3798,6 +3800,18 @@ class KeypairAPI(base.Base):
         self._notify(context, 'create.end', key_name)
 
         return keypair, private_key
+
+    def _generate_fingerprint(self, public_key, key_type):
+        if key_type == keypair_obj.KEYPAIR_TYPE_SSH:
+            return crypto.generate_fingerprint(public_key)
+        elif key_type == keypair_obj.KEYPAIR_TYPE_X509:
+            return crypto.generate_x509_fingerprint(public_key)
+
+    def _generate_key_pair(self, context, user_id, key_type):
+        if key_type == keypair_obj.KEYPAIR_TYPE_SSH:
+            return crypto.generate_key_pair()
+        elif key_type == keypair_obj.KEYPAIR_TYPE_X509:
+            return crypto.generate_winrm_x509_cert(user_id, context.project_id)
 
     @wrap_exception()
     def delete_key_pair(self, context, user_id, key_name):

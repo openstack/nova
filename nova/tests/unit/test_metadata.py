@@ -45,6 +45,7 @@ from nova.network import api as network_api
 from nova.network import model as network_model
 from nova import objects
 from nova import test
+from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_network
 from nova.tests.unit.objects import test_security_group
@@ -60,9 +61,10 @@ def fake_inst_obj(context):
     inst = objects.Instance(
         context=context,
         id=1,
+        user_id='fake_user',
         uuid='b65cee2f-8c69-4aeb-be2f-f79742548fc2',
         project_id='test',
-        key_name="mykey",
+        key_name="key",
         key_data="ssh-rsa AAAAB3Nzai....N3NtHw== someuser@somehost",
         host='test',
         launch_index=1,
@@ -300,6 +302,7 @@ class MetadataTestCase(test.TestCase):
                               network_info=network_info)
 
     def test_InstanceMetadata_invoke_metadata_for_config_drive(self):
+        fakes.stub_out_key_pair_funcs(self.stubs)
         inst = self.instance.obj_clone()
         inst_md = base.InstanceMetadata(inst)
         for (path, value) in inst_md.metadata_for_config_drive():
@@ -396,6 +399,7 @@ class OpenStackMetadataTestCase(test.TestCase):
                          grizzly_supported_apis)
 
     def test_metadata_json(self):
+        fakes.stub_out_key_pair_funcs(self.stubs)
         inst = self.instance.obj_clone()
         content = [
             ('/etc/my.conf', "content of my.conf"),
@@ -429,8 +433,25 @@ class OpenStackMetadataTestCase(test.TestCase):
             found = mdinst.lookup("/openstack%s" % fent['content_path'])
             self.assertEqual(found, content)
 
+    def test_x509_keypair(self):
+        # check if the x509 content is set, if the keypair type is x509.
+        fakes.stub_out_key_pair_funcs(self.stubs, type='x509')
+        inst = self.instance.obj_clone()
+        mdinst = fake_InstanceMetadata(self.stubs, inst)
+
+        mdjson = mdinst.lookup("/openstack/2012-08-10/meta_data.json")
+        mddict = jsonutils.loads(mdjson)
+
+        # keypair is stubbed-out, so it's public_key is 'public_key'.
+        expected = {'name': self.instance['key_name'],
+                    'type': 'x509',
+                    'data': 'public_key'}
+
+        self.assertEqual([expected], mddict['keys'])
+
     def test_extra_md(self):
         # make sure extra_md makes it through to metadata
+        fakes.stub_out_key_pair_funcs(self.stubs)
         inst = self.instance.obj_clone()
         extra = {'foo': 'bar', 'mylist': [1, 2, 3],
                  'mydict': {"one": 1, "two": 2}}
@@ -470,6 +491,7 @@ class OpenStackMetadataTestCase(test.TestCase):
             mdinst.lookup, "/openstack/2012-08-10/user_data")
 
     def test_random_seed(self):
+        fakes.stub_out_key_pair_funcs(self.stubs)
         inst = self.instance.obj_clone()
         mdinst = fake_InstanceMetadata(self.stubs, inst)
 
@@ -486,6 +508,7 @@ class OpenStackMetadataTestCase(test.TestCase):
 
     def test_no_dashes_in_metadata(self):
         # top level entries in meta_data should not contain '-' in their name
+        fakes.stub_out_key_pair_funcs(self.stubs)
         inst = self.instance.obj_clone()
         mdinst = fake_InstanceMetadata(self.stubs, inst)
         mdjson = jsonutils.loads(
@@ -592,6 +615,7 @@ class MetadataHandlerTestCase(test.TestCase):
         self.assertEqual(response.status_int, 404)
 
     def test_json_data(self):
+        fakes.stub_out_key_pair_funcs(self.stubs)
         response = fake_request(self.stubs, self.mdinst,
                                 "/openstack/latest/meta_data.json")
         response_ctype = response.headers['Content-Type']
