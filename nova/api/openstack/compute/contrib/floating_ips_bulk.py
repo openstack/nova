@@ -85,8 +85,6 @@ class FloatingIPBulkController(object):
             raise webob.exc.HTTPUnprocessableEntity()
         params = body['floating_ips_bulk_create']
 
-        LOG.debug(params)
-
         if 'ip_range' not in params:
             raise webob.exc.HTTPUnprocessableEntity()
         ip_range = params['ip_range']
