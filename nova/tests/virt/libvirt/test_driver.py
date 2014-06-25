@@ -2724,68 +2724,6 @@ class LibvirtConnTestCase(test.TestCase):
         devices = conn.get_all_block_devices()
         self.assertEqual(devices, ['/path/to/dev/1', '/path/to/dev/3'])
 
-    def test_get_disks(self):
-        xml = [
-            # NOTE(vish): id 0 is skipped
-            None,
-            """
-                <domain type='kvm'>
-                    <devices>
-                        <disk type='file'>
-                            <source file='filename'/>
-                            <target dev='vda' bus='virtio'/>
-                        </disk>
-                        <disk type='block'>
-                            <source dev='/path/to/dev/1'/>
-                            <target dev='vdb' bus='virtio'/>
-                        </disk>
-                    </devices>
-                </domain>
-            """,
-            """
-                <domain type='kvm'>
-                    <devices>
-                        <disk type='file'>
-                            <source file='filename'/>
-                            <target dev='vda' bus='virtio'/>
-                        </disk>
-                    </devices>
-                </domain>
-            """,
-            """
-                <domain type='kvm'>
-                    <devices>
-                        <disk type='file'>
-                            <source file='filename'/>
-                            <target dev='vda' bus='virtio'/>
-                        </disk>
-                        <disk type='block'>
-                            <source dev='/path/to/dev/3'/>
-                            <target dev='vdb' bus='virtio'/>
-                        </disk>
-                    </devices>
-                </domain>
-            """,
-        ]
-
-        def fake_lookup(id):
-            return FakeVirtDomain(xml[id])
-
-        def fake_lookup_name(name):
-            return FakeVirtDomain(xml[1])
-
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 4
-        libvirt_driver.LibvirtDriver._conn.listDomainsID = lambda: range(4)
-        libvirt_driver.LibvirtDriver._conn.lookupByID = fake_lookup
-        libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup_name
-        libvirt_driver.LibvirtDriver._conn.listDefinedDomains = lambda: []
-
-        self.mox.ReplayAll()
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        devices = conn.get_disks(conn.list_instances()[0])
-        self.assertEqual(devices, ['vda', 'vdb'])
-
     def test_snapshot_in_ami_format(self):
         expected_calls = [
             {'args': (),

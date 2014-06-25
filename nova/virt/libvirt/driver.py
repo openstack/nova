@@ -3703,23 +3703,6 @@ class LibvirtDriver(driver.ComputeDriver):
                         devices.append(child.get('dev'))
         return devices
 
-    def get_disks(self, instance_name):
-        """Note that this function takes an instance name.
-
-        Returns a list of all block devices for this domain.
-        """
-        domain = self._lookup_by_name(instance_name)
-        xml = domain.XMLDesc(0)
-
-        try:
-            doc = etree.fromstring(xml)
-        except Exception:
-            return []
-
-        return filter(bool,
-                      [target.get("dev")
-                       for target in doc.findall('devices/disk/target')])
-
     def get_interfaces(self, xml):
         """Note that this function takes a domain xml.
 
