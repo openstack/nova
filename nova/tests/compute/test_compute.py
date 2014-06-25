@@ -9112,9 +9112,9 @@ class ComputeAPITestCase(BaseTestCase):
         instance.refresh()
         self.assertEqual(instance['task_state'], task_states.MIGRATING)
 
-    def test_evacuate(self):
+    def _check_evacuate(self, instance_params=None):
         instance = jsonutils.to_primitive(self._create_fake_instance(
-                                          services=True))
+                                          instance_params, services=True))
         instance_uuid = instance['uuid']
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertIsNone(instance['task_state'])
@@ -9142,6 +9142,12 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(instance['host'], 'fake_dest_host')
 
         db.instance_destroy(self.context, instance['uuid'])
+
+    def test_evacuate(self):
+        self._check_evacuate()
+
+    def test_error_evacuate(self):
+        self._check_evacuate({'vm_state': vm_states.ERROR})
 
     def test_fail_evacuate_from_non_existing_host(self):
         inst = {}
@@ -9211,9 +9217,7 @@ class ComputeAPITestCase(BaseTestCase):
             jsonutils.to_primitive(self._create_fake_instance(
                                     {'vm_state': vm_states.SOFT_DELETED})),
             jsonutils.to_primitive(self._create_fake_instance(
-                                    {'vm_state': vm_states.DELETED})),
-            jsonutils.to_primitive(self._create_fake_instance(
-                                    {'vm_state': vm_states.ERROR}))
+                                    {'vm_state': vm_states.DELETED}))
         ]
 
         for instance in instances:
