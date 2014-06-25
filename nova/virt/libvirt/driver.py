@@ -2457,9 +2457,9 @@ class LibvirtDriver(driver.ComputeDriver):
                             'console.log')
 
     @staticmethod
-    def _get_disk_config_path(instance):
+    def _get_disk_config_path(instance, suffix=''):
         return os.path.join(libvirt_utils.get_instance_path(instance),
-                            'disk.config')
+                            'disk.config' + suffix)
 
     def _chown_console_log_for_instance(self, instance):
         console_log = self._get_console_log_path(instance)
@@ -2682,7 +2682,7 @@ class LibvirtDriver(driver.ComputeDriver):
             inst_md = instance_metadata.InstanceMetadata(instance,
                 content=files, extra_md=extra_md, network_info=network_info)
             with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
-                configdrive_path = self._get_disk_config_path(instance)
+                configdrive_path = self._get_disk_config_path(instance, suffix)
                 LOG.info(_LI('Creating config drive at %(path)s'),
                          {'path': configdrive_path}, instance=instance)
 

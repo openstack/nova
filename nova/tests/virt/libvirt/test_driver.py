@@ -32,6 +32,7 @@ from oslo.config import cfg
 from xml.dom import minidom
 
 from nova.api.ec2 import cloud
+from nova.api.metadata import base as instance_metadata
 from nova.compute import flavors
 from nova.compute import manager
 from nova.compute import power_state
@@ -61,6 +62,7 @@ from nova.tests import fake_network
 import nova.tests.image.fake
 from nova.tests import matchers
 from nova.tests.objects import test_pci_device
+from nova.tests.virt.libvirt import fake_imagebackend
 from nova.tests.virt.libvirt import fake_libvirt_utils
 from nova.tests.virt.libvirt import fakelibvirt
 from nova import utils
@@ -5199,7 +5201,7 @@ class LibvirtConnTestCase(test.TestCase):
                                 ).AndReturn(instance)
         self.mox.StubOutWithMock(driver, "block_device_info_get_mapping")
         driver.block_device_info_get_mapping(vol
-                                 ).AndReturn(vol['block_device_mapping'])
+                                    ).AndReturn(vol['block_device_mapping'])
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
                                  "volume_driver_method")
         if volume_fail:
@@ -9280,6 +9282,156 @@ class LibvirtDriverTestCase(test.TestCase):
         self._test_attach_detach_interface(
             'detach_interface', power_state.SHUTDOWN,
             expected_flags=(libvirt.VIR_DOMAIN_AFFECT_CONFIG))
+
+    def test_rescue(self):
+        instance = self._create_instance()
+        instance.config_drive = False
+        dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
+                    "<devices>"
+                    "<disk type='file'><driver name='qemu' type='raw'/>"
+                    "<source file='/test/disk'/>"
+                    "<target dev='vda' bus='virtio'/></disk>"
+                    "<disk type='file'><driver name='qemu' type='qcow2'/>"
+                    "<source file='/test/disk.local'/>"
+                    "<target dev='vdb' bus='virtio'/></disk>"
+                    "</devices></domain>")
+        network_info = _fake_network_info(self.stubs, 1)
+
+        self.mox.StubOutWithMock(self.libvirtconnection,
+                                     '_get_existing_domain_xml')
+        self.mox.StubOutWithMock(libvirt_utils, 'write_to_file')
+        self.mox.StubOutWithMock(imagebackend.Backend, 'image')
+        self.mox.StubOutWithMock(imagebackend.Image, 'cache')
+        self.mox.StubOutWithMock(self.libvirtconnection, '_get_guest_xml')
+        self.mox.StubOutWithMock(self.libvirtconnection, '_destroy')
+        self.mox.StubOutWithMock(self.libvirtconnection, '_create_domain')
+
+        self.libvirtconnection._get_existing_domain_xml(mox.IgnoreArg(),
+                        mox.IgnoreArg()).MultipleTimes().AndReturn(dummyxml)
+        libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
+        libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg(),
+                               mox.IgnoreArg())
+        imagebackend.Backend.image(instance, 'kernel.rescue', 'raw'
+                                        ).AndReturn(fake_imagebackend.Raw())
+        imagebackend.Backend.image(instance, 'ramdisk.rescue', 'raw'
+                                        ).AndReturn(fake_imagebackend.Raw())
+        imagebackend.Backend.image(instance, 'disk.rescue', 'default'
+                                        ).AndReturn(fake_imagebackend.Raw())
+        imagebackend.Image.cache(context=mox.IgnoreArg(),
+                                fetch_func=mox.IgnoreArg(),
+                                filename=mox.IgnoreArg(),
+                                image_id=mox.IgnoreArg(),
+                                project_id=mox.IgnoreArg(),
+                                user_id=mox.IgnoreArg()).MultipleTimes()
+
+        imagebackend.Image.cache(context=mox.IgnoreArg(),
+                                fetch_func=mox.IgnoreArg(),
+                                filename=mox.IgnoreArg(),
+                                image_id=mox.IgnoreArg(),
+                                project_id=mox.IgnoreArg(),
+                                size=None, user_id=mox.IgnoreArg())
+
+        image_meta = {'id': 'fake', 'name': 'fake'}
+        self.libvirtconnection._get_guest_xml(mox.IgnoreArg(), instance,
+                                    network_info, mox.IgnoreArg(),
+                                    image_meta, rescue=mox.IgnoreArg(),
+                                    write_to_disk=mox.IgnoreArg()
+                                    ).AndReturn(dummyxml)
+
+        self.libvirtconnection._destroy(instance)
+        self.libvirtconnection._create_domain(mox.IgnoreArg())
+
+        self.mox.ReplayAll()
+
+        rescue_password = 'fake_password'
+
+        self.libvirtconnection.rescue(self.context, instance,
+                    network_info, image_meta, rescue_password)
+        self.mox.VerifyAll()
+
+    def test_rescue_config_drive(self):
+        instance = self._create_instance()
+        uuid = instance.uuid
+        configdrive_path = uuid + '/disk.config.rescue'
+        dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
+                    "<devices>"
+                    "<disk type='file'><driver name='qemu' type='raw'/>"
+                    "<source file='/test/disk'/>"
+                    "<target dev='vda' bus='virtio'/></disk>"
+                    "<disk type='file'><driver name='qemu' type='qcow2'/>"
+                    "<source file='/test/disk.local'/>"
+                    "<target dev='vdb' bus='virtio'/></disk>"
+                    "</devices></domain>")
+        network_info = _fake_network_info(self.stubs, 1)
+
+        self.mox.StubOutWithMock(self.libvirtconnection,
+                                    '_get_existing_domain_xml')
+        self.mox.StubOutWithMock(libvirt_utils, 'write_to_file')
+        self.mox.StubOutWithMock(imagebackend.Backend, 'image')
+        self.mox.StubOutWithMock(imagebackend.Image, 'cache')
+        self.mox.StubOutWithMock(instance_metadata.InstanceMetadata,
+                                                            '__init__')
+        self.mox.StubOutWithMock(configdrive, 'ConfigDriveBuilder')
+        self.mox.StubOutWithMock(configdrive.ConfigDriveBuilder, 'make_drive')
+        self.mox.StubOutWithMock(self.libvirtconnection, '_get_guest_xml')
+        self.mox.StubOutWithMock(self.libvirtconnection, '_destroy')
+        self.mox.StubOutWithMock(self.libvirtconnection, '_create_domain')
+
+        self.libvirtconnection._get_existing_domain_xml(mox.IgnoreArg(),
+                    mox.IgnoreArg()).MultipleTimes().AndReturn(dummyxml)
+        libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
+        libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg(),
+                                    mox.IgnoreArg())
+
+        imagebackend.Backend.image(instance, 'kernel.rescue', 'raw'
+                                    ).AndReturn(fake_imagebackend.Raw())
+        imagebackend.Backend.image(instance, 'ramdisk.rescue', 'raw'
+                                    ).AndReturn(fake_imagebackend.Raw())
+        imagebackend.Backend.image(instance, 'disk.rescue', 'default'
+                                    ).AndReturn(fake_imagebackend.Raw())
+
+        imagebackend.Image.cache(context=mox.IgnoreArg(),
+                                fetch_func=mox.IgnoreArg(),
+                                filename=mox.IgnoreArg(),
+                                image_id=mox.IgnoreArg(),
+                                project_id=mox.IgnoreArg(),
+                                user_id=mox.IgnoreArg()).MultipleTimes()
+
+        imagebackend.Image.cache(context=mox.IgnoreArg(),
+                                fetch_func=mox.IgnoreArg(),
+                                filename=mox.IgnoreArg(),
+                                image_id=mox.IgnoreArg(),
+                                project_id=mox.IgnoreArg(),
+                                size=None, user_id=mox.IgnoreArg())
+
+        instance_metadata.InstanceMetadata.__init__(mox.IgnoreArg(),
+                                            content=mox.IgnoreArg(),
+                                            extra_md=mox.IgnoreArg(),
+                                            network_info=mox.IgnoreArg())
+        cdb = self.mox.CreateMockAnything()
+        m = configdrive.ConfigDriveBuilder(instance_md=mox.IgnoreArg())
+        m.AndReturn(cdb)
+        # __enter__ and __exit__ are required by "with"
+        cdb.__enter__().AndReturn(cdb)
+        cdb.make_drive(mox.Regex(configdrive_path))
+        cdb.__exit__(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg()
+                        ).AndReturn(None)
+        image_meta = {'id': 'fake', 'name': 'fake'}
+        self.libvirtconnection._get_guest_xml(mox.IgnoreArg(), instance,
+                                network_info, mox.IgnoreArg(),
+                                image_meta, rescue=mox.IgnoreArg(),
+                                write_to_disk=mox.IgnoreArg()
+                                ).AndReturn(dummyxml)
+        self.libvirtconnection._destroy(instance)
+        self.libvirtconnection._create_domain(mox.IgnoreArg())
+
+        self.mox.ReplayAll()
+
+        rescue_password = 'fake_password'
+
+        self.libvirtconnection.rescue(self.context, instance, network_info,
+                                                image_meta, rescue_password)
+        self.mox.VerifyAll()
 
 
 class LibvirtVolumeUsageTestCase(test.TestCase):

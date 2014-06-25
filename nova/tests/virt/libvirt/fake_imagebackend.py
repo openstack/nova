@@ -56,3 +56,18 @@ class Backend(object):
         #NOTE(bfilippov): this is done in favor for
         # snapshot tests in test_libvirt.LibvirtConnTestCase
         return imagebackend.Backend(True).snapshot(path, image_type)
+
+
+class Raw(imagebackend.Image):
+    # NOTE(spandhe) Added for test_rescue and test_rescue_config_drive
+    def __init__(self, instance=None, disk_name=None, path=None):
+        pass
+
+    def _get_driver_format(self):
+        pass
+
+    def correct_format(self):
+        pass
+
+    def create_image(self, prepare_template, base, size, *args, **kwargs):
+        pass
