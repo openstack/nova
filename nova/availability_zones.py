@@ -15,9 +15,11 @@
 
 """Availability zone helper functions."""
 
+import collections
+
 from oslo.config import cfg
 
-from nova import db
+from nova import objects
 from nova.openstack.common import memorycache
 
 # NOTE(vish): azs don't change that often, so cache them for an hour to
@@ -61,11 +63,34 @@ def _make_cache_key(host):
     return "azcache-%s" % host.encode('utf-8')
 
 
+def _build_metadata_by_host(aggregates, hosts=None):
+    if hosts and not isinstance(hosts, set):
+        hosts = set(hosts)
+    metadata = collections.defaultdict(set)
+    for aggregate in aggregates:
+        for host in aggregate.hosts:
+            if hosts and host not in hosts:
+                continue
+            metadata[host].add(aggregate.metadata.values()[0])
+    return metadata
+
+
+def _build_metadata_by_key(aggregates):
+    metadata = collections.defaultdict(set)
+    for aggregate in aggregates:
+        for key, value in aggregate.metadata.iteritems():
+            metadata[key].add(value)
+    return metadata
+
+
 def set_availability_zones(context, services):
     # Makes sure services isn't a sqlalchemy object
     services = [dict(service.iteritems()) for service in services]
-    metadata = db.aggregate_host_get_by_metadata_key(context,
-            key='availability_zone')
+    hosts = set([service['host'] for service in services])
+    aggregates = objects.AggregateList.get_by_metadata_key(context,
+            'availability_zone', hosts=hosts)
+    metadata = _build_metadata_by_host(aggregates, hosts=hosts)
+    # gather all of the availability zones associated with a service host
     for service in services:
         az = CONF.internal_service_availability_zone
         if service['topic'] == "compute":
@@ -85,8 +110,9 @@ def get_host_availability_zone(context, host, conductor_api=None):
         metadata = conductor_api.aggregate_metadata_get_by_host(
             context, host, key='availability_zone')
     else:
-        metadata = db.aggregate_metadata_get_by_host(
-            context, host, key='availability_zone')
+        aggregates = objects.AggregateList.get_by_host(context, host,
+                                                       key='availability_zone')
+        metadata = _build_metadata_by_key(aggregates)
     if 'availability_zone' in metadata:
         az = list(metadata['availability_zone'])[0]
     else:
@@ -114,7 +140,7 @@ def get_availability_zones(context, get_only_available=False,
         :param with_hosts: whether to return hosts part of the AZs
         :type with_hosts: bool
     """
-    enabled_services = db.service_get_all(context, False)
+    enabled_services = objects.ServiceList.get_all(context, disabled=False)
     enabled_services = set_availability_zones(context, enabled_services)
 
     available_zones = []
@@ -130,7 +156,7 @@ def get_availability_zones(context, get_only_available=False,
             available_zones = list(_available_zones.items())
 
     if not get_only_available:
-        disabled_services = db.service_get_all(context, True)
+        disabled_services = objects.ServiceList.get_all(context, disabled=True)
         disabled_services = set_availability_zones(context, disabled_services)
         not_available_zones = []
         azs = available_zones if not with_hosts else dict(available_zones)
