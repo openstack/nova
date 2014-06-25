@@ -12,12 +12,13 @@
 
 import webob
 
+from nova.api.openstack.compute.schemas.v3 import flavor_manage
 from nova.api.openstack.compute.views import flavors as flavors_view
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova.compute import flavors
 from nova import exception
-from nova.openstack.common.gettextutils import _
 
 ALIAS = "flavor-manage"
 
@@ -50,21 +51,18 @@ class FlavorManageController(wsgi.Controller):
     @wsgi.response(201)
     @wsgi.action("create")
     @extensions.expected_errors((400, 409))
+    @validation.schema(flavor_manage.create)
     def _create(self, req, body):
         context = req.environ['nova.context']
         authorize(context)
 
-        if not self.is_valid_body(body, 'flavor'):
-            msg = _('Invalid request body')
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-
         vals = body['flavor']
 
-        name = vals.get('name')
+        name = vals['name']
         flavorid = vals.get('id')
-        memory = vals.get('ram')
-        vcpus = vals.get('vcpus')
-        root_gb = vals.get('disk')
+        memory = vals['ram']
+        vcpus = vals['vcpus']
+        root_gb = vals['disk']
         ephemeral_gb = vals.get('ephemeral', 0)
         swap = vals.get('swap', 0)
         rxtx_factor = vals.get('os-flavor-rxtx:rxtx_factor', 1.0)
@@ -83,8 +81,6 @@ class FlavorManageController(wsgi.Controller):
         except (exception.FlavorExists,
                 exception.FlavorIdExists) as err:
             raise webob.exc.HTTPConflict(explanation=err.format_message())
-        except exception.InvalidInput as exc:
-            raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
 
         return self._view_builder.show(req, flavor)
 
