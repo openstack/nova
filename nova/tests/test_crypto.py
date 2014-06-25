@@ -18,6 +18,7 @@ Tests for Crypto module.
 
 import os
 
+import mock
 import mox
 
 from nova import crypto
@@ -132,6 +133,18 @@ class RevokeCertsTest(test.TestCase):
         self.mox.ReplayAll()
 
         crypto.revoke_certs_by_project(project_id)
+
+    @mock.patch.object(utils, 'execute',
+                       side_effect=processutils.ProcessExecutionError)
+    @mock.patch.object(os, 'chdir', return_value=True)
+    def test_revoke_cert_process_execution_error(self, *args, **kargs):
+        self.assertRaises(exception.RevokeCertFailure, crypto.revoke_cert,
+                          2, 'test_file')
+
+    @mock.patch.object(os, 'chdir', return_value=False)
+    def test_revoke_cert_project_not_found_chdir_fails(self, *args, **kargs):
+        self.assertRaises(exception.ProjectNotFound, crypto.revoke_cert,
+                          2, 'test_file')
 
 
 class CertExceptionTests(test.TestCase):

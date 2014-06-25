@@ -147,6 +147,10 @@ class DecryptionFailure(NovaException):
     msg_fmt = _("Failed to decrypt text: %(reason)s")
 
 
+class RevokeCertFailure(NovaException):
+    msg_fmt = _("Failed to revoke certificate for %(project_id)s")
+
+
 class VirtualInterfaceCreateException(NovaException):
     msg_fmt = _("Virtual Interface creation failed")
 
