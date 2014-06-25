@@ -23,10 +23,8 @@ from oslo.config import cfg
 from oslo import messaging
 
 from nova.compute import rpcapi as compute_rpcapi
-from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
-from nova.conductor.tasks import live_migrate
 from nova import exception
 from nova import manager
 from nova.objects import instance as instance_obj
@@ -62,7 +60,7 @@ QUOTAS = quota.QUOTAS
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
-    target = messaging.Target(version='2.9')
+    target = messaging.Target(version='3.0')
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
@@ -71,63 +69,12 @@ class SchedulerManager(manager.Manager):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         super(SchedulerManager, self).__init__(service_name='scheduler',
                                                *args, **kwargs)
-        self.additional_endpoints.append(_SchedulerManagerV3Proxy(self))
-
-    def create_volume(self, context, volume_id, snapshot_id,
-                      reservations=None, image_id=None):
-        #function removed in RPC API 2.3
-        pass
-
-    @messaging.expected_exceptions(exception.NoValidHost,
-                                   exception.ComputeServiceUnavailable,
-                                   exception.InvalidHypervisorType,
-                                   exception.UnableToMigrateToSelf,
-                                   exception.DestinationHypervisorTooOld,
-                                   exception.InvalidLocalStorage,
-                                   exception.InvalidSharedStorage,
-                                   exception.MigrationPreCheckError)
-    def live_migration(self, context, instance, dest,
-                       block_migration, disk_over_commit):
-        try:
-            self._schedule_live_migration(context, instance, dest,
-                    block_migration, disk_over_commit)
-        except (exception.NoValidHost,
-                exception.ComputeServiceUnavailable,
-                exception.InvalidHypervisorType,
-                exception.UnableToMigrateToSelf,
-                exception.DestinationHypervisorTooOld,
-                exception.InvalidLocalStorage,
-                exception.InvalidSharedStorage,
-                exception.MigrationPreCheckError) as ex:
-            request_spec = {'instance_properties': {
-                'uuid': instance['uuid'], },
-            }
-            with excutils.save_and_reraise_exception():
-                self._set_vm_state_and_notify('live_migration',
-                            dict(vm_state=instance['vm_state'],
-                                 task_state=None,
-                                 expected_task_state=task_states.MIGRATING,),
-                                              context, ex, request_spec)
-        except Exception as ex:
-            request_spec = {'instance_properties': {
-                'uuid': instance['uuid'], },
-            }
-            with excutils.save_and_reraise_exception():
-                self._set_vm_state_and_notify('live_migration',
-                                             {'vm_state': vm_states.ERROR},
-                                             context, ex, request_spec)
-
-    def _schedule_live_migration(self, context, instance, dest,
-            block_migration, disk_over_commit):
-        task = live_migrate.LiveMigrationTask(context, instance,
-                    dest, block_migration, disk_over_commit)
-        return task.execute()
 
     # NOTE(alaski): Remove this method when the scheduler rpc interface is
     # bumped to 4.x as it is no longer used.
     def run_instance(self, context, request_spec, admin_password,
             injected_files, requested_networks, is_first_time,
-            filter_properties, legacy_bdm_in_spec=True):
+            filter_properties, legacy_bdm_in_spec):
         """Tries to call schedule_run_instance on the driver.
         Sets instance vm_state to ERROR on exceptions
         """
@@ -205,61 +152,6 @@ class SchedulerManager(manager.Manager):
         scheduler_utils.set_vm_state_and_notify(
             context, 'scheduler', method, updates, ex, request_spec, self.db)
 
-    # NOTE(hanlind): This method can be removed in v3.0 of the RPC API.
-    def show_host_resources(self, context, host):
-        """Shows the physical/usage resource given by hosts.
-
-        :param context: security context
-        :param host: hostname
-        :returns:
-            example format is below::
-
-                {'resource':D, 'usage':{proj_id1:D, proj_id2:D}}
-                D: {'vcpus': 3, 'memory_mb': 2048, 'local_gb': 2048,
-                    'vcpus_used': 12, 'memory_mb_used': 10240,
-                    'local_gb_used': 64}
-
-        """
-        # Getting compute node info and related instances info
-        service_ref = self.db.service_get_by_compute_host(context, host)
-        instance_refs = self.db.instance_get_all_by_host(context,
-                                                         service_ref['host'])
-
-        # Getting total available/used resource
-        compute_ref = service_ref['compute_node'][0]
-        resource = {'vcpus': compute_ref['vcpus'],
-                    'memory_mb': compute_ref['memory_mb'],
-                    'local_gb': compute_ref['local_gb'],
-                    'vcpus_used': compute_ref['vcpus_used'],
-                    'memory_mb_used': compute_ref['memory_mb_used'],
-                    'local_gb_used': compute_ref['local_gb_used']}
-        usage = dict()
-        if not instance_refs:
-            return {'resource': resource, 'usage': usage}
-
-        # Getting usage resource per project
-        project_ids = [i['project_id'] for i in instance_refs]
-        project_ids = list(set(project_ids))
-        for project_id in project_ids:
-            vcpus = [i['vcpus'] for i in instance_refs
-                     if i['project_id'] == project_id]
-
-            mem = [i['memory_mb'] for i in instance_refs
-                   if i['project_id'] == project_id]
-
-            root = [i['root_gb'] for i in instance_refs
-                    if i['project_id'] == project_id]
-
-            ephemeral = [i['ephemeral_gb'] for i in instance_refs
-                         if i['project_id'] == project_id]
-
-            usage[project_id] = {'vcpus': sum(vcpus),
-                                 'memory_mb': sum(mem),
-                                 'root_gb': sum(root),
-                                 'ephemeral_gb': sum(ephemeral)}
-
-        return {'resource': resource, 'usage': usage}
-
     @periodic_task.periodic_task
     def _expire_reservations(self, context):
         QUOTAS.expire(context)
@@ -268,22 +160,6 @@ class SchedulerManager(manager.Manager):
                                  run_immediately=True)
     def _run_periodic_tasks(self, context):
         self.driver.run_periodic_tasks(context)
-
-    # NOTE(russellb) This method can be removed in 3.0 of this API.  It is
-    # deprecated in favor of the method in the base API.
-    def get_backdoor_port(self, context):
-        return self.backdoor_port
-
-    # NOTE(hanlind): This method can be removed in v4.0 of the RPC API.
-    @messaging.expected_exceptions(exception.NoValidHost)
-    def select_hosts(self, context, request_spec, filter_properties):
-        """Returns host(s) best suited for this request_spec
-        and filter_properties.
-        """
-        dests = self.driver.select_destinations(context, request_spec,
-            filter_properties)
-        hosts = [dest['host'] for dest in dests]
-        return jsonutils.to_primitive(hosts)
 
     @messaging.expected_exceptions(exception.NoValidHost)
     def select_destinations(self, context, request_spec, filter_properties):
@@ -296,32 +172,3 @@ class SchedulerManager(manager.Manager):
         dests = self.driver.select_destinations(context, request_spec,
             filter_properties)
         return jsonutils.to_primitive(dests)
-
-
-class _SchedulerManagerV3Proxy(object):
-
-    target = messaging.Target(version='3.0')
-
-    def __init__(self, manager):
-        self.manager = manager
-
-    def select_destinations(self, ctxt, request_spec, filter_properties):
-        return self.manager.select_destinations(ctxt,
-                request_spec=request_spec, filter_properties=filter_properties)
-
-    def run_instance(self, ctxt, request_spec, admin_password,
-            injected_files, requested_networks, is_first_time,
-            filter_properties, legacy_bdm_in_spec):
-        return self.manager.run_instance(ctxt, request_spec=request_spec,
-                admin_password=admin_password, injected_files=injected_files,
-                requested_networks=requested_networks,
-                is_first_time=is_first_time,
-                filter_properties=filter_properties,
-                legacy_bdm_in_spec=legacy_bdm_in_spec)
-
-    def prep_resize(self, ctxt, instance, instance_type, image,
-            request_spec, filter_properties, reservations):
-        return self.manager.prep_resize(ctxt, instance=instance,
-                instance_type=instance_type, image=image,
-                request_spec=request_spec, filter_properties=filter_properties,
-                reservations=reservations)
