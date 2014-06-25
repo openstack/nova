@@ -1537,6 +1537,11 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             LOG.debug(msg, {'interface': interface, 'bridge': bridge})
             out, err = _execute('brctl', 'addif', bridge, interface,
                                 check_exit_code=False, run_as_root=True)
+            if (err and err != "device %s is already a member of a bridge; "
+                     "can't enslave it to bridge %s.\n" % (interface, bridge)):
+                msg = _('Failed to add interface: %s') % err
+                raise exception.NovaException(msg)
+
             out, err = _execute('ip', 'link', 'set', interface, 'up',
                                 check_exit_code=False, run_as_root=True)
 
@@ -1568,11 +1573,6 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             for fields in old_routes:
                 _execute('ip', 'route', 'add', *fields,
                          run_as_root=True)
-
-            if (err and err != "device %s is already a member of a bridge;"
-                     "can't enslave it to bridge %s.\n" % (interface, bridge)):
-                msg = _('Failed to add interface: %s') % err
-                raise exception.NovaException(msg)
 
         if filtering:
             # Don't forward traffic unless we were told to be a gateway
