@@ -1760,9 +1760,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(conductor_rpcapi.ConductorAPI,
                                  'instance_update')
         self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
+        self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
         self.compute._build_networks_for_instance(self.context, self.instance,
                 self.requested_networks, self.security_groups).AndReturn(
                         self.network_info)
+        self.compute._shutdown_instance(self.context, self.instance,
+                self.block_device_mapping, self.requested_networks,
+                try_deallocate_networks=False)
         self._notify_about_instance_usage('create.start',
             extra_usage_info={'image_name': self.image.get('name')})
         self._build_and_run_instance_update()
@@ -1788,9 +1792,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(conductor_rpcapi.ConductorAPI,
                                  'instance_update')
         self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
+        self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
         self.compute._build_networks_for_instance(self.context, self.instance,
                 self.requested_networks, self.security_groups).AndReturn(
                         self.network_info)
+        self.compute._shutdown_instance(self.context, self.instance,
+                self.block_device_mapping, self.requested_networks,
+                try_deallocate_networks=False)
         self._notify_about_instance_usage('create.start',
             extra_usage_info={'image_name': self.image.get('name')})
         self._build_and_run_instance_update()
@@ -1827,9 +1835,12 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     '_build_networks_for_instance',
                     return_value=self.network_info),
                 mock.patch.object(self.compute,
-                    '_notify_about_instance_usage')
+                    '_notify_about_instance_usage'),
+                mock.patch.object(self.compute,
+                    '_shutdown_instance')
         ) as (spawn, instance_update, save,
-                _build_networks_for_instance, _notify_about_instance_usage):
+                _build_networks_for_instance, _notify_about_instance_usage,
+                _shutdown_instance):
 
             self.assertRaises(exception.BuildAbortException,
                     self.compute._build_and_run_instance, self.context,
@@ -1860,6 +1871,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
             instance_update.assert_has_calls(mock.call(self.context,
                 self.instance['uuid'], mock.ANY, 'conductor'))
+
+            _shutdown_instance.assert_called_once_with(self.context,
+                    self.instance, self.block_device_mapping,
+                    self.requested_networks, try_deallocate_networks=False)
 
     @mock.patch('nova.compute.manager.ComputeManager._get_power_state')
     def test_spawn_waits_for_network_and_saves_info_cache(self, gps):
@@ -2012,9 +2027,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def test_build_resources_with_network_info_obj_on_spawn_failure(self):
         self.mox.StubOutWithMock(self.compute, '_cleanup_build_resources')
         self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
+        self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
         self.compute._build_networks_for_instance(self.context, self.instance,
                 self.requested_networks, self.security_groups).AndReturn(
                         network_model.NetworkInfo())
+        self.compute._shutdown_instance(self.context, self.instance,
+                self.block_device_mapping, self.requested_networks,
+                try_deallocate_networks=False)
         self._build_resources_instance_update()
         self.compute._cleanup_build_resources(self.context, self.instance,
                 self.block_device_mapping)
@@ -2036,9 +2055,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def test_build_resources_cleans_up_and_reraises_on_spawn_failure(self):
         self.mox.StubOutWithMock(self.compute, '_cleanup_build_resources')
         self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
+        self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
         self.compute._build_networks_for_instance(self.context, self.instance,
                 self.requested_networks, self.security_groups).AndReturn(
                         self.network_info)
+        self.compute._shutdown_instance(self.context, self.instance,
+                self.block_device_mapping, self.requested_networks,
+                try_deallocate_networks=False)
         self._build_resources_instance_update()
         self.compute._cleanup_build_resources(self.context, self.instance,
                 self.block_device_mapping)
@@ -2060,9 +2083,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def test_build_resources_aborts_on_cleanup_failure(self):
         self.mox.StubOutWithMock(self.compute, '_cleanup_build_resources')
         self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
+        self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
         self.compute._build_networks_for_instance(self.context, self.instance,
                 self.requested_networks, self.security_groups).AndReturn(
                         self.network_info)
+        self.compute._shutdown_instance(self.context, self.instance,
+                self.block_device_mapping, self.requested_networks,
+                try_deallocate_networks=False)
         self._build_resources_instance_update()
         self.compute._cleanup_build_resources(self.context, self.instance,
                 self.block_device_mapping).AndRaise(test.TestingException())
