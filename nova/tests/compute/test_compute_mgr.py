@@ -1416,30 +1416,19 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                               instance=instance,
                               new_pass=None)
 
-            # NOTE(mriedem): Currently instance.save is only called for
-            # NotImplementedError so if that's not the expected_exception then
-            # we have to check update_mock.
             if expected_exception == NotImplementedError:
                 instance_save_mock.assert_called_once_with(
                     expected_task_state=task_states.UPDATING_PASSWORD)
-                self.assertEqual(expected_vm_state, instance.vm_state)
-                self.assertEqual(expected_task_state, instance.task_state)
-                # check revert_task_state decorator
-                update_mock.assert_called_once_with(
-                    self.context, instance.uuid,
-                    task_state=expected_task_state)
             else:
-                self.assertFalse(instance_save_mock.called)
-                calls = [
-                    # _set_instance_error_state
-                    mock.call(self.context, instance.uuid,
-                              vm_state=expected_vm_state),
-                    # revert_task_state
-                    mock.call(self.context, instance.uuid,
-                              task_state=expected_task_state)
-                ]
-                update_mock.assert_has_calls(calls)
+                # setting the instance to error state
+                instance_save_mock.assert_called_once_with()
 
+            self.assertEqual(expected_vm_state, instance.vm_state)
+            # check revert_task_state decorator
+            update_mock.assert_called_once_with(
+                self.context, instance.uuid,
+                task_state=expected_task_state)
+            # check wrap_instance_fault decorator
             add_fault_mock.assert_called_once_with(
                 self.context, instance, mock.ANY, mock.ANY)
 
