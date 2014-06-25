@@ -282,7 +282,7 @@ class InterfaceAttachTests(test.NoDBTestCase):
         req.environ['nova.context'] = self.context
         self.assertRaises(exc.HTTPConflict,
                           attachments.create, req, FAKE_UUID1,
-                          jsonutils.loads(req.body))
+                          body=jsonutils.loads(req.body))
 
     def test_attach_interface_without_network_id(self):
         self.stubs.Set(compute_api.API, 'attach_interface',
@@ -295,7 +295,7 @@ class InterfaceAttachTests(test.NoDBTestCase):
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
         result = attachments.create(req, FAKE_UUID1,
-                                    jsonutils.loads(req.body))
+                                    body=jsonutils.loads(req.body))
         self.assertEqual(result['interface_attachment']['net_id'],
                          FAKE_NET_ID1)
 
@@ -311,7 +311,7 @@ class InterfaceAttachTests(test.NoDBTestCase):
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
         result = attachments.create(req,
-                                    FAKE_UUID1, jsonutils.loads(req.body))
+                                    FAKE_UUID1, body=jsonutils.loads(req.body))
         self.assertEqual(result['interface_attachment']['net_id'],
                          FAKE_NET_ID2)
 
@@ -329,7 +329,7 @@ class InterfaceAttachTests(test.NoDBTestCase):
         req.environ['nova.context'] = self.context
         self.assertRaises(exc.HTTPBadRequest,
                           attachments.create, req, FAKE_UUID1,
-                          jsonutils.loads(req.body))
+                          body=jsonutils.loads(req.body))
 
     def test_attach_interface_instance_not_found(self):
         attachments = attach_interfaces.InterfaceAttachmentController()
@@ -348,22 +348,33 @@ class InterfaceAttachTests(test.NoDBTestCase):
         self.stubs.Set(compute_api.API, 'get', fake_get_instance_exception)
         self.assertRaises(exc.HTTPNotFound,
                           attachments.create, req, 'fake',
-                          jsonutils.loads(req.body))
+                          body=jsonutils.loads(req.body))
 
-    def test_attach_interface_with_invalid_data(self):
+    def _test_attach_interface_with_invalid_parameter(self, param):
         self.stubs.Set(compute_api.API, 'attach_interface',
                        fake_attach_interface)
         attachments = attach_interfaces.InterfaceAttachmentController()
         req = webob.Request.blank(
             '/v3/servers/fake/os-attach-interfaces/attach')
         req.method = 'POST'
-        req.body = jsonutils.dumps({'interface_attachment':
-                                    {'net_id': 'bad_id'}})
+        req.body = jsonutils.dumps({'interface_attachment': param})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           attachments.create, req, FAKE_UUID1,
-                          jsonutils.loads(req.body))
+                          body=jsonutils.loads(req.body))
+
+    def test_attach_interface_instance_with_non_uuid_net_id(self):
+        param = {'net_id': 'non_uuid'}
+        self._test_attach_interface_with_invalid_parameter(param)
+
+    def test_attach_interface_instance_with_non_uuid_port_id(self):
+        param = {'port_id': 'non_uuid'}
+        self._test_attach_interface_with_invalid_parameter(param)
+
+    def test_attach_interface_instance_with_non_array_fixed_ips(self):
+        param = {'fixed_ips': 'non_array'}
+        self._test_attach_interface_with_invalid_parameter(param)
 
 
 class InterfaceAttachTestsWithMock(test.NoDBTestCase):
@@ -391,7 +402,7 @@ class InterfaceAttachTestsWithMock(test.NoDBTestCase):
         req.environ['nova.context'] = self.context
         self.assertRaises(exc.HTTPBadRequest,
                           attachments.create, req, FAKE_UUID1,
-                          jsonutils.loads(req.body))
+                          body=jsonutils.loads(req.body))
         attach_mock.assert_called_once_with(self.context, {}, None, None, None)
         get_mock.assert_called_once_with(self.context, FAKE_UUID1,
                                          want_objects=True,
