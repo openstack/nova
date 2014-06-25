@@ -18,6 +18,7 @@
 Manage hosts in the current zone.
 """
 
+from nova.openstack.common import jsonutils
 from nova.scheduler import host_manager
 
 
@@ -39,6 +40,9 @@ class BaremetalNodeState(host_manager.HostState):
         self.free_disk_mb = free_disk_mb
         self.vcpus_total = compute['vcpus']
         self.vcpus_used = compute['vcpus_used']
+
+        stats = compute.get('stats', '{}')
+        self.stats = jsonutils.loads(stats)
 
     def consume_from_instance(self, instance):
         self.free_ram_mb = 0
