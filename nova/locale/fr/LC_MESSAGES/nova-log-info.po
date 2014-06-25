@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-06-17 06:06+0000\n"
-"PO-Revision-Date: 2014-06-14 19:30+0000\n"
+"POT-Creation-Date: 2014-06-24 06:06+0000\n"
+"PO-Revision-Date: 2014-06-20 16:41+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: French (http://www.transifex.com/projects/p/nova/language/"
 "fr/)\n"
@@ -91,11 +91,69 @@ msgstr "Suppression ligne en double avec l'ID : %(id)s de la table : %(table)s"
 msgid "%(num_values)d values found, of which the minimum value will be used."
 msgstr ""
 
-#: nova/virt/libvirt/utils.py:719
+#: nova/virt/libvirt/imagecache.py:191
+#, python-format
+msgid "Writing stored info to %s"
+msgstr "Ecriture d'informations stockées dans %s"
+
+#: nova/virt/libvirt/imagecache.py:401
+#, python-format
+msgid ""
+"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
+msgstr ""
+"image %(id)s à (%(base_file)s) : vérification d'image ignorée, aucun hachage "
+"stocké"
+
+#: nova/virt/libvirt/imagecache.py:410
+#, python-format
+msgid "%(id)s (%(base_file)s): generating checksum"
+msgstr "%(id)s (%(base_file)s) : génération d'un total de contrôle"
+
+#: nova/virt/libvirt/imagecache.py:438
+#, python-format
+msgid "Base file too young to remove: %s"
+msgstr "Fichier de base trop jeune pour un retrait : %s"
+
+#: nova/virt/libvirt/imagecache.py:441
+#, python-format
+msgid "Removing base file: %s"
+msgstr "Retrait du fichier de base : %s"
+
+#: nova/virt/libvirt/imagecache.py:459
+#, python-format
+msgid "image %(id)s at (%(base_file)s): checking"
+msgstr "image %(id)s à (%(base_file)s) : vérification"
+
+#: nova/virt/libvirt/imagecache.py:483
+#, python-format
+msgid ""
+"image %(id)s at (%(base_file)s): in use: on this node %(local)d local, "
+"%(remote)d on other nodes sharing this instance storage"
+msgstr ""
+"image %(id)s à (%(base_file)s) : en cours d'utilisation : sur ce noeud "
+"%(local)d local, %(remote)d sur d'autres noeuds partageant ce stockage "
+"d'instance"
+
+#: nova/virt/libvirt/imagecache.py:550
+#, python-format
+msgid "Active base files: %s"
+msgstr "Fichiers de base actifs : %s"
+
+#: nova/virt/libvirt/imagecache.py:553
+#, python-format
+msgid "Corrupt base files: %s"
+msgstr "Fichiers de base endommagés : %s"
+
+#: nova/virt/libvirt/imagecache.py:557
+#, python-format
+msgid "Removable base files: %s"
+msgstr "Fichiers de base pouvant être retirés : %s"
+
+#: nova/virt/libvirt/utils.py:530
 msgid "findmnt tool is not installed"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:1353
+#: nova/virt/xenapi/vm_utils.py:1352
 #, python-format
 msgid ""
 "Image creation data, cacheable: %(cache)s, downloaded: %(downloaded)s "

@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-06-18 06:06+0000\n"
-"PO-Revision-Date: 2014-06-17 22:56+0000\n"
+"POT-Creation-Date: 2014-06-24 06:06+0000\n"
+"PO-Revision-Date: 2014-06-20 16:41+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Japanese (http://www.transifex.com/projects/p/nova/language/"
 "ja/)\n"
@@ -106,7 +106,29 @@ msgstr "DB 例外がラップされました。"
 msgid "Failed to migrate to version %s on engine %s"
 msgstr "バージョン%sをエンジン%sへの移行が失敗しました。"
 
-#: nova/virt/libvirt/utils.py:395
+#: nova/virt/libvirt/imagecache.py:130
+#, python-format
+msgid "Error reading image info file %(filename)s: %(error)s"
+msgstr ""
+"イメージ情報ファイル %(filename)s の読み取り中にエラーが発生しました: "
+"%(error)s"
+
+#: nova/virt/libvirt/imagecache.py:391
+#, python-format
+msgid "image %(id)s at (%(base_file)s): image verification failed"
+msgstr "(%(base_file)s) にあるイメージ %(id)s: イメージの検査が失敗しました"
+
+#: nova/virt/libvirt/imagecache.py:448
+#, python-format
+msgid "Failed to remove %(base_file)s, error was %(error)s"
+msgstr "%(base_file)s の削除に失敗しました。エラーは %(error)s"
+
+#: nova/virt/libvirt/lvm.py:201
 #, python-format
 msgid "ignoring unrecognized volume_clear='%s' value"
+msgstr ""
+
+#: nova/virt/libvirt/volume.py:141
+#, python-format
+msgid "Unknown content in connection_info/access_mode: %s"
 msgstr ""
