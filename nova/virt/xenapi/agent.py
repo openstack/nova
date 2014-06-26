@@ -28,6 +28,7 @@ from nova.compute import utils as compute_utils
 from nova import context
 from nova import crypto
 from nova import exception
+from nova import objects
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -209,12 +210,16 @@ class XenAPIBasedAgent(object):
 
     def _get_expected_build(self):
         ctxt = context.get_admin_context()
-        agent_build = self.virtapi.agent_build_get_by_triple(
+        agent_build = objects.Agent.get_by_triple(
             ctxt, 'xen', self.instance['os_type'],
             self.instance['architecture'])
         if agent_build:
             LOG.debug('Latest agent build for %(hypervisor)s/%(os)s'
-                      '/%(architecture)s is %(version)s', agent_build)
+                      '/%(architecture)s is %(version)s', {
+                            'hypervisor': agent_build.hypervisor,
+                            'os': agent_build.os,
+                            'architecture': agent_build.architecture,
+                            'version': agent_build.version})
         else:
             LOG.debug('No agent build found for %(hypervisor)s/%(os)s'
                       '/%(architecture)s', {

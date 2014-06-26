@@ -1082,29 +1082,29 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.check_vm_params_for_linux()
         self.assertEqual(actual_injected_files, injected_files)
 
-    def test_spawn_agent_upgrade(self):
+    @mock.patch('nova.db.agent_build_get_by_triple')
+    def test_spawn_agent_upgrade(self, mock_get):
         self.flags(use_agent_default=True,
                    group='xenserver')
 
-        def fake_agent_build(_self, *args):
-            return {"version": "1.1.0", "architecture": "x86-64",
-                    "hypervisor": "xen", "os": "windows",
-                    "url": "url", "md5hash": "asdf"}
-
-        self.stubs.Set(self.conn.virtapi, 'agent_build_get_by_triple',
-                       fake_agent_build)
+        mock_get.return_value = {"version": "1.1.0", "architecture": "x86-64",
+                                 "hypervisor": "xen", "os": "windows",
+                                 "url": "url", "md5hash": "asdf",
+                                 'created_at': None, 'updated_at': None,
+                                 'deleted_at': None, 'deleted': False,
+                                 'id': 1}
 
         self._test_spawn(IMAGE_VHD, None, None,
                          os_type="linux", architecture="x86-64")
 
-    def test_spawn_agent_upgrade_fails_silently(self):
-        def fake_agent_build(_self, *args):
-            return {"version": "1.1.0", "architecture": "x86-64",
-                    "hypervisor": "xen", "os": "windows",
-                    "url": "url", "md5hash": "asdf"}
-
-        self.stubs.Set(self.conn.virtapi, 'agent_build_get_by_triple',
-                       fake_agent_build)
+    @mock.patch('nova.db.agent_build_get_by_triple')
+    def test_spawn_agent_upgrade_fails_silently(self, mock_get):
+        mock_get.return_value = {"version": "1.1.0", "architecture": "x86-64",
+                                 "hypervisor": "xen", "os": "windows",
+                                 "url": "url", "md5hash": "asdf",
+                                 'created_at': None, 'updated_at': None,
+                                 'deleted_at': None, 'deleted': False,
+                                 'id': 1}
 
         self._test_spawn_fails_silently_with(exception.AgentError,
                 method="_plugin_agent_agentupdate", failure="fake_error")
