@@ -60,20 +60,6 @@ class DsUtilTestCase(test.NoDBTestCase):
         path = ds_util.build_datastore_path('ds', 'folder/file')
         self.assertEqual('[ds] folder/file', path)
 
-    def test_split_datastore_path(self):
-        ds, path = ds_util.split_datastore_path('[ds]')
-        self.assertEqual('ds', ds)
-        self.assertEqual('', path)
-        ds, path = ds_util.split_datastore_path('[ds] folder')
-        self.assertEqual('ds', ds)
-        self.assertEqual('folder', path)
-        ds, path = ds_util.split_datastore_path('[ds] folder/file')
-        self.assertEqual('ds', ds)
-        self.assertEqual('folder/file', path)
-        self.assertRaises(IndexError,
-                          ds_util.split_datastore_path,
-                          'split bad path')
-
     def test_file_delete(self):
         def fake_call_method(module, method, *args, **kwargs):
             self.assertEqual('DeleteDatastoreFile_Task', method)

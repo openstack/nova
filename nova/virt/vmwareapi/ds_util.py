@@ -104,17 +104,6 @@ def build_datastore_path(datastore_name, path):
     return str(DatastorePath(datastore_name, path))
 
 
-# TODO(vui): Convert all callers to use DatastorePath instead next.
-def split_datastore_path(datastore_path):
-    """Return the datastore and path from a datastore_path.
-
-    Split the VMware style datastore path to get the Datastore
-    name and the entity path.
-    """
-    ds_path_obj = DatastorePath.parse(datastore_path)
-    return ds_path_obj.datastore, ds_path_obj.rel_path
-
-
 def file_delete(session, datastore_path, dc_ref):
     LOG.debug("Deleting the datastore file %s", datastore_path)
     vim = session._get_vim()
