@@ -167,6 +167,22 @@ class DsUtilTestCase(test.NoDBTestCase):
             self.assertFalse(file_exists)
 
 
+class DatastoreTestCase(test.NoDBTestCase):
+    def test_ds(self):
+        ds = ds_util.Datastore("fake_ref", "ds_name")
+        self.assertEqual('ds_name', ds.name)
+        self.assertEqual('fake_ref', ds.ref)
+
+    def test_ds_invalid(self):
+        self.assertRaises(ValueError, ds_util.Datastore, None, "ds_name")
+        self.assertRaises(ValueError, ds_util.Datastore, "fake_ref", None)
+
+    def test_build_path(self):
+        ds = ds_util.Datastore("fake_ref", "ds_name")
+        ds_path = ds.build_path("some_dir", "foo.vmdk")
+        self.assertEqual('[ds_name] some_dir/foo.vmdk', str(ds_path))
+
+
 class DatastorePathTestCase(test.NoDBTestCase):
 
     def test_ds_path(self):
