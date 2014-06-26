@@ -174,7 +174,6 @@ def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
     try:
         vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
         LOG.debug(vdi_rec)
-        LOG.debug(type(vdi_rec))
     except session.XenAPI.Failure as exc:
         LOG.exception(exc)
         raise exception.StorageError(
