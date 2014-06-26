@@ -293,7 +293,10 @@ MIN_LIBVIRT_HOST_CPU_VERSION = (0, 9, 10)
 MIN_LIBVIRT_DEVICE_CALLBACK_VERSION = (1, 1, 1)
 # Live snapshot requirements
 REQ_HYPERVISOR_LIVESNAPSHOT = "QEMU"
-MIN_LIBVIRT_LIVESNAPSHOT_VERSION = (1, 0, 0)
+# TODO(sdague): this should be 1.0.0, but hacked to set 1.3.0 until
+# https://bugs.launchpad.net/nova/+bug/1334398
+# can be diagnosed & resolved
+MIN_LIBVIRT_LIVESNAPSHOT_VERSION = (1, 3, 0)
 MIN_QEMU_LIVESNAPSHOT_VERSION = (1, 3, 0)
 # block size tuning requirements
 MIN_LIBVIRT_BLOCKIO_VERSION = (0, 10, 2)
