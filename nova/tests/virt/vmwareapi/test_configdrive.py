@@ -170,7 +170,8 @@ class ConfigDriveTestCase(test.NoDBTestCase):
                                                mox.IgnoreArg(),
                                                mox.IgnoreArg(),
                                                mox.IgnoreArg(),
-                                               mox.IgnoreArg())
+                                               mox.IgnoreArg()
+                                               ).AndReturn('[ds1] fake.iso')
         self.conn._vmops._attach_cdrom_to_vm(mox.IgnoreArg(),
                                                mox.IgnoreArg(),
                                                mox.IgnoreArg(),
