@@ -1992,6 +1992,19 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
                                ' the vlan start cannot be greater'
                                ' than 4094'))
 
+        # Check that vlan is not greater than 4094 or less then 1
+        vlan_num = kwargs.get("vlan", None)
+        if vlan_num is not None:
+            try:
+                vlan_num = int(vlan_num)
+            except ValueError:
+                raise ValueError(_("vlan must be an integer"))
+            if vlan_num > 4094:
+                raise ValueError(_('The vlan number cannot be greater than'
+                                   ' 4094'))
+            if vlan_num < 1:
+                raise ValueError(_('The vlan number cannot be less than 1'))
+
         # check that num networks and network size fits in fixed_net
         fixed_net = netaddr.IPNetwork(kwargs['cidr'])
         if fixed_net.size < kwargs['num_networks'] * kwargs['network_size']:

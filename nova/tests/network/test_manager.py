@@ -23,6 +23,7 @@ import mox
 import netaddr
 from oslo.config import cfg
 from oslo import messaging
+import six
 
 from nova import context
 from nova import db
@@ -1014,6 +1015,35 @@ class VlanNetworkTestCase(test.TestCase):
                           network_size=100)
 
         self.assertEqual(networks[0]["vlan"], 102)
+
+    def test_vlan_parameter(self):
+        # vlan parameter could not be greater than 4094
+        exc = self.assertRaises(ValueError,
+                                self.network.create_networks,
+                                self.context_admin, label="fake",
+                                num_networks=1,
+                                vlan=4095, cidr='192.168.0.1/24')
+        error_msg = 'The vlan number cannot be greater than 4094'
+        self.assertIn(error_msg, six.text_type(exc))
+
+        # vlan parameter could not be less than 1
+        exc = self.assertRaises(ValueError,
+                                self.network.create_networks,
+                                self.context_admin, label="fake",
+                                num_networks=1,
+                                vlan=0, cidr='192.168.0.1/24')
+        error_msg = 'The vlan number cannot be less than 1'
+        self.assertIn(error_msg, six.text_type(exc))
+
+    def test_vlan_be_integer(self):
+        # vlan must be an integer
+        exc = self.assertRaises(ValueError,
+                                self.network.create_networks,
+                                self.context_admin, label="fake",
+                                num_networks=1,
+                                vlan='fake', cidr='192.168.0.1/24')
+        error_msg = 'vlan must be an integer'
+        self.assertIn(error_msg, six.text_type(exc))
 
     @mock.patch('nova.db.network_get')
     def test_validate_networks(self, net_get):
