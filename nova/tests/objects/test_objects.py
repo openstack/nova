@@ -876,6 +876,8 @@ class TestObjectSerializer(_BaseTestCase):
 # they come with a corresponding version bump in the affected
 # objects
 object_data = {
+    'Agent': '1.0-c4ff8a833aee8ae44ab8aed1a171273d',
+    'AgentList': '1.0-f8b860e1f2ce80e676ba1a37ddf86e4f',
     'Aggregate': '1.1-f5d477be06150529a9b2d27cc49030b5',
     'AggregateList': '1.1-3e67b6a4840b19c797504cc6056b27ff',
     'BlockDeviceMapping': '1.1-9968ffe513e7672484b0f528b034cd0f',
