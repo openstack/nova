@@ -1113,9 +1113,9 @@ class VMwareVMOps(object):
                                        step=2,
                                        total_steps=RESIZE_TOTAL_STEPS)
 
-        ds_ref = vm_util.get_datastore_ref_and_name(
+        ds_ref = vm_util.get_datastore(
                             self._session, self._cluster, host_ref,
-                            datastore_regex=self._datastore_regex)[0]
+                            datastore_regex=self._datastore_regex).ref
         dc_info = self.get_datacenter_ref_and_name(ds_ref)
         # 3. Clone the VM for instance
         vm_util.clone_vmref_for_instance(self._session, instance, vm_ref,

@@ -67,9 +67,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                  self._context, **values)
 
         fake_ds_ref = vmwareapi_fake.ManagedObjectReference('fake-ds')
-
-        self._ds_record = vm_util.DSRecord(
-                datastore=fake_ds_ref, name='fake_ds',
+        self._ds = ds_util.Datastore(
+                ref=fake_ds_ref, name='fake_ds',
                 capacity=10 * units.Gi,
                 freespace=10 * units.Gi)
         self._dc_info = vmops.DcInfo(
@@ -571,7 +570,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         recorded_methods = [c[1][1] for c in mock_call_method.mock_calls]
         self.assertEqual(expected_methods, recorded_methods)
 
-    @mock.patch('nova.virt.vmwareapi.vm_util.get_datastore_ref_and_name')
+    @mock.patch('nova.virt.vmwareapi.vm_util.get_datastore')
     @mock.patch(
         'nova.virt.vmwareapi.vmops.VMwareVCVMOps.get_datacenter_ref_and_name')
     @mock.patch('nova.virt.vmwareapi.vm_util.get_mo_id_from_instance',
@@ -608,7 +607,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                    mock_get_res_pool_ref,
                    mock_get_mo_id_for_instance,
                    mock_get_datacenter_ref_and_name,
-                   mock_get_datastore_ref_and_name,
+                   mock_get_datastore,
                    block_device_info=None,
                    power_on=True):
 
@@ -619,7 +618,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             'size': 1 * units.Gi,
         }
         network_info = mock.Mock()
-        mock_get_datastore_ref_and_name.return_value = self._ds_record
+        mock_get_datastore.return_value = self._ds
         mock_get_datacenter_ref_and_name.return_value = self._dc_info
         mock_call_method = mock.Mock(return_value='fake_task')
 
@@ -679,7 +678,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 mock_attach = self._vmops._volumeops.attach_root_volume
                 mock_attach.assert_called_once_with(
                         root_disk['connection_info'], self._instance, 'vda',
-                        self._ds_record.datastore)
+                        self._ds.ref)
                 self.assertFalse(_wait_for_task.called)
                 self.assertFalse(_fetch_image.called)
                 self.assertFalse(_call_method.called)
@@ -691,7 +690,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                         self._instance,
                         self._session._host_ip,
                         self._dc_info.name,
-                        self._ds_record.name,
+                        self._ds.name,
                         upload_file_name,
                         cookies='Fake-CookieJar')
                 self.assertTrue(len(_wait_for_task.mock_calls) > 0)

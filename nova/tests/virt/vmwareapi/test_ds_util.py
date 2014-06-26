@@ -15,6 +15,7 @@
 import contextlib
 import mock
 
+from nova.openstack.common import units
 from nova import test
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
@@ -169,9 +170,23 @@ class DsUtilTestCase(test.NoDBTestCase):
 
 class DatastoreTestCase(test.NoDBTestCase):
     def test_ds(self):
-        ds = ds_util.Datastore("fake_ref", "ds_name")
+        ds = ds_util.Datastore(
+                "fake_ref", "ds_name", 2 * units.Gi, 1 * units.Gi)
         self.assertEqual('ds_name', ds.name)
         self.assertEqual('fake_ref', ds.ref)
+        self.assertEqual(2 * units.Gi, ds.capacity)
+        self.assertEqual(1 * units.Gi, ds.freespace)
+
+    def test_ds_invalid_space(self):
+        self.assertRaises(ValueError, ds_util.Datastore,
+                "fake_ref", "ds_name", 1 * units.Gi, 2 * units.Gi)
+        self.assertRaises(ValueError, ds_util.Datastore,
+                "fake_ref", "ds_name", None, 2 * units.Gi)
+
+    def test_ds_no_capacity_no_freespace(self):
+        ds = ds_util.Datastore("fake_ref", "ds_name")
+        self.assertIsNone(ds.capacity)
+        self.assertIsNone(ds.freespace)
 
     def test_ds_invalid(self):
         self.assertRaises(ValueError, ds_util.Datastore, None, "ds_name")

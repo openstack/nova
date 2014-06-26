@@ -65,26 +65,26 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         super(VMwareVMUtilTestCase, self).tearDown()
         fake.reset()
 
-    def test_get_datastore_ref_and_name(self):
+    def test_get_datastore(self):
         fake_objects = fake.FakeRetrieveResult()
         fake_objects.add_object(fake.Datastore())
-        result = vm_util.get_datastore_ref_and_name(
+        result = vm_util.get_datastore(
             fake_session(fake_objects))
 
-        self.assertEqual(result[1], "fake-ds")
-        self.assertEqual(result[2], units.Ti)
-        self.assertEqual(result[3], 500 * units.Gi)
+        self.assertEqual("fake-ds", result.name)
+        self.assertEqual(units.Ti, result.capacity)
+        self.assertEqual(500 * units.Gi, result.freespace)
 
-    def test_get_datastore_ref_and_name_with_regex(self):
+    def test_get_datastore_with_regex(self):
         # Test with a regex that matches with a datastore
         datastore_valid_regex = re.compile("^openstack.*\d$")
         fake_objects = fake.FakeRetrieveResult()
         fake_objects.add_object(fake.Datastore("openstack-ds0"))
         fake_objects.add_object(fake.Datastore("fake-ds0"))
         fake_objects.add_object(fake.Datastore("fake-ds1"))
-        result = vm_util.get_datastore_ref_and_name(
+        result = vm_util.get_datastore(
             fake_session(fake_objects), None, None, datastore_valid_regex)
-        self.assertEqual("openstack-ds0", result[1])
+        self.assertEqual("openstack-ds0", result.name)
 
     def _test_get_stats_from_cluster(self, connection_state="connected",
                                      maintenance_mode=False):
@@ -165,7 +165,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     def test_get_stats_from_cluster_hosts_connected_and_maintenance(self):
         self._test_get_stats_from_cluster(maintenance_mode=True)
 
-    def test_get_datastore_ref_and_name_with_token(self):
+    def test_get_datastore_with_token(self):
         regex = re.compile("^ds.*\d$")
         fake0 = fake.FakeRetrieveResult()
         fake0.add_object(fake.Datastore("ds0", 10 * units.Gi, 5 * units.Gi))
@@ -174,22 +174,22 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake1 = fake.FakeRetrieveResult()
         fake1.add_object(fake.Datastore("ds2", 10 * units.Gi, 8 * units.Gi))
         fake1.add_object(fake.Datastore("ds3", 10 * units.Gi, 1 * units.Gi))
-        result = vm_util.get_datastore_ref_and_name(
+        result = vm_util.get_datastore(
             fake_session(fake0, fake1), None, None, regex)
-        self.assertEqual("ds2", result[1])
+        self.assertEqual("ds2", result.name)
 
-    def test_get_datastore_ref_and_name_with_list(self):
+    def test_get_datastore_with_list(self):
         # Test with a regex containing whitelist of datastores
         datastore_valid_regex = re.compile("(openstack-ds0|openstack-ds2)")
         fake_objects = fake.FakeRetrieveResult()
         fake_objects.add_object(fake.Datastore("openstack-ds0"))
         fake_objects.add_object(fake.Datastore("openstack-ds1"))
         fake_objects.add_object(fake.Datastore("openstack-ds2"))
-        result = vm_util.get_datastore_ref_and_name(
+        result = vm_util.get_datastore(
             fake_session(fake_objects), None, None, datastore_valid_regex)
-        self.assertNotEqual("openstack-ds1", result[1])
+        self.assertNotEqual("openstack-ds1", result.name)
 
-    def test_get_datastore_ref_and_name_with_regex_error(self):
+    def test_get_datastore_with_regex_error(self):
         # Test with a regex that has no match
         # Checks if code raises DatastoreNotFound with a specific message
         datastore_invalid_regex = re.compile("unknown-ds")
@@ -201,7 +201,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         # assertRaisesRegExp would have been a good choice instead of
         # try/catch block, but it's available only from Py 2.7.
         try:
-            vm_util.get_datastore_ref_and_name(
+            vm_util.get_datastore(
                 fake_session(fake_objects), None, None,
                 datastore_invalid_regex)
         except exception.DatastoreNotFound as e:
@@ -210,14 +210,14 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             self.fail("DatastoreNotFound Exception was not raised with "
                       "message: %s" % exp_message)
 
-    def test_get_datastore_ref_and_name_without_datastore(self):
+    def test_get_datastore_without_datastore(self):
 
         self.assertRaises(exception.DatastoreNotFound,
-                vm_util.get_datastore_ref_and_name,
+                vm_util.get_datastore,
                 fake_session(None), host="fake-host")
 
         self.assertRaises(exception.DatastoreNotFound,
-                vm_util.get_datastore_ref_and_name,
+                vm_util.get_datastore,
                 fake_session(None), cluster="fake-cluster")
 
     def test_get_host_ref_from_id(self):
@@ -241,9 +241,9 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                           vm_util.get_host_ref,
                           fake_session(""), 'fake_cluster')
 
-    def test_get_datastore_ref_and_name_no_host_in_cluster(self):
+    def test_get_datastore_no_host_in_cluster(self):
         self.assertRaises(exception.DatastoreNotFound,
-                          vm_util.get_datastore_ref_and_name,
+                          vm_util.get_datastore,
                           fake_session(""), 'fake_cluster')
 
     @mock.patch.object(vm_util, '_get_vm_ref_from_vm_uuid',
@@ -320,7 +320,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertIsNotNone(prop4)
         self.assertEqual('bar1', prop4.val)
 
-    def test_get_datastore_ref_and_name_inaccessible_ds(self):
+    def test_get_datastore_inaccessible_ds(self):
         data_store = fake.Datastore()
         data_store.set("summary.accessible", False)
 
@@ -328,7 +328,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake_objects.add_object(data_store)
 
         self.assertRaises(exception.DatastoreNotFound,
-                vm_util.get_datastore_ref_and_name,
+                vm_util.get_datastore,
                 fake_session(fake_objects))
 
     def test_get_resize_spec(self):

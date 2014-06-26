@@ -26,19 +26,28 @@ LOG = logging.getLogger(__name__)
 
 class Datastore(object):
 
-    def __init__(self, ref, name):
+    def __init__(self, ref, name, capacity=None, freespace=None):
         """Datastore object holds ref and name together for convenience.
 
         :param ref: a vSphere reference to a datastore
         :param name: vSphere unique name for this datastore
+        :param capacity: (optional) capacity in bytes of this datastore
+        :param freespace: (optional) free space in bytes of datastore
         """
         if name is None:
             raise ValueError(_("Datastore name cannot be None"))
         if ref is None:
             raise ValueError(_("Datastore reference cannot be None"))
+        if freespace is not None and capacity is None:
+            raise ValueError(_("Invalid capacity"))
+        if capacity is not None and freespace is not None:
+            if capacity < freespace:
+                raise ValueError(_("Capacity is smaller than free space"))
 
         self._ref = ref
         self._name = name
+        self._capacity = capacity
+        self._freespace = freespace
 
     @property
     def ref(self):
@@ -47,6 +56,14 @@ class Datastore(object):
     @property
     def name(self):
         return self._name
+
+    @property
+    def capacity(self):
+        return self._capacity
+
+    @property
+    def freespace(self):
+        return self._freespace
 
     def build_path(self, *paths):
         """Constructs and returns a DatastorePath.
