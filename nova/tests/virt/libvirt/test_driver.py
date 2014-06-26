@@ -409,7 +409,7 @@ class LibvirtConnTestCase(test.TestCase):
         # returned by libvirt becomes the serial whose value is checked for in
         # test_xml_and_uri_* below.
         self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.driver.LibvirtDriver.get_host_uuid',
+            'nova.virt.libvirt.driver.LibvirtDriver._get_host_uuid',
             lambda _: 'cef19ce0-0ca2-11df-855d-b19fbce37686'))
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.imagebackend.libvirt_utils',
@@ -786,7 +786,7 @@ class LibvirtConnTestCase(test.TestCase):
         @mock.patch.object(libvirt, 'registerErrorHandler',
                            side_effect=fake_registerErrorHandler)
         @mock.patch.object(libvirt_driver.LibvirtDriver,
-                           'get_host_capabilities',
+                           '_get_host_capabilities',
                             side_effect=fake_get_host_capabilities)
         def test_init_host(get_host_capabilities, register_error_handler):
             conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -904,7 +904,7 @@ class LibvirtConnTestCase(test.TestCase):
         # Test old version of libvirt, it shouldn't see the `aes' feature
         with mock.patch('nova.virt.libvirt.driver.libvirt') as mock_libvirt:
             del mock_libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
-            caps = conn.get_host_capabilities()
+            caps = conn._get_host_capabilities()
             self.assertNotIn('aes', [x.name for x in caps.host.cpu.features])
 
         # Test new verion of libvirt, should find the `aes' feature
@@ -912,7 +912,7 @@ class LibvirtConnTestCase(test.TestCase):
             mock_libvirt['VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES'] = 1
             # Cleanup the capabilities cache firstly
             conn._caps = None
-            caps = conn.get_host_capabilities()
+            caps = conn._get_host_capabilities()
             self.assertIn('aes', [x.name for x in caps.host.cpu.features])
 
     def test_cpu_features_are_not_duplicated(self):
@@ -921,7 +921,7 @@ class LibvirtConnTestCase(test.TestCase):
         # Test old version of libvirt. Should return single 'hypervisor'
         with mock.patch('nova.virt.libvirt.driver.libvirt') as mock_libvirt:
             del mock_libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
-            caps = conn.get_host_capabilities()
+            caps = conn._get_host_capabilities()
             cnt = [x.name for x in caps.host.cpu.features].count('hypervisor')
             self.assertEqual(1, cnt)
 
@@ -930,7 +930,7 @@ class LibvirtConnTestCase(test.TestCase):
             mock_libvirt['VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES'] = 1
             # Cleanup the capabilities cache firstly
             conn._caps = None
-            caps = conn.get_host_capabilities()
+            caps = conn._get_host_capabilities()
             cnt = [x.name for x in caps.host.cpu.features].count('hypervisor')
             self.assertEqual(1, cnt)
 
@@ -953,7 +953,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         with mock.patch.object(conn._conn, 'baselineCPU',
                                side_effect=not_supported_exc):
-            caps = conn.get_host_capabilities()
+            caps = conn._get_host_capabilities()
             self.assertEqual(vconfig.LibvirtConfigCaps, type(caps))
             self.assertNotIn('aes', [x.name for x in caps.host.cpu.features])
 
@@ -968,14 +968,15 @@ class LibvirtConnTestCase(test.TestCase):
 
         with mock.patch.object(conn._conn, 'baselineCPU',
                                side_effect=other_exc):
-            self.assertRaises(libvirt.libvirtError, conn.get_host_capabilities)
+            self.assertRaises(libvirt.libvirtError,
+                              conn._get_host_capabilities)
 
     def test_lxc_get_host_capabilities_failed(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
         with mock.patch.object(conn._conn, 'baselineCPU', return_value=-1):
             setattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', 1)
-            caps = conn.get_host_capabilities()
+            caps = conn._get_host_capabilities()
             delattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES')
             self.assertEqual(vconfig.LibvirtConfigCaps, type(caps))
             self.assertNotIn('aes', [x.name for x in caps.host.cpu.features])
@@ -2130,7 +2131,7 @@ class LibvirtConnTestCase(test.TestCase):
                                             instance_ref)
 
         self.stubs.Set(libvirt_driver.LibvirtDriver,
-                       "get_host_capabilities",
+                       "_get_host_capabilities",
                        get_host_capabilities_stub)
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -2157,7 +2158,7 @@ class LibvirtConnTestCase(test.TestCase):
                                             instance_ref)
 
         self.stubs.Set(libvirt_driver.LibvirtDriver,
-                       "get_host_capabilities",
+                       "_get_host_capabilities",
                        get_host_capabilities_stub)
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -2388,7 +2389,7 @@ class LibvirtConnTestCase(test.TestCase):
                        "getLibVersion",
                        get_lib_version_stub)
         self.stubs.Set(libvirt_driver.LibvirtDriver,
-                       "get_host_capabilities",
+                       "_get_host_capabilities",
                        get_host_capabilities_stub)
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = db.instance_create(self.context, self.test_instance)
@@ -5948,7 +5949,7 @@ class LibvirtConnTestCase(test.TestCase):
             return caps
 
         self.stubs.Set(libvirt_driver.LibvirtDriver,
-                       'get_host_capabilities',
+                       '_get_host_capabilities',
                        get_host_capabilities_stub)
 
         want = {"vendor": "AMD",
@@ -6536,7 +6537,7 @@ class LibvirtConnTestCase(test.TestCase):
             return caps
 
         self.stubs.Set(libvirt_driver.LibvirtDriver,
-                       'get_host_capabilities',
+                       '_get_host_capabilities',
                        get_host_capabilities_stub)
 
         want = [('x86_64', 'kvm', 'hvm'),

@@ -597,7 +597,7 @@ class LibvirtDriver(driver.ComputeDriver):
         unknown. Currently, only qemu or kvm on intel 32- or 64-bit systems
         is tested upstream.
         """
-        caps = self.get_host_capabilities()
+        caps = self._get_host_capabilities()
         arch = caps.host.cpu.arch
         if (CONF.libvirt.virt_type not in ('qemu', 'kvm') or
                 arch not in ('i686', 'x86_64')):
@@ -2832,7 +2832,7 @@ class LibvirtDriver(driver.ComputeDriver):
                          'due to an unexpected exception.'), CONF.host,
                      exc_info=True)
 
-    def get_host_capabilities(self):
+    def _get_host_capabilities(self):
         """Returns an instance of config.LibvirtConfigCaps representing
            the capabilities of the host.
         """
@@ -2863,18 +2863,18 @@ class LibvirtDriver(driver.ComputeDriver):
                         raise
         return self._caps
 
-    def get_host_uuid(self):
+    def _get_host_uuid(self):
         """Returns a UUID representing the host."""
-        caps = self.get_host_capabilities()
+        caps = self._get_host_capabilities()
         return caps.host.uuid
 
-    def get_host_cpu_for_guest(self):
+    def _get_host_cpu_for_guest(self):
         """Returns an instance of config.LibvirtConfigGuestCPU
            representing the host's CPU model & topology with
            policy for configuring a guest to match
         """
 
-        caps = self.get_host_capabilities()
+        caps = self._get_host_capabilities()
         hostcpu = caps.host.cpu
         guestcpu = vconfig.LibvirtConfigGuestCPU()
 
@@ -2935,7 +2935,7 @@ class LibvirtDriver(driver.ComputeDriver):
             cpu = vconfig.LibvirtConfigGuestCPU()
             cpu.model = model
         elif mode == "host-model":
-            cpu = self.get_host_cpu_for_guest()
+            cpu = self._get_host_cpu_for_guest()
         elif mode == "host-passthrough":
             msg = _("Passthrough of the host CPU was requested but "
                     "this libvirt version does not support this feature")
@@ -3062,7 +3062,7 @@ class LibvirtDriver(driver.ComputeDriver):
         sysinfo.system_product = version.product_string()
         sysinfo.system_version = version.version_string_with_package()
 
-        sysinfo.system_serial = self.get_host_uuid()
+        sysinfo.system_serial = self._get_host_uuid()
         sysinfo.system_uuid = instance['uuid']
 
         return sysinfo
@@ -3145,7 +3145,7 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.os_loader = CONF.libvirt.xen_hvmloader_path
 
         if CONF.libvirt.virt_type in ("kvm", "qemu"):
-            caps = self.get_host_capabilities()
+            caps = self._get_host_capabilities()
             if caps.host.cpu.arch in ("i686", "x86_64"):
                 guest.sysinfo = self._get_guest_config_sysinfo(instance)
                 guest.os_smbios = vconfig.LibvirtConfigGuestSMBIOS()
@@ -3914,7 +3914,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         :returns: List of tuples describing instance capabilities
         """
-        caps = self.get_host_capabilities()
+        caps = self._get_host_capabilities()
         instance_caps = list()
         for g in caps.guests:
             for dt in g.domtype:
@@ -3933,7 +3933,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         """
 
-        caps = self.get_host_capabilities()
+        caps = self._get_host_capabilities()
         cpu_info = dict()
 
         cpu_info['arch'] = caps.host.cpu.arch
