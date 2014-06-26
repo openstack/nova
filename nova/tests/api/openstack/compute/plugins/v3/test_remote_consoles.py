@@ -209,6 +209,15 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 501)
 
+    def test_get_vnc_console_with_undefined_param(self):
+        body = {'get_vnc_console': {'type': 'novnc', 'undefined': 'foo'}}
+        req = webob.Request.blank('/v3/servers/1/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(self.app)
+        self.assertEqual(400, res.status_int)
+
     def test_get_spice_console(self):
         body = {'get_spice_console': {'type': 'spice-html5'}}
         req = webob.Request.blank('/v3/servers/1/action')
@@ -307,6 +316,16 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         res = req.get_response(self.app)
         self.assertEqual(400, res.status_int)
 
+    def test_get_spice_console_with_undefined_param(self):
+        body = {'get_spice_console': {'type': 'spice-html5',
+                                      'undefined': 'foo'}}
+        req = webob.Request.blank('/v3/servers/1/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(self.app)
+        self.assertEqual(400, res.status_int)
+
     def test_get_rdp_console(self):
         body = {'get_rdp_console': {'type': 'rdp-html5'}}
         req = webob.Request.blank('/v3/servers/1/action')
@@ -389,5 +408,14 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
+        res = req.get_response(self.app)
+        self.assertEqual(400, res.status_int)
+
+    def test_get_rdp_console_with_undefined_param(self):
+        body = {'get_rdp_console': {'type': 'rdp-html5', 'undefined': 'foo'}}
+        req = webob.Request.blank('/v3/servers/1/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
         res = req.get_response(self.app)
         self.assertEqual(400, res.status_int)
