@@ -148,6 +148,7 @@ class ConductorAPI(object):
     ...  - Remove instance_fault_create()
     ...  - Remove action_event_start() and action_event_finish()
     ...  - Remove instance_get_by_uuid()
+    ...  - Remove agent_build_get_by_triple()
     """
 
     VERSION_ALIASES = {
@@ -204,12 +205,6 @@ class ConductorAPI(object):
     def provider_fw_rule_get_all(self, context):
         cctxt = self.client.prepare()
         return cctxt.call(context, 'provider_fw_rule_get_all')
-
-    def agent_build_get_by_triple(self, context, hypervisor, os, architecture):
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'agent_build_get_by_triple',
-                          hypervisor=hypervisor, os=os,
-                          architecture=architecture)
 
     def block_device_mapping_update_or_create(self, context, values,
                                               create=None):

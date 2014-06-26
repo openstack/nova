@@ -103,10 +103,6 @@ class LocalAPI(object):
     def provider_fw_rule_get_all(self, context):
         return self._manager.provider_fw_rule_get_all(context)
 
-    def agent_build_get_by_triple(self, context, hypervisor, os, architecture):
-        return self._manager.agent_build_get_by_triple(context, hypervisor,
-                                                       os, architecture)
-
     def block_device_mapping_create(self, context, values):
         return self._manager.block_device_mapping_update_or_create(context,
                                                                    values,

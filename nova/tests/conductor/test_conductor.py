@@ -170,17 +170,6 @@ class _BaseTestCase(object):
         result = self.conductor.provider_fw_rule_get_all(self.context)
         self.assertEqual(result, fake_rules)
 
-    def test_agent_build_get_by_triple(self):
-        self.mox.StubOutWithMock(db, 'agent_build_get_by_triple')
-        db.agent_build_get_by_triple(self.context, 'fake-hv', 'fake-os',
-                                     'fake-arch').AndReturn('it worked')
-        self.mox.ReplayAll()
-        result = self.conductor.agent_build_get_by_triple(self.context,
-                                                          'fake-hv',
-                                                          'fake-os',
-                                                          'fake-arch')
-        self.assertEqual(result, 'it worked')
-
     def test_block_device_mapping_get_all_by_instance(self):
         fake_inst = {'uuid': 'fake-uuid'}
         self.mox.StubOutWithMock(db,
@@ -771,6 +760,17 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         db.action_event_finish(self.context, mox.IgnoreArg())
         self.mox.ReplayAll()
         self.conductor.action_event_finish(self.context, {})
+
+    def test_agent_build_get_by_triple(self):
+        self.mox.StubOutWithMock(db, 'agent_build_get_by_triple')
+        db.agent_build_get_by_triple(self.context, 'fake-hv', 'fake-os',
+                                     'fake-arch').AndReturn('it worked')
+        self.mox.ReplayAll()
+        result = self.conductor.agent_build_get_by_triple(self.context,
+                                                          'fake-hv',
+                                                          'fake-os',
+                                                          'fake-arch')
+        self.assertEqual(result, 'it worked')
 
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):

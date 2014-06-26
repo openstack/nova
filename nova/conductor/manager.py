@@ -189,6 +189,7 @@ class ConductorManager(manager.Manager):
         rules = self.db.provider_fw_rule_get_all(context)
         return jsonutils.to_primitive(rules)
 
+    # NOTE(danms): This can be removed in version 3.0 of the RPC API
     def agent_build_get_by_triple(self, context, hypervisor, os, architecture):
         info = self.db.agent_build_get_by_triple(context, hypervisor, os,
                                                  architecture)
