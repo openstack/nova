@@ -23,9 +23,7 @@ from nova.api import validation
 from nova import compute
 from nova.compute import vm_states
 from nova import exception
-from nova.openstack.common import log as logging
 
-LOG = logging.getLogger(__name__)
 ALIAS = "os-admin-actions"
 
 # States usable in resetState action
