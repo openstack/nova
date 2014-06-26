@@ -3274,6 +3274,39 @@ class ComputeTestCase(BaseTestCase):
                 self.compute.get_rdp_console, self.context, 'rdp-html5',
                 instance=instance)
 
+    def test_vnc_console_disabled(self):
+        self.flags(vnc_enabled=False)
+        instance = self._create_fake_instance_obj(
+                params={'vm_state': vm_states.BUILDING})
+
+        self.compute = utils.ExceptionHelper(self.compute)
+
+        self.assertRaises(exception.ConsoleTypeUnavailable,
+                self.compute.get_vnc_console, self.context, 'novnc',
+                instance=instance)
+
+    def test_spice_console_disabled(self):
+        self.flags(enabled=False, group='spice')
+        instance = self._create_fake_instance_obj(
+                params={'vm_state': vm_states.BUILDING})
+
+        self.compute = utils.ExceptionHelper(self.compute)
+
+        self.assertRaises(exception.ConsoleTypeUnavailable,
+                self.compute.get_spice_console, self.context, 'spice-html5',
+                instance=instance)
+
+    def test_rdp_console_disabled(self):
+        self.flags(enabled=False, group='rdp')
+        instance = self._create_fake_instance_obj(
+                params={'vm_state': vm_states.BUILDING})
+
+        self.compute = utils.ExceptionHelper(self.compute)
+
+        self.assertRaises(exception.ConsoleTypeUnavailable,
+                self.compute.get_rdp_console, self.context, 'rdp-html5',
+                instance=instance)
+
     def test_diagnostics(self):
         # Make sure we can get diagnostics for an instance.
         expected_diagnostic = {'cpu0_time': 17300000000,
