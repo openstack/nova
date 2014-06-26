@@ -501,23 +501,6 @@ def get_disk_mapping(virt_type, instance,
         driver.block_device_info_get_mapping(block_device_info))
      if get_device_name(bdm)]
 
-    if virt_type == "lxc":
-        # NOTE(zul): This information is not used by the libvirt driver
-        # however we need to populate mapping so the image can be
-        # created when the instance is started. This can
-        # be removed when we convert LXC to use block devices.
-        root_disk_bus = disk_bus
-        root_device_type = 'disk'
-
-        root_info = get_next_disk_info(mapping,
-                                       root_disk_bus,
-                                       root_device_type,
-                                       boot_index=1)
-        mapping['root'] = root_info
-        mapping['disk'] = root_info
-
-        return mapping
-
     if rescue:
         rescue_info = get_next_disk_info(mapping,
                                          disk_bus, boot_index=1)
