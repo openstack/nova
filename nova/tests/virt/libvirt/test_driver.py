@@ -5884,7 +5884,7 @@ class LibvirtConnTestCase(test.TestCase):
             return jsonutils.dumps(fake_disks.get(instance_name))
         self.stubs.Set(conn, 'get_instance_disk_info', get_info)
 
-        result = conn.get_disk_over_committed_size_total()
+        result = conn._get_disk_over_committed_size_total()
         self.assertEqual(result, 10653532160)
 
     def test_disk_over_committed_size_total_permission_denied(self):
@@ -5911,7 +5911,7 @@ class LibvirtConnTestCase(test.TestCase):
         get_disk_info.side_effect = side_effect
         driver.get_instance_disk_info = get_disk_info
 
-        result = driver.get_disk_over_committed_size_total()
+        result = driver._get_disk_over_committed_size_total()
         self.assertEqual(21474836480, result)
 
     def test_cpu_info(self):
@@ -5957,7 +5957,7 @@ class LibvirtConnTestCase(test.TestCase):
                 "model": "Opteron_G4",
                 "arch": "x86_64",
                 "topology": {"cores": 2, "threads": 1, "sockets": 4}}
-        got = jsonutils.loads(conn.get_cpu_info())
+        got = jsonutils.loads(conn._get_cpu_info())
         self.assertEqual(want, got)
 
     def test_get_pcidev_info(self):
@@ -6017,7 +6017,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         with mock.patch.object(conn._conn, 'listDevices',
                                side_effect=not_supported_exc):
-            self.assertEqual('[]', conn.get_pci_passthrough_devices())
+            self.assertEqual('[]', conn._get_pci_passthrough_devices())
 
         # We cache not supported status to avoid emitting too many logging
         # messages. Clear this value to test the other exception case.
@@ -6032,7 +6032,7 @@ class LibvirtConnTestCase(test.TestCase):
         with mock.patch.object(conn._conn, 'listDevices',
                                side_effect=other_exc):
             self.assertRaises(libvirt.libvirtError,
-                              conn.get_pci_passthrough_devices)
+                              conn._get_pci_passthrough_devices)
 
     def test_get_pci_passthrough_devices(self):
 
@@ -6049,7 +6049,7 @@ class LibvirtConnTestCase(test.TestCase):
                                              fake_nodeDeviceLookupByName
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(conn.dev_filter, 'device_assignable', lambda x: x)
-        actjson = conn.get_pci_passthrough_devices()
+        actjson = conn._get_pci_passthrough_devices()
 
         expectvfs = [
             {
@@ -6490,7 +6490,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn.lookupByID(2).AndReturn(DiagFakeDomain(5))
 
         self.mox.ReplayAll()
-        self.assertEqual(5, driver.get_vcpu_used())
+        self.assertEqual(5, driver._get_vcpu_used())
 
     def test_failing_vcpu_count_none(self):
         """Domain will return zero if the current number of vcpus used
@@ -6514,7 +6514,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn.lookupByID(1).AndReturn(DiagFakeDomain())
 
         self.mox.ReplayAll()
-        self.assertEqual(0, driver.get_vcpu_used())
+        self.assertEqual(0, driver._get_vcpu_used())
 
     def test_get_instance_capabilities(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -6543,7 +6543,7 @@ class LibvirtConnTestCase(test.TestCase):
         want = [('x86_64', 'kvm', 'hvm'),
                 ('x86_64', 'qemu', 'hvm'),
                 ('i686', 'kvm', 'hvm')]
-        got = conn.get_instance_capabilities()
+        got = conn._get_instance_capabilities()
         self.assertEqual(want, got)
 
     def test_event_dispatch(self):
@@ -7001,8 +7001,8 @@ class LibvirtConnTestCase(test.TestCase):
         conn._conn.getHostname().AndReturn('foo')
         conn._conn.getHostname().AndReturn('bar')
         self.mox.ReplayAll()
-        self.assertEqual('foo', conn.get_hypervisor_hostname())
-        self.assertEqual('foo', conn.get_hypervisor_hostname())
+        self.assertEqual('foo', conn._get_hypervisor_hostname())
+        self.assertEqual('foo', conn._get_hypervisor_hostname())
 
     def test_get_connection_serial(self):
 
@@ -7371,47 +7371,47 @@ class HostStateTestCase(test.TestCase):
     class FakeConnection(object):
         """Fake connection object."""
 
-        def get_vcpu_total(self):
+        def _get_vcpu_total(self):
             return 1
 
-        def get_vcpu_used(self):
+        def _get_vcpu_used(self):
             return 0
 
-        def get_cpu_info(self):
+        def _get_cpu_info(self):
             return HostStateTestCase.cpu_info
 
-        def get_disk_over_committed_size_total(self):
+        def _get_disk_over_committed_size_total(self):
             return 0
 
-        def get_local_gb_info(self):
+        def _get_local_gb_info(self):
             return {'total': 100, 'used': 20, 'free': 80}
 
-        def get_memory_mb_total(self):
+        def _get_memory_mb_total(self):
             return 497
 
-        def get_memory_mb_used(self):
+        def _get_memory_mb_used(self):
             return 88
 
-        def get_hypervisor_type(self):
+        def _get_hypervisor_type(self):
             return 'QEMU'
 
-        def get_hypervisor_version(self):
+        def _get_hypervisor_version(self):
             return 13091
 
-        def get_hypervisor_hostname(self):
+        def _get_hypervisor_hostname(self):
             return 'compute1'
 
         def get_host_uptime(self):
             return ('10:01:16 up  1:36,  6 users,  '
                     'load average: 0.21, 0.16, 0.19')
 
-        def get_disk_available_least(self):
+        def _get_disk_available_least(self):
             return 13091
 
-        def get_instance_capabilities(self):
+        def _get_instance_capabilities(self):
             return HostStateTestCase.instance_caps
 
-        def get_pci_passthrough_devices(self):
+        def _get_pci_passthrough_devices(self):
             return jsonutils.dumps(HostStateTestCase.pci_devices)
 
     def test_update_status(self):
