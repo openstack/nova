@@ -1043,16 +1043,6 @@ class FakeVim(object):
         _db_content['session'][self._session] = session
         return session
 
-    def _logout(self):
-        """Logs out and remove the session object ref from the db."""
-        s = self._session
-        self._session = None
-        if s not in _db_content['session']:
-            raise exception.NovaException(
-                _("Logging out a session that is invalid or already logged "
-                "out: %s") % s)
-        del _db_content['session'][s]
-
     def _terminate_session(self, *args, **kwargs):
         """Terminates a session."""
         s = kwargs.get("sessionId")[0]
@@ -1373,8 +1363,6 @@ class FakeVim(object):
             self._check_session()
         if attr_name == "Login":
             return lambda *args, **kwargs: self._login()
-        elif attr_name == "Logout":
-            self._logout()
         elif attr_name == "SessionIsActive":
             return lambda *args, **kwargs: self._session_is_active(
                                                *args, **kwargs)
