@@ -14,6 +14,7 @@
 
 from nova import db
 from nova import exception
+from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
@@ -117,20 +118,20 @@ class Flavor(base.NovaPersistentObject, base.NovaObject):
     @base.remotable_classmethod
     def get_by_id(cls, context, id):
         db_flavor = db.flavor_get(context, id)
-        return cls._from_db_object(context, cls(), db_flavor,
+        return cls._from_db_object(context, cls(context), db_flavor,
                                    expected_attrs=['extra_specs'])
 
     @base.remotable_classmethod
     def get_by_name(cls, context, name):
         db_flavor = db.flavor_get_by_name(context, name)
-        return cls._from_db_object(context, cls(), db_flavor,
+        return cls._from_db_object(context, cls(context), db_flavor,
                                    expected_attrs=['extra_specs'])
 
     @base.remotable_classmethod
     def get_by_flavor_id(cls, context, flavor_id, read_deleted=None):
         db_flavor = db.flavor_get_by_flavor_id(context, flavor_id,
                                                read_deleted)
-        return cls._from_db_object(context, cls(), db_flavor,
+        return cls._from_db_object(context, cls(context), db_flavor,
                                    expected_attrs=['extra_specs'])
 
     @base.remotable
@@ -254,5 +255,5 @@ class FlavorList(base.ObjectListBase, base.NovaObject):
                                        filters=filters, sort_key=sort_key,
                                        sort_dir=sort_dir, limit=limit,
                                        marker=marker)
-        return base.obj_make_list(context, cls(), Flavor, db_flavors,
-                                  expected_attrs=['extra_specs'])
+        return base.obj_make_list(context, cls(context), objects.Flavor,
+                                  db_flavors, expected_attrs=['extra_specs'])

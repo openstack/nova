@@ -68,7 +68,7 @@ class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject):
         if not db_obj:
             raise exception.InstanceInfoCacheNotFound(
                     instance_uuid=instance_uuid)
-        return InstanceInfoCache._from_db_object(context, cls(), db_obj)
+        return cls._from_db_object(context, cls(context), db_obj)
 
     @staticmethod
     def _info_cache_cells_update(ctxt, info_cache):

@@ -16,9 +16,9 @@ from nova import block_device
 from nova.cells import rpcapi as cells_rpcapi
 from nova import db
 from nova import exception
+from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova.objects import instance
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
@@ -70,9 +70,9 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject):
                 continue
             block_device_obj[key] = db_block_device[key]
         if 'instance' in expected_attrs:
-            my_inst = instance.Instance()
-            instance.Instance._from_db_object(
-                    context, my_inst, db_block_device['instance'])
+            my_inst = objects.Instance(context)
+            my_inst._from_db_object(context, my_inst,
+                                    db_block_device['instance'])
             block_device_obj.instance = my_inst
 
         block_device_obj._context = context
@@ -167,8 +167,8 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject):
                    'name': self.obj_name(),
                    'uuid': self.uuid,
                    })
-        self.instance = instance.Instance.get_by_uuid(self._context,
-                                                      self.instance_uuid)
+        self.instance = objects.Instance.get_by_uuid(self._context,
+                                                     self.instance_uuid)
         self.obj_reset_changes(fields=['instance'])
 
 
@@ -192,7 +192,7 @@ class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
         db_bdms = db.block_device_mapping_get_all_by_instance(
                 context, instance_uuid, use_slave=use_slave)
         return base.obj_make_list(
-                context, cls(), BlockDeviceMapping, db_bdms or [])
+                context, cls(), objects.BlockDeviceMapping, db_bdms or [])
 
     def root_bdm(self):
         try:
@@ -222,5 +222,7 @@ class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
 
 
 def block_device_make_list(context, db_list, **extra_args):
-    return base.obj_make_list(context, BlockDeviceMappingList(),
-                              BlockDeviceMapping, db_list, **extra_args)
+    return base.obj_make_list(context,
+                              objects.BlockDeviceMappingList(context),
+                              objects.BlockDeviceMapping, db_list,
+                              **extra_args)

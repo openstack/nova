@@ -17,8 +17,6 @@ from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import fields
-from nova.objects import network as network_obj
-from nova.objects import virtual_interface as vif_obj
 from nova.openstack.common import timeutils
 
 
@@ -48,10 +46,8 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
 
     @property
     def floating_ips(self):
-        # NOTE(danms): avoid circular import
-        from nova.objects import floating_ip
-        return floating_ip.FloatingIPList.get_by_fixed_ip_id(self._context,
-                                                             self.id)
+        return objects.FloatingIPList.get_by_fixed_ip_id(self._context,
+                                                         self.id)
 
     @staticmethod
     def _from_db_object(context, fixedip, db_fixedip, expected_attrs=None):
@@ -69,11 +65,11 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
         if 'instance' in expected_attrs:
             fixedip.instance = objects.Instance._from_db_object(
                 context,
-                objects.Instance(),
+                objects.Instance(context),
                 db_fixedip['instance']) if db_fixedip['instance'] else None
         if 'network' in expected_attrs:
-            fixedip.network = network_obj.Network._from_db_object(
-                context, network_obj.Network(), db_fixedip['network'])
+            fixedip.network = objects.Network._from_db_object(
+                context, objects.Network(context), db_fixedip['network'])
         fixedip._context = context
         fixedip.obj_reset_changes()
         return fixedip
@@ -84,7 +80,8 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
             expected_attrs = []
         get_network = 'network' in expected_attrs
         db_fixedip = db.fixed_ip_get(context, id, get_network=get_network)
-        return cls._from_db_object(context, cls(), db_fixedip, expected_attrs)
+        return cls._from_db_object(context, cls(context), db_fixedip,
+                                   expected_attrs)
 
     @obj_base.remotable_classmethod
     def get_by_address(cls, context, address, expected_attrs=None):
@@ -92,17 +89,18 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
             expected_attrs = []
         db_fixedip = db.fixed_ip_get_by_address(context, str(address),
                                                 columns_to_join=expected_attrs)
-        return cls._from_db_object(context, cls(), db_fixedip, expected_attrs)
+        return cls._from_db_object(context, cls(context), db_fixedip,
+                                   expected_attrs)
 
     @obj_base.remotable_classmethod
     def get_by_floating_address(cls, context, address):
         db_fixedip = db.fixed_ip_get_by_floating_address(context, address)
-        return cls._from_db_object(context, cls(), db_fixedip)
+        return cls._from_db_object(context, cls(context), db_fixedip)
 
     @obj_base.remotable_classmethod
     def get_by_network_and_host(cls, context, network_id, host):
         db_fixedip = db.fixed_ip_get_by_network_host(context, network_id, host)
-        return cls._from_db_object(context, cls(), db_fixedip)
+        return cls._from_db_object(context, cls(context), db_fixedip)
 
     @obj_base.remotable_classmethod
     def associate(cls, context, address, instance_uuid, network_id=None,
@@ -110,7 +108,7 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
         db_fixedip = db.fixed_ip_associate(context, address, instance_uuid,
                                            network_id=network_id,
                                            reserved=reserved)
-        return cls._from_db_object(context, cls(), db_fixedip)
+        return cls._from_db_object(context, cls(context), db_fixedip)
 
     @obj_base.remotable_classmethod
     def associate_pool(cls, context, network_id, instance_uuid=None,
@@ -118,7 +116,7 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
         db_fixedip = db.fixed_ip_associate_pool(context, network_id,
                                                 instance_uuid=instance_uuid,
                                                 host=host)
-        return cls._from_db_object(context, cls(), db_fixedip)
+        return cls._from_db_object(context, cls(context), db_fixedip)
 
     @obj_base.remotable_classmethod
     def disassociate_by_address(cls, context, address):
@@ -178,22 +176,26 @@ class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     @obj_base.remotable_classmethod
     def get_all(cls, context):
         db_fixedips = db.fixed_ip_get_all(context)
-        return obj_base.obj_make_list(context, cls(), FixedIP, db_fixedips)
+        return obj_base.obj_make_list(context, cls(context),
+                                      objects.FixedIP, db_fixedips)
 
     @obj_base.remotable_classmethod
     def get_by_instance_uuid(cls, context, instance_uuid):
         db_fixedips = db.fixed_ip_get_by_instance(context, instance_uuid)
-        return obj_base.obj_make_list(context, cls(), FixedIP, db_fixedips)
+        return obj_base.obj_make_list(context, cls(context),
+                                      objects.FixedIP, db_fixedips)
 
     @obj_base.remotable_classmethod
     def get_by_host(cls, context, host):
         db_fixedips = db.fixed_ip_get_by_host(context, host)
-        return obj_base.obj_make_list(context, cls(), FixedIP, db_fixedips)
+        return obj_base.obj_make_list(context, cls(context),
+                                      objects.FixedIP, db_fixedips)
 
     @obj_base.remotable_classmethod
     def get_by_virtual_interface_id(cls, context, vif_id):
         db_fixedips = db.fixed_ips_by_virtual_interface(context, vif_id)
-        return obj_base.obj_make_list(context, cls(), FixedIP, db_fixedips)
+        return obj_base.obj_make_list(context, cls(context),
+                                      objects.FixedIP, db_fixedips)
 
     @obj_base.remotable_classmethod
     def get_by_network(cls, context, network, host=None):
@@ -211,18 +213,18 @@ class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
                                     hostname=info['instance_hostname'],
                                     created_at=info['instance_created'],
                                     updated_at=info['instance_updated'])
-            vif = vif_obj.VirtualInterface(context=context,
+            vif = objects.VirtualInterface(context=context,
                                            id=info['vif_id'],
                                            address=info['vif_address'])
-            fip = FixedIP(context=context,
-                          address=info['address'],
-                          instance_uuid=info['instance_uuid'],
-                          network_id=info['network_id'],
-                          virtual_interface_id=info['vif_id'],
-                          allocated=info['allocated'],
-                          leased=info['leased'],
-                          instance=inst,
-                          virtual_interface=vif)
+            fip = objects.FixedIP(context=context,
+                                  address=info['address'],
+                                  instance_uuid=info['instance_uuid'],
+                                  network_id=info['network_id'],
+                                  virtual_interface_id=info['vif_id'],
+                                  allocated=info['allocated'],
+                                  leased=info['leased'],
+                                  instance=inst,
+                                  virtual_interface=vif)
             fips.objects.append(fip)
         fips.obj_reset_changes()
         return fips

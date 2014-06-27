@@ -14,6 +14,7 @@
 #    under the License.
 
 from nova import db
+from nova import objects
 from nova.objects import base
 from nova.objects import fields
 from nova.openstack.common import jsonutils
@@ -106,8 +107,8 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                 extra_info.update({k: v})
                 self.extra_info = extra_info
 
-    def __init__(self):
-        super(PciDevice, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(PciDevice, self).__init__(*args, **kwargs)
         self.obj_reset_changes()
         self.extra_info = {}
 
@@ -174,19 +175,19 @@ class PciDeviceList(base.ObjectListBase, base.NovaObject):
         # NOTE(danms): PciDevice was at 1.1 before we added this
         }
 
-    def __init__(self):
-        super(PciDeviceList, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(PciDeviceList, self).__init__(*args, **kwargs)
         self.objects = []
         self.obj_reset_changes()
 
     @base.remotable_classmethod
     def get_by_compute_node(cls, context, node_id):
         db_dev_list = db.pci_device_get_all_by_node(context, node_id)
-        return base.obj_make_list(context, PciDeviceList(), PciDevice,
+        return base.obj_make_list(context, cls(context), objects.PciDevice,
                                   db_dev_list)
 
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, uuid):
         db_dev_list = db.pci_device_get_all_by_instance_uuid(context, uuid)
-        return base.obj_make_list(context, PciDeviceList(), PciDevice,
+        return base.obj_make_list(context, cls(context), objects.PciDevice,
                                   db_dev_list)

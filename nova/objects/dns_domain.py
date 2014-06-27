@@ -13,6 +13,7 @@
 #    under the License.
 
 from nova import db
+from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
@@ -68,4 +69,5 @@ class DNSDomainList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_all(cls, context):
         db_domains = db.dnsdomain_get_all(context)
-        return base.obj_make_list(context, cls(), DNSDomain, db_domains)
+        return base.obj_make_list(context, cls(context), objects.DNSDomain,
+                                  db_domains)
