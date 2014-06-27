@@ -1464,8 +1464,6 @@ class FakeVim(object):
         elif attr_name == "FindAllByUuid":
             return lambda *args, **kwargs: self._find_all_by_uuid(attr_name,
                                                 *args, **kwargs)
-        elif attr_name == "Rename_Task":
-            return lambda *args, **kwargs: self._just_return_task(attr_name)
         elif attr_name == "SearchDatastore_Task":
             return lambda *args, **kwargs: self._search_ds(attr_name,
                                                 *args, **kwargs)
@@ -1484,16 +1482,12 @@ class FakeVim(object):
         elif attr_name == "CancelRetrievePropertiesEx":
             return lambda *args, **kwargs: self._retrieve_properties_cancel(
                                                 attr_name, *args, **kwargs)
-        elif attr_name == "AcquireCloneTicket":
-            return lambda *args, **kwargs: self._just_return()
         elif attr_name == "AddPortGroup":
             return lambda *args, **kwargs: self._add_port_group(attr_name,
                                                 *args, **kwargs)
         elif attr_name == "RebootHost_Task":
             return lambda *args, **kwargs: self._just_return_task(attr_name)
         elif attr_name == "ShutdownHost_Task":
-            return lambda *args, **kwargs: self._just_return_task(attr_name)
-        elif attr_name == "PowerDownHostToStandBy_Task":
             return lambda *args, **kwargs: self._just_return_task(attr_name)
         elif attr_name == "PowerUpHostFromStandBy_Task":
             return lambda *args, **kwargs: self._just_return_task(attr_name)
