@@ -68,6 +68,8 @@ from nova.objects import instance as instance_obj
 from nova.objects import quotas as quotas_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _LE
+from nova.openstack.common.gettextutils import _LI
 from nova.openstack.common.gettextutils import _LW
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -2348,14 +2350,21 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def stop_instance(self, context, instance):
         """Stopping an instance on this host."""
-        self._notify_about_instance_usage(context, instance, "power_off.start")
-        self.driver.power_off(instance)
-        current_power_state = self._get_power_state(context, instance)
-        instance.power_state = current_power_state
-        instance.vm_state = vm_states.STOPPED
-        instance.task_state = None
-        instance.save(expected_task_state=task_states.POWERING_OFF)
-        self._notify_about_instance_usage(context, instance, "power_off.end")
+
+        @utils.synchronized(instance.uuid)
+        def do_stop_instance():
+            self._notify_about_instance_usage(context, instance,
+                                              "power_off.start")
+            self.driver.power_off(instance)
+            current_power_state = self._get_power_state(context, instance)
+            instance.power_state = current_power_state
+            instance.vm_state = vm_states.STOPPED
+            instance.task_state = None
+            instance.save(expected_task_state=task_states.POWERING_OFF)
+            self._notify_about_instance_usage(context, instance,
+                                              "power_off.end")
+
+        do_stop_instance()
 
     def _power_on(self, context, instance):
         network_info = self._get_instance_nw_info(context, instance)
@@ -5325,34 +5334,43 @@ class ComputeManager(manager.Manager):
                       'num_vm_instances': num_vm_instances})
 
         for db_instance in db_instances:
-            if db_instance['task_state'] is not None:
-                LOG.info(_("During sync_power_state the instance has a "
-                           "pending task (%(task)s). Skip."),
-                         {'task': db_instance['task_state']},
-                         instance=db_instance)
-                continue
-            # No pending tasks. Now try to figure out the real vm_power_state.
+            #NOTE(melwitt): This must be synchronized as we query state from
+            #               two separate sources, the driver and the database.
+            #               They are set (in stop_instance) and read, in sync.
+            @utils.synchronized(db_instance.uuid)
+            def query_driver_power_state_and_sync():
+                self._query_driver_power_state_and_sync(context, db_instance)
+
             try:
-                try:
-                    vm_instance = self.driver.get_info(db_instance)
-                    vm_power_state = vm_instance['state']
-                except exception.InstanceNotFound:
-                    vm_power_state = power_state.NOSTATE
-                # Note(maoy): the above get_info call might take a long time,
-                # for example, because of a broken libvirt driver.
-                try:
-                    self._sync_instance_power_state(context,
-                                                    db_instance,
-                                                    vm_power_state,
-                                                    use_slave=True)
-                except exception.InstanceNotFound:
-                    # NOTE(hanlind): If the instance gets deleted during sync,
-                    # silently ignore and move on to next instance.
-                    continue
+                query_driver_power_state_and_sync()
             except Exception:
-                LOG.exception(_("Periodic sync_power_state task had an error "
-                                "while processing an instance."),
-                                instance=db_instance)
+                LOG.exception(_LE("Periodic sync_power_state task had an "
+                                  "error while processing an instance."),
+                              instance=db_instance)
+
+    def _query_driver_power_state_and_sync(self, context, db_instance):
+        if db_instance.task_state is not None:
+            LOG.info(_LI("During sync_power_state the instance has a "
+                         "pending task (%(task)s). Skip."),
+                     {'task': db_instance.task_state}, instance=db_instance)
+            return
+        # No pending tasks. Now try to figure out the real vm_power_state.
+        try:
+            vm_instance = self.driver.get_info(db_instance)
+            vm_power_state = vm_instance['state']
+        except exception.InstanceNotFound:
+            vm_power_state = power_state.NOSTATE
+        # Note(maoy): the above get_info call might take a long time,
+        # for example, because of a broken libvirt driver.
+        try:
+            self._sync_instance_power_state(context,
+                                            db_instance,
+                                            vm_power_state,
+                                            use_slave=True)
+        except exception.InstanceNotFound:
+            # NOTE(hanlind): If the instance gets deleted during sync,
+            # silently ignore.
+            pass
 
     def _sync_instance_power_state(self, context, db_instance, vm_power_state,
                                    use_slave=False):
