@@ -118,6 +118,7 @@ class LinuxNetL3(L3Driver):
         linux_net.unbind_floating_ip(floating_ip, l3_interface_id)
         linux_net.remove_floating_forward(floating_ip, fixed_ip,
                                           l3_interface_id, network)
+        linux_net.clean_conntrack(fixed_ip)
 
     def add_vpn(self, public_ip, port, private_ip):
         linux_net.ensure_vpn_forward(public_ip, port, private_ip)
@@ -126,9 +127,6 @@ class LinuxNetL3(L3Driver):
         # Linux net currently doesn't implement any way of removing
         # the VPN forwarding rules
         pass
-
-    def clean_conntrack(self, fixed_ip):
-        linux_net.clean_conntrack(fixed_ip)
 
     def teardown(self):
         pass
