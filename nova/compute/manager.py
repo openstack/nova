@@ -4512,7 +4512,8 @@ class ComputeManager(manager.Manager):
         if len(network_info) != 1:
             LOG.error(_('allocate_port_for_instance returned %(ports)s ports')
                       % dict(ports=len(network_info)))
-            raise exception.InterfaceAttachFailed(instance=instance)
+            raise exception.InterfaceAttachFailed(
+                    instance_uuid=instance.uuid)
         image_ref = instance.get('image_ref')
         image_meta = compute_utils.get_image_metadata(
             context, self.image_api, image_ref, instance)

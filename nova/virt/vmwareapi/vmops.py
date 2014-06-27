@@ -1550,7 +1550,7 @@ class VMwareVMOps(object):
                               ' %s'),
                           e, instance=instance)
                 raise exception.InterfaceAttachFailed(
-                        instance=instance['uuid'])
+                        instance_uuid=instance['uuid'])
         LOG.debug("Reconfigured VM to attach interface", instance=instance)
 
     def detach_interface(self, instance, vif):
@@ -1590,7 +1590,7 @@ class VMwareVMOps(object):
                               '%s'),
                           e, instance=instance)
                 raise exception.InterfaceDetachFailed(
-                        instance=instance['uuid'])
+                        instance_uuid=instance['uuid'])
         LOG.debug("Reconfigured VM to detach interface", instance=instance)
 
 

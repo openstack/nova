@@ -248,14 +248,16 @@ class FakeDriver(driver.ComputeDriver):
 
     def attach_interface(self, instance, image_meta, vif):
         if vif['id'] in self._interfaces:
-            raise exception.InterfaceAttachFailed('duplicate')
+            raise exception.InterfaceAttachFailed(
+                    instance_uuid=instance['uuid'])
         self._interfaces[vif['id']] = vif
 
     def detach_interface(self, instance, vif):
         try:
             del self._interfaces[vif['id']]
         except KeyError:
-            raise exception.InterfaceDetachFailed('not attached')
+            raise exception.InterfaceDetachFailed(
+                    instance_uuid=instance['uuid'])
 
     def get_info(self, instance):
         if instance['name'] not in self.instances:

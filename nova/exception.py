@@ -1302,11 +1302,13 @@ class ConfigDriveUnknownFormat(NovaException):
 
 
 class InterfaceAttachFailed(Invalid):
-    msg_fmt = _("Failed to attach network adapter device to %(instance)s")
+    msg_fmt = _("Failed to attach network adapter device to "
+                "%(instance_uuid)s")
 
 
 class InterfaceDetachFailed(Invalid):
-    msg_fmt = _("Failed to detach network adapter device from  %(instance)s")
+    msg_fmt = _("Failed to detach network adapter device from "
+                "%(instance_uuid)s")
 
 
 class InstanceUserDataTooLarge(NovaException):
