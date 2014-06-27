@@ -4866,11 +4866,14 @@ def bw_usage_get(context, uuid, start_period, mac, use_slave=False):
 
 
 @require_context
-def bw_usage_get_by_uuids(context, uuids, start_period):
-    return model_query(context, models.BandwidthUsage, read_deleted="yes").\
-                   filter(models.BandwidthUsage.uuid.in_(uuids)).\
-                   filter_by(start_period=start_period).\
-                   all()
+def bw_usage_get_by_uuids(context, uuids, start_period, use_slave=False):
+    return (
+        model_query(context, models.BandwidthUsage, read_deleted="yes",
+                    use_slave=use_slave).
+        filter(models.BandwidthUsage.uuid.in_(uuids)).
+        filter_by(start_period=start_period).
+        all()
+    )
 
 
 @require_context
