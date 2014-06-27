@@ -15,6 +15,7 @@
 
 """Tests for the aggregates admin api."""
 
+import mock
 from webob import exc
 
 from nova.api.openstack.compute.contrib import aggregates
@@ -486,6 +487,18 @@ class AggregateTestCase(test.NoDBTestCase):
         result = self.controller.action(self.req, "1", body=body)
 
         self.assertEqual(AGGREGATE, result["aggregate"])
+
+    def test_set_metadata_delete(self):
+        body = {"set_metadata": {"metadata": {"foo": None}}}
+
+        with mock.patch.object(self.controller.api,
+                               'update_aggregate_metadata') as mocked:
+            mocked.return_value = AGGREGATE
+            result = self.controller.action(self.req, "1", body=body)
+
+        self.assertEqual(AGGREGATE, result["aggregate"])
+        mocked.assert_called_once_with(self.context, "1",
+                                       body["set_metadata"]["metadata"])
 
     def test_set_metadata_no_admin(self):
         self.assertRaises(exception.PolicyNotAuthorized,
