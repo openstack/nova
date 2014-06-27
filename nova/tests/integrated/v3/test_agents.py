@@ -30,10 +30,10 @@ class AgentsJsonTest(api_sample_base.ApiSampleTestBaseV3):
                              'os': 'os',
                              'version': '8.0',
                              'md5hash': 'add6bb58e139be103324d04d82d8f545',
-                             'id': '1'}]
+                             'id': 1}]
 
         def fake_agent_build_create(context, values):
-            values['id'] = '1'
+            values['id'] = 1
             agent_build_ref = models.AgentBuild()
             agent_build_ref.update(values)
             return agent_build_ref
@@ -74,22 +74,12 @@ class AgentsJsonTest(api_sample_base.ApiSampleTestBaseV3):
                 }
         response = self._do_post('os-agents', 'agent-post-req',
                                  project)
-        project['agent_id'] = 1
         self._verify_response('agent-post-resp', project, response, 201)
-        return project
 
     def test_agent_list(self):
         # Return a list of all agent builds.
         response = self._do_get('os-agents')
-        project = {'url': 'xxxxxxxxxxxx',
-                'hypervisor': 'hypervisor',
-                'architecture': 'x86',
-                'os': 'os',
-                'version': '8.0',
-                'md5hash': 'add6bb58e139be103324d04d82d8f545',
-                'agent_id': 1
-                }
-        self._verify_response('agents-get-resp', project, response, 200)
+        self._verify_response('agents-get-resp', {}, response, 200)
 
     def test_agent_update(self):
         # Update an existing agent build.
@@ -99,7 +89,6 @@ class AgentsJsonTest(api_sample_base.ApiSampleTestBaseV3):
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}
         response = self._do_put('os-agents/%s' % agent_id,
                                 'agent-update-put-req', subs)
-        subs['agent_id'] = 1
         self._verify_response('agent-update-put-resp', subs, response, 200)
 
     def test_agent_delete(self):
