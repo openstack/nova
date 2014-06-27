@@ -20,7 +20,7 @@ from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
-from nova.objects import instance
+from nova import objects
 from nova.objects import pci_device as pci_device_obj
 from nova.pci import pci_device
 from nova.pci import pci_manager
@@ -73,7 +73,7 @@ fake_pci_requests = [
 
 class PciDevTrackerTestCase(test.TestCase):
     def _create_fake_instance(self):
-        self.inst = instance.Instance()
+        self.inst = objects.Instance()
         self.inst.uuid = 'fake-inst-uuid'
         self.inst.pci_devices = pci_device_obj.PciDeviceList()
         self.inst.vm_state = vm_states.ACTIVE
@@ -342,9 +342,8 @@ class PciGetInstanceDevs(test.TestCase):
         db.instance_get(ctxt, '1', columns_to_join=[]
                         ).AndReturn(inst)
         self.mox.ReplayAll()
-        inst = instance.Instance.get_by_id(ctxt, '1', expected_attrs=[])
-        self.stubs.Set(instance.Instance, 'obj_load_attr',
-            _fake_obj_load_attr)
+        inst = objects.Instance.get_by_id(ctxt, '1', expected_attrs=[])
+        self.stubs.Set(objects.Instance, 'obj_load_attr', _fake_obj_load_attr)
 
         self.load_attr_called = False
         pci_manager.get_instance_pci_devs(inst)

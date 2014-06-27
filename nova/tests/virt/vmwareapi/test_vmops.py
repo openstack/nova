@@ -21,7 +21,7 @@ from nova.compute import power_state
 from nova import context
 from nova import exception
 from nova.network import model as network_model
-from nova.objects import instance as instance_obj
+from nova import objects
 from nova.openstack.common import units
 from nova.openstack.common import uuidutils
 from nova import test
@@ -290,8 +290,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                    mock.call('fake_snapshot_task')])
 
     def test_update_instance_progress(self):
-        instance = instance_obj.Instance(context=mock.MagicMock(),
-                                         uuid='fake-uuid')
+        instance = objects.Instance(context=mock.MagicMock(), uuid='fake-uuid')
         with mock.patch.object(instance, 'save') as mock_save:
             self._vmops._update_instance_progress(instance._context,
                                                   instance, 5, 10)

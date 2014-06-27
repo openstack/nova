@@ -63,10 +63,10 @@ from nova.network import driver
 from nova.network import floating_ips
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
+from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import dns_domain as dns_domain_obj
 from nova.objects import fixed_ip as fixed_ip_obj
-from nova.objects import instance as instance_obj
 from nova.objects import instance_info_cache as info_cache_obj
 from nova.objects import network as network_obj
 from nova.objects import quotas as quotas_obj
@@ -387,8 +387,7 @@ class NetworkManager(manager.Manager):
         # NOTE(francois.charlier): the instance may have been deleted already
         # thus enabling `read_deleted`
         admin_context = context.get_admin_context(read_deleted='yes')
-        instance = instance_obj.Instance.get_by_uuid(admin_context,
-                                                     instance_id)
+        instance = objects.Instance.get_by_uuid(admin_context, instance_id)
 
         try:
             # NOTE(vish): We need to make sure the instance info cache has been
@@ -548,10 +547,10 @@ class NetworkManager(manager.Manager):
         else:
             instance_id = kwargs['instance_id']
             if uuidutils.is_uuid_like(instance_id):
-                instance = instance_obj.Instance.get_by_uuid(
+                instance = objects.Instance.get_by_uuid(
                         read_deleted_context, instance_id)
             else:
-                instance = instance_obj.Instance.get_by_id(
+                instance = objects.Instance.get_by_id(
                         read_deleted_context, instance_id)
             # NOTE(russellb) in case instance_id was an ID and not UUID
             instance_uuid = instance.uuid
@@ -863,7 +862,7 @@ class NetworkManager(manager.Manager):
 
         # NOTE(vish) This db query could be removed if we pass az and name
         #            (or the whole instance object).
-        instance = instance_obj.Instance.get_by_uuid(context, instance_id)
+        instance = objects.Instance.get_by_uuid(context, instance_id)
         LOG.debug('Allocate fixed ip on network %s', network['uuid'],
                   instance=instance)
 
@@ -960,7 +959,7 @@ class NetworkManager(manager.Manager):
             # NOTE(danms) We can't use fixed_ip_ref.instance because
             #             instance may be deleted and the relationship
             #             doesn't extend to deleted instances
-            instance = instance_obj.Instance.get_by_uuid(
+            instance = objects.Instance.get_by_uuid(
                 context.elevated(read_deleted='yes'), instance_uuid)
 
         quotas = self.quotas_cls()
@@ -1375,7 +1374,7 @@ class NetworkManager(manager.Manager):
         else:
             call_func = self._setup_network_on_host
 
-        instance = instance_obj.Instance.get_by_id(context, instance_id)
+        instance = objects.Instance.get_by_id(context, instance_id)
         vifs = vif_obj.VirtualInterfaceList.get_by_instance_uuid(context,
                 instance['uuid'])
         LOG.debug('Setup networks on host', instance=instance)
@@ -1460,7 +1459,7 @@ class NetworkManager(manager.Manager):
         """Returns the vifs associated with an instance."""
         # NOTE(vish): This is no longer used but can't be removed until
         #             we major version the network_rpcapi to 2.0.
-        instance = instance_obj.Instance.get_by_id(context, instance_id)
+        instance = objects.Instance.get_by_id(context, instance_id)
         LOG.debug('Get VIFs for instance', instance=instance)
 
         # NOTE(russellb) No need to object-ify this since
@@ -1859,7 +1858,7 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
 
         # NOTE(vish) This db query could be removed if we pass az and name
         #            (or the whole instance object).
-        instance = instance_obj.Instance.get_by_uuid(context, instance_id)
+        instance = objects.Instance.get_by_uuid(context, instance_id)
 
         name = instance.display_name
         if self._validate_instance_zone_for_dns_domain(context, instance):

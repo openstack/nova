@@ -28,6 +28,7 @@ from nova import db
 from nova.image import glance
 from nova import network
 from nova.network import model as network_model
+from nova.objects import base as obj_base
 from nova.openstack.common import context as common_context
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
@@ -273,10 +274,8 @@ def bandwidth_usage(instance_ref, audit_start,
                     return
                 raise
 
-    # FIXME(comstud): Temporary as we transition to objects.  This import
-    # is here to avoid circular imports.
-    from nova.objects import instance as instance_obj
-    if isinstance(instance_ref, instance_obj.Instance):
+    # FIXME(comstud): Temporary as we transition to objects.
+    if isinstance(instance_ref, obj_base.NovaObject):
         nw_info = instance_ref.info_cache.network_info
         if nw_info is None:
             nw_info = network_model.NetworkInfo()

@@ -14,9 +14,9 @@
 
 from nova import db
 from nova import exception
+from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import fields
-from nova.objects import instance as instance_obj
 from nova.objects import network as network_obj
 from nova.objects import virtual_interface as vif_obj
 from nova.openstack.common import timeutils
@@ -67,9 +67,9 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
                 fixedip[field] = db_fixedip[field]
         # NOTE(danms): Instance could be deleted, and thus None
         if 'instance' in expected_attrs:
-            fixedip.instance = instance_obj.Instance._from_db_object(
+            fixedip.instance = objects.Instance._from_db_object(
                 context,
-                instance_obj.Instance(),
+                objects.Instance(),
                 db_fixedip['instance']) if db_fixedip['instance'] else None
         if 'network' in expected_attrs:
             fixedip.network = network_obj.Network._from_db_object(
@@ -206,11 +206,11 @@ class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
         fips = cls(context=context, objects=[])
 
         for info in ipinfo:
-            inst = instance_obj.Instance(context=context,
-                                         uuid=info['instance_uuid'],
-                                         hostname=info['instance_hostname'],
-                                         created_at=info['instance_created'],
-                                         updated_at=info['instance_updated'])
+            inst = objects.Instance(context=context,
+                                    uuid=info['instance_uuid'],
+                                    hostname=info['instance_hostname'],
+                                    created_at=info['instance_created'],
+                                    updated_at=info['instance_updated'])
             vif = vif_obj.VirtualInterface(context=context,
                                            id=info['vif_id'],
                                            address=info['vif_address'])

@@ -42,8 +42,8 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.network import model as network_model
+from nova import objects
 from nova.objects import flavor as flavor_obj
-from nova.objects import instance as instance_obj
 from nova.objects import pci_device as pci_device_obj
 from nova.objects import service as service_obj
 from nova.openstack.common import fileutils
@@ -582,7 +582,7 @@ class LibvirtConnTestCase(test.TestCase):
         default_params = self.test_instance
         default_params['pci_devices'] = pci_device_obj.PciDeviceList()
         default_params.update(params)
-        instance = instance_obj.Instance(context, **params)
+        instance = objects.Instance(context, **params)
         flavor = flavors.get_default_flavor()
         instance.system_metadata = flavors.save_flavor_info({}, flavor)
         instance.instance_type_id = flavor['id']
@@ -5238,11 +5238,11 @@ class LibvirtConnTestCase(test.TestCase):
         self.stubs.Set(conn.firewall_driver,
                        'unfilter_instance', fake_unfilter_instance)
         self.stubs.Set(os.path, 'exists', fake_os_path_exists)
-        self.stubs.Set(instance_obj.Instance, 'fields',
+        self.stubs.Set(objects.Instance, 'fields',
                        {'id': int, 'uuid': str, 'cleaned': int})
-        self.stubs.Set(instance_obj.Instance, 'obj_load_attr',
+        self.stubs.Set(objects.Instance, 'obj_load_attr',
                        fake_obj_load_attr)
-        self.stubs.Set(instance_obj.Instance, 'save', fake_save)
+        self.stubs.Set(objects.Instance, 'save', fake_save)
 
         conn.destroy(self.context, instance, [], vol)
 
@@ -5313,12 +5313,12 @@ class LibvirtConnTestCase(test.TestCase):
                 self[attrname] = {}
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(instance_obj.Instance, 'fields',
+        self.stubs.Set(objects.Instance, 'fields',
                        {'id': int, 'uuid': str, 'cleaned': int})
-        self.stubs.Set(instance_obj.Instance, 'obj_load_attr',
+        self.stubs.Set(objects.Instance, 'obj_load_attr',
                        fake_obj_load_attr)
 
-        inst_obj = instance_obj.Instance.get_by_uuid(None, instance['uuid'])
+        inst_obj = objects.Instance.get_by_uuid(None, instance['uuid'])
         self.assertFalse(conn.delete_instance_files(inst_obj))
         self.assertTrue(conn.delete_instance_files(inst_obj))
 
@@ -7166,7 +7166,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.flags(virt_type='lxc', group='libvirt')
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = instance_obj.Instance(id=1, uuid='fake-uuid')
+        instance = objects.Instance(id=1, uuid='fake-uuid')
 
         with contextlib.nested(
               mock.patch.object(conn, 'plug_vifs'),
@@ -7185,7 +7185,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.flags(virt_type='lxc', group='libvirt')
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = instance_obj.Instance(id=1, uuid='fake-uuid')
+        instance = objects.Instance(id=1, uuid='fake-uuid')
 
         with contextlib.nested(
               mock.patch.object(conn, 'plug_vifs'),
@@ -7227,7 +7227,7 @@ class LibvirtConnTestCase(test.TestCase):
         prepare.side_effect = fake_prepare
         conn = libvirt_driver.LibvirtDriver(virtapi, False)
 
-        instance = instance_obj.Instance(id=1, uuid='fake-uuid')
+        instance = objects.Instance(id=1, uuid='fake-uuid')
         vifs = [{'id': 'vif1', 'active': False},
                 {'id': 'vif2', 'active': False}]
 
@@ -9030,8 +9030,7 @@ class LibvirtDriverTestCase(test.TestCase):
     @mock.patch('os.path.exists')
     @mock.patch('nova.virt.libvirt.lvm.list_volumes')
     def test_lvm_disks(self, listlvs, exists):
-        instance = instance_obj.Instance(uuid='fake-uuid',
-                                         id=1)
+        instance = objects.Instance(uuid='fake-uuid', id=1)
         self.flags(images_volume_group='vols', group='libvirt')
         exists.return_value = True
         listlvs.return_value = ['fake-uuid_foo',

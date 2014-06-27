@@ -15,8 +15,8 @@
 import datetime
 import uuid
 
+from nova import objects
 from nova.objects import fields
-from nova.objects import instance as instance_obj
 from nova.objects import instance_fault as inst_fault_obj
 
 
@@ -58,7 +58,7 @@ def fake_db_instance(**updates):
         'ephemeral_gb': 0
         }
 
-    for name, field in instance_obj.Instance.fields.items():
+    for name, field in objects.Instance.fields.items():
         if name in db_instance:
             continue
         if field.nullable:
@@ -80,8 +80,8 @@ def fake_db_instance(**updates):
 
 def fake_instance_obj(context, **updates):
     expected_attrs = updates.pop('expected_attrs', None)
-    return instance_obj.Instance._from_db_object(context,
-               instance_obj.Instance(), fake_db_instance(**updates),
+    return objects.Instance._from_db_object(context,
+               objects.Instance(), fake_db_instance(**updates),
                expected_attrs=expected_attrs)
 
 

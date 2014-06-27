@@ -28,7 +28,7 @@ from nova.cells import utils as cells_utils
 from nova import context
 from nova import exception
 from nova import manager
-from nova.objects import instance as instance_obj
+from nova import objects
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
@@ -226,8 +226,8 @@ class CellsManager(manager.Manager):
         deleted or soft_deleted.  So, we'll broadcast this everywhere.
         """
         if isinstance(instance, dict):
-            instance = instance_obj.Instance._from_db_object(ctxt,
-                    instance_obj.Instance(), instance)
+            instance = objects.Instance._from_db_object(ctxt,
+                    objects.Instance(), instance)
         self.msg_runner.instance_delete_everywhere(ctxt, instance,
                                                    delete_type)
 

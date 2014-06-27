@@ -59,7 +59,6 @@ from nova import exception
 from nova import image
 from nova import objects
 from nova.objects import flavor as flavor_obj
-from nova.objects import instance as instance_obj
 from nova.objects import service as service_obj
 from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
@@ -5210,7 +5209,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE(mikal): a shim to handle this file not using instance objects
         # everywhere. Remove this when that conversion happens.
         context = nova_context.get_admin_context(read_deleted='yes')
-        inst_obj = instance_obj.Instance.get_by_uuid(context, instance['uuid'])
+        inst_obj = objects.Instance.get_by_uuid(context, instance['uuid'])
 
         # NOTE(mikal): this code should be pushed up a layer when this shim is
         # removed.

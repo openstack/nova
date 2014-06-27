@@ -27,7 +27,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.image import glance
-from nova.objects import instance as instance_obj
+from nova import objects
 from nova import rpc
 from nova.scheduler import driver
 from nova.scheduler import manager
@@ -258,7 +258,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
 
         self.mox.StubOutWithMock(self.manager.compute_rpcapi, 'prep_resize')
         self.manager.compute_rpcapi.prep_resize(self.context, image,
-                mox.IsA(instance_obj.Instance),
+                mox.IsA(objects.Instance),
                 instance_type, 'host', reservations, request_spec=request_spec,
                 filter_properties=filter_properties, node='node')
 

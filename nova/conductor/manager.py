@@ -38,7 +38,6 @@ from nova.network.security_group import openstack_driver
 from nova import notifications
 from nova import objects
 from nova.objects import base as nova_object
-from nova.objects import instance as instance_obj
 from nova.objects import quotas as quotas_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
@@ -474,13 +473,13 @@ class ComputeTaskManager(base.Base):
                                    exception.MigrationPreCheckError)
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
             flavor, block_migration, disk_over_commit, reservations=None):
-        if instance and not isinstance(instance, instance_obj.Instance):
+        if instance and not isinstance(instance, nova_object.NovaObject):
             # NOTE(danms): Until v2 of the RPC API, we need to tolerate
             # old-world instance objects here
             attrs = ['metadata', 'system_metadata', 'info_cache',
                      'security_groups']
-            instance = instance_obj.Instance._from_db_object(
-                context, instance_obj.Instance(), instance,
+            instance = objects.Instance._from_db_object(
+                context, objects.Instance(), instance,
                 expected_attrs=attrs)
         if live and not rebuild and not flavor:
             self._live_migrate(context, instance, scheduler_hint,

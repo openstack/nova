@@ -45,8 +45,8 @@ from nova import context
 from nova.db import base
 from nova import exception
 from nova.network import model as network_model
+from nova import objects
 from nova.objects import base as objects_base
-from nova.objects import instance as instance_obj
 from nova.objects import instance_fault as instance_fault_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
@@ -685,7 +685,7 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         EXPECTS_OBJECTS = ['start', 'stop', 'delete_instance_metadata',
                            'update_instance_metadata']
         if method in EXPECTS_OBJECTS:
-            inst_obj = instance_obj.Instance()
+            inst_obj = objects.Instance()
             inst_obj._from_db_object(message.ctxt, inst_obj, instance)
             instance = inst_obj
         args[0] = instance

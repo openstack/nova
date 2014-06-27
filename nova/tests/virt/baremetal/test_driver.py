@@ -28,7 +28,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova import db as main_db
 from nova import exception
-from nova.objects import instance as instance_obj
+from nova import objects
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.image import fake as fake_image
@@ -142,8 +142,8 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
                 block_device_info=result['spawn_params']['block_device_info'],
             )
 
-        instance = instance_obj.Instance._from_db_object(
-            self.context, instance_obj.Instance(), result['instance'])
+        instance = objects.Instance._from_db_object(
+            self.context, objects.Instance(), result['instance'])
         instance.node = result['node']['uuid']
 
         result['rebuild_params'] = dict(
@@ -187,7 +187,7 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         self.assertEqual(instance['default_ephemeral_device'], '/dev/sda1')
 
     def test_set_default_ephemeral_device(self):
-        instance = instance_obj.Instance(context=self.context)
+        instance = objects.Instance(context=self.context)
         instance.system_metadata = flavors.save_flavor_info(
             {}, flavors.get_default_flavor())
         instance.system_metadata['instance_type_ephemeral_gb'] = 1
