@@ -798,3 +798,11 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
                                            image_id='fake-id',
                                            backup_type='backup-type',
                                            rotation='rotation')
+
+    def test_set_admin_password(self):
+        with mock.patch.object(self.msg_runner,
+                               'set_admin_password') as set_admin_password:
+            self.cells_manager.set_admin_password(self.ctxt,
+                    instance='fake-instance', new_pass='fake-password')
+            set_admin_password.assert_called_once_with(self.ctxt,
+                    'fake-instance', 'fake-password')

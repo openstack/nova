@@ -49,7 +49,8 @@ class ComputeRPCAPIRedirect(object):
                         'unpause_instance', 'revert_resize',
                         'confirm_resize', 'reset_network',
                         'inject_network_info',
-                        'backup_instance', 'snapshot_instance']
+                        'backup_instance', 'snapshot_instance',
+                        'set_admin_password']
 
     def __init__(self, cells_rpcapi):
         self.cells_rpcapi = cells_rpcapi
@@ -334,14 +335,6 @@ class ComputeCellsAPI(compute_api.API):
         """Unshelve the given instance."""
         super(ComputeCellsAPI, self).unshelve(context, instance)
         self._cast_to_cells(context, instance, 'unshelve')
-
-    @check_instance_cell
-    def set_admin_password(self, context, instance, password=None):
-        """Set the root/admin password for the given instance."""
-        super(ComputeCellsAPI, self).set_admin_password(context, instance,
-                password=password)
-        self._cast_to_cells(context, instance, 'set_admin_password',
-                password=password)
 
     @wrap_check_policy
     @check_instance_cell
