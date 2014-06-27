@@ -1735,3 +1735,55 @@ class LibvirtConfigGuestCPUTuneTest(LibvirtConfigBaseTest):
             <quota>50000</quota>
             <period>25000</period>
           </cputune>""")
+
+
+class LibvirtConfigGuestMetadataNovaTest(LibvirtConfigBaseTest):
+
+    def test_config_metadata(self):
+        meta = config.LibvirtConfigGuestMetaNovaInstance()
+        meta.package = "2014.2.3"
+        meta.name = "moonbuggy"
+        meta.creationTime = 1234567890
+        meta.roottype = "image"
+        meta.rootid = "fe55c69a-8b2e-4bbc-811a-9ad2023a0426"
+
+        owner = config.LibvirtConfigGuestMetaNovaOwner()
+        owner.userid = "3472c2a6-de91-4fb5-b618-42bc781ef670"
+        owner.username = "buzz"
+        owner.projectid = "f241e906-010e-4917-ae81-53f4fb8aa021"
+        owner.projectname = "moonshot"
+
+        meta.owner = owner
+
+        flavor = config.LibvirtConfigGuestMetaNovaFlavor()
+        flavor.name = "m1.lowgravity"
+        flavor.vcpus = 8
+        flavor.memory = 2048
+        flavor.swap = 10
+        flavor.disk = 50
+        flavor.ephemeral = 10
+
+        meta.flavor = flavor
+
+        xml = meta.to_xml()
+        self.assertXmlEqual(xml, """
+    <nova:instance xmlns:nova='http://openstack.org/xmlns/libvirt/nova/1.0'>
+      <nova:package version="2014.2.3"/>
+      <nova:name>moonbuggy</nova:name>
+      <nova:creationTime>2009-02-13 23:31:30</nova:creationTime>
+      <nova:flavor name="m1.lowgravity">
+        <nova:memory>2048</nova:memory>
+        <nova:disk>50</nova:disk>
+        <nova:swap>10</nova:swap>
+        <nova:ephemeral>10</nova:ephemeral>
+        <nova:vcpus>8</nova:vcpus>
+      </nova:flavor>
+      <nova:owner>
+        <nova:user
+         uuid="3472c2a6-de91-4fb5-b618-42bc781ef670">buzz</nova:user>
+        <nova:project
+         uuid="f241e906-010e-4917-ae81-53f4fb8aa021">moonshot</nova:project>
+      </nova:owner>
+      <nova:root type="image" uuid="fe55c69a-8b2e-4bbc-811a-9ad2023a0426"/>
+    </nova:instance>
+        """)
