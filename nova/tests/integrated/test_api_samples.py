@@ -1368,10 +1368,10 @@ class AgentsJsonTest(ApiSampleTestBaseV2):
                              'os': 'os',
                              'version': '8.0',
                              'md5hash': 'add6bb58e139be103324d04d82d8f545',
-                             'id': '1'}]
+                             'id': 1}]
 
         def fake_agent_build_create(context, values):
-            values['id'] = '1'
+            values['id'] = 1
             agent_build_ref = models.AgentBuild()
             agent_build_ref.update(values)
             return agent_build_ref
