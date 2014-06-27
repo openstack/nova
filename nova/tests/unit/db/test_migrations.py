@@ -15,16 +15,9 @@
 #    under the License.
 
 """
-Tests for database migrations. This test case reads the configuration
-file test_migrations.conf for database connection settings
-to use in the tests. For each connection found in the config file,
-the test case runs a series of test cases to ensure that migrations work
-properly both upgrading and downgrading, and that no data loss occurs
-if possible.
-
-There are also "opportunistic" tests for both mysql and postgresql in here,
-which allows testing against all 3 databases (sqlite in memory, mysql, pg) in
-a properly configured unit test environment.
+Tests for database migrations.
+There are "opportunistic" tests which allows testing against all 3 databases
+(sqlite in memory, mysql, pg) in a properly configured unit test environment.
 
 For the opportunistic testing you need to set up db's named 'openstack_citest'
 with user 'openstack_citest' and password 'openstack_citest' on localhost. The
@@ -39,493 +32,91 @@ For postgres on Ubuntu this can be done with the following commands::
 
 """
 
-import ConfigParser
 import glob
+import logging
 import os
 
 from migrate.versioning import repository
-from oslo.concurrency import processutils
-from oslo.db.sqlalchemy import session
+import mock
+from oslo.config import cfg
+from oslo.db.sqlalchemy import test_base
+from oslo.db.sqlalchemy import test_migrations
 from oslo.db.sqlalchemy import utils as oslodbutils
-import six.moves.urllib.parse as urlparse
 import sqlalchemy
 import sqlalchemy.exc
 
-import nova.db.sqlalchemy.migrate_repo
+from nova.db import migration
+from nova.db.sqlalchemy import migrate_repo
+from nova.db.sqlalchemy import migration as sa_migration
 from nova.db.sqlalchemy import utils as db_utils
 from nova.i18n import _
-from nova.openstack.common import log as logging
 from nova import test
-from nova import utils
+from nova.tests.unit import conf_fixture
 
 
 LOG = logging.getLogger(__name__)
 
 
-def get_connect_string(backend, database, user=None, passwd=None,
-                       host='localhost'):
-    """Get database connection
-    Try to get a connection with a very specific set of values, if we get
-    these then we'll run the tests, otherwise they are skipped
-    """
-    args = {'backend': backend,
-            'user': user,
-            'passwd': passwd,
-            'host': host,
-            'database': database}
-    if backend == 'sqlite':
-        template = '%(backend)s:///%(database)s'
-    else:
-        template = "%(backend)s://%(user)s:%(passwd)s@%(host)s/%(database)s"
-    return template % args
-
-
-def is_backend_avail(backend, database, user=None, passwd=None):
-    try:
-        connect_uri = get_connect_string(backend=backend,
-                                         database=database,
-                                         user=user,
-                                         passwd=passwd)
-        engine = sqlalchemy.create_engine(connect_uri)
-        connection = engine.connect()
-    except Exception as e:
-        # intentionally catch all to handle exceptions even if we don't
-        # have any backend code loaded.
-        msg = _("The %(backend)s backend is unavailable: %(exception)s")
-        LOG.info(msg, {"backend": backend, "exception": e})
-        return False
-    else:
-        connection.close()
-        engine.dispose()
-        return True
-
-
-def _have_mysql(user, passwd, database):
-    present = os.environ.get('NOVA_TEST_MYSQL_PRESENT')
-    if present is None:
-        return is_backend_avail('mysql+mysqldb', database, user, passwd)
-    return present.lower() in ('', 'true')
-
-
-def _have_postgresql(user, passwd, database):
-    present = os.environ.get('NOVA_TEST_POSTGRESQL_PRESENT')
-    if present is None:
-        return is_backend_avail('postgresql+psycopg2', database, user, passwd)
-    return present.lower() in ('', 'true')
-
-
-def get_mysql_connection_info(conn_pieces):
-    database = conn_pieces.path.strip('/')
-    loc_pieces = conn_pieces.netloc.split('@')
-    host = loc_pieces[1]
-    auth_pieces = loc_pieces[0].split(':')
-    user = auth_pieces[0]
-    password = ""
-    if len(auth_pieces) > 1:
-        if auth_pieces[1].strip():
-            password = "-p\"%s\"" % auth_pieces[1]
-
-    return (user, password, database, host)
-
-
-def get_pgsql_connection_info(conn_pieces):
-    database = conn_pieces.path.strip('/')
-    loc_pieces = conn_pieces.netloc.split('@')
-    host = loc_pieces[1]
-
-    auth_pieces = loc_pieces[0].split(':')
-    user = auth_pieces[0]
-    password = ""
-    if len(auth_pieces) > 1:
-        password = auth_pieces[1].strip()
-
-    return (user, password, database, host)
-
-
-class CommonTestsMixIn(object):
-    """Base class for migration tests.
-
-    BaseMigrationTestCase is effectively an abstract class, meant to be derived
-    from and not directly tested against; that's why these `test_` methods need
-    to be on a Mixin, so that they won't be picked up as valid tests for
-    BaseMigrationTestCase.
-    """
-    def test_walk_versions(self):
-        if not self.engines:
-            self.skipTest("No engines initialized")
-
-        for key, engine in self.engines.items():
-            # We start each walk with a completely blank slate.
-            self._reset_database(key)
-            self._walk_versions(engine, self.snake_walk, self.downgrade)
-
-    def test_mysql_opportunistically(self):
-        self._test_mysql_opportunistically()
-
-    def test_mysql_connect_fail(self):
-        """Test that we can trigger a mysql connection failure and we fail
-        gracefully to ensure we don't break people without mysql
-        """
-        if is_backend_avail('mysql+mysqldb', self.DATABASE,
-                            "openstack_cifail", self.PASSWD):
-            self.fail("Shouldn't have connected")
-
-    def test_postgresql_opportunistically(self):
-        self._test_postgresql_opportunistically()
-
-    def test_postgresql_connect_fail(self):
-        """Test that we can trigger a postgres connection failure and we fail
-        gracefully to ensure we don't break people without postgres
-        """
-        if is_backend_avail('postgresql+psycopg2', self.DATABASE,
-                            "openstack_cifail", self.PASSWD):
-            self.fail("Shouldn't have connected")
-
-
-class BaseMigrationTestCase(test.NoDBTestCase):
-    """Base class for testing migrations and migration utils. This sets up
-    and configures the databases to run tests against.
-    """
-
-    REQUIRES_LOCKING = True
-
-    # NOTE(jhesketh): It is expected that tests clean up after themselves.
-    # This is necessary for concurrency to allow multiple tests to work on
-    # one database.
-    # The full migration walk tests however do call the old _reset_databases()
-    # to throw away whatever was there so they need to operate on their own
-    # database that we know isn't accessed concurrently.
-    # Hence, BaseWalkMigrationTestCase overwrites the engine list.
-
-    USER = None
-    PASSWD = None
-    DATABASE = None
+class NovaMigrationsCheckers(test_migrations.WalkVersionsMixin):
+    """Test sqlalchemy-migrate migrations."""
 
     TIMEOUT_SCALING_FACTOR = 2
 
-    def __init__(self, *args, **kwargs):
-        super(BaseMigrationTestCase, self).__init__(*args, **kwargs)
+    snake_walk = True
+    downgrade = True
 
-        self.DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(__file__),
-                                       'test_migrations.conf')
-        # Test machines can set the NOVA_TEST_MIGRATIONS_CONF variable
-        # to override the location of the config file for migration testing
-        self.CONFIG_FILE_PATH = os.environ.get('NOVA_TEST_MIGRATIONS_CONF',
-                                      self.DEFAULT_CONFIG_FILE)
-        self.MIGRATE_FILE = nova.db.sqlalchemy.migrate_repo.__file__
-        self.REPOSITORY = repository.Repository(
-                        os.path.abspath(os.path.dirname(self.MIGRATE_FILE)))
-        self.INIT_VERSION = 0
+    @property
+    def INIT_VERSION(self):
+        return migration.db_initial_version()
 
-        self.snake_walk = False
-        self.downgrade = False
-        self.test_databases = {}
-        self.migration = None
-        self.migration_api = None
+    @property
+    def REPOSITORY(self):
+        return repository.Repository(
+            os.path.abspath(os.path.dirname(migrate_repo.__file__)))
+
+    @property
+    def migration_api(self):
+        return sa_migration.versioning_api
+
+    @property
+    def migrate_engine(self):
+        return self.engine
 
     def setUp(self):
-        super(BaseMigrationTestCase, self).setUp()
-        self._load_config()
+        super(NovaMigrationsCheckers, self).setUp()
+        conf_fixture.ConfFixture(cfg.CONF)
+        self.addCleanup(cfg.CONF.reset)
+        # NOTE(viktors): We should reduce log output because it causes issues,
+        #                when we run tests with testr
+        migrate_log = logging.getLogger('migrate')
+        old_level = migrate_log.level
+        migrate_log.setLevel(logging.WARN)
+        self.addCleanup(migrate_log.setLevel, old_level)
 
-    def _load_config(self):
-        # Load test databases from the config file. Only do this
-        # once. No need to re-run this on each test...
-        LOG.debug('config_path is %s' % self.CONFIG_FILE_PATH)
-        if os.path.exists(self.CONFIG_FILE_PATH):
-            cp = ConfigParser.RawConfigParser()
-            try:
-                cp.read(self.CONFIG_FILE_PATH)
-                config = cp.options('unit_tests')
-                for key in config:
-                    self.test_databases[key] = cp.get('unit_tests', key)
-                self.snake_walk = cp.getboolean('walk_style', 'snake_walk')
-                self.downgrade = cp.getboolean('walk_style', 'downgrade')
+    def assertColumnExists(self, engine, table_name, column):
+        self.assertTrue(oslodbutils.column_exists(engine, table_name, column))
 
-            except ConfigParser.ParsingError as e:
-                self.fail("Failed to read test_migrations.conf config "
-                          "file. Got error: %s" % e)
-        else:
-            self.fail("Failed to find test_migrations.conf config "
-                      "file.")
+    def assertColumnNotExists(self, engine, table_name, column):
+        self.assertFalse(oslodbutils.column_exists(engine, table_name, column))
 
-        self.engines = {}
-        for key, value in self.test_databases.items():
-            self.engines[key] = session.create_engine(value)
+    def assertTableNotExists(self, engine, table):
+        self.assertRaises(sqlalchemy.exc.NoSuchTableError,
+                          oslodbutils.get_table, engine, table)
 
-        # NOTE(jhesketh): We only need to make sure the databases are created
-        # not necessarily clean of tables.
-        self._create_databases()
+    def assertIndexExists(self, engine, table_name, index):
+        self.assertTrue(oslodbutils.index_exists(engine, table_name, index))
 
-    def execute_cmd(self, cmd=None):
-        out, err = processutils.trycmd(cmd, shell=True, discard_warnings=True)
-        output = out or err
-        LOG.debug(output)
-        self.assertEqual('', err,
-                         "Failed to run: %s\n%s" % (cmd, output))
+    def assertIndexMembers(self, engine, table, index, members):
+        self.assertIndexExists(engine, table, index)
 
-    @utils.synchronized('pgadmin', external=True)
-    def _reset_pg(self, conn_pieces):
-        (user, password, database, host) = \
-            get_pgsql_connection_info(conn_pieces)
-        os.environ['PGPASSWORD'] = password
-        os.environ['PGUSER'] = user
-        # note(boris-42): We must create and drop database, we can't
-        # drop database which we have connected to, so for such
-        # operations there is a special database postgres.
-        sqlcmd = ("psql -w -U %(user)s -h %(host)s -c"
-                  " '%(sql)s' -d postgres")
-        sqldict = {'user': user, 'host': host}
+        t = oslodbutils.get_table(engine, table)
+        index_columns = None
+        for idx in t.indexes:
+            if idx.name == index:
+                index_columns = idx.columns.keys()
+                break
 
-        sqldict['sql'] = ("drop database if exists %s;") % database
-        droptable = sqlcmd % sqldict
-        self.execute_cmd(droptable)
-
-        sqldict['sql'] = ("create database %s;") % database
-        createtable = sqlcmd % sqldict
-        self.execute_cmd(createtable)
-
-        os.unsetenv('PGPASSWORD')
-        os.unsetenv('PGUSER')
-
-    @utils.synchronized('mysql', external=True)
-    def _reset_mysql(self, conn_pieces):
-        # We can execute the MySQL client to destroy and re-create
-        # the MYSQL database, which is easier and less error-prone
-        # than using SQLAlchemy to do this via MetaData...trust me.
-        (user, password, database, host) = \
-                get_mysql_connection_info(conn_pieces)
-        sql = ("drop database if exists %(database)s; "
-                "create database %(database)s;" % {'database': database})
-        cmd = ("mysql -u \"%(user)s\" %(password)s -h %(host)s "
-               "-e \"%(sql)s\"" % {'user': user, 'password': password,
-                                   'host': host, 'sql': sql})
-        self.execute_cmd(cmd)
-
-    @utils.synchronized('sqlite', external=True)
-    def _reset_sqlite(self, conn_pieces):
-        # We can just delete the SQLite database, which is
-        # the easiest and cleanest solution
-        db_path = conn_pieces.path.strip('/')
-        if os.path.exists(db_path):
-            os.unlink(db_path)
-        # No need to recreate the SQLite DB. SQLite will
-        # create it for us if it's not there...
-
-    def _create_databases(self):
-        """Create all configured databases as needed."""
-        for key, engine in self.engines.items():
-            self._create_database(key)
-
-    def _create_database(self, key):
-        """Create database if it doesn't exist."""
-        conn_string = self.test_databases[key]
-        conn_pieces = urlparse.urlparse(conn_string)
-
-        if conn_string.startswith('mysql'):
-            (user, password, database, host) = \
-                get_mysql_connection_info(conn_pieces)
-            sql = "create database if not exists %s;" % database
-            cmd = ("mysql -u \"%(user)s\" %(password)s -h %(host)s "
-                   "-e \"%(sql)s\"" % {'user': user, 'password': password,
-                                       'host': host, 'sql': sql})
-            self.execute_cmd(cmd)
-        elif conn_string.startswith('postgresql'):
-            (user, password, database, host) = \
-                get_pgsql_connection_info(conn_pieces)
-            os.environ['PGPASSWORD'] = password
-            os.environ['PGUSER'] = user
-
-            sqlcmd = ("psql -w -U %(user)s -h %(host)s -c"
-                      " '%(sql)s' -d postgres")
-
-            sql = ("create database if not exists %s;") % database
-            createtable = sqlcmd % {'user': user, 'host': host, 'sql': sql}
-            # 0 means databases is created
-            # 256 means it already exists (which is fine)
-            # otherwise raise an error
-            out, err = processutils.trycmd(createtable, shell=True,
-                                           check_exit_code=[0, 256],
-                                           discard_warnings=True)
-            output = out or err
-            if err != '':
-                self.fail("Failed to run: %s\n%s" % (createtable, output))
-
-            os.unsetenv('PGPASSWORD')
-            os.unsetenv('PGUSER')
-
-    def _reset_databases(self):
-        """Reset all configured databases."""
-        for key, engine in self.engines.items():
-            self._reset_database(key)
-
-    def _reset_database(self, key):
-        """Reset specific database."""
-        engine = self.engines[key]
-        conn_string = self.test_databases[key]
-        conn_pieces = urlparse.urlparse(conn_string)
-        engine.dispose()
-        if conn_string.startswith('sqlite'):
-            self._reset_sqlite(conn_pieces)
-        elif conn_string.startswith('mysql'):
-            self._reset_mysql(conn_pieces)
-        elif conn_string.startswith('postgresql'):
-            self._reset_pg(conn_pieces)
-
-
-class BaseWalkMigrationTestCase(BaseMigrationTestCase):
-    """BaseWalkMigrationTestCase loads in an alternative set of databases for
-    testing against. This is necessary as the default databases can run tests
-    concurrently without interfering with itself. It is expected that
-    databases listed under [migraiton_dbs] in the configuration are only being
-    accessed by one test at a time. Currently only test_walk_versions accesses
-    the databases (and is the only method that calls _reset_database() which
-    is clearly problematic for concurrency).
-    """
-
-    def _load_config(self):
-        # Load test databases from the config file. Only do this
-        # once. No need to re-run this on each test...
-        LOG.debug('config_path is %s' % self.CONFIG_FILE_PATH)
-        if os.path.exists(self.CONFIG_FILE_PATH):
-            cp = ConfigParser.RawConfigParser()
-            try:
-                cp.read(self.CONFIG_FILE_PATH)
-                config = cp.options('migration_dbs')
-                for key in config:
-                    self.test_databases[key] = cp.get('migration_dbs', key)
-                self.snake_walk = cp.getboolean('walk_style', 'snake_walk')
-                self.downgrade = cp.getboolean('walk_style', 'downgrade')
-            except ConfigParser.ParsingError as e:
-                self.fail("Failed to read test_migrations.conf config "
-                          "file. Got error: %s" % e)
-        else:
-            self.fail("Failed to find test_migrations.conf config "
-                      "file.")
-
-        self.engines = {}
-        for key, value in self.test_databases.items():
-            self.engines[key] = session.create_engine(value)
-
-        self._create_databases()
-
-    def _test_mysql_opportunistically(self):
-        # Test that table creation on mysql only builds InnoDB tables
-        if not _have_mysql(self.USER, self.PASSWD, self.DATABASE):
-            self.skipTest("mysql not available")
-        # add this to the global lists to make reset work with it, it's removed
-        # automatically in tearDown so no need to clean it up here.
-        connect_string = oslodbutils.get_connect_string(
-            "mysql+mysqldb", self.DATABASE, self.USER, self.PASSWD)
-        (user, password, database, host) = \
-                get_mysql_connection_info(urlparse.urlparse(connect_string))
-        engine = session.create_engine(connect_string)
-        self.engines[database] = engine
-        self.test_databases[database] = connect_string
-
-        # build a fully populated mysql database with all the tables
-        self._reset_database(database)
-        self._walk_versions(engine, self.snake_walk, self.downgrade)
-
-        connection = engine.connect()
-        # sanity check
-        total = connection.execute("SELECT count(*) "
-                                   "from information_schema.TABLES "
-                                   "where TABLE_SCHEMA='%(database)s'" %
-                                   {'database': database})
-        self.assertTrue(total.scalar() > 0, "No tables found. Wrong schema?")
-
-        noninnodb = connection.execute("SELECT count(*) "
-                                       "from information_schema.TABLES "
-                                       "where TABLE_SCHEMA='%(database)s' "
-                                       "and ENGINE!='InnoDB' "
-                                       "and TABLE_NAME!='migrate_version'" %
-                                       {'database': database})
-        count = noninnodb.scalar()
-        self.assertEqual(count, 0, "%d non InnoDB tables created" % count)
-        connection.close()
-
-        del(self.engines[database])
-        del(self.test_databases[database])
-
-    def _test_postgresql_opportunistically(self):
-        # Test postgresql database migration walk
-        if not _have_postgresql(self.USER, self.PASSWD, self.DATABASE):
-            self.skipTest("postgresql not available")
-        # add this to the global lists to make reset work with it, it's removed
-        # automatically in tearDown so no need to clean it up here.
-        connect_string = oslodbutils.get_connect_string(
-            "postgresql+psycopg2", self.DATABASE, self.USER, self.PASSWD)
-        engine = session.create_engine(connect_string)
-        (user, password, database, host) = \
-                get_pgsql_connection_info(urlparse.urlparse(connect_string))
-        self.engines[database] = engine
-        self.test_databases[database] = connect_string
-
-        # build a fully populated postgresql database with all the tables
-        self._reset_database(database)
-        self._walk_versions(engine, self.snake_walk, self.downgrade)
-        del(self.engines[database])
-        del(self.test_databases[database])
-
-    def _walk_versions(self, engine=None, snake_walk=False, downgrade=True):
-        # Determine latest version script from the repo, then
-        # upgrade from 1 through to the latest, with no data
-        # in the databases. This just checks that the schema itself
-        # upgrades successfully.
-
-        # Place the database under version control
-        self.migration_api.version_control(engine,
-                self.REPOSITORY,
-                self.INIT_VERSION)
-        self.assertEqual(self.INIT_VERSION,
-                self.migration_api.db_version(engine,
-                                         self.REPOSITORY))
-
-        LOG.debug('latest version is %s' % self.REPOSITORY.latest)
-        versions = range(self.INIT_VERSION + 1, self.REPOSITORY.latest + 1)
-
-        for version in versions:
-            # upgrade -> downgrade -> upgrade
-            self._migrate_up(engine, version, with_data=True)
-            if snake_walk:
-                downgraded = self._migrate_down(
-                        engine, version - 1, with_data=True)
-                if downgraded:
-                    self._migrate_up(engine, version)
-
-        if downgrade:
-            # Now walk it back down to 0 from the latest, testing
-            # the downgrade paths.
-            for version in reversed(versions):
-                # downgrade -> upgrade -> downgrade
-                downgraded = self._migrate_down(engine, version - 1)
-
-                if snake_walk and downgraded:
-                    self._migrate_up(engine, version)
-                    self._migrate_down(engine, version - 1)
-
-    def _migrate_down(self, engine, version, with_data=False):
-        try:
-            self.migration_api.downgrade(engine, self.REPOSITORY, version)
-        except NotImplementedError:
-            # NOTE(sirp): some migrations, namely release-level
-            # migrations, don't support a downgrade.
-            return False
-
-        self.assertEqual(version,
-                         self.migration_api.db_version(engine,
-                                                  self.REPOSITORY))
-
-        # NOTE(sirp): `version` is what we're downgrading to (i.e. the 'target'
-        # version). So if we have any downgrade checks, they need to be run for
-        # the previous (higher numbered) migration.
-        if with_data:
-            post_downgrade = getattr(
-                    self, "_post_downgrade_%03d" % (version + 1), None)
-            if post_downgrade:
-                post_downgrade(engine)
-
-        return True
+        self.assertEqual(sorted(members), sorted(index_columns))
 
     def _skippable_migrations(self):
         special = [
@@ -541,100 +132,18 @@ class BaseWalkMigrationTestCase(BaseMigrationTestCase):
                 icehouse_placeholders +
                 juno_placeholders)
 
-    def _migrate_up(self, engine, version, with_data=False):
-        """migrate up to a new version of the db.
+    def migrate_up(self, version, with_data=False):
+        if with_data:
+            check = getattr(self, "_check_%03d" % version, None)
+            if version not in self._skippable_migrations():
+                self.assertIsNotNone(check,
+                                     ('DB Migration %i does not have a '
+                                      'test. Please add one!') % version)
 
-        We allow for data insertion and post checks at every
-        migration version with special _pre_upgrade_### and
-        _check_### functions in the main test.
-        """
-        # NOTE(sdague): try block is here because it's impossible to debug
-        # where a failed data migration happens otherwise
-        try:
-            if with_data:
-                data = None
-                pre_upgrade = getattr(
-                        self, "_pre_upgrade_%03d" % version, None)
-                if pre_upgrade:
-                    data = pre_upgrade(engine)
+        super(NovaMigrationsCheckers, self).migrate_up(version, with_data)
 
-            self.migration_api.upgrade(engine, self.REPOSITORY, version)
-            self.assertEqual(version,
-                             self.migration_api.db_version(engine,
-                                                           self.REPOSITORY))
-            if with_data:
-                check = getattr(self, "_check_%03d" % version, None)
-                if version not in self._skippable_migrations():
-                    self.assertIsNotNone(check,
-                                         ('DB Migration %i does not have a '
-                                          'test. Please add one!') % version)
-                if check:
-                    check(engine, data)
-        except Exception:
-            LOG.error("Failed to migrate to version %s on engine %s" %
-                      (version, engine))
-            raise
-
-
-class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
-    """Test sqlalchemy-migrate migrations."""
-    USER = "openstack_citest"
-    PASSWD = "openstack_citest"
-    DATABASE = "openstack_citest"
-
-    def __init__(self, *args, **kwargs):
-        super(TestNovaMigrations, self).__init__(*args, **kwargs)
-
-        self.DEFAULT_CONFIG_FILE = os.path.join(os.path.dirname(__file__),
-                                       'test_migrations.conf')
-        # Test machines can set the NOVA_TEST_MIGRATIONS_CONF variable
-        # to override the location of the config file for migration testing
-        self.CONFIG_FILE_PATH = os.environ.get('NOVA_TEST_MIGRATIONS_CONF',
-                                      self.DEFAULT_CONFIG_FILE)
-        self.MIGRATE_FILE = nova.db.sqlalchemy.migrate_repo.__file__
-        self.REPOSITORY = repository.Repository(
-                        os.path.abspath(os.path.dirname(self.MIGRATE_FILE)))
-
-    def setUp(self):
-        super(TestNovaMigrations, self).setUp()
-
-        if self.migration is None:
-            self.migration = __import__('nova.db.migration',
-                    globals(), locals(), ['db_initial_version'], -1)
-            self.INIT_VERSION = self.migration.db_initial_version()
-        if self.migration_api is None:
-            temp = __import__('nova.db.sqlalchemy.migration',
-                    globals(), locals(), ['versioning_api'], -1)
-            self.migration_api = temp.versioning_api
-
-    def assertColumnExists(self, engine, table, column):
-        t = oslodbutils.get_table(engine, table)
-        self.assertIn(column, t.c)
-
-    def assertColumnNotExists(self, engine, table, column):
-        t = oslodbutils.get_table(engine, table)
-        self.assertNotIn(column, t.c)
-
-    def assertTableNotExists(self, engine, table):
-        self.assertRaises(sqlalchemy.exc.NoSuchTableError,
-                          oslodbutils.get_table, engine, table)
-
-    def assertIndexExists(self, engine, table, index):
-        t = oslodbutils.get_table(engine, table)
-        index_names = [idx.name for idx in t.indexes]
-        self.assertIn(index, index_names)
-
-    def assertIndexMembers(self, engine, table, index, members):
-        self.assertIndexExists(engine, table, index)
-
-        t = oslodbutils.get_table(engine, table)
-        index_columns = None
-        for idx in t.indexes:
-            if idx.name == index:
-                index_columns = idx.columns.keys()
-                break
-
-        self.assertEqual(sorted(members), sorted(index_columns))
+    def test_walk_versions(self):
+        self.walk_versions(self.snake_walk, self.downgrade)
 
     def _check_227(self, engine, data):
         table = oslodbutils.get_table(engine, 'project_user_quotas')
@@ -831,12 +340,12 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
 
     def _check_251(self, engine, data):
         self.assertColumnExists(engine, 'compute_nodes', 'numa_topology')
-        self.assertColumnExists(
-                engine, 'shadow_compute_nodes', 'numa_topology')
+        self.assertColumnExists(engine, 'shadow_compute_nodes',
+                                'numa_topology')
 
         compute_nodes = oslodbutils.get_table(engine, 'compute_nodes')
-        shadow_compute_nodes = oslodbutils.get_table(
-                engine, 'shadow_compute_nodes')
+        shadow_compute_nodes = oslodbutils.get_table(engine,
+                                                     'shadow_compute_nodes')
         self.assertIsInstance(compute_nodes.c.numa_topology.type,
                               sqlalchemy.types.Text)
         self.assertIsInstance(shadow_compute_nodes.c.numa_topology.type,
@@ -844,8 +353,8 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
 
     def _post_downgrade_251(self, engine):
         self.assertColumnNotExists(engine, 'compute_nodes', 'numa_topology')
-        self.assertColumnNotExists(
-                engine, 'shadow_compute_nodes', 'numa_topology')
+        self.assertColumnNotExists(engine, 'shadow_compute_nodes',
+                                   'numa_topology')
 
     def _check_252(self, engine, data):
         oslodbutils.get_table(engine, 'instance_extra')
@@ -861,11 +370,10 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     def _check_253(self, engine, data):
         self.assertColumnExists(engine, 'instance_extra', 'pci_requests')
         self.assertColumnExists(
-                engine, 'shadow_instance_extra', 'pci_requests')
-
+            engine, 'shadow_instance_extra', 'pci_requests')
         instance_extra = oslodbutils.get_table(engine, 'instance_extra')
-        shadow_instance_extra = oslodbutils.get_table(
-                engine, 'shadow_instance_extra')
+        shadow_instance_extra = oslodbutils.get_table(engine,
+                                                      'shadow_instance_extra')
         self.assertIsInstance(instance_extra.c.pci_requests.type,
                               sqlalchemy.types.Text)
         self.assertIsInstance(shadow_instance_extra.c.pci_requests.type,
@@ -873,8 +381,8 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
 
     def _post_downgrade_253(self, engine):
         self.assertColumnNotExists(engine, 'instance_extra', 'pci_requests')
-        self.assertColumnNotExists(
-                engine, 'shadow_instance_extra', 'pci_requests')
+        self.assertColumnNotExists(engine, 'shadow_instance_extra',
+                                   'pci_requests')
 
     def _check_254(self, engine, data):
         self.assertColumnExists(engine, 'pci_devices', 'request_id')
@@ -920,6 +428,41 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         self.assertEqual(1, len([i for i in iscsi_targets.indexes
                                  if [c.name for c in i.columns][:1] ==
                                     ['host']]))
+
+
+class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
+                               test_base.DbTestCase):
+    pass
+
+
+class TestNovaMigrationsMySQL(NovaMigrationsCheckers,
+                              test_base.MySQLOpportunisticTestCase):
+    def test_innodb_tables(self):
+        with mock.patch.object(sa_migration, 'get_engine',
+                               return_value=self.migrate_engine):
+            sa_migration.db_sync()
+
+        total = self.migrate_engine.execute(
+            "SELECT count(*) "
+            "FROM information_schema.TABLES "
+            "WHERE TABLE_SCHEMA = '%(database)s'" %
+            {'database': self.migrate_engine.url.database})
+        self.assertTrue(total.scalar() > 0, "No tables found. Wrong schema?")
+
+        noninnodb = self.migrate_engine.execute(
+            "SELECT count(*) "
+            "FROM information_schema.TABLES "
+            "WHERE TABLE_SCHEMA='%(database)s' "
+            "AND ENGINE != 'InnoDB' "
+            "AND TABLE_NAME != 'migrate_version'" %
+            {'database': self.migrate_engine.url.database})
+        count = noninnodb.scalar()
+        self.assertEqual(count, 0, "%d non InnoDB tables created" % count)
+
+
+class TestNovaMigrationsPostgreSQL(NovaMigrationsCheckers,
+                                   test_base.PostgreSQLOpportunisticTestCase):
+    pass
 
 
 class ProjectTestCase(test.NoDBTestCase):
