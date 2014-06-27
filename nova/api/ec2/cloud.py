@@ -1670,6 +1670,10 @@ class CloudController(object):
     # manipulating instances/volumes/snapshots.
     # As other code doesn't take it into consideration, here we don't
     # care of it for now. Ostrich algorithm
+    # TODO(mriedem): Consider auto-locking the instance when stopping it and
+    # doing the snapshot, then unlock it when that is done. Locking the
+    # instance in the database would prevent other APIs from changing the state
+    # of the instance during this operation for non-admin users.
     def create_image(self, context, instance_id, **kwargs):
         # NOTE(yamahata): name/description are ignored by register_image(),
         #                 do so here
@@ -1700,21 +1704,28 @@ class CloudController(object):
 
             if vm_state == vm_states.ACTIVE:
                 restart_instance = True
-                self.compute_api.stop(context, instance)
+                # NOTE(mriedem): We do a call here so that we're sure the
+                # stop request is complete before we begin polling the state.
+                self.compute_api.stop(context, instance, do_cast=False)
 
-            # wait instance for really stopped
+            # wait instance for really stopped (and not transitioning tasks)
             start_time = time.time()
-            while vm_state != vm_states.STOPPED:
+            while (vm_state != vm_states.STOPPED and
+                   instance.task_state is not None):
                 time.sleep(1)
-                instance = self.compute_api.get(context, instance_uuid,
-                                                want_objects=True)
+                instance.refresh()
                 vm_state = instance.vm_state
                 # NOTE(yamahata): timeout and error. 1 hour for now for safety.
                 #                 Is it too short/long?
                 #                 Or is there any better way?
                 timeout = 1 * 60 * 60
                 if time.time() > start_time + timeout:
-                    err = _("Couldn't stop instance within %d sec") % timeout
+                    err = (_("Couldn't stop instance %(instance)s within "
+                             "1 hour. Current vm_state: %(vm_state)s, "
+                             "current task_state: %(task_state)s") %
+                             {'instance': instance_uuid,
+                              'vm_state': vm_state,
+                              'task_state': instance.task_state})
                     raise exception.InternalError(message=err)
 
         glance_uuid = instance.image_ref
