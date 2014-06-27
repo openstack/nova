@@ -1685,14 +1685,14 @@ class CloudController(object):
         if not self.compute_api.is_volume_backed_instance(context, instance):
             msg = _("Invalid value '%(ec2_instance_id)s' for instanceId. "
                     "Instance does not have a volume attached at root "
-                    "(%(root)s)") % {'root': instance['root_device_name'],
+                    "(%(root)s)") % {'root': instance.root_device_name,
                                      'ec2_instance_id': ec2_instance_id}
             raise exception.InvalidParameterValue(err=msg)
 
         # stop the instance if necessary
         restart_instance = False
         if not no_reboot:
-            vm_state = instance['vm_state']
+            vm_state = instance.vm_state
 
             # if the instance is in subtle state, refuse to proceed.
             if vm_state not in (vm_states.ACTIVE, vm_states.STOPPED):
@@ -1708,7 +1708,7 @@ class CloudController(object):
                 time.sleep(1)
                 instance = self.compute_api.get(context, instance_uuid,
                                                 want_objects=True)
-                vm_state = instance['vm_state']
+                vm_state = instance.vm_state
                 # NOTE(yamahata): timeout and error. 1 hour for now for safety.
                 #                 Is it too short/long?
                 #                 Or is there any better way?
@@ -1717,7 +1717,7 @@ class CloudController(object):
                     err = _("Couldn't stop instance within %d sec") % timeout
                     raise exception.InternalError(message=err)
 
-        glance_uuid = instance['image_ref']
+        glance_uuid = instance.image_ref
         ec2_image_id = ec2utils.glance_id_to_ec2_id(context, glance_uuid)
         src_image = self._get_image(context, ec2_image_id)
         image_meta = dict(src_image)
@@ -1732,7 +1732,7 @@ class CloudController(object):
         _unmap_id_property(image_meta['properties'], 'ramdisk_id')
 
         # meaningful image name
-        name_map = dict(instance=instance['uuid'], now=timeutils.isotime())
+        name_map = dict(instance=instance_uuid, now=timeutils.isotime())
         name = name or _('image of %(instance)s at %(now)s') % name_map
 
         new_image = self.compute_api.snapshot_volume_backed(context,
