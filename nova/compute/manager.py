@@ -3241,51 +3241,47 @@ class ComputeManager(manager.Manager):
 
         """
 
-        @utils.synchronized(instance['uuid'])
-        def do_revert_resize(context, instance, migration, reservations):
-            quotas = quotas_obj.Quotas.from_reservations(context,
-                                                         reservations,
-                                                         instance=instance)
-            # NOTE(comstud): A revert_resize is essentially a resize back to
-            # the old size, so we need to send a usage event here.
-            self.conductor_api.notify_usage_exists(
-                    context, instance, current_period=True)
+        quotas = quotas_obj.Quotas.from_reservations(context,
+                                                     reservations,
+                                                     instance=instance)
 
-            with self._error_out_instance_on_exception(context,
-                                                       instance['uuid'],
-                                                       quotas=quotas):
-                # NOTE(tr3buchet): tear down networks on destination host
-                self.network_api.setup_networks_on_host(context, instance,
-                                                        teardown=True)
+        # NOTE(comstud): A revert_resize is essentially a resize back to
+        # the old size, so we need to send a usage event here.
+        self.conductor_api.notify_usage_exists(
+                context, instance, current_period=True)
 
-                instance_p = obj_base.obj_to_primitive(instance)
-                migration_p = obj_base.obj_to_primitive(migration)
-                self.network_api.migrate_instance_start(context,
-                                                        instance_p,
-                                                        migration_p)
+        with self._error_out_instance_on_exception(context, instance['uuid'],
+                                                   quotas=quotas):
+            # NOTE(tr3buchet): tear down networks on destination host
+            self.network_api.setup_networks_on_host(context, instance,
+                                                    teardown=True)
 
-                network_info = self._get_instance_nw_info(context, instance)
-                obj_bdml = objects.BlockDeviceMappingList
-                bdms = obj_bdml.get_by_instance_uuid(context, instance.uuid)
-                block_device_info = self._get_instance_block_device_info(
-                                    context, instance, bdms=bdms)
+            instance_p = obj_base.obj_to_primitive(instance)
+            migration_p = obj_base.obj_to_primitive(migration)
+            self.network_api.migrate_instance_start(context,
+                                                    instance_p,
+                                                    migration_p)
 
-                self.driver.destroy(context, instance, network_info,
-                                    block_device_info)
+            network_info = self._get_instance_nw_info(context, instance)
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                    context, instance.uuid)
+            block_device_info = self._get_instance_block_device_info(
+                                context, instance, bdms=bdms)
 
-                self._terminate_volume_connections(context, instance, bdms)
+            self.driver.destroy(context, instance, network_info,
+                                block_device_info)
 
-                migration.status = 'reverted'
-                migration.save(context.elevated())
+            self._terminate_volume_connections(context, instance, bdms)
 
-                rt = self._get_resource_tracker(instance.node)
-                rt.drop_resize_claim(instance)
+            migration.status = 'reverted'
+            migration.save(context.elevated())
 
-                self.compute_rpcapi.finish_revert_resize(context, instance,
-                        migration, migration.source_compute,
-                        quotas.reservations)
+            rt = self._get_resource_tracker(instance.node)
+            rt.drop_resize_claim(instance)
 
-        do_revert_resize(context, instance, migration, reservations)
+            self.compute_rpcapi.finish_revert_resize(context, instance,
+                    migration, migration.source_compute,
+                    quotas.reservations)
 
     @wrap_exception()
     @reverts_task_state
@@ -3621,20 +3617,13 @@ class ComputeManager(manager.Manager):
                                      image, resize_instance,
                                      block_device_info, power_on)
 
-        # NOTE(lbragstad): Here we should make sure to update the instance
-        # object before the migration in the event the
-        # _poll_unconfirmed_resizes periodic task is run in between the
-        # instance and migration updates. If we update the instance first the
-        # migration record will sync in _confirm_resize the next time the
-        # periodic task is run, versus erroring out because the migration has
-        # 'finished' and the instance doesn't have task state RESIZE_FINISH.
+        migration.status = 'finished'
+        migration.save(context.elevated())
+
         instance.vm_state = vm_states.RESIZED
         instance.task_state = None
         instance.launched_at = timeutils.utcnow()
         instance.save(expected_task_state=task_states.RESIZE_FINISH)
-
-        migration.status = 'finished'
-        migration.save(context.elevated())
 
         self._notify_about_instance_usage(
             context, instance, "finish_resize.end",
@@ -3653,31 +3642,24 @@ class ComputeManager(manager.Manager):
         new host machine.
 
         """
-        @utils.synchronized(instance['uuid'])
-        def do_finish_resize(context, disk_info, image, instance,
-                             reservations, migration):
-            quotas = quotas_obj.Quotas.from_reservations(context,
-                                                         reservations,
-                                                         instance=instance)
-
-            try:
-                self._finish_resize(context, instance, migration,
-                                    disk_info, image)
-                quotas.commit()
-            except Exception:
-                LOG.exception(_('Setting instance vm_state to ERROR'),
-                              instance=instance)
-                with excutils.save_and_reraise_exception():
-                    try:
-                        quotas.rollback()
-                    except Exception as qr_error:
-                        LOG.exception(_("Failed to rollback quota for failed "
-                                        "finish_resize: %s"),
-                                      qr_error, instance=instance)
-                    self._set_instance_error_state(context, instance['uuid'])
-
-        do_finish_resize(context, disk_info, image, instance, reservations,
-                         migration)
+        quotas = quotas_obj.Quotas.from_reservations(context,
+                                                     reservations,
+                                                     instance=instance)
+        try:
+            self._finish_resize(context, instance, migration,
+                                disk_info, image)
+            quotas.commit()
+        except Exception:
+            LOG.exception(_('Setting instance vm_state to ERROR'),
+                          instance=instance)
+            with excutils.save_and_reraise_exception():
+                try:
+                    quotas.rollback()
+                except Exception as qr_error:
+                    LOG.exception(_("Failed to rollback quota for failed "
+                                    "finish_resize: %s"),
+                                  qr_error, instance=instance)
+                self._set_instance_error_state(context, instance['uuid'])
 
     @object_compat
     @wrap_exception()
