@@ -59,7 +59,10 @@ _SANITIZE_PATTERNS = []
 _FORMAT_PATTERNS = [r'(%(key)s\s*[=]\s*[\"\']).*?([\"\'])',
                     r'(<%(key)s>).*?(</%(key)s>)',
                     r'([\"\']%(key)s[\"\']\s*:\s*[\"\']).*?([\"\'])',
-                    r'([\'"].*?%(key)s[\'"]\s*:\s*u?[\'"]).*?([\'"])']
+                    r'([\'"].*?%(key)s[\'"]\s*:\s*u?[\'"]).*?([\'"])',
+                    r'([\'"].*?%(key)s[\'"]\s*,\s*\'--?[A-z]+\'\s*,\s*u?[\'"])'
+                    '.*?([\'"])',
+                    r'(%(key)s\s*--?[A-z]+\s*).*?([\s])']
 
 for key in _SANITIZE_KEYS:
     for pattern in _FORMAT_PATTERNS:
@@ -89,7 +92,6 @@ logging_cli_opts = [
                     'files. For details about logging configuration files, '
                     'see the Python logging module documentation.'),
     cfg.StrOpt('log-format',
-               default=None,
                metavar='FORMAT',
                help='DEPRECATED. '
                     'A logging.Formatter log message format string which may '
@@ -115,7 +117,7 @@ logging_cli_opts = [
                 default=False,
                 help='Use syslog for logging. '
                      'Existing syslog format is DEPRECATED during I, '
-                     'and will chang in J to honor RFC5424.'),
+                     'and will change in J to honor RFC5424.'),
     cfg.BoolOpt('use-syslog-rfc-format',
                 # TODO(bogdando) remove or use True after existing
                 #    syslog format deprecation in J
@@ -422,9 +424,7 @@ class JSONFormatter(logging.Formatter):
 
 def _create_logging_excepthook(product_name):
     def logging_excepthook(exc_type, value, tb):
-        extra = {}
-        if CONF.verbose or CONF.debug:
-            extra['exc_info'] = (exc_type, value, tb)
+        extra = {'exc_info': (exc_type, value, tb)}
         getLogger(product_name).critical(
             "".join(traceback.format_exception_only(exc_type, value)),
             **extra)
@@ -462,9 +462,8 @@ def setup(product_name, version='unknown'):
 
 
 def set_defaults(logging_context_format_string):
-    cfg.set_defaults(log_opts,
-                     logging_context_format_string=
-                     logging_context_format_string)
+    cfg.set_defaults(
+        log_opts, logging_context_format_string=logging_context_format_string)
 
 
 def _find_facility_from_conf():
@@ -541,9 +540,14 @@ def _setup_logging_from_conf(project, version):
         log_root.addHandler(streamlog)
 
     if CONF.publish_errors:
-        handler = importutils.import_object(
-            "nova.openstack.common.log_handler.PublishErrorsHandler",
-            logging.ERROR)
+        try:
+            handler = importutils.import_object(
+                "nova.openstack.common.log_handler.PublishErrorsHandler",
+                logging.ERROR)
+        except ImportError:
+            handler = importutils.import_object(
+                "oslo.messaging.notify.log_handler.PublishErrorsHandler",
+                logging.ERROR)
         log_root.addHandler(handler)
 
     datefmt = CONF.log_date_format
@@ -569,9 +573,15 @@ def _setup_logging_from_conf(project, version):
 
     for pair in CONF.default_log_levels:
         mod, _sep, level_name = pair.partition('=')
-        level = logging.getLevelName(level_name)
         logger = logging.getLogger(mod)
-        logger.setLevel(level)
+        # NOTE(AAzza) in python2.6 Logger.setLevel doesn't convert string name
+        # to integer code.
+        if sys.version_info < (2, 7):
+            level = logging.getLevelName(level_name)
+            logger.setLevel(level)
+        else:
+            logger.setLevel(level_name)
+
 
 _loggers = {}
 
@@ -660,14 +670,19 @@ class ContextFormatter(logging.Formatter):
                 record.__dict__[key] = ''
 
         if record.__dict__.get('request_id'):
-            self._fmt = CONF.logging_context_format_string
+            fmt = CONF.logging_context_format_string
         else:
-            self._fmt = CONF.logging_default_format_string
+            fmt = CONF.logging_default_format_string
 
         if (record.levelno == logging.DEBUG and
                 CONF.logging_debug_format_suffix):
-            self._fmt += " " + CONF.logging_debug_format_suffix
+            fmt += " " + CONF.logging_debug_format_suffix
 
+        if sys.version_info < (3, 2):
+            self._fmt = fmt
+        else:
+            self._style = logging.PercentStyle(fmt)
+            self._fmt = self._style._fmt
         # Cache this on the record, Logger will respect our formatted copy
         if record.exc_info:
             record.exc_text = self.formatException(record.exc_info, record)
