@@ -784,10 +784,13 @@ class ComputeAPI(object):
                      filter_properties, requested_networks,
                      injected_files, admin_password,
                      is_first_time, node=None, legacy_bdm_in_spec=True):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.37')
-        instance_p = jsonutils.to_primitive(instance)
-        msg_kwargs = {'instance': instance_p, 'request_spec': request_spec,
+        if self.client.can_send_version('3.27'):
+            version = '3.27'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.37')
+            instance = jsonutils.to_primitive(instance)
+        msg_kwargs = {'instance': instance, 'request_spec': request_spec,
                       'filter_properties': filter_properties,
                       'requested_networks': requested_networks,
                       'injected_files': injected_files,
