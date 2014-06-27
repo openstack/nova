@@ -711,6 +711,14 @@
             "name": "Volumes",
             "namespace": "http://docs.openstack.org/compute/ext/volumes/api/v1.1",
             "updated": "2011-03-25T00:00:00Z"
+        },
+        {
+            "alias": "os-server-sort-keys",
+            "description": "Add sorting support in get Server v2 API.",
+            "links": [],
+            "name": "ServerSortKeys",
+            "namespace": "http://docs.openstack.org/compute/ext/server_sort_keys/api/v2",
+            "updated": "2014-05-22T00:00:00Z"
         }
     ]
 }

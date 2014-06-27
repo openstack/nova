@@ -596,12 +596,18 @@ class Controller(wsgi.Controller):
                 search_opts['user_id'] = context.user_id
 
         limit, marker = common.get_limit_and_marker(req)
+        # Sorting by multiple keys and directions is conditionally enabled
+        sort_keys, sort_dirs = None, None
+        if self.ext_mgr.is_loaded('os-server-sort-keys'):
+            sort_keys, sort_dirs = common.get_sort_params(req.params)
         try:
             instance_list = self.compute_api.get_all(context,
                                                      search_opts=search_opts,
                                                      limit=limit,
                                                      marker=marker,
-                                                     want_objects=True)
+                                                     want_objects=True,
+                                                     sort_keys=sort_keys,
+                                                     sort_dirs=sort_dirs)
         except exception.MarkerNotFound:
             msg = _('marker [%s] not found') % marker
             raise exc.HTTPBadRequest(explanation=msg)

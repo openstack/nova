@@ -176,6 +176,9 @@ class ControllerTest(test.TestCase):
         fake.stub_out_image_service(self.stubs)
         return_server = fakes.fake_instance_get()
         return_servers = fakes.fake_instance_get_all_by_filters()
+        # Server sort keys extension is not enabled in v2 test so no sort
+        # data is passed to the instance API and the non-sorted DB API is
+        # invoked
         self.stubs.Set(db, 'instance_get_all_by_filters',
                        return_servers)
         self.stubs.Set(db, 'instance_get_by_uuid',
@@ -572,7 +575,8 @@ class ServersControllerTest(ControllerTest):
 
     def test_get_server_details_with_limit_and_other_params(self):
         req = fakes.HTTPRequest.blank('/fake/servers/detail'
-                                      '?limit=3&blah=2:t')
+                                      '?limit=3&blah=2:t'
+                                      '&sort_key=id1&sort_dir=asc')
         res = self.controller.detail(req)
 
         servers = res['servers']
@@ -581,11 +585,16 @@ class ServersControllerTest(ControllerTest):
 
         servers_links = res['servers_links']
         self.assertEqual(servers_links[0]['rel'], 'next')
-
+        # Retrieve the parameters from the next link, they should contain the
+        # same limit, filter, and sort information as the original request as
+        # well as a marker; this ensures that the caller can simply use the
+        # "next" link and that they do not need to manually insert the limit
+        # and sort information.
         href_parts = urlparse.urlparse(servers_links[0]['href'])
         self.assertEqual('/v2/fake/servers/detail', href_parts.path)
         params = urlparse.parse_qs(href_parts.query)
         expected = {'limit': ['3'], 'blah': ['2:t'],
+                    'sort_key': ['id1'], 'sort_dir': ['asc'],
                     'marker': [fakes.get_fake_uuid(2)]}
         self.assertThat(params, matchers.DictMatches(expected))
 
@@ -616,12 +625,38 @@ class ServersControllerTest(ControllerTest):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.index, req)
 
+    @mock.patch('nova.compute.api.API.get_all')
+    def test_get_servers_with_sorting_enabled(self, mock_compute_get_all):
+        '''Sorting params honored if os-server-sort-keys is loaded.'''
+        self.ext_mgr.extensions = {'os-server-sort-keys': 'fake'}
+        req = fakes.HTTPRequest.blank('/fake/servers'
+                                      '?sort_key=id1&sort_dir=asc')
+        self.controller.index(req)
+        self.assertEqual(mock_compute_get_all.call_count, 1)
+        # Ensure that sort_dirs and sort_dirs is correct
+        kwargs = mock_compute_get_all.call_args[1]
+        self.assertEqual(['id1'], kwargs['sort_keys'])
+        self.assertEqual(['asc'], kwargs['sort_dirs'])
+
+    @mock.patch('nova.compute.api.API.get_all')
+    def test_get_servers_with_sorting_disabled(self, mock_compute_get_all):
+        '''Sorting params ignored if os-server-sort-keys is not loaded.'''
+        self.ext_mgr.extensions = {}
+        req = fakes.HTTPRequest.blank('/fake/servers'
+                                      '?sort_key=id1&sort_dir=asc')
+        self.controller.index(req)
+        self.assertEqual(mock_compute_get_all.call_count, 1)
+        # Ensure that sort_dirs and sort_dirs is None
+        kwargs = mock_compute_get_all.call_args[1]
+        self.assertIsNone(kwargs['sort_keys'])
+        self.assertIsNone(kwargs['sort_dirs'])
+
     def test_get_servers_with_bad_option(self):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc',
-                         limit=None, marker=None, want_objects=False):
+                         limit=None, marker=None, want_objects=False,
+                         sort_keys=None, sort_dirs=None):
             db_list = [fakes.stub_instance(100, uuid=server_uuid)]
             return instance_obj._make_instance_list(
                 context, objects.InstanceList(), db_list, FIELDS)
@@ -638,8 +673,8 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc',
-                         limit=None, marker=None, want_objects=False):
+                         limit=None, marker=None, want_objects=False,
+                         sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('image', search_opts)
             self.assertEqual(search_opts['image'], '12345')
@@ -670,9 +705,8 @@ class ServersControllerTest(ControllerTest):
         req = fakes.HTTPRequest.blank('/fake/servers'
                                       '?all_tenants=1&tenant_id=newfake',
                                       use_admin_context=True)
-        res = self.controller.index(req)
-
-        self.assertIn('servers', res)
+        servers = self.controller.index(req)['servers']
+        self.assertEqual(len(servers), 1)
 
     def test_all_tenants_param_normal(self):
         def fake_get_all(context, filters=None, sort_key=None,
@@ -686,9 +720,8 @@ class ServersControllerTest(ControllerTest):
 
         req = fakes.HTTPRequest.blank('/fake/servers?all_tenants',
                                       use_admin_context=True)
-        res = self.controller.index(req)
-
-        self.assertIn('servers', res)
+        servers = self.controller.index(req)['servers']
+        self.assertEqual(len(servers), 1)
 
     def test_all_tenants_param_one(self):
         def fake_get_all(context, filters=None, sort_key=None,
@@ -702,9 +735,8 @@ class ServersControllerTest(ControllerTest):
 
         req = fakes.HTTPRequest.blank('/fake/servers?all_tenants=1',
                                       use_admin_context=True)
-        res = self.controller.index(req)
-
-        self.assertIn('servers', res)
+        servers = self.controller.index(req)['servers']
+        self.assertEqual(len(servers), 1)
 
     def test_all_tenants_param_zero(self):
         def fake_get_all(context, filters=None, sort_key=None,
@@ -718,9 +750,8 @@ class ServersControllerTest(ControllerTest):
 
         req = fakes.HTTPRequest.blank('/fake/servers?all_tenants=0',
                                       use_admin_context=True)
-        res = self.controller.index(req)
-
-        self.assertIn('servers', res)
+        servers = self.controller.index(req)['servers']
+        self.assertEqual(len(servers), 1)
 
     def test_all_tenants_param_false(self):
         def fake_get_all(context, filters=None, sort_key=None,
@@ -734,9 +765,8 @@ class ServersControllerTest(ControllerTest):
 
         req = fakes.HTTPRequest.blank('/fake/servers?all_tenants=false',
                                       use_admin_context=True)
-        res = self.controller.index(req)
-
-        self.assertIn('servers', res)
+        servers = self.controller.index(req)['servers']
+        self.assertEqual(len(servers), 1)
 
     def test_all_tenants_param_invalid(self):
         def fake_get_all(context, filters=None, sort_key=None,
@@ -766,9 +796,8 @@ class ServersControllerTest(ControllerTest):
 
         req = fakes.HTTPRequest.blank('/fake/servers',
                                       use_admin_context=True)
-        res = self.controller.index(req)
-
-        self.assertIn('servers', res)
+        servers = self.controller.index(req)['servers']
+        self.assertEqual(len(servers), 1)
 
     def test_all_tenants_pass_policy(self):
         def fake_get_all(context, filters=None, sort_key=None,
@@ -791,9 +820,8 @@ class ServersControllerTest(ControllerTest):
         policy.set_rules(rules)
 
         req = fakes.HTTPRequest.blank('/fake/servers?all_tenants=1')
-        res = self.controller.index(req)
-
-        self.assertIn('servers', res)
+        servers = self.controller.index(req)['servers']
+        self.assertEqual(len(servers), 1)
 
     def test_all_tenants_fail_policy(self):
         def fake_get_all(context, filters=None, sort_key=None,
@@ -821,8 +849,8 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc',
-                         limit=None, marker=None, want_objects=False):
+                         limit=None, marker=None, want_objects=False,
+                         sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('flavor', search_opts)
             # flavor is an integer ID
@@ -855,8 +883,8 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc',
-                         limit=None, marker=None, want_objects=False):
+                         limit=None, marker=None, want_objects=False,
+                         sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('vm_state', search_opts)
             self.assertEqual(search_opts['vm_state'], [vm_states.ACTIVE])
@@ -893,7 +921,8 @@ class ServersControllerTest(ControllerTest):
                                     project_id='fake')
         get_all_mock.assert_called_once_with(mock.ANY,
                         search_opts=expected_search_opts, limit=mock.ANY,
-                        marker=mock.ANY, want_objects=mock.ANY)
+                        marker=mock.ANY, want_objects=mock.ANY,
+                        sort_keys=mock.ANY, sort_dirs=mock.ANY)
 
     @mock.patch.object(compute_api.API, 'get_all')
     def test_get_servers_system_metadata_filter(self, get_all_mock):
@@ -918,7 +947,8 @@ class ServersControllerTest(ControllerTest):
             system_metadata=expected_system_metadata, project_id='fake')
         get_all_mock.assert_called_once_with(mock.ANY,
                         search_opts=expected_search_opts, limit=mock.ANY,
-                        marker=mock.ANY, want_objects=mock.ANY)
+                        marker=mock.ANY, want_objects=mock.ANY,
+                        sort_keys=mock.ANY, sort_dirs=mock.ANY)
 
     @mock.patch.object(compute_api.API, 'get_all')
     def test_get_servers_flavor_not_found(self, get_all_mock):
@@ -949,15 +979,16 @@ class ServersControllerTest(ControllerTest):
                                     project_id='fake')
         get_all_mock.assert_called_once_with(mock.ANY,
                         search_opts=expected_search_opts, limit=mock.ANY,
-                        marker=mock.ANY, want_objects=mock.ANY)
+                        marker=mock.ANY, want_objects=mock.ANY,
+                        sort_keys=mock.ANY, sort_dirs=mock.ANY)
 
     def test_get_servers_allows_task_status(self):
         server_uuid = str(uuid.uuid4())
         task_state = task_states.REBOOTING
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc',
-                         limit=None, marker=None, want_objects=False):
+                         limit=None, marker=None, want_objects=False,
+                         sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('task_state', search_opts)
             self.assertEqual([task_states.REBOOT_PENDING,
@@ -982,8 +1013,8 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc',
-                         limit=None, marker=None, want_objects=False):
+                         limit=None, marker=None, want_objects=False,
+                         sort_keys=None, sort_dirs=None):
             self.assertIn('vm_state', search_opts)
             self.assertEqual(search_opts['vm_state'],
                              [vm_states.ACTIVE, vm_states.STOPPED])
@@ -1017,8 +1048,8 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc',
-                         limit=None, marker=None, want_objects=False):
+                         limit=None, marker=None, want_objects=False,
+                         sort_keys=None, sort_dirs=None):
             self.assertIn('vm_state', search_opts)
             self.assertEqual(search_opts['vm_state'], ['deleted'])
 
@@ -1039,8 +1070,8 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc',
-                         limit=None, marker=None, want_objects=False):
+                         limit=None, marker=None, want_objects=False,
+                         sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('name', search_opts)
             self.assertEqual(search_opts['name'], 'whee.*')
@@ -1060,8 +1091,8 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc',
-                         limit=None, marker=None, want_objects=False):
+                         limit=None, marker=None, want_objects=False,
+                         sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('changes-since', search_opts)
             changes_since = datetime.datetime(2011, 1, 24, 17, 8, 1,
@@ -1094,8 +1125,8 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc',
-                         limit=None, marker=None, want_objects=False):
+                         limit=None, marker=None, want_objects=False,
+                         sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             # Allowed by user
             self.assertIn('name', search_opts)
@@ -1125,8 +1156,8 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc',
-                         limit=None, marker=None, want_objects=False):
+                         limit=None, marker=None, want_objects=False,
+                         sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             # Allowed by user
             self.assertIn('name', search_opts)
@@ -1154,8 +1185,8 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc',
-                         limit=None, marker=None, want_objects=False):
+                         limit=None, marker=None, want_objects=False,
+                         sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('ip', search_opts)
             self.assertEqual(search_opts['ip'], '10\..*')
@@ -1178,8 +1209,8 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         sort_key=None, sort_dir='desc',
-                         limit=None, marker=None, want_objects=False):
+                         limit=None, marker=None, want_objects=False,
+                         sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('ip6', search_opts)
             self.assertEqual(search_opts['ip6'], 'ffff.*')

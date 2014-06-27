@@ -64,6 +64,17 @@ class ServersSampleJsonTest(ServersSampleBase):
         self._verify_response('servers-details-resp', subs, response, 200)
 
 
+class ServerSortKeysJsonTests(ServersSampleBase):
+    sample_dir = 'servers-sort'
+
+    def test_servers_list(self):
+        self._post_server()
+        response = self._do_get('servers?sort_key=display_name&sort_dir=asc')
+        subs = self._get_regexes()
+        self._verify_response('server-sort-keys-list-resp', subs, response,
+                              200)
+
+
 class ServersSampleAllExtensionJsonTest(ServersSampleJsonTest):
     all_extensions = True
 
