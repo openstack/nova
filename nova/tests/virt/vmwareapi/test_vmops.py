@@ -637,7 +637,17 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                               power_on=power_on)
 
             mock_is_neutron.assert_called_once_with()
-            self.assertTrue(3, len(mock_mkdir.mock_calls))
+
+            expected_mkdir_calls = 3
+            if block_device_info and len(block_device_info.get(
+                    'block_device_mapping', [])) > 0:
+                # if block_device_info contains key 'block_device_mapping'
+                # with any information, method mkdir wouldn't be called in
+                # method self._vmops.spawn()
+                expected_mkdir_calls = 0
+
+            self.assertEqual(expected_mkdir_calls, len(mock_mkdir.mock_calls))
+
             mock_get_vnc_port.assert_called_once_with(self._session)
             mock_get_mo_id_for_instance.assert_called_once_with(self._instance)
             mock_get_res_pool_ref.assert_called_once_with(
