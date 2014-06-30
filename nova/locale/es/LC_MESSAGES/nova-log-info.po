@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-06-24 06:06+0000\n"
-"PO-Revision-Date: 2014-06-20 16:41+0000\n"
+"POT-Creation-Date: 2014-06-30 06:07+0000\n"
+"PO-Revision-Date: 2014-06-30 05:01+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Spanish (http://www.transifex.com/projects/p/nova/language/"
 "es/)\n"
@@ -23,6 +23,16 @@ msgstr ""
 #, python-format
 msgid "Eventlet backdoor listening on %(port)s for process %(pid)d"
 msgstr "Eventlet oculto escuchando en %(port)s para el proceso %(pid)d"
+
+#: nova/openstack/common/lockutils.py:83
+#, python-format
+msgid "Created lock path: %s"
+msgstr "Candado creado ruta: %s"
+
+#: nova/openstack/common/lockutils.py:250
+#, python-format
+msgid "Failed to remove file %(file)s"
+msgstr ""
 
 #: nova/openstack/common/periodic_task.py:125
 #, python-format
@@ -90,6 +100,145 @@ msgstr "Eliminando registro duplicado con id: %(id)s de la tabla: %(table)s"
 #, python-format
 msgid "%(num_values)d values found, of which the minimum value will be used."
 msgstr ""
+
+#: nova/virt/libvirt/driver.py:894
+msgid "Instance destroyed successfully."
+msgstr "La instancia se ha destruido satisfactoriamente. "
+
+#: nova/virt/libvirt/driver.py:904
+msgid "Instance may be started again."
+msgstr "La instancia puede volver a iniciarse."
+
+#: nova/virt/libvirt/driver.py:914
+msgid "Going to destroy instance again."
+msgstr "Se va a volver a destruir la instancia."
+
+#: nova/virt/libvirt/driver.py:1518
+msgid "Beginning live snapshot process"
+msgstr "Empezando proceso de instantánea en directo"
+
+#: nova/virt/libvirt/driver.py:1521
+msgid "Beginning cold snapshot process"
+msgstr "Empezando proceso de instantánea frío"
+
+#: nova/virt/libvirt/driver.py:1550
+msgid "Snapshot extracted, beginning image upload"
+msgstr "Se ha extraído instantánea, empezando subida de imagen"
+
+#: nova/virt/libvirt/driver.py:1562
+msgid "Snapshot image upload complete"
+msgstr "Subida de imagen de instantánea se ha completado"
+
+#: nova/virt/libvirt/driver.py:1972
+msgid "Instance soft rebooted successfully."
+msgstr ""
+"La instancia ha rearrancado satisfactoriamente de forma no permanente. "
+
+#: nova/virt/libvirt/driver.py:2015
+msgid "Instance shutdown successfully."
+msgstr "La instancia ha concluido satisfactoriamente."
+
+#: nova/virt/libvirt/driver.py:2023
+msgid "Instance may have been rebooted during soft reboot, so return now."
+msgstr ""
+"Es posible que la instancia se haya rearrancado durante el arranque no "
+"permanente, por consiguiente volver ahora."
+
+#: nova/virt/libvirt/driver.py:2091
+msgid "Instance rebooted successfully."
+msgstr "La instancia ha rearrancado satisfactoriamente."
+
+#: nova/virt/libvirt/driver.py:2259
+msgid "Instance spawned successfully."
+msgstr "Instancia generada satisfactoriamente. "
+
+#: nova/virt/libvirt/driver.py:2275
+#, python-format
+msgid "data: %(data)r, fpath: %(fpath)r"
+msgstr "data: %(data)r, fpath: %(fpath)r"
+
+#: nova/virt/libvirt/driver.py:2314 nova/virt/libvirt/driver.py:2341
+#, python-format
+msgid "Truncated console log returned, %d bytes ignored"
+msgstr "Se ha devuelto registro de consola truncado, se han ignorado %d bytes "
+
+#: nova/virt/libvirt/driver.py:2568
+msgid "Creating image"
+msgstr "Creando imagen"
+
+#: nova/virt/libvirt/driver.py:2677
+msgid "Using config drive"
+msgstr "Utilizando unidad de configuración"
+
+#: nova/virt/libvirt/driver.py:2686
+#, python-format
+msgid "Creating config drive at %(path)s"
+msgstr "Creando unidad de configuración en %(path)s"
+
+#: nova/virt/libvirt/driver.py:3223
+msgid "Configuring timezone for windows instance to localtime"
+msgstr "Configurando la zona horaria para la instancia windows a horario local"
+
+#: nova/virt/libvirt/driver.py:3694 nova/virt/libvirt/driver.py:3821
+#: nova/virt/libvirt/driver.py:3849
+#, python-format
+msgid "libvirt can't find a domain with id: %s"
+msgstr "libvirt no puede encontrar un dominio con id: %s"
+
+#: nova/virt/libvirt/driver.py:4109
+#, python-format
+msgid ""
+"Getting block stats failed, device might have been detached. Instance="
+"%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
+msgstr ""
+"Fallo al obtener estadísticas de bloque, el dispositivo puede haber sido "
+"desasociado. Instancia=%(instance_name)s Disco=%(disk)s Código=%(errcode)s "
+"Error=%(e)s"
+
+#: nova/virt/libvirt/driver.py:4115
+#, python-format
+msgid ""
+"Could not find domain in libvirt for instance %s. Cannot get block stats for "
+"device"
+msgstr ""
+"No se ha podido encontrar el dominio en libvirt para la instancia %s. No se "
+"pueden obtener estadísticas de bloque para el dispositivo"
+
+#: nova/virt/libvirt/driver.py:4330
+#, python-format
+msgid "Instance launched has CPU info: %s"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:4986
+msgid "Instance running successfully."
+msgstr "La instancia se está ejecutando satisfactoriamente."
+
+#: nova/virt/libvirt/driver.py:5226
+#, python-format
+msgid "Deleting instance files %s"
+msgstr "Eliminado los archivos de instancia %s"
+
+#: nova/virt/libvirt/driver.py:5238
+#, python-format
+msgid "Deletion of %s failed"
+msgstr "La remoción de %s ha fallado"
+
+#: nova/virt/libvirt/driver.py:5241
+#, python-format
+msgid "Deletion of %s complete"
+msgstr "La remoción de %s se ha completado"
+
+#: nova/virt/libvirt/firewall.py:105
+msgid "Called setup_basic_filtering in nwfilter"
+msgstr "Se ha llamado a setup_basic_filtering en nwfilter"
+
+#: nova/virt/libvirt/firewall.py:113
+msgid "Ensuring static filters"
+msgstr "Asegurando filtros estáticos"
+
+#: nova/virt/libvirt/firewall.py:306
+msgid "Attempted to unfilter instance which is not filtered"
+msgstr "Se ha intentado eliminar filtro de instancia que no está filtrada"
 
 #: nova/virt/libvirt/imagecache.py:191
 #, python-format
