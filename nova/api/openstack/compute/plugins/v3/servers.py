@@ -25,9 +25,11 @@ import webob
 from webob import exc
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas.v3 import servers as schema_servers
 from nova.api.openstack.compute.views import servers as views_servers
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import compute
 from nova.compute import flavors
 from nova import exception
@@ -69,6 +71,8 @@ class ServersController(wsgi.Controller):
     EXTENSION_UPDATE_NAMESPACE = 'nova.api.v3.extensions.server.update'
 
     _view_builder_class = views_servers.ViewBuilderV3
+
+    schema_server_create = schema_servers.base_create
 
     @staticmethod
     def _add_location(robj):
@@ -166,6 +170,20 @@ class ServersController(wsgi.Controller):
                 propagate_map_exceptions=True)
         if not list(self.update_extension_manager):
             LOG.debug("Did not find any server update extensions")
+
+        # Look for API schema of server create extension
+        self.create_schema_manager = \
+            stevedore.enabled.EnabledExtensionManager(
+                namespace=self.EXTENSION_CREATE_NAMESPACE,
+                check_func=_check_load_extension('get_server_create_schema'),
+                invoke_on_load=True,
+                invoke_kwds={"extension_info": self.extension_info},
+                propagate_map_exceptions=True)
+        if list(self.create_schema_manager):
+            self.create_schema_manager.map(self._create_extension_schema,
+                                           self.schema_server_create)
+        else:
+            LOG.debug("Did not find any server create schemas")
 
     @extensions.expected_errors((400, 403))
     def index(self, req):
@@ -411,10 +429,9 @@ class ServersController(wsgi.Controller):
 
     @extensions.expected_errors((400, 409, 413))
     @wsgi.response(202)
+    @validation.schema(schema_server_create)
     def create(self, req, body):
         """Creates a new server for a given user."""
-        if not self.is_valid_body(body, 'server'):
-            raise exc.HTTPBadRequest(_("The request body is invalid"))
 
         context = req.environ['nova.context']
         server_dict = body['server']
@@ -572,6 +589,13 @@ class ServersController(wsgi.Controller):
         handler = ext.obj
         LOG.debug("Running _update_extension_point for %s", ext.obj)
         handler.server_update(update_dict, update_kwargs)
+
+    def _create_extension_schema(self, ext, create_schema):
+        handler = ext.obj
+        LOG.debug("Running _create_extension_schema for %s", ext.obj)
+
+        schema = handler.get_server_create_schema()
+        create_schema['properties']['server']['properties'].update(schema)
 
     def _delete(self, context, req, instance_uuid):
         instance = self._get_server(context, req, instance_uuid)
