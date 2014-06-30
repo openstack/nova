@@ -972,13 +972,6 @@ def fake_upload_image(context, image, instance, **kwargs):
     pass
 
 
-def fake_get_vmdk_size_and_properties(context, image_id, instance):
-    """Fakes the file size and properties fetch for the image file."""
-    props = {"vmware_ostype": constants.DEFAULT_OS_TYPE,
-             "vmware_adaptertype": constants.DEFAULT_ADAPTER_TYPE}
-    return _FAKE_FILE_SIZE, props
-
-
 def _get_vm_mdo(vm_ref):
     """Gets the Virtual Machine with the ref from the db."""
     if _db_content.get("VirtualMachine", None) is None:
