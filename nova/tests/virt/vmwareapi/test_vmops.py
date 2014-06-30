@@ -88,7 +88,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._vmops = vmops.VMwareVCVMOps(self._session, self._virtapi, None)
 
         self._image_id = nova.tests.image.fake.get_valid_image_id()
-        values = {
+        self._instance_values = {
             'name': 'fake_name',
             'uuid': 'fake_uuid',
             'vcpus': 1,
@@ -98,7 +98,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             'node': 'respool-1001(MyResPoolName)'
         }
         self._instance = fake_instance.fake_instance_obj(
-                                 self._context, **values)
+                                 self._context, **self._instance_values)
 
         fake_ds_ref = vmwareapi_fake.ManagedObjectReference('fake-ds')
         self._ds = ds_util.Datastore(
@@ -130,15 +130,18 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                         vlan=None,
                                         bridge_interface=None,
                                         injected=True)
+        self._network_values = {
+            'id': None,
+            'address': 'DE:AD:BE:EF:00:00',
+            'network': network,
+            'type': None,
+            'devname': None,
+            'ovs_interfaceid': None,
+            'rxtx_cap': 3
+        }
         self.network_info = network_model.NetworkInfo([
-                network_model.VIF(id=None,
-                                  address='DE:AD:BE:EF:00:00',
-                                  network=network,
-                                  type=None,
-                                  devname=None,
-                                  ovs_interfaceid=None,
-                                  rxtx_cap=3)
-                ])
+                network_model.VIF(**self._network_values)
+        ])
         pure_IPv6_network = network_model.Network(id=0,
                                         bridge='fa0',
                                         label='fake',
@@ -754,3 +757,57 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             'block_device_mapping': [{'connection_info': 'fake'}]
         }
         self._test_spawn(block_device_info=block_device_info)
+
+    @mock.patch('nova.virt.vmwareapi.driver.VMwareAPISession._get_vim_object')
+    def test_build_virtual_machine(self, mock_get_vim_object):
+        mock_get_vim_object.return_value = vmwareapi_fake.FakeVim()
+
+        fake_session = driver.VMwareAPISession()
+        fake_vmops = vmops.VMwareVCVMOps(fake_session, None, None)
+
+        image_id = nova.tests.image.fake.get_valid_image_id()
+        image = vmware_images.VMwareImage(image_id=image_id)
+
+        vm_ref = fake_vmops.build_virtual_machine(self._instance,
+                                                  'fake-instance-name',
+                                                  image, self._dc_info,
+                                                  self._ds, self.network_info)
+
+        vm = vmwareapi_fake._get_object(vm_ref)
+
+        # Test basic VM parameters
+        self.assertEqual('fake-instance-name', vm.name)
+        # NOTE(mdbooth): The instanceUuid behaviour below is apparently
+        # deliberate.
+        self.assertEqual('fake-instance-name',
+                         vm.get('summary.config.instanceUuid'))
+        self.assertEqual(self._instance_values['vcpus'],
+                         vm.get('summary.config.numCpu'))
+        self.assertEqual(self._instance_values['memory_mb'],
+                         vm.get('summary.config.memorySizeMB'))
+
+        # Test NSX config
+        for optval in vm.get('config.extraConfig').OptionValue:
+            if optval.key == 'nvp.vm-uuid':
+                self.assertEqual(self._instance_values['uuid'], optval.value)
+                break
+        else:
+            self.fail('nvp.vm-uuid not found in extraConfig')
+
+        # Test that the VM is associated with the specified datastore
+        datastores = vm.datastore.ManagedObjectReference
+        self.assertEqual(1, len(datastores))
+
+        datastore = vmwareapi_fake._get_object(datastores[0])
+        self.assertEqual(self._ds.name, datastore.get('summary.name'))
+
+        # Test that the VM's network is configured as specified
+        devices = vm.get('config.hardware.device').VirtualDevice
+        for device in devices:
+            if device.obj_name != 'ns0:VirtualE1000':
+                continue
+            self.assertEqual(self._network_values['address'],
+                             device.macAddress)
+            break
+        else:
+            self.fail('NIC not configured')
