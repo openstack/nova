@@ -72,7 +72,6 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
                                                     "create.start",
                                                     payload)
         metadata = updates.pop('metadata', None)
-        updates.pop('id', None)
         db_aggregate = db.aggregate_create(context, updates, metadata=metadata)
         self._from_db_object(context, self, db_aggregate)
         payload['aggregate_id'] = self.id
