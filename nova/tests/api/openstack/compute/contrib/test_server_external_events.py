@@ -30,9 +30,11 @@ fake_instances = {
         uuid='00000000-0000-0000-0000-000000000002', host='host1'),
     '00000000-0000-0000-0000-000000000003': objects.Instance(
         uuid='00000000-0000-0000-0000-000000000003', host='host2'),
+    '00000000-0000-0000-0000-000000000004': objects.Instance(
+        uuid='00000000-0000-0000-0000-000000000004', host=None),
 }
 fake_instance_uuids = sorted(fake_instances.keys())
-MISSING_UUID = '00000000-0000-0000-0000-000000000004'
+MISSING_UUID = '00000000-0000-0000-0000-000000000005'
 
 
 @classmethod
@@ -49,16 +51,20 @@ class ServerExternalEventsTest(test.NoDBTestCase):
         super(ServerExternalEventsTest, self).setUp()
         self.api = server_external_events.ServerExternalEventsController()
         self.context = context.get_admin_context()
-        self.default_body = {
-            'events': [
-                {'name': 'network-vif-plugged',
-                 'tag': 'foo',
-                 'status': 'completed',
-                 'server_uuid': fake_instance_uuids[0]},
-                {'name': 'network-changed',
-                 'server_uuid': fake_instance_uuids[1]},
-                ]
-            }
+        self.event_1 = {'name': 'network-vif-plugged',
+                        'tag': 'foo',
+                        'server_uuid': fake_instance_uuids[0]}
+        self.event_2 = {'name': 'network-changed',
+                        'server_uuid': fake_instance_uuids[1]}
+        self.default_body = {'events': [self.event_1, self.event_2]}
+        self.resp_event_1 = dict(self.event_1)
+        self.resp_event_1['code'] = 200
+        self.resp_event_1['status'] = 'completed'
+        self.resp_event_2 = dict(self.event_2)
+        self.resp_event_2['code'] = 200
+        self.resp_event_2['status'] = 'completed'
+        self.default_resp_body = {'events': [self.resp_event_1,
+                                             self.resp_event_2]}
 
     def _create_req(self, body):
         req = webob.Request.blank('/v2/fake/os-server-external-events')
@@ -91,7 +97,7 @@ class ServerExternalEventsTest(test.NoDBTestCase):
                                          fake_instance_uuids[:2],
                                          ['network-vif-plugged',
                                           'network-changed'])
-        self.assertEqual(self.default_body, result)
+        self.assertEqual(self.default_resp_body, result)
         self.assertEqual(200, code)
 
     def test_create_one_bad_instance(self):
@@ -103,6 +109,19 @@ class ServerExternalEventsTest(test.NoDBTestCase):
         self.assertEqual('failed', result['events'][1]['status'])
         self.assertEqual(200, result['events'][0]['code'])
         self.assertEqual(404, result['events'][1]['code'])
+        self.assertEqual(207, code)
+
+    def test_create_event_instance_has_no_host(self):
+        body = self.default_body
+        body['events'][0]['server_uuid'] = fake_instance_uuids[-1]
+        req = self._create_req(body)
+        result, code = self._assert_call(req, body,
+                                         [fake_instance_uuids[1],
+                                          fake_instance_uuids[-1]],
+                                         ['network-changed'])
+        self.assertEqual(422, result['events'][0]['code'])
+        self.assertEqual('failed', result['events'][0]['status'])
+        self.assertEqual(200, result['events'][1]['code'])
         self.assertEqual(207, code)
 
     def test_create_no_good_instances(self):

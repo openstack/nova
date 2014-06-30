@@ -70,7 +70,7 @@ class ServerExternalEventsController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context, action='create')
 
-        events = []
+        response_events = []
         accepted = []
         instances = {}
         result = 200
@@ -101,8 +101,8 @@ class ServerExternalEventsController(wsgi.Controller):
                 raise webob.exc.HTTPBadRequest(
                     _('Invalid event status `%s\'') % event.status)
 
-            events.append(_event)
-            if event.instance_uuid not in instances:
+            instance = instances.get(event.instance_uuid)
+            if not instance:
                 try:
                     instance = objects.Instance.get_by_uuid(
                         context, event.instance_uuid)
@@ -115,24 +115,40 @@ class ServerExternalEventsController(wsgi.Controller):
                     _event['code'] = 404
                     result = 207
 
-            if event.instance_uuid in instances:
-                accepted.append(event)
-                _event['code'] = 200
-                LOG.audit(_('Create event %(name)s:%(tag)s for instance '
-                            '%(instance_uuid)s'),
-                          dict(event.iteritems()))
+            # NOTE: before accepting the event, make sure the instance
+            # for which the event is sent is assigned to a host; otherwise
+            # it will not be possible to dispatch the event
+            if instance:
+                if instance.host:
+                    accepted.append(event)
+                    LOG.audit(_('Creating event %(name)s:%(tag)s for instance '
+                                '%(instance_uuid)s'),
+                              dict(event.iteritems()))
+                    # NOTE: as the event is processed asynchronously verify
+                    # whether 202 is a more suitable response code than 200
+                    _event['status'] = 'completed'
+                    _event['code'] = 200
+                else:
+                    LOG.debug("Unable to find a host for instance "
+                              "%(instance)s. Dropping event %(event)s",
+                              {'instance': event.instance_uuid,
+                               'event': event.name})
+                    _event['status'] = 'failed'
+                    _event['code'] = 422
+                    result = 207
+
+            response_events.append(_event)
 
         if accepted:
-            self.compute_api.external_instance_event(context,
-                                                     instances.values(),
-                                                     accepted)
+            self.compute_api.external_instance_event(
+                context, instances.values(), accepted)
         else:
             msg = _('No instances found for any event')
             raise webob.exc.HTTPNotFound(explanation=msg)
 
         # FIXME(cyeoh): This needs some infrastructure support so that
         # we have a general way to do this
-        robj = wsgi.ResponseObject({'events': events})
+        robj = wsgi.ResponseObject({'events': response_events})
         robj._code = result
         return robj
 
