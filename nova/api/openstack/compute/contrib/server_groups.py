@@ -24,7 +24,6 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 import nova.exception
 from nova import objects
-from nova.objects import instance_group as instance_group_obj
 from nova.openstack.common.gettextutils import _
 from nova import utils
 
@@ -209,7 +208,7 @@ class ServerGroupController(wsgi.Controller):
         """Return data about the given server group."""
         context = _authorize_context(req)
         try:
-            sg = instance_group_obj.InstanceGroup.get_by_uuid(context, id)
+            sg = objects.InstanceGroup.get_by_uuid(context, id)
         except nova.exception.InstanceGroupNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         return {'server_group': self._format_server_group(context, sg)}
@@ -218,7 +217,7 @@ class ServerGroupController(wsgi.Controller):
         """Delete an server group."""
         context = _authorize_context(req)
         try:
-            sg = instance_group_obj.InstanceGroup.get_by_uuid(context, id)
+            sg = objects.InstanceGroup.get_by_uuid(context, id)
             sg.destroy(context)
         except nova.exception.InstanceGroupNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
@@ -230,9 +229,9 @@ class ServerGroupController(wsgi.Controller):
         context = _authorize_context(req)
         project_id = context.project_id
         if 'all_projects' in req.GET and context.is_admin:
-            sgs = instance_group_obj.InstanceGroupList.get_all(context)
+            sgs = objects.InstanceGroupList.get_all(context)
         else:
-            sgs = instance_group_obj.InstanceGroupList.get_by_project_id(
+            sgs = objects.InstanceGroupList.get_by_project_id(
                     context, project_id)
         limited_list = common.limited(sgs.objects, req)
         result = [self._format_server_group(context, group)
@@ -251,13 +250,13 @@ class ServerGroupController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
         vals = body['server_group']
-        sg = instance_group_obj.InstanceGroup()
+        sg = objects.InstanceGroup(context)
         sg.project_id = context.project_id
         sg.user_id = context.user_id
         try:
             sg.name = vals.get('name')
             sg.policies = vals.get('policies')
-            sg.create(context)
+            sg.create()
         except ValueError as e:
             raise exc.HTTPBadRequest(explanation=e)
 

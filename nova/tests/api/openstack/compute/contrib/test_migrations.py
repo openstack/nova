@@ -19,8 +19,8 @@ from lxml import etree
 from nova.api.openstack.compute.contrib import migrations
 from nova import context
 from nova import exception
+from nova import objects
 from nova.objects import base
-from nova.objects import migration
 from nova.openstack.common.fixture import moxstubout
 from nova import test
 
@@ -61,8 +61,8 @@ fake_migrations = [
 
 migrations_obj = base.obj_make_list(
     'fake-context',
-    migration.MigrationList(),
-    migration.Migration,
+    objects.MigrationList(),
+    objects.Migration,
     fake_migrations)
 
 

@@ -22,7 +22,6 @@ from nova import context
 import nova.db
 from nova import exception
 from nova import objects
-from nova.objects import instance_group as instance_group_obj
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -114,7 +113,7 @@ class ServerGroupTest(test.TestCase):
         return instance
 
     def _create_instance_group(self, context, members):
-        ig = instance_group_obj.InstanceGroup(name='fake_name',
+        ig = objects.InstanceGroup(name='fake_name',
                   user_id='fake_user', project_id='fake',
                   members=members)
         ig.create(context)

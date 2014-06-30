@@ -20,7 +20,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
-from nova.objects import pci_device
+from nova import objects
 from nova.openstack.common import jsonutils
 
 
@@ -103,7 +103,7 @@ class PciController(object):
         compute_nodes = self.host_api.compute_node_get_all(context)
         results = []
         for node in compute_nodes:
-            pci_devs = pci_device.PciDeviceList.get_by_compute_node(
+            pci_devs = objects.PciDeviceList.get_by_compute_node(
                 context, node['id'])
             results.extend([self._view_pcidevice(dev, detail)
                             for dev in pci_devs])
@@ -119,7 +119,7 @@ class PciController(object):
         context = req.environ['nova.context']
         authorize(context, action='show')
         try:
-            pci_dev = pci_device.PciDevice.get_by_dev_id(context, id)
+            pci_dev = objects.PciDevice.get_by_dev_id(context, id)
         except exception.PciDeviceNotFoundById as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         result = self._view_pcidevice(pci_dev, True)

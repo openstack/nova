@@ -43,10 +43,6 @@ from nova import network
 from nova.network.security_group import neutron_driver
 from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import ec2 as ec2_obj
-from nova.objects import flavor as flavor_obj
-from nova.objects import security_group as sec_group_obj
-from nova.objects import service as service_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -280,7 +276,7 @@ class CloudController(object):
             availability_zones.get_availability_zones(ctxt)
 
         # Available services
-        enabled_services = service_obj.ServiceList.get_all(context,
+        enabled_services = objects.ServiceList.get_all(context,
                 disabled=False, set_zones=True)
         zone_hosts = {}
         host_services = {}
@@ -583,7 +579,7 @@ class CloudController(object):
             source_project_id = self._get_source_project_id(context,
                 source_security_group_owner_id)
 
-            source_security_group = sec_group_obj.SecurityGroup.get_by_name(
+            source_security_group = objects.SecurityGroup.get_by_name(
                     context.elevated(),
                     source_project_id,
                     source_security_group_name)
@@ -852,7 +848,7 @@ class CloudController(object):
                                         kwargs.get('description'),
                                         **create_kwargs)
 
-        vmap = ec2_obj.EC2VolumeMapping(context)
+        vmap = objects.EC2VolumeMapping(context)
         vmap.uuid = volume['id']
         vmap.create()
 
@@ -1332,9 +1328,8 @@ class CloudController(object):
             msg = _('Image must be available')
             raise exception.ImageNotActive(message=msg)
 
-        flavor = flavor_obj.Flavor.get_by_name(context,
-                                               kwargs.get('instance_type',
-                                                          None))
+        flavor = objects.Flavor.get_by_name(context,
+                                            kwargs.get('instance_type', None))
 
         (instances, resv_id) = self.compute_api.create(context,
             instance_type=obj_base.obj_to_primitive(flavor),

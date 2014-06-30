@@ -48,7 +48,6 @@ from nova.network import manager
 from nova.network.neutronv2 import api as neutron_api
 from nova import objects
 from nova.objects import instance as instance_obj
-from nova.objects import service as service_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import policy as common_policy
@@ -1433,7 +1432,7 @@ class ServersControllerDeleteTest(ControllerTest):
         @classmethod
         def fake_get_by_compute_host(cls, context, host):
             return {'updated_at': timeutils.utcnow()}
-        self.stubs.Set(service_obj.Service, 'get_by_compute_host',
+        self.stubs.Set(objects.Service, 'get_by_compute_host',
                        fake_get_by_compute_host)
 
         self.controller.delete(req, FAKE_UUID)
@@ -1454,7 +1453,7 @@ class ServersControllerDeleteTest(ControllerTest):
         @classmethod
         def fake_get_by_compute_host(cls, context, host):
             return {'updated_at': datetime.datetime.min}
-        self.stubs.Set(service_obj.Service, 'get_by_compute_host',
+        self.stubs.Set(objects.Service, 'get_by_compute_host',
                        fake_get_by_compute_host)
 
         self.controller.delete(req, FAKE_UUID)

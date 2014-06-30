@@ -32,7 +32,6 @@ from nova import context
 from nova import network
 from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import security_group as secgroup_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -136,7 +135,7 @@ class InstanceMetadata():
         self.availability_zone = ec2utils.get_availability_zone_by_host(
                 instance['host'], capi)
 
-        self.security_groups = secgroup_obj.SecurityGroupList.get_by_instance(
+        self.security_groups = objects.SecurityGroupList.get_by_instance(
             ctxt, instance)
 
         self.mappings = _format_instance_mapping(ctxt, instance)

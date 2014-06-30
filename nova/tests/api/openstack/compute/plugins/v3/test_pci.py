@@ -21,7 +21,6 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import objects
-from nova.objects import pci_device as pci_device_obj
 from nova.openstack.common import jsonutils
 from nova.pci import pci_device
 from nova import test
@@ -67,7 +66,7 @@ class PciServerControllerTest(test.NoDBTestCase):
     def _create_fake_instance(self):
         self.inst = objects.Instance()
         self.inst.uuid = 'fake-inst-uuid'
-        self.inst.pci_devices = pci_device_obj.PciDeviceList()
+        self.inst.pci_devices = objects.PciDeviceList()
 
     def _create_fake_pci_device(self):
         def fake_pci_device_get_by_addr(ctxt, id, addr):
@@ -76,8 +75,7 @@ class PciServerControllerTest(test.NoDBTestCase):
         ctxt = context.get_admin_context()
         self.stubs.Set(db, 'pci_device_get_by_addr',
                        fake_pci_device_get_by_addr)
-        self.pci_device = pci_device_obj.PciDevice.get_by_dev_addr(
-            ctxt, 1, 'a')
+        self.pci_device = objects.PciDevice.get_by_dev_addr(ctxt, 1, 'a')
 
     def test_show(self):
         def fake_get_db_instance(id):
