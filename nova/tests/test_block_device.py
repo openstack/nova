@@ -195,6 +195,18 @@ class BlockDeviceTestCase(test.NoDBTestCase):
         size = block_device.get_bdm_local_disk_num(self.new_mapping)
         self.assertEqual(2, size)
 
+    def test_new_format_is_swap(self):
+        expected_results = [True, False, False, False, False]
+        for expected, bdm in zip(expected_results, self.new_mapping):
+            res = block_device.new_format_is_swap(bdm)
+            self.assertEqual(expected, res)
+
+    def test_new_format_is_ephemeral(self):
+        expected_results = [False, True, False, False, False]
+        for expected, bdm in zip(expected_results, self.new_mapping):
+            res = block_device.new_format_is_ephemeral(bdm)
+            self.assertEqual(expected, res)
+
 
 class TestBlockDeviceDict(test.NoDBTestCase):
     def setUp(self):
