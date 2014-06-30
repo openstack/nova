@@ -25,10 +25,16 @@ from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
-from nova.virt.vmwareapi import volume_util
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
+
+
+class StorageError(Exception):
+    """To raise errors related to Volume commands."""
+
+    def __init__(self, message=None):
+        super(StorageError, self).__init__(message)
 
 
 class VMwareVolumeOps(object):
@@ -132,24 +138,143 @@ class VMwareVolumeOps(object):
                   {'instance_name': instance_name, 'disk_key': disk_key},
                   instance=instance)
 
-    def discover_st(self, data):
-        """Discover iSCSI targets."""
+    def _iscsi_get_target(self, data):
+        """Return the iSCSI Target given a volume info."""
+        target_portal = data['target_portal']
+        target_iqn = data['target_iqn']
+        host_mor = vm_util.get_host_ref(self._session, self._cluster)
+
+        lst_properties = ["config.storageDevice.hostBusAdapter",
+                          "config.storageDevice.scsiTopology",
+                          "config.storageDevice.scsiLun"]
+        prop_dict = self._session._call_method(
+            vim_util, "get_dynamic_properties",
+            host_mor, "HostSystem", lst_properties)
+        result = (None, None)
+        hbas_ret = None
+        scsi_topology = None
+        scsi_lun_ret = None
+        if prop_dict:
+            hbas_ret = prop_dict.get('config.storageDevice.hostBusAdapter')
+            scsi_topology = prop_dict.get('config.storageDevice.scsiTopology')
+            scsi_lun_ret = prop_dict.get('config.storageDevice.scsiLun')
+
+        # Meaning there are no host bus adapters on the host
+        if hbas_ret is None:
+            return result
+        host_hbas = hbas_ret.HostHostBusAdapter
+        if not host_hbas:
+            return result
+        for hba in host_hbas:
+            if hba.__class__.__name__ == 'HostInternetScsiHba':
+                hba_key = hba.key
+                break
+        else:
+            return result
+
+        if scsi_topology is None:
+            return result
+        host_adapters = scsi_topology.adapter
+        if not host_adapters:
+            return result
+        scsi_lun_key = None
+        for adapter in host_adapters:
+            if adapter.adapter == hba_key:
+                if not getattr(adapter, 'target', None):
+                    return result
+                for target in adapter.target:
+                    if (getattr(target.transport, 'address', None) and
+                        target.transport.address[0] == target_portal and
+                            target.transport.iScsiName == target_iqn):
+                        if not target.lun:
+                            return result
+                        for lun in target.lun:
+                            if 'host.ScsiDisk' in lun.scsiLun:
+                                scsi_lun_key = lun.scsiLun
+                                break
+                        break
+                break
+
+        if scsi_lun_key is None:
+            return result
+
+        if scsi_lun_ret is None:
+            return result
+        host_scsi_luns = scsi_lun_ret.ScsiLun
+        if not host_scsi_luns:
+            return result
+        for scsi_lun in host_scsi_luns:
+            if scsi_lun.key == scsi_lun_key:
+                return (scsi_lun.deviceName, scsi_lun.uuid)
+
+        return result
+
+    def _iscsi_add_send_target_host(self, storage_system_mor, hba_device,
+                                    target_portal):
+        """Adds the iscsi host to send target host list."""
+        client_factory = self._session._get_vim().client.factory
+        send_tgt = client_factory.create('ns0:HostInternetScsiHbaSendTarget')
+        (send_tgt.address, send_tgt.port) = target_portal.split(':')
+        LOG.debug("Adding iSCSI host %s to send targets", send_tgt.address)
+        self._session._call_method(
+            self._session._get_vim(), "AddInternetScsiSendTargets",
+            storage_system_mor, iScsiHbaDevice=hba_device, targets=[send_tgt])
+
+    def _iscsi_rescan_hba(self, target_portal):
+        """Rescan the iSCSI HBA to discover iSCSI targets."""
+        host_mor = vm_util.get_host_ref(self._session, self._cluster)
+        storage_system_mor = self._session._call_method(
+            vim_util, "get_dynamic_property",
+            host_mor, "HostSystem",
+            "configManager.storageSystem")
+        hbas_ret = self._session._call_method(
+            vim_util, "get_dynamic_property",
+            storage_system_mor, "HostStorageSystem",
+            "storageDeviceInfo.hostBusAdapter")
+        # Meaning there are no host bus adapters on the host
+        if hbas_ret is None:
+            return
+        host_hbas = hbas_ret.HostHostBusAdapter
+        if not host_hbas:
+            return
+        for hba in host_hbas:
+            if hba.__class__.__name__ == 'HostInternetScsiHba':
+                hba_device = hba.device
+                if target_portal:
+                    # Check if iscsi host is already in the send target host
+                    # list
+                    send_targets = getattr(hba, 'configuredSendTarget', [])
+                    send_tgt_portals = ['%s:%s' % (s.address, s.port) for s in
+                                        send_targets]
+                    if target_portal not in send_tgt_portals:
+                        self._iscsi_add_send_target_host(storage_system_mor,
+                                                         hba_device,
+                                                         target_portal)
+                break
+        else:
+            return
+        LOG.debug("Rescanning HBA %s", hba_device)
+        self._session._call_method(self._session._get_vim(),
+            "RescanHba", storage_system_mor, hbaDevice=hba_device)
+        LOG.debug("Rescanned HBA %s ", hba_device)
+
+    def _iscsi_discover_target(self, data):
+        """Get iSCSI target, rescanning the HBA if necessary."""
         target_portal = data['target_portal']
         target_iqn = data['target_iqn']
         LOG.debug("Discovering iSCSI target %(target_iqn)s from "
                   "%(target_portal)s.",
                   {'target_iqn': target_iqn, 'target_portal': target_portal})
-        device_name, uuid = volume_util.find_st(self._session, data,
-                                                self._cluster)
+        device_name, uuid = self._iscsi_get_target(data)
         if device_name:
             LOG.debug("Storage target found. No need to discover")
             return (device_name, uuid)
+
         # Rescan iSCSI HBA with iscsi target host
-        volume_util.rescan_iscsi_hba(self._session, self._cluster,
-                                     target_portal)
+        self._iscsi_rescan_hba(target_portal)
+
         # Find iSCSI Target again
-        device_name, uuid = volume_util.find_st(self._session, data,
-                                                self._cluster)
+        device_name, uuid = self._iscsi_get_target(data)
         if device_name:
             LOG.debug("Discovered iSCSI target %(target_iqn)s from "
                       "%(target_portal)s.",
@@ -162,13 +287,31 @@ class VMwareVolumeOps(object):
                        'target_portal': target_portal})
         return (device_name, uuid)
 
+    def _iscsi_get_host_iqn(self):
+        """Return the host iSCSI IQN."""
+        host_mor = vm_util.get_host_ref(self._session, self._cluster)
+        hbas_ret = self._session._call_method(
+            vim_util, "get_dynamic_property",
+            host_mor, "HostSystem",
+            "config.storageDevice.hostBusAdapter")
+
+        # Meaning there are no host bus adapters on the host
+        if hbas_ret is None:
+            return
+        host_hbas = hbas_ret.HostHostBusAdapter
+        if not host_hbas:
+            return
+        for hba in host_hbas:
+            if hba.__class__.__name__ == 'HostInternetScsiHba':
+                return hba.iScsiName
+
     def get_volume_connector(self, instance):
         """Return volume connector information."""
         try:
             vm_ref = vm_util.get_vm_ref(self._session, instance)
         except exception.InstanceNotFound:
             vm_ref = None
-        iqn = volume_util.get_host_iqn(self._session, self._cluster)
+        iqn = self._iscsi_get_host_iqn()
         connector = {'ip': CONF.vmware.host_ip,
                      'initiator': iqn,
                      'host': CONF.vmware.host_ip}
@@ -234,9 +377,9 @@ class VMwareVolumeOps(object):
         data = connection_info['data']
 
         # Discover iSCSI Target
-        device_name, uuid = self.discover_st(data)
+        device_name = self._iscsi_discover_target(data)[0]
         if device_name is None:
-            raise volume_util.StorageError(_("Unable to find iSCSI Target"))
+            raise StorageError(_("Unable to find iSCSI Target"))
 
         # Get the vmdk file name that the VM is pointing to
         hardware_devices = self._session._call_method(vim_util,
@@ -372,7 +515,7 @@ class VMwareVolumeOps(object):
         device = vm_util.get_vmdk_backed_disk_device(hardware_devices,
                                                      disk_uuid)
         if not device:
-            raise volume_util.StorageError(_("Unable to find volume"))
+            raise StorageError(_("Unable to find volume"))
         return device
 
     def _detach_volume_vmdk(self, connection_info, instance, mountpoint):
@@ -408,10 +551,9 @@ class VMwareVolumeOps(object):
         data = connection_info['data']
 
         # Discover iSCSI Target
-        device_name, uuid = volume_util.find_st(self._session, data,
-                                                self._cluster)
+        device_name, uuid = self._iscsi_get_target(data)
         if device_name is None:
-            raise volume_util.StorageError(_("Unable to find iSCSI Target"))
+            raise StorageError(_("Unable to find iSCSI Target"))
 
         # Get the vmdk file name that the VM is pointing to
         hardware_devices = self._session._call_method(vim_util,
@@ -419,7 +561,7 @@ class VMwareVolumeOps(object):
                         "VirtualMachine", "config.hardware.device")
         device = vm_util.get_rdm_disk(hardware_devices, uuid)
         if device is None:
-            raise volume_util.StorageError(_("Unable to find volume"))
+            raise StorageError(_("Unable to find volume"))
         self.detach_disk_from_vm(vm_ref, instance, device, destroy_disk=True)
         LOG.info(_("Mountpoint %(mountpoint)s detached from "
                    "instance %(instance_name)s"),

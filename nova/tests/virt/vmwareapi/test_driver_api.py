@@ -63,7 +63,6 @@ from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
 from nova.virt.vmwareapi import vmware_images
-from nova.virt.vmwareapi import volume_util
 from nova.virt.vmwareapi import volumeops
 
 CONF = cfg.CONF
@@ -1728,18 +1727,21 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         connection_info['data']['target_iqn'] = 'fake_target_iqn'
         mount_point = '/dev/vdc'
         discover = ('fake_name', 'fake_uuid')
-        self.mox.StubOutWithMock(volume_util, 'find_st')
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 '_iscsi_get_target')
         # simulate target not found
-        volume_util.find_st(mox.IgnoreArg(), connection_info['data'],
-                            mox.IgnoreArg()).AndReturn((None, None))
-        self.mox.StubOutWithMock(volume_util, '_add_iscsi_send_target_host')
+        volumeops.VMwareVolumeOps._iscsi_get_target(
+            connection_info['data']).AndReturn((None, None))
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 '_iscsi_add_send_target_host')
         # rescan gets called with target portal
-        volume_util.rescan_iscsi_hba(
-            self.conn._session,
-            target_portal=connection_info['data']['target_portal'])
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 '_iscsi_rescan_hba')
+        volumeops.VMwareVolumeOps._iscsi_rescan_hba(
+            connection_info['data']['target_portal'])
         # simulate target found
-        volume_util.find_st(mox.IgnoreArg(), connection_info['data'],
-                            mox.IgnoreArg()).AndReturn(discover)
+        volumeops.VMwareVolumeOps._iscsi_get_target(
+            connection_info['data']).AndReturn(discover)
         self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
                                  'attach_disk_to_vm')
         volumeops.VMwareVolumeOps.attach_disk_to_vm(mox.IgnoreArg(),
@@ -1749,7 +1751,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.conn.attach_volume(None, connection_info, self.instance,
                                 mount_point)
 
-    def test_rescan_iscsi_hba(self):
+    def test_iscsi_rescan_hba(self):
         fake_target_portal = 'fake_target_host:port'
         host_storage_sys = vmwareapi_fake._get_objects(
             "HostStorageSystem").objects[0]
@@ -1760,22 +1762,22 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertRaises(AttributeError, getattr, iscsi_hba,
                           'configuredSendTarget')
         # Rescan HBA with the target portal
-        volume_util.rescan_iscsi_hba(self.conn._session, None,
-                                     fake_target_portal)
+        vops = volumeops.VMwareVolumeOps(self.conn._session)
+        vops._iscsi_rescan_hba(fake_target_portal)
         # Check if HBA has the target portal configured
         self.assertEqual('fake_target_host',
                           iscsi_hba.configuredSendTarget[0].address)
         # Rescan HBA with same portal
-        volume_util.rescan_iscsi_hba(self.conn._session, None,
-                                     fake_target_portal)
+        vops._iscsi_rescan_hba(fake_target_portal)
         self.assertEqual(1, len(iscsi_hba.configuredSendTarget))
 
-    def test_find_st(self):
+    def test_iscsi_get_target(self):
         data = {'target_portal': 'fake_target_host:port',
                 'target_iqn': 'fake_target_iqn'}
         host = vmwareapi_fake._get_objects('HostSystem').objects[0]
         host._add_iscsi_target(data)
-        result = volume_util.find_st(self.conn._session, data)
+        vops = volumeops.VMwareVolumeOps(self.conn._session)
+        result = vops._iscsi_get_target(data)
         self.assertEqual(('fake-device', 'fake-uuid'), result)
 
     def test_detach_iscsi_disk_from_vm(self):
@@ -1785,9 +1787,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         connection_info['data']['target_iqn'] = 'fake_target_iqn'
         mount_point = '/dev/vdc'
         find = ('fake_name', 'fake_uuid')
-        self.mox.StubOutWithMock(volume_util, 'find_st')
-        volume_util.find_st(mox.IgnoreArg(), connection_info['data'],
-                mox.IgnoreArg()).AndReturn(find)
+        self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
+                                 '_iscsi_get_target')
+        volumeops.VMwareVolumeOps._iscsi_get_target(
+            connection_info['data']).AndReturn(find)
         self.mox.StubOutWithMock(vm_util, 'get_rdm_disk')
         device = 'fake_device'
         vm_util.get_rdm_disk(mox.IgnoreArg(), 'fake_uuid').AndReturn(device)
