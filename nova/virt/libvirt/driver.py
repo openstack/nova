@@ -1054,7 +1054,9 @@ class LibvirtDriver(driver.ComputeDriver):
             block_device_info)
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
-            disk_dev = vol['mount_device'].rpartition("/")[2]
+            disk_dev = vol['mount_device']
+            if disk_dev is not None:
+                disk_dev = disk_dev.rpartition("/")[2]
 
             if ('data' in connection_info and
                     'volume_id' in connection_info['data']):
