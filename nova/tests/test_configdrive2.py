@@ -23,11 +23,20 @@ from nova import test
 from nova.openstack.common import fileutils
 from nova import utils
 from nova.virt import configdrive
+from oslo.config import cfg
+
+CONF = cfg.CONF
+
+
+class FakeInstanceMD(object):
+    def metadata_for_config_drive(self):
+        yield ('this/is/a/path/hello', 'This is some content')
 
 
 class ConfigDriveTestCase(test.NoDBTestCase):
 
     def test_create_configdrive_iso(self):
+        CONF.set_override('config_drive_format', 'iso9660')
         imagefile = None
 
         try:
@@ -41,20 +50,17 @@ class ConfigDriveTestCase(test.NoDBTestCase):
 
             self.mox.ReplayAll()
 
-            with configdrive.ConfigDriveBuilder() as c:
-                c._add_file('this/is/a/path/hello', 'This is some content')
+            with configdrive.ConfigDriveBuilder(FakeInstanceMD()) as c:
                 (fd, imagefile) = tempfile.mkstemp(prefix='cd_iso_')
                 os.close(fd)
-                c._make_iso9660(imagefile)
-
-            # Check cleanup
-            self.assertFalse(os.path.exists(c.tempdir))
+                c.make_drive(imagefile)
 
         finally:
             if imagefile:
                 fileutils.delete_if_exists(imagefile)
 
     def test_create_configdrive_vfat(self):
+        CONF.set_override('config_drive_format', 'vfat')
         imagefile = None
         try:
             self.mox.StubOutWithMock(utils, 'mkfs')
@@ -71,14 +77,10 @@ class ConfigDriveTestCase(test.NoDBTestCase):
 
             self.mox.ReplayAll()
 
-            with configdrive.ConfigDriveBuilder() as c:
-                c._add_file('this/is/a/path/hello', 'This is some content')
+            with configdrive.ConfigDriveBuilder(FakeInstanceMD()) as c:
                 (fd, imagefile) = tempfile.mkstemp(prefix='cd_vfat_')
                 os.close(fd)
-                c._make_vfat(imagefile)
-
-            # Check cleanup
-            self.assertFalse(os.path.exists(c.tempdir))
+                c.make_drive(imagefile)
 
             # NOTE(mikal): we can't check for a VFAT output here because the
             # filesystem creation stuff has been mocked out because it
