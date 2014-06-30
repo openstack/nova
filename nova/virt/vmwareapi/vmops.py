@@ -186,16 +186,11 @@ class VMwareVMOps(object):
         #. Power on the VM.
 
         """
-        ebs_root = False
-        if block_device_info:
-            msg = "Block device information present: %s" % block_device_info
-            # NOTE(mriedem): block_device_info can contain an auth_password
-            # so we have to scrub the message before logging it.
-            LOG.debug(logging.mask_password(msg), instance=instance)
-            block_device_mapping = driver.block_device_info_get_mapping(
-                    block_device_info)
-            if block_device_mapping:
-                ebs_root = True
+
+        # NOTE(hartsocks): some of the logic below relies on instance_name
+        # even when it is not set by the caller.
+        if instance_name is None:
+            instance_name = instance.uuid
 
         client_factory = self._session._get_vim().client.factory
         datastore = ds_util.get_datastore(
@@ -247,9 +242,34 @@ class VMwareVMOps(object):
             vnc_port = vm_util.get_vnc_port(self._session)
             self._set_vnc_config(client_factory, instance, vnc_port)
 
-        if not ebs_root:
-            # this logic allows for instances or images to decide
-            # for themselves which strategy is best for them.
+        block_device_mapping = []
+        if block_device_info is not None:
+            block_device_mapping = driver.block_device_info_get_mapping(
+                block_device_info)
+
+        # NOTE(mdbooth): the logic here is that we ignore the image if there
+        # are block device mappings. This behaviour is incorrect, and a bug in
+        # the driver.  We should be able to accept an image and block device
+        # mappings.
+        if len(block_device_mapping) > 0:
+            msg = "Block device information present: %s" % block_device_info
+            # NOTE(mriedem): block_device_info can contain an auth_password
+            # so we have to scrub the message before logging it.
+            LOG.debug(logging.mask_password(msg), instance=instance)
+
+            for root_disk in block_device_mapping:
+                connection_info = root_disk['connection_info']
+                # TODO(hartsocks): instance is unnecessary, remove it
+                # we still use instance in many locations for no other purpose
+                # than logging, can we simplify this?
+                self._volumeops.attach_root_volume(connection_info, instance,
+                                                   self._default_root_device,
+                                                   datastore.ref)
+        else:
+            # TODO(hartsocks): Refactor this section image handling section.
+            # The next section handles manipulating various image types
+            # as well as preparing those image's virtual disks for mounting
+            # in our virtual machine.
 
             upload_name = instance.image_ref
             upload_folder = '%s/%s' % (self._base_folder, upload_name)
@@ -514,13 +534,6 @@ class VMwareVMOps(object):
                     datastore.ref,
                     str(uploaded_iso_path))
 
-        else:
-            # Attach the root disk to the VM.
-            for root_disk in block_device_mapping:
-                connection_info = root_disk['connection_info']
-                self._volumeops.attach_root_volume(connection_info, instance,
-                                                   self._default_root_device,
-                                                   datastore.ref)
         if power_on:
             vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
 
