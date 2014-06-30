@@ -420,7 +420,8 @@ class VMwareVMOps(object):
             if is_iso:
                 if root_gb_in_kb:
                     dest_vmdk_path = self._get_vmdk_path(datastore.name,
-                            instance['uuid'], instance_name)
+                                                         instance['uuid'],
+                                                         instance_name)
                     # Create the blank virtual disk for the VM
                     LOG.debug("Create blank virtual disk on %s",
                               datastore.name, instance=instance)
@@ -596,7 +597,7 @@ class VMwareVMOps(object):
                           e, instance=instance)
 
     def _attach_cdrom_to_vm(self, vm_ref, instance,
-                         datastore, file_path):
+                            datastore, file_path):
         """Attach cdrom to VM by reconfiguration."""
         instance_name = instance['name']
         client_factory = self._session._get_vim().client.factory
