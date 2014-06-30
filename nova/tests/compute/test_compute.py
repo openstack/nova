@@ -57,13 +57,7 @@ from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
-from nova.objects import compute_node as compute_node_obj
 from nova.objects import instance as instance_obj
-from nova.objects import instance_action as instance_action_obj
-from nova.objects import instance_group as instance_group_obj
-from nova.objects import instance_info_cache
-from nova.objects import migration as migration_obj
-from nova.objects import quotas as quotas_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -198,8 +192,8 @@ class BaseTestCase(test.TestCase):
                                    'metrics': '',
                                    'stats': '',
                                    'id': 2}]
-            return [compute_node_obj.ComputeNode._from_db_object(
-                        context, compute_node_obj.ComputeNode(), cn)
+            return [objects.ComputeNode._from_db_object(
+                        context, objects.ComputeNode(), cn)
                     for cn in fake_compute_nodes]
 
         def fake_compute_node_delete(context, compute_node_id):
@@ -217,7 +211,7 @@ class BaseTestCase(test.TestCase):
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id,
                                               self.project_id)
-        self.none_quotas = quotas_obj.Quotas.from_reservations(
+        self.none_quotas = objects.Quotas.from_reservations(
                 self.context, None)
 
         def fake_show(meh, context, id):
@@ -1140,8 +1134,8 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertFalse(called['fault_added'])
 
-    @mock.patch.object(instance_action_obj.InstanceActionEvent, 'event_start')
-    @mock.patch.object(instance_action_obj.InstanceActionEvent,
+    @mock.patch.object(objects.InstanceActionEvent, 'event_start')
+    @mock.patch.object(objects.InstanceActionEvent,
                        'event_finish_with_failure')
     def test_wrap_instance_event(self, mock_finish, mock_start):
         inst = {"uuid": "fake_uuid"}
@@ -1155,8 +1149,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue(mock_start.called)
         self.assertTrue(mock_finish.called)
 
-    @mock.patch.object(instance_action_obj.InstanceActionEvent, 'event_start')
-    @mock.patch.object(instance_action_obj.InstanceActionEvent,
+    @mock.patch.object(objects.InstanceActionEvent, 'event_start')
+    @mock.patch.object(objects.InstanceActionEvent,
                        'event_finish_with_failure')
     def test_wrap_instance_event_return(self, mock_finish, mock_start):
         inst = {"uuid": "fake_uuid"}
@@ -1171,8 +1165,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue(mock_start.called)
         self.assertTrue(mock_finish.called)
 
-    @mock.patch.object(instance_action_obj.InstanceActionEvent, 'event_start')
-    @mock.patch.object(instance_action_obj.InstanceActionEvent,
+    @mock.patch.object(objects.InstanceActionEvent, 'event_start')
+    @mock.patch.object(objects.InstanceActionEvent,
                        'event_finish_with_failure')
     def test_wrap_instance_event_log_exception(self, mock_finish, mock_start):
         inst = {"uuid": "fake_uuid"}
@@ -3616,7 +3610,7 @@ class ComputeTestCase(BaseTestCase):
         group_instance = self._create_fake_instance_obj(
                 params=dict(host=self.compute.host))
 
-        instance_group = instance_group_obj.InstanceGroup(self.context)
+        instance_group = objects.InstanceGroup(self.context)
         instance_group.user_id = self.user_id
         instance_group.project_id = self.project_id
         instance_group.name = 'messi'
@@ -3952,7 +3946,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_state_revert(self):
         # ensure that task_state is reverted after a failed operation.
-        migration = migration_obj.Migration()
+        migration = objects.Migration()
         migration.instance_uuid = 'b48316c5-71e8-45e4-9884-6c78055b9b13'
         migration.new_instance_type_id = '1'
 
@@ -4131,7 +4125,7 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(vm_states.ACTIVE, sys_meta['old_vm_state'])
         else:
             self.assertEqual(vm_states.STOPPED, sys_meta['old_vm_state'])
-        migration = migration_obj.Migration.get_by_instance_and_status(
+        migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
                 instance.uuid, 'pre-migrating')
 
@@ -4327,7 +4321,7 @@ class ComputeTestCase(BaseTestCase):
 
         self._stub_out_resize_network_methods()
 
-        migration = migration_obj.Migration.get_by_instance_and_status(
+        migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
                 instance.uuid, 'pre-migrating')
         self.compute.resize_instance(self.context, instance=instance,
@@ -4414,7 +4408,7 @@ class ComputeTestCase(BaseTestCase):
                                  request_spec={}, filter_properties={},
                                  node=None)
 
-        migration = migration_obj.Migration.get_by_instance_and_status(
+        migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
                 instance.uuid, 'pre-migrating')
 
@@ -4526,7 +4520,7 @@ class ComputeTestCase(BaseTestCase):
 
         self._stub_out_resize_network_methods()
 
-        migration = migration_obj.Migration.get_by_instance_and_status(
+        migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
                 instance.uuid, 'pre-migrating')
         self.compute.resize_instance(self.context, instance=instance,
@@ -4688,7 +4682,7 @@ class ComputeTestCase(BaseTestCase):
                                  filter_properties={}, node=None)
         instance.task_state = task_states.RESIZE_PREP
         instance.save()
-        migration = migration_obj.Migration.get_by_instance_and_status(
+        migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
                 instance.uuid, 'pre-migrating')
 
@@ -4729,7 +4723,7 @@ class ComputeTestCase(BaseTestCase):
         instance.task_state = task_states.RESIZE_PREP
         instance.save()
 
-        migration = migration_obj.Migration.get_by_instance_and_status(
+        migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
                 instance.uuid, 'pre-migrating')
 
@@ -4770,7 +4764,7 @@ class ComputeTestCase(BaseTestCase):
         instance.task_state = task_states.RESIZE_PREP
         instance.save()
 
-        migration = migration_obj.Migration.get_by_instance_and_status(
+        migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
                 instance.uuid, 'pre-migrating')
 
@@ -4848,7 +4842,7 @@ class ComputeTestCase(BaseTestCase):
                 image={}, reservations=reservations, request_spec={},
                 filter_properties={}, node=None)
 
-        migration = migration_obj.Migration.get_by_instance_and_status(
+        migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
                 instance.uuid, 'pre-migrating')
 
@@ -4955,7 +4949,7 @@ class ComputeTestCase(BaseTestCase):
                 image={}, reservations=reservations, request_spec={},
                 filter_properties={}, node=None)
 
-        migration = migration_obj.Migration.get_by_instance_and_status(
+        migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
                 instance.uuid, 'pre-migrating')
 
@@ -5110,7 +5104,7 @@ class ComputeTestCase(BaseTestCase):
                                  image={}, reservations=reservations,
                                  request_spec={}, filter_properties={},
                                  node=None)
-        migration = migration_obj.Migration.get_by_instance_and_status(
+        migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
                 instance.uuid, 'pre-migrating')
         instance.task_state = task_states.RESIZE_PREP
@@ -5518,7 +5512,7 @@ class ComputeTestCase(BaseTestCase):
         """The instance's node property should be updated correctly."""
         self._begin_post_live_migration_at_destination()
         hypervisor_hostname = 'fake_hypervisor_hostname'
-        fake_compute_info = compute_node_obj.ComputeNode(
+        fake_compute_info = objects.ComputeNode(
             hypervisor_hostname=hypervisor_hostname)
         self.compute._get_compute_info(mox.IgnoreArg(),
                                        mox.IgnoreArg()).AndReturn(
@@ -5999,7 +5993,7 @@ class ComputeTestCase(BaseTestCase):
         # Stays the same because we didn't find anything to process
         self.assertEqual(3, call_info['get_nw_info'])
 
-    @mock.patch('nova.objects.instance.InstanceList.get_by_filters')
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
     @mock.patch('nova.compute.api.API.unrescue')
     def test_poll_rescued_instances(self, unrescue, get):
         timed_out_time = timeutils.utcnow() - datetime.timedelta(minutes=5)
@@ -6396,7 +6390,7 @@ class ComputeTestCase(BaseTestCase):
                        '_complete_deletion',
                        lambda *a, **k: None)
 
-        self.stubs.Set(quotas_obj.Quotas, 'reserve', lambda *a, **k: None)
+        self.stubs.Set(objects.Quotas, 'reserve', lambda *a, **k: None)
 
         self.compute._complete_partial_deletion(admin_context, instance)
 
@@ -6503,7 +6497,7 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute, '_delete_instance')
         self.compute._delete_instance(
                 ctxt, mox.IsA(objects.Instance), [],
-                mox.IsA(quotas_obj.Quotas))
+                mox.IsA(objects.Quotas))
 
         self.mox.ReplayAll()
 
@@ -6650,7 +6644,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.network_api, 'setup_networks_on_host',
                        fake_setup_networks_on_host)
 
-        migration = migration_obj.Migration()
+        migration = objects.Migration()
         migration.instance_uuid = instance.uuid
         migration.status = 'finished'
         migration.create(self.context.elevated())
@@ -7079,7 +7073,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_instance_create_adds_to_instance_group(self):
         self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
 
-        group = instance_group_obj.InstanceGroup(self.context)
+        group = objects.InstanceGroup(self.context)
         group.uuid = str(uuid.uuid4())
         group.create()
 
@@ -7088,8 +7082,7 @@ class ComputeAPITestCase(BaseTestCase):
             self.context, inst_type, self.fake_image['id'],
             scheduler_hints={'group': group.uuid})
 
-        group = instance_group_obj.InstanceGroup.get_by_uuid(self.context,
-                group.uuid)
+        group = objects.InstanceGroup.get_by_uuid(self.context, group.uuid)
         self.assertIn(refs[0]['uuid'], group.members)
 
         db.instance_destroy(self.context, refs[0]['uuid'])
@@ -7102,8 +7095,7 @@ class ComputeAPITestCase(BaseTestCase):
             self.context, inst_type, self.fake_image['id'],
             scheduler_hints={'group': 'groupname'})
 
-        group = instance_group_obj.InstanceGroup.get_by_name(self.context,
-                'groupname')
+        group = objects.InstanceGroup.get_by_name(self.context, 'groupname')
         self.assertEqual('groupname', group.name)
         self.assertIn('legacy', group.policies)
         self.assertEqual(1, len(group.members))
@@ -7114,8 +7106,7 @@ class ComputeAPITestCase(BaseTestCase):
         (refs2, resv_id) = self.compute_api.create(
             self.context, inst_type, self.fake_image['id'],
             scheduler_hints={'group': 'groupname'})
-        group = instance_group_obj.InstanceGroup.get_by_name(self.context,
-                'groupname')
+        group = objects.InstanceGroup.get_by_name(self.context, 'groupname')
         self.assertEqual('groupname', group.name)
         self.assertIn('legacy', group.policies)
         self.assertEqual(2, len(group.members))
@@ -8661,7 +8652,7 @@ class ComputeAPITestCase(BaseTestCase):
                        'deallocate_port_for_instance',
                        lambda a, b, c: [])
         instance = objects.Instance()
-        instance.info_cache = instance_info_cache.InstanceInfoCache.new(
+        instance.info_cache = objects.InstanceInfoCache.new(
             self.context, 'fake-uuid')
         instance.info_cache.network_info = network_model.NetworkInfo.hydrate(
             nwinfo)
@@ -10555,8 +10546,7 @@ class EvacuateHostTestCase(BaseTestCase):
         def fake_get_compute_info(context, host):
             self.assertTrue(context.is_admin)
             self.assertEqual('fake-mini', host)
-            cn = compute_node_obj.ComputeNode(
-                hypervisor_hostname=self.rt.nodename)
+            cn = objects.ComputeNode(hypervisor_hostname=self.rt.nodename)
             return cn
 
         self.stubs.Set(self.compute, '_get_compute_info',

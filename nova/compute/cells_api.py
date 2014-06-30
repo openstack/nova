@@ -25,8 +25,8 @@ from nova.cells import utils as cells_utils
 from nova.compute import api as compute_api
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
+from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import service as service_obj
 from nova import rpc
 
 
@@ -531,8 +531,8 @@ class HostAPI(compute_api.HostAPI):
         # return values, so just convert the db-formatted service objects
         # to new-world objects here
         services = obj_base.obj_make_list(context,
-                                          service_obj.ServiceList(),
-                                          service_obj.Service,
+                                          objects.ServiceList(),
+                                          objects.Service,
                                           services)
 
         # Now wrap it in the proxy with the original cell_path
@@ -546,9 +546,9 @@ class HostAPI(compute_api.HostAPI):
         # return values, so just convert the db-formatted service objects
         # to new-world objects here
         if db_service:
-            return service_obj.Service._from_db_object(context,
-                                                       service_obj.Service(),
-                                                       db_service)
+            return objects.Service._from_db_object(context,
+                                                   objects.Service(),
+                                                   db_service)
 
     def service_update(self, context, host_name, binary, params_to_update):
         """Used to enable/disable a service. For compute services, setting to
@@ -565,9 +565,9 @@ class HostAPI(compute_api.HostAPI):
         # return values, so just convert the db-formatted service objects
         # to new-world objects here
         if db_service:
-            return service_obj.Service._from_db_object(context,
-                                                       service_obj.Service(),
-                                                       db_service)
+            return objects.Service._from_db_object(context,
+                                                   objects.Service(),
+                                                   db_service)
 
     def service_delete(self, context, service_id):
         """Deletes the specified service."""

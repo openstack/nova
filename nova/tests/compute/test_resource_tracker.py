@@ -26,8 +26,8 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import db
+from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import migration as migration_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import rpc
@@ -802,7 +802,7 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
             self._migrations[mig_self.instance_uuid] = mig_self
             mig_self.obj_reset_changes()
 
-        self.stubs.Set(migration_obj.Migration, 'create',
+        self.stubs.Set(objects.Migration, 'create',
                        _fake_migration_create)
 
         self.instance = self._fake_instance()
@@ -827,7 +827,7 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
         if values:
             mig_dict.update(values)
 
-        migration = migration_obj.Migration()
+        migration = objects.Migration()
         migration.update(mig_dict)
         # This hits the stub in setUp()
         migration.create('fake')

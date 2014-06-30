@@ -31,8 +31,6 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import flavor as flavor_obj
-from nova.objects import migration as migration_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -182,7 +180,7 @@ class ResourceTracker(object):
         claim will not be lost if the audit process starts.
         """
         old_instance_type = flavors.extract_flavor(instance)
-        migration = migration_obj.Migration()
+        migration = objects.Migration()
         migration.dest_compute = self.host
         migration.dest_node = self.nodename
         migration.dest_host = self.driver.get_host_ip_addr()
@@ -692,5 +690,4 @@ class ResourceTracker(object):
         try:
             return flavors.extract_flavor(instance, prefix)
         except KeyError:
-            return flavor_obj.Flavor.get_by_id(context,
-                                               instance_type_id)
+            return objects.Flavor.get_by_id(context, instance_type_id)
