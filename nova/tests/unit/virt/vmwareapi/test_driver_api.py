@@ -53,7 +53,6 @@ from nova.tests.unit import test_flavors
 from nova.tests.unit import utils
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
-from nova import utils as nova_utils
 from nova.virt import driver as v_driver
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import driver
@@ -170,9 +169,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         super(VMwareAPIVMTestCase, self).setUp()
         vm_util.vm_refs_cache_reset()
         self.context = context.RequestContext('fake', 'fake', is_admin=False)
-        cluster_name = 'test_cluster'
-        cluster_name2 = 'test_cluster2'
-        self.flags(cluster_name=[cluster_name, cluster_name2],
+        self.flags(cluster_name='test_cluster',
                    host_ip='test_url',
                    host_username='test_username',
                    host_password='test_pass',
@@ -189,12 +186,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         nova.tests.unit.image.fake.stub_out_image_service(self.stubs)
         self.conn = driver.VMwareVCDriver(None, False)
         self._set_exception_vars()
-        self.node_name = self.conn._resources.keys()[0]
-        self.node_name2 = self.conn._resources.keys()[1]
-        if self.conn._resources[self.node_name2]['name'] == cluster_name2:
-            self.ds = 'ds1'
-        else:
-            self.ds = 'ds2'
+        self.node_name = self.conn._nodename
+        self.ds = 'ds1'
 
         self.vim = vmwareapi_fake.FakeVim()
 
@@ -1990,18 +1983,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         instances = self.conn.list_instances()
         self.assertEqual(0, len(instances))
 
-    def test_list_instances_from_nodes(self):
-        # Create instance on node1
-        self._create_vm(self.node_name)
-        # Create instances on the other node
-        self._create_vm(self.node_name2, num_instances=2)
-        self._create_vm(self.node_name2, num_instances=3)
-        node1_vmops = self.conn._get_vmops_for_compute_node(self.node_name)
-        node2_vmops = self.conn._get_vmops_for_compute_node(self.node_name2)
-        self.assertEqual(1, len(node1_vmops.list_instances()))
-        self.assertEqual(2, len(node2_vmops.list_instances()))
-        self.assertEqual(3, len(self.conn.list_instances()))
-
     def _setup_mocks_for_session(self, mock_init):
         mock_init.return_value = None
 
@@ -2027,20 +2008,17 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                           self.conn.set_host_enabled, 'state')
 
     def test_datastore_regex_configured(self):
-        for node in self.conn._resources.keys():
-            self.assertEqual(self.conn._datastore_regex,
-                    self.conn._resources[node]['vmops']._datastore_regex)
-            self.assertEqual(self.conn._datastore_regex,
-                    self.conn._resources[node]['vcstate']._datastore_regex)
+        self.assertEqual(self.conn._datastore_regex,
+                self.conn._vmops._datastore_regex)
+        self.assertEqual(self.conn._datastore_regex,
+                self.conn._vc_state._datastore_regex)
 
     @mock.patch('nova.virt.vmwareapi.ds_util.get_datastore')
     def test_datastore_regex_configured_vcstate(self, mock_get_ds_ref):
-        self.assertEqual(2, len(self.conn._resources.keys()))
-        for node in self.conn._resources.keys():
-            vcstate = self.conn._resources[node]['vcstate']
-            self.conn.get_available_resource(node)
-            mock_get_ds_ref.assert_called_with(
-                vcstate._session, vcstate._cluster, vcstate._datastore_regex)
+        vcstate = self.conn._vc_state
+        self.conn.get_available_resource(self.node_name)
+        mock_get_ds_ref.assert_called_with(
+            vcstate._session, vcstate._cluster, vcstate._datastore_regex)
 
     def test_get_available_resource(self):
         stats = self.conn.get_available_resource(self.node_name)
@@ -2060,41 +2038,14 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
         # Tests if we raise an exception for Invalid Regular Expression in
         # vmware_datastore_regex
-        self.flags(cluster_name=['test_cluster'], datastore_regex='fake-ds(01',
+        self.flags(cluster_name='test_cluster', datastore_regex='fake-ds(01',
                    group='vmware')
         self.assertRaises(exception.InvalidInput, driver.VMwareVCDriver, None)
 
     def test_get_available_nodes(self):
         nodelist = self.conn.get_available_nodes()
-        self.assertEqual(len(nodelist), 2)
+        self.assertEqual(len(nodelist), 1)
         self.assertIn(self.node_name, nodelist)
-        self.assertIn(self.node_name2, nodelist)
-
-    def test_spawn_multiple_node(self):
-
-        def fake_is_neutron():
-            return False
-
-        self.stubs.Set(nova_utils, 'is_neutron', fake_is_neutron)
-        uuid1 = uuidutils.generate_uuid()
-        uuid2 = uuidutils.generate_uuid()
-        self._create_vm(node=self.node_name, num_instances=1,
-                        uuid=uuid1)
-        info = self._get_info(uuid=uuid1)
-        self._check_vm_info(info, power_state.RUNNING)
-        self.conn.destroy(self.context, self.instance, self.network_info)
-        self._create_vm(node=self.node_name2, num_instances=1,
-                        uuid=uuid2)
-        info = self._get_info(uuid=uuid2)
-        self._check_vm_info(info, power_state.RUNNING)
-
-    def test_spawn_invalid_node(self):
-        self._create_instance(node='InvalidNodeName')
-        self.assertRaises(exception.NotFound, self.conn.spawn,
-                          self.context, self.instance, self.image,
-                          injected_files=[], admin_password=None,
-                          network_info=self.network_info,
-                          block_device_info=None)
 
     @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
                        'from_image')
@@ -2261,7 +2212,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                           self.instance)
 
     def test_datastore_dc_map(self):
-        vmops = self.conn._resources[self.node_name]['vmops']
+        vmops = self.conn._vmops
         self.assertEqual({}, vmops._datastore_dc_mapping)
         self._create_vm()
         # currently there are 2 data stores
@@ -2302,28 +2253,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                     vmwareapi_fake._FAKE_VCENTER_UUID),
                          self.conn._create_nodename(test_mor),
                          "VC driver failed to create the proper node name")
-
-    def test_normalize_nodename_old(self):
-        test_mor = "domain-26"
-        sample_cluster_names = ["Cluster1",
-                                "Cluster:2",
-                                "Cluster:3)",
-                                "(Cluster:4",
-                                "(Cluster:5)",
-                                "Test Cluster"]
-
-        for cluster_name in sample_cluster_names:
-            old_format = "%s(%s)" % (test_mor, cluster_name)
-            self.assertEqual(self.conn._create_nodename(test_mor),
-                             self.conn._normalize_nodename(old_format),
-                             'VC driver failed to normalize cluster name %s' %
-                                 cluster_name)
-
-    def test_normalize_nodename_new(self):
-        # Assert that _normalize_nodename doesn't touch the new format
-        test_mor = "domain-26"
-        nodename = "%s.%s" % (test_mor, vmwareapi_fake._FAKE_VCENTER_UUID)
-        self.assertEqual(nodename, self.conn._normalize_nodename(nodename))
 
     @mock.patch.object(driver.LOG, 'warning')
     def test_min_version(self, mock_warning):

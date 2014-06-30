@@ -1207,89 +1207,13 @@ def get_all_cluster_mors(session):
         LOG.warning(_LW("Failed to get cluster references %s"), excep)
 
 
-def get_all_res_pool_mors(session):
-    """Get all the resource pools in the vCenter."""
-    try:
-        results = session._call_method(vim_util, "get_objects",
-                                             "ResourcePool")
-        session._call_method(vutil, 'cancel_retrieval',
-                             results)
-        return results.objects
-    except Exception as excep:
-        LOG.warning(_LW("Failed to get resource pool references %s"), excep)
-
-
-def get_dynamic_property_mor(session, mor_ref, attribute):
-    """Get the value of an attribute for a given managed object."""
-    return session._call_method(vim_util, "get_dynamic_property",
-                                mor_ref, mor_ref._type, attribute)
-
-
-def find_entity_mor(entity_list, entity_name):
-    """Returns managed object ref for given cluster or resource pool name."""
-    return [mor for mor in entity_list if (hasattr(mor, 'propSet') and
-                                           mor.propSet[0].val == entity_name)]
-
-
-def get_all_cluster_refs_by_name(session, path_list):
-    """Get reference to the Cluster, ResourcePool with the path specified.
-
-    The path is the display name. This can be the full path as well.
-    The input will have the list of clusters and resource pool names
-    """
-    cls = get_all_cluster_mors(session)
-    if not cls:
-        return {}
-    res = get_all_res_pool_mors(session)
-    if not res:
-        return {}
-    path_list = [path.strip() for path in path_list]
-    list_obj = []
-    for entity_path in path_list:
-        # entity_path could be unique cluster and/or resource-pool name
-        res_mor = find_entity_mor(res, entity_path)
-        cls_mor = find_entity_mor(cls, entity_path)
-        cls_mor.extend(res_mor)
-        for mor in cls_mor:
-            list_obj.append((mor.obj, mor.propSet[0].val))
-    return get_dict_mor(session, list_obj)
-
-
-def get_dict_mor(session, list_obj):
-    """The input is a list of objects in the form
-    (manage_object,display_name)
-    The managed object will be in the form
-    { value = "domain-1002", _type = "ClusterComputeResource" }
-
-    Output data format:
-    | dict_mors = {
-    |              'respool-1001': { 'cluster_mor': clusterMor,
-    |                                'res_pool_mor': resourcePoolMor,
-    |                                'name': display_name },
-    |              'domain-1002': { 'cluster_mor': clusterMor,
-    |                                'res_pool_mor': resourcePoolMor,
-    |                                'name': display_name },
-    |            }
-
-    """
-    dict_mors = {}
-    for obj_ref, path in list_obj:
-        if obj_ref._type == "ResourcePool":
-            # Get owner cluster-ref mor
-            cluster_ref = get_dynamic_property_mor(session, obj_ref, "owner")
-            dict_mors[obj_ref.value] = {'cluster_mor': cluster_ref,
-                                        'res_pool_mor': obj_ref,
-                                        'name': path,
-                                        }
-        else:
-            # Get default resource pool of the cluster
-            res_pool_ref = get_dynamic_property_mor(session,
-                                                    obj_ref, "resourcePool")
-            dict_mors[obj_ref.value] = {'cluster_mor': obj_ref,
-                                        'res_pool_mor': res_pool_ref,
-                                        'name': path,
-                                        }
-    return dict_mors
+def get_cluster_ref_by_name(session, cluster_name):
+    """Get reference to the vCenter cluster with the specified name."""
+    all_clusters = get_all_cluster_mors(session)
+    for cluster in all_clusters:
+        if (hasattr(cluster, 'propSet') and
+                    cluster.propSet[0].val == cluster_name):
+            return cluster.obj
 
 
 def get_vmdk_adapter_type(adapter_type):
