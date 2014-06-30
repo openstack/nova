@@ -194,10 +194,6 @@ class FloatingIPController(object):
         self.network_api.release_floating_ip(context, address)
         return webob.Response(status_int=202)
 
-    def _get_ip_by_id(self, context, value):
-        """Checks that value is id and then returns its address."""
-        return self.network_api.get_floating_ip(context, value)['address']
-
 
 class FloatingIPActionController(wsgi.Controller):
     def __init__(self, ext_mgr=None, *args, **kwargs):
