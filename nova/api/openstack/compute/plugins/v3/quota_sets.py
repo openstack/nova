@@ -16,8 +16,10 @@
 import six.moves.urllib.parse as urlparse
 import webob
 
+from nova.api.openstack.compute.schemas.v3 import quota_sets
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 import nova.context
 from nova import db
 from nova import exception
@@ -25,12 +27,13 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 from nova import quota
-from nova import utils
 
 
 ALIAS = "os-quota-sets"
 QUOTAS = quota.QUOTAS
 LOG = logging.getLogger(__name__)
+# NOTE: If FILTERED_QUOTAS list is changed,
+# then the schema file also needs to be updated.
 FILTERED_QUOTAS = ['injected_files', 'injected_file_content_bytes',
                    'injected_file_path_bytes']
 authorize_update = extensions.extension_authorizer('compute',
@@ -52,9 +55,6 @@ class QuotaSetsController(wsgi.Controller):
 
     def _validate_quota_limit(self, limit, minimum, maximum):
         # NOTE: -1 is a flag value for unlimited
-        if limit < -1:
-            msg = _("Quota limit must be -1 or greater.")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
         if ((limit < minimum) and
            (maximum != -1 or (maximum == -1 and limit != -1))):
             msg = _("Quota limit must be greater than %s.") % minimum
@@ -104,6 +104,7 @@ class QuotaSetsController(wsgi.Controller):
             raise webob.exc.HTTPForbidden()
 
     @extensions.expected_errors((400, 403))
+    @validation.schema(quota_sets.update)
     def update(self, req, id, body):
         context = req.environ['nova.context']
         authorize_update(context)
@@ -111,33 +112,9 @@ class QuotaSetsController(wsgi.Controller):
         params = urlparse.parse_qs(req.environ.get('QUERY_STRING', ''))
         user_id = params.get('user_id', [None])[0]
 
-        bad_keys = []
-        force_update = False
-
-        if not self.is_valid_body(body, 'quota_set'):
-            msg = _("quota_set not specified")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
         quota_set = body['quota_set']
-
-        for key, value in quota_set.items():
-            if ((key not in QUOTAS or key in FILTERED_QUOTAS)
-                 and key != 'force'):
-                bad_keys.append(key)
-                continue
-            if key == 'force':
-                force_update = strutils.bool_from_string(value)
-            elif key != 'force' and value:
-                try:
-                    value = utils.validate_integer(
-                        value, key)
-                except exception.InvalidInput as e:
-                    LOG.warn(e.format_message())
-                    raise webob.exc.HTTPBadRequest(
-                        explanation=e.format_message())
-
-        if len(bad_keys) > 0:
-            msg = _("Bad key(s) %s in quota_set") % ",".join(bad_keys)
-            raise webob.exc.HTTPBadRequest(explanation=msg)
+        force_update = strutils.bool_from_string(quota_set.get('force',
+                                                               'False'))
 
         try:
             settable_quotas = QUOTAS.get_settable_quotas(context, project_id,
