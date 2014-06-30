@@ -140,9 +140,9 @@ class VMwareHTTPWriteFile(VMwareHTTPFile):
         """Get the response and close the connection."""
         try:
             self.conn.getresponse()
-        except Exception as excep:
+        except Exception:
             LOG.debug("Exception during HTTP connection close in "
-                      "VMwareHTTPWrite. Exception is %s", excep)
+                      "VMwareHTTPWrite", exc_info=True)
         super(VMwareHTTPWriteFile, self).close()
 
 

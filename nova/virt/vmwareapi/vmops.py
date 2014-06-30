@@ -143,11 +143,11 @@ class VMwareVMOps(object):
         except (error_util.CannotDeleteFileException,
                 error_util.FileFaultException,
                 error_util.FileLockedException,
-                error_util.FileNotFoundException) as e:
+                error_util.FileNotFoundException):
             LOG.debug("Unable to delete %(ds)s. There may be more than "
-                      "one process or thread that tries to delete the file. "
-                      "Exception: %(ex)s",
-                      {'ds': datastore_path, 'ex': e})
+                      "one process or thread trying to delete the file",
+                      {'ds': datastore_path},
+                      exc_info=True)
 
     def _get_vmdk_path(self, ds_name, folder, name):
         path = "%s/%s.vmdk" % (folder, name)
@@ -888,11 +888,10 @@ class VMwareVMOps(object):
                               "datastore %(datastore_name)s",
                               {'datastore_name': vm_ds_path.datastore},
                               instance=instance)
-                except Exception as excep:
+                except Exception:
                     LOG.warn(_("In vmwareapi:vmops:_destroy_instance, "
-                                "got this exception while deleting "
-                                "the VM contents from the disk: %s"),
-                             excep)
+                               "exception while deleting the VM contents from "
+                               "the disk"), exc_info=True)
         except Exception as exc:
             LOG.exception(exc, instance=instance)
         finally:
