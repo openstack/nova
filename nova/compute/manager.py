@@ -4060,7 +4060,7 @@ class ComputeManager(manager.Manager):
         token = str(uuid.uuid4())
 
         if not CONF.vnc_enabled:
-            raise exception.ConsoleTypeInvalid(console_type=console_type)
+            raise exception.ConsoleTypeUnavailable(console_type=console_type)
 
         if console_type == 'novnc':
             # For essex, novncproxy_base_url must include the full path
@@ -4098,7 +4098,7 @@ class ComputeManager(manager.Manager):
         token = str(uuid.uuid4())
 
         if not CONF.spice.enabled:
-            raise exception.ConsoleTypeInvalid(console_type=console_type)
+            raise exception.ConsoleTypeUnavailable(console_type=console_type)
 
         if console_type == 'spice-html5':
             # For essex, spicehtml5proxy_base_url must include the full path
@@ -4136,7 +4136,7 @@ class ComputeManager(manager.Manager):
         token = str(uuid.uuid4())
 
         if not CONF.rdp.enabled:
-            raise exception.ConsoleTypeInvalid(console_type=console_type)
+            raise exception.ConsoleTypeUnavailable(console_type=console_type)
 
         if console_type == 'rdp-html5':
             access_url = '%s?token=%s' % (CONF.rdp.html5_proxy_base_url,

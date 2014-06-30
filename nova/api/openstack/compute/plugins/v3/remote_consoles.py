@@ -50,8 +50,6 @@ class RemoteConsolesController(wsgi.Controller):
             output = self.compute_api.get_vnc_console(context,
                                                       instance,
                                                       console_type)
-        except exception.ConsoleTypeInvalid as e:
-            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         except exception.ConsoleTypeUnavailable as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InstanceNotFound as e:
@@ -81,8 +79,6 @@ class RemoteConsolesController(wsgi.Controller):
             output = self.compute_api.get_spice_console(context,
                                                         instance,
                                                         console_type)
-        except exception.ConsoleTypeInvalid as e:
-            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         except exception.ConsoleTypeUnavailable as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InstanceNotFound as e:
@@ -115,8 +111,6 @@ class RemoteConsolesController(wsgi.Controller):
             output = self.compute_api.get_rdp_console(context,
                                                       instance,
                                                       console_type)
-        except exception.ConsoleTypeInvalid as e:
-            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         except exception.ConsoleTypeUnavailable as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InstanceNotFound as e:
