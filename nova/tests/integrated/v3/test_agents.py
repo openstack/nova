@@ -24,7 +24,7 @@ class AgentsJsonTest(api_sample_base.ApiSampleTestBaseV3):
     def setUp(self):
         super(AgentsJsonTest, self).setUp()
 
-        fake_agents_list = [{'url': 'xxxxxxxxxxxx',
+        fake_agents_list = [{'url': 'http://example.com/path/to/resource',
                              'hypervisor': 'hypervisor',
                              'architecture': 'x86',
                              'os': 'os',
@@ -65,7 +65,7 @@ class AgentsJsonTest(api_sample_base.ApiSampleTestBaseV3):
 
     def test_agent_create(self):
         # Creates a new agent build.
-        project = {'url': 'xxxxxxxxxxxx',
+        project = {'url': 'http://example.com/path/to/resource',
                 'hypervisor': 'hypervisor',
                 'architecture': 'x86',
                 'os': 'os',
@@ -85,7 +85,7 @@ class AgentsJsonTest(api_sample_base.ApiSampleTestBaseV3):
         # Update an existing agent build.
         agent_id = 1
         subs = {'version': '7.0',
-                'url': 'xxx://xxxx/xxx/xxx',
+                'url': 'http://example.com/path/to/resource',
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}
         response = self._do_put('os-agents/%s' % agent_id,
                                 'agent-update-put-req', subs)
