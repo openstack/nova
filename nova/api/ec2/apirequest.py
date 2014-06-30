@@ -25,7 +25,6 @@ from xml.dom import minidom
 
 from nova.api.ec2 import ec2utils
 from nova import exception
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
@@ -57,10 +56,10 @@ class APIRequest(object):
             method = getattr(self.controller,
                              ec2utils.camelcase_to_underscore(self.action))
         except AttributeError:
-            LOG.exception(_('Unsupported API request: controller = '
-                            '%(controller)s, action = %(action)s'),
-                          {'controller': self.controller,
-                           'action': self.action})
+            LOG.debug('Unsupported API request: controller = '
+                        '%(controller)s, action = %(action)s',
+                        {'controller': self.controller,
+                         'action': self.action})
             # TODO(gundlach): Raise custom exception, trap in apiserver,
             #       and reraise as 400 error.
             raise exception.InvalidRequest()

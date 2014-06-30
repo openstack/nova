@@ -33,6 +33,7 @@ from nova.api import validator
 from nova import context
 from nova import exception
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _LE
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -239,7 +240,7 @@ class EC2KeystoneAuth(wsgi.Middleware):
             roles = [role['name'] for role
                      in result['access']['user']['roles']]
         except (AttributeError, KeyError) as e:
-            LOG.exception(_("Keystone failure: %s") % e)
+            LOG.error(_LE("Keystone failure: %s"), e)
             msg = _("Failure communicating with keystone")
             return faults.ec2_error_response(request_id, "AuthFailure", msg,
                                              status=400)
@@ -301,7 +302,7 @@ class Requestify(wsgi.Middleware):
                             expires=CONF.ec2_timestamp_expiry)
             if expired:
                 msg = _("Timestamp failed validation.")
-                LOG.exception(msg)
+                LOG.debug("Timestamp failed validation")
                 raise webob.exc.HTTPForbidden(explanation=msg)
 
             # Raise KeyError if omitted
