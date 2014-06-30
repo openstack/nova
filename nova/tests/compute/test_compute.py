@@ -10235,14 +10235,15 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
             destroy_mock,
             _try_deallocate_network_mock
         ):
-            self.compute._shutdown_instance(self.context, self.instance,
+            inst_obj = self._objectify(self.instance)
+            self.compute._shutdown_instance(self.context, inst_obj,
                                             bdms=[], notify=False)
             # By asserting that _try_deallocate_network_mock was called
             # exactly once, we know that _get_instance_nw_info raising
             # InstanceInfoCacheNotFound did not make _shutdown_instance error
             # out and driver.destroy was still called.
             _try_deallocate_network_mock.assert_called_once_with(
-                elevated_context, self.instance, None)
+                elevated_context, inst_obj, None)
 
     def test_reschedule_fail(self):
         # Test handling of exception from _reschedule.
