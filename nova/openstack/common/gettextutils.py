@@ -373,8 +373,8 @@ def get_available_languages(domain):
                'zh_Hant_HK': 'zh_HK',
                'zh_Hant': 'zh_TW',
                'fil': 'tl_PH'}
-    for (locale, alias) in six.iteritems(aliases):
-        if locale in language_list and alias not in language_list:
+    for (locale_, alias) in six.iteritems(aliases):
+        if locale_ in language_list and alias not in language_list:
             language_list.append(alias)
 
     _AVAILABLE_LANGUAGES[domain] = language_list
