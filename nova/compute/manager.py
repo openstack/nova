@@ -1449,7 +1449,7 @@ class ComputeManager(manager.Manager):
         return rescheduled
 
     def _reschedule(self, context, request_spec, filter_properties,
-            instance, scheduler_method, method_args, task_state,
+            instance, reschedule_method, method_args, task_state,
             exc_info=None):
         """Attempt to re-schedule a compute operation."""
 
@@ -1469,7 +1469,7 @@ class ComputeManager(manager.Manager):
         request_spec['instance_uuids'] = [instance_uuid]
 
         LOG.debug("Re-scheduling %(method)s: attempt %(num)d",
-                  {'method': scheduler_method.func_name,
+                  {'method': reschedule_method.func_name,
                    'num': retry['num_attempts']}, instance_uuid=instance_uuid)
 
         # reset the task state:
@@ -1480,7 +1480,7 @@ class ComputeManager(manager.Manager):
             retry['exc'] = traceback.format_exception_only(exc_info[0],
                                     exc_info[1])
 
-        scheduler_method(context, *method_args)
+        reschedule_method(context, *method_args)
         return True
 
     @periodic_task.periodic_task
@@ -3484,17 +3484,14 @@ class ComputeManager(manager.Manager):
         instance_uuid = instance['uuid']
 
         try:
-            # NOTE(comstud): remove the scheduler RPCAPI method when
-            # this is adjusted to send to conductor... and then
-            # deprecate the scheduler manager method.
-            scheduler_method = self.scheduler_rpcapi.prep_resize
-            instance_p = obj_base.obj_to_primitive(instance)
-            method_args = (instance_p, instance_type, image, request_spec,
-                           filter_properties, quotas.reservations)
+            reschedule_method = self.compute_task_api.resize_instance
+            scheduler_hint = dict(filter_properties=filter_properties)
+            method_args = (instance, None, scheduler_hint, instance_type,
+                           quotas.reservations)
             task_state = task_states.RESIZE_PREP
 
             rescheduled = self._reschedule(context, request_spec,
-                    filter_properties, instance, scheduler_method,
+                    filter_properties, instance, reschedule_method,
                     method_args, task_state, exc_info)
         except Exception as error:
             rescheduled = False
