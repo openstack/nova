@@ -67,8 +67,14 @@ class MigrateServerTests(admin_only_action_common.CommonTests):
             method_translations=method_translations)
 
     def test_actions_with_locked_instance(self):
-        method_translations = {'migrate': 'resize'}
-        self._test_actions_with_locked_instance(['migrate'],
+        method_translations = {'migrate': 'resize',
+                               'migrate_live': 'live_migrate'}
+        body_map = {'migrate_live': {'host': 'hostname',
+                                     'block_migration': False,
+                                     'disk_over_commit': False}}
+        args_map = {'migrate_live': ((False, False, 'hostname'), {})}
+        self._test_actions_with_locked_instance(
+            ['migrate', 'migrate_live'], body_map=body_map, args_map=args_map,
             method_translations=method_translations)
 
     def _test_migrate_exception(self, exc_info, expected_result):

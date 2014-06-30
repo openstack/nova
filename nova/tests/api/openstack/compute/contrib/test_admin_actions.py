@@ -160,18 +160,22 @@ class CommonMixin(object):
         self.mox.VerifyAll()
         self.mox.UnsetStubs()
 
-    def _test_locked_instance(self, action, method=None):
+    def _test_locked_instance(self, action, method=None, body_map=None,
+                              compute_api_args_map=None):
         if method is None:
             method = action
 
         instance = self._stub_instance_get()
-        getattr(self.compute_api, method)(self.context, instance).AndRaise(
+
+        args, kwargs = compute_api_args_map.get(action, ((), {}))
+        getattr(self.compute_api, method)(self.context, instance,
+                                          *args, **kwargs).AndRaise(
                 exception.InstanceIsLocked(instance_uuid=instance['uuid']))
 
         self.mox.ReplayAll()
 
         res = self._make_request('/servers/%s/action' % instance['uuid'],
-                                 {action: None})
+                                 {action: body_map.get(action)})
         self.assertEqual(409, res.status_int)
         # Do these here instead of tearDown because this method is called
         # more than once for the same test case
@@ -242,15 +246,23 @@ class AdminActionsTest(CommonMixin, test.NoDBTestCase):
 
     def test_actions_with_locked_instance(self):
         actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
-                   'resetNetwork', 'injectNetworkInfo']
+                   'resetNetwork', 'injectNetworkInfo', 'os-migrateLive']
         method_translations = {'migrate': 'resize',
                                'resetNetwork': 'reset_network',
-                               'injectNetworkInfo': 'inject_network_info'}
+                               'injectNetworkInfo': 'inject_network_info',
+                               'os-migrateLive': 'live_migrate'}
+        args_map = {'os-migrateLive': ((False, False, 'hostname'), {})}
+        body_map = {'os-migrateLive': {'host': 'hostname',
+                                       'block_migration': False,
+                                       'disk_over_commit': False}}
 
         for action in actions:
             method = method_translations.get(action)
             self.mox.StubOutWithMock(self.compute_api, method or action)
-            self._test_locked_instance(action, method=method)
+            self._test_locked_instance(action, method=method,
+                                       body_map=body_map,
+                                       compute_api_args_map=args_map)
+
             # Re-mock this.
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
