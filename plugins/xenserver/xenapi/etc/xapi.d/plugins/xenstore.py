@@ -62,7 +62,7 @@ def jsonify(fnc):
     return wrapper
 
 
-def _record_exists(arg_dict):
+def record_exists(arg_dict):
     """Returns whether or not the given record exists. The record path
     is determined from the given path and dom_id in the arg_dict.
     """
@@ -93,7 +93,7 @@ def read_record(self, arg_dict):
     except XenstoreError, e:    # noqa
         if not arg_dict.get("ignore_missing_path", False):
             raise
-        if not _record_exists(arg_dict):
+        if not record_exists(arg_dict):
             return "None"
         # Just try again in case the agent write won the race against
         # the record_exists check. If this fails again, it will likely raise
@@ -129,7 +129,7 @@ def list_records(self, arg_dict):
     try:
         recs = _run_command(cmd)
     except XenstoreError, e:    # noqa
-        if not _record_exists(arg_dict):
+        if not record_exists(arg_dict):
             return {}
         # Just try again in case the path was created in between
         # the "ls" and the existence check. If this fails again, it will

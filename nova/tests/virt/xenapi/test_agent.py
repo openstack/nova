@@ -14,6 +14,7 @@
 #    under the License.
 
 import base64
+import time
 import uuid
 
 import mock
@@ -41,8 +42,8 @@ def _get_fake_instance(**kwargs):
 
 
 class AgentTestCaseBase(test.NoDBTestCase):
-    def _create_agent(self, instance):
-        self.session = "session"
+    def _create_agent(self, instance, session="session"):
+        self.session = session
         self.virtapi = "virtapi"
         self.vm_ref = "vm_ref"
         return agent.XenAPIBasedAgent(self.session, self.virtapi,
@@ -200,6 +201,84 @@ class FileInjectionTestCase(AgentTestCaseBase):
         self.mox.ReplayAll()
 
         agent.inject_files(files)
+
+
+class FakeRebootException(Exception):
+    details = ["", "", "", "asdf REBOOT: asdf"]
+
+
+class RebootRetryTestCase(AgentTestCaseBase):
+    @mock.patch.object(agent, '_wait_for_new_dom_id')
+    def test_retry_on_reboot(self, mock_wait):
+        mock_session = mock.Mock()
+
+        def fake_call_plugin(*args, **kwargs):
+            if fake_call_plugin.called:
+                return {"returncode": '0', "message": "done"}
+            else:
+                fake_call_plugin.called = True
+                raise FakeRebootException()
+
+        fake_call_plugin.called = False
+        mock_session.XenAPI.Failure = FakeRebootException
+        mock_session.VM.get_domid.return_value = "fake_dom_id"
+        mock_session.call_plugin.side_effect = fake_call_plugin
+
+        agent = self._create_agent(None, mock_session)
+
+        result = agent._call_agent("asdf")
+        self.assertEqual("done", result)
+        self.assertTrue(mock_session.VM.get_domid.called)
+        self.assertEqual(2, mock_session.call_plugin.call_count)
+        mock_wait.called_once_with(mock_session, self.vm_ref,
+                                   "fake_dom_id", "asdf")
+
+    @mock.patch.object(time, 'sleep')
+    @mock.patch.object(time, 'time')
+    def test_wait_for_new_dom_id_found(self, mock_time, mock_sleep):
+        mock_session = mock.Mock()
+        mock_session.VM.get_domid.return_value = "new"
+
+        agent._wait_for_new_dom_id(mock_session, "vm_ref", "old", "method")
+
+        mock_session.VM.get_domid.assert_called_once_with("vm_ref")
+        self.assertFalse(mock_sleep.called)
+
+    @mock.patch.object(time, 'sleep')
+    @mock.patch.object(time, 'time')
+    def test_wait_for_new_dom_id_after_retry(self, mock_time, mock_sleep):
+        self.flags(agent_timeout=3, group="xenserver")
+        mock_time.return_value = 0
+        mock_session = mock.Mock()
+        old = 40
+        new = 42
+        mock_session.VM.get_domid.side_effect = [old, -1, new]
+
+        agent._wait_for_new_dom_id(mock_session, "vm_ref", old, "method")
+
+        mock_session.VM.get_domid.assert_called_with("vm_ref")
+        self.assertEqual(3, mock_session.VM.get_domid.call_count)
+        self.assertEqual(2, mock_sleep.call_count)
+
+    @mock.patch.object(time, 'sleep')
+    @mock.patch.object(time, 'time')
+    def test_wait_for_new_dom_id_timeout(self, mock_time, mock_sleep):
+        self.flags(agent_timeout=3, group="xenserver")
+
+        def fake_time():
+            fake_time.time = fake_time.time + 1
+            return fake_time.time
+
+        fake_time.time = 0
+        mock_time.side_effect = fake_time
+        mock_session = mock.Mock()
+        mock_session.VM.get_domid.return_value = "old"
+
+        self.assertRaises(exception.AgentTimeout,
+                          agent._wait_for_new_dom_id,
+                          mock_session, "vm_ref", "old", "method")
+
+        self.assertEqual(4, mock_session.VM.get_domid.call_count)
 
 
 class SetAdminPasswordTestCase(AgentTestCaseBase):

@@ -113,6 +113,13 @@ def _call_agent(session, instance, vm_ref, method, addl_args=None,
                         'args=%(args)r'),
                       {'method': method, 'args': args}, instance=instance)
             raise exception.AgentTimeout(method=method)
+        elif 'REBOOT:' in err_msg:
+            LOG.debug('REBOOT: The call to %(method)s detected a reboot. '
+                      'args=%(args)r',
+                      {'method': method, 'args': args}, instance=instance)
+            _wait_for_new_dom_id(session, vm_ref, dom_id, method)
+            return _call_agent(session, instance, vm_ref, method,
+                               addl_args, timeout, success_codes)
         elif 'NOT IMPLEMENTED:' in err_msg:
             LOG.error(_('NOT IMPLEMENTED: The call to %(method)s is not '
                         'supported by the agent. args=%(args)r'),
@@ -150,6 +157,22 @@ def _call_agent(session, instance, vm_ref, method, addl_args=None,
     # Some old versions of the Windows agent have a trailing \\r\\n
     # (ie CRLF escaped) for some reason. Strip that off.
     return ret['message'].replace('\\r\\n', '')
+
+
+def _wait_for_new_dom_id(session, vm_ref, old_dom_id, method):
+    expiration = time.time() + CONF.xenserver.agent_timeout
+    while True:
+        dom_id = session.VM.get_domid(vm_ref)
+
+        if dom_id and dom_id != -1 and dom_id != old_dom_id:
+            LOG.debug("Found new dom_id %s" % dom_id)
+            return
+
+        if time.time() > expiration:
+            LOG.debug("Timed out waiting for new dom_id %s" % dom_id)
+            raise exception.AgentTimeout(method=method)
+
+        time.sleep(1)
 
 
 def is_upgrade_required(current_version, available_version):
