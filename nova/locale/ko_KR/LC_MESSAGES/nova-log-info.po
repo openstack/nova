@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-06-24 06:06+0000\n"
-"PO-Revision-Date: 2014-06-18 19:31+0000\n"
+"POT-Creation-Date: 2014-06-30 06:07+0000\n"
+"PO-Revision-Date: 2014-06-30 04:40+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Korean (Korea) (http://www.transifex.com/projects/p/nova/"
 "language/ko_KR/)\n"
@@ -23,6 +23,16 @@ msgstr ""
 #, python-format
 msgid "Eventlet backdoor listening on %(port)s for process %(pid)d"
 msgstr "Eventlet 백도어는 프로세스 %(pid)d 일 동안 %(port)s에서 수신"
+
+#: nova/openstack/common/lockutils.py:83
+#, python-format
+msgid "Created lock path: %s"
+msgstr ""
+
+#: nova/openstack/common/lockutils.py:250
+#, python-format
+msgid "Failed to remove file %(file)s"
+msgstr ""
 
 #: nova/openstack/common/periodic_task.py:125
 #, python-format
@@ -90,6 +100,140 @@ msgstr ""
 #, python-format
 msgid "%(num_values)d values found, of which the minimum value will be used."
 msgstr ""
+
+#: nova/virt/libvirt/driver.py:894
+msgid "Instance destroyed successfully."
+msgstr "인스턴스가 영구 삭제되었습니다. "
+
+#: nova/virt/libvirt/driver.py:904
+msgid "Instance may be started again."
+msgstr "인스턴스가 다시 시작됩니다."
+
+#: nova/virt/libvirt/driver.py:914
+msgid "Going to destroy instance again."
+msgstr "인스턴스를 다시 영구 삭제하려 합니다."
+
+#: nova/virt/libvirt/driver.py:1518
+msgid "Beginning live snapshot process"
+msgstr "라이브 스냅샷 프로세스 시작 중"
+
+#: nova/virt/libvirt/driver.py:1521
+msgid "Beginning cold snapshot process"
+msgstr "콜드 스냅샷 프로세스 시작 중"
+
+#: nova/virt/libvirt/driver.py:1550
+msgid "Snapshot extracted, beginning image upload"
+msgstr "스냅샷 추출, 이미지 업로드 시작 중"
+
+#: nova/virt/libvirt/driver.py:1562
+msgid "Snapshot image upload complete"
+msgstr "스냅샷 이미지 업로드 완료"
+
+#: nova/virt/libvirt/driver.py:1972
+msgid "Instance soft rebooted successfully."
+msgstr "인스턴스가 소프트 리부트되었습니다. "
+
+#: nova/virt/libvirt/driver.py:2015
+msgid "Instance shutdown successfully."
+msgstr "인스턴스가 시스템 종료되었습니다. "
+
+#: nova/virt/libvirt/driver.py:2023
+msgid "Instance may have been rebooted during soft reboot, so return now."
+msgstr ""
+"인스턴스가 소프트 리부트 중에 다시 부팅되었을 수 있으므로, 지금 리턴합니다. "
+
+#: nova/virt/libvirt/driver.py:2091
+msgid "Instance rebooted successfully."
+msgstr "인스턴스가 다시 부트되었습니다. "
+
+#: nova/virt/libvirt/driver.py:2259
+msgid "Instance spawned successfully."
+msgstr "인스턴스가 파생되었습니다. "
+
+#: nova/virt/libvirt/driver.py:2275
+#, python-format
+msgid "data: %(data)r, fpath: %(fpath)r"
+msgstr "데이터: %(data)r, fpath: %(fpath)r"
+
+#: nova/virt/libvirt/driver.py:2314 nova/virt/libvirt/driver.py:2341
+#, python-format
+msgid "Truncated console log returned, %d bytes ignored"
+msgstr "잘린 콘솔 로그가 리턴되었으며, %d 바이트는 무시됨"
+
+#: nova/virt/libvirt/driver.py:2568
+msgid "Creating image"
+msgstr "이미지 작성 중"
+
+#: nova/virt/libvirt/driver.py:2677
+msgid "Using config drive"
+msgstr "구성 드라이브 사용 중"
+
+#: nova/virt/libvirt/driver.py:2686
+#, python-format
+msgid "Creating config drive at %(path)s"
+msgstr "%(path)s에 구성 드라이브 작성 중"
+
+#: nova/virt/libvirt/driver.py:3223
+msgid "Configuring timezone for windows instance to localtime"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:3694 nova/virt/libvirt/driver.py:3821
+#: nova/virt/libvirt/driver.py:3849
+#, python-format
+msgid "libvirt can't find a domain with id: %s"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:4109
+#, python-format
+msgid ""
+"Getting block stats failed, device might have been detached. Instance="
+"%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:4115
+#, python-format
+msgid ""
+"Could not find domain in libvirt for instance %s. Cannot get block stats for "
+"device"
+msgstr ""
+"%s 인스턴스에 대한 libvirt에서 도메인을 찾을 수 없습니다. 디바이스의 블록 통"
+"계를 가져올 수 없음"
+
+#: nova/virt/libvirt/driver.py:4330
+#, python-format
+msgid "Instance launched has CPU info: %s"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:4986
+msgid "Instance running successfully."
+msgstr "인스턴스가 정상적으로 실행 중입니다. "
+
+#: nova/virt/libvirt/driver.py:5226
+#, python-format
+msgid "Deleting instance files %s"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:5238
+#, python-format
+msgid "Deletion of %s failed"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:5241
+#, python-format
+msgid "Deletion of %s complete"
+msgstr ""
+
+#: nova/virt/libvirt/firewall.py:105
+msgid "Called setup_basic_filtering in nwfilter"
+msgstr "nwfilter에서 setup_basic_filtering을 호출했음"
+
+#: nova/virt/libvirt/firewall.py:113
+msgid "Ensuring static filters"
+msgstr "정적 필터 확인 중"
+
+#: nova/virt/libvirt/firewall.py:306
+msgid "Attempted to unfilter instance which is not filtered"
+msgstr "필터링되지 않는 인스턴스를 필터링 해제하려고 했음"
 
 #: nova/virt/libvirt/imagecache.py:191
 #, python-format

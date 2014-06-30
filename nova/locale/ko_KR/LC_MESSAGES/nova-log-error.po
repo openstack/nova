@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-06-24 06:06+0000\n"
+"POT-Creation-Date: 2014-06-30 06:08+0000\n"
 "PO-Revision-Date: 2014-06-16 04:10+0000\n"
 "Last-Translator: jaekwon.park <jaekwon.park@rockplace.co.kr>\n"
 "Language-Team: Korean (Korea) (http://www.transifex.com/projects/p/nova/"
@@ -40,7 +40,12 @@ msgstr ""
 msgid "Exception running %(name)s post-hook: %(obj)s"
 msgstr ""
 
-#: nova/objects/instance_fault.py:86
+#: nova/api/ec2/__init__.py:243
+#, python-format
+msgid "Keystone failure: %s"
+msgstr ""
+
+#: nova/objects/instance_fault.py:87
 msgid "Failed to notify cells of instance fault"
 msgstr "셀에 인스턴스 결함을 알리지 못했음"
 
@@ -53,6 +58,11 @@ msgstr "기존 예외가 삭제됨: %s"
 #, python-format
 msgid "Unexpected exception occurred %d time(s)... retrying."
 msgstr "예기치 않은 예외 %d 번 발생하였습니다... 다시 시도중."
+
+#: nova/openstack/common/lockutils.py:120
+#, python-format
+msgid "Could not release the acquired lock `%s`"
+msgstr ""
 
 #: nova/openstack/common/loopingcall.py:89
 msgid "in fixed duration looping call"
@@ -107,6 +117,141 @@ msgstr "DB 예외가 랩핑되었습니다."
 msgid "Failed to migrate to version %s on engine %s"
 msgstr ""
 
+#: nova/virt/libvirt/driver.py:625
+#, python-format
+msgid "Nova requires libvirt version %(major)i.%(minor)i.%(micro)i or greater."
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:749
+#, python-format
+msgid "Connection to libvirt failed: %s"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:873
+#, python-format
+msgid "Error from libvirt during destroy. Code=%(errcode)s Error=%(e)s"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:889
+msgid "During wait destroy, instance disappeared."
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:951
+#, python-format
+msgid "Error from libvirt during undefine. Code=%(errcode)s Error=%(e)s"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:977
+#, python-format
+msgid "Error from libvirt during unfilter. Code=%(errcode)s Error=%(e)s"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:1389
+msgid "attaching network adapter failed."
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:1414
+msgid "detaching network adapter failed."
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:1663
+msgid "Failed to send updated snapshot status to volume service."
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:1749
+msgid ""
+"Unable to create quiesced VM snapshot, attempting again with quiescing "
+"disabled."
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:1755
+msgid "Unable to create VM snapshot, failing volume_snapshot operation."
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:1804
+msgid ""
+"Error occurred during volume_snapshot_create, sending error status to Cinder."
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:1951
+msgid ""
+"Error occurred during volume_snapshot_delete, sending error status to Cinder."
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:2416 nova/virt/libvirt/driver.py:2421
+#, python-format
+msgid "Error on '%(path)s' while checking direct I/O: '%(ex)s'"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:2542
+#, python-format
+msgid "Error injecting data into image %(img_id)s (%(e)s)"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:2693
+#, python-format
+msgid "Creating config drive failed with error: %s"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:2786
+#, python-format
+msgid "Attaching PCI devices %(dev)s to %(dom)s failed."
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:3553
+#, python-format
+msgid "An error occurred while trying to define a domain with xml: %s"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:3562
+#, python-format
+msgid "An error occurred while trying to launch a defined domain with xml: %s"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:3571
+#, python-format
+msgid "An error occurred while enabling hairpin mode on domain with xml: %s"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:3589
+#, python-format
+msgid "Neutron Reported failure on event %(event)s for instance %(uuid)s"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:3904
+#, python-format
+msgid ""
+"Hostname has changed from %(old)s to %(new)s. A restart is required to take "
+"effect."
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:4481
+#, python-format
+msgid "Live Migration failure: %s"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:5231
+#, python-format
+msgid "Failed to cleanup directory %(target)s: %(e)s"
+msgstr ""
+
+#: nova/virt/libvirt/imagebackend.py:202
+#, python-format
+msgid "Unable to preallocate_images=%(imgs)s at path: %(path)s"
+msgstr ""
+
+#: nova/virt/libvirt/imagebackend.py:230
+#, python-format
+msgid ""
+"%(base)s virtual size %(base_size)s larger than flavor root disk size "
+"%(size)s"
+msgstr ""
+
+#: nova/virt/libvirt/imagebackend.py:501
+#, python-format
+msgid "error opening rbd image %s"
+msgstr ""
+
 #: nova/virt/libvirt/imagecache.py:130
 #, python-format
 msgid "Error reading image info file %(filename)s: %(error)s"
@@ -127,7 +272,29 @@ msgstr ""
 msgid "ignoring unrecognized volume_clear='%s' value"
 msgstr ""
 
+#: nova/virt/libvirt/vif.py:548 nova/virt/libvirt/vif.py:572
+#: nova/virt/libvirt/vif.py:596
+msgid "Failed while plugging vif"
+msgstr ""
+
+#: nova/virt/libvirt/vif.py:644 nova/virt/libvirt/vif.py:676
+#: nova/virt/libvirt/vif.py:695 nova/virt/libvirt/vif.py:717
+#: nova/virt/libvirt/vif.py:737 nova/virt/libvirt/vif.py:762
+#: nova/virt/libvirt/vif.py:784
+msgid "Failed while unplugging vif"
+msgstr ""
+
 #: nova/virt/libvirt/volume.py:141
 #, python-format
 msgid "Unknown content in connection_info/access_mode: %s"
+msgstr ""
+
+#: nova/virt/libvirt/volume.py:666
+#, python-format
+msgid "Couldn't unmount the NFS share %s"
+msgstr ""
+
+#: nova/virt/libvirt/volume.py:815
+#, python-format
+msgid "Couldn't unmount the GlusterFS share %s"
 msgstr ""
