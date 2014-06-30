@@ -56,6 +56,11 @@ class Event(object):
     def get_timestamp(self):
         return self.timestamp
 
+    def __repr__(self):
+        return "<%s: %s>" % (
+            self.__class__.__name__,
+            self.timestamp)
+
 
 class InstanceEvent(Event):
     """Base class for all instance events.
@@ -73,6 +78,12 @@ class InstanceEvent(Event):
 
     def get_instance_uuid(self):
         return self.uuid
+
+    def __repr__(self):
+        return "<%s: %s, %s>" % (
+            self.__class__.__name__,
+            self.timestamp,
+            self.uuid)
 
 
 class LifecycleEvent(InstanceEvent):
@@ -95,3 +106,10 @@ class LifecycleEvent(InstanceEvent):
 
     def get_name(self):
         return NAMES.get(self.transition, _('Unknown'))
+
+    def __repr__(self):
+        return "<%s: %s, %s => %s>" % (
+            self.__class__.__name__,
+            self.timestamp,
+            self.uuid,
+            self.get_name())
