@@ -104,7 +104,7 @@ class VMwareESXDriver(driver.ComputeDriver):
                       'removed in the Juno release. The VC driver will remain '
                       'and continue to be supported.'))
 
-    def __init__(self, virtapi, read_only=False, scheme="https"):
+    def __init__(self, virtapi, scheme="https"):
         super(VMwareESXDriver, self).__init__(virtapi)
 
         self._do_deprecation_warning()
@@ -387,8 +387,8 @@ class VMwareVCDriver(VMwareESXDriver):
         # Driver validated by VMware's Minesweeper CI
         pass
 
-    def __init__(self, virtapi, read_only=False, scheme="https"):
-        super(VMwareVCDriver, self).__init__(virtapi)
+    def __init__(self, virtapi, scheme="https"):
+        super(VMwareVCDriver, self).__init__(virtapi, scheme)
 
         # Get the list of clusters to be used
         self._cluster_names = CONF.vmware.cluster_name
