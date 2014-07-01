@@ -22,6 +22,7 @@ import StringIO
 from xml.dom import minidom
 
 from lxml import etree
+import mock
 import webob
 
 from nova.api.openstack.compute import limits
@@ -81,9 +82,13 @@ class LimitsControllerTest(BaseLimitTestSuite):
         self.controller = limits.create_resource()
         self.ctrler = limits.LimitsController()
 
-    def _get_index_request(self, accept_header="application/json"):
+    def _get_index_request(self, accept_header="application/json",
+                           tenant_id=None):
         """Helper to set routing arguments."""
         request = webob.Request.blank("/")
+        if tenant_id:
+            request = webob.Request.blank("/?tenant_id=%s" % tenant_id)
+
         request.accept = accept_header
         request.environ["wsgiorg.routing_args"] = (None, {
             "action": "index",
@@ -118,8 +123,18 @@ class LimitsControllerTest(BaseLimitTestSuite):
         self.assertEqual(expected, body)
 
     def test_index_json(self):
+        self._test_index_json()
+
+    def test_index_json_by_tenant(self):
+        self._test_index_json('faketenant')
+
+    def _test_index_json(self, tenant_id=None):
         # Test getting limit details in JSON.
-        request = self._get_index_request()
+        request = self._get_index_request(tenant_id=tenant_id)
+        context = request.environ["nova.context"]
+        if tenant_id is None:
+            tenant_id = context.project_id
+
         request = self._populate_limits(request)
         self.absolute_limits = {
             'ram': 512,
@@ -130,7 +145,6 @@ class LimitsControllerTest(BaseLimitTestSuite):
             'security_groups': 10,
             'security_group_rules': 20,
         }
-        response = request.get_response(self.controller)
         expected = {
             "limits": {
                 "rate": [
@@ -180,8 +194,21 @@ class LimitsControllerTest(BaseLimitTestSuite):
                     },
             },
         }
-        body = jsonutils.loads(response.body)
-        self.assertEqual(expected, body)
+
+        def _get_project_quotas(context, project_id, usages=True):
+            return dict((k, dict(limit=v))
+                        for k, v in self.absolute_limits.items())
+
+        with mock.patch('nova.quota.QUOTAS.get_project_quotas') as \
+                get_project_quotas:
+            get_project_quotas.side_effect = _get_project_quotas
+
+            response = request.get_response(self.controller)
+
+            body = jsonutils.loads(response.body)
+            self.assertEqual(expected, body)
+            get_project_quotas.assert_called_once_with(context, tenant_id,
+                                                       usages=False)
 
     def _populate_limits_diff_regex(self, request):
         """Put limit info into a request."""
