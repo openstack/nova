@@ -364,6 +364,11 @@ The Filter Scheduler weighs hosts based on the config option
 
     metrics_weight_setting = name1=1.0, name2=-1.0
 
+* |IoOpsWeigher| The weigher can compute the weight based on the compute node
+  host's workload. The default is to preferably choose light workload compute
+  hosts. If the multiplier is positive, the weigher prefer choosing heavy
+  workload compute hosts, the weighing has the opposite effect of the default.
+
 Filter Scheduler finds local list of acceptable hosts by repeated filtering and
 weighing. Each time it chooses a host, it virtually consumes resources on it,
 so subsequent selections can adjust accordingly. It is useful if the customer
@@ -415,3 +420,4 @@ in :mod:``nova.tests.scheduler``.
 .. |AggregateImagePropertiesIsolation| replace:: :class:`AggregateImagePropertiesIsolation <nova.scheduler.filters.aggregate_image_properties_isolation.AggregateImagePropertiesIsolation>`
 .. |MetricsFilter| replace:: :class:`MetricsFilter <nova.scheduler.filters.metrics_filter.MetricsFilter>`
 .. |MetricsWeigher| replace:: :class:`MetricsWeigher <nova.scheduler.weights.metrics.MetricsWeigher>`
+.. |IoOpsWeigher| replace:: :class:`IoOpsWeigher <nova.scheduler.weights.io_ops.IoOpsWeigher>`
