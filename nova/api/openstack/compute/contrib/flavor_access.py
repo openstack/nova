@@ -165,7 +165,10 @@ class FlavorActionController(wsgi.Controller):
         self._check_body(body)
 
         vals = body['addTenantAccess']
-        tenant = vals['tenant']
+        tenant = vals.get('tenant')
+        if not tenant:
+            msg = _("Missing tenant parameter")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         flavor = objects.Flavor(context=context, flavorid=id)
         try:
@@ -186,7 +189,10 @@ class FlavorActionController(wsgi.Controller):
         self._check_body(body)
 
         vals = body['removeTenantAccess']
-        tenant = vals['tenant']
+        tenant = vals.get('tenant')
+        if not tenant:
+            msg = _("Missing tenant parameter")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         flavor = objects.Flavor(context=context, flavorid=id)
         try:
