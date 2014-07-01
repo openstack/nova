@@ -68,6 +68,7 @@ class VMUtilsTestCase(test.NoDBTestCase):
     _ADD_RESOURCE = 'AddVirtualSystemResources'
     _REMOVE_RESOURCE = 'RemoveVirtualSystemResources'
     _SETTING_TYPE = 'SettingType'
+    _VM_GEN = constants.VM_GEN_1
 
     _VIRTUAL_SYSTEM_TYPE_REALIZED = 3
 
@@ -235,7 +236,8 @@ class VMUtilsTestCase(test.NoDBTestCase):
 
         self._vmutils.create_vm(self._FAKE_VM_NAME, self._FAKE_MEMORY_MB,
                                 self._FAKE_VCPUS_NUM, False,
-                                self._FAKE_DYNAMIC_MEMORY_RATIO)
+                                self._FAKE_DYNAMIC_MEMORY_RATIO,
+                                self._VM_GEN)
 
         self.assertTrue(getattr(mock_svc, self._DEFINE_SYSTEM).called)
         mock_set_mem.assert_called_with(mock_vm, mock_s, self._FAKE_MEMORY_MB,
@@ -249,6 +251,20 @@ class VMUtilsTestCase(test.NoDBTestCase):
         self._prepare_get_vm_controller(self._vmutils._SCSI_CTRL_RES_SUB_TYPE)
         path = self._vmutils.get_vm_scsi_controller(self._FAKE_VM_NAME)
         self.assertEqual(self._FAKE_RES_PATH, path)
+
+    @mock.patch("nova.virt.hyperv.vmutils.VMUtils.get_attached_disks")
+    def test_get_free_controller_slot(self, mock_get_attached_disks):
+        mock_disk = mock.MagicMock()
+        mock_disk.AddressOnParent = 3
+        mock_get_attached_disks.return_value = [mock_disk]
+
+        response = self._vmutils.get_free_controller_slot(
+            self._FAKE_CTRL_PATH)
+
+        mock_get_attached_disks.assert_called_once_with(
+            self._FAKE_CTRL_PATH)
+
+        self.assertEqual(response, 0)
 
     def test_get_free_controller_slot_exception(self):
         fake_drive = mock.MagicMock()
@@ -269,6 +285,12 @@ class VMUtilsTestCase(test.NoDBTestCase):
                                                    self._FAKE_ADDRESS)
         self.assertEqual(self._FAKE_RES_PATH, path)
 
+    def test_get_vm_ide_controller_none(self):
+        self._prepare_get_vm_controller(self._vmutils._IDE_CTRL_RES_SUB_TYPE)
+        path = self._vmutils.get_vm_ide_controller(
+            mock.sentinel.FAKE_VM_NAME, mock.sentinel.FAKE_NOT_FOUND_ADDR)
+        self.assertNotEqual(self._FAKE_RES_PATH, path)
+
     def _prepare_get_vm_controller(self, resource_sub_type):
         mock_vm = self._lookup_vm()
         mock_vm_settings = mock.MagicMock()
@@ -284,6 +306,26 @@ class VMUtilsTestCase(test.NoDBTestCase):
         mock_rasds.path_.return_value = mock_path
         mock_rasds.ResourceSubType = mock_subtype
         return mock_rasds
+
+    @mock.patch("nova.virt.hyperv.vmutils.VMUtils.get_free_controller_slot")
+    @mock.patch("nova.virt.hyperv.vmutils.VMUtils._get_vm_scsi_controller")
+    def test_attach_scsi_drive(self, mock_get_vm_scsi_controller,
+                               mock_get_free_controller_slot):
+        mock_vm = self._lookup_vm()
+        mock_get_vm_scsi_controller.return_value = self._FAKE_CTRL_PATH
+        mock_get_free_controller_slot.return_value = self._FAKE_DRIVE_ADDR
+
+        with mock.patch.object(self._vmutils,
+                               'attach_drive') as mock_attach_drive:
+            self._vmutils.attach_scsi_drive(mock_vm, self._FAKE_PATH,
+                                            constants.DISK)
+
+            mock_get_vm_scsi_controller.assert_called_once_with(mock_vm)
+            mock_get_free_controller_slot.assert_called_once_with(
+                self._FAKE_CTRL_PATH)
+            mock_attach_drive.assert_called_once_with(
+                mock_vm, self._FAKE_PATH, self._FAKE_CTRL_PATH,
+                self._FAKE_DRIVE_ADDR, constants.DISK)
 
     @mock.patch.object(vmutils.VMUtils, '_get_new_resource_setting_data')
     @mock.patch.object(vmutils.VMUtils, '_get_vm_ide_controller')
@@ -651,6 +693,7 @@ class VMUtilsTestCase(test.NoDBTestCase):
 
         response = self._vmutils._create_vm_obj(vs_man_svc=mock_vs_man_svc,
                                                 vm_name='fake vm',
+                                                vm_gen='fake vm gen',
                                                 notes='fake notes',
                                                 dynamic_memory_ratio=1.0)
 
@@ -718,10 +761,9 @@ class VMUtilsTestCase(test.NoDBTestCase):
     def test_get_attached_disks(self):
         mock_scsi_ctrl_path = mock.MagicMock()
         expected_query = ("SELECT * FROM %(class_name)s "
-                          "WHERE (ResourceSubType = "
-                          "'%(res_sub_type)s' OR "
+                          "WHERE (ResourceSubType='%(res_sub_type)s' OR "
                           "ResourceSubType='%(res_sub_type_virt)s')"
-                          " AND Parent = '%(parent)s'" %
+                          " AND Parent='%(parent)s'" %
                           {"class_name":
                            self._vmutils._RESOURCE_ALLOC_SETTING_DATA_CLASS,
                            "res_sub_type":

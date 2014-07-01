@@ -47,6 +47,7 @@ class VMUtilsV2(vmutils.VMUtils):
     _SERIAL_PORT_RES_SUB_TYPE = 'Microsoft:Hyper-V:Serial Port'
 
     _VIRTUAL_SYSTEM_TYPE_REALIZED = 'Microsoft:Hyper-V:System:Realized'
+    _VIRTUAL_SYSTEM_SUBTYPE_GEN2 = 'Microsoft:Hyper-V:SubType:2'
 
     _SNAPSHOT_FULL = 2
 
@@ -89,7 +90,8 @@ class VMUtilsV2(vmutils.VMUtils):
                     ['ElementName'],
                     VirtualSystemType=self._VIRTUAL_SYSTEM_TYPE_REALIZED)]
 
-    def _create_vm_obj(self, vs_man_svc, vm_name, notes, dynamic_memory_ratio):
+    def _create_vm_obj(self, vs_man_svc, vm_name, vm_gen, notes,
+                       dynamic_memory_ratio):
         vs_data = self._conn.Msvm_VirtualSystemSettingData.new()
         vs_data.ElementName = vm_name
         vs_data.Notes = notes
@@ -99,6 +101,10 @@ class VMUtilsV2(vmutils.VMUtils):
         # vNUMA and dynamic memory are mutually exclusive
         if dynamic_memory_ratio > 1:
             vs_data.VirtualNumaEnabled = False
+
+        if vm_gen == constants.VM_GEN_2:
+            vs_data.VirtualSystemSubType = self._VIRTUAL_SYSTEM_SUBTYPE_GEN2
+            vs_data.SecureBootEnabled = False
 
         (job_path,
          vm_path,
@@ -116,6 +122,18 @@ class VMUtilsV2(vmutils.VMUtils):
         # Avoid snapshots
         return [s for s in vmsettings if
                 s.VirtualSystemType == self._VIRTUAL_SYSTEM_TYPE_REALIZED][0]
+
+    def _get_attached_disks_query_string(self, scsi_controller_path):
+        # DVD Drives can be attached to SCSI as well, if the VM Generation is 2
+        return ("SELECT * FROM Msvm_ResourceAllocationSettingData WHERE ("
+                "ResourceSubType='%(res_sub_type)s' OR "
+                "ResourceSubType='%(res_sub_type_virt)s' OR "
+                "ResourceSubType='%(res_sub_type_dvd)s') AND "
+                "Parent = '%(parent)s'" % {
+                    'res_sub_type': self._PHYS_DISK_RES_SUB_TYPE,
+                    'res_sub_type_virt': self._DISK_DRIVE_RES_SUB_TYPE,
+                    'res_sub_type_dvd': self._DVD_DRIVE_RES_SUB_TYPE,
+                    'parent': scsi_controller_path.replace("'", "''")})
 
     def attach_drive(self, vm_name, path, ctrller_path, drive_addr,
                      drive_type=constants.DISK):

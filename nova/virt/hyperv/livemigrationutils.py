@@ -109,7 +109,11 @@ class LiveMigrationUtils(object):
 
     def _get_physical_disk_paths(self, vm_name):
         ide_ctrl_path = self._vmutils.get_vm_ide_controller(vm_name, 0)
-        ide_paths = self._vmutils.get_controller_volume_paths(ide_ctrl_path)
+        if ide_ctrl_path:
+            ide_paths = self._vmutils.get_controller_volume_paths(
+                ide_ctrl_path)
+        else:
+            ide_paths = {}
 
         scsi_ctrl_path = self._vmutils.get_vm_scsi_controller(vm_name)
         scsi_paths = self._vmutils.get_controller_volume_paths(scsi_ctrl_path)
