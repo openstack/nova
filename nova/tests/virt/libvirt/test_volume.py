@@ -57,7 +57,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
             def _get_hypervisor_type(self):
                 return self.hyperv
 
-            def get_all_block_devices(self):
+            def _get_all_block_devices(self):
                 return []
 
         self.fake_conn = FakeLibvirtDriver(fake.FakeVirtAPI())
@@ -281,7 +281,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
         devs = ['/dev/disk/by-path/ip-%s-iscsi-%s-lun-2' % (self.location,
                                                             self.iqn)]
-        self.stubs.Set(self.fake_conn, 'get_all_block_devices', lambda: devs)
+        self.stubs.Set(self.fake_conn, '_get_all_block_devices', lambda: devs)
         vol = {'id': 1, 'name': self.name}
         connection_info = self.iscsi_connection(vol, self.location, self.iqn)
         conf = libvirt_driver.connect_volume(connection_info, self.disk_info)
@@ -311,7 +311,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
                                                             self.iqn)]
         with contextlib.nested(
             mock.patch.object(os.path, 'exists', return_value=True),
-            mock.patch.object(self.fake_conn, 'get_all_block_devices',
+            mock.patch.object(self.fake_conn, '_get_all_block_devices',
                               return_value=devs),
             mock.patch.object(libvirt_driver, '_rescan_multipath'),
             mock.patch.object(libvirt_driver, '_run_multipath'),
@@ -512,7 +512,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         self.flags(iscsi_use_multipath=True, group='libvirt')
         self.stubs.Set(os.path, 'exists', lambda x: True)
         devs = ['/dev/mapper/sda', '/dev/mapper/sdb']
-        self.stubs.Set(self.fake_conn, 'get_all_block_devices', lambda: devs)
+        self.stubs.Set(self.fake_conn, '_get_all_block_devices', lambda: devs)
         libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
         connection_info = self.iscsi_connection(self.vol, self.location,
                                                 self.iqn)
@@ -549,7 +549,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
             lambda x: _get_multipath_device_name(x)
 
         block_devs = ['/dev/disks/by-path/%s-iscsi-%s-lun-2' % (location, iqn)]
-        self.stubs.Set(self.fake_conn, 'get_all_block_devices',
+        self.stubs.Set(self.fake_conn, '_get_all_block_devices',
                        lambda: block_devs)
 
         vol = {'id': 1, 'name': name}
@@ -589,7 +589,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         dev = '/dev/disk/by-path/ip-%s-iscsi-%s-lun-1' % (self.location,
                                                           self.iqn)
         devs = [dev0, dev]
-        self.stubs.Set(self.fake_conn, 'get_all_block_devices', lambda: devs)
+        self.stubs.Set(self.fake_conn, '_get_all_block_devices', lambda: devs)
         connection_info = self.iscsi_connection(self.vol, self.location,
                                                 self.iqn)
         mpdev_filepath = '/dev/mapper/foo'
@@ -607,7 +607,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         self.stubs.Set(os.path, 'exists', lambda x: True)
         self.stubs.Set(time, 'sleep', lambda x: None)
         devs = ['/dev/mapper/sda', '/dev/mapper/sdb']
-        self.stubs.Set(self.fake_conn, 'get_all_block_devices', lambda: devs)
+        self.stubs.Set(self.fake_conn, '_get_all_block_devices', lambda: devs)
         libvirt_driver = volume.LibvirtISERVolumeDriver(self.fake_conn)
         name = 'volume-00000001'
         location = '10.0.2.15:3260'
@@ -648,7 +648,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         vol = {'id': 1, 'name': name}
         dev = '/dev/disk/by-path/ip-%s-iscsi-%s-lun-1' % (location, iqn)
         devs = [dev0, dev]
-        self.stubs.Set(self.fake_conn, 'get_all_block_devices', lambda: devs)
+        self.stubs.Set(self.fake_conn, '_get_all_block_devices', lambda: devs)
         self.stubs.Set(libvirt_driver, '_get_iscsi_devices', lambda: [])
         connection_info = self.iser_connection(vol, location, iqn)
         mpdev_filepath = '/dev/mapper/foo'
