@@ -135,8 +135,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         expected_filter_properties = {'retry': {'num_attempts': 1,
                                                 'hosts': []}}
         self.driver._schedule(fake_context, request_spec,
-                expected_filter_properties,
-                ['fake-uuid1', 'fake-uuid2']).AndReturn(['host1', 'host2'])
+                expected_filter_properties).AndReturn(['host1', 'host2'])
         # instance 1
         self.driver._provision_resource(
             fake_context, 'host1',
@@ -214,8 +213,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.mox.StubOutWithMock(sched, '_schedule')
         self.mox.StubOutWithMock(sched, '_provision_resource')
 
-        sched._schedule(self.context, request_spec, filter_properties,
-                ['fake-uuid1']).AndReturn(['host1'])
+        sched._schedule(self.context, request_spec,
+                        filter_properties).AndReturn(['host1'])
         sched._provision_resource(
             self.context, 'host1',
             request_spec, filter_properties,
@@ -239,8 +238,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.mox.StubOutWithMock(sched, '_schedule')
         self.mox.StubOutWithMock(sched, '_provision_resource')
 
-        sched._schedule(self.context, request_spec, filter_properties,
-                ['fake-uuid1']).AndReturn(['host1'])
+        sched._schedule(self.context, request_spec,
+                        filter_properties).AndReturn(['host1'])
         sched._provision_resource(
             self.context, 'host1',
             request_spec, filter_properties,
@@ -264,8 +263,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.mox.StubOutWithMock(sched, '_schedule')
         self.mox.StubOutWithMock(sched, '_provision_resource')
 
-        sched._schedule(self.context, request_spec, filter_properties,
-                ['fake-uuid1']).AndReturn(['host1'])
+        sched._schedule(self.context, request_spec,
+                        filter_properties).AndReturn(['host1'])
         sched._provision_resource(
             self.context, 'host1',
             request_spec, filter_properties,
@@ -290,8 +289,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.mox.StubOutWithMock(sched, '_schedule')
         self.mox.StubOutWithMock(sched, '_provision_resource')
 
-        sched._schedule(self.context, request_spec, expected_filter_properties,
-                        ['fake-uuid1']).AndReturn(['host1'])
+        sched._schedule(self.context, request_spec,
+                        expected_filter_properties).AndReturn(['host1'])
         sched._provision_resource(
             self.context, 'host1',
             request_spec, expected_filter_properties,
@@ -315,8 +314,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.mox.StubOutWithMock(sched, '_schedule')
         self.mox.StubOutWithMock(sched, '_provision_resource')
 
-        sched._schedule(self.context, request_spec, expected_filter_properties,
-                        ['fake-uuid1']).AndReturn(['host1'])
+        sched._schedule(self.context, request_spec,
+                        expected_filter_properties).AndReturn(['host1'])
         sched._provision_resource(
             self.context, 'host1',
             request_spec, expected_filter_properties,
