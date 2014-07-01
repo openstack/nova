@@ -66,6 +66,9 @@ class TestField(test.NoDBTestCase):
             self.assertEqual(out_val, self.field.from_primitive(
                     ObjectLikeThing, 'attr', prim_val))
 
+    def test_stringify(self):
+        self.assertEqual('123', self.field.stringify(123))
+
 
 class TestString(TestField):
     def setUp(self):
@@ -76,6 +79,9 @@ class TestString(TestField):
         self.coerce_bad_values = [None]
         self.to_primitive_values = self.coerce_good_values[0:1]
         self.from_primitive_values = self.coerce_good_values[0:1]
+
+    def test_stringify(self):
+        self.assertEqual("'123'", self.field.stringify(123))
 
 
 class TestInteger(TestField):
@@ -119,6 +125,13 @@ class TestDateTime(TestField):
         self.coerce_bad_values = [1, 'foo']
         self.to_primitive_values = [(self.dt, timeutils.isotime(self.dt))]
         self.from_primitive_values = [(timeutils.isotime(self.dt), self.dt)]
+
+    def test_stringify(self):
+        self.assertEqual(
+            '1955-11-05T18:00:00Z',
+            self.field.stringify(
+                datetime.datetime(1955, 11, 5, 18, 0, 0,
+                                  tzinfo=iso8601.iso8601.Utc())))
 
 
 class TestIPAddress(TestField):
@@ -174,6 +187,9 @@ class TestDict(TestField):
         self.to_primitive_values = [({'foo': 'bar'}, {'foo': '!bar!'})]
         self.from_primitive_values = [({'foo': '!bar!'}, {'foo': 'bar'})]
 
+    def test_stringify(self):
+        self.assertEqual("{key=val}", self.field.stringify({'key': 'val'}))
+
 
 class TestDictOfStrings(TestField):
     def setUp(self):
@@ -184,6 +200,9 @@ class TestDictOfStrings(TestField):
         self.coerce_bad_values = [{1: 'bar'}, {'foo': None}, 'foo']
         self.to_primitive_values = [({'foo': 'bar'}, {'foo': 'bar'})]
         self.from_primitive_values = [({'foo': 'bar'}, {'foo': 'bar'})]
+
+    def test_stringify(self):
+        self.assertEqual("{key='val'}", self.field.stringify({'key': 'val'}))
 
 
 class TestDictOfStringsNone(TestField):
@@ -197,6 +216,11 @@ class TestDictOfStringsNone(TestField):
         self.to_primitive_values = [({'foo': 'bar'}, {'foo': 'bar'})]
         self.from_primitive_values = [({'foo': 'bar'}, {'foo': 'bar'})]
 
+    def test_stringify(self):
+        self.assertEqual("{k2=None,key='val'}",
+                         self.field.stringify({'k2': None,
+                                               'key': 'val'}))
+
 
 class TestList(TestField):
     def setUp(self):
@@ -206,6 +230,9 @@ class TestList(TestField):
         self.coerce_bad_values = ['foo']
         self.to_primitive_values = [(['foo'], ['!foo!'])]
         self.from_primitive_values = [(['!foo!'], ['foo'])]
+
+    def test_stringify(self):
+        self.assertEqual('[123]', self.field.stringify([123]))
 
 
 class TestListOfStrings(TestField):
@@ -217,12 +244,19 @@ class TestListOfStrings(TestField):
         self.to_primitive_values = [(['foo'], ['foo'])]
         self.from_primitive_values = [(['foo'], ['foo'])]
 
+    def test_stringify(self):
+        self.assertEqual("['abc']", self.field.stringify(['abc']))
+
 
 class TestObject(TestField):
     def setUp(self):
         super(TestObject, self).setUp()
 
         class TestableObject(obj_base.NovaObject):
+            fields = {
+                'uuid': fields.StringField(),
+                }
+
             def __eq__(self, value):
                 # NOTE(danms): Be rather lax about this equality thing to
                 # satisfy the assertEqual() in test_from_primitive(). We
@@ -233,12 +267,18 @@ class TestObject(TestField):
             pass
 
         test_inst = TestableObject()
+        self._test_cls = TestableObject
         self.field = fields.Field(fields.Object('TestableObject'))
         self.coerce_good_values = [(test_inst, test_inst)]
         self.coerce_bad_values = [OtherTestableObject(), 1, 'foo']
         self.to_primitive_values = [(test_inst, test_inst.obj_to_primitive())]
         self.from_primitive_values = [(test_inst.obj_to_primitive(),
                                        test_inst)]
+
+    def test_stringify(self):
+        obj = self._test_cls(uuid='fake-uuid')
+        self.assertEqual('TestableObject(fake-uuid)',
+                         self.field.stringify(obj))
 
 
 class TestNetworkModel(TestField):
@@ -250,6 +290,13 @@ class TestNetworkModel(TestField):
         self.coerce_bad_values = [[], 'foo']
         self.to_primitive_values = [(model, model.json())]
         self.from_primitive_values = [(model.json(), model)]
+
+    def test_stringify(self):
+        networkinfo = network_model.NetworkInfo()
+        networkinfo.append(network_model.VIF(id=123))
+        networkinfo.append(network_model.VIF(id=456))
+        self.assertEqual('NetworkModel(123,456)',
+                         self.field.stringify(networkinfo))
 
 
 class TestIPNetwork(TestField):

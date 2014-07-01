@@ -702,6 +702,12 @@ class _TestObject(object):
         self.assertRaises(exception.ReadOnlyFieldError, setattr,
                           obj, 'readonly', 2)
 
+    def test_obj_repr(self):
+        obj = MyObj(foo=123)
+        self.assertEqual('MyObj(bar=<?>,created_at=<?>,deleted=<?>,'
+                         'deleted_at=<?>,foo=123,missing=<?>,readonly=<?>,'
+                         'updated_at=<?>)', repr(obj))
+
 
 class TestObject(_LocalTest, _TestObject):
     pass
@@ -822,6 +828,16 @@ class TestObjectListBase(test.TestCase):
         obj = Foo()
         self.assertEqual([], obj.objects)
         self.assertEqual(set(), obj.obj_what_changed())
+
+    def test_obj_repr(self):
+        class Foo(base.ObjectListBase, base.NovaObject):
+            fields = {'objects': fields.ListOfObjectsField('Bar')}
+
+        class Bar(base.NovaObject):
+            fields = {'uuid': fields.StringField()}
+
+        obj = Foo(objects=[Bar(uuid='fake-uuid')])
+        self.assertEqual('Foo(objects=[Bar(fake-uuid)])', repr(obj))
 
 
 class TestObjectSerializer(_BaseTestCase):

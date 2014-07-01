@@ -233,6 +233,15 @@ class NovaObject(object):
         for key in kwargs.keys():
             self[key] = kwargs[key]
 
+    def __repr__(self):
+        return '%s(%s)' % (
+            self.obj_name(),
+            ','.join(['%s=%s' % (name,
+                                 (self.obj_attr_is_set(name) and
+                                  field.stringify(getattr(self, name)) or
+                                  '<?>'))
+                      for name, field in sorted(self.fields.items())]))
+
     @classmethod
     def obj_name(cls):
         """Return a canonical name for this object which will be used over
