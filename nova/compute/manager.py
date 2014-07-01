@@ -2166,7 +2166,19 @@ class ComputeManager(manager.Manager):
     def _shutdown_instance(self, context, instance,
                            bdms, requested_networks=None, notify=True,
                            try_deallocate_networks=True):
-        """Shutdown an instance on this host."""
+        """Shutdown an instance on this host.
+
+        :param:context: security context
+        :param:instance: a nova.objects.Instance object
+        :param:bdms: the block devices for the instance to be torn
+                     down
+        :param:requested_networks: the networks on which the instance
+                                   has ports
+        :param:notify: true if a final usage notification should be
+                       emitted
+        :param:try_deallocate_networks: false if we should avoid
+                                        trying to teardown networking
+        """
         context = context.elevated()
         LOG.audit(_('%(action_str)s instance') % {'action_str': 'Terminating'},
                   context=context, instance=instance)
