@@ -828,7 +828,7 @@ class VMwareVMOps(object):
             self._session._wait_for_task(reset_task)
             LOG.debug("Did hard reboot of VM", instance=instance)
 
-    def _destroy_instance(self, instance, network_info, destroy_disks=True,
+    def _destroy_instance(self, instance, destroy_disks=True,
                           instance_name=None):
         # Destroy a VM instance
         # Get the instance name. In some cases this may differ from the 'uuid',
@@ -898,7 +898,7 @@ class VMwareVMOps(object):
         finally:
             vm_util.vm_ref_cache_delete(instance_name)
 
-    def destroy(self, instance, network_info, destroy_disks=True):
+    def destroy(self, instance, destroy_disks=True):
         """Destroy a VM instance.
 
         Steps followed for each VM are:
@@ -915,11 +915,10 @@ class VMwareVMOps(object):
                 LOG.debug("Rescue VM destroyed", instance=instance)
             except Exception:
                 rescue_name = instance['uuid'] + self._rescue_suffix
-                self._destroy_instance(instance, network_info,
+                self._destroy_instance(instance,
                                        destroy_disks=destroy_disks,
                                        instance_name=rescue_name)
-        self._destroy_instance(instance, network_info,
-                               destroy_disks=destroy_disks)
+        self._destroy_instance(instance, destroy_disks=destroy_disks)
         LOG.debug("Instance destroyed", instance=instance)
 
     def pause(self, instance):
@@ -1022,7 +1021,7 @@ class VMwareVMOps(object):
         device = vm_util.get_vmdk_volume_disk(hardware_devices, path=vmdk_path)
         self._power_off_vm_ref(vm_rescue_ref)
         self._volumeops.detach_disk_from_vm(vm_rescue_ref, r_instance, device)
-        self._destroy_instance(r_instance, None, instance_name=instance_name)
+        self._destroy_instance(r_instance, instance_name=instance_name)
         if power_on:
             vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
 

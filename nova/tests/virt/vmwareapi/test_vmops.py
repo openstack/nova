@@ -428,7 +428,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             _get_vm_ref_from_name.assert_called_once_with(self._session,
                                                           'fake_uuid-rescue')
             _power_off.assert_called_once_with(vm_rescue_ref)
-            _destroy_instance.assert_called_once_with(r_instance, None,
+            _destroy_instance.assert_called_once_with(r_instance,
                 instance_name='fake_uuid-rescue')
 
     def _test_finish_migration(self, power_on=True, resize_instance=False):

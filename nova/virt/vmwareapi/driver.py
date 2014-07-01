@@ -191,7 +191,7 @@ class VMwareESXDriver(driver.ComputeDriver):
         if not instance['node']:
             return
 
-        self._vmops.destroy(instance, network_info, destroy_disks)
+        self._vmops.destroy(instance, destroy_disks)
 
     def cleanup(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True):
@@ -670,7 +670,7 @@ class VMwareVCDriver(VMwareESXDriver):
             return
 
         _vmops = self._get_vmops_for_compute_node(instance['node'])
-        _vmops.destroy(instance, network_info, destroy_disks)
+        _vmops.destroy(instance, destroy_disks)
 
     def pause(self, instance):
         """Pause VM instance."""
