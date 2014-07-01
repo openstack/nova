@@ -10,6 +10,7 @@ mock>=1.0
 mox3>=0.7.0
 MySQL-python
 psycopg2
+python-barbicanclient>=3.0.1
 python-ironicclient>=0.2.1
 python-subunit>=0.0.18
 requests-mock>=0.5.1  # Apache-2.0
