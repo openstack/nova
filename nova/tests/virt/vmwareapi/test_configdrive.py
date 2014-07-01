@@ -56,8 +56,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         self.node_name = '%s(%s)' % (self.conn.dict_mors.keys()[0],
                                      cluster_name)
         image_ref = nova.tests.image.fake.get_valid_image_id()
-        self.test_instance = {'node': 'test_url',
-                              'vm_state': 'building',
+        self.test_instance = {'vm_state': 'building',
                               'project_id': 'fake',
                               'user_id': 'fake',
                               'name': '1',
