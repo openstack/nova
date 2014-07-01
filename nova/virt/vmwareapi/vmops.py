@@ -209,7 +209,7 @@ class VMwareVMOps(object):
             """Get the Size of the flat vmdk file that is there on the storage
             repository.
             """
-            image_ref = instance.get('image_ref')
+            image_ref = instance.image_ref
             if image_ref:
                 _image_info = vmware_images.get_vmdk_size_and_properties(
                         context, image_ref, instance)
@@ -238,7 +238,7 @@ class VMwareVMOps(object):
             return (vmdk_file_size_in_kb, os_type, adapter_type, disk_type,
                 vif_model, image_linked_clone)
 
-        root_gb = instance['root_gb']
+        root_gb = instance.root_gb
         root_gb_in_kb = root_gb * units.Mi
 
         (vmdk_file_size_in_kb, os_type, adapter_type, disk_type, vif_model,
@@ -246,7 +246,7 @@ class VMwareVMOps(object):
 
         if root_gb_in_kb and vmdk_file_size_in_kb > root_gb_in_kb:
             reason = _("Image disk size greater than requested disk size")
-            raise exception.InstanceUnacceptable(instance_id=instance['uuid'],
+            raise exception.InstanceUnacceptable(instance_id=instance.uuid,
                                                  reason=reason)
 
         node_mo_id = vm_util.get_mo_id_from_instance(instance)
@@ -260,7 +260,7 @@ class VMwareVMOps(object):
         # Get the instance name. In some cases this may differ from the 'uuid',
         # for example when the spawn of a rescue instance takes place.
         if not instance_name:
-            instance_name = instance['uuid']
+            instance_name = instance.uuid
 
         # Create the VM
         config_spec = vm_util.get_vm_create_spec(
@@ -292,7 +292,7 @@ class VMwareVMOps(object):
                 image_linked_clone,
                 CONF.vmware.use_linked_clone
             )
-            upload_name = instance['image_ref']
+            upload_name = instance.image_ref
             upload_folder = '%s/%s' % (self._base_folder, upload_name)
 
             # The vmdk meta-data file
@@ -420,7 +420,7 @@ class VMwareVMOps(object):
             if is_iso:
                 if root_gb_in_kb:
                     dest_vmdk_path = self._get_vmdk_path(datastore.name,
-                                                         instance['uuid'],
+                                                         instance.uuid,
                                                          instance_name)
                     # Create the blank virtual disk for the VM
                     LOG.debug("Create blank virtual disk on %s",
@@ -458,7 +458,8 @@ class VMwareVMOps(object):
                                                   root_vmdk_path, dc_info.ref)
                 else:
                     upload_folder = '%s/%s' % (self._base_folder, upload_name)
-                    root_vmdk_name = "%s.%s.vmdk" % (upload_name, root_gb)
+                    root_vmdk_name = "%s.%s.vmdk" % (upload_name,
+                                                     instance.root_gb)
                     root_vmdk_path = str(datastore.build_path(
                             upload_folder, root_vmdk_name))
 
@@ -482,7 +483,7 @@ class VMwareVMOps(object):
                                 upload_folder,
                                 root_vmdk_name):
                             LOG.debug("Copying root disk of size %sGb",
-                                      root_gb)
+                                      instance.root_gb)
 
                             copy_spec = self.get_copy_virtual_disk_spec(
                                 client_factory, adapter_type, disk_type)
@@ -541,7 +542,7 @@ class VMwareVMOps(object):
                                                               admin_password,
                                                               datastore.name,
                                                               dc_info.name,
-                                                              instance['uuid'],
+                                                              instance.uuid,
                                                               cookies)
                 uploaded_iso_path = ds_util.build_datastore_path(
                     datastore.name,
@@ -599,7 +600,7 @@ class VMwareVMOps(object):
     def _attach_cdrom_to_vm(self, vm_ref, instance,
                             datastore, file_path):
         """Attach cdrom to VM by reconfiguration."""
-        instance_name = instance['name']
+        instance_name = instance.name
         client_factory = self._session._get_vim().client.factory
         devices = self._session._call_method(vim_util,
                                     "get_dynamic_property", vm_ref,
@@ -680,7 +681,7 @@ class VMwareVMOps(object):
         snapshot_task = self._session._call_method(
                     self._session._get_vim(),
                     "CreateSnapshot_Task", vm_ref,
-                    name="%s-snapshot" % instance['uuid'],
+                    name="%s-snapshot" % instance.uuid,
                     description="Taking Snapshot of the VM",
                     memory=False,
                     quiesce=True)
@@ -727,7 +728,7 @@ class VMwareVMOps(object):
                         "VirtualMachine", "config.hardware.device")
             (vmdk_file_path_before_snapshot, adapter_type,
              disk_type) = vm_util.get_vmdk_path_and_adapter_type(
-                                        hw_devices, uuid=instance['uuid'])
+                                        hw_devices, uuid=instance.uuid)
             if not vmdk_file_path_before_snapshot:
                 LOG.debug("No root disk defined. Unable to snapshot.")
                 raise error_util.NoRootDiskDefined()
@@ -876,7 +877,7 @@ class VMwareVMOps(object):
         # Destroy a VM instance
         # Get the instance name. In some cases this may differ from the 'uuid',
         # for example when the spawn of a rescue instance takes place.
-        if not instance_name:
+        if instance_name is None:
             instance_name = instance['uuid']
         try:
             vm_ref = vm_util.get_vm_ref_from_name(self._session, instance_name)
@@ -1109,7 +1110,7 @@ class VMwareVMOps(object):
         vm_util.power_on_instance(self._session, instance)
 
     def _get_orig_vm_name_label(self, instance):
-        return instance['uuid'] + '-orig'
+        return instance.uuid + '-orig'
 
     def _update_instance_progress(self, context, instance, step, total_steps):
         """Update instance progress percent to reflect current step number
@@ -1173,11 +1174,11 @@ class VMwareVMOps(object):
     def confirm_migration(self, migration, instance, network_info):
         """Confirms a resize, destroying the source VM."""
         # Destroy the original VM. The vm_ref needs to be searched using the
-        # instance['uuid'] + self._migrate_suffix as the identifier. We will
+        # instance.uuid + self._migrate_suffix as the identifier. We will
         # not get the vm when searched using the instanceUuid but rather will
         # be found using the uuid buried in the extraConfig
         vm_ref = vm_util.search_vm_ref_by_identifier(self._session,
-                                    instance['uuid'] + self._migrate_suffix)
+                                    instance.uuid + self._migrate_suffix)
         if vm_ref is None:
             LOG.debug("instance not present", instance=instance)
             return
@@ -1607,6 +1608,6 @@ class VMwareVCVMOps(VMwareVMOps):
 
         # NOTE: VM can move hosts in some situations. Debug for admins.
         LOG.debug("VM %(uuid)s is currently on host %(host_name)s",
-                  {'uuid': instance['name'], 'host_name': host_name},
+                  {'uuid': instance.name, 'host_name': host_name},
                   instance=instance)
         return vnc_console
