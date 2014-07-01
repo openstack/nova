@@ -2362,6 +2362,10 @@ class API(base.Base):
         else:
             new_instance_type = flavors.get_flavor_by_flavor_id(
                     flavor_id, read_deleted="no")
+            if (new_instance_type.get('root_gb') == 0 and
+                current_instance_type.get('root_gb') != 0):
+                reason = _('Resize to zero disk flavor is not allowed.')
+                raise exception.CannotResizeDisk(reason=reason)
 
         current_instance_type_name = current_instance_type['name']
         new_instance_type_name = new_instance_type['name']

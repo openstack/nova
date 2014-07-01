@@ -1159,6 +1159,18 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.compute_api.resize, self.context,
                           fake_inst, flavor_id='flavor-id')
 
+    @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
+    def test_resize_to_zero_disk_flavor_fails(self, get_flavor_by_flavor_id):
+        fake_inst = self._create_instance_obj()
+        fake_flavor = dict(id=200, flavorid='flavor-id', name='foo',
+                           root_gb=0)
+
+        get_flavor_by_flavor_id.return_value = fake_flavor
+
+        self.assertRaises(exception.CannotResizeDisk,
+                          self.compute_api.resize, self.context,
+                          fake_inst, flavor_id='flavor-id')
+
     def test_resize_quota_exceeds_fails(self):
         self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
         self.mox.StubOutWithMock(self.compute_api, '_upsize_quota_delta')
