@@ -455,9 +455,6 @@ class FakeDriver(driver.ComputeDriver):
             return 'enabled'
         return 'disabled'
 
-    def get_disk_available_least(self):
-        pass
-
     def get_volume_connector(self, instance):
         return {'ip': '127.0.0.1', 'initiator': 'fake', 'host': 'fakehost'}
 
