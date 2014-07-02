@@ -1063,7 +1063,7 @@ class LibvirtConnTestCase(test.TestCase,
         self.assertEqual(cfg.os_type, vm_mode.HVM)
         self.assertEqual(cfg.os_boot_dev, ["hd"])
         self.assertIsNone(cfg.os_root)
-        self.assertEqual(len(cfg.devices), 8)
+        self.assertEqual(len(cfg.devices), 9)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -1080,6 +1080,8 @@ class LibvirtConnTestCase(test.TestCase,
                               vconfig.LibvirtConfigGuestGraphics)
         self.assertIsInstance(cfg.devices[7],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[8],
+                              vconfig.LibvirtConfigMemoryBalloon)
         self.assertEqual(len(cfg.metadata), 1)
         self.assertIsInstance(cfg.metadata[0],
                               vconfig.LibvirtConfigGuestMetaNovaInstance)
@@ -1218,7 +1220,7 @@ class LibvirtConnTestCase(test.TestCase,
         self.assertEqual(cfg.os_type, vm_mode.HVM)
         self.assertEqual(cfg.os_boot_dev, ["hd"])
         self.assertIsNone(cfg.os_root)
-        self.assertEqual(len(cfg.devices), 9)
+        self.assertEqual(len(cfg.devices), 10)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -1237,6 +1239,8 @@ class LibvirtConnTestCase(test.TestCase,
                               vconfig.LibvirtConfigGuestGraphics)
         self.assertIsInstance(cfg.devices[8],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[9],
+                              vconfig.LibvirtConfigMemoryBalloon)
 
     def test_get_guest_config_bug_1118829(self):
         self.flags(virt_type='uml', group='libvirt')
@@ -1412,7 +1416,7 @@ class LibvirtConnTestCase(test.TestCase,
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref)
         cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
-        self.assertEqual(len(cfg.devices), 6)
+        self.assertEqual(len(cfg.devices), 7)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -1425,6 +1429,8 @@ class LibvirtConnTestCase(test.TestCase,
                               vconfig.LibvirtConfigGuestGraphics)
         self.assertIsInstance(cfg.devices[5],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[6],
+                              vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual(cfg.devices[4].type, "vnc")
 
@@ -1441,7 +1447,7 @@ class LibvirtConnTestCase(test.TestCase,
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref)
         cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
-        self.assertEqual(len(cfg.devices), 7)
+        self.assertEqual(len(cfg.devices), 8)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -1456,6 +1462,8 @@ class LibvirtConnTestCase(test.TestCase,
                               vconfig.LibvirtConfigGuestGraphics)
         self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[7],
+                              vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual(cfg.devices[4].type, "tablet")
         self.assertEqual(cfg.devices[5].type, "vnc")
@@ -1475,7 +1483,7 @@ class LibvirtConnTestCase(test.TestCase,
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref)
         cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
-        self.assertEqual(len(cfg.devices), 7)
+        self.assertEqual(len(cfg.devices), 8)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -1490,6 +1498,8 @@ class LibvirtConnTestCase(test.TestCase,
                               vconfig.LibvirtConfigGuestGraphics)
         self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[7],
+                              vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual(cfg.devices[4].type, "tablet")
         self.assertEqual(cfg.devices[5].type, "spice")
@@ -1509,7 +1519,7 @@ class LibvirtConnTestCase(test.TestCase,
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref)
         cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
-        self.assertEqual(len(cfg.devices), 7)
+        self.assertEqual(len(cfg.devices), 8)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -1524,6 +1534,8 @@ class LibvirtConnTestCase(test.TestCase,
                               vconfig.LibvirtConfigGuestGraphics)
         self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[7],
+                              vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual(cfg.devices[4].target_name, "com.redhat.spice.0")
         self.assertEqual(cfg.devices[5].type, "spice")
@@ -1542,7 +1554,7 @@ class LibvirtConnTestCase(test.TestCase,
         acquire_port.return_value = 11111
 
         cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
-        self.assertEqual(7, len(cfg.devices))
+        self.assertEqual(8, len(cfg.devices))
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -1557,6 +1569,8 @@ class LibvirtConnTestCase(test.TestCase,
                               vconfig.LibvirtConfigGuestGraphics)
         self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[7],
+                              vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual("tcp", cfg.devices[2].type)
         self.assertEqual(11111, cfg.devices[2].listen_port)
@@ -1577,7 +1591,7 @@ class LibvirtConnTestCase(test.TestCase,
         with mock.patch.object(objects.Flavor, 'get_by_id',
                                return_value=fake_flavor):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
-            self.assertEqual(9, len(cfg.devices))
+            self.assertEqual(10, len(cfg.devices))
             self.assertIsInstance(cfg.devices[0],
                                   vconfig.LibvirtConfigGuestDisk)
             self.assertIsInstance(cfg.devices[1],
@@ -1596,6 +1610,8 @@ class LibvirtConnTestCase(test.TestCase,
                                   vconfig.LibvirtConfigGuestGraphics)
             self.assertIsInstance(cfg.devices[8],
                                   vconfig.LibvirtConfigGuestVideo)
+            self.assertIsInstance(cfg.devices[9],
+                                  vconfig.LibvirtConfigMemoryBalloon)
 
             self.assertEqual("tcp", cfg.devices[2].type)
             self.assertEqual("tcp", cfg.devices[3].type)
@@ -1637,7 +1653,7 @@ class LibvirtConnTestCase(test.TestCase,
                                return_value=fake_flavor):
             cfg = conn._get_guest_config(instance_ref, [], image_meta,
                                          disk_info)
-            self.assertEqual(9, len(cfg.devices), cfg.devices)
+            self.assertEqual(10, len(cfg.devices), cfg.devices)
             self.assertIsInstance(cfg.devices[0],
                                   vconfig.LibvirtConfigGuestDisk)
             self.assertIsInstance(cfg.devices[1],
@@ -1656,6 +1672,8 @@ class LibvirtConnTestCase(test.TestCase,
                                   vconfig.LibvirtConfigGuestGraphics)
             self.assertIsInstance(cfg.devices[8],
                                   vconfig.LibvirtConfigGuestVideo)
+            self.assertIsInstance(cfg.devices[9],
+                                  vconfig.LibvirtConfigMemoryBalloon)
 
             self.assertEqual("tcp", cfg.devices[2].type)
             self.assertEqual("tcp", cfg.devices[3].type)
@@ -1758,7 +1776,7 @@ class LibvirtConnTestCase(test.TestCase,
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref)
         cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
-        self.assertEqual(len(cfg.devices), 5)
+        self.assertEqual(len(cfg.devices), 6)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -1769,6 +1787,8 @@ class LibvirtConnTestCase(test.TestCase,
                               vconfig.LibvirtConfigGuestGraphics)
         self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[5],
+                              vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual(cfg.devices[3].type, "vnc")
         self.assertEqual(cfg.devices[4].type, "xen")
@@ -1788,7 +1808,7 @@ class LibvirtConnTestCase(test.TestCase,
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref)
         cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
-        self.assertEqual(len(cfg.devices), 9)
+        self.assertEqual(len(cfg.devices), 10)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -1807,6 +1827,8 @@ class LibvirtConnTestCase(test.TestCase,
                               vconfig.LibvirtConfigGuestGraphics)
         self.assertIsInstance(cfg.devices[8],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[9],
+                              vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual(cfg.devices[4].type, "tablet")
         self.assertEqual(cfg.devices[5].target_name, "com.redhat.spice.0")
@@ -1839,7 +1861,7 @@ class LibvirtConnTestCase(test.TestCase,
                                             instance_ref)
         image_meta = {"properties": {"hw_watchdog_action": "none"}}
         cfg = conn._get_guest_config(instance_ref, [], image_meta, disk_info)
-        self.assertEqual(len(cfg.devices), 8)
+        self.assertEqual(len(cfg.devices), 9)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -1856,6 +1878,8 @@ class LibvirtConnTestCase(test.TestCase,
                               vconfig.LibvirtConfigGuestVideo)
         self.assertIsInstance(cfg.devices[7],
                               vconfig.LibvirtConfigGuestWatchdog)
+        self.assertIsInstance(cfg.devices[8],
+                              vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual("none", cfg.devices[7].action)
 
@@ -1877,7 +1901,7 @@ class LibvirtConnTestCase(test.TestCase,
                                return_value=fake_flavor):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
 
-            self.assertEqual(8, len(cfg.devices))
+            self.assertEqual(9, len(cfg.devices))
             self.assertIsInstance(cfg.devices[0],
                                   vconfig.LibvirtConfigGuestDisk)
             self.assertIsInstance(cfg.devices[1],
@@ -1894,6 +1918,8 @@ class LibvirtConnTestCase(test.TestCase,
                                   vconfig.LibvirtConfigGuestVideo)
             self.assertIsInstance(cfg.devices[7],
                                   vconfig.LibvirtConfigGuestWatchdog)
+            self.assertIsInstance(cfg.devices[8],
+                                  vconfig.LibvirtConfigMemoryBalloon)
 
             self.assertEqual("none", cfg.devices[7].action)
 
@@ -1918,7 +1944,7 @@ class LibvirtConnTestCase(test.TestCase,
             cfg = conn._get_guest_config(instance_ref, [],
                                          image_meta, disk_info)
 
-            self.assertEqual(8, len(cfg.devices))
+            self.assertEqual(9, len(cfg.devices))
             self.assertIsInstance(cfg.devices[0],
                                   vconfig.LibvirtConfigGuestDisk)
             self.assertIsInstance(cfg.devices[1],
@@ -1935,6 +1961,8 @@ class LibvirtConnTestCase(test.TestCase,
                                   vconfig.LibvirtConfigGuestVideo)
             self.assertIsInstance(cfg.devices[7],
                                   vconfig.LibvirtConfigGuestWatchdog)
+            self.assertIsInstance(cfg.devices[8],
+                                  vconfig.LibvirtConfigMemoryBalloon)
 
             self.assertEqual("pause", cfg.devices[7].action)
 
@@ -1964,35 +1992,6 @@ class LibvirtConnTestCase(test.TestCase,
                                             instance_ref)
         image_meta = {"properties": {"hw_video_model": "vmvga"}}
         cfg = conn._get_guest_config(instance_ref, [], image_meta, disk_info)
-        self.assertEqual(len(cfg.devices), 7)
-        self.assertIsInstance(cfg.devices[0],
-                              vconfig.LibvirtConfigGuestDisk)
-        self.assertIsInstance(cfg.devices[1],
-                              vconfig.LibvirtConfigGuestDisk)
-        self.assertIsInstance(cfg.devices[2],
-                              vconfig.LibvirtConfigGuestSerial)
-        self.assertIsInstance(cfg.devices[3],
-                              vconfig.LibvirtConfigGuestSerial)
-        self.assertIsInstance(cfg.devices[4],
-                              vconfig.LibvirtConfigGuestInput)
-        self.assertIsInstance(cfg.devices[5],
-                              vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[6],
-                              vconfig.LibvirtConfigGuestVideo)
-
-        self.assertEqual(cfg.devices[5].type, "vnc")
-        self.assertEqual(cfg.devices[6].type, "vmvga")
-
-    def test_get_guest_config_with_qga_through_image_meta(self):
-        self.flags(virt_type='kvm', group='libvirt')
-
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = db.instance_create(self.context, self.test_instance)
-
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref)
-        image_meta = {"properties": {"hw_qemu_guest_agent": "yes"}}
-        cfg = conn._get_guest_config(instance_ref, [], image_meta, disk_info)
         self.assertEqual(len(cfg.devices), 8)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
@@ -2009,7 +2008,40 @@ class LibvirtConnTestCase(test.TestCase,
         self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestVideo)
         self.assertIsInstance(cfg.devices[7],
+                              vconfig.LibvirtConfigMemoryBalloon)
+
+        self.assertEqual(cfg.devices[5].type, "vnc")
+        self.assertEqual(cfg.devices[6].type, "vmvga")
+
+    def test_get_guest_config_with_qga_through_image_meta(self):
+        self.flags(virt_type='kvm', group='libvirt')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        image_meta = {"properties": {"hw_qemu_guest_agent": "yes"}}
+        cfg = conn._get_guest_config(instance_ref, [], image_meta, disk_info)
+        self.assertEqual(len(cfg.devices), 9)
+        self.assertIsInstance(cfg.devices[0],
+                              vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(cfg.devices[1],
+                              vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(cfg.devices[2],
+                              vconfig.LibvirtConfigGuestSerial)
+        self.assertIsInstance(cfg.devices[3],
+                              vconfig.LibvirtConfigGuestSerial)
+        self.assertIsInstance(cfg.devices[4],
+                              vconfig.LibvirtConfigGuestInput)
+        self.assertIsInstance(cfg.devices[5],
+                              vconfig.LibvirtConfigGuestGraphics)
+        self.assertIsInstance(cfg.devices[6],
+                              vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[7],
                               vconfig.LibvirtConfigGuestChannel)
+        self.assertIsInstance(cfg.devices[8],
+                              vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual(cfg.devices[4].type, "tablet")
         self.assertEqual(cfg.devices[5].type, "vnc")
@@ -2036,7 +2068,7 @@ class LibvirtConnTestCase(test.TestCase,
                                return_value=instance_type):
             cfg = conn._get_guest_config(instance_ref, [],
                                         image_meta, disk_info)
-            self.assertEqual(len(cfg.devices), 7)
+            self.assertEqual(len(cfg.devices), 8)
             self.assertIsInstance(cfg.devices[0],
                                   vconfig.LibvirtConfigGuestDisk)
             self.assertIsInstance(cfg.devices[1],
@@ -2051,6 +2083,8 @@ class LibvirtConnTestCase(test.TestCase,
                                   vconfig.LibvirtConfigGuestGraphics)
             self.assertIsInstance(cfg.devices[6],
                                   vconfig.LibvirtConfigGuestVideo)
+            self.assertIsInstance(cfg.devices[7],
+                              vconfig.LibvirtConfigMemoryBalloon)
 
             self.assertEqual(cfg.devices[5].type, "spice")
             self.assertEqual(cfg.devices[6].type, "qxl")
@@ -2143,7 +2177,7 @@ class LibvirtConnTestCase(test.TestCase,
                                             instance_ref)
         image_meta = {"properties": {"hw_qemu_guest_agent": "no"}}
         cfg = conn._get_guest_config(instance_ref, [], image_meta, disk_info)
-        self.assertEqual(len(cfg.devices), 7)
+        self.assertEqual(len(cfg.devices), 8)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -2158,6 +2192,8 @@ class LibvirtConnTestCase(test.TestCase,
                               vconfig.LibvirtConfigGuestGraphics)
         self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[7],
+                              vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual(cfg.devices[4].type, "tablet")
         self.assertEqual(cfg.devices[5].type, "vnc")
@@ -2182,7 +2218,7 @@ class LibvirtConnTestCase(test.TestCase,
                                return_value=fake_flavor):
             cfg = conn._get_guest_config(instance_ref, [],
                                         image_meta, disk_info)
-            self.assertEqual(len(cfg.devices), 7)
+            self.assertEqual(len(cfg.devices), 8)
             self.assertIsInstance(cfg.devices[0],
                                   vconfig.LibvirtConfigGuestDisk)
             self.assertIsInstance(cfg.devices[1],
@@ -2197,6 +2233,9 @@ class LibvirtConnTestCase(test.TestCase,
                                   vconfig.LibvirtConfigGuestVideo)
             self.assertIsInstance(cfg.devices[6],
                                   vconfig.LibvirtConfigGuestRng)
+            self.assertIsInstance(cfg.devices[7],
+                                  vconfig.LibvirtConfigMemoryBalloon)
+
             self.assertEqual(cfg.devices[6].model, 'random')
             self.assertIsNone(cfg.devices[6].backend)
             self.assertIsNone(cfg.devices[6].rate_bytes)
@@ -2216,7 +2255,7 @@ class LibvirtConnTestCase(test.TestCase,
         image_meta = {"properties": {"hw_rng_model": "virtio"}}
         cfg = conn._get_guest_config(instance_ref, [],
                                      image_meta, disk_info)
-        self.assertEqual(len(cfg.devices), 6)
+        self.assertEqual(len(cfg.devices), 7)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertIsInstance(cfg.devices[1],
@@ -2229,6 +2268,8 @@ class LibvirtConnTestCase(test.TestCase,
                               vconfig.LibvirtConfigGuestGraphics)
         self.assertIsInstance(cfg.devices[5],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[6],
+                              vconfig.LibvirtConfigMemoryBalloon)
 
     def test_get_guest_config_with_rng_limits(self):
         self.flags(virt_type='kvm',
@@ -2252,7 +2293,7 @@ class LibvirtConnTestCase(test.TestCase,
                                return_value=fake_flavor):
             cfg = conn._get_guest_config(instance_ref, [],
                                          image_meta, disk_info)
-            self.assertEqual(len(cfg.devices), 7)
+            self.assertEqual(len(cfg.devices), 8)
             self.assertIsInstance(cfg.devices[0],
                                   vconfig.LibvirtConfigGuestDisk)
             self.assertIsInstance(cfg.devices[1],
@@ -2267,6 +2308,9 @@ class LibvirtConnTestCase(test.TestCase,
                                   vconfig.LibvirtConfigGuestVideo)
             self.assertIsInstance(cfg.devices[6],
                                   vconfig.LibvirtConfigGuestRng)
+            self.assertIsInstance(cfg.devices[7],
+                                  vconfig.LibvirtConfigMemoryBalloon)
+
             self.assertEqual(cfg.devices[6].model, 'random')
             self.assertIsNone(cfg.devices[6].backend)
             self.assertEqual(cfg.devices[6].rate_bytes, 1024)
@@ -2296,7 +2340,7 @@ class LibvirtConnTestCase(test.TestCase,
                                                  return_value=True)):
             cfg = conn._get_guest_config(instance_ref, [],
                                          image_meta, disk_info)
-            self.assertEqual(len(cfg.devices), 7)
+            self.assertEqual(len(cfg.devices), 8)
             self.assertIsInstance(cfg.devices[0],
                              vconfig.LibvirtConfigGuestDisk)
             self.assertIsInstance(cfg.devices[1],
@@ -2311,6 +2355,9 @@ class LibvirtConnTestCase(test.TestCase,
                              vconfig.LibvirtConfigGuestVideo)
             self.assertIsInstance(cfg.devices[6],
                              vconfig.LibvirtConfigGuestRng)
+            self.assertIsInstance(cfg.devices[7],
+                             vconfig.LibvirtConfigMemoryBalloon)
+
             self.assertEqual(cfg.devices[6].model, 'random')
             self.assertEqual(cfg.devices[6].backend, '/dev/hw_rng')
             self.assertIsNone(cfg.devices[6].rate_bytes)
@@ -2969,6 +3016,101 @@ class LibvirtConnTestCase(test.TestCase,
             self.assertEqual(conf.cpu.sockets, 4)
             self.assertEqual(conf.cpu.cores, 2)
             self.assertEqual(conf.cpu.threads, 1)
+
+    def test_get_guest_memory_balloon_config_by_default(self):
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+        for device in cfg.devices:
+            if device.root_name == 'memballoon':
+                self.assertIsInstance(device,
+                                      vconfig.LibvirtConfigMemoryBalloon)
+                self.assertEqual('virtio', device.model)
+                self.assertEqual(10, device.period)
+
+    def test_get_guest_memory_balloon_config_disable(self):
+
+        self.flags(mem_stats_period_seconds=0, group='libvirt')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+        no_exist = True
+        for device in cfg.devices:
+            if device.root_name == 'memballoon':
+                no_exist = False
+                break
+        self.assertTrue(no_exist)
+
+    def test_get_guest_memory_balloon_config_period_value(self):
+
+        self.flags(mem_stats_period_seconds=21, group='libvirt')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+        for device in cfg.devices:
+            if device.root_name == 'memballoon':
+                self.assertIsInstance(device,
+                                      vconfig.LibvirtConfigMemoryBalloon)
+                self.assertEqual('virtio', device.model)
+                self.assertEqual(21, device.period)
+
+    def test_get_guest_memory_balloon_config_qemu(self):
+
+        self.flags(virt_type='qemu', group='libvirt')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+        for device in cfg.devices:
+            if device.root_name == 'memballoon':
+                self.assertIsInstance(device,
+                                      vconfig.LibvirtConfigMemoryBalloon)
+                self.assertEqual('virtio', device.model)
+                self.assertEqual(10, device.period)
+
+    def test_get_guest_memory_balloon_config_xen(self):
+
+        self.flags(virt_type='xen', group='libvirt')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+        for device in cfg.devices:
+            if device.root_name == 'memballoon':
+                self.assertIsInstance(device,
+                                      vconfig.LibvirtConfigMemoryBalloon)
+                self.assertEqual('xen', device.model)
+                self.assertEqual(10, device.period)
+
+    def test_get_guest_memory_balloon_config_lxc(self):
+
+        self.flags(virt_type='lxc', group='libvirt')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+        no_exist = True
+        for device in cfg.devices:
+            if device.root_name == 'memballoon':
+                no_exist = False
+                break
+        self.assertTrue(no_exist)
 
     def test_xml_and_uri_no_ramdisk_no_kernel(self):
         instance_data = dict(self.test_instance)
