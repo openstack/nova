@@ -13,7 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.openstack.common import log as logging
 from nova.scheduler import filters
+
+LOG = logging.getLogger(__name__)
 
 
 class PciPassthroughFilter(filters.BaseHostFilter):
@@ -34,7 +37,12 @@ class PciPassthroughFilter(filters.BaseHostFilter):
 
     def host_passes(self, host_state, filter_properties):
         """Return true if the host has the required PCI devices."""
-        if not filter_properties.get('pci_requests'):
+        pci_requests = filter_properties.get('pci_requests')
+        if not pci_requests:
             return True
-        return host_state.pci_stats.support_requests(
-            filter_properties.get('pci_requests'))
+        if not host_state.pci_stats.support_requests(pci_requests):
+            LOG.debug("%(host_state)s doesn't have the required PCI devices"
+                      " (%(requests)s)",
+                      {'host_state': host_state, 'requests': pci_requests})
+            return False
+        return True
