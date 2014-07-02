@@ -27,11 +27,22 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         sys.modules['guestfs'] = fakeguestfs
         vfsimpl.guestfs = fakeguestfs
 
-    def test_appliance_setup_inspect(self):
+    def _do_test_appliance_setup_inspect(self, forcetcg):
+        if forcetcg:
+            vfsimpl.force_tcg()
+        else:
+            vfsimpl.force_tcg(False)
+
         vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2",
                                  imgfmt="qcow2",
                                  partition=-1)
         vfs.setup()
+
+        if forcetcg:
+            self.assertEqual(vfs.handle.backend_settings, "force_tcg")
+            vfsimpl.force_tcg(False)
+        else:
+            self.assertIsNone(vfs.handle.backend_settings)
 
         self.assertEqual(vfs.handle.running, True)
         self.assertEqual(len(vfs.handle.mounts), 3)
@@ -52,12 +63,20 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         self.assertEqual(handle.closed, True)
         self.assertEqual(len(handle.mounts), 0)
 
+    def test_appliance_setup_inspect_auto(self):
+        self._do_test_appliance_setup_inspect(False)
+
+    def test_appliance_setup_inspect_tcg(self):
+        self._do_test_appliance_setup_inspect(True)
+
     def test_appliance_setup_inspect_no_root_raises(self):
         vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2",
                                  imgfmt="qcow2",
                                  partition=-1)
         # call setup to init the handle so we can stub it
         vfs.setup()
+
+        self.assertIsNone(vfs.handle.backend_settings)
 
         def fake_inspect_os():
             return []
@@ -72,6 +91,8 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         # call setup to init the handle so we can stub it
         vfs.setup()
 
+        self.assertIsNone(vfs.handle.backend_settings)
+
         def fake_inspect_os():
             return ['fake1', 'fake2']
 
@@ -84,6 +105,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
                                  partition=None)
         vfs.setup()
 
+        self.assertIsNone(vfs.handle.backend_settings)
         self.assertEqual(vfs.handle.running, True)
         self.assertEqual(len(vfs.handle.mounts), 1)
         self.assertEqual(vfs.handle.mounts[0][1], "/dev/sda")
@@ -103,6 +125,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
                                  partition=2)
         vfs.setup()
 
+        self.assertIsNone(vfs.handle.backend_settings)
         self.assertEqual(vfs.handle.running, True)
         self.assertEqual(len(vfs.handle.mounts), 1)
         self.assertEqual(vfs.handle.mounts[0][1], "/dev/sda2")

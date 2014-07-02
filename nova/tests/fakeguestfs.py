@@ -27,6 +27,7 @@ class GuestFS(object):
         self.files = {}
         self.auginit = False
         self.root_mounted = False
+        self.backend_settings = None
 
     def launch(self):
         self.running = True
@@ -35,6 +36,9 @@ class GuestFS(object):
         self.running = False
         self.mounts = []
         self.drives = []
+
+    def set_backend_settings(self, settings):
+        self.backend_settings = settings
 
     def close(self):
         self.closed = True
