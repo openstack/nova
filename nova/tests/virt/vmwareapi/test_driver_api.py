@@ -1444,9 +1444,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._check_vm_info(info, power_state.RUNNING)
         instances = self.conn.list_instances()
         self.assertEqual(len(instances), 1)
-        # Overwrite the vmPathName
+        # Delete the vmPathName
         vm = self._get_vm_record()
-        vm.set("config.files.vmPathName", None)
+        vm.delete('config.files.vmPathName')
         self.conn.destroy(self.context, self.instance, self.network_info)
         instances = self.conn.list_instances()
         self.assertEqual(len(instances), 0)

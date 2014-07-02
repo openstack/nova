@@ -242,6 +242,10 @@ class ManagedObject(object):
         """
         return self.__getattr__(attr)
 
+    def delete(self, attr):
+        """Deletes an attribute."""
+        self.propSet = filter(lambda elem: elem.name != attr, self.propSet)
+
     def __setattr__(self, attr, val):
         # TODO(hartsocks): this is adds unnecessary complexity to the class
         for prop in self.propSet:

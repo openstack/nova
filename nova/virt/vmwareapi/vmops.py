@@ -771,10 +771,12 @@ class VMwareVMOps(object):
             query = vm_util.get_values_from_object_properties(
                     self._session, props)
             pwr_state = query['runtime.powerState']
-            vm_config_pathname = query['config.files.vmPathName']
+
+            vm_config_pathname = query.get('config.files.vmPathName')
             vm_ds_path = None
-            if vm_config_pathname:
-                vm_ds_path = ds_util.DatastorePath.parse(vm_config_pathname)
+            if vm_config_pathname is not None:
+                vm_ds_path = ds_util.DatastorePath.parse(
+                        vm_config_pathname)
 
             # Power off the VM if it is in PoweredOn state.
             if pwr_state == "poweredOn":
