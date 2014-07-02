@@ -1042,6 +1042,13 @@ class NoInstanceTypesInSysMetadata(ResizeClaimTestCase):
         super(NoInstanceTypesInSysMetadata, self).setUp()
         self.instance = self._fake_instance(stash=False)
 
+    def test_get_instance_type_stash_false(self):
+        with (mock.patch.object(objects.Flavor, 'get_by_id',
+                                return_value=self.instance_type)):
+            flavor = self.tracker._get_instance_type(self.context,
+                                                     self.instance, "new_")
+            self.assertEqual(self.instance_type, flavor)
+
 
 class OrphanTestCase(BaseTrackerTestCase):
     def _driver(self):

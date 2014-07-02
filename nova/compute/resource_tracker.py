@@ -684,10 +684,9 @@ class ResourceTracker(object):
 
         See bug 1164110
         """
-        if not instance_type_id:
-            instance_type_id = instance['instance_type_id']
-
         try:
             return flavors.extract_flavor(instance, prefix)
         except KeyError:
+            if not instance_type_id:
+                instance_type_id = instance['instance_type_id']
             return objects.Flavor.get_by_id(context, instance_type_id)
