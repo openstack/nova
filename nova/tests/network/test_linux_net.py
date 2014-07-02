@@ -950,10 +950,11 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         with contextlib.nested(
             mock.patch.object(linux_net, 'device_exists', return_value=True),
             mock.patch.object(linux_net, '_execute', fake_execute)
-        ) as (device_exists, _execute):
+        ) as (device_exists, _):
             driver = linux_net.LinuxBridgeInterfaceDriver()
             self.assertRaises(exception.NovaException,
                               driver.ensure_bridge, 'bridge', 'eth0')
+            device_exists.assert_called_once_with('bridge')
 
     def test_set_device_mtu_configured(self):
         self.flags(network_device_mtu=10000)
