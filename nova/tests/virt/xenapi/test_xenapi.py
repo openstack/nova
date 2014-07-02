@@ -2718,7 +2718,8 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
         db.instance_add_security_group(admin_ctxt, instance_ref['uuid'],
                                        secgroup['id'])
         self.fw.prepare_instance_filter(instance_ref, network_info)
-        self.fw.instances[instance_ref['id']] = instance_ref
+        self.fw.instance_info[instance_ref['id']] = (instance_ref,
+                                                     network_info)
         self._validate_security_group()
         # add a rule to the security group
         db.security_group_rule_create(admin_ctxt,
