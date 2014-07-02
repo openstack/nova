@@ -16,7 +16,10 @@
 from oslo.config import cfg
 
 from nova import db
+from nova.openstack.common import log as logging
 from nova.scheduler import filters
+
+LOG = logging.getLogger(__name__)
 
 CONF = cfg.CONF
 CONF.import_opt('default_availability_zone', 'nova.availability_zones')
@@ -38,13 +41,25 @@ class AvailabilityZoneFilter(filters.BaseHostFilter):
         props = spec.get('instance_properties', {})
         availability_zone = props.get('availability_zone')
 
-        if availability_zone:
-            context = filter_properties['context']
-            metadata = db.aggregate_metadata_get_by_host(
-                         context, host_state.host, key='availability_zone')
-            if 'availability_zone' in metadata:
-                return availability_zone in metadata['availability_zone']
-            else:
-                return availability_zone == CONF.default_availability_zone
+        if not availability_zone:
+            return True
 
-        return True
+        context = filter_properties['context']
+        metadata = db.aggregate_metadata_get_by_host(
+                context, host_state.host, key='availability_zone')
+
+        if 'availability_zone' in metadata:
+            hosts_passes = availability_zone in metadata['availability_zone']
+            host_az = metadata['availability_zone']
+        else:
+            hosts_passes = availability_zone == CONF.default_availability_zone
+            host_az = CONF.default_availability_zone
+
+        if not hosts_passes:
+            LOG.debug("Availability Zone '%(az)s' requested. "
+                      "%(host_state)s has AZs: %(host_az)s",
+                      {'host_state': host_state,
+                       'az': availability_zone,
+                       'host_az': host_az})
+
+        return hosts_passes
