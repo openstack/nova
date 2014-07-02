@@ -1472,6 +1472,54 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             destroy.assert_called_once_with(self.context, instance_2, None,
                                             {}, True)
 
+    @mock.patch('nova.compute.manager.ComputeManager._instance_update')
+    def test_error_out_instance_on_exception_not_implemented_err(self,
+                                                        inst_update_mock):
+        instance = fake_instance.fake_instance_obj(self.context)
+
+        def do_test():
+            with self.compute._error_out_instance_on_exception(
+                    self.context, instance, instance_state=vm_states.STOPPED):
+                raise NotImplementedError('test')
+
+        self.assertRaises(NotImplementedError, do_test)
+        inst_update_mock.assert_called_once_with(
+            self.context, instance.uuid,
+            vm_state=vm_states.STOPPED, task_state=None)
+
+    @mock.patch('nova.compute.manager.ComputeManager._instance_update')
+    def test_error_out_instance_on_exception_inst_fault_rollback(self,
+                                                        inst_update_mock):
+        instance = fake_instance.fake_instance_obj(self.context)
+
+        def do_test():
+            with self.compute._error_out_instance_on_exception(self.context,
+                                                               instance):
+                raise exception.InstanceFaultRollback(
+                    inner_exception=test.TestingException('test'))
+
+        self.assertRaises(test.TestingException, do_test)
+        inst_update_mock.assert_called_once_with(
+            self.context, instance.uuid,
+            vm_state=vm_states.ACTIVE, task_state=None)
+
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_set_instance_error_state')
+    def test_error_out_instance_on_exception_unknown_with_quotas(self,
+                                                                 set_error):
+        instance = fake_instance.fake_instance_obj(self.context)
+        quotas = mock.create_autospec(objects.Quotas, spec_set=True)
+
+        def do_test():
+            with self.compute._error_out_instance_on_exception(
+                    self.context, instance, quotas):
+                raise test.TestingException('test')
+
+        self.assertRaises(test.TestingException, do_test)
+        self.assertEqual(1, len(quotas.method_calls))
+        self.assertEqual(mock.call.rollback(), quotas.method_calls[0])
+        set_error.assert_called_once_with(self.context, instance.uuid)
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):
