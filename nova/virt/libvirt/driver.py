@@ -4364,8 +4364,7 @@ class LibvirtDriver(driver.ComputeDriver):
         tmp_file = os.path.join(CONF.instances_path, filename)
         os.remove(tmp_file)
 
-    def ensure_filtering_rules_for_instance(self, instance, network_info,
-                                            time_module=None):
+    def ensure_filtering_rules_for_instance(self, instance, network_info):
         """Ensure that an instance's filtering rules are enabled.
 
         When migrating an instance, we need the filtering rules to
@@ -4375,9 +4374,6 @@ class LibvirtDriver(driver.ComputeDriver):
         Also, when restarting the compute service, we need to ensure
         that filtering rules exist for all running services.
         """
-
-        if not time_module:
-            time_module = greenthread
 
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance,
@@ -4394,7 +4390,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if len(timeout_count) == 0:
                 msg = _('The firewall filter for %s does not exist')
                 raise exception.NovaException(msg % instance.name)
-            time_module.sleep(1)
+            greenthread.sleep(1)
 
     def filter_defer_apply_on(self):
         self.firewall_driver.filter_defer_apply_on()
