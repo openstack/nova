@@ -716,8 +716,7 @@ class ComputeAPI(object):
 
     def rescue_instance(self, ctxt, instance, rescue_password,
                         rescue_image_ref=None):
-        instance = jsonutils.to_primitive(instance)
-        msg_args = {'rescue_password': rescue_password, 'instance': instance}
+        msg_args = {'rescue_password': rescue_password}
         if self.client.can_send_version('3.24'):
             version = '3.24'
             msg_args['rescue_image_ref'] = rescue_image_ref
@@ -725,7 +724,9 @@ class ComputeAPI(object):
             version = '3.9'
         else:
             # NOTE(russellb) Havana compat
+            instance = jsonutils.to_primitive(instance)
             version = self._get_compat_version('3.0', '2.44')
+        msg_args['instance'] = instance
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'rescue_instance', **msg_args)
