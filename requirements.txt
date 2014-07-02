@@ -7,7 +7,7 @@ eventlet>=0.13.0
 Jinja2
 kombu>=2.4.8
 lxml>=2.3
-Routes>=1.12.3
+Routes>=1.12.3,!=2.0
 WebOb>=1.2.3
 greenlet>=0.3.2
 PasteDeploy>=1.5.0
@@ -20,9 +20,9 @@ pyasn1
 Babel>=1.3
 iso8601>=0.1.9
 jsonschema>=2.0.0,<3.0.0
-python-cinderclient>=1.0.6
+python-cinderclient>=1.0.7
 python-neutronclient>=2.3.5,<3
-python-glanceclient>=0.9.0
+python-glanceclient>=0.13.1
 python-keystoneclient>=0.9.0
 six>=1.7.0
 stevedore>=0.14
