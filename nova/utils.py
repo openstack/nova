@@ -22,7 +22,6 @@ import datetime
 import functools
 import hashlib
 import inspect
-import multiprocessing
 import os
 import pyclbr
 import random
@@ -1145,10 +1144,3 @@ def get_image_from_system_metadata(system_meta):
 def get_hash_str(base_str):
     """returns string that represents hash of base_str (in hex format)."""
     return hashlib.md5(base_str).hexdigest()
-
-
-def cpu_count():
-    try:
-        return multiprocessing.cpu_count()
-    except NotImplementedError:
-        return 1

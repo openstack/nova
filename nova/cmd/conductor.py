@@ -21,6 +21,7 @@ from oslo.config import cfg
 from nova import config
 from nova import objects
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova.openstack.common.report import guru_meditation_report as gmr
 from nova import service
 from nova import utils
@@ -41,6 +42,6 @@ def main():
     server = service.Service.create(binary='nova-conductor',
                                     topic=CONF.conductor.topic,
                                     manager=CONF.conductor.manager)
-    workers = CONF.conductor.workers or utils.cpu_count()
+    workers = CONF.conductor.workers or processutils.get_worker_count()
     service.serve(server, workers=workers)
     service.wait()
