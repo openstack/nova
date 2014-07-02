@@ -17,6 +17,7 @@ Test suite for the Hyper-V driver and related APIs.
 """
 
 import contextlib
+import datetime
 import io
 import os
 import platform
@@ -49,6 +50,7 @@ from nova.virt import driver
 from nova.virt.hyperv import basevolumeutils
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import driver as driver_hyperv
+from nova.virt.hyperv import hostops
 from nova.virt.hyperv import hostutils
 from nova.virt.hyperv import livemigrationutils
 from nova.virt.hyperv import networkutils
@@ -335,6 +337,13 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         self._mox.VerifyAll()
 
         self.assertEqual(instances, fake_instances)
+
+    def test_get_host_uptime(self):
+        fake_host = "fake_host"
+        with mock.patch.object(self._conn._hostops,
+                               "get_host_uptime") as mock_uptime:
+            self._conn._hostops.get_host_uptime(fake_host)
+            mock_uptime.assert_called_once_with(fake_host)
 
     def test_get_info(self):
         self._instance_data = self._get_instance_data()
@@ -1862,3 +1871,24 @@ class VolumeOpsTestCase(HyperVAPIBaseTestCase):
             mock_get_vm_scsi_controller.assert_called_with("test_vm_name")
             mock_set_disk_host_resource("test_vm_name", "fake_controller_path",
                                         0, "fake_mounted_path")
+
+
+class HostOpsTestCase(HyperVAPIBaseTestCase):
+    """Unit tests for the Hyper-V hostops class."""
+
+    def setUp(self):
+        self._hostops = hostops.HostOps()
+        self._hostops._hostutils = mock.MagicMock()
+        self._hostops.time = mock.MagicMock()
+        super(HostOpsTestCase, self).setUp()
+
+    @mock.patch('nova.virt.hyperv.hostops.time')
+    def test_host_uptime(self, mock_time):
+        self._hostops._hostutils.get_host_tick_count64.return_value = 100
+        mock_time.strftime.return_value = "01:01:01"
+
+        result_uptime = "01:01:01 up %s,  0 users,  load average: 0, 0, 0" % (
+                          str(datetime.timedelta(
+                                     milliseconds=long(100))))
+        actual_uptime = self._hostops.get_host_uptime()
+        self.assertEqual(result_uptime, actual_uptime)
