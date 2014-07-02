@@ -683,10 +683,17 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         # FIXME(comstud): This is temporary/transitional until I can
         # work out a better way to pass full objects down.
         EXPECTS_OBJECTS = ['start', 'stop', 'delete_instance_metadata',
-                           'update_instance_metadata']
+                           'update_instance_metadata', 'shelve', 'unshelve']
         if method in EXPECTS_OBJECTS:
             inst_obj = objects.Instance()
-            inst_obj._from_db_object(message.ctxt, inst_obj, instance)
+            expected_attrs = None
+            # shelve and unshelve requires 'info_cache' and 'metadata',
+            # because of this fetching same from database.
+            if method in ['shelve', 'unshelve']:
+                expected_attrs = ['metadata', 'info_cache']
+
+            inst_obj._from_db_object(message.ctxt, inst_obj, instance,
+                                     expected_attrs=expected_attrs)
             instance = inst_obj
         args[0] = instance
         return fn(message.ctxt, *args, **method_info['method_kwargs'])
