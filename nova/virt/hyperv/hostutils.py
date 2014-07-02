@@ -75,3 +75,6 @@ class HostUtils(object):
         # Returns IPv4 and IPv6 addresses, ordered by protocol family
         addr_info.sort()
         return [a[4][0] for a in addr_info]
+
+    def get_host_tick_count64(self):
+        return ctypes.windll.kernel32.GetTickCount64()
