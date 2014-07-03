@@ -764,6 +764,28 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def get_instance_disk_info(self, instance_name,
+                               block_device_info=None):
+        """Retrieve information about actual disk sizes of an instance.
+
+        :param instance_name:
+            name of a nova instance as returned by list_instances()
+        :param block_device_info:
+            Optional; Can be used to filter out devices which are
+            actually volumes.
+        :return:
+            json strings with below format::
+
+                "[{'path':'disk',
+                   'type':'raw',
+                   'virt_disk_size':'10737418240',
+                   'backing_file':'backing_file',
+                   'disk_size':'83886080'
+                   'over_committed_disk_size':'10737418240'},
+                   ...]"
+        """
+        raise NotImplementedError()
+
     def refresh_security_group_rules(self, security_group_id):
         """This method is called after a change to security groups.
 

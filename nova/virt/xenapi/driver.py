@@ -504,7 +504,8 @@ class XenAPIDriver(driver.ComputeDriver):
         return self._vmops.check_can_live_migrate_source(ctxt, instance_ref,
                                                          dest_check_data)
 
-    def get_instance_disk_info(self, instance_name):
+    def get_instance_disk_info(self, instance_name,
+                               block_device_info=None):
         """Used by libvirt for live migration. We rely on xenapi
         checks to do this for us.
         """
