@@ -129,10 +129,14 @@ class DriverBlockDevice(dict):
         """
         raise NotImplementedError()
 
-    def save(self, context):
+    def save(self, context=None):
         for attr_name, key_name in self._update_on_save.iteritems():
             setattr(self._bdm_obj, attr_name, self[key_name or attr_name])
-        self._bdm_obj.save(context)
+
+        if context:
+            self._bdm_obj.save(context)
+        else:
+            self._bdm_obj.save()
 
 
 class DriverSwapBlockDevice(DriverBlockDevice):
@@ -268,7 +272,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
             connection_info['serial'] = self.volume_id
         self['connection_info'] = connection_info
 
-    def save(self, context):
+    def save(self, context=None):
         # NOTE(ndipanov): we might want to generalize this by adding it to the
         # _update_on_save and adding a transformation function.
         try:
