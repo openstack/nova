@@ -1141,15 +1141,6 @@ class FakeVim(object):
         task_mdo = create_task(method, "success")
         return task_mdo.obj
 
-    def _delete_disk(self, method, *args, **kwargs):
-        """Deletes .vmdk and -flat.vmdk files corresponding to the VM."""
-        vmdk_file_path = kwargs.get("name")
-        flat_vmdk_file_path = vmdk_file_path.replace(".vmdk", "-flat.vmdk")
-        _remove_file(vmdk_file_path)
-        _remove_file(flat_vmdk_file_path)
-        task_mdo = create_task(method, "success")
-        return task_mdo.obj
-
     def _delete_file(self, method, *args, **kwargs):
         """Deletes a file from the datastore."""
         _remove_file(kwargs.get("name"))
