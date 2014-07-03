@@ -62,7 +62,7 @@ _FORMAT_PATTERNS = [r'(%(key)s\s*[=]\s*[\"\']).*?([\"\'])',
                     r'([\'"].*?%(key)s[\'"]\s*:\s*u?[\'"]).*?([\'"])',
                     r'([\'"].*?%(key)s[\'"]\s*,\s*\'--?[A-z]+\'\s*,\s*u?[\'"])'
                     '.*?([\'"])',
-                    r'(%(key)s\s*--?[A-z]+\s*).*?([\s])']
+                    r'(%(key)s\s*--?[A-z]+\s*)\S+(\s*)']
 
 for key in _SANITIZE_KEYS:
     for pattern in _FORMAT_PATTERNS:
@@ -181,11 +181,11 @@ log_opts = [
     cfg.StrOpt('instance_format',
                default='[instance: %(uuid)s] ',
                help='The format for an instance that is passed with the log '
-                    'message. '),
+                    'message.'),
     cfg.StrOpt('instance_uuid_format',
                default='[instance: %(uuid)s] ',
                help='The format for an instance UUID that is passed with the '
-                    'log message. '),
+                    'log message.'),
 ]
 
 CONF = cfg.CONF

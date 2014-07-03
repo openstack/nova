@@ -157,7 +157,7 @@ def execute(*cmd, **kwargs):
         attempts -= 1
         try:
             LOG.log(loglevel, 'Running cmd (subprocess): %s',
-                    ' '.join(logging.mask_password(cmd)))
+                    logging.mask_password(' '.join(cmd)))
             _PIPE = subprocess.PIPE  # pylint: disable=E1101
 
             if os.name == 'nt':
