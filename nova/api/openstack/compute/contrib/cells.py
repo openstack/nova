@@ -270,7 +270,10 @@ class Controller(object):
     def delete(self, req, id):
         """Delete a child or parent cell entry.  'id' is a cell name."""
         context = req.environ['nova.context']
+
         authorize(context)
+        authorize(context, action="delete")
+
         try:
             num_deleted = self.cells_rpcapi.cell_delete(context, id)
         except exception.CellsUpdateUnsupported as e:
@@ -347,7 +350,10 @@ class Controller(object):
     def create(self, req, body):
         """Create a child cell entry."""
         context = req.environ['nova.context']
+
         authorize(context)
+        authorize(context, action="create")
+
         if 'cell' not in body:
             msg = _("No cell information in request")
             LOG.error(msg)
@@ -371,7 +377,10 @@ class Controller(object):
     def update(self, req, id, body):
         """Update a child cell entry.  'id' is the cell name to update."""
         context = req.environ['nova.context']
+
         authorize(context)
+        authorize(context, action="update")
+
         if 'cell' not in body:
             msg = _("No cell information in request")
             LOG.error(msg)
@@ -403,7 +412,10 @@ class Controller(object):
     def sync_instances(self, req, body):
         """Tell all cells to sync instance info."""
         context = req.environ['nova.context']
+
         authorize(context)
+        authorize(context, action="sync_instances")
+
         project_id = body.pop('project_id', None)
         deleted = body.pop('deleted', False)
         updated_since = body.pop('updated_since', None)

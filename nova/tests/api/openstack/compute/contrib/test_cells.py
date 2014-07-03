@@ -133,7 +133,7 @@ class CellsTest(BaseCellsTest):
         self.assertEqual(cell['rpc_host'], 'r1.example.org')
         self.assertNotIn('password', cell)
 
-    def test_cell_delete(self):
+    def _cell_delete(self):
         call_info = {'delete_called': 0}
 
         def fake_cell_delete(inst, context, cell_name):
@@ -143,8 +143,19 @@ class CellsTest(BaseCellsTest):
         self.stubs.Set(cells_rpcapi.CellsAPI, 'cell_delete', fake_cell_delete)
 
         req = self._get_request("cells/cell999")
+        req.environ['nova.context'] = self.context
         self.controller.delete(req, 'cell999')
         self.assertEqual(call_info['delete_called'], 1)
+
+    def test_cell_delete(self):
+        # Test cell delete with just cell policy
+        rules = {"default": "is_admin:true",
+                 "compute_extension:cells": "is_admin:true"}
+        self.policy.set_rules(rules)
+        self._cell_delete()
+
+    def test_cell_delete_with_delete_policy(self):
+        self._cell_delete()
 
     def test_delete_bogus_cell_raises(self):
         def fake_cell_delete(inst, context, cell_name):
@@ -157,7 +168,19 @@ class CellsTest(BaseCellsTest):
         self.assertRaises(exc.HTTPNotFound, self.controller.delete, req,
                 'cell999')
 
-    def test_cell_create_parent(self):
+    def test_cell_delete_fails_for_invalid_policy(self):
+        def fake_cell_delete(inst, context, cell_name):
+            pass
+
+        self.stubs.Set(cells_rpcapi.CellsAPI, 'cell_delete', fake_cell_delete)
+
+        req = self._get_request("cells/cell999")
+        req.environ['nova.context'] = self.context
+        req.environ["nova.context"].is_admin = False
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.delete, req, 'cell999')
+
+    def _cell_create_parent(self):
         body = {'cell': {'name': 'meow',
                         'username': 'fred',
                         'password': 'fubar',
@@ -167,6 +190,7 @@ class CellsTest(BaseCellsTest):
                         'is_parent': False}}
 
         req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
         res_dict = self.controller.create(req, body)
         cell = res_dict['cell']
 
@@ -177,7 +201,17 @@ class CellsTest(BaseCellsTest):
         self.assertNotIn('password', cell)
         self.assertNotIn('is_parent', cell)
 
-    def test_cell_create_child(self):
+    def test_cell_create_parent(self):
+        # Test create with just cells policy
+        rules = {"default": "is_admin:true",
+                 "compute_extension:cells": "is_admin:true"}
+        self.policy.set_rules(rules)
+        self._cell_create_parent()
+
+    def test_cell_create_parent_with_create_policy(self):
+        self._cell_create_parent()
+
+    def _cell_create_child(self):
         body = {'cell': {'name': 'meow',
                         'username': 'fred',
                         'password': 'fubar',
@@ -185,6 +219,7 @@ class CellsTest(BaseCellsTest):
                         'type': 'child'}}
 
         req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
         res_dict = self.controller.create(req, body)
         cell = res_dict['cell']
 
@@ -195,6 +230,16 @@ class CellsTest(BaseCellsTest):
         self.assertNotIn('password', cell)
         self.assertNotIn('is_parent', cell)
 
+    def test_cell_create_child(self):
+        # Test create with just cells policy
+        rules = {"default": "is_admin:true",
+                 "compute_extension:cells": "is_admin:true"}
+        self.policy.set_rules(rules)
+        self._cell_create_child()
+
+    def test_cell_create_child_with_create_policy(self):
+        self._cell_create_child()
+
     def test_cell_create_no_name_raises(self):
         body = {'cell': {'username': 'moocow',
                          'password': 'secret',
@@ -202,6 +247,7 @@ class CellsTest(BaseCellsTest):
                          'type': 'parent'}}
 
         req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
         self.assertRaises(exc.HTTPBadRequest,
             self.controller.create, req, body)
 
@@ -213,6 +259,7 @@ class CellsTest(BaseCellsTest):
                          'type': 'parent'}}
 
         req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
         self.assertRaises(exc.HTTPBadRequest,
             self.controller.create, req, body)
 
@@ -224,6 +271,7 @@ class CellsTest(BaseCellsTest):
                          'type': 'parent'}}
 
         req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
         self.assertRaises(exc.HTTPBadRequest,
             self.controller.create, req, body)
 
@@ -235,6 +283,7 @@ class CellsTest(BaseCellsTest):
                          'type': 'parent'}}
 
         req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
         self.assertRaises(exc.HTTPBadRequest,
             self.controller.create, req, body)
 
@@ -246,14 +295,24 @@ class CellsTest(BaseCellsTest):
                          'type': 'invalid'}}
 
         req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
         self.assertRaises(exc.HTTPBadRequest,
             self.controller.create, req, body)
 
-    def test_cell_update(self):
+    def test_cell_create_fails_for_invalid_policy(self):
+        body = {'cell': {'name': 'fake'}}
+        req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
+        req.environ['nova.context'].is_admin = False
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.create, req, body)
+
+    def _cell_update(self):
         body = {'cell': {'username': 'zeb',
                          'password': 'sneaky'}}
 
         req = self._get_request("cells/cell1")
+        req.environ['nova.context'] = self.context
         res_dict = self.controller.update(req, 'cell1', body)
         cell = res_dict['cell']
 
@@ -262,12 +321,31 @@ class CellsTest(BaseCellsTest):
         self.assertEqual(cell['username'], 'zeb')
         self.assertNotIn('password', cell)
 
+    def test_cell_update(self):
+        # Test cell update with just cell policy
+        rules = {"default": "is_admin:true",
+                 "compute_extension:cells": "is_admin:true"}
+        self.policy.set_rules(rules)
+        self._cell_update()
+
+    def test_cell_update_with_update_policy(self):
+        self._cell_update()
+
+    def test_cell_update_fails_for_invalid_policy(self):
+        body = {'cell': {'name': 'got_changed'}}
+        req = self._get_request("cells/cell1")
+        req.environ['nova.context'] = self.context
+        req.environ['nova.context'].is_admin = False
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.create, req, body)
+
     def test_cell_update_empty_name_raises(self):
         body = {'cell': {'name': '',
                          'username': 'zeb',
                          'password': 'sneaky'}}
 
         req = self._get_request("cells/cell1")
+        req.environ['nova.context'] = self.context
         self.assertRaises(exc.HTTPBadRequest,
             self.controller.update, req, 'cell1', body)
 
@@ -277,6 +355,7 @@ class CellsTest(BaseCellsTest):
                          'password': 'sneaky'}}
 
         req = self._get_request("cells/cell1")
+        req.environ['nova.context'] = self.context
         self.assertRaises(exc.HTTPBadRequest,
             self.controller.update, req, 'cell1', body)
 
@@ -284,6 +363,7 @@ class CellsTest(BaseCellsTest):
         body = {'cell': {'username': 'wingwj'}}
 
         req = self._get_request("cells/cell1")
+        req.environ['nova.context'] = self.context
         res_dict = self.controller.update(req, 'cell1', body)
         cell = res_dict['cell']
 
@@ -297,10 +377,12 @@ class CellsTest(BaseCellsTest):
         body2 = {'cell': {'username': 'wingwj', 'type': 'parent'}}
 
         req1 = self._get_request("cells/cell1")
+        req1.environ['nova.context'] = self.context
         res_dict1 = self.controller.update(req1, 'cell1', body1)
         cell1 = res_dict1['cell']
 
         req2 = self._get_request("cells/cell2")
+        req2.environ['nova.context'] = self.context
         res_dict2 = self.controller.update(req2, 'cell2', body2)
         cell2 = res_dict2['cell']
 
@@ -406,6 +488,7 @@ class CellsTest(BaseCellsTest):
         self.stubs.Set(cells_rpcapi.CellsAPI, 'sync_instances', sync_instances)
 
         req = self._get_request("cells/sync_instances")
+        req.environ['nova.context'] = self.context
         body = {}
         self.controller.sync_instances(req, body=body)
         self.assertIsNone(call_info['project_id'])
@@ -454,6 +537,20 @@ class CellsTest(BaseCellsTest):
         body = {'foo': 'meow'}
         self.assertRaises(exc.HTTPBadRequest,
                 self.controller.sync_instances, req, body=body)
+
+    def test_sync_instances_fails_for_invalid_policy(self):
+        def sync_instances(self, context, **kwargs):
+            pass
+
+        self.stubs.Set(cells_rpcapi.CellsAPI, 'sync_instances', sync_instances)
+
+        req = self._get_request("cells/sync_instances")
+        req.environ['nova.context'] = self.context
+        req.environ['nova.context'].is_admin = False
+
+        body = {}
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.sync_instances, req, body)
 
     def test_cells_disabled(self):
         self.flags(enable=False, group='cells')
