@@ -441,6 +441,13 @@ class IptablesFirewallDriver(FirewallDriver):
     @utils.synchronized('iptables', external=True)
     def _inner_do_refresh_rules(self, instance, ipv4_rules,
                                                ipv6_rules):
+        chain_name = self._instance_chain_name(instance)
+        if not self.iptables.ipv4['filter'].has_chain(chain_name):
+            LOG.info(
+                _('instance chain %s disappeared during refresh, '
+                    'skipping') % chain_name,
+                instance=instance)
+            return
         self.remove_filters_for_instance(instance)
         self.add_filters_for_instance(instance, ipv4_rules, ipv6_rules)
 

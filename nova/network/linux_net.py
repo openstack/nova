@@ -185,6 +185,12 @@ class IptablesTable(object):
         self.remove_chains = set()
         self.dirty = True
 
+    def has_chain(self, name, wrap=True):
+        if wrap:
+            return name in self.chains
+        else:
+            return name in self.unwrapped_chains
+
     def add_chain(self, name, wrap=True):
         """Adds a named chain to the table.
 
