@@ -1155,11 +1155,12 @@ class VMwareVMOps(object):
                     lst_properties)
         query = vm_util.get_values_from_object_properties(
                 self._session, vm_props)
-        max_mem = int(query['summary.config.memorySizeMB']) * 1024
+        max_mem = int(query.get('summary.config.memorySizeMB', 0)) * 1024
+        num_cpu = int(query.get('summary.config.numCpu', 0))
         return {'state': VMWARE_POWER_STATES[query['runtime.powerState']],
                 'max_mem': max_mem,
                 'mem': max_mem,
-                'num_cpu': int(query['summary.config.numCpu']),
+                'num_cpu': num_cpu,
                 'cpu_time': 0}
 
     def _get_diagnostics(self, instance):

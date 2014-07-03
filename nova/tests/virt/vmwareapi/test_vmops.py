@@ -269,9 +269,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             mock_save.assert_called_once_with()
         self.assertEqual(50, instance.progress)
 
-    @mock.patch('nova.virt.vmwareapi.vm_util.get_vm_ref',
-                return_value='fake_ref')
-    def test_get_info(self, mock_get_vm_ref):
+    @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake_ref')
+    @mock.patch.object(driver.VMwareAPISession, '_call_method')
+    def test_get_info(self, mock_call, mock_get_vm_ref):
         props = ['summary.config.numCpu', 'summary.config.memorySizeMB',
                  'runtime.powerState']
         prop_cpu = vmwareapi_fake.Prop(props[0], 4)
@@ -281,20 +281,42 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         obj_content = vmwareapi_fake.ObjectContent(None, prop_list=prop_list)
         result = vmwareapi_fake.FakeRetrieveResult()
         result.add_object(obj_content)
-        mock_call_method = mock.Mock(return_value=result)
-        with mock.patch.object(self._session, '_call_method',
-                               mock_call_method):
-            info = self._vmops.get_info(self._instance)
-            mock_call_method.assert_called_once_with(vim_util,
-                'get_object_properties', None, 'fake_ref', 'VirtualMachine',
-                props)
-            mock_get_vm_ref.assert_called_once_with(self._session,
-                self._instance)
-            self.assertEqual(power_state.RUNNING, info['state'])
-            self.assertEqual(128 * 1024, info['max_mem'])
-            self.assertEqual(128 * 1024, info['mem'])
-            self.assertEqual(4, info['num_cpu'])
-            self.assertEqual(0, info['cpu_time'])
+        mock_call.return_value = result
+        info = self._vmops.get_info(self._instance)
+        mock_call.assert_called_once_with(vim_util,
+            'get_object_properties', None, 'fake_ref', 'VirtualMachine',
+            props)
+        mock_get_vm_ref.assert_called_once_with(self._session,
+            self._instance)
+        self.assertEqual(power_state.RUNNING, info['state'])
+        self.assertEqual(128 * 1024, info['max_mem'])
+        self.assertEqual(128 * 1024, info['mem'])
+        self.assertEqual(4, info['num_cpu'])
+        self.assertEqual(0, info['cpu_time'])
+
+    @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake_ref')
+    @mock.patch.object(driver.VMwareAPISession, '_call_method')
+    def test_get_info_when_ds_unavailable(self, mock_call, mock_get_vm_ref):
+        props = ['summary.config.numCpu', 'summary.config.memorySizeMB',
+                 'runtime.powerState']
+        prop_state = vmwareapi_fake.Prop(props[2], 'poweredOff')
+        # when vm's ds not available, only power state can be received
+        prop_list = [prop_state]
+        obj_content = vmwareapi_fake.ObjectContent(None, prop_list=prop_list)
+        result = vmwareapi_fake.FakeRetrieveResult()
+        result.add_object(obj_content)
+        mock_call.return_value = result
+        info = self._vmops.get_info(self._instance)
+        mock_call.assert_called_once_with(vim_util,
+            'get_object_properties', None, 'fake_ref', 'VirtualMachine',
+            props)
+        mock_get_vm_ref.assert_called_once_with(self._session,
+            self._instance)
+        self.assertEqual(power_state.SHUTDOWN, info['state'])
+        self.assertEqual(0, info['max_mem'])
+        self.assertEqual(0, info['mem'])
+        self.assertEqual(0, info['num_cpu'])
+        self.assertEqual(0, info['cpu_time'])
 
     def _test_get_datacenter_ref_and_name(self, ds_ref_exists=False):
         instance_ds_ref = mock.Mock()
