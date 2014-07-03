@@ -267,7 +267,9 @@ class IptablesTable(object):
 
         rule_obj = IptablesRule(chain, rule, wrap, top)
         if rule_obj in self.rules:
-            LOG.debug("Skipping duplicate iptables rule addition")
+            LOG.debug("Skipping duplicate iptables rule addition. "
+                      "%(rule)r already in %(rules)r",
+                      {'rule': rule_obj, 'rules': self.rules})
         else:
             self.rules.append(IptablesRule(chain, rule, wrap, top))
             self.dirty = True
