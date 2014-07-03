@@ -300,8 +300,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.compute.driver.resume_state_on_host_boot(mox.IgnoreArg(),
                 instance, mox.IgnoreArg(),
                 'fake-bdm').AndRaise(test.TestingException)
-        self.compute._set_instance_error_state(mox.IgnoreArg(),
-                instance['uuid'])
+        self.compute._set_instance_error_state(mox.IgnoreArg(), instance)
         self.mox.ReplayAll()
         self.compute._init_instance('fake-context', instance)
 
@@ -1518,7 +1517,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertRaises(test.TestingException, do_test)
         self.assertEqual(1, len(quotas.method_calls))
         self.assertEqual(mock.call.rollback(), quotas.method_calls[0])
-        set_error.assert_called_once_with(self.context, instance.uuid)
+        set_error.assert_called_once_with(self.context, instance)
 
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
@@ -1629,8 +1628,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                             instance_uuid=self.instance['uuid']))
         self.compute._cleanup_allocated_networks(self.context, self.instance,
                 self.requested_networks)
-        self.compute._set_instance_error_state(self.context,
-                self.instance['uuid'])
+        self.compute._set_instance_error_state(self.context, self.instance)
         self._instance_action_events()
         self.mox.ReplayAll()
 
@@ -1784,8 +1782,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.requested_networks)
         if set_error:
             self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
-            self.compute._set_instance_error_state(self.context,
-                    self.instance['uuid'])
+            self.compute._set_instance_error_state(self.context, self.instance)
         self._instance_action_events()
         self.mox.ReplayAll()
 
