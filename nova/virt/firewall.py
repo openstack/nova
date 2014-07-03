@@ -24,6 +24,7 @@ from nova import objects
 from nova.objects import security_group as security_group_obj
 from nova.objects import security_group_rule as security_group_rule_obj
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _LI
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova import utils
@@ -442,6 +443,13 @@ class IptablesFirewallDriver(FirewallDriver):
     @utils.synchronized('iptables', external=True)
     def _inner_do_refresh_rules(self, instance, network_info, ipv4_rules,
                                 ipv6_rules):
+        chain_name = self._instance_chain_name(instance)
+        if not self.iptables.ipv4['filter'].has_chain(chain_name):
+            LOG.info(
+                _LI('instance chain %s disappeared during refresh, '
+                    'skipping') % chain_name,
+                instance=instance)
+            return
         self.remove_filters_for_instance(instance)
         self.add_filters_for_instance(instance, network_info, ipv4_rules,
                                       ipv6_rules)
