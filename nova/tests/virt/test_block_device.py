@@ -195,8 +195,6 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         for passthru in test_bdm._proxy_as_attr:
             self.assertEqual(getattr(test_bdm, passthru),
                              getattr(test_bdm._bdm_obj, passthru))
-        for no_pass in set(db_bdm.keys()) - test_bdm._proxy_as_attr:
-            self.assertRaises(AttributeError, getattr, test_bdm, no_pass)
 
         # Make sure that all others raise _invalidType
         for other_name, cls in self.driver_classes.iteritems():
