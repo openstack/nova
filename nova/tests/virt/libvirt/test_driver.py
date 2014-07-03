@@ -67,6 +67,7 @@ from nova.tests.virt.libvirt import fakelibvirt
 from nova.tests.virt import test_driver
 from nova import utils
 from nova import version
+from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
 from nova.virt.disk import api as disk
 from nova.virt import driver
@@ -144,14 +145,6 @@ _fake_NodeDevXml = \
           </capability>
         </capability>
     </device>"""}
-
-
-def mocked_bdm(id, bdm_info):
-    bdm_mock = mock.MagicMock()
-    bdm_mock.__getitem__ = lambda s, k: bdm_info[k]
-    bdm_mock.get = lambda *k, **kw: bdm_info.get(*k, **kw)
-    bdm_mock.id = id
-    return bdm_mock
 
 
 def _concurrency(signal, wait, done, target, is_block_dev=False):
@@ -1216,25 +1209,33 @@ class LibvirtConnTestCase(test.TestCase,
 
         instance_ref = db.instance_create(self.context, self.test_instance)
         conn_info = {'driver_volume_type': 'fake'}
-        info = {'block_device_mapping': [
-                mocked_bdm(1, {'connection_info': conn_info,
-                               'mount_device': '/dev/vdc'}),
-                mocked_bdm(2, {'connection_info': conn_info,
-                               'mount_device': '/dev/vdd'}),
-                ]}
+        info = {'block_device_mapping': driver_block_device.convert_volumes([
+                    fake_block_device.FakeDbBlockDeviceDict(
+                        {'id': 1,
+                         'source_type': 'volume', 'destination_type': 'volume',
+                         'device_name': '/dev/vdc'}),
+                    fake_block_device.FakeDbBlockDeviceDict(
+                        {'id': 2,
+                         'source_type': 'volume', 'destination_type': 'volume',
+                         'device_name': '/dev/vdd'}),
+                ])}
+        info['block_device_mapping'][0]['connection_info'] = conn_info
+        info['block_device_mapping'][1]['connection_info'] = conn_info
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref, info)
-        cfg = conn._get_guest_config(instance_ref, [], {}, disk_info,
+        with mock.patch.object(
+                driver_block_device.DriverVolumeBlockDevice, 'save'):
+            cfg = conn._get_guest_config(instance_ref, [], {}, disk_info,
                                      None, info)
-        self.assertIsInstance(cfg.devices[2],
-                              vconfig.LibvirtConfigGuestDisk)
-        self.assertEqual(cfg.devices[2].target_dev, 'vdc')
-        self.assertIsInstance(cfg.devices[3],
-                              vconfig.LibvirtConfigGuestDisk)
-        self.assertEqual(cfg.devices[3].target_dev, 'vdd')
-        self.assertTrue(info['block_device_mapping'][0].save.called)
-        self.assertTrue(info['block_device_mapping'][1].save.called)
+            self.assertIsInstance(cfg.devices[2],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertEqual(cfg.devices[2].target_dev, 'vdc')
+            self.assertIsInstance(cfg.devices[3],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertEqual(cfg.devices[3].target_dev, 'vdd')
+            self.assertTrue(info['block_device_mapping'][0].save.called)
+            self.assertTrue(info['block_device_mapping'][1].save.called)
 
     def test_get_guest_config_with_configdrive(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -1274,30 +1275,37 @@ class LibvirtConnTestCase(test.TestCase,
         image_meta = {"properties": {"hw_scsi_model": "virtio-scsi"}}
         instance_ref = db.instance_create(self.context, self.test_instance)
         conn_info = {'driver_volume_type': 'fake'}
-        bd_info = {'block_device_mapping': [
-                mocked_bdm(1, {'connection_info': conn_info,
-                               'mount_device': '/dev/sdc',
-                               'disk_bus': 'scsi'}),
-                mocked_bdm(2, {'connection_info': conn_info,
-                               'mount_device': '/dev/sdd',
-                               'disk_bus': 'scsi'}),
-                ]}
+        bd_info = {
+            'block_device_mapping': driver_block_device.convert_volumes([
+                    fake_block_device.FakeDbBlockDeviceDict(
+                        {'id': 1,
+                         'source_type': 'volume', 'destination_type': 'volume',
+                         'device_name': '/dev/sdc', 'disk_bus': 'scsi'}),
+                    fake_block_device.FakeDbBlockDeviceDict(
+                        {'id': 2,
+                         'source_type': 'volume', 'destination_type': 'volume',
+                         'device_name': '/dev/sdd', 'disk_bus': 'scsi'}),
+                ])}
+        bd_info['block_device_mapping'][0]['connection_info'] = conn_info
+        bd_info['block_device_mapping'][1]['connection_info'] = conn_info
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref, bd_info, image_meta)
-        cfg = conn._get_guest_config(instance_ref, [], image_meta, disk_info,
-                                     [], bd_info)
-        self.assertIsInstance(cfg.devices[2],
-                         vconfig.LibvirtConfigGuestDisk)
-        self.assertEqual(cfg.devices[2].target_dev, 'sdc')
-        self.assertEqual(cfg.devices[2].target_bus, 'scsi')
-        self.assertIsInstance(cfg.devices[3],
-                         vconfig.LibvirtConfigGuestDisk)
-        self.assertEqual(cfg.devices[3].target_dev, 'sdd')
-        self.assertEqual(cfg.devices[3].target_bus, 'scsi')
-        self.assertIsInstance(cfg.devices[4],
-                         vconfig.LibvirtConfigGuestController)
-        self.assertEqual(cfg.devices[4].model, 'virtio-scsi')
+        with mock.patch.object(
+                driver_block_device.DriverVolumeBlockDevice, 'save'):
+            cfg = conn._get_guest_config(instance_ref, [], image_meta,
+                    disk_info, [], bd_info)
+            self.assertIsInstance(cfg.devices[2],
+                             vconfig.LibvirtConfigGuestDisk)
+            self.assertEqual(cfg.devices[2].target_dev, 'sdc')
+            self.assertEqual(cfg.devices[2].target_bus, 'scsi')
+            self.assertIsInstance(cfg.devices[3],
+                             vconfig.LibvirtConfigGuestDisk)
+            self.assertEqual(cfg.devices[3].target_dev, 'sdd')
+            self.assertEqual(cfg.devices[3].target_bus, 'scsi')
+            self.assertIsInstance(cfg.devices[4],
+                             vconfig.LibvirtConfigGuestController)
+            self.assertEqual(cfg.devices[4].model, 'virtio-scsi')
 
     def test_get_guest_config_with_vnc(self):
         self.flags(vnc_enabled=True)
@@ -7840,22 +7848,28 @@ Active:          8381604 kB
         self.stubs.Set(conn,
                        '_lookup_by_name',
                        fake_lookup_name)
-        block_device_info = {'block_device_mapping': [
-                mocked_bdm(1, {'guest_format': None,
+        block_device_info = {'block_device_mapping':
+                driver_block_device.convert_volumes([
+                    fake_block_device.FakeDbBlockDeviceDict(
+                              {'id': 1, 'guest_format': None,
                                'boot_index': 0,
-                               'mount_device': '/dev/vda',
-                               'connection_info':
-                                   {'driver_volume_type': 'iscsi'},
+                               'source_type': 'volume',
+                               'destination_type': 'volume',
+                               'device_name': '/dev/vda',
                                'disk_bus': 'virtio',
                                'device_type': 'disk',
                                'delete_on_termination': False}),
-                    ]}
-        conn.post_live_migration_at_destination(self.context, instance,
-                                        network_info, True,
-                                        block_device_info=block_device_info)
-        self.assertIn('fake', self.resultXML)
-        self.assertTrue(
-            block_device_info['block_device_mapping'][0].save.called)
+                    ])}
+        block_device_info['block_device_mapping'][0]['connection_info'] = (
+                {'driver_volume_type': 'iscsi'})
+        with mock.patch.object(
+                driver_block_device.DriverVolumeBlockDevice, 'save'):
+            conn.post_live_migration_at_destination(
+                    self.context, instance, network_info, True,
+                    block_device_info=block_device_info)
+            self.assertTrue('fake' in self.resultXML)
+            self.assertTrue(
+                    block_device_info['block_device_mapping'][0].save.called)
 
     def test_create_propagates_exceptions(self):
         self.flags(virt_type='lxc', group='libvirt')
