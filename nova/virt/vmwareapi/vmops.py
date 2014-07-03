@@ -571,11 +571,7 @@ class VMwareVMOps(object):
         LOG.debug("Reconfiguring VM instance %(instance_name)s to attach "
                   "cdrom %(file_path)s",
                   {'instance_name': instance_name, 'file_path': file_path})
-        reconfig_task = self._session._call_method(
-                                        self._session._get_vim(),
-                                        "ReconfigVM_Task", vm_ref,
-                                        spec=cdrom_attach_config_spec)
-        self._session._wait_for_task(reconfig_task)
+        vm_util.reconfigure_vm(self._session, vm_ref, cdrom_attach_config_spec)
         LOG.debug("Reconfigured VM instance %(instance_name)s to attach "
                   "cdrom %(file_path)s",
                   {'instance_name': instance_name, 'file_path': file_path})
@@ -1164,11 +1160,7 @@ class VMwareVMOps(object):
             client_factory = self._session._get_vim().client.factory
             vm_resize_spec = vm_util.get_vm_resize_spec(client_factory,
                                                         instance)
-            reconfig_task = self._session._call_method(
-                                            self._session._get_vim(),
-                                            "ReconfigVM_Task", vm_ref,
-                                            spec=vm_resize_spec)
-            self._session._wait_for_task(reconfig_task)
+            vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
         # 4. Start VM
         if power_on:
@@ -1316,10 +1308,7 @@ class VMwareVMOps(object):
 
         LOG.debug("Reconfiguring VM instance to set the machine id",
                   instance=instance)
-        reconfig_task = self._session._call_method(self._session._get_vim(),
-                           "ReconfigVM_Task", vm_ref,
-                           spec=machine_id_change_spec)
-        self._session._wait_for_task(reconfig_task)
+        vm_util.reconfigure_vm(self._session, vm_ref, machine_id_change_spec)
         LOG.debug("Reconfigured VM instance to set the machine id",
                   instance=instance)
 
@@ -1333,10 +1322,7 @@ class VMwareVMOps(object):
         LOG.debug("Reconfiguring VM instance to enable vnc on "
                   "port - %(port)s", {'port': port},
                   instance=instance)
-        reconfig_task = self._session._call_method(self._session._get_vim(),
-                           "ReconfigVM_Task", vm_ref,
-                           spec=vnc_config_spec)
-        self._session._wait_for_task(reconfig_task)
+        vm_util.reconfigure_vm(self._session, vm_ref, vnc_config_spec)
         LOG.debug("Reconfigured VM instance to enable vnc on "
                   "port - %(port)s", {'port': port},
                   instance=instance)

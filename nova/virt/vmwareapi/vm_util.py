@@ -1393,6 +1393,14 @@ def copy_virtual_disk(session, dc_ref, source, dest, copy_spec=None):
               {'source': source, 'dest': dest})
 
 
+def reconfigure_vm(session, vm_ref, config_spec):
+    """Reconfigure a VM according to the config spec."""
+    reconfig_task = session._call_method(session._get_vim(),
+                                         "ReconfigVM_Task", vm_ref,
+                                         spec=config_spec)
+    session._wait_for_task(reconfig_task)
+
+
 def clone_vmref_for_instance(session, instance, vm_ref, host_ref, ds_ref,
                                 vmfolder_ref):
     """Clone VM and link the cloned VM to the instance.
@@ -1445,9 +1453,7 @@ def disassociate_vmref_from_instance(session, instance, vm_ref=None,
     reconfig_spec.instanceUuid = ''
     LOG.debug("Disassociating VM from instance %s", instance['uuid'],
               instance=instance)
-    reconfig_task = session._call_method(session._get_vim(), "ReconfigVM_Task",
-                                         vm_ref, spec=reconfig_spec)
-    session._wait_for_task(reconfig_task)
+    reconfigure_vm(session, vm_ref, reconfig_spec)
     LOG.debug("Disassociated VM from instance %s", instance['uuid'],
               instance=instance)
     # Invalidate the cache, so that it is refetched the next time
@@ -1477,9 +1483,7 @@ def associate_vmref_for_instance(session, instance, vm_ref=None,
     reconfig_spec.instanceUuid = instance['uuid']
     LOG.debug("Associating VM to instance %s", instance['uuid'],
               instance=instance)
-    reconfig_task = session._call_method(session._get_vim(), "ReconfigVM_Task",
-                                         vm_ref, spec=reconfig_spec)
-    session._wait_for_task(reconfig_task)
+    reconfigure_vm(session, vm_ref, reconfig_spec)
     LOG.debug("Associated VM to instance %s", instance['uuid'],
               instance=instance)
     # Invalidate the cache, so that it is refetched the next time
