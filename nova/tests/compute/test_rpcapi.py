@@ -641,11 +641,19 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_run_instance(self):
         self._test_compute_api('run_instance', 'cast',
+                instance=self.fake_instance_obj, host='fake_host',
+                request_spec='fake_spec', filter_properties={},
+                requested_networks='networks', injected_files='files',
+                admin_password='pw', is_first_time=True, node='node',
+                legacy_bdm_in_spec=False, version='3.27')
+
+        self.flags(compute='icehouse-compat', group='upgrade_levels')
+        self._test_compute_api('run_instance', 'cast',
                 instance=self.fake_instance, host='fake_host',
                 request_spec='fake_spec', filter_properties={},
                 requested_networks='networks', injected_files='files',
                 admin_password='pw', is_first_time=True, node='node',
-                legacy_bdm_in_spec=False)
+                legacy_bdm_in_spec=False, version='3.0')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
