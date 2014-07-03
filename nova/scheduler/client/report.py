@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 from nova import conductor
 from nova import exception
 from nova.i18n import _LI
@@ -21,8 +22,8 @@ from nova.openstack.common import log as logging
 LOG = logging.getLogger(__name__)
 
 
-class SchedulerClient(object):
-    """Client library for placing calls to the scheduler."""
+class SchedulerReportClient(object):
+    """Client class for updating the scheduler."""
 
     def __init__(self):
         self.conductor_api = conductor.API()

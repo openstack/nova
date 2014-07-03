@@ -20,7 +20,7 @@ from nova import exception
 from nova.i18n import _
 from nova import image
 from nova.openstack.common import log as logging
-from nova.scheduler import rpcapi as scheduler_rpcapi
+from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils
 from nova import servicegroup
 
@@ -48,7 +48,7 @@ class LiveMigrationTask(object):
         self.migrate_data = None
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.servicegroup_api = servicegroup.API()
-        self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
+        self.scheduler_client = scheduler_client.SchedulerClient()
         self.image_api = image.API()
 
     def execute(self):
@@ -156,7 +156,7 @@ class LiveMigrationTask(object):
         while host is None:
             self._check_not_over_max_retries(attempted_hosts)
             filter_properties = {'ignore_hosts': attempted_hosts}
-            host = self.scheduler_rpcapi.select_destinations(self.context,
+            host = self.scheduler_client.select_destinations(self.context,
                             request_spec, filter_properties)[0]['host']
             try:
                 self._check_compatible_with_source_hypervisor(host)
