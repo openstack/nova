@@ -452,16 +452,11 @@ class DbQuotaDriver(object):
                  (user_quotas[key] >= 0 and user_quotas[key] < val)]
         if overs:
             headroom = {}
-            # Check project_quotas:
-            for key in quotas:
-                if quotas[key] >= 0 and quotas[key] < val:
-                    headroom[key] = quotas[key]
-            # Check user quotas:
-            for key in user_quotas:
-                if (user_quotas[key] >= 0 and user_quotas[key] < val and
-                        headroom.get(key) > user_quotas[key]):
-                    headroom[key] = user_quotas[key]
-
+            for key in overs:
+                headroom[key] = min(
+                    val for val in (quotas.get(key), project_quotas.get(key))
+                    if val is not None
+                )
             raise exception.OverQuota(overs=sorted(overs), quotas=quotas,
                                       usages={}, headroom=headroom)
 

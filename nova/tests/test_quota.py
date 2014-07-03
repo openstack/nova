@@ -1947,6 +1947,15 @@ class DbQuotaDriverTestCase(test.TestCase):
                           quota.QUOTAS._resources,
                           dict(metadata_items=129))
 
+    def test_limit_check_project_overs(self):
+        self._stub_get_project_quotas()
+        self.assertRaises(exception.OverQuota,
+                          self.driver.limit_check,
+                          FakeContext('test_project', 'test_class'),
+                          quota.QUOTAS._resources,
+                          dict(injected_file_content_bytes=10241,
+                               injected_file_path_bytes=256))
+
     def test_limit_check_unlimited(self):
         self.flags(quota_metadata_items=-1)
         self._stub_get_project_quotas()
