@@ -1061,7 +1061,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 self._test_check_can_live_migrate_destination,
                 do_raise=True)
 
-    def test_prepare_for_instance_event(self):
+    @mock.patch('nova.compute.manager.InstanceEvents._lock_name')
+    def test_prepare_for_instance_event(self, lock_name_mock):
         inst_obj = objects.Instance(uuid='foo')
         result = self.compute.instance_events.prepare_for_instance_event(
             inst_obj, 'test-event')
@@ -1072,6 +1073,42 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             result,
             self.compute.instance_events._events['foo']['test-event'])
         self.assertTrue(hasattr(result, 'send'))
+        lock_name_mock.assert_called_once_with(inst_obj)
+
+    @mock.patch('nova.compute.manager.InstanceEvents._lock_name')
+    def test_pop_instance_event(self, lock_name_mock):
+        event = eventlet_event.Event()
+        self.compute.instance_events._events = {
+            'foo': {
+                'test-event': event,
+                }
+            }
+        inst_obj = objects.Instance(uuid='foo')
+        event_obj = objects.InstanceExternalEvent(name='test-event',
+                                                  tag=None)
+        result = self.compute.instance_events.pop_instance_event(inst_obj,
+                                                                 event_obj)
+        self.assertEqual(result, event)
+        lock_name_mock.assert_called_once_with(inst_obj)
+
+    @mock.patch('nova.compute.manager.InstanceEvents._lock_name')
+    def test_clear_events_for_instance(self, lock_name_mock):
+        event = eventlet_event.Event()
+        self.compute.instance_events._events = {
+            'foo': {
+                'test-event': event,
+                }
+            }
+        inst_obj = objects.Instance(uuid='foo')
+        result = self.compute.instance_events.clear_events_for_instance(
+            inst_obj)
+        self.assertEqual(result, {'test-event': event})
+        lock_name_mock.assert_called_once_with(inst_obj)
+
+    def test_instance_events_lock_name(self):
+        inst_obj = objects.Instance(uuid='foo')
+        result = self.compute.instance_events._lock_name(inst_obj)
+        self.assertEqual(result, 'foo-events')
 
     def test_prepare_for_instance_event_again(self):
         inst_obj = objects.Instance(uuid='foo')
