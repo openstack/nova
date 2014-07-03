@@ -1238,7 +1238,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         inst_from_db.return_value = inst_obj
         with mock.patch.object(self.compute, 'volume_api'):
             self.compute.remove_volume_connection(self.context, 'vol',
-                                                  {'uuid': 'fake-inst'})
+                                                  inst_obj)
         detach.assert_called_once_with(self.context, inst_obj, bdm)
 
     def test_rescue(self):

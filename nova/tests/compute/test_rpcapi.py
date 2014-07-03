@@ -567,7 +567,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_remove_volume_connection(self):
         self._test_compute_api('remove_volume_connection', 'call',
-                instance=self.fake_instance, volume_id='id', host='host')
+                instance=self.fake_instance, volume_id='id', host='host',
+                version='3.30')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')

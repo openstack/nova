@@ -552,7 +552,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.29')
+    target = messaging.Target(version='3.30')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -4425,13 +4425,19 @@ class ComputeManager(manager.Manager):
         # NOTE(vish): We don't want to actually mark the volume
         #             detached, or delete the bdm, just remove the
         #             connection from this host.
+
+        # NOTE(PhilDay): Can't use object_compat decorator here as
+        #                instance is not the second parameter
+        if isinstance(instance, dict):
+            metas = ['metadata', 'system_metadata']
+            instance = objects.Instance._from_db_object(
+                    context, objects.Instance(), instance,
+                    expected_attrs=metas)
+            instance._context = context
         try:
             bdm = objects.BlockDeviceMapping.get_by_volume_id(
                     context, volume_id)
-            inst_obj = objects.Instance._from_db_object(context,
-                                                        objects.Instance(),
-                                                        instance)
-            self._detach_volume(context, inst_obj, bdm)
+            self._detach_volume(context, instance, bdm)
             connector = self.driver.get_volume_connector(instance)
             self.volume_api.terminate_connection(context, volume_id, connector)
         except exception.NotFound:
