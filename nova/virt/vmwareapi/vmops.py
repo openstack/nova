@@ -34,7 +34,7 @@ from nova import context as nova_context
 from nova import exception
 from nova.network import model as network_model
 from nova.openstack.common import excutils
-from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _, _LE
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
@@ -453,27 +453,66 @@ class VMwareVMOps(object):
                     root_vmdk_name = "%s.%s.vmdk" % (upload_name, root_gb)
                     root_vmdk_path = str(datastore.build_path(
                             upload_folder, root_vmdk_name))
-                    if not self._check_if_folder_file_exists(
-                            ds_browser,
-                            datastore.ref, datastore.name,
-                            upload_folder,
-                            upload_name + ".%s.vmdk" % root_gb):
-                        LOG.debug("Copying root disk of size %sGb", root_gb)
-                        try:
+
+                    # Ensure only a single thread extends the image at once.
+                    # We do this by taking a lock on the name of the extended
+                    # image. This allows multiple threads to create resized
+                    # copies simultaneously, as long as they are different
+                    # sizes. Threads attempting to create the same resized copy
+                    # will be serialized, with only the first actually creating
+                    # the copy.
+                    #
+                    # Note that the object is in a per-nova cache directory,
+                    # so inter-nova locking is not a concern. Consequently we
+                    # can safely use simple thread locks.
+
+                    with lockutils.lock(root_vmdk_path,
+                                        lock_file_prefix='nova-vmware-image'):
+                        if not self._check_if_folder_file_exists(
+                                ds_browser,
+                                datastore.ref, datastore.name,
+                                upload_folder,
+                                root_vmdk_name):
+                            LOG.debug("Copying root disk of size %sGb",
+                                      root_gb)
+
                             copy_spec = self.get_copy_virtual_disk_spec(
                                 client_factory, adapter_type, disk_type)
-                            vm_util.copy_virtual_disk(self._session,
-                                                      dc_info.ref,
-                                                      uploaded_file_path,
-                                                      root_vmdk_path,
-                                                      copy_spec)
-                        except Exception as e:
-                            LOG.warning(_("Root disk file creation "
-                                          "failed - %s"), e)
-                        if root_gb_in_kb > vmdk_file_size_in_kb:
-                            self._extend_virtual_disk(instance, root_gb_in_kb,
-                                                      root_vmdk_path,
-                                                      dc_info.ref)
+
+                            # Create a copy of the base image, ensuring we
+                            # clean up on failure
+                            try:
+                                vm_util.copy_virtual_disk(self._session,
+                                                          dc_info.ref,
+                                                          uploaded_file_path,
+                                                          root_vmdk_path,
+                                                          copy_spec)
+                            except Exception as e:
+                                with excutils.save_and_reraise_exception():
+                                    LOG.error(_LE('Failed to copy cached '
+                                                  'image %(source)s to '
+                                                  '%(dest)s for resize: '
+                                                  '%(error)s'),
+                                              {'source': uploaded_file_path,
+                                               'dest': root_vmdk_path,
+                                               'error': e.message})
+                                    try:
+                                        ds_util.file_delete(self._session,
+                                                            root_vmdk_path,
+                                                            dc_info.ref)
+                                    except error_util.FileNotFoundException:
+                                        # File was never created: cleanup not
+                                        # required
+                                        pass
+
+                            # Resize the copy to the appropriate size. No need
+                            # for cleanup up here, as _extend_virtual_disk
+                            # already does it
+                            if root_gb_in_kb > vmdk_file_size_in_kb:
+                                self._extend_virtual_disk(instance,
+                                                          root_gb_in_kb,
+                                                          root_vmdk_path,
+                                                          dc_info.ref)
 
             # Attach the root disk to the VM.
             if root_vmdk_path:
