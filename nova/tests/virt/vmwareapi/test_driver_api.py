@@ -579,6 +579,12 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertEqual(info["mem"], mem_kib)
         self.assertEqual(info["num_cpu"], self.type_data['vcpus'])
 
+    def test_instance_exists(self):
+        self._create_vm()
+        self.assertTrue(self.conn.instance_exists(self.instance))
+        invalid_instance = dict(uuid='foo', name='bar', node=self.node_name)
+        self.assertFalse(self.conn.instance_exists(invalid_instance))
+
     def test_list_instances(self):
         instances = self.conn.list_instances()
         self.assertEqual(len(instances), 0)

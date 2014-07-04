@@ -1456,6 +1456,13 @@ class VMwareVMOps(object):
                 break
         return lst_vm_names
 
+    def instance_exists(self, instance):
+        try:
+            vm_util.get_vm_ref(self._session, instance)
+            return True
+        except exception.InstanceNotFound:
+            return False
+
 
 class VMwareVCVMOps(VMwareVMOps):
     """Management class for VM-related tasks.
