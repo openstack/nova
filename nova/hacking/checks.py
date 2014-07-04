@@ -93,7 +93,7 @@ def _get_virt_name(regex, data):
     driver = m.group(1)
     # Ignore things we mis-detect as virt drivers in the regex
     if driver in ["test_virt_drivers", "driver", "firewall",
-                  "disk", "api", "imagecache", "cpu"]:
+                  "disk", "api", "imagecache", "cpu", "hardware"]:
         return None
     # TODO(berrange): remove once bugs 1261826 and 126182 are
     # fixed, or baremetal driver is removed, which is first.

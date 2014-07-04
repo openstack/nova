@@ -86,6 +86,7 @@ from nova.virt.disk import api as disk
 from nova.virt import driver
 from nova.virt import event as virtevent
 from nova.virt import firewall
+from nova.virt import hardware
 from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import firewall as libvirt_firewall
@@ -2882,19 +2883,19 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return guestcpu
 
-    def _get_guest_cpu_config(self):
+    def _get_guest_cpu_model_config(self):
         mode = CONF.libvirt.cpu_mode
         model = CONF.libvirt.cpu_model
 
-        if mode is None:
-            if ((CONF.libvirt.virt_type == "kvm" or
-                 CONF.libvirt.virt_type == "qemu")):
+        if (CONF.libvirt.virt_type == "kvm" or
+            CONF.libvirt.virt_type == "qemu"):
+            if mode is None:
                 mode = "host-model"
-            else:
-                mode = "none"
-
-        if mode == "none":
-            return None
+            if mode == "none":
+                return vconfig.LibvirtConfigGuestCPU()
+        else:
+            if mode is None or mode == "none":
+                return None
 
         if ((CONF.libvirt.virt_type != "kvm" and
              CONF.libvirt.virt_type != "qemu")):
@@ -2931,6 +2932,21 @@ class LibvirtDriver(driver.ComputeDriver):
             msg = _("Passthrough of the host CPU was requested but "
                     "this libvirt version does not support this feature")
             raise exception.NovaException(msg)
+
+        return cpu
+
+    def _get_guest_cpu_config(self, flavor, image):
+        cpu = self._get_guest_cpu_model_config()
+
+        if cpu is None:
+            return None
+
+        topology = hardware.VirtCPUTopology.get_best_config(flavor,
+                                                            image)
+
+        cpu.sockets = topology.sockets
+        cpu.cores = topology.cores
+        cpu.threads = topology.threads
 
         return cpu
 
@@ -3104,7 +3120,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 if scope[1] in quota_items:
                     setattr(guest, scope[1], int(value))
 
-        guest.cpu = self._get_guest_cpu_config()
+        guest.cpu = self._get_guest_cpu_config(flavor, image_meta)
 
         if 'root' in disk_mapping:
             root_device_name = block_device.prepend_dev(
