@@ -29,6 +29,7 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import units
 from nova import utils
+from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import vim_util
@@ -93,7 +94,7 @@ VNC_CONFIG_KEY = 'config.extraConfig["RemoteDisplay.vnc.port"]'
 
 
 def get_vm_create_spec(client_factory, instance, name, data_store_name,
-                       vif_infos, os_type="otherGuest"):
+                       vif_infos, os_type=constants.DEFAULT_OS_TYPE):
     """Builds the VM Create spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
     config_spec.name = name
@@ -160,7 +161,8 @@ def get_vm_resize_spec(client_factory, instance):
     return resize_spec
 
 
-def create_controller_spec(client_factory, key, adapter_type="lsiLogic"):
+def create_controller_spec(client_factory, key,
+                           adapter_type=constants.DEFAULT_ADAPTER_TYPE):
     """Builds a Config Spec for the LSI or Bus Logic Controller's addition
     which acts as the controller for the virtual hard disk to be attached
     to the VM.
@@ -259,7 +261,7 @@ def create_network_spec(client_factory, vif_info):
 
 
 def get_vmdk_attach_config_spec(client_factory,
-                                disk_type="preallocated",
+                                disk_type=constants.DEFAULT_DISK_TYPE,
                                 file_path=None,
                                 disk_size=None,
                                 linked_clone=False,
@@ -357,9 +359,9 @@ def get_vmdk_path_and_adapter_type(hardware_devices, uuid=None):
                     if getattr(device.backing, 'eagerlyScrub', False):
                         disk_type = "eagerZeroedThick"
                     else:
-                        disk_type = "preallocated"
+                        disk_type = constants.DEFAULT_DISK_TYPE
         elif device.__class__.__name__ == "VirtualLsiLogicController":
-            adapter_type_dict[device.key] = "lsiLogic"
+            adapter_type_dict[device.key] = constants.DEFAULT_ADAPTER_TYPE
         elif device.__class__.__name__ == "VirtualBusLogicController":
             adapter_type_dict[device.key] = "busLogic"
         elif device.__class__.__name__ == "VirtualIDEController":
@@ -420,7 +422,8 @@ def allocate_controller_key_and_unit_number(client_factory, devices,
     if adapter_type == 'ide':
         ide_keys = [dev.key for dev in devices if _is_ide_controller(dev)]
         ret = _find_controller_slot(ide_keys, taken, 2)
-    elif adapter_type in ['lsiLogic', 'lsiLogicsas', 'busLogic']:
+    elif adapter_type in [constants.DEFAULT_ADAPTER_TYPE, 'lsiLogicsas',
+                          'busLogic']:
         scsi_keys = [dev.key for dev in devices if _is_scsi_controller(dev)]
         ret = _find_controller_slot(scsi_keys, taken, 16)
     if ret:
@@ -446,8 +449,9 @@ def get_rdm_disk(hardware_devices, uuid):
             return device
 
 
-def get_copy_virtual_disk_spec(client_factory, adapter_type="lsiLogic",
-                               disk_type="preallocated"):
+def get_copy_virtual_disk_spec(client_factory,
+                               adapter_type=constants.DEFAULT_ADAPTER_TYPE,
+                               disk_type=constants.DEFAULT_DISK_TYPE):
     """Builds the Virtual Disk copy spec."""
     dest_spec = client_factory.create('ns0:VirtualDiskSpec')
     dest_spec.adapterType = get_vmdk_adapter_type(adapter_type)
@@ -455,8 +459,9 @@ def get_copy_virtual_disk_spec(client_factory, adapter_type="lsiLogic",
     return dest_spec
 
 
-def get_vmdk_create_spec(client_factory, size_in_kb, adapter_type="lsiLogic",
-                         disk_type="preallocated"):
+def get_vmdk_create_spec(client_factory, size_in_kb,
+                         adapter_type=constants.DEFAULT_ADAPTER_TYPE,
+                         disk_type=constants.DEFAULT_DISK_TYPE):
     """Builds the virtual disk create spec."""
     create_vmdk_spec = client_factory.create('ns0:FileBackedVirtualDiskSpec')
     create_vmdk_spec.adapterType = get_vmdk_adapter_type(adapter_type)
@@ -499,7 +504,7 @@ def create_virtual_cdrom_spec(client_factory,
 
 
 def create_virtual_disk_spec(client_factory, controller_key,
-                             disk_type="preallocated",
+                             disk_type=constants.DEFAULT_DISK_TYPE,
                              file_path=None,
                              disk_size=None,
                              linked_clone=False,
@@ -1314,7 +1319,7 @@ def get_vmdk_adapter_type(adapter_type):
     types.
     """
     if adapter_type == "lsiLogicsas":
-        vmdk_adapter_type = "lsiLogic"
+        vmdk_adapter_type = constants.DEFAULT_ADAPTER_TYPE
     else:
         vmdk_adapter_type = adapter_type
     return vmdk_adapter_type

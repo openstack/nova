@@ -32,7 +32,6 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context as nova_context
 from nova import exception
-from nova.network import model as network_model
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _, _LE
 from nova.openstack.common import lockutils
@@ -43,6 +42,7 @@ from nova.openstack.common import uuidutils
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import driver
+from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import imagecache
@@ -218,14 +218,15 @@ class VMwareVMOps(object):
 
             image_size, image_properties = _image_info
             vmdk_file_size_in_kb = int(image_size) / 1024
-            os_type = image_properties.get("vmware_ostype", "otherGuest")
+            os_type = image_properties.get("vmware_ostype",
+                                           constants.DEFAULT_OS_TYPE)
             adapter_type = image_properties.get("vmware_adaptertype",
-                                                "lsiLogic")
+                                                constants.DEFAULT_ADAPTER_TYPE)
             disk_type = image_properties.get("vmware_disktype",
-                                             "preallocated")
+                                             constants.DEFAULT_DISK_TYPE)
             # Get the network card type from the image properties.
             vif_model = image_properties.get("hw_vif_model",
-                                             network_model.VIF_MODEL_E1000)
+                                             constants.DEFAULT_VIF_MODEL)
 
             # Fetch the image_linked_clone data here. It is retrieved
             # with the above network based API call. To retrieve it
@@ -800,7 +801,7 @@ class VMwareVMOps(object):
                 image_id,
                 instance,
                 os_type=os_type,
-                disk_type="preallocated",
+                disk_type=constants.DEFAULT_DISK_TYPE,
                 adapter_type=adapter_type,
                 image_version=1,
                 host=self._session._host_ip,

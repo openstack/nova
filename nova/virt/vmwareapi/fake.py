@@ -28,6 +28,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import units
 from nova.openstack.common import uuidutils
+from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import error_util
 
 _CLASSES = ['Datacenter', 'Datastore', 'ResourcePool', 'VirtualMachine',
@@ -383,7 +384,8 @@ class VirtualMachine(ManagedObject):
         self.set("name", kwargs.get("name", 'test-vm'))
         self.set("runtime.connectionState",
                  kwargs.get("conn_state", "connected"))
-        self.set("summary.config.guestId", kwargs.get("guest", "otherGuest"))
+        self.set("summary.config.guestId",
+                 kwargs.get("guest", constants.DEFAULT_OS_TYPE))
         ds_do = kwargs.get("ds", None)
         self.set("datastore", _convert_to_array_of_mor(ds_do))
         self.set("summary.guest.toolsStatus", kwargs.get("toolsstatus",
@@ -956,8 +958,8 @@ def fake_upload_image(context, image, instance, **kwargs):
 
 def fake_get_vmdk_size_and_properties(context, image_id, instance):
     """Fakes the file size and properties fetch for the image file."""
-    props = {"vmware_ostype": "otherGuest",
-            "vmware_adaptertype": "lsiLogic"}
+    props = {"vmware_ostype": constants.DEFAULT_OS_TYPE,
+             "vmware_adaptertype": constants.DEFAULT_ADAPTER_TYPE}
     return _FAKE_FILE_SIZE, props
 
 
