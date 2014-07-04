@@ -906,7 +906,7 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def set_admin_password(self, context, instance, new_pass=None):
+    def set_admin_password(self, instance, new_pass):
         """Set the root password on the specified instance.
 
         :param instance: nova.objects.instance.Instance
