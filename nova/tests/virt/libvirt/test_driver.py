@@ -1947,6 +1947,51 @@ class LibvirtConnTestCase(test.TestCase):
                               [],
                               image_meta, disk_info)
 
+    def test_get_guest_config_with_cpu_quota(self):
+        self.flags(virt_type='kvm', group='libvirt')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        fake_flavor = flavor_obj.Flavor.get_by_id(
+                                 self.context,
+                                 self.test_instance['instance_type_id'])
+        fake_flavor.extra_specs = {'quota:cpu_shares': '10000',
+                                   'quota:cpu_period': '20000'}
+
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        with mock.patch.object(flavor_obj.Flavor, 'get_by_id',
+                               return_value=fake_flavor):
+            cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+
+            self.assertEqual(10000, cfg.cpu_shares)
+            self.assertEqual(20000, cfg.cpu_period)
+
+    def test_get_guest_config_with_bogus_cpu_quota(self):
+        self.flags(virt_type='kvm', group='libvirt')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        fake_flavor = flavor_obj.Flavor.get_by_id(
+                                 self.context,
+                                 self.test_instance['instance_type_id'])
+        fake_flavor.extra_specs = {'quota:cpu_shares': 'fishfood',
+                                   'quota:cpu_period': '20000'}
+
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        with mock.patch.object(flavor_obj.Flavor, 'get_by_id',
+                               return_value=fake_flavor):
+            self.assertRaises(ValueError,
+                              conn._get_guest_config,
+                              instance_ref, [], {}, disk_info)
+
     def _create_fake_service_compute(self):
         service_info = {
             'host': 'fake',
