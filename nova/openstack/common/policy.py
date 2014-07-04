@@ -283,10 +283,6 @@ class Enforcer(object):
                 from the expression.
         """
 
-        # NOTE(flaper87): Not logging target or creds to avoid
-        # potential security issues.
-        LOG.debug("Rule %s will be now enforced" % rule)
-
         self.load_rules()
 
         # Allow the rule to be a Check tree
