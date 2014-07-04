@@ -64,10 +64,10 @@ class VMUtils(object):
 
     # These constants can be overridden by inherited classes
     _PHYS_DISK_RES_SUB_TYPE = 'Microsoft Physical Disk Drive'
-    _DISK_RES_SUB_TYPE = 'Microsoft Synthetic Disk Drive'
-    _DVD_RES_SUB_TYPE = 'Microsoft Synthetic DVD Drive'
-    _IDE_DISK_RES_SUB_TYPE = 'Microsoft Virtual Hard Disk'
-    _IDE_DVD_RES_SUB_TYPE = 'Microsoft Virtual CD/DVD Disk'
+    _DISK_DRIVE_RES_SUB_TYPE = 'Microsoft Synthetic Disk Drive'
+    _DVD_DRIVE_RES_SUB_TYPE = 'Microsoft Synthetic DVD Drive'
+    _HARD_DISK_RES_SUB_TYPE = 'Microsoft Virtual Hard Disk'
+    _DVD_DISK_RES_SUB_TYPE = 'Microsoft Virtual CD/DVD Disk'
     _IDE_CTRL_RES_SUB_TYPE = 'Microsoft Emulated IDE Controller'
     _SCSI_CTRL_RES_SUB_TYPE = 'Microsoft Synthetic SCSI Controller'
     _SERIAL_PORT_RES_SUB_TYPE = 'Microsoft Serial Port'
@@ -292,7 +292,6 @@ class VMUtils(object):
 
     def get_vm_scsi_controller(self, vm_name):
         vm = self._lookup_vm_check(vm_name)
-
         vmsettings = vm.associators(
             wmi_result_class=self._VIRTUAL_SYSTEM_SETTING_DATA_CLASS)
         rasds = vmsettings[0].associators(
@@ -360,31 +359,32 @@ class VMUtils(object):
         return new_obj
 
     def attach_ide_drive(self, vm_name, path, ctrller_addr, drive_addr,
-                         drive_type=constants.IDE_DISK):
-        """Create an IDE drive and attach it to the vm."""
-
+                         drive_type=constants.DISK):
         vm = self._lookup_vm_check(vm_name)
-
         ctrller_path = self._get_vm_ide_controller(vm, ctrller_addr)
+        self._attach_drive(vm, path, ctrller_path, drive_addr, drive_type)
 
-        if drive_type == constants.IDE_DISK:
-            res_sub_type = self._DISK_RES_SUB_TYPE
-        elif drive_type == constants.IDE_DVD:
-            res_sub_type = self._DVD_RES_SUB_TYPE
+    def _attach_drive(self, vm, path, ctrller_path, drive_addr, drive_type):
+        """Create a drive and attach it to the vm."""
+
+        if drive_type == constants.DISK:
+            res_sub_type = self._DISK_DRIVE_RES_SUB_TYPE
+        elif drive_type == constants.DVD:
+            res_sub_type = self._DVD_DRIVE_RES_SUB_TYPE
 
         drive = self._get_new_resource_setting_data(res_sub_type)
 
-        # Set the IDE ctrller as parent.
+        # Set the ctrller as parent.
         drive.Parent = ctrller_path
         drive.Address = drive_addr
         # Add the cloned disk drive object to the vm.
         new_resources = self._add_virt_resource(drive, vm.path_())
         drive_path = new_resources[0]
 
-        if drive_type == constants.IDE_DISK:
-            res_sub_type = self._IDE_DISK_RES_SUB_TYPE
-        elif drive_type == constants.IDE_DVD:
-            res_sub_type = self._IDE_DVD_RES_SUB_TYPE
+        if drive_type == constants.DISK:
+            res_sub_type = self._HARD_DISK_RES_SUB_TYPE
+        elif drive_type == constants.DVD:
+            res_sub_type = self._DVD_DISK_RES_SUB_TYPE
 
         res = self._get_new_resource_setting_data(res_sub_type)
         # Set the new drive as the parent.
@@ -526,8 +526,8 @@ class VMUtils(object):
             wmi_result_class=self._STORAGE_ALLOC_SETTING_DATA_CLASS)
         disk_resources = [r for r in rasds if
                           r.ResourceSubType in
-                          [self._IDE_DISK_RES_SUB_TYPE,
-                           self._IDE_DVD_RES_SUB_TYPE]]
+                          [self._HARD_DISK_RES_SUB_TYPE,
+                           self._DVD_DISK_RES_SUB_TYPE]]
 
         if (self._RESOURCE_ALLOC_SETTING_DATA_CLASS !=
                 self._STORAGE_ALLOC_SETTING_DATA_CLASS):

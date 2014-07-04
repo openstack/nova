@@ -294,7 +294,7 @@ class VMOps(object):
                                            root_vhd_path,
                                            0,
                                            ctrl_disk_addr,
-                                           constants.IDE_DISK)
+                                           constants.DISK)
             ctrl_disk_addr += 1
 
         if eph_vhd_path:
@@ -302,7 +302,7 @@ class VMOps(object):
                                            eph_vhd_path,
                                            0,
                                            ctrl_disk_addr,
-                                           constants.IDE_DISK)
+                                           constants.DISK)
 
         self._vmutils.create_scsi_controller(instance_name)
 

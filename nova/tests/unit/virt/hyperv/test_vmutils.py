@@ -30,6 +30,7 @@ class VMUtilsTestCase(test.NoDBTestCase):
     _FAKE_JOB_PATH = 'fake_job_path'
     _FAKE_RET_VAL = 0
     _FAKE_RET_VAL_BAD = -1
+    _FAKE_PATH = "fake_path"
     _FAKE_CTRL_PATH = 'fake_ctrl_path'
     _FAKE_CTRL_ADDR = 0
     _FAKE_DRIVE_ADDR = 0
@@ -202,7 +203,7 @@ class VMUtilsTestCase(test.NoDBTestCase):
 
     def _create_mock_disks(self):
         mock_rasd1 = mock.MagicMock()
-        mock_rasd1.ResourceSubType = self._vmutils._IDE_DISK_RES_SUB_TYPE
+        mock_rasd1.ResourceSubType = self._vmutils._HARD_DISK_RES_SUB_TYPE
         mock_rasd1.HostResource = [self._FAKE_VHD_PATH]
         mock_rasd1.Connection = [self._FAKE_VHD_PATH]
         mock_rasd1.Parent = self._FAKE_CTRL_PATH
@@ -519,7 +520,7 @@ class VMUtilsTestCase(test.NoDBTestCase):
         mock_disk = mock.MagicMock()
         mock_disk.HostResource = [self._FAKE_HOST_RESOURCE]
         mock_disk.path.return_value.RelPath = self._FAKE_RES_PATH
-        mock_disk.ResourceSubType = self._vmutils._IDE_DISK_RES_SUB_TYPE
+        mock_disk.ResourceSubType = self._vmutils._HARD_DISK_RES_SUB_TYPE
         self._vmutils._conn.query.return_value = [mock_disk]
 
         return mock_disk
