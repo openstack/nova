@@ -872,6 +872,10 @@ class VMwareVMOps(object):
             instance_name = instance['uuid']
         try:
             vm_ref = vm_util.get_vm_ref_from_name(self._session, instance_name)
+            if vm_ref is None:
+                LOG.warning(_('Instance does not exist on backend'),
+                            instance=instance)
+                return
             lst_properties = ["config.files.vmPathName", "runtime.powerState",
                               "datastore"]
             props = self._session._call_method(vim_util,
