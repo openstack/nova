@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import inspect
+
 from nova import test
 from nova.virt import driver
 
@@ -56,3 +58,34 @@ class ToDriverRegistryTestCase(test.NoDBTestCase):
             drvs['key2'],
             FakeDriver2, 'arg1', 'arg2', param1='value1',
             param2='value2')
+
+
+class DriverAPITestHelper():
+
+    def assertPublicAPISignatures(self, inst):
+        def get_public_apis(inst):
+            methods = {}
+            for (name, value) in inspect.getmembers(inst, inspect.ismethod):
+                if name.startswith("_"):
+                    continue
+                methods[name] = value
+            return methods
+
+        base = driver.ComputeDriver(None)
+        basemethods = get_public_apis(base)
+        implmethods = get_public_apis(inst)
+
+        extranames = []
+        for name in sorted(implmethods.keys()):
+            if name not in basemethods:
+                extranames.append(name)
+
+        self.assertEqual([], extranames,
+                         "public APIs not listed in base class")
+
+        for name in sorted(implmethods.keys()):
+            baseargs = inspect.getargspec(basemethods[name])
+            implargs = inspect.getargspec(implmethods[name])
+
+            self.assertEqual(baseargs, implargs,
+                             "%s args don't match base" % name)
