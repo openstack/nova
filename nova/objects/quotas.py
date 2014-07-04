@@ -39,6 +39,13 @@ def ids_from_security_group(context, security_group):
     return ids_from_instance(context, security_group)
 
 
+# TODO(PhilD): This method needs to be cleaned up once the
+# ids_from_instance helper method is renamed or some common
+# method is added for objects.quotas.
+def ids_from_server_group(context, server_group):
+    return ids_from_instance(context, server_group)
+
+
 class Quotas(base.NovaObject):
     # Version 1.0: initial version
     # Version 1.1: Added create_limit() and update_limit()

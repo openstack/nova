@@ -30,8 +30,13 @@ from nova import utils
 
 
 QUOTAS = quota.QUOTAS
-LOG = logging.getLogger(__name__)
 NON_QUOTA_KEYS = ['tenant_id', 'id', 'force']
+
+# Quotas that are only enabled by specific extensions
+EXTENDED_QUOTAS = {'server_groups': 'os-server-group-quotas',
+                   'server_group_members': 'os-server-group-quotas'}
+
+LOG = logging.getLogger(__name__)
 
 
 authorize_update = extensions.extension_authorizer('compute', 'quotas:update')
@@ -45,24 +50,35 @@ class QuotaTemplate(xmlutil.TemplateBuilder):
         root.set('id')
 
         for resource in QUOTAS.resources:
-            elem = xmlutil.SubTemplateElement(root, resource)
-            elem.text = resource
+            if resource not in EXTENDED_QUOTAS:
+                elem = xmlutil.SubTemplateElement(root, resource)
+                elem.text = resource
 
         return xmlutil.MasterTemplate(root, 1)
 
 
 class QuotaSetsController(wsgi.Controller):
 
+    supported_quotas = []
+
     def __init__(self, ext_mgr):
         self.ext_mgr = ext_mgr
+        self.supported_quotas = QUOTAS.resources
+        for resource, extension in EXTENDED_QUOTAS.items():
+            if not self.ext_mgr.is_loaded(extension):
+                self.supported_quotas.remove(resource)
 
     def _format_quota_set(self, project_id, quota_set):
         """Convert the quota object to a result dict."""
 
-        result = dict(id=str(project_id))
+        if project_id:
+            result = dict(id=str(project_id))
+        else:
+            result = {}
 
-        for resource in QUOTAS.resources:
-            result[resource] = quota_set[resource]
+        for resource in self.supported_quotas:
+            if resource in quota_set:
+                result[resource] = quota_set[resource]
 
         return dict(quota_set=result)
 
@@ -140,9 +156,10 @@ class QuotaSetsController(wsgi.Controller):
             msg = _("quota_set not specified")
             raise webob.exc.HTTPBadRequest(explanation=msg)
         quota_set = body['quota_set']
+
         for key, value in quota_set.items():
-            if (key not in QUOTAS and
-                    key not in NON_QUOTA_KEYS):
+            if (key not in self.supported_quotas
+                and key not in NON_QUOTA_KEYS):
                 bad_keys.append(key)
                 continue
             if key == 'force' and extended_loaded:
@@ -158,7 +175,7 @@ class QuotaSetsController(wsgi.Controller):
 
         LOG.debug("force update quotas: %s", force_update)
 
-        if len(bad_keys) > 0:
+        if bad_keys:
             msg = _("Bad key(s) %s in quota_set") % ",".join(bad_keys)
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
@@ -203,13 +220,15 @@ class QuotaSetsController(wsgi.Controller):
                                             key, value, user_id=user_id)
             except exception.AdminRequired:
                 raise webob.exc.HTTPForbidden()
-        return {'quota_set': self._get_quotas(context, id, user_id=user_id)}
+        values = self._get_quotas(context, id, user_id=user_id)
+        return self._format_quota_set(None, values)
 
     @wsgi.serializers(xml=QuotaTemplate)
     def defaults(self, req, id):
         context = req.environ['nova.context']
         authorize_show(context)
-        return self._format_quota_set(id, QUOTAS.get_defaults(context))
+        values = QUOTAS.get_defaults(context)
+        return self._format_quota_set(id, values)
 
     def delete(self, req, id):
         if self.ext_mgr.is_loaded('os-extended-quotas'):

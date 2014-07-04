@@ -30,13 +30,17 @@ from nova import test
 from nova.tests.api.openstack import fakes
 
 
-def quota_set(id):
-    return {'quota_set': {'id': id, 'metadata_items': 128,
-            'ram': 51200, 'floating_ips': 10, 'fixed_ips': -1,
-            'instances': 10, 'injected_files': 5, 'cores': 20,
-            'injected_file_content_bytes': 10240,
-            'security_groups': 10, 'security_group_rules': 20,
-            'key_pairs': 100, 'injected_file_path_bytes': 255}}
+def quota_set(id, include_server_group_quotas=True):
+    res = {'quota_set': {'id': id, 'metadata_items': 128,
+           'ram': 51200, 'floating_ips': 10, 'fixed_ips': -1,
+           'instances': 10, 'injected_files': 5, 'cores': 20,
+           'injected_file_content_bytes': 10240,
+           'security_groups': 10, 'security_group_rules': 20,
+           'key_pairs': 100, 'injected_file_path_bytes': 255}}
+    if include_server_group_quotas:
+        res['quota_set']['server_groups'] = 10
+        res['quota_set']['server_group_members'] = 10
+    return res
 
 
 class BaseQuotaSetsTest(test.TestCase):
@@ -81,11 +85,11 @@ class BaseQuotaSetsTest(test.TestCase):
 class QuotaSetsTestV21(BaseQuotaSetsTest):
     plugin = quotas_v21
     validation_error = exception.ValidationError
+    include_server_group_quotas = True
 
     def setUp(self):
         super(QuotaSetsTestV21, self).setUp()
-        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
-        self.controller = self.plugin.QuotaSetsController(self.ext_mgr)
+        self._setup_controller()
         self.default_quotas = {
             'instances': 10,
             'cores': 20,
@@ -98,8 +102,15 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
             'injected_file_content_bytes': 10240,
             'security_groups': 10,
             'security_group_rules': 20,
-            'key_pairs': 100
+            'key_pairs': 100,
         }
+        if self.include_server_group_quotas:
+            self.default_quotas['server_groups'] = 10
+            self.default_quotas['server_group_members'] = 10
+
+    def _setup_controller(self):
+        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
+        self.controller = self.plugin.QuotaSetsController(self.ext_mgr)
 
     def test_format_quota_set(self):
         quota_set = self.controller._format_quota_set('1234',
@@ -119,6 +130,9 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
         self.assertEqual(qs['security_groups'], 10)
         self.assertEqual(qs['security_group_rules'], 20)
         self.assertEqual(qs['key_pairs'], 100)
+        if self.include_server_group_quotas:
+            self.assertEqual(qs['server_groups'], 10)
+            self.assertEqual(qs['server_group_members'], 10)
 
     def test_quotas_defaults(self):
         uri = '/v2/fake_tenant/os-quota-sets/fake_tenant/defaults'
@@ -136,7 +150,8 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
                                       use_admin_context=True)
         res_dict = self.controller.show(req, 1234)
 
-        self.assertEqual(res_dict, quota_set('1234'))
+        ref_quota_set = quota_set('1234', self.include_server_group_quotas)
+        self.assertEqual(res_dict, ref_quota_set)
 
     def test_quotas_show_as_unauthorized_user(self):
         self.setup_mock_for_show()
@@ -169,6 +184,9 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
                               'security_groups': 0,
                               'security_group_rules': 0,
                               'key_pairs': 100, 'fixed_ips': -1}}
+        if self.include_server_group_quotas:
+            body['quota_set']['server_groups'] = 10
+            body['quota_set']['server_group_members'] = 10
         expected_body = self.get_update_expected_response(body)
 
         req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
@@ -330,8 +348,7 @@ class ExtendedQuotasTestV21(BaseQuotaSetsTest):
 
     def setUp(self):
         super(ExtendedQuotasTestV21, self).setUp()
-        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
-        self.controller = self.plugin.QuotaSetsController(self.ext_mgr)
+        self._setup_controller()
         self.setup_mock_for_update()
 
     fake_quotas = {'ram': {'limit': 51200,
@@ -343,6 +360,10 @@ class ExtendedQuotasTestV21(BaseQuotaSetsTest):
                    'instances': {'limit': 100,
                                  'in_use': 0,
                                  'reserved': 0}}
+
+    def _setup_controller(self):
+        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
+        self.controller = self.plugin.QuotaSetsController(self.ext_mgr)
 
     def fake_get_quotas(self, context, id, user_id=None, usages=False):
         if usages:
@@ -384,9 +405,13 @@ class ExtendedQuotasTestV21(BaseQuotaSetsTest):
 
 class UserQuotasTestV21(BaseQuotaSetsTest):
     plugin = quotas_v21
+    include_server_group_quotas = True
 
     def setUp(self):
         super(UserQuotasTestV21, self).setUp()
+        self._setup_controller()
+
+    def _setup_controller(self):
         self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
         self.controller = self.plugin.QuotaSetsController(self.ext_mgr)
 
@@ -395,8 +420,8 @@ class UserQuotasTestV21(BaseQuotaSetsTest):
         req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234?user_id=1',
                                       use_admin_context=True)
         res_dict = self.controller.show(req, 1234)
-
-        self.assertEqual(res_dict, quota_set('1234'))
+        ref_quota_set = quota_set('1234', self.include_server_group_quotas)
+        self.assertEqual(res_dict, ref_quota_set)
 
     def test_user_quotas_show_as_unauthorized_user(self):
         self.setup_mock_for_show()
@@ -415,6 +440,10 @@ class UserQuotasTestV21(BaseQuotaSetsTest):
                               'security_groups': 10,
                               'security_group_rules': 20,
                               'key_pairs': 100}}
+        if self.include_server_group_quotas:
+            body['quota_set']['server_groups'] = 10
+            body['quota_set']['server_group_members'] = 10
+
         expected_body = self.get_update_expected_response(body)
 
         url = '/v2/fake4/os-quota-sets/update_me?user_id=1'
@@ -432,7 +461,9 @@ class UserQuotasTestV21(BaseQuotaSetsTest):
                               'injected_file_content_bytes': 10240,
                               'security_groups': 10,
                               'security_group_rules': 20,
-                              'key_pairs': 100}}
+                              'key_pairs': 100,
+                              'server_groups': 10,
+                              'server_group_members': 10}}
 
         url = '/v2/fake4/os-quota-sets/update_me?user_id=1'
         req = fakes.HTTPRequest.blank(url)
@@ -474,6 +505,15 @@ class UserQuotasTestV21(BaseQuotaSetsTest):
 class QuotaSetsTestV2(QuotaSetsTestV21):
     plugin = quotas_v2
     validation_error = webob.exc.HTTPBadRequest
+    include_server_group_quotas = False
+
+    def _setup_controller(self):
+        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
+        self.ext_mgr.is_loaded('os-server-group-quotas').MultipleTimes().\
+            AndReturn(self.include_server_group_quotas)
+        self.mox.ReplayAll()
+        self.controller = self.plugin.QuotaSetsController(self.ext_mgr)
+        self.mox.ResetAll()
 
     # NOTE: The following tests are tricky and v2.1 API does not allow
     # this kind of input by strong input validation. Just for test coverage,
@@ -528,10 +568,63 @@ class QuotaSetsTestV2(QuotaSetsTestV21):
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
                           req, 1234)
 
+    # NOTE: os-server-group-quotas is only for v2.0.   On v2.1 this feature
+    # is always enabled, so this test is only needed for v2.0
+    def test_quotas_update_without_server_group_quotas_extenstion(self):
+        self.setup_mock_for_update()
+        self.default_quotas.update({
+            'server_groups': 50,
+            'sever_group_members': 50
+        })
+        body = {'quota_set': self.default_quotas}
+
+        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
+                                      use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          req, 'update_me', body=body)
+
 
 class ExtendedQuotasTestV2(ExtendedQuotasTestV21):
     plugin = quotas_v2
 
+    def _setup_controller(self):
+        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
+        self.ext_mgr.is_loaded('os-server-group-quotas').MultipleTimes().\
+            AndReturn(False)
+        self.mox.ReplayAll()
+        self.controller = self.plugin.QuotaSetsController(self.ext_mgr)
+        self.mox.ResetAll()
+
 
 class UserQuotasTestV2(UserQuotasTestV21):
     plugin = quotas_v2
+    include_server_group_quotas = False
+
+    def _setup_controller(self):
+        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
+        self.ext_mgr.is_loaded('os-server-group-quotas').MultipleTimes().\
+            AndReturn(self.include_server_group_quotas)
+        self.mox.ReplayAll()
+        self.controller = self.plugin.QuotaSetsController(self.ext_mgr)
+        self.mox.ResetAll()
+
+    # NOTE: os-server-group-quotas is only for v2.0.   On v2.1 this feature
+    # is always enabled, so this test is only needed for v2.0
+    def test_user_quotas_update_as_admin_without_sg_quota_extension(self):
+        self.setup_mock_for_update()
+        body = {'quota_set': {'instances': 10, 'cores': 20,
+                              'ram': 51200, 'floating_ips': 10,
+                              'fixed_ips': -1, 'metadata_items': 128,
+                              'injected_files': 5,
+                              'injected_file_content_bytes': 10240,
+                              'injected_file_path_bytes': 255,
+                              'security_groups': 10,
+                              'security_group_rules': 20,
+                              'key_pairs': 100,
+                              'server_groups': 100,
+                              'server_group_members': 200}}
+
+        url = '/v2/fake4/os-quota-sets/update_me?user_id=1'
+        req = fakes.HTTPRequest.blank(url, use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          req, 'update_me', body=body)

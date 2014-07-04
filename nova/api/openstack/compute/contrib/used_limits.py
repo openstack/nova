@@ -60,6 +60,9 @@ class UsedLimitsController(wsgi.Controller):
             'totalFloatingIpsUsed': 'floating_ips',
             'totalSecurityGroupsUsed': 'security_groups',
         }
+        if self.ext_mgr.is_loaded('os-server-group-quotas'):
+            quota_map['totalServerGroupsUsed'] = 'server_groups'
+
         used_limits = {}
         for display_name, key in quota_map.iteritems():
             if key in quotas:

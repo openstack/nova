@@ -40,7 +40,7 @@ class LimitsController(object):
         return builder.build(rate_limits, abs_limits)
 
     def _get_view_builder(self, req):
-        return limits_views.ViewBuilder()
+        return limits_views.ViewBuilderV3()
 
 
 class Limits(extensions.V3APIExtensionBase):

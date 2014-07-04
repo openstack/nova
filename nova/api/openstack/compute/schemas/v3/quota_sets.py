@@ -39,6 +39,8 @@ update = {
                 'injected_files': common_quota,
                 'injected_file_content_bytes': common_quota,
                 'injected_file_path_bytes': common_quota,
+                'server_groups': common_quota,
+                'server_group_members': common_quota,
                 'force': parameter_types.boolean,
             },
             'additionalProperties': False,
