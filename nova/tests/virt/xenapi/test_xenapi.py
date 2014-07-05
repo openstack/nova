@@ -3606,7 +3606,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
             pass
 
         conn.live_migration(
-            self.context, instance_ref=dict(name='ignore'), dest=None,
+            self.context, instance=dict(name='ignore'), dest=None,
             post_method=dummy_callback, recover_method=dummy_callback,
             block_migration="SOMEDATA",
             migrate_data=dict(migrate_send_data='SOMEDATA',
@@ -3634,7 +3634,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
             pass
 
         self.assertRaises(IOError, conn.live_migration,
-            self.context, instance_ref=dict(name='ignore'), dest=None,
+            self.context, instance=dict(name='ignore'), dest=None,
             post_method=dummy_callback, recover_method=dummy_callback,
             block_migration=False, migrate_data={})
 
