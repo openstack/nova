@@ -1975,10 +1975,6 @@ class ComputeManager(manager.Manager):
                                       injected_files, admin_password,
                                       network_info=network_info,
                                       block_device_info=block_device_info)
-                    self._notify_about_instance_usage(context, instance,
-                            'create.end',
-                            extra_usage_info={'message': _('Success')},
-                            network_info=network_info)
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError) as e:
             with excutils.save_and_reraise_exception():
@@ -2036,6 +2032,10 @@ class ComputeManager(manager.Manager):
         instance.task_state = None
         instance.launched_at = timeutils.utcnow()
         instance.save(expected_task_state=task_states.SPAWNING)
+
+        self._notify_about_instance_usage(context, instance, 'create.end',
+                extra_usage_info={'message': _('Success')},
+                network_info=network_info)
 
     @contextlib.contextmanager
     def _build_resources(self, context, instance, requested_networks,
