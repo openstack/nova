@@ -842,8 +842,7 @@ class VMwareVMOps(object):
         props = self._session._call_method(vim_util, "get_object_properties",
                            None, vm_ref, "VirtualMachine",
                            lst_properties)
-        query = vm_util.get_values_from_object_properties(self._session, props,
-                                                          lst_properties)
+        query = vm_util.get_values_from_object_properties(self._session, props)
         pwr_state = query['runtime.powerState']
         tools_status = query['summary.guest.toolsStatus']
         tools_running_status = query['summary.guest.toolsRunningStatus']
@@ -887,7 +886,7 @@ class VMwareVMOps(object):
                         "get_object_properties",
                         None, vm_ref, "VirtualMachine", lst_properties)
             query = vm_util.get_values_from_object_properties(
-                    self._session, props, lst_properties)
+                    self._session, props)
             pwr_state = query['runtime.powerState']
             vm_config_pathname = query['config.files.vmPathName']
             vm_ds_path = None
@@ -1267,7 +1266,7 @@ class VMwareVMOps(object):
                     "get_object_properties", None, vm_ref, "VirtualMachine",
                     lst_properties)
         query = vm_util.get_values_from_object_properties(
-                self._session, vm_props, lst_properties)
+                self._session, vm_props)
         max_mem = int(query['summary.config.memorySizeMB']) * 1024
         return {'state': VMWARE_POWER_STATES[query['runtime.powerState']],
                 'max_mem': max_mem,
@@ -1285,8 +1284,7 @@ class VMwareVMOps(object):
                     "get_object_properties", None, vm_ref, "VirtualMachine",
                     lst_properties)
         query = vm_util.get_values_from_object_properties(self._session,
-                                                          vm_props,
-                                                          lst_properties)
+                                                          vm_props)
         data = {}
         # All of values received are objects. Convert them to dictionaries
         for value in query.values():
