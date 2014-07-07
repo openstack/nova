@@ -93,8 +93,9 @@ class HyperVDriver(driver.ComputeDriver):
     def host_power_action(self, host, action):
         return self._hostops.host_power_action(host, action)
 
-    def snapshot(self, context, instance, name, update_task_state):
-        self._snapshotops.snapshot(context, instance, name, update_task_state)
+    def snapshot(self, context, instance, image_id, update_task_state):
+        self._snapshotops.snapshot(context, instance, image_id,
+                                   update_task_state)
 
     def pause(self, instance):
         self._vmops.pause(instance)
@@ -115,10 +116,10 @@ class HyperVDriver(driver.ComputeDriver):
                  block_device_info=None):
         self._vmops.power_on(instance)
 
-    def live_migration(self, context, instance_ref, dest, post_method,
+    def live_migration(self, context, instance, dest, post_method,
                        recover_method, block_migration=False,
                        migrate_data=None):
-        self._livemigrationops.live_migration(context, instance_ref, dest,
+        self._livemigrationops.live_migration(context, instance, dest,
                                               post_method, recover_method,
                                               block_migration, migrate_data)
 
@@ -128,37 +129,38 @@ class HyperVDriver(driver.ComputeDriver):
         self.destroy(context, instance, network_info, block_device_info)
 
     def pre_live_migration(self, context, instance, block_device_info,
-                           network_info, disk, migrate_data=None):
+                           network_info, disk_info, migrate_data=None):
         self._livemigrationops.pre_live_migration(context, instance,
                                                   block_device_info,
                                                   network_info)
 
-    def post_live_migration_at_destination(self, ctxt, instance_ref,
+    def post_live_migration_at_destination(self, context, instance,
                                            network_info,
-                                           block_migr=False,
+                                           block_migration=False,
                                            block_device_info=None):
-        self._livemigrationops.post_live_migration_at_destination(ctxt,
-                                                                  instance_ref,
-                                                                  network_info,
-                                                                  block_migr)
+        self._livemigrationops.post_live_migration_at_destination(
+            context,
+            instance,
+            network_info,
+            block_migration)
 
-    def check_can_live_migrate_destination(self, ctxt, instance_ref,
+    def check_can_live_migrate_destination(self, context, instance,
                                            src_compute_info, dst_compute_info,
                                            block_migration=False,
                                            disk_over_commit=False):
         return self._livemigrationops.check_can_live_migrate_destination(
-            ctxt, instance_ref, src_compute_info, dst_compute_info,
+            context, instance, src_compute_info, dst_compute_info,
             block_migration, disk_over_commit)
 
-    def check_can_live_migrate_destination_cleanup(self, ctxt,
+    def check_can_live_migrate_destination_cleanup(self, context,
                                                    dest_check_data):
         self._livemigrationops.check_can_live_migrate_destination_cleanup(
-            ctxt, dest_check_data)
+            context, dest_check_data)
 
-    def check_can_live_migrate_source(self, ctxt, instance_ref,
+    def check_can_live_migrate_source(self, context, instance,
                                       dest_check_data):
         return self._livemigrationops.check_can_live_migrate_source(
-            ctxt, instance_ref, dest_check_data)
+            context, instance, dest_check_data)
 
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
@@ -170,9 +172,9 @@ class HyperVDriver(driver.ComputeDriver):
         msg = _("VIF unplugging is not supported by the Hyper-V driver.")
         raise NotImplementedError(msg)
 
-    def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
+    def ensure_filtering_rules_for_instance(self, instance, network_info):
         LOG.debug("ensure_filtering_rules_for_instance called",
-                  instance=instance_ref)
+                  instance=instance)
 
     def unfilter_instance(self, instance, network_info):
         LOG.debug("unfilter_instance called", instance=instance)
@@ -196,7 +198,7 @@ class HyperVDriver(driver.ComputeDriver):
                                                    block_device_info, power_on)
 
     def finish_migration(self, context, migration, instance, disk_info,
-                         network_info, image_meta, resize_instance=False,
+                         network_info, image_meta, resize_instance,
                          block_device_info=None, power_on=True):
         self._migrationops.finish_migration(context, migration, instance,
                                             disk_info, network_info,

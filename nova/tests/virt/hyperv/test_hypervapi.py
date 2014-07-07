@@ -43,6 +43,7 @@ from nova.tests.image import fake as fake_image
 from nova.tests import matchers
 from nova.tests.virt.hyperv import db_fakes
 from nova.tests.virt.hyperv import fake
+from nova.tests.virt import test_driver
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import driver
@@ -251,8 +252,12 @@ class HyperVAPIBaseTestCase(test.NoDBTestCase):
         super(HyperVAPIBaseTestCase, self).tearDown()
 
 
-class HyperVAPITestCase(HyperVAPIBaseTestCase):
+class HyperVAPITestCase(HyperVAPIBaseTestCase,
+                        test_driver.DriverAPITestHelper):
     """Unit tests for Hyper-V driver calls."""
+
+    def test_public_api_signatures(self):
+        self.assertPublicAPISignatures(self._conn)
 
     def test_get_available_resource(self):
         cpu_info = {'Architecture': 'fake',
