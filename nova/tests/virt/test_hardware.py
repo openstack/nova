@@ -24,93 +24,95 @@ class FakeFlavor():
 
 
 class CpuSetTestCase(test.NoDBTestCase):
-    def test_get_vcpu_pin_set_none_returns_none(self):
-        self.flags(vcpu_pin_set=None)
-        cpuset_ids = hw.get_vcpu_pin_set()
-        self.assertIsNone(cpuset_ids)
-
-    def test_get_vcpu_pin_set_valid_syntax_works(self):
-        self.flags(vcpu_pin_set="1")
-        cpuset_ids = hw.get_vcpu_pin_set()
-        self.assertEqual([1], cpuset_ids)
-
-        self.flags(vcpu_pin_set="1,2")
-        cpuset_ids = hw.get_vcpu_pin_set()
-        self.assertEqual([1, 2], cpuset_ids)
-
-        self.flags(vcpu_pin_set=", ,   1 ,  ,,  2,    ,")
-        cpuset_ids = hw.get_vcpu_pin_set()
-        self.assertEqual([1, 2], cpuset_ids)
-
-        self.flags(vcpu_pin_set="1-1")
-        cpuset_ids = hw.get_vcpu_pin_set()
-        self.assertEqual([1], cpuset_ids)
-
-        self.flags(vcpu_pin_set=" 1 - 1, 1 - 2 , 1 -3")
-        cpuset_ids = hw.get_vcpu_pin_set()
-        self.assertEqual([1, 2, 3], cpuset_ids)
-
-        self.flags(vcpu_pin_set="1,^2")
-        cpuset_ids = hw.get_vcpu_pin_set()
-        self.assertEqual([1], cpuset_ids)
-
-        self.flags(vcpu_pin_set="1-2, ^1")
-        cpuset_ids = hw.get_vcpu_pin_set()
-        self.assertEqual([2], cpuset_ids)
-
+    def test_get_vcpu_pin_set(self):
         self.flags(vcpu_pin_set="1-3,5,^2")
         cpuset_ids = hw.get_vcpu_pin_set()
         self.assertEqual([1, 3, 5], cpuset_ids)
 
-        self.flags(vcpu_pin_set=" 1 -    3        ,   ^2,        5")
+    def test_parse_cpu_spec_none_returns_none(self):
+        self.flags(vcpu_pin_set=None)
         cpuset_ids = hw.get_vcpu_pin_set()
-        self.assertEqual([1, 3, 5], cpuset_ids)
+        self.assertIsNone(cpuset_ids)
 
-    def test_get_vcpu_pin_set_invalid_syntax_raises(self):
-        self.flags(vcpu_pin_set=" -1-3,5,^2")
-        self.assertRaises(exception.Invalid, hw.get_vcpu_pin_set)
+    def test_parse_cpu_spec_valid_syntax_works(self):
+        cpuset_ids = hw.parse_cpu_spec("1")
+        self.assertEqual(set([1]), cpuset_ids)
 
-        self.flags(vcpu_pin_set="1-3-,5,^2")
-        self.assertRaises(exception.Invalid, hw.get_vcpu_pin_set)
+        cpuset_ids = hw.parse_cpu_spec("1,2")
+        self.assertEqual(set([1, 2]), cpuset_ids)
 
-        self.flags(vcpu_pin_set="-3,5,^2")
-        self.assertRaises(exception.Invalid, hw.get_vcpu_pin_set)
+        cpuset_ids = hw.parse_cpu_spec(", ,   1 ,  ,,  2,    ,")
+        self.assertEqual(set([1, 2]), cpuset_ids)
 
-        self.flags(vcpu_pin_set="1-,5,^2")
-        self.assertRaises(exception.Invalid, hw.get_vcpu_pin_set)
+        cpuset_ids = hw.parse_cpu_spec("1-1")
+        self.assertEqual(set([1]), cpuset_ids)
 
-        self.flags(vcpu_pin_set="1-3,5,^2^")
-        self.assertRaises(exception.Invalid, hw.get_vcpu_pin_set)
+        cpuset_ids = hw.parse_cpu_spec(" 1 - 1, 1 - 2 , 1 -3")
+        self.assertEqual(set([1, 2, 3]), cpuset_ids)
 
-        self.flags(vcpu_pin_set="1-3,5,^2-")
-        self.assertRaises(exception.Invalid, hw.get_vcpu_pin_set)
+        cpuset_ids = hw.parse_cpu_spec("1,^2")
+        self.assertEqual(set([1]), cpuset_ids)
 
-        self.flags(vcpu_pin_set="--13,^^5,^2")
-        self.assertRaises(exception.Invalid, hw.get_vcpu_pin_set)
+        cpuset_ids = hw.parse_cpu_spec("1-2, ^1")
+        self.assertEqual(set([2]), cpuset_ids)
 
-        self.flags(vcpu_pin_set="a-3,5,^2")
-        self.assertRaises(exception.Invalid, hw.get_vcpu_pin_set)
+        cpuset_ids = hw.parse_cpu_spec("1-3,5,^2")
+        self.assertEqual(set([1, 3, 5]), cpuset_ids)
 
-        self.flags(vcpu_pin_set="1-a,5,^2")
-        self.assertRaises(exception.Invalid, hw.get_vcpu_pin_set)
+        cpuset_ids = hw.parse_cpu_spec(" 1 -    3        ,   ^2,        5")
+        self.assertEqual(set([1, 3, 5]), cpuset_ids)
 
-        self.flags(vcpu_pin_set="1-3,b,^2")
-        self.assertRaises(exception.Invalid, hw.get_vcpu_pin_set)
+        cpuset_ids = hw.parse_cpu_spec(" 1,1, ^1")
+        self.assertEqual(set([]), cpuset_ids)
 
-        self.flags(vcpu_pin_set="1-3,5,^c")
-        self.assertRaises(exception.Invalid, hw.get_vcpu_pin_set)
+    def test_parse_cpu_spec_invalid_syntax_raises(self):
+        self.assertRaises(exception.Invalid,
+                          hw.parse_cpu_spec,
+                          " -1-3,5,^2")
 
-        self.flags(vcpu_pin_set="3 - 1, 5 , ^ 2 ")
-        self.assertRaises(exception.Invalid, hw.get_vcpu_pin_set)
+        self.assertRaises(exception.Invalid,
+                          hw.parse_cpu_spec,
+                          "1-3-,5,^2")
 
-        self.flags(vcpu_pin_set=" 1,1, ^1")
-        self.assertRaises(exception.Invalid, hw.get_vcpu_pin_set)
+        self.assertRaises(exception.Invalid,
+                          hw.parse_cpu_spec,
+                          "-3,5,^2")
 
-        self.flags(vcpu_pin_set=" 1,^1,^1,2, ^2")
-        self.assertRaises(exception.Invalid, hw.get_vcpu_pin_set)
+        self.assertRaises(exception.Invalid,
+                          hw.parse_cpu_spec,
+                          "1-,5,^2")
 
-        self.flags(vcpu_pin_set="^2")
-        self.assertRaises(exception.Invalid, hw.get_vcpu_pin_set)
+        self.assertRaises(exception.Invalid,
+                          hw.parse_cpu_spec,
+                          "1-3,5,^2^")
+
+        self.assertRaises(exception.Invalid,
+                          hw.parse_cpu_spec,
+                          "1-3,5,^2-")
+
+        self.assertRaises(exception.Invalid,
+                          hw.parse_cpu_spec,
+                          "--13,^^5,^2")
+
+        self.assertRaises(exception.Invalid,
+                          hw.parse_cpu_spec,
+                          "a-3,5,^2")
+
+        self.assertRaises(exception.Invalid,
+                          hw.parse_cpu_spec,
+                          "1-a,5,^2")
+
+        self.assertRaises(exception.Invalid,
+                          hw.parse_cpu_spec,
+                          "1-3,b,^2")
+
+        self.assertRaises(exception.Invalid,
+                          hw.parse_cpu_spec,
+                          "1-3,5,^c")
+
+        self.assertRaises(exception.Invalid,
+                          hw.parse_cpu_spec,
+                          "3 - 1, 5 , ^ 2 ")
 
 
 class VCPUTopologyTest(test.NoDBTestCase):

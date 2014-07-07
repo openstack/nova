@@ -40,9 +40,29 @@ def get_vcpu_pin_set():
     if not CONF.vcpu_pin_set:
         return None
 
+    cpuset_ids = parse_cpu_spec(CONF.vcpu_pin_set)
+    if not cpuset_ids:
+        raise exception.Invalid(_("No CPUs available after parsing %r") %
+                                CONF.vcpu_pin_set)
+    return sorted(cpuset_ids)
+
+
+def parse_cpu_spec(spec):
+    """Parse a CPU set specification.
+
+    :param spec: cpu set string eg "1-4,^3,6"
+
+    Each element in the list is either a single
+    CPU number, a range of CPU numbers, or a
+    caret followed by a CPU number to be excluded
+    from a previous range.
+
+    :returns: a set of CPU indexes
+    """
+
     cpuset_ids = set()
     cpuset_reject_ids = set()
-    for rule in CONF.vcpu_pin_set.split(','):
+    for rule in spec.split(','):
         rule = rule.strip()
         # Handle multi ','
         if len(rule) < 1:
@@ -60,7 +80,7 @@ def get_vcpu_pin_set():
             if start > end:
                 raise exception.Invalid(_("Invalid range expression %r")
                                         % rule)
-            # Add available pcpu ids to set
+            # Add available CPU ids to set
             cpuset_ids |= set(range(start, end + 1))
         elif rule[0] == '^':
             # Not a range, the rule is an exclusion rule; convert to int
@@ -70,19 +90,17 @@ def get_vcpu_pin_set():
                 raise exception.Invalid(_("Invalid exclusion "
                                           "expression %r") % rule)
         else:
-            # OK, a single PCPU to include; convert to int
+            # OK, a single CPU to include; convert to int
             try:
                 cpuset_ids.add(int(rule))
             except ValueError:
                 raise exception.Invalid(_("Invalid inclusion "
                                           "expression %r") % rule)
+
     # Use sets to handle the exclusion rules for us
     cpuset_ids -= cpuset_reject_ids
-    if not cpuset_ids:
-        raise exception.Invalid(_("No CPUs available after parsing %r") %
-                                CONF.vcpu_pin_set)
-    # This will convert the set to a sorted list for us
-    return sorted(cpuset_ids)
+
+    return cpuset_ids
 
 
 class VirtCPUTopology(object):
