@@ -103,6 +103,42 @@ def parse_cpu_spec(spec):
     return cpuset_ids
 
 
+def format_cpu_spec(cpuset, allow_ranges=True):
+    """Format a libvirt CPU range specification.
+
+    :param cpuset: set (or list) of CPU indexes
+
+    Format a set/list of CPU indexes as a libvirt CPU
+    range specification. It allow_ranges is true, it
+    will try to detect continuous ranges of CPUs,
+    otherwise it will just list each CPU index explicitly.
+
+    :returns: a formatted CPU range string
+    """
+
+    # We attempt to detect ranges, but don't bother with
+    # trying to do range negations to minimize the overall
+    # spec string length
+    if allow_ranges:
+        ranges = []
+        previndex = None
+        for cpuindex in sorted(cpuset):
+            if previndex is None or previndex != (cpuindex - 1):
+                ranges.append([])
+            ranges[-1].append(cpuindex)
+            previndex = cpuindex
+
+        parts = []
+        for entry in ranges:
+            if len(entry) == 1:
+                parts.append(str(entry[0]))
+            else:
+                parts.append("%d-%d" % (entry[0], entry[len(entry) - 1]))
+        return ",".join(parts)
+    else:
+        return ",".join(str(id) for id in sorted(cpuset))
+
+
 class VirtCPUTopology(object):
 
     def __init__(self, sockets, cores, threads):
