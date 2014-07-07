@@ -50,9 +50,9 @@ from nova.openstack.common import versionutils
 from nova.openstack.common import xmlutils
 from nova import utils
 from nova.virt import configdrive
-from nova.virt import cpu
 from nova.virt.disk import api as disk
 from nova.virt.disk.vfs import localfs as vfsimpl
+from nova.virt import hardware
 from nova.virt.xenapi import agent
 from nova.virt.xenapi.image import utils as image_utils
 from nova.virt.xenapi import volume_utils
@@ -240,7 +240,7 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
         # we need to specify both weight and cap for either to apply
         vcpu_params = {"weight": str(vcpu_weight), "cap": "0"}
 
-    cpu_mask_list = cpu.get_cpuset_ids()
+    cpu_mask_list = hardware.get_vcpu_pin_set()
     if cpu_mask_list:
         cpu_mask = ",".join(str(cpu_id) for cpu_id in cpu_mask_list)
         vcpu_params["mask"] = cpu_mask
