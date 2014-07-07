@@ -514,6 +514,14 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                   powered_on=powered_on)
         self.assertIsNotNone(vm_util.vm_ref_cache_get(self.uuid))
 
+    def _get_vm_record(self):
+        # Get record for VM
+        vms = vmwareapi_fake._get_objects("VirtualMachine")
+        for vm in vms.objects:
+            if vm.get('name') == self.uuid:
+                return vm
+        self.fail('Unable to find VM backing!')
+
     def _check_vm_record(self, num_instances=1, powered_on=True):
         """Check if the spawned VM's properties correspond to the instance in
         the db.
@@ -526,11 +534,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                       'name': 1,
                                       'node': self.instance_node})
 
-        # Get record for VM
-        vms = vmwareapi_fake._get_objects("VirtualMachine")
-        for vm in vms.objects:
-            if vm.get('name') == self.uuid:
-                break
+        vm = self._get_vm_record()
 
         # Check that m1.large above turned into the right thing.
         mem_kib = long(self.type_data['memory_mb']) << 10
@@ -1177,7 +1181,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertIsNotNone(vm_ref, 'VM Reference cannot be none')
         # Disrupt the fake Virtual Machine object so that extraConfig
         # cannot be matched.
-        fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
+        fake_vm = self._get_vm_record()
         fake_vm.get('config.extraConfig["nvp.vm-uuid"]').value = ""
         # We should not get a Virtual Machine through extraConfig.
         vm_ref = vm_util._get_vm_ref_from_extraconfig(self.conn._session,
@@ -1192,7 +1196,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         vm_ref = vm_util.search_vm_ref_by_identifier(self.conn._session,
                                             self.instance['uuid'])
         self.assertIsNotNone(vm_ref, 'VM Reference cannot be none')
-        fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
+        fake_vm = self._get_vm_record()
         fake_vm.set("summary.config.instanceUuid", "foo")
         fake_vm.set("name", "foo")
         fake_vm.get('config.extraConfig["nvp.vm-uuid"]').value = "foo"
@@ -1251,7 +1255,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def test_snapshot_delete_vm_snapshot(self):
         self._create_vm()
-        fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0].obj
+        fake_vm = self._get_vm_record()
         snapshot_ref = vmwareapi_fake.ManagedObjectReference(
                                value="Snapshot-123",
                                name="VirtualMachineSnapshot")
@@ -1259,12 +1263,12 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(vmops.VMwareVMOps,
                                  '_create_vm_snapshot')
         self.conn._vmops._create_vm_snapshot(
-                self.instance, fake_vm).AndReturn(snapshot_ref)
+                self.instance, fake_vm.obj).AndReturn(snapshot_ref)
 
         self.mox.StubOutWithMock(vmops.VMwareVMOps,
                                  '_delete_vm_snapshot')
         self.conn._vmops._delete_vm_snapshot(
-                self.instance, fake_vm, snapshot_ref).AndReturn(None)
+                self.instance, fake_vm.obj, snapshot_ref).AndReturn(None)
         self.mox.ReplayAll()
 
         self._test_snapshot()
@@ -1489,8 +1493,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         instances = self.conn.list_instances()
         self.assertEqual(len(instances), 1)
         # Overwrite the vmPathName
-        vms = vmwareapi_fake._get_objects("VirtualMachine")
-        vm = vms.objects[0]
+        vm = self._get_vm_record()
         vm.set("config.files.vmPathName", None)
         self.conn.destroy(self.context, self.instance, self.network_info)
         instances = self.conn.list_instances()
@@ -1723,7 +1726,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def _test_get_vnc_console(self):
         self._create_vm()
-        fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
+        fake_vm = self._get_vm_record()
         OptionValue = collections.namedtuple('OptionValue', ['key', 'value'])
         opt_val = OptionValue(key='', value=5906)
         fake_vm.set(vm_util.VNC_CONFIG_KEY, opt_val)
@@ -1736,7 +1739,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def test_get_vnc_console_noport(self):
         self._create_vm()
-        vmwareapi_fake._get_objects("VirtualMachine").objects
         self.assertRaises(exception.ConsoleTypeUnavailable,
                           self.conn.get_vnc_console,
                           self.context,
@@ -1748,7 +1750,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_get_volume_connector(self):
         self._create_vm()
         connector_dict = self.conn.get_volume_connector(self.instance)
-        fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
+        fake_vm = self._get_vm_record()
         fake_vm_id = fake_vm.obj.value
         self.assertEqual(connector_dict['ip'], 'test_url')
         self.assertEqual(connector_dict['initiator'], 'iscsi-name')
@@ -2474,8 +2476,7 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         instances = self.conn.list_instances()
         self.assertEqual(1, len(instances))
         # Overwrite the vmPathName
-        vms = vmwareapi_fake._get_objects("VirtualMachine")
-        vm = vms.objects[0]
+        vm = self._get_vm_record()
         vm.set("config.files.vmPathName", None)
         self.conn.destroy(self.context, self.instance, self.network_info)
         instances = self.conn.list_instances()
