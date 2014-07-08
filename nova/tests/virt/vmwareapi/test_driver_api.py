@@ -48,6 +48,7 @@ import nova.tests.image.fake
 from nova.tests import matchers
 from nova.tests import test_flavors
 from nova.tests import utils
+from nova.tests.virt import test_driver
 from nova.tests.virt.vmwareapi import stubs
 from nova import utils as nova_utils
 from nova.virt import driver as v_driver
@@ -2051,7 +2052,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._cached_files_exist()
 
 
-class VMwareAPIHostTestCase(test.NoDBTestCase):
+class VMwareAPIHostTestCase(test.NoDBTestCase,
+                            test_driver.DriverAPITestHelper):
     """Unit tests for Vmware API host calls."""
 
     def setUp(self):
@@ -2068,6 +2070,9 @@ class VMwareAPIHostTestCase(test.NoDBTestCase):
     def tearDown(self):
         super(VMwareAPIHostTestCase, self).tearDown()
         vmwareapi_fake.cleanup()
+
+    def test_public_api_signatures(self):
+        self.assertPublicAPISignatures(self.conn)
 
     def test_host_state(self):
         stats = self.conn.get_host_stats()
@@ -2106,7 +2111,8 @@ class VMwareAPIHostTestCase(test.NoDBTestCase):
         self.assertEqual('Please refer to test_url for the uptime', result)
 
 
-class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
+class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase,
+                                test_driver.DriverAPITestHelper):
 
     def setUp(self):
         super(VMwareAPIVCDriverTestCase, self).setUp()
@@ -2131,6 +2137,9 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
     def tearDown(self):
         super(VMwareAPIVCDriverTestCase, self).tearDown()
         vmwareapi_fake.cleanup()
+
+    def test_public_api_signatures(self):
+        self.assertPublicAPISignatures(self.conn)
 
     def test_list_instances(self):
         instances = self.conn.list_instances()
