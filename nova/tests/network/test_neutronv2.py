@@ -2161,6 +2161,32 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertEqual(nw_infos[1]['id'], 'port1')
         self.assertEqual(nw_infos[2]['id'], 'port2')
 
+    def test_get_subnets_from_port(self):
+        api = neutronapi.API()
+
+        port_data = copy.copy(self.port_data1[0])
+        subnet_data1 = copy.copy(self.subnet_data1)
+        subnet_data1[0]['host_routes'] = [
+            {'destination': '192.168.0.0/24', 'nexthop': '1.0.0.10'}
+        ]
+
+        self.moxed_client.list_subnets(
+            id=[port_data['fixed_ips'][0]['subnet_id']]
+        ).AndReturn({'subnets': subnet_data1})
+        self.moxed_client.list_ports(
+            network_id=subnet_data1[0]['network_id'],
+            device_owner='network:dhcp').AndReturn({'ports': []})
+        self.mox.ReplayAll()
+
+        subnets = api._get_subnets_from_port(self.context, port_data)
+
+        self.assertEqual(len(subnets), 1)
+        self.assertEqual(len(subnets[0]['routes']), 1)
+        self.assertEqual(subnets[0]['routes'][0]['cidr'],
+                         subnet_data1[0]['host_routes'][0]['destination'])
+        self.assertEqual(subnets[0]['routes'][0]['gateway']['address'],
+                         subnet_data1[0]['host_routes'][0]['nexthop'])
+
     def test_get_all_empty_list_networks(self):
         api = neutronapi.API()
         self.moxed_client.list_networks().AndReturn({'networks': []})
