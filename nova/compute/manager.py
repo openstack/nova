@@ -1430,7 +1430,7 @@ class ComputeManager(manager.Manager):
             task_state = task_states.SCHEDULING
 
             rescheduled = self._reschedule(context, request_spec,
-                    filter_properties, instance['uuid'],
+                    filter_properties, instance,
                     self.scheduler_rpcapi.run_instance, method_args,
                     task_state, exc_info)
 
@@ -1442,10 +1442,11 @@ class ComputeManager(manager.Manager):
         return rescheduled
 
     def _reschedule(self, context, request_spec, filter_properties,
-            instance_uuid, scheduler_method, method_args, task_state,
+            instance, scheduler_method, method_args, task_state,
             exc_info=None):
         """Attempt to re-schedule a compute operation."""
 
+        instance_uuid = instance['uuid']
         retry = filter_properties.get('retry', None)
         if not retry:
             # no retry information, do not reschedule.
@@ -3471,7 +3472,7 @@ class ComputeManager(manager.Manager):
             task_state = task_states.RESIZE_PREP
 
             rescheduled = self._reschedule(context, request_spec,
-                    filter_properties, instance_uuid, scheduler_method,
+                    filter_properties, instance, scheduler_method,
                     method_args, task_state, exc_info)
         except Exception as error:
             rescheduled = False
