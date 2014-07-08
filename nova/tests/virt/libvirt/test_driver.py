@@ -5664,7 +5664,12 @@ class LibvirtConnTestCase(test.TestCase,
         conn._destroy(instance)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance, block_device_info)
+
+        system_meta = utils.instance_sys_meta(instance)
+        image_meta = utils.get_image_from_system_metadata(system_meta)
+
         conn._get_guest_xml(self.context, instance, network_info, disk_info,
+                            image_meta=image_meta,
                             block_device_info=block_device_info,
                             write_to_disk=True).AndReturn(dummyxml)
         disk_info_json = '[{"virt_disk_size": 2}]'
@@ -5680,6 +5685,50 @@ class LibvirtConnTestCase(test.TestCase,
 
         conn._hard_reboot(self.context, instance, network_info,
                           block_device_info)
+
+    @mock.patch('nova.openstack.common.loopingcall.FixedIntervalLoopingCall')
+    @mock.patch('nova.pci.pci_manager.get_instance_pci_devs')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._prepare_pci_devices_for_use')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_domain_and_network')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_images_and_backing')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._get_instance_disk_info')
+    @mock.patch('nova.virt.libvirt.utils.write_to_file')
+    @mock.patch('nova.virt.libvirt.utils.get_instance_path')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._get_guest_config')
+    @mock.patch('nova.virt.libvirt.blockinfo.get_disk_info')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._destroy')
+    def test_hard_reboot_doesnt_call_glance_show(self,
+            mock_destroy, mock_get_disk_info, mock_get_guest_config,
+            mock_get_instance_path, mock_write_to_file,
+            mock_get_instance_disk_info, mock_create_images_and_backing,
+            mock_create_domand_and_network, mock_prepare_pci_devices_for_use,
+            mock_get_instance_pci_devs, mock_looping_call):
+        """For a hard reboot, we shouldn't need an additional call to glance
+        to get the image metadata.
+
+        This is important for automatically spinning up instances on a
+        host-reboot, since we won't have a user request context that'll allow
+        the Glance request to go through. We have to rely on the cached image
+        metadata, instead.
+
+        https://bugs.launchpad.net/nova/+bug/1339386
+        """
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        instance = db.instance_create(self.context, self.test_instance)
+
+        network_info = mock.MagicMock()
+        block_device_info = mock.MagicMock()
+        mock_get_disk_info.return_value = {}
+        mock_get_guest_config.return_value = mock.MagicMock()
+        mock_get_instance_path.return_value = '/foo'
+        mock_looping_call.return_value = mock.MagicMock()
+        conn._image_api = mock.MagicMock()
+
+        conn._hard_reboot(self.context, instance, network_info,
+                          block_device_info)
+
+        self.assertFalse(conn._image_api.get.called)
 
     def test_power_on(self):
 
@@ -5733,12 +5782,9 @@ class LibvirtConnTestCase(test.TestCase,
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         with contextlib.nested(
-            mock.patch.object(conn, '_destroy', return_value=None),
-            mock.patch.object(conn, '_create_images_and_backing'),
-            mock.patch.object(conn, '_create_domain_and_network'),
-            mock.patch('nova.image.glance.get_remote_image_service',
-                       return_value=(image_service_mock,
-                       instance['image_ref']))):
+                mock.patch.object(conn, '_destroy', return_value=None),
+                mock.patch.object(conn, '_create_images_and_backing'),
+                mock.patch.object(conn, '_create_domain_and_network')):
             conn.get_info = fake_get_info
             conn._get_instance_disk_info = _check_xml_bus
             conn._hard_reboot(self.context, instance, network_info,

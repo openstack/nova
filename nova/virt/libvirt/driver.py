@@ -2057,6 +2057,7 @@ class LibvirtDriver(driver.ComputeDriver):
         #             does we need to (re)generate the xml after the images
         #             are in place.
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
+                                  image_meta=image_meta,
                                   block_device_info=block_device_info,
                                   write_to_disk=True)
 
@@ -3433,7 +3434,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_guest_xml(self, context, instance, network_info, disk_info,
                        image_meta=None, rescue=None,
                        block_device_info=None, write_to_disk=False):
-        # We should get image metadata every time for generating xml
+
         if image_meta is None:
             image_ref = instance['image_ref']
             image_meta = compute_utils.get_image_metadata(
