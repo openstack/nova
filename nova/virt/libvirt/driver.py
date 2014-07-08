@@ -81,7 +81,6 @@ from nova import utils
 from nova import version
 from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
-from nova.virt import cpu
 from nova.virt.disk import api as disk
 from nova.virt import driver
 from nova.virt import event as virtevent
@@ -225,7 +224,7 @@ CONF.import_opt('use_cow_images', 'nova.virt.driver')
 CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')
 CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc')
 CONF.import_opt('server_proxyclient_address', 'nova.spice', group='spice')
-CONF.import_opt('vcpu_pin_set', 'nova.virt.cpu')
+CONF.import_opt('vcpu_pin_set', 'nova.virt.hardware')
 CONF.import_opt('vif_plugging_is_fatal', 'nova.virt.driver')
 CONF.import_opt('vif_plugging_timeout', 'nova.virt.driver')
 
@@ -3762,7 +3761,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self._vcpu_total = total_pcpus
             return self._vcpu_total
 
-        available_ids = cpu.get_cpuset_ids()
+        available_ids = hardware.get_vcpu_pin_set()
         if available_ids[-1] >= total_pcpus:
             raise exception.Invalid(_("Invalid vcpu_pin_set config, "
                                       "out of hypervisor cpu range."))
