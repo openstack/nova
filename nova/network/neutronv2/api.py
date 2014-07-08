@@ -1129,8 +1129,15 @@ class API(base_api.NetworkAPI):
         elif vif_type == network_model.VIF_TYPE_BRIDGE:
             bridge = "brq" + port['network_id']
             should_create_bridge = True
+        elif vif_type == network_model.VIF_TYPE_DVS:
+            if network_name is None:
+                bridge = port['network_id']
+            else:
+                bridge = '%s-%s' % (network_name, port['network_id'])
 
-        if bridge is not None:
+        # Prune the bridge name if necessary. For the DVS this is not done
+        # as the bridge is a '<network-name>-<network-UUID>'.
+        if bridge is not None and vif_type != network_model.VIF_TYPE_DVS:
             bridge = bridge[:network_model.NIC_NAME_LEN]
 
         network = network_model.Network(

@@ -31,6 +31,7 @@ def ensure_string_keys(d):
 # Constants for the 'vif_type' field in VIF class
 VIF_TYPE_OVS = 'ovs'
 VIF_TYPE_IVS = 'ivs'
+VIF_TYPE_DVS = 'dvs'
 VIF_TYPE_IOVISOR = 'iovisor'
 VIF_TYPE_BRIDGE = 'bridge'
 VIF_TYPE_802_QBG = '802.1qbg'
