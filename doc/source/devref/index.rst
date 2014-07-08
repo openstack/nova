@@ -38,6 +38,7 @@ Background Concepts for Nova
    :maxdepth: 3
 
    architecture
+   aggregates
    threading
    vmstates
    il8n
