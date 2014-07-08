@@ -30,6 +30,7 @@ from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import memorycache
+from nova import utils
 from nova import wsgi
 
 CACHE_EXPIRATION = 15  # in seconds
@@ -169,7 +170,7 @@ class MetadataRequestHandler(wsgi.Application):
             instance_id,
             hashlib.sha256).hexdigest()
 
-        if expected_signature != signature:
+        if not utils.constant_time_compare(expected_signature, signature):
             if instance_id:
                 LOG.warn(_('X-Instance-ID-Signature: %(signature)s does not '
                            'match the expected value: %(expected_signature)s '
