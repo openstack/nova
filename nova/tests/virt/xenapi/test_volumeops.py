@@ -311,7 +311,7 @@ class AttachVolumeTestCase(VolumeOpsTestBase):
         conn_info = {"driver_volume_type": "xensm"}
         self.ops._check_is_supported_driver_type(conn_info)
 
-    def test_check_is_supported_driver_type_pass_iscsi(self):
+    def test_check_is_supported_driver_type_pass_bad(self):
         conn_info = {"driver_volume_type": "bad"}
         self.assertRaises(exception.VolumeDriverNotFound,
                           self.ops._check_is_supported_driver_type, conn_info)

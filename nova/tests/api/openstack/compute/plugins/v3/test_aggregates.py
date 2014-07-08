@@ -439,8 +439,9 @@ class AggregateTestCase(test.NoDBTestCase):
                           self.controller._remove_host,
                 self.req, "1", body={"remove_host": 1})
 
-    def test_remove_host_with_missing_host(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller._remove_host,
+    def test_remove_host_with_missing_host_empty(self):
+        self.assertRaises(exception.ValidationError,
+                          self.controller._remove_host,
                 self.req, "1", body={"remove_host": {}})
 
     def test_remove_host_with_missing_host(self):
