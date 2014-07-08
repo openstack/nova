@@ -176,10 +176,10 @@ def create_controller_spec(client_factory, key,
     virtual_device_config = client_factory.create(
                             'ns0:VirtualDeviceConfigSpec')
     virtual_device_config.operation = "add"
-    if adapter_type == "busLogic":
+    if adapter_type == constants.ADAPTER_TYPE_BUSLOGIC:
         virtual_controller = client_factory.create(
                                 'ns0:VirtualBusLogicController')
-    elif adapter_type == "lsiLogicsas":
+    elif adapter_type == constants.ADAPTER_TYPE_LSILOGICSAS:
         virtual_controller = client_factory.create(
                                 'ns0:VirtualLsiLogicSASController')
     else:
@@ -410,11 +410,11 @@ def get_vmdk_path_and_adapter_type(hardware_devices, uuid=None):
         elif device.__class__.__name__ == "VirtualLsiLogicController":
             adapter_type_dict[device.key] = constants.DEFAULT_ADAPTER_TYPE
         elif device.__class__.__name__ == "VirtualBusLogicController":
-            adapter_type_dict[device.key] = "busLogic"
+            adapter_type_dict[device.key] = constants.ADAPTER_TYPE_BUSLOGIC
         elif device.__class__.__name__ == "VirtualIDEController":
-            adapter_type_dict[device.key] = "ide"
+            adapter_type_dict[device.key] = constants.ADAPTER_TYPE_IDE
         elif device.__class__.__name__ == "VirtualLsiLogicSASController":
-            adapter_type_dict[device.key] = "lsiLogicsas"
+            adapter_type_dict[device.key] = constants.ADAPTER_TYPE_LSILOGICSAS
 
     adapter_type = adapter_type_dict.get(vmdk_controller_key, "")
 
@@ -466,11 +466,12 @@ def allocate_controller_key_and_unit_number(client_factory, devices,
     taken = _find_allocated_slots(devices)
 
     ret = None
-    if adapter_type == 'ide':
+    if adapter_type == constants.ADAPTER_TYPE_IDE:
         ide_keys = [dev.key for dev in devices if _is_ide_controller(dev)]
         ret = _find_controller_slot(ide_keys, taken, 2)
-    elif adapter_type in [constants.DEFAULT_ADAPTER_TYPE, 'lsiLogicsas',
-                          'busLogic']:
+    elif adapter_type in [constants.DEFAULT_ADAPTER_TYPE,
+                          constants.ADAPTER_TYPE_LSILOGICSAS,
+                          constants.ADAPTER_TYPE_BUSLOGIC]:
         scsi_keys = [dev.key for dev in devices if _is_scsi_controller(dev)]
         ret = _find_controller_slot(scsi_keys, taken, 16)
     if ret:
@@ -1235,7 +1236,7 @@ def get_vmdk_adapter_type(adapter_type):
     because Virtual Disk Manager API does not recognize the newer controller
     types.
     """
-    if adapter_type == "lsiLogicsas":
+    if adapter_type == constants.ADAPTER_TYPE_LSILOGICSAS:
         vmdk_adapter_type = constants.DEFAULT_ADAPTER_TYPE
     else:
         vmdk_adapter_type = adapter_type
