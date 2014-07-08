@@ -125,7 +125,7 @@ class QuotaSetsTest(test.TestCase):
         id = 'update_me'
         body = {'quota_set': {'instances': 0, 'cores': 0,
                               'ram': 0, 'floating_ips': 0,
-                              'fixed_ips': 0, 'metadata_items': 0,
+                              'metadata_items': 0,
                               'security_groups': 0,
                               'security_group_rules': 0,
                               'key_pairs': 100, 'fixed_ips': -1}}
