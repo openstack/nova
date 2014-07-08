@@ -668,13 +668,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertFalse(vmwareapi_fake.get_file(str(path)))
 
     def test_iso_disk_cdrom_attach(self):
-        self.iso_path = ds_util.DatastorePath(self.ds, 'vmware_base',
-                                              self.fake_image_uuid,
-                                              '%s.iso' % self.fake_image_uuid)
+        iso_path = ds_util.DatastorePath(self.ds, 'vmware_base',
+                                         self.fake_image_uuid,
+                                         '%s.iso' % self.fake_image_uuid)
 
         def fake_attach_cdrom(vm_ref, instance, data_store_ref,
                               iso_uploaded_path):
-            self.assertEqual(iso_uploaded_path, str(self.iso_path))
+            self.assertEqual(iso_uploaded_path, str(iso_path))
 
         self.stubs.Set(self.conn._vmops, "_attach_cdrom_to_vm",
                        fake_attach_cdrom)
@@ -683,12 +683,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def test_iso_disk_cdrom_attach_with_config_drive(self):
         self.flags(force_config_drive=True)
-        self.iso_path = [
+        iso_path = [
             ds_util.DatastorePath(self.ds, 'vmware_base',
                                   self.fake_image_uuid,
                                   '%s.iso' % self.fake_image_uuid),
             ds_util.DatastorePath(self.ds, 'fake-config-drive')]
-        self.iso_unit_nos = [0, 1]
         self.iso_index = 0
 
         def fake_create_config_drive(instance, injected_files, password,
@@ -697,8 +696,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
         def fake_attach_cdrom(vm_ref, instance, data_store_ref,
                               iso_uploaded_path):
-            self.assertEqual(iso_uploaded_path,
-                             str(self.iso_path[self.iso_index]))
+            self.assertEqual(iso_uploaded_path, str(iso_path[self.iso_index]))
             self.iso_index += 1
 
         self.stubs.Set(self.conn._vmops, "_attach_cdrom_to_vm",
@@ -713,7 +711,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_cdrom_attach_with_config_drive(self):
         self.flags(force_config_drive=True)
 
-        self.iso_path = ds_util.DatastorePath(self.ds, 'fake-config-drive')
+        iso_path = ds_util.DatastorePath(self.ds, 'fake-config-drive')
         self.cd_attach_called = False
 
         def fake_create_config_drive(instance, injected_files, password,
@@ -722,7 +720,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
         def fake_attach_cdrom(vm_ref, instance, data_store_ref,
                               iso_uploaded_path):
-            self.assertEqual(iso_uploaded_path, str(self.iso_path))
+            self.assertEqual(iso_uploaded_path, str(iso_path))
             self.cd_attach_called = True
 
         self.stubs.Set(self.conn._vmops, "_attach_cdrom_to_vm",
@@ -842,10 +840,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         root = ds_util.DatastorePath(self.ds, 'vmware_base',
                                      self.fake_image_uuid,
                                      '%s.80.vmdk' % self.fake_image_uuid)
-        self.root = root
 
         def _fake_extend(instance, requested_size, name, dc_ref):
-            vmwareapi_fake._add_file(str(self.root))
+            vmwareapi_fake._add_file(str(root))
 
         self.stubs.Set(self.conn._vmops, '_extend_virtual_disk',
                        _fake_extend)
