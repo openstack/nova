@@ -14,8 +14,9 @@
 #    under the License.
 
 import contextlib
-import eventlet
 import tarfile
+
+import eventlet
 
 from nova.image import glance
 from nova import test

@@ -29,10 +29,11 @@ import sys
 if sys.platform == 'win32':
     import wmi
 
+from xml.etree import ElementTree
+
 from nova.openstack.common.gettextutils import _
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import vmutils
-from xml.etree import ElementTree
 
 
 VHD_HEADER_SIZE_FIX = 512

@@ -16,16 +16,15 @@
 """Starter script for Bare-Metal Deployment Service."""
 
 
-import os
-import sys
-import threading
-import time
-
 import cgi
+import os
 import Queue
 import re
 import socket
 import stat
+import sys
+import threading
+import time
 from wsgiref import simple_server
 
 from nova import config

@@ -19,6 +19,7 @@ Tests for Consoleauth Code.
 """
 
 import mox
+
 from nova.consoleauth import manager
 from nova import context
 from nova import db

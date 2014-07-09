@@ -18,20 +18,20 @@
 
 import os.path
 import tempfile
-import testtools
+import urllib2
 
 import eventlet
 import eventlet.wsgi
 import mock
+from oslo.config import cfg
 import requests
+import testtools
+import webob
 
 import nova.exception
 from nova import test
 from nova.tests import utils
 import nova.wsgi
-from oslo.config import cfg
-import urllib2
-import webob
 
 SSL_CERT_DIR = os.path.normpath(os.path.join(
                                 os.path.dirname(os.path.abspath(__file__)),

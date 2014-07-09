@@ -17,12 +17,11 @@ import six.moves.urllib.parse as urlparse
 import webob
 
 from nova.api.openstack.compute.plugins.v3 import flavors
-from nova.openstack.common import jsonutils
-
 import nova.compute.flavors
 from nova import context
 from nova import db
 from nova import exception
+from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import matchers

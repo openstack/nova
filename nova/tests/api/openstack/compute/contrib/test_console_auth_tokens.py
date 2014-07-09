@@ -13,9 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import webob
-
 from oslo.config import cfg
+import webob
 
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context

@@ -13,7 +13,6 @@
 #    under the License.
 
 import netaddr
-
 from oslo.config import cfg
 
 from nova import db

@@ -13,6 +13,7 @@
 #    under the License.
 
 import contextlib
+
 import mock
 
 from nova.openstack.common import units

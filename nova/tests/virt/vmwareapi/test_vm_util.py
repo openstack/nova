@@ -15,9 +15,9 @@
 #    under the License.
 
 import collections
+import contextlib
 import re
 
-import contextlib
 import mock
 
 from nova import exception

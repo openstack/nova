@@ -13,8 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 from xml.dom import minidom
+
+from lxml import etree
 
 from nova.api.openstack import xmlutil
 from nova import exception

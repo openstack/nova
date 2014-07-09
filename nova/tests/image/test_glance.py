@@ -18,17 +18,15 @@ import datetime
 import filecmp
 import os
 import random
+import sys
 import tempfile
 import time
 
-import sys
-import testtools
-
+import glanceclient.exc
 import mock
 import mox
-
-import glanceclient.exc
 from oslo.config import cfg
+import testtools
 
 from nova import context
 from nova import exception
@@ -37,7 +35,6 @@ from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests.glance import stubs as glance_stubs
 from nova import utils
-
 import nova.virt.libvirt.utils as lv_utils
 
 CONF = cfg.CONF

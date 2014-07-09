@@ -30,6 +30,7 @@ if ('eventlet' in sys.modules and
 os.environ['EVENTLET_NO_GREENDNS'] = 'yes'
 
 import eventlet
+
 from nova import debugger
 
 if debugger.enabled():

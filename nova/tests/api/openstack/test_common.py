@@ -17,12 +17,13 @@
 Test suites for 'common' code used throughout the OpenStack HTTP API.
 """
 
+import xml.dom.minidom as minidom
+
 from lxml import etree
 import mock
 from testtools import matchers
 import webob
 import webob.exc
-import xml.dom.minidom as minidom
 
 from nova.api.openstack import common
 from nova.api.openstack import xmlutil

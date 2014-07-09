@@ -16,6 +16,7 @@
 """Tests for the conductor service."""
 
 import contextlib
+
 import mock
 import mox
 from oslo import messaging

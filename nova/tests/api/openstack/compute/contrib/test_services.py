@@ -15,8 +15,8 @@
 
 import calendar
 import datetime
-import iso8601
 
+import iso8601
 import mock
 import webob.exc
 

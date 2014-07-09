@@ -14,10 +14,10 @@
 #    under the License.
 
 import contextlib
-import fixtures
 import os
 import time
 
+import fixtures
 import mock
 from oslo.config import cfg
 

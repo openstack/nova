@@ -13,9 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import fixtures
 import StringIO
 import sys
+
+import fixtures
 
 from nova.cmd import manage
 from nova import context

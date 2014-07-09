@@ -14,8 +14,9 @@
 #    under the License.
 
 import datetime
-from oslo.config import cfg
 import uuid
+
+from oslo.config import cfg
 import webob
 
 from nova.api.openstack.compute import plugins

@@ -55,10 +55,10 @@
 from __future__ import print_function
 
 import argparse
-import decorator
 import os
 import sys
 
+import decorator
 import netaddr
 from oslo.config import cfg
 from oslo import messaging

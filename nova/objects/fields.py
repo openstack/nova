@@ -14,8 +14,8 @@
 
 import abc
 import datetime
-import iso8601
 
+import iso8601
 import netaddr
 import six
 

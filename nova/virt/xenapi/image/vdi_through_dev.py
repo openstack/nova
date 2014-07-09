@@ -14,10 +14,11 @@
 #    under the License.
 
 import contextlib
-import eventlet
-from eventlet import greenio
 import os
 import tarfile
+
+import eventlet
+from eventlet import greenio
 
 from nova.image import glance
 from nova import utils

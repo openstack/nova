@@ -50,12 +50,11 @@ A fake XenAPI SDK.
 
 import base64
 import pickle
+import pprint
 import random
 import uuid
 from xml.sax import saxutils
 import zlib
-
-import pprint
 
 from nova import exception
 from nova.openstack.common.gettextutils import _

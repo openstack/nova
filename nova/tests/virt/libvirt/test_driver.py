@@ -16,21 +16,21 @@
 import contextlib
 import copy
 import errno
-import eventlet
-import fixtures
 import functools
-import mox
 import os
 import re
 import shutil
 import tempfile
 import uuid
+from xml.dom import minidom
 
+import eventlet
 from eventlet import greenthread
+import fixtures
 from lxml import etree
 import mock
+import mox
 from oslo.config import cfg
-from xml.dom import minidom
 
 from nova.api.ec2 import cloud
 from nova.compute import flavors
@@ -7864,7 +7864,7 @@ class IptablesFirewallTestCase(test.TestCase):
         from nova.network import linux_net
         linux_net.iptables_manager.execute = fake_iptables_execute
 
-        from nova.compute import utils as compute_utils
+        from nova.compute import utils as compute_utils  # noqa
         self.stubs.Set(compute_utils, 'get_nw_info_for_instance',
                        lambda instance: network_model)
 

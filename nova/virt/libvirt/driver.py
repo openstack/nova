@@ -26,7 +26,6 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 """
 
 import errno
-import eventlet
 import functools
 import glob
 import mmap
@@ -39,6 +38,7 @@ import threading
 import time
 import uuid
 
+import eventlet
 from eventlet import greenio
 from eventlet import greenthread
 from eventlet import patcher

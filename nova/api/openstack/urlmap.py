@@ -13,9 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import paste.urlmap
 import re
 import urllib2
+
+import paste.urlmap
 
 from nova.api.openstack import wsgi
 

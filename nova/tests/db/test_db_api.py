@@ -20,11 +20,11 @@
 
 import copy
 import datetime
-import iso8601
 import types
 import uuid as stdlib_uuid
 
 import eventlet
+import iso8601
 import mox
 import netaddr
 from oslo.config import cfg
@@ -60,7 +60,6 @@ from nova import quota
 from nova import test
 from nova.tests import matchers
 from nova import utils
-
 
 CONF = cfg.CONF
 CONF.import_opt('reserved_host_memory_mb', 'nova.compute.resource_tracker')

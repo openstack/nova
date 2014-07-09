@@ -17,13 +17,13 @@
 """Eventlet WSGI Services to proxy VNC for XCP protocol."""
 
 import socket
-import webob
 
 import eventlet
 import eventlet.green
 import eventlet.greenio
 import eventlet.wsgi
 from oslo.config import cfg
+import webob
 
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context

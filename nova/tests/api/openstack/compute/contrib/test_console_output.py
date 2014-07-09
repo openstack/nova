@@ -14,6 +14,7 @@
 #    under the License.
 
 import string
+
 import webob
 
 from nova.compute import api as compute_api

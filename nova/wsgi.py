@@ -21,6 +21,7 @@ from __future__ import print_function
 
 import os.path
 import socket
+import ssl
 import sys
 
 import eventlet
@@ -29,7 +30,6 @@ import greenlet
 from oslo.config import cfg
 from paste import deploy
 import routes.middleware
-import ssl
 import webob.dec
 import webob.exc
 

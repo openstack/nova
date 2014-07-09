@@ -20,7 +20,6 @@
 import os
 
 import mox
-
 from oslo.config import cfg
 
 from nova import exception

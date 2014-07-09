@@ -29,7 +29,7 @@ except ImportError:
 
 import utils    # noqa
 
-import XenAPIPlugin
+import XenAPIPlugin    # noqa
 
 import pluginlib_nova as pluginlib  # noqa
 pluginlib.configure_logging("xenstore")
