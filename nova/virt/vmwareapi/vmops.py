@@ -269,6 +269,10 @@ class VMwareVMOps(object):
         vm_ref = vm_util.create_vm(self._session, instance, dc_info.vmFolder,
                                    config_spec, res_pool_ref)
 
+        # Cache the vm_ref. This saves a remote call to the VC. This uses the
+        # instance_name. This covers all use cases including rescue and resize.
+        vm_util.vm_ref_cache_update(instance_name, vm_ref)
+
         # Set the machine.id parameter of the instance to inject
         # the NIC configuration inside the VM
         if CONF.flat_injected:
