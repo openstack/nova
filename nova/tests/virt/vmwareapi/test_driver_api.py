@@ -623,7 +623,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                          self.type_data['memory_mb'])
 
         self.assertEqual(
-            vm.get("config.hardware.device")[2].device.obj_name,
+            vm.get("config.hardware.device").VirtualDevice[2].obj_name,
             "ns0:VirtualE1000")
         if powered_on:
             # Check that the VM is running according to Nova

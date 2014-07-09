@@ -39,6 +39,7 @@ _CLASSES = ['Datacenter', 'Datastore', 'ResourcePool', 'VirtualMachine',
 _FAKE_FILE_SIZE = 1024
 
 _db_content = {}
+_array_types = {}
 
 LOG = logging.getLogger(__name__)
 
@@ -107,6 +108,24 @@ def _convert_to_array_of_opt_val(optvals):
     array_of_optv = DataObject()
     array_of_optv.OptionValue = optvals
     return array_of_optv
+
+
+def _create_array_of_type(t):
+    """Returns an array to contain objects of type t."""
+    if t in _array_types:
+        return _array_types[t]()
+
+    array_type_name = 'ArrayOf%s' % t
+    array_type = type(array_type_name, (DataObject,), {})
+
+    def __init__(self):
+        super(array_type, self).__init__(array_type_name)
+        setattr(self, t, [])
+
+    setattr(array_type, '__init__', __init__)
+
+    _array_types[t] = array_type
+    return array_type()
 
 
 class FakeRetrieveResult(object):
@@ -395,7 +414,11 @@ class VirtualMachine(ManagedObject):
         self.set("summary.config.numCpu", kwargs.get("numCpu", 1))
         self.set("summary.config.memorySizeMB", kwargs.get("mem", 1))
         self.set("summary.config.instanceUuid", kwargs.get("instanceUuid"))
-        self.set("config.hardware.device", kwargs.get("virtual_device", None))
+
+        devices = _create_array_of_type('VirtualDevice')
+        devices.VirtualDevice = kwargs.get("virtual_device", [])
+        self.set("config.hardware.device", devices)
+
         exconfig_do = kwargs.get("extra_config", None)
         self.set("config.extraConfig",
                  _convert_to_array_of_opt_val(exconfig_do))
@@ -403,7 +426,7 @@ class VirtualMachine(ManagedObject):
             for optval in exconfig_do:
                 self.set('config.extraConfig["%s"]' % optval.key, optval)
         self.set('runtime.host', kwargs.get("runtime_host", None))
-        self.device = kwargs.get("virtual_device")
+        self.device = kwargs.get("virtual_device", [])
         # Sample of diagnostics data is below.
         config = [
             ('template', False),
@@ -497,8 +520,9 @@ class VirtualMachine(ManagedObject):
             controller = VirtualLsiLogicController()
             controller.key = controller_key
 
-            self.set("config.hardware.device", [disk, controller,
-                                                  self.device[0]])
+            devices = _create_array_of_type('VirtualDevice')
+            devices.VirtualDevice = [disk, controller, self.device[0]]
+            self.set("config.hardware.device", devices)
         except AttributeError:
             pass
 
@@ -1140,6 +1164,11 @@ class FakeVim(object):
         else:
             ds = create_datastore(vm_path.datastore, 1024, 500)
 
+        devices = []
+        for device_change in config_spec.deviceChange:
+            if device_change.operation == 'add':
+                devices.append(device_change.device)
+
         host = _db_content["HostSystem"].keys()[0]
         vm_dict = {"name": config_spec.name,
                   "ds": [ds],
@@ -1149,7 +1178,7 @@ class FakeVim(object):
                   "numCpu": config_spec.numCPUs,
                   "mem": config_spec.memoryMB,
                   "extra_config": config_spec.extraConfig,
-                  "virtual_device": config_spec.deviceChange,
+                  "virtual_device": devices,
                   "instanceUuid": config_spec.instanceUuid}
         virtual_machine = VirtualMachine(**vm_dict)
         _create_object("VirtualMachine", virtual_machine)
@@ -1230,7 +1259,8 @@ class FakeVim(object):
          "numCpu": source_vm_mdo.get("summary.config.numCpu"),
          "mem": source_vm_mdo.get("summary.config.memorySizeMB"),
          "extra_config": source_vm_mdo.get("config.extraConfig").OptionValue,
-         "virtual_device": source_vm_mdo.get("config.hardware.device"),
+         "virtual_device":
+             source_vm_mdo.get("config.hardware.device").VirtualDevice,
          "instanceUuid": source_vm_mdo.get("summary.config.instanceUuid")}
 
         if clone_spec.config is not None:
