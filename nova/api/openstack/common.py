@@ -30,6 +30,8 @@ from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LE
+from nova.i18n import _LW
 from nova.openstack.common import log as logging
 from nova import quota
 
@@ -129,9 +131,9 @@ def status_from_state(vm_state, task_state='default'):
     task_map = _STATE_MAP.get(vm_state, dict(default='UNKNOWN'))
     status = task_map.get(task_state, task_map['default'])
     if status == "UNKNOWN":
-        LOG.error(_("status is UNKNOWN from vm_state=%(vm_state)s "
-                    "task_state=%(task_state)s. Bad upgrade or db "
-                    "corrupted?"),
+        LOG.error(_LE("status is UNKNOWN from vm_state=%(vm_state)s "
+                      "task_state=%(task_state)s. Bad upgrade or db "
+                      "corrupted?"),
                   {'vm_state': vm_state, 'task_state': task_state})
     return status
 
@@ -273,9 +275,8 @@ def remove_version_from_href(href):
     new_path = '/'.join(url_parts)
 
     if new_path == parsed_url.path:
-        msg = _('href %s does not contain version') % href
-        LOG.debug(msg)
-        raise ValueError(msg)
+        LOG.debug('href %s does not contain version' % href)
+        raise ValueError(_('href %s does not contain version') % href)
 
     parsed_url = list(parsed_url)
     parsed_url[2] = new_path
@@ -451,8 +452,8 @@ def check_snapshots_enabled(f):
     @functools.wraps(f)
     def inner(*args, **kwargs):
         if not CONF.allow_instance_snapshots:
-            LOG.warn(_('Rejecting snapshot request, snapshots currently'
-                       ' disabled'))
+            LOG.warn(_LW('Rejecting snapshot request, snapshots currently'
+                         ' disabled'))
             msg = _("Instance snapshots are not permitted at this time.")
             raise webob.exc.HTTPBadRequest(explanation=msg)
         return f(*args, **kwargs)

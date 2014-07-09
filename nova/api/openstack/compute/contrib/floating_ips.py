@@ -25,6 +25,7 @@ from nova import compute
 from nova.compute import utils as compute_utils
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LW
 from nova import network
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
@@ -248,8 +249,8 @@ class FloatingIPActionController(wsgi.Controller):
         if not fixed_address:
             fixed_address = fixed_ips[0]['address']
             if len(fixed_ips) > 1:
-                msg = _('multiple fixed_ips exist, using the first: %s')
-                LOG.warning(msg, fixed_address)
+                LOG.warn(_LW('multiple fixed_ips exist, using the first: '
+                             '%s'), fixed_address)
 
         try:
             self.network_api.associate_floating_ip(context, instance,

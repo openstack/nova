@@ -34,6 +34,7 @@ from nova import context
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
+from nova.i18n import _LW
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -165,9 +166,9 @@ class Lockout(wsgi.Middleware):
                 # NOTE(vish): To use incr, failures has to be a string.
                 self.mc.set(failures_key, '1', time=CONF.lockout_window * 60)
             elif failures >= CONF.lockout_attempts:
-                LOG.warn(_('Access key %(access_key)s has had %(failures)d '
-                           'failed authentications and will be locked out '
-                           'for %(lock_mins)d minutes.'),
+                LOG.warn(_LW('Access key %(access_key)s has had %(failures)d '
+                             'failed authentications and will be locked out '
+                             'for %(lock_mins)d minutes.'),
                          {'access_key': access_key,
                           'failures': failures,
                           'lock_mins': CONF.lockout_minutes})
@@ -489,10 +490,10 @@ def ec2_error_ex(ex, req, code=None, message=None, unexpected=False):
 
     if unexpected:
         log_fun = LOG.error
-        log_msg = _("Unexpected %(ex_name)s raised: %(ex_str)s")
+        log_msg = _LE("Unexpected %(ex_name)s raised: %(ex_str)s")
     else:
         log_fun = LOG.debug
-        log_msg = _("%(ex_name)s raised: %(ex_str)s")
+        log_msg = "%(ex_name)s raised: %(ex_str)s"
         # NOTE(jruzicka): For compatibility with EC2 API, treat expected
         # exceptions as client (4xx) errors. The exception error code is 500
         # by default and most exceptions inherit this from NovaException even
@@ -516,7 +517,7 @@ def ec2_error_ex(ex, req, code=None, message=None, unexpected=False):
         for k in env.keys():
             if not isinstance(env[k], six.string_types):
                 env.pop(k)
-        log_fun(_('Environment: %s') % jsonutils.dumps(env))
+        log_fun(_LE('Environment: %s'), jsonutils.dumps(env))
     if not message:
         message = _('Unknown error occurred.')
     return faults.ec2_error_response(request_id, code, message, status=status)

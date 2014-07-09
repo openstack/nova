@@ -28,6 +28,8 @@ from nova.api.metadata import base
 from nova import conductor
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LE
+from nova.i18n import _LW
 from nova.openstack.common import log as logging
 from nova.openstack.common import memorycache
 from nova import utils
@@ -109,9 +111,9 @@ class MetadataRequestHandler(wsgi.Application):
         else:
             if req.headers.get('X-Instance-ID'):
                 LOG.warn(
-                    _("X-Instance-ID present in request headers. The "
-                      "'service_neutron_metadata_proxy' option must be enabled"
-                      " to process this header."))
+                    _LW("X-Instance-ID present in request headers. The "
+                        "'service_neutron_metadata_proxy' option must be"
+                        "enabled to process this header."))
             meta_data = self._handle_remote_ip_request(req)
 
         if meta_data is None:
@@ -145,7 +147,8 @@ class MetadataRequestHandler(wsgi.Application):
             raise webob.exc.HTTPInternalServerError(explanation=unicode(msg))
 
         if meta_data is None:
-            LOG.error(_('Failed to get metadata for ip: %s'), remote_address)
+            LOG.error(_LE('Failed to get metadata for ip: %s'),
+                      remote_address)
 
         return meta_data
 
@@ -178,10 +181,10 @@ class MetadataRequestHandler(wsgi.Application):
 
         if not utils.constant_time_compare(expected_signature, signature):
             if instance_id:
-                LOG.warn(_('X-Instance-ID-Signature: %(signature)s does not '
-                           'match the expected value: %(expected_signature)s '
-                           'for id: %(instance_id)s.  Request From: '
-                            '%(remote_address)s'),
+                LOG.warn(_LW('X-Instance-ID-Signature: %(signature)s does '
+                             'not match the expected value: '
+                             '%(expected_signature)s for id: %(instance_id)s.'
+                             '  Request From: %(remote_address)s'),
                          {'signature': signature,
                           'expected_signature': expected_signature,
                           'instance_id': instance_id,
@@ -201,14 +204,13 @@ class MetadataRequestHandler(wsgi.Application):
             raise webob.exc.HTTPInternalServerError(explanation=unicode(msg))
 
         if meta_data is None:
-            LOG.error(_('Failed to get metadata for instance id: %s'),
+            LOG.error(_LE('Failed to get metadata for instance id: %s'),
                       instance_id)
 
         if meta_data.instance['project_id'] != tenant_id:
-            LOG.warning(_("Tenant_id %(tenant_id)s does not match tenant_id "
-                          "of instance %(instance_id)s."),
-                        {'tenant_id': tenant_id,
-                         'instance_id': instance_id})
+            LOG.warn(_LW("Tenant_id %(tenant_id)s does not match tenant_id "
+                         "of instance %(instance_id)s."),
+                     {'tenant_id': tenant_id, 'instance_id': instance_id})
             # causes a 404 to be raised
             meta_data = None
 

@@ -28,6 +28,9 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LC
+from nova.i18n import _LI
+from nova.i18n import _LW
 from nova.i18n import translate
 from nova import notifications
 from nova.openstack.common import log as logging
@@ -95,7 +98,7 @@ class FaultWrapper(base_wsgi.Middleware):
             status = 500
 
         msg_dict = dict(url=req.url, status=status)
-        LOG.info(_("%(url)s returned with HTTP %(status)d") % msg_dict)
+        LOG.info(_LI("%(url)s returned with HTTP %(status)d"), msg_dict)
         outer = self.status_to_type(status)
         if headers:
             outer.headers = headers
@@ -229,9 +232,9 @@ class APIRouter(base_wsgi.Router):
             msg_format_dict = {'collection': collection,
                                'ext_name': extension.extension.name}
             if collection not in self.resources:
-                LOG.warning(_('Extension %(ext_name)s: Cannot extend '
-                              'resource %(collection)s: No such resource'),
-                            msg_format_dict)
+                LOG.warn(_LW('Extension %(ext_name)s: Cannot extend '
+                             'resource %(collection)s: No such resource'),
+                         msg_format_dict)
                 continue
 
             LOG.debug('Extension %(ext_name)s extended resource: '
@@ -276,19 +279,19 @@ class APIRouterV3(base_wsgi.Router):
                     if ext.obj.alias not in CONF.osapi_v3.extensions_blacklist:
                         return self._register_extension(ext)
                     else:
-                        LOG.warning(_("Not loading %s because it is "
-                                      "in the blacklist"), ext.obj.alias)
+                        LOG.warn(_LW("Not loading %s because it is "
+                                     "in the blacklist"), ext.obj.alias)
                         return False
                 else:
-                    LOG.warning(
-                        _("Not loading %s because it is not in the whitelist"),
-                        ext.obj.alias)
+                    LOG.warn(
+                        _LW("Not loading %s because it is not in the "
+                            "whitelist"), ext.obj.alias)
                     return False
             else:
                 return False
 
         if not CONF.osapi_v3.enabled:
-            LOG.info(_("V3 API has been disabled by configuration"))
+            LOG.info(_LI("V3 API has been disabled by configuration"))
             return
 
         self.init_only = init_only
@@ -301,8 +304,8 @@ class APIRouterV3(base_wsgi.Router):
             CONF.osapi_v3.extensions_whitelist).intersection(
                 CONF.osapi_v3.extensions_blacklist)
         if len(in_blacklist_and_whitelist) != 0:
-            LOG.warning(_("Extensions in both blacklist and whitelist: %s"),
-                        list(in_blacklist_and_whitelist))
+            LOG.warn(_LW("Extensions in both blacklist and whitelist: %s"),
+                     list(in_blacklist_and_whitelist))
 
         self.api_extension_manager = stevedore.enabled.EnabledExtensionManager(
             namespace=self.API_EXTENSION_NAMESPACE,
@@ -325,7 +328,7 @@ class APIRouterV3(base_wsgi.Router):
         missing_core_extensions = self.get_missing_core_extensions(
             self.loaded_extension_info.get_extensions().keys())
         if not self.init_only and missing_core_extensions:
-            LOG.critical(_("Missing core API extensions: %s"),
+            LOG.critical(_LC("Missing core API extensions: %s"),
                          missing_core_extensions)
             raise exception.CoreAPIMissing(
                 missing_apis=missing_core_extensions)
@@ -403,9 +406,9 @@ class APIRouterV3(base_wsgi.Router):
             controller = extension.controller
 
             if collection not in self.resources:
-                LOG.warning(_('Extension %(ext_name)s: Cannot extend '
-                              'resource %(collection)s: No such resource'),
-                              {'ext_name': ext_name, 'collection': collection})
+                LOG.warn(_LW('Extension %(ext_name)s: Cannot extend '
+                             'resource %(collection)s: No such resource'),
+                         {'ext_name': ext_name, 'collection': collection})
                 continue
 
             LOG.debug('Extension %(ext_name)s extending resource: '
