@@ -480,3 +480,247 @@ class VirtCPUTopology(object):
         return VirtCPUTopology.get_desirable_configs(flavor,
                                                      image_meta,
                                                      allow_threads)[0]
+
+
+class VirtNUMATopologyCell(object):
+    """Class for reporting NUMA resources in a cell
+
+    The VirtNUMATopologyCell class represents the
+    hardware resources present in a NUMA cell.
+    """
+
+    def __init__(self, id, cpuset, memory):
+        """Create a new NUMA Cell
+
+        :param id: integer identifier of cell
+        :param cpuset: set containing list of CPU indexes
+        :param memory: RAM measured in KiB
+
+        Creates a new NUMA cell object to record the hardware
+        resources.
+
+        :returns: a new NUMA cell object
+        """
+
+        super(VirtNUMATopologyCell, self).__init__()
+
+        self.id = id
+        self.cpuset = cpuset
+        self.memory = memory
+
+
+class VirtNUMATopologyCellUsage(VirtNUMATopologyCell):
+    """Class for reporting NUMA resources and usage in a cell
+
+    The VirtNUMATopologyCellUsage class specializes
+    VirtNUMATopologyCell to include information about the
+    utilization of hardware resources in a NUMA cell.
+    """
+
+    def __init__(self, id, cpuset, memory, cpu_usage, memory_usage):
+        """Create a new NUMA Cell with usage
+
+        :param id: integer identifier of cell
+        :param cpuset: set containing list of CPU indexes
+        :param memory: RAM measured in KiB
+        :param cpu_usage: number of  CPUs allocated
+        :param memory_usage: RAM allocated in KiB
+
+        Creates a new NUMA cell object to record the hardware
+        resources and utilization. The number of CPUs specified
+        by the @cpu_usage parameter may be larger than the number
+        of bits set in @cpuset if CPU overcommit is used. Likewise
+        the amount of RAM specified by the @memory_usage parameter
+        may be larger than the available RAM in @memory if RAM
+        overcommit is used.
+
+        :returns: a new NUMA cell object
+        """
+
+        super(VirtNUMATopologyCellUsage, self).__init__(
+            id, cpuset, memory)
+
+        self.cpu_usage = cpu_usage
+        self.memory_usage = memory_usage
+
+
+class VirtNUMATopology(object):
+    """Base class for tracking NUMA topology information
+
+    The VirtNUMATopology class represents the NUMA hardware
+    topology for memory and CPUs in any machine. It is
+    later specialized for handling either guest instance
+    or compute host NUMA topology.
+    """
+
+    def __init__(self, cells=None):
+        """Create a new NUMA topology object
+
+        :param cells: list of VirtNUMATopologyCell instances
+
+        """
+
+        super(VirtNUMATopology, self).__init__()
+
+        self.cells = cells or []
+
+    def __len__(self):
+        """Defined so that boolean testing works the same as for lists."""
+        return len(self.cells)
+
+
+class VirtNUMAInstanceTopology(VirtNUMATopology):
+    """Class to represent the topology configured for a guest
+    instance. It provides helper APIs to determine configuration
+    from the metadata specified against the flavour and or
+    disk image
+    """
+
+    @staticmethod
+    def _get_flavor_or_image_prop(flavor, image_meta, propname):
+        flavor_val = flavor.get('extra_specs', {}).get("hw:" + propname)
+        image_val = image_meta.get("hw_" + propname)
+
+        if flavor_val is not None:
+            if image_val is not None:
+                raise exception.ImageNUMATopologyForbidden(
+                    name='hw_' + propname)
+
+            return flavor_val
+        else:
+            return image_val
+
+    @classmethod
+    def _get_constraints_manual(cls, nodes, flavor, image_meta):
+        cells = []
+        totalmem = 0
+
+        availcpus = set(range(flavor.vcpus))
+
+        for node in range(nodes):
+            cpus = cls._get_flavor_or_image_prop(
+                flavor, image_meta, "numa_cpus.%d" % node)
+            mem = cls._get_flavor_or_image_prop(
+                flavor, image_meta, "numa_mem.%d" % node)
+
+            # We're expecting both properties set, so
+            # raise an error if either is missing
+            if cpus is None or mem is None:
+                raise exception.ImageNUMATopologyIncomplete()
+
+            mem = int(mem)
+            cpuset = parse_cpu_spec(cpus)
+
+            for cpu in cpuset:
+                if cpu > (flavor.vcpus - 1):
+                    raise exception.ImageNUMATopologyCPUOutOfRange(
+                        cpunum=cpu, cpumax=(flavor.vcpus - 1))
+
+                if cpu not in availcpus:
+                    raise exception.ImageNUMATopologyCPUDuplicates(
+                        cpunum=cpu)
+
+                availcpus.remove(cpu)
+
+            cells.append(VirtNUMATopologyCell(node, cpuset, mem))
+            totalmem = totalmem + mem
+
+        if availcpus:
+            raise exception.ImageNUMATopologyCPUsUnassigned(
+                cpuset=str(availcpus))
+
+        if totalmem != flavor.memory_mb:
+            raise exception.ImageNUMATopologyMemoryOutOfRange(
+                memsize=totalmem,
+                memtotal=flavor.memory_mb)
+
+        return cls(cells)
+
+    @classmethod
+    def _get_constraints_auto(cls, nodes, flavor, image_meta):
+        if ((flavor.vcpus % nodes) > 0 or
+            (flavor.memory_mb % nodes) > 0):
+            raise exception.ImageNUMATopologyAsymmetric()
+
+        cells = []
+        for node in range(nodes):
+            cpus = cls._get_flavor_or_image_prop(
+                flavor, image_meta, "numa_cpus.%d" % node)
+            mem = cls._get_flavor_or_image_prop(
+                flavor, image_meta, "numa_mem.%d" % node)
+
+            # We're not expecting any properties set, so
+            # raise an error if there are any
+            if cpus is not None or mem is not None:
+                raise exception.ImageNUMATopologyIncomplete()
+
+            ncpus = int(flavor.vcpus / nodes)
+            mem = int(flavor.memory_mb / nodes)
+            start = node * ncpus
+            cpuset = set(range(start, start + ncpus))
+
+            cells.append(VirtNUMATopologyCell(node, cpuset, mem))
+
+        return cls(cells)
+
+    @classmethod
+    def get_constraints(cls, flavor, image_meta):
+        nodes = cls._get_flavor_or_image_prop(
+            flavor, image_meta, "numa_nodes")
+
+        if nodes is None:
+            return None
+
+        nodes = int(nodes)
+
+        # We'll pick what path to go down based on whether
+        # anything is set for the first node. Both paths
+        # have logic to cope with inconsistent property usage
+        auto = cls._get_flavor_or_image_prop(
+            flavor, image_meta, "numa_cpus.0") is None
+
+        if auto:
+            return cls._get_constraints_auto(
+                nodes, flavor, image_meta)
+        else:
+            return cls._get_constraints_manual(
+                nodes, flavor, image_meta)
+
+
+class VirtNUMAHostTopology(VirtNUMATopology):
+
+    """Class represents the NUMA configuration and utilization
+    of a compute node. As well as exposing the overall topology
+    it tracks the utilization of the resources by guest instances
+    """
+
+    @classmethod
+    def usage_from_instances(cls, host, instances):
+        """Get host topology usage
+
+        :param host: VirtNUMAHostTopology without usage information
+        :param instances: list of VirtNUMAInstanceTopology
+
+        Sum the usage from all @instances to report the overall
+        host topology usage
+
+        :returns: VirtNUMAHostTopology including usage information
+        """
+
+        cells = []
+        for hostcell in host.cells:
+            memory_usage = 0
+            cpu_usage = 0
+            for instance in instances:
+                for instancecell in instance.cells:
+                    if instancecell.id == hostcell.id:
+                        memory_usage = memory_usage + instancecell.memory
+                        cpu_usage = cpu_usage + len(instancecell.cpuset)
+
+            cell = VirtNUMATopologyCellUsage(
+                hostcell.id, hostcell.cpuset, hostcell.memory,
+                cpu_usage, memory_usage)
+
+            cells.append(cell)
+
+        return cls(cells)
