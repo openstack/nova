@@ -20,11 +20,20 @@ iface {{ ifc.name }} inet static
     dns-nameservers {{ ifc.dns }}
 {% endif %}
 {% if use_ipv6 %}
+{% if libvirt_virt_type == 'lxc' %}
+{% if ifc.address_v6 %}
+    post-up ip -6 addr add {{ ifc.address_v6 }}/{{ifc.netmask_v6 }} dev ${IFACE}
+{% endif %}
+{% if ifc.gateway_v6 %}
+    post-up ip -6 route add default via {{ ifc.gateway_v6 }} dev ${IFACE}
+{% endif %}
+{% else %}
 iface {{ ifc.name }} inet6 static
     address {{ ifc.address_v6 }}
     netmask {{ ifc.netmask_v6 }}
 {% if ifc.gateway_v6 %}
     gateway {{ ifc.gateway_v6 }}
+{% endif %}
 {% endif %}
 {% endif %}
 {% endfor %}

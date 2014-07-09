@@ -506,7 +506,8 @@ class NetworkInfoTests(test.NoDBTestCase):
     def _setup_injected_network_scenario(self, should_inject=True,
                                         use_ipv4=True, use_ipv6=False,
                                         gateway=True, dns=True,
-                                        two_interfaces=False):
+                                        two_interfaces=False,
+                                        libvirt_virt_type=None):
         """Check that netutils properly decides whether to inject based on
            whether the supplied subnet is static or dynamic.
         """
@@ -548,8 +549,8 @@ class NetworkInfoTests(test.NoDBTestCase):
             vifs.append(vif)
 
         nwinfo = model.NetworkInfo(vifs)
-        return netutils.get_injected_network_template(nwinfo,
-                                                      use_ipv6=use_ipv6)
+        return netutils.get_injected_network_template(
+                nwinfo, use_ipv6=use_ipv6, libvirt_virt_type=libvirt_virt_type)
 
     def test_injection_dynamic(self):
         expected = None
@@ -713,4 +714,71 @@ iface eth1 inet6 static
 """
         template = self._setup_injected_network_scenario(use_ipv6=True,
                                                          two_interfaces=True)
+        self.assertEqual(expected, template)
+
+    def test_injection_ipv6_with_lxc(self):
+        expected = """\
+# Injected by Nova on instance boot
+#
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+    address 10.10.0.2
+    netmask 255.255.255.0
+    broadcast 10.10.0.255
+    gateway 10.10.0.1
+    dns-nameservers 1.2.3.4 2.3.4.5
+    post-up ip -6 addr add 1234:567::2/48 dev ${IFACE}
+    post-up ip -6 route add default via 1234:567::1 dev ${IFACE}
+
+auto eth1
+iface eth1 inet static
+    address 10.10.0.2
+    netmask 255.255.255.0
+    broadcast 10.10.0.255
+    gateway 10.10.0.1
+    dns-nameservers 1.2.3.4 2.3.4.5
+    post-up ip -6 addr add 1234:567::2/48 dev ${IFACE}
+    post-up ip -6 route add default via 1234:567::1 dev ${IFACE}
+"""
+        template = self._setup_injected_network_scenario(
+                use_ipv6=True, two_interfaces=True, libvirt_virt_type='lxc')
+        self.assertEqual(expected, template)
+
+    def test_injection_ipv6_with_lxc_no_gateway(self):
+        expected = """\
+# Injected by Nova on instance boot
+#
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+    address 10.10.0.2
+    netmask 255.255.255.0
+    broadcast 10.10.0.255
+    dns-nameservers 1.2.3.4 2.3.4.5
+    post-up ip -6 addr add 1234:567::2/48 dev ${IFACE}
+
+auto eth1
+iface eth1 inet static
+    address 10.10.0.2
+    netmask 255.255.255.0
+    broadcast 10.10.0.255
+    dns-nameservers 1.2.3.4 2.3.4.5
+    post-up ip -6 addr add 1234:567::2/48 dev ${IFACE}
+"""
+        template = self._setup_injected_network_scenario(
+                use_ipv6=True, gateway=False, two_interfaces=True,
+                libvirt_virt_type='lxc')
         self.assertEqual(expected, template)
