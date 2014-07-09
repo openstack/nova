@@ -4617,18 +4617,18 @@ class BlockDeviceMappingTestCase(test.TestCase):
         uuid2 = db.instance_create(self.ctxt, {})['uuid']
 
         bmds_values = [{'instance_uuid': uuid1,
-                        'device_name': 'first'},
+                        'device_name': '/dev/vda'},
                        {'instance_uuid': uuid2,
-                        'device_name': 'second'},
+                        'device_name': '/dev/vdb'},
                        {'instance_uuid': uuid2,
-                        'device_name': 'third'}]
+                        'device_name': '/dev/vdc'}]
 
         for bdm in bmds_values:
             self._create_bdm(bdm)
 
         bmd = db.block_device_mapping_get_all_by_instance(self.ctxt, uuid1)
         self.assertEqual(len(bmd), 1)
-        self.assertEqual(bmd[0]['device_name'], 'first')
+        self.assertEqual(bmd[0]['device_name'], '/dev/vda')
 
         bmd = db.block_device_mapping_get_all_by_instance(self.ctxt, uuid2)
         self.assertEqual(len(bmd), 2)
@@ -4644,27 +4644,27 @@ class BlockDeviceMappingTestCase(test.TestCase):
         vol_id1 = '69f5c254-1a5b-4fff-acf7-cb369904f58f'
         vol_id2 = '69f5c254-1a5b-4fff-acf7-cb369904f59f'
 
-        self._create_bdm({'device_name': 'fake1', 'volume_id': vol_id1})
-        self._create_bdm({'device_name': 'fake2', 'volume_id': vol_id2})
+        self._create_bdm({'device_name': '/dev/vda', 'volume_id': vol_id1})
+        self._create_bdm({'device_name': '/dev/vdb', 'volume_id': vol_id2})
 
         uuid = self.instance['uuid']
         db.block_device_mapping_destroy_by_instance_and_volume(self.ctxt, uuid,
                                                                vol_id1)
         bdms = db.block_device_mapping_get_all_by_instance(self.ctxt, uuid)
         self.assertEqual(len(bdms), 1)
-        self.assertEqual(bdms[0]['device_name'], 'fake2')
+        self.assertEqual(bdms[0]['device_name'], '/dev/vdb')
 
     def test_block_device_mapping_destroy_by_instance_and_device(self):
-        self._create_bdm({'device_name': 'fake1'})
-        self._create_bdm({'device_name': 'fake2'})
+        self._create_bdm({'device_name': '/dev/vda'})
+        self._create_bdm({'device_name': '/dev/vdb'})
 
         uuid = self.instance['uuid']
-        params = (self.ctxt, uuid, 'fake1')
+        params = (self.ctxt, uuid, '/dev/vdb')
         db.block_device_mapping_destroy_by_instance_and_device(*params)
 
         bdms = db.block_device_mapping_get_all_by_instance(self.ctxt, uuid)
         self.assertEqual(len(bdms), 1)
-        self.assertEqual(bdms[0]['device_name'], 'fake2')
+        self.assertEqual(bdms[0]['device_name'], '/dev/vda')
 
     def test_block_device_mapping_get_by_volume_id(self):
         self._create_bdm({'volume_id': 'fake_id'})

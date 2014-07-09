@@ -307,6 +307,24 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         self.assertNotIn('db_field1', dev_dict)
         self.assertFalse('db_field2'in dev_dict)
 
+    def test_init_prepend_dev_to_device_name(self):
+        bdm = {'id': 3, 'instance_uuid': 'fake-instance',
+               'device_name': 'vda',
+               'source_type': 'volume',
+               'destination_type': 'volume',
+               'volume_id': 'fake-volume-id-1',
+               'boot_index': 0}
+        bdm_dict = block_device.BlockDeviceDict(bdm)
+        self.assertEqual('/dev/vda', bdm_dict['device_name'])
+
+        bdm['device_name'] = '/dev/vdb'
+        bdm_dict = block_device.BlockDeviceDict(bdm)
+        self.assertEqual('/dev/vdb', bdm_dict['device_name'])
+
+        bdm['device_name'] = None
+        bdm_dict = block_device.BlockDeviceDict(bdm)
+        self.assertIsNone(bdm_dict['device_name'])
+
     def test_validate(self):
         self.assertRaises(exception.InvalidBDMFormat,
                           block_device.BlockDeviceDict,

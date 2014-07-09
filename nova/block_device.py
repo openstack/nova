@@ -82,6 +82,8 @@ class BlockDeviceDict(dict):
         do_not_default = do_not_default or set()
 
         self._validate(bdm_dict)
+        if bdm_dict.get('device_name'):
+            bdm_dict['device_name'] = prepend_dev(bdm_dict['device_name'])
         # NOTE (ndipanov): Never default db fields
         self.update(
             dict((field, None)
