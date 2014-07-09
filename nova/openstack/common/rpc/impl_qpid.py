@@ -369,7 +369,7 @@ class DirectPublisher(Publisher):
         """Init a 'direct' publisher."""
 
         if conf.qpid_topology_version == 1:
-            node_name = msg_id
+            node_name = "%s/%s" % (msg_id, msg_id)
             node_opts = {"type": "direct"}
         elif conf.qpid_topology_version == 2:
             node_name = "amq.direct/%s" % msg_id
