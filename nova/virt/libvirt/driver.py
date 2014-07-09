@@ -2776,6 +2776,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                                     connection_info,
                                                     info)
                     devices.append(cfg)
+                    self.virtapi.block_device_mapping_update(
+                        nova_context.get_admin_context(), vol.id,
+                        {'connection_info': jsonutils.dumps(connection_info)})
 
             if 'disk.config' in disk_mapping:
                 diskconfig = self.get_guest_disk_config(instance,
