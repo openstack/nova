@@ -120,6 +120,10 @@ compute_opts = [
     cfg.IntOpt('network_allocate_retries',
                default=0,
                help="Number of times to retry network allocation on failures"),
+    cfg.IntOpt('block_device_allocate_retries',
+               default=180,
+               help='Number of times to retry block device'
+                    ' allocation on failures')
     ]
 
 interval_opts = [
@@ -153,7 +157,11 @@ interval_opts = [
     cfg.IntOpt('instance_delete_interval',
                default=300,
                help=('Interval in seconds for retrying failed instance file '
-                     'deletes'))
+                     'deletes')),
+    cfg.IntOpt('block_device_allocate_retries_interval',
+               default=1,
+               help='Waiting time interval (seconds) between block'
+                    ' device allocation retries on failures')
 ]
 
 timeout_opts = [
@@ -1135,24 +1143,21 @@ class ComputeManager(manager.Manager):
                                                              instance)
         return network_info
 
-    def _await_block_device_map_created(self, context, vol_id, max_tries=180,
-                                        wait_between=1):
+    def _await_block_device_map_created(self, context, vol_id):
         # TODO(yamahata): creating volume simultaneously
         #                 reduces creation time?
         # TODO(yamahata): eliminate dumb polling
-        # TODO(harlowja): make the max_tries configurable or dynamic?
         attempts = 0
         start = time.time()
-        while attempts < max_tries:
+        while attempts < CONF.block_device_allocate_retries:
             volume = self.volume_api.get(context, vol_id)
             volume_status = volume['status']
             if volume_status not in ['creating', 'downloading']:
                 if volume_status != 'available':
                     LOG.warn(_("Volume id: %s finished being created but was"
                                " not set as 'available'"), vol_id)
-                # NOTE(harlowja): return how many attempts were tried
                 return attempts + 1
-            greenthread.sleep(wait_between)
+            greenthread.sleep(CONF.block_device_allocate_retries_interval)
             attempts += 1
         # NOTE(harlowja): Should only happen if we ran out of attempts
         raise exception.VolumeNotCreated(volume_id=vol_id,
