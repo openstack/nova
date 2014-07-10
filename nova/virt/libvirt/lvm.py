@@ -28,7 +28,6 @@ from nova.openstack.common.gettextutils import _LW
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova.openstack.common import units
-from nova import utils
 from nova.virt.libvirt import utils
 
 

@@ -387,8 +387,8 @@ class API(base_api.NetworkAPI):
         # and in later runs will only be what was created that time. Thus,
         # this only affects the attach case, not the original use for this
         # method.
-        return network_model.NetworkInfo([port for port in nw_info
-                                          if port['id'] in created_port_ids +
+        return network_model.NetworkInfo([vif for vif in nw_info
+                                          if vif['id'] in created_port_ids +
                                                            touched_port_ids])
 
     def _refresh_neutron_extensions_cache(self, context):
