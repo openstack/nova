@@ -25,10 +25,10 @@ from nova.image import glance
 from nova import test
 import nova.tests.image.fake
 from nova.tests import utils
+from nova.tests.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.virt.vmwareapi import stubs
 from nova.virt import fake
 from nova.virt.vmwareapi import driver
-from nova.virt.vmwareapi import fake as vmwareapi_fake
 from nova.virt.vmwareapi import read_write_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops

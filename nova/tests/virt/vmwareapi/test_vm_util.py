@@ -26,8 +26,8 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import units
 from nova.openstack.common import uuidutils
 from nova import test
+from nova.tests.virt.vmwareapi import fake
 from nova.virt.vmwareapi import error_util
-from nova.virt.vmwareapi import fake
 from nova.virt.vmwareapi import vm_util
 
 

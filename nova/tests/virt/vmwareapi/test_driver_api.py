@@ -49,6 +49,7 @@ from nova.tests import matchers
 from nova.tests import test_flavors
 from nova.tests import utils
 from nova.tests.virt import test_driver
+from nova.tests.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.virt.vmwareapi import stubs
 from nova import utils as nova_utils
 from nova.virt import driver as v_driver
@@ -56,7 +57,6 @@ from nova.virt import fake
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
-from nova.virt.vmwareapi import fake as vmwareapi_fake
 from nova.virt.vmwareapi import imagecache
 from nova.virt.vmwareapi import read_write_util
 from nova.virt.vmwareapi import vim

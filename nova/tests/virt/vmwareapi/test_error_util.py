@@ -13,8 +13,8 @@
 #    under the License.
 
 from nova import test
+from nova.tests.virt.vmwareapi import fake
 from nova.virt.vmwareapi import error_util
-from nova.virt.vmwareapi import fake
 
 
 class ExpectedMethodFault:
