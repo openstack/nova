@@ -19,6 +19,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
+from nova.i18n import _
 from nova import objects
 from nova import utils
 
@@ -95,8 +96,9 @@ class AgentController(object):
             url = para['url']
             md5hash = para['md5hash']
             version = para['version']
-        except (TypeError, KeyError):
-            raise webob.exc.HTTPUnprocessableEntity()
+        except (TypeError, KeyError) as ex:
+            msg = _("Invalid request body: %s") % unicode(ex)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
             utils.check_string_length(url, 'url', max_length=255)
@@ -112,8 +114,9 @@ class AgentController(object):
             agent.url = url
             agent.md5hash = md5hash
             agent.save()
-        except ValueError:
-            raise webob.exc.HTTPUnprocessableEntity()
+        except ValueError as ex:
+            msg = _("Invalid request body: %s") % unicode(ex)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
         except exception.AgentBuildNotFound as ex:
             raise webob.exc.HTTPNotFound(explanation=ex.format_message())
 
@@ -149,8 +152,9 @@ class AgentController(object):
             version = agent['version']
             url = agent['url']
             md5hash = agent['md5hash']
-        except (TypeError, KeyError):
-            raise webob.exc.HTTPUnprocessableEntity()
+        except (TypeError, KeyError) as ex:
+            msg = _("Invalid request body: %s") % unicode(ex)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
             utils.check_string_length(hypervisor, 'hypervisor', max_length=255)
