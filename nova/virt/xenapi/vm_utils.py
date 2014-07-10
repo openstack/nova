@@ -242,7 +242,8 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
 
     cpu_mask_list = hardware.get_vcpu_pin_set()
     if cpu_mask_list:
-        cpu_mask = ",".join(str(cpu_id) for cpu_id in cpu_mask_list)
+        cpu_mask = hardware.format_cpu_spec(cpu_mask_list,
+                                            allow_ranges=False)
         vcpu_params["mask"] = cpu_mask
 
     viridian = 'true' if instance['os_type'] == 'windows' else 'false'
