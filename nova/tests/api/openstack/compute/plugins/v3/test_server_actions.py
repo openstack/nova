@@ -15,6 +15,7 @@
 
 import uuid
 
+import mock
 import mox
 from oslo.config import cfg
 import webob
@@ -682,6 +683,24 @@ class ServerActionsControllerTest(test.TestCase):
 
         req = fakes.HTTPRequestV3.blank(self.url)
         self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
+                          self.controller._action_resize,
+                          req, FAKE_UUID, body)
+
+    @mock.patch('nova.compute.api.API.resize',
+                side_effect=exception.CannotResizeDisk(reason=''))
+    def test_resize_raises_cannot_resize_disk(self, mock_resize):
+        body = dict(resize=dict(flavor_ref="http://localhost/3"))
+        req = fakes.HTTPRequestV3.blank(self.url)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_resize,
+                          req, FAKE_UUID, body)
+
+    @mock.patch('nova.compute.api.API.resize',
+                side_effect=exception.FlavorNotFound(reason=''))
+    def test_resize_raises_flavor_not_found(self, mock_resize):
+        body = dict(resize=dict(flavor_ref="http://localhost/3"))
+        req = fakes.HTTPRequestV3.blank(self.url)
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_resize,
                           req, FAKE_UUID, body)
 
