@@ -278,10 +278,10 @@ class FloatingIP(object):
             LOG.exception(_("Failed to update usages deallocating "
                             "floating IP"))
 
-        floating_ip_ref = objects.FloatingIP.deallocate(context, address)
-        # floating_ip_ref will be None if concurrently another
+        rows_updated = objects.FloatingIP.deallocate(context, address)
+        # number of updated rows will be 0 if concurrently another
         # API call has also deallocated the same floating ip
-        if floating_ip_ref is None:
+        if not rows_updated:
             if reservations:
                 QUOTAS.rollback(context, reservations, project_id=project_id)
         else:

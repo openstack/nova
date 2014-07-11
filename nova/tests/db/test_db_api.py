@@ -3894,12 +3894,16 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_floating_ip_deallocate(self):
         values = {'address': '1.1.1.1', 'project_id': 'fake', 'host': 'fake'}
         float_ip = self._create_floating_ip(values)
-        db.floating_ip_deallocate(self.ctxt, float_ip.address)
+        rows_updated = db.floating_ip_deallocate(self.ctxt, float_ip.address)
+        self.assertEqual(1, rows_updated)
 
         updated_float_ip = db.floating_ip_get(self.ctxt, float_ip.id)
         self.assertIsNone(updated_float_ip.project_id)
         self.assertIsNone(updated_float_ip.host)
         self.assertFalse(updated_float_ip.auto_assigned)
+
+    def test_floating_ip_deallocate_address_not_found(self):
+        self.assertEqual(0, db.floating_ip_deallocate(self.ctxt, '2.2.2.2'))
 
     def test_floating_ip_destroy(self):
         addresses = ['1.1.1.1', '1.1.1.2', '1.1.1.3']
