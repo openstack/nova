@@ -52,7 +52,7 @@ class MultinicController(wsgi.Controller):
         # Validate the input entity
         if 'networkId' not in body['addFixedIp']:
             msg = _("Missing 'networkId' argument for addFixedIp")
-            raise exc.HTTPUnprocessableEntity(explanation=msg)
+            raise exc.HTTPBadRequest(explanation=msg)
 
         instance = self._get_instance(context, id, want_objects=True)
         network_id = body['addFixedIp']['networkId']
@@ -68,7 +68,7 @@ class MultinicController(wsgi.Controller):
         # Validate the input entity
         if 'address' not in body['removeFixedIp']:
             msg = _("Missing 'address' argument for removeFixedIp")
-            raise exc.HTTPUnprocessableEntity(explanation=msg)
+            raise exc.HTTPBadRequest(explanation=msg)
 
         instance = self._get_instance(context, id,
                                       want_objects=True)

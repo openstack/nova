@@ -90,7 +90,7 @@ class FixedIpTest(test.NoDBTestCase):
         req.headers['content-type'] = 'application/json'
 
         resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 422)
+        self.assertEqual(resp.status_int, 400)
         self.assertEqual(last_add_fixed_ip, (None, None))
 
     def test_remove_fixed_ip(self):
@@ -118,5 +118,5 @@ class FixedIpTest(test.NoDBTestCase):
         req.headers['content-type'] = 'application/json'
 
         resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 422)
+        self.assertEqual(resp.status_int, 400)
         self.assertEqual(last_remove_fixed_ip, (None, None))
