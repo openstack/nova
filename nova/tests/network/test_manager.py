@@ -2688,7 +2688,7 @@ class FloatingIPTestCase(test.TestCase):
                                  fake_is_stale_floating_ip_address)
         self.stubs.Set(self.network.l3driver, 'remove_floating_ip',
                        fake_remove_floating_ip)
-        self.stubs.Set(self.network.l3driver, 'clean_conntrack',
+        self.stubs.Set(self.network.driver, 'clean_conntrack',
                        fake_clean_conntrack)
         self.mox.ReplayAll()
         addresses = ['172.24.4.23', '172.24.4.24', '172.24.4.25']
