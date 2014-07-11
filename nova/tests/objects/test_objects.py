@@ -305,6 +305,12 @@ class _BaseTestCase(test.TestCase):
         #equivalent
         self.assertEqual(expected, jsonutils.dumps(obj_val))
 
+    def str_comparator(self, expected, obj_val):
+        """Compare an object field to a string in the db by performing
+        a simple coercion on the object field value.
+        """
+        self.assertEqual(expected, str(obj_val))
+
     def assertNotIsInstance(self, obj, cls, msg=None):
         """Python < v2.7 compatibility.  Assert 'not isinstance(obj, cls)."""
         try:
@@ -898,8 +904,8 @@ object_data = {
     'AggregateList': '1.1-3e67b6a4840b19c797504cc6056b27ff',
     'BlockDeviceMapping': '1.1-9968ffe513e7672484b0f528b034cd0f',
     'BlockDeviceMappingList': '1.2-d6d7df540ca149dda78b22b4b10bdef3',
-    'ComputeNode': '1.3-b3b8935a99ca48621dc9ba271d5ed668',
-    'ComputeNodeList': '1.2-ff59187056eaa96f6fd3fb70693d818c',
+    'ComputeNode': '1.4-ed20e7a7c1a4612fe7d2836d5887c726',
+    'ComputeNodeList': '1.3-ff59187056eaa96f6fd3fb70693d818c',
     'DNSDomain': '1.0-5bdc288d7c3b723ce86ede998fd5c9ba',
     'DNSDomainList': '1.0-6e3cc498d89dd7e90f9beb021644221c',
     'EC2InstanceMapping': '1.0-627baaf4b12c9067200979bdc4558a99',

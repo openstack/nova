@@ -107,7 +107,8 @@ class MultiNodeComputeTestCase(BaseTestCase):
                                    'free_ram_mb': 130560,
                                    'metrics': '',
                                    'stats': '',
-                                   'id': 2}]
+                                   'id': 2,
+                                   'host_ip': '127.0.0.1'}]
             return [objects.ComputeNode._from_db_object(
                         context, objects.ComputeNode(), cn)
                     for cn in fake_compute_nodes]
