@@ -1290,6 +1290,26 @@ class API(base.Base):
                         " instance one by one with different ports.")
                 raise exception.MultiplePortsNotApplicable(reason=msg)
 
+    def _check_multiple_instances_and_specified_ip(self, requested_networks):
+        """Check whether multiple instances are created with specified ip."""
+
+        error = False
+        if utils.is_neutron():
+            for net, ip, port in requested_networks:
+                if net and ip:
+                    error = True
+                    break
+        else:
+            # nova-network case
+            for id, ip in requested_networks:
+                if id and ip:
+                    error = True
+                    break
+        if error:
+            msg = _("max_count cannot be greater than 1 if an fixed_ip "
+                    "is specified.")
+            raise exception.InvalidFixedIpAndMaxCountRequest(reason=msg)
+
     @hooks.add_hook("create_instance")
     def create(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
@@ -1311,8 +1331,11 @@ class API(base.Base):
         self._check_create_policies(context, availability_zone,
                 requested_networks, block_device_mapping)
 
-        if requested_networks and max_count > 1 and utils.is_neutron():
-            self._check_multiple_instances_neutron_ports(requested_networks)
+        if requested_networks and max_count > 1:
+            self._check_multiple_instances_and_specified_ip(requested_networks)
+            if utils.is_neutron():
+                self._check_multiple_instances_neutron_ports(
+                    requested_networks)
 
         return self._create_instance(
                                context, instance_type,

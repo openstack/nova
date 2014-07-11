@@ -402,6 +402,10 @@ class MultiplePortsNotApplicable(Invalid):
     msg_fmt = _("Failed to launch instances: %(reason)s")
 
 
+class InvalidFixedIpAndMaxCountRequest(Invalid):
+    msg_fmt = _("Failed to launch instances: %(reason)s")
+
+
 class ServiceUnavailable(Invalid):
     msg_fmt = _("Service is unavailable at this time.")
 
