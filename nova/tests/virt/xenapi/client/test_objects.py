@@ -102,11 +102,6 @@ class VBDTestCase(stubs.XenAPITestBaseNoDB):
         self.session.VBD.plug("vbd_ref", "vm_ref")
         self.session.call_xenapi.assert_called_once_with("VBD.plug", "vbd_ref")
 
-    @mock.patch.object(utils, 'synchronized')
-    def test_vbd_plug_check_synchronized(self, mock_synchronized):
-        self.session.VBD.plug("vbd_ref", "vm_ref")
-        mock_synchronized.assert_called_once_with("xenapi-vbd-vm_ref")
-
     def test_unplug(self):
         self.session.VBD.unplug("vbd_ref", "vm_ref")
         self.session.call_xenapi.assert_called_once_with("VBD.unplug",

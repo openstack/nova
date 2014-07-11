@@ -236,7 +236,7 @@ class AttachVolumeTestCase(VolumeOpsTestBase):
                                             False)
 
     @mock.patch.object(volumeops.VolumeOps, "_attach_volume")
-    def test_attach_volume_default_hotplug(self, mock_attach):
+    def test_attach_volume_default_hotplug_connect_volume(self, mock_attach):
         self.ops.connect_volume({})
         mock_attach.assert_called_once_with({})
 
