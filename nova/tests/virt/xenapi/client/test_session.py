@@ -61,7 +61,7 @@ class ApplySessionHelpersTestCase(stubs.XenAPITestBaseNoDB):
         self.session.host.get_X("ref")
         self.session.call_xenapi.assert_called_once_with("host.get_X", "ref")
 
-    def test_apply_session_helpers_add_host(self):
+    def test_apply_session_helpers_add_network(self):
         self.session.network.get_X("ref")
         self.session.call_xenapi.assert_called_once_with("network.get_X",
                                                          "ref")

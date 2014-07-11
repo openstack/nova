@@ -708,28 +708,6 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.mox.ReplayAll()
         self.conductor.compute_unrescue(self.context, 'instance')
 
-    def test_instance_get_all_by_filters(self):
-        filters = {'foo': 'bar'}
-        self.mox.StubOutWithMock(db, 'instance_get_all_by_filters')
-        db.instance_get_all_by_filters(self.context, filters,
-                                       'fake-key', 'fake-sort',
-                                       columns_to_join=None, use_slave=False)
-        self.mox.ReplayAll()
-        self.conductor.instance_get_all_by_filters(self.context, filters,
-                                                   'fake-key', 'fake-sort',
-                                                   None, False)
-
-    def test_instance_get_all_by_filters_use_slave(self):
-        filters = {'foo': 'bar'}
-        self.mox.StubOutWithMock(db, 'instance_get_all_by_filters')
-        db.instance_get_all_by_filters(self.context, filters,
-                                       'fake-key', 'fake-sort',
-                                       columns_to_join=None, use_slave=True)
-        self.mox.ReplayAll()
-        self.conductor.instance_get_all_by_filters(self.context, filters,
-                                                   'fake-key', 'fake-sort',
-                                                   None, use_slave=True)
-
     def test_instance_get_active_by_window_joined(self):
         self.mox.StubOutWithMock(db, 'instance_get_active_by_window_joined')
         db.instance_get_active_by_window_joined(self.context, 'fake-begin',

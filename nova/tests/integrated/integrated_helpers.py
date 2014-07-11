@@ -35,7 +35,6 @@ from nova.tests.integrated.api import client
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
-CONF = cfg.CONF
 CONF.import_opt('manager', 'nova.cells.opts', group='cells')
 
 

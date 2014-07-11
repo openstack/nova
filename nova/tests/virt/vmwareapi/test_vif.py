@@ -171,7 +171,7 @@ class VMwareVifTestCase(test.NoDBTestCase):
         ])[0]
         vif.get_network_ref(self.session, self.cluster, self.vif, False)
 
-    def test_get_network_ref_bridge(self):
+    def test_get_network_ref_bridge_from_opaque(self):
         opaque_networks = [{'opaqueNetworkId': 'bridge_id',
                             'opaqueNetworkName': 'name',
                             'opaqueNetworkType': 'OpaqueNetwork'}]
@@ -179,7 +179,7 @@ class VMwareVifTestCase(test.NoDBTestCase):
                 'integration_bridge', 'bridge_id')
         self.assertEqual('bridge_id', network_ref['network-id'])
 
-    def test_get_network_ref_bridges(self):
+    def test_get_network_ref_multiple_bridges_from_opaque(self):
         opaque_networks = [{'opaqueNetworkId': 'bridge_id1',
                             'opaqueNetworkName': 'name1',
                             'opaqueNetworkType': 'OpaqueNetwork'},
