@@ -866,26 +866,11 @@ class LibvirtDriver(driver.ComputeDriver):
         return names
 
     def list_instance_uuids(self):
-        uuids = set()
-        for domain_id in self._list_instance_ids():
-            try:
-                # We skip domains with ID 0 (hypervisors).
-                if domain_id != 0:
-                    domain = self._lookup_by_id(domain_id)
-                    uuids.add(domain.UUIDString())
-            except exception.InstanceNotFound:
-                # Ignore deleted instance while listing
-                continue
+        uuids = []
+        for dom in self._list_instance_domains(only_running=False):
+            uuids.append(dom.UUIDString())
 
-        # extend instance list to contain also defined domains
-        for domain_name in self._conn.listDefinedDomains():
-            try:
-                uuids.add(self._lookup_by_name(domain_name).UUIDString())
-            except exception.InstanceNotFound:
-                # Ignore deleted instance while listing
-                continue
-
-        return list(uuids)
+        return uuids
 
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
