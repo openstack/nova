@@ -777,7 +777,7 @@ class FlavorsXMLSerializationTest(test.TestCase):
 
         output = serializer.serialize(fixture)
         root = etree.XML(output)
-        xmlutil.validate_schema(root, 'flavors_index')
+        xmlutil.validate_schema(root, 'flavors')
         flavor_elems = root.findall('{0}flavor'.format(NS))
         self.assertEqual(len(flavor_elems), 2)
         for i, flavor_elem in enumerate(flavor_elems):
@@ -801,7 +801,7 @@ class FlavorsXMLSerializationTest(test.TestCase):
 
         output = serializer.serialize(fixture)
         root = etree.XML(output)
-        xmlutil.validate_schema(root, 'flavors_index')
+        xmlutil.validate_schema(root, 'flavors')
         flavor_elems = root.findall('{0}flavor'.format(NS))
         self.assertEqual(len(flavor_elems), 0)
 

@@ -876,7 +876,7 @@ class ImageXMLSerializationTest(test.NoDBTestCase):
 
         output = serializer.serialize(fixture)
         root = etree.XML(output)
-        xmlutil.validate_schema(root, 'images_index')
+        xmlutil.validate_schema(root, 'images')
         image_elems = root.findall('{0}image'.format(NS))
         self.assertEqual(len(image_elems), 2)
         for i, image_elem in enumerate(image_elems):
@@ -935,7 +935,7 @@ class ImageXMLSerializationTest(test.NoDBTestCase):
 
         output = serializer.serialize(fixture)
         root = etree.XML(output)
-        xmlutil.validate_schema(root, 'images_index')
+        xmlutil.validate_schema(root, 'images')
         image_elems = root.findall('{0}image'.format(NS))
         self.assertEqual(len(image_elems), 2)
         for i, image_elem in enumerate(image_elems):
@@ -965,7 +965,7 @@ class ImageXMLSerializationTest(test.NoDBTestCase):
 
         output = serializer.serialize(fixtures)
         root = etree.XML(output)
-        xmlutil.validate_schema(root, 'images_index')
+        xmlutil.validate_schema(root, 'images')
         image_elems = root.findall('{0}image'.format(NS))
         self.assertEqual(len(image_elems), 0)
 
