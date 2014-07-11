@@ -75,11 +75,11 @@ class ImageCacheManagerTests(test.NoDBTestCase):
                                                               all_instances)
 
         self.assertEqual(len(running['used_images']), 4)
-        self.assertTrue(running['used_images']['1'] == (1, 0, ['inst-1']))
-        self.assertTrue(running['used_images']['2'] == (1, 1, ['inst-2',
-                                                               'inst-3']))
-        self.assertTrue(running['used_images']['21'] == (0, 1, ['inst-3']))
-        self.assertTrue(running['used_images']['22'] == (0, 1, ['inst-3']))
+        self.assertEqual(running['used_images']['1'], (1, 0, ['inst-1']))
+        self.assertEqual(running['used_images']['2'], (1, 1, ['inst-2',
+                                                              'inst-3']))
+        self.assertEqual(running['used_images']['21'], (0, 1, ['inst-3']))
+        self.assertEqual(running['used_images']['22'], (0, 1, ['inst-3']))
 
         self.assertIn('inst-1', running['instance_names'])
         self.assertIn('123', running['instance_names'])
@@ -103,9 +103,9 @@ class ImageCacheManagerTests(test.NoDBTestCase):
                                                               all_instances)
 
         self.assertEqual(len(running['used_images']), 1)
-        self.assertTrue(running['used_images']['1'] == (1, 0, ['inst-1']))
-        self.assertTrue(running['instance_names'] ==
-                        set(['inst-1', '123', 'inst-1_resize', '123_resize']))
+        self.assertEqual((1, 0, ['inst-1']), running['used_images']['1'])
+        self.assertEqual(set(['inst-1', '123', 'inst-1_resize', '123_resize']),
+                         running['instance_names'])
 
         self.assertEqual(len(running['image_popularity']), 1)
         self.assertEqual(running['image_popularity']['1'], 1)

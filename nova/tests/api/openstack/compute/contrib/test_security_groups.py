@@ -1141,7 +1141,7 @@ class TestSecurityGroupRules(test.TestCase):
         if proto == 'icmp':
             expected_rule['to_port'] = -1
             expected_rule['from_port'] = -1
-        self.assertTrue(security_group_rule == expected_rule)
+        self.assertEqual(expected_rule, security_group_rule)
 
     def test_create_with_no_ports_icmp(self):
         self._test_create_with_no_ports_and_no_group('icmp')
@@ -1170,10 +1170,10 @@ class TestSecurityGroupRules(test.TestCase):
             'ip_protocol': proto, 'to_port': to_port, 'parent_group_id':
              self.sg2['id'], 'ip_range': {}, 'id': security_group_rule['id']
         }
-        self.assertTrue(security_group_rule['ip_protocol'] == proto)
-        self.assertTrue(security_group_rule['from_port'] == from_port)
-        self.assertTrue(security_group_rule['to_port'] == to_port)
-        self.assertTrue(security_group_rule == expected_rule)
+        self.assertEqual(proto, security_group_rule['ip_protocol'])
+        self.assertEqual(from_port, security_group_rule['from_port'])
+        self.assertEqual(to_port, security_group_rule['to_port'])
+        self.assertEqual(expected_rule, security_group_rule)
 
     def test_create_with_ports_icmp(self):
         self._test_create_with_ports('icmp', 0, 1)

@@ -570,7 +570,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake_objects.add_object(fake.ClusterComputeResource(name='cluster'))
         refs = vm_util.get_all_cluster_refs_by_name(fake_session(fake_objects),
                                                     ['cluster'])
-        self.assertTrue(len(refs) == 1)
+        self.assertEqual(1, len(refs))
 
     def test_get_all_cluster_refs_by_name_missing(self):
         fake_objects = fake.FakeRetrieveResult()

@@ -434,7 +434,7 @@ class OpenStackMetadataTestCase(test.TestCase):
         # there is as expected, and that /content lists them.
         for (path, content) in content:
             fent = [f for f in mddict['files'] if f['path'] == path]
-            self.assertTrue((len(fent) == 1))
+            self.assertEqual(1, len(fent))
             fent = fent[0]
             found = mdinst.lookup("/openstack%s" % fent['content_path'])
             self.assertEqual(found, content)

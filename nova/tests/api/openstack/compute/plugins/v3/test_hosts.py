@@ -391,7 +391,7 @@ class HostTestCase(test.TestCase):
         for resource in result['host']:
             self.assertIn(resource['resource']['project'], proj)
             self.assertEqual(len(resource['resource']), 5)
-            self.assertTrue(set(resource['resource'].keys()) == set(column))
+            self.assertEqual(set(column), set(resource['resource'].keys()))
         db.service_destroy(ctxt, s_ref['id'])
 
     def test_show_works_correctly(self):
@@ -410,7 +410,7 @@ class HostTestCase(test.TestCase):
         for resource in result['host']:
             self.assertIn(resource['resource']['project'], proj)
             self.assertEqual(len(resource['resource']), 5)
-            self.assertTrue(set(resource['resource'].keys()) == set(column))
+            self.assertEqual(set(column), set(resource['resource'].keys()))
         db.service_destroy(ctxt, s_ref['id'])
         db.instance_destroy(ctxt, i_ref1['uuid'])
         db.instance_destroy(ctxt, i_ref2['uuid'])

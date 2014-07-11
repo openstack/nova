@@ -429,10 +429,10 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             self.assertTrue(data['allocated'])
             self.assertTrue(data['leased'])
             self.assertTrue(lease[0] > seconds_since_epoch)
-            self.assertTrue(lease[1] == data['vif_address'])
-            self.assertTrue(lease[2] == data['address'])
-            self.assertTrue(lease[3] == data['instance_hostname'])
-            self.assertTrue(lease[4] == '*')
+            self.assertEqual(data['vif_address'], lease[1])
+            self.assertEqual(data['address'], lease[2])
+            self.assertEqual(data['instance_hostname'], lease[3])
+            self.assertEqual('*', lease[4])
 
     def test_get_dhcp_leases_for_nw01(self):
         self.flags(host='fake_instance01')
@@ -446,10 +446,10 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             data = get_associated(self.context, 1, address=lease[2])[0]
             self.assertTrue(data['leased'])
             self.assertTrue(lease[0] > seconds_since_epoch)
-            self.assertTrue(lease[1] == data['vif_address'])
-            self.assertTrue(lease[2] == data['address'])
-            self.assertTrue(lease[3] == data['instance_hostname'])
-            self.assertTrue(lease[4] == '*')
+            self.assertEqual(data['vif_address'], lease[1])
+            self.assertEqual(data['address'], lease[2])
+            self.assertEqual(data['instance_hostname'], lease[3])
+            self.assertEqual('*', lease[4])
 
     def test_dhcp_opts_not_default_gateway_network(self):
         expected = "NW-0,3"
