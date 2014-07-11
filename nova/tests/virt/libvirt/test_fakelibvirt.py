@@ -276,7 +276,7 @@ class FakeLibvirtTests(test.NoDBTestCase):
 
     def test_getVersion(self):
         conn = self.get_openAuth_curry_func()('qemu:///system')
-        self.assertTrue(type(conn.getVersion()) is int)
+        self.assertIsInstance(conn.getVersion(), int)
 
     def test_getCapabilities(self):
         conn = self.get_openAuth_curry_func()('qemu:///system')

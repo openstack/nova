@@ -4174,7 +4174,7 @@ class LibvirtConnTestCase(test.TestCase,
         self.mox.ReplayAll()
         ret = conn.check_can_live_migrate_source(self.context, instance_ref,
                                                  dest_check_data)
-        self.assertTrue(type(ret) == dict)
+        self.assertIsInstance(ret, dict)
         self.assertIn('is_shared_storage', ret)
 
     def test_check_can_live_migrate_source_vol_backed_w_disk_raises(self):
