@@ -15,7 +15,6 @@
 """Compute-related Utilities and helpers."""
 
 import itertools
-import re
 import string
 import traceback
 
@@ -163,10 +162,7 @@ def get_next_device_name(instance, device_name_list,
 
     used_letters = set()
     for device_path in device_name_list:
-        letter = block_device.strip_prefix(device_path)
-        # NOTE(vish): delete numbers in case we have something like
-        #             /dev/sda1
-        letter = re.sub("\d+", "", letter)
+        letter = block_device.get_device_letter(device_path)
         used_letters.add(letter)
 
     # NOTE(vish): remove this when xenapi is properly setting
