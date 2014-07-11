@@ -171,6 +171,9 @@ class _ComputeAPIUnitTestMixIn(object):
             quota.QUOTAS.limit_check(self.context, metadata_items=mox.IsA(int))
             quota.QUOTAS.reserve(self.context, instances=40,
                                  cores=mox.IsA(int),
+                                 expire=mox.IgnoreArg(),
+                                 project_id=mox.IgnoreArg(),
+                                 user_id=mox.IgnoreArg(),
                                  ram=mox.IsA(int)).AndRaise(quota_exception)
 
         self.mox.ReplayAll()
@@ -568,7 +571,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 system_metadata=inst.system_metadata)
 
     def _test_delete(self, delete_type, **attrs):
-        reservations = 'fake-resv'
+        reservations = ['fake-resv']
         inst = self._create_instance_obj()
         inst.update(attrs)
         inst._context = self.context
@@ -622,6 +625,7 @@ class _ComputeAPIUnitTestMixIn(object):
             self._test_delete_resizing_part(inst, deltas)
         quota.QUOTAS.reserve(self.context, project_id=inst.project_id,
                              user_id=inst.user_id,
+                             expire=mox.IgnoreArg(),
                              **deltas).AndReturn(reservations)
 
         # NOTE(comstud): This is getting messy.  But what we are wanting
@@ -745,6 +749,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_delete_fast_if_host_not_set(self):
         inst = self._create_instance_obj()
         inst.host = ''
+        quotas = quotas_obj.Quotas(self.context)
         updates = {'progress': 0, 'task_state': task_states.DELETING}
 
         self.mox.StubOutWithMock(inst, 'save')
@@ -769,7 +774,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api._create_reservations(self.context,
                                               inst, inst.task_state,
                                               inst.project_id, inst.user_id
-                                              ).AndReturn(None)
+                                              ).AndReturn(quotas)
 
         if self.cell_type == 'api':
             rpcapi.terminate_instance(
@@ -1969,8 +1974,8 @@ class _ComputeAPIUnitTestMixIn(object):
                 None, new_image, flavor, {}, [])
         self.assertEqual(vm_mode.XEN, instance.vm_mode)
 
-    @mock.patch('nova.quota.QUOTAS.commit')
-    @mock.patch('nova.quota.QUOTAS.reserve')
+    @mock.patch('nova.objects.Quotas.commit')
+    @mock.patch('nova.objects.Quotas.reserve')
     @mock.patch('nova.objects.Instance.save')
     @mock.patch('nova.objects.InstanceAction.action_start')
     def test_restore(self, action_start, instance_save, quota_reserve,
