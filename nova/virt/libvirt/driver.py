@@ -322,6 +322,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if libvirt is None:
             libvirt = __import__('libvirt')
 
+        self._skip_list_all_domains = False
         self._host_state = None
         self._initiator = None
         self._fc_wwnns = None
@@ -644,6 +645,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self._set_host_enabled(bool(wrapped_conn), disable_reason)
 
         self._wrapped_conn = wrapped_conn
+        self._skip_list_all_domains = False
 
         try:
             LOG.debug("Registering for lifecycle events %s", self)
@@ -766,6 +768,78 @@ class LibvirtDriver(driver.ComputeDriver):
             return True
         except exception.NovaException:
             return False
+
+    def _list_instance_domains_fast(self, only_running=True):
+        # The modern (>= 0.9.13) fast way - 1 single API call for all domains
+        flags = libvirt.VIR_CONNECT_LIST_DOMAINS_ACTIVE
+        if not only_running:
+            flags = flags | libvirt.VIR_CONNECT_LIST_DOMAINS_INACTIVE
+        return self._conn.listAllDomains(flags)
+
+    def _list_instance_domains_slow(self, only_running=True):
+        # The legacy (< 0.9.13) slow way - O(n) API call for n domains
+        uuids = []
+        doms = []
+        # Redundant numOfDomains check is for libvirt bz #836647
+        if self._conn.numOfDomains() > 0:
+            for id in self._conn.listDomainsID():
+                try:
+                    dom = self._lookup_by_id(id)
+                    doms.append(dom)
+                    uuids.append(dom.UUIDString())
+                except exception.InstanceNotFound:
+                    continue
+
+        if only_running:
+            return doms
+
+        for name in self._conn.listDefinedDomains():
+            try:
+                dom = self._lookup_by_name(name)
+                if dom.UUIDString() not in uuids:
+                    doms.append(dom)
+            except exception.InstanceNotFound:
+                continue
+
+        return doms
+
+    def _list_instance_domains(self, only_running=True, only_guests=True):
+        """Get a list of libvirt.Domain objects for nova instances
+
+        :param only_running: True to only return running instances
+        :param only_guests: True to filter out any host domain (eg Dom-0)
+
+        Query libvirt to a get a list of all libvirt.Domain objects
+        that correspond to nova instances. If the only_running parameter
+        is true this list will only include active domains, otherwise
+        inactive domains will be included too. If the only_guests parameter
+        is true the list will have any "host" domain (aka Xen Domain-0)
+        filtered out.
+
+        :returns: list of libvirt.Domain objects
+        """
+
+        if not self._skip_list_all_domains:
+            try:
+                alldoms = self._list_instance_domains_fast(only_running)
+            except (libvirt.libvirtError, AttributeError) as ex:
+                LOG.info(_LI("Unable to use bulk domain list APIs, "
+                             "falling back to slow code path: %(ex)s"),
+                         {'ex': ex})
+                self._skip_list_all_domains = True
+
+        if self._skip_list_all_domains:
+            # Old libvirt, or a libvirt driver which doesn't
+            # implement the new API
+            alldoms = self._list_instance_domains_slow(only_running)
+
+        doms = []
+        for dom in alldoms:
+            if only_guests and dom.ID() == 0:
+                continue
+            doms.append(dom)
+
+        return doms
 
     # TODO(Shrews): Remove when libvirt Bugzilla bug # 836647 is fixed.
     def _list_instance_ids(self):
