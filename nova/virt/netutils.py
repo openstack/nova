@@ -140,12 +140,9 @@ def get_injected_network_template(network_info, use_ipv6=CONF.use_ipv6,
     if not nets:
         return
 
-    return build_template(template, nets, ipv6_is_available)
-
-
-def build_template(template, nets, ipv6_is_available):
     tmpl_path, tmpl_file = os.path.split(CONF.injected_network_template)
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(tmpl_path))
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(tmpl_path),
+                             trim_blocks=True)
     template = env.get_template(tmpl_file)
     return template.render({'interfaces': nets,
                             'use_ipv6': ipv6_is_available})
