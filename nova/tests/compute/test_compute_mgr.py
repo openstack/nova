@@ -799,13 +799,15 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
         self.compute._instance_usage_audit(self.context)
 
-    def _get_sync_instance(self, power_state, vm_state, task_state=None):
+    def _get_sync_instance(self, power_state, vm_state, task_state=None,
+                           shutdown_terminate=False):
         instance = objects.Instance()
         instance.uuid = 'fake-uuid'
         instance.power_state = power_state
         instance.vm_state = vm_state
         instance.host = self.compute.host
         instance.task_state = task_state
+        instance.shutdown_terminate = shutdown_terminate
         self.mox.StubOutWithMock(instance, 'refresh')
         self.mox.StubOutWithMock(instance, 'save')
         return instance
@@ -829,13 +831,17 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertEqual(instance.power_state, power_state.SHUTDOWN)
 
     def _test_sync_to_stop(self, power_state, vm_state, driver_power_state,
-                           stop=True, force=False):
-        instance = self._get_sync_instance(power_state, vm_state)
+                           stop=True, force=False, shutdown_terminate=False):
+        instance = self._get_sync_instance(
+            power_state, vm_state, shutdown_terminate=shutdown_terminate)
         instance.refresh(use_slave=False)
         instance.save()
         self.mox.StubOutWithMock(self.compute.compute_api, 'stop')
+        self.mox.StubOutWithMock(self.compute.compute_api, 'delete')
         self.mox.StubOutWithMock(self.compute.compute_api, 'force_stop')
-        if stop:
+        if shutdown_terminate:
+            self.compute.compute_api.delete(self.context, instance)
+        elif stop:
             if force:
                 self.compute.compute_api.force_stop(self.context, instance)
             else:
@@ -857,6 +863,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         self._test_sync_to_stop(power_state.SHUTDOWN, vm_states.STOPPED,
                                 power_state.RUNNING, force=True)
+
+    def test_sync_instance_power_state_to_terminate(self):
+        self._test_sync_to_stop(power_state.RUNNING, vm_states.ACTIVE,
+                                power_state.SHUTDOWN,
+                                force=False, shutdown_terminate=True)
 
     def test_sync_instance_power_state_to_no_stop(self):
         for ps in (power_state.PAUSED, power_state.NOSTATE):
