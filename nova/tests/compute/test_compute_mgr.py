@@ -1738,6 +1738,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def test_build_abort_exception(self):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
+        self.mox.StubOutWithMock(self.compute, '_cleanup_volumes')
         self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                                  'build_instances')
@@ -1751,6 +1752,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                             instance_uuid=self.instance['uuid']))
         self.compute._cleanup_allocated_networks(self.context, self.instance,
                 self.requested_networks)
+        self.compute._cleanup_volumes(self.context, self.instance.uuid,
+                self.block_device_mapping, raise_exc=False)
         self.compute._set_instance_error_state(self.context, self.instance)
         self._instance_action_events()
         self.mox.ReplayAll()
@@ -1799,6 +1802,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
         self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
+        self.mox.StubOutWithMock(self.compute, '_cleanup_volumes')
         self._do_build_instance_update()
         self.compute._build_and_run_instance(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
@@ -1890,9 +1894,11 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
 
-    def _test_build_and_run_exceptions(self, exc, set_error=False):
+    def _test_build_and_run_exceptions(self, exc, set_error=False,
+            cleanup_volumes=False):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
+        self.mox.StubOutWithMock(self.compute, '_cleanup_volumes')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                 'build_instances')
         self._do_build_instance_update()
@@ -1903,6 +1909,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.filter_properties).AndRaise(exc)
         self.compute._cleanup_allocated_networks(self.context, self.instance,
                 self.requested_networks)
+        if cleanup_volumes:
+            self.compute._cleanup_volumes(self.context, self.instance.uuid,
+                    self.block_device_mapping, raise_exc=False)
         if set_error:
             self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
             self.compute._set_instance_error_state(self.context, self.instance)
@@ -1918,21 +1927,23 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
-        self.mox.UnsetStubs()
 
-    def test_build_and_run_instance_exceptions(self):
-        exceptions = [
-                exception.InstanceNotFound(instance_id=''),
+    def test_build_and_run_notfound_exception(self):
+        self._test_build_and_run_exceptions(exception.InstanceNotFound(
+            instance_id=''))
+
+    def test_build_and_run_unexpecteddeleting_exception(self):
+        self._test_build_and_run_exceptions(
                 exception.UnexpectedDeletingTaskStateError(expected='',
-                    actual='')]
-        error_exceptions = [
-                exception.BuildAbortException(instance_uuid='', reason=''),
-                test.TestingException()]
+                    actual=''))
 
-        for exc in exceptions:
-            self._test_build_and_run_exceptions(exc)
-        for exc in error_exceptions:
-            self._test_build_and_run_exceptions(exc, set_error=True)
+    def test_build_and_run_buildabort_exception(self):
+        self._test_build_and_run_exceptions(exception.BuildAbortException(
+            instance_uuid='', reason=''), set_error=True, cleanup_volumes=True)
+
+    def test_build_and_run_unhandled_exception(self):
+        self._test_build_and_run_exceptions(test.TestingException(),
+                set_error=True, cleanup_volumes=True)
 
     def test_instance_not_found(self):
         exc = exception.InstanceNotFound(instance_id=1)
@@ -2228,7 +2239,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                         self.requested_networks, self.security_groups))
 
     def test_build_resources_with_network_info_obj_on_spawn_failure(self):
-        self.mox.StubOutWithMock(self.compute, '_cleanup_build_resources')
         self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
         self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
         self.compute._build_networks_for_instance(self.context, self.instance,
@@ -2238,8 +2248,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.block_device_mapping, self.requested_networks,
                 try_deallocate_networks=False)
         self._build_resources_instance_update()
-        self.compute._cleanup_build_resources(self.context, self.instance,
-                self.block_device_mapping)
         self.mox.ReplayAll()
 
         test_exception = test.TestingException()
@@ -2256,7 +2264,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.assertEqual(test_exception, e)
 
     def test_build_resources_cleans_up_and_reraises_on_spawn_failure(self):
-        self.mox.StubOutWithMock(self.compute, '_cleanup_build_resources')
         self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
         self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
         self.compute._build_networks_for_instance(self.context, self.instance,
@@ -2266,8 +2273,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.block_device_mapping, self.requested_networks,
                 try_deallocate_networks=False)
         self._build_resources_instance_update()
-        self.compute._cleanup_build_resources(self.context, self.instance,
-                self.block_device_mapping)
         self.mox.ReplayAll()
 
         test_exception = test.TestingException()
@@ -2284,7 +2289,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.assertEqual(test_exception, e)
 
     def test_build_resources_aborts_on_cleanup_failure(self):
-        self.mox.StubOutWithMock(self.compute, '_cleanup_build_resources')
         self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
         self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
         self.compute._build_networks_for_instance(self.context, self.instance,
@@ -2292,10 +2296,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                         self.network_info)
         self.compute._shutdown_instance(self.context, self.instance,
                 self.block_device_mapping, self.requested_networks,
-                try_deallocate_networks=False)
+                try_deallocate_networks=False).AndRaise(
+                        test.TestingException())
         self._build_resources_instance_update()
-        self.compute._cleanup_build_resources(self.context, self.instance,
-                self.block_device_mapping).AndRaise(test.TestingException())
         self.mox.ReplayAll()
 
         def fake_spawn():
@@ -2308,25 +2311,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 fake_spawn()
         except Exception as e:
             self.assertIsInstance(e, exception.BuildAbortException)
-
-    def test_cleanup_cleans_volumes(self):
-        self.mox.StubOutWithMock(self.compute, '_cleanup_volumes')
-        self.compute._cleanup_volumes(self.context, self.instance['uuid'],
-                self.block_device_mapping)
-        self.mox.ReplayAll()
-
-        self.compute._cleanup_build_resources(self.context, self.instance,
-                self.block_device_mapping)
-
-    def test_cleanup_reraises_volume_cleanup_failure(self):
-        self.mox.StubOutWithMock(self.compute, '_cleanup_volumes')
-        self.compute._cleanup_volumes(self.context, self.instance['uuid'],
-                self.block_device_mapping).AndRaise(test.TestingException())
-        self.mox.ReplayAll()
-
-        self.assertRaises(test.TestingException,
-                self.compute._cleanup_build_resources, self.context,
-                self.instance, self.block_device_mapping)
 
     def test_build_networks_if_not_allocated(self):
         instance = fake_instance.fake_instance_obj(self.context,

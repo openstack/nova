@@ -1934,6 +1934,8 @@ class ComputeManager(manager.Manager):
                 LOG.exception(e.format_message(), instance=instance)
                 self._cleanup_allocated_networks(context, instance,
                         requested_networks)
+                self._cleanup_volumes(context, instance.uuid,
+                        block_device_mapping, raise_exc=False)
                 self._set_instance_error_state(context, instance)
             except Exception:
                 # Should not reach here.
@@ -1941,6 +1943,8 @@ class ComputeManager(manager.Manager):
                 LOG.exception(msg, instance=instance)
                 self._cleanup_allocated_networks(context, instance,
                         requested_networks)
+                self._cleanup_volumes(context, instance.uuid,
+                        block_device_mapping, raise_exc=False)
                 self._set_instance_error_state(context, instance)
 
         do_build_and_run_instance(context, instance, image, request_spec,
@@ -2103,8 +2107,6 @@ class ComputeManager(manager.Manager):
                     self._shutdown_instance(context, instance,
                             block_device_mapping, requested_networks,
                             try_deallocate_networks=False)
-                    self._cleanup_build_resources(context, instance,
-                            block_device_mapping)
                 except Exception:
                     ctxt.reraise = False
                     msg = _('Could not clean up failed build,'
@@ -2129,18 +2131,6 @@ class ComputeManager(manager.Manager):
             # because the instance was deleted.  If that's the case then this
             # exception will be raised by instance.save()
             pass
-
-    def _cleanup_build_resources(self, context, instance,
-            block_device_mapping):
-        # Don't clean up networks here in case we reschedule
-        try:
-            self._cleanup_volumes(context, instance.uuid,
-                    block_device_mapping)
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                msg = _('Failed to cleanup volumes for failed build,'
-                        ' not rescheduling')
-                LOG.exception(msg, instance=instance)
 
     @object_compat
     @messaging.expected_exceptions(exception.BuildAbortException,
