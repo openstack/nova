@@ -981,7 +981,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.virt_type = "lxc"
         obj.memory = 100 * units.Mi
         obj.vcpus = 2
-        obj.cpuset = "0-3,^2,4-5"
+        obj.cpuset = set([0, 1, 3, 4, 5])
         obj.name = "demo"
         obj.uuid = "b38a3f43-4be2-4046-897f-b67c2f5e0147"
         obj.os_type = "exe"
@@ -999,7 +999,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <uuid>b38a3f43-4be2-4046-897f-b67c2f5e0147</uuid>
               <name>demo</name>
               <memory>104857600</memory>
-              <vcpu cpuset="0-3,^2,4-5">2</vcpu>
+              <vcpu cpuset="0-1,3-5">2</vcpu>
               <os>
                 <type>exe</type>
                 <init>/sbin/init</init>
@@ -1017,7 +1017,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.virt_type = "xen"
         obj.memory = 100 * units.Mi
         obj.vcpus = 2
-        obj.cpuset = "0-3,^2,4-5"
+        obj.cpuset = set([0, 1, 3, 4, 5])
         obj.name = "demo"
         obj.uuid = "b38a3f43-4be2-4046-897f-b67c2f5e0147"
         obj.os_type = "linux"
@@ -1039,7 +1039,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <uuid>b38a3f43-4be2-4046-897f-b67c2f5e0147</uuid>
               <name>demo</name>
               <memory>104857600</memory>
-              <vcpu cpuset="0-3,^2,4-5">2</vcpu>
+              <vcpu cpuset="0-1,3-5">2</vcpu>
               <os>
                 <type>linux</type>
                 <kernel>/tmp/vmlinuz</kernel>
@@ -1059,7 +1059,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.virt_type = "xen"
         obj.memory = 100 * units.Mi
         obj.vcpus = 2
-        obj.cpuset = "0-3,^2,4-5"
+        obj.cpuset = set([0, 1, 3, 4, 5])
         obj.name = "demo"
         obj.uuid = "b38a3f43-4be2-4046-897f-b67c2f5e0147"
         obj.os_type = "hvm"
@@ -1083,7 +1083,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <uuid>b38a3f43-4be2-4046-897f-b67c2f5e0147</uuid>
               <name>demo</name>
               <memory>104857600</memory>
-              <vcpu cpuset="0-3,^2,4-5">2</vcpu>
+              <vcpu cpuset="0-1,3-5">2</vcpu>
               <os>
                 <type>hvm</type>
                 <loader>/usr/lib/xen/boot/hvmloader</loader>
@@ -1107,7 +1107,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.virt_type = "kvm"
         obj.memory = 100 * units.Mi
         obj.vcpus = 2
-        obj.cpuset = "0-3,^2,4-5"
+        obj.cpuset = set([0, 1, 3, 4, 5])
 
         obj.cputune = config.LibvirtConfigGuestCPUTune()
         obj.cputune.shares = 100
@@ -1140,7 +1140,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <uuid>b38a3f43-4be2-4046-897f-b67c2f5e0147</uuid>
               <name>demo</name>
               <memory>104857600</memory>
-              <vcpu cpuset="0-3,^2,4-5">2</vcpu>
+              <vcpu cpuset="0-1,3-5">2</vcpu>
               <sysinfo type='smbios'>
                  <bios>
                    <entry name="vendor">Acme</entry>

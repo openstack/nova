@@ -3187,7 +3187,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # We are using default unit for memory: KiB
         guest.memory = flavor.memory_mb * units.Ki
         guest.vcpus = flavor.vcpus
-        guest.cpuset = CONF.vcpu_pin_set
+        guest.cpuset = hardware.get_vcpu_pin_set()
 
         cputuning = ['shares', 'period', 'quota']
         for name in cputuning:

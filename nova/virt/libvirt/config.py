@@ -26,6 +26,7 @@ helpers for populating up config object instances.
 from nova import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common import units
+from nova.virt import hardware
 
 from lxml import etree
 
@@ -1187,7 +1188,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         root.append(self._text_node("memory", self.memory))
         if self.cpuset is not None:
             vcpu = self._text_node("vcpu", self.vcpus)
-            vcpu.set("cpuset", self.cpuset)
+            vcpu.set("cpuset", hardware.format_cpu_spec(self.cpuset))
             root.append(vcpu)
         else:
             root.append(self._text_node("vcpu", self.vcpus))
