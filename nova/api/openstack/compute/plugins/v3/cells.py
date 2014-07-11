@@ -28,13 +28,11 @@ from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import api as compute
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 from nova import rpc
 
 
-LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 CONF.import_opt('name', 'nova.cells.opts', group='cells')
 CONF.import_opt('capabilities', 'nova.cells.opts', group='cells')
@@ -190,18 +188,15 @@ class CellsController(object):
         """Validate cell name is not empty and doesn't contain '!' or '.'."""
         if not cell_name:
             msg = _("Cell name cannot be empty")
-            LOG.error(msg)
             raise exc.HTTPBadRequest(explanation=msg)
         if '!' in cell_name or '.' in cell_name:
             msg = _("Cell name cannot contain '!' or '.'")
-            LOG.error(msg)
             raise exc.HTTPBadRequest(explanation=msg)
 
     def _validate_cell_type(self, cell_type):
         """Validate cell_type is 'parent' or 'child'."""
         if cell_type not in ['parent', 'child']:
             msg = _("Cell type must be 'parent' or 'child'")
-            LOG.error(msg)
             raise exc.HTTPBadRequest(explanation=msg)
 
     def _normalize_cell(self, cell, existing=None):
@@ -257,12 +252,10 @@ class CellsController(object):
         authorize(context)
         if 'cell' not in body:
             msg = _("No cell information in request")
-            LOG.error(msg)
             raise exc.HTTPBadRequest(explanation=msg)
         cell = body['cell']
         if 'name' not in cell:
             msg = _("No cell name in request")
-            LOG.error(msg)
             raise exc.HTTPBadRequest(explanation=msg)
         self._validate_cell_name(cell['name'])
         self._normalize_cell(cell)
@@ -280,7 +273,6 @@ class CellsController(object):
         authorize(context)
         if 'cell' not in body:
             msg = _("No cell information in request")
-            LOG.error(msg)
             raise exc.HTTPBadRequest(explanation=msg)
         cell = body['cell']
         cell.pop('id', None)
