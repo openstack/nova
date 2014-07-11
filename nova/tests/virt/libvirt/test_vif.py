@@ -382,20 +382,25 @@ class LibvirtVifTestCase(test.TestCase):
 
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
         xml = self._get_instance_xml(d, self.vif_bridge)
-
         self._assertModel(xml, network_model.VIF_MODEL_VIRTIO)
 
-    def test_model_kvm_custom(self):
-        self.flags(use_virtio_for_bridges=True,
-                   virt_type='kvm',
-                   group='libvirt')
+    def test_model_kvm_qemu_custom(self):
+        for virt in ('kvm', 'qemu'):
+            self.flags(use_virtio_for_bridges=True,
+                       virt_type=virt,
+                       group='libvirt')
 
-        d = vif.LibvirtGenericVIFDriver(self._get_conn())
-        image_meta = {'properties': {'hw_vif_model':
-                                     network_model.VIF_MODEL_E1000}}
-        xml = self._get_instance_xml(d, self.vif_bridge,
-                                     image_meta)
-        self._assertModel(xml, network_model.VIF_MODEL_E1000)
+            d = vif.LibvirtGenericVIFDriver(self._get_conn())
+            supported = (network_model.VIF_MODEL_NE2K_PCI,
+                         network_model.VIF_MODEL_PCNET,
+                         network_model.VIF_MODEL_RTL8139,
+                         network_model.VIF_MODEL_E1000,
+                         network_model.VIF_MODEL_SPAPR_VLAN)
+            for model in supported:
+                image_meta = {'properties': {'hw_vif_model': model}}
+                xml = self._get_instance_xml(d, self.vif_bridge,
+                                             image_meta)
+                self._assertModel(xml, model)
 
     def test_model_kvm_bogus(self):
         self.flags(use_virtio_for_bridges=True,

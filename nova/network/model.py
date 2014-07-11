@@ -53,6 +53,7 @@ VIF_MODEL_RTL8139 = 'rtl8139'
 VIF_MODEL_E1000 = 'e1000'
 VIF_MODEL_E1000E = 'e1000e'
 VIF_MODEL_NETFRONT = 'netfront'
+VIF_MODEL_SPAPR_VLAN = 'spapr-vlan'
 
 # Constant for max length of network interface names
 # eg 'bridge' in the Network class or 'devname' in
