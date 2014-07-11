@@ -175,7 +175,9 @@ class _ComputeAPIUnitTestMixIn(object):
         for _unused in range(2):
             self.compute_api._get_image(self.context, image_href).AndReturn(
                 (image_id, {}))
-            quota.QUOTAS.limit_check(self.context, metadata_items=mox.IsA(int))
+            quota.QUOTAS.limit_check(self.context, metadata_items=mox.IsA(int),
+                                     project_id=mox.IgnoreArg(),
+                                     user_id=mox.IgnoreArg())
             quota.QUOTAS.reserve(self.context, instances=40,
                                  cores=mox.IsA(int),
                                  expire=mox.IgnoreArg(),
