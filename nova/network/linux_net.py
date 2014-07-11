@@ -1275,12 +1275,14 @@ def _ip_bridge_cmd(action, params, device):
     return cmd
 
 
-def _set_device_mtu(dev):
+def _set_device_mtu(dev, mtu=None):
     """Set the device MTU."""
 
-    if CONF.network_device_mtu:
+    if not mtu:
+        mtu = CONF.network_device_mtu
+    if mtu:
         utils.execute('ip', 'link', 'set', dev, 'mtu',
-                      CONF.network_device_mtu, run_as_root=True,
+                      mtu, run_as_root=True,
                       check_exit_code=[0, 2, 254])
 
 
@@ -1424,7 +1426,8 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                            network['bridge'],
                            iface,
                            network,
-                           mac_address)
+                           mac_address,
+                           network.get('mtu'))
             iface = 'vlan%s' % vlan
         else:
             iface = CONF.flat_interface or network['bridge_interface']
@@ -1461,10 +1464,12 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
     @staticmethod
     def ensure_vlan_bridge(vlan_num, bridge, bridge_interface,
-                           net_attrs=None, mac_address=None):
+                           net_attrs=None, mac_address=None,
+                           mtu=None):
         """Create a vlan and bridge unless they already exist."""
         interface = LinuxBridgeInterfaceDriver.ensure_vlan(vlan_num,
-                                               bridge_interface, mac_address)
+                                               bridge_interface, mac_address,
+                                               mtu)
         LinuxBridgeInterfaceDriver.ensure_bridge(bridge, interface, net_attrs)
         return interface
 
@@ -1476,7 +1481,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
     @staticmethod
     @utils.synchronized('lock_vlan', external=True)
-    def ensure_vlan(vlan_num, bridge_interface, mac_address=None):
+    def ensure_vlan(vlan_num, bridge_interface, mac_address=None, mtu=None):
         """Create a vlan unless it already exists."""
         interface = 'vlan%s' % vlan_num
         if not device_exists(interface):
@@ -1493,7 +1498,9 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                          check_exit_code=[0, 2, 254])
             _execute('ip', 'link', 'set', interface, 'up', run_as_root=True,
                      check_exit_code=[0, 2, 254])
-            _set_device_mtu(interface)
+        # NOTE(vish): set mtu every time to ensure that changes to mtu get
+        #             propogated
+        _set_device_mtu(interface, mtu)
         return interface
 
     @staticmethod
@@ -1704,7 +1711,7 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
                         'external-ids:attached-mac=%s' % mac_address])
             _execute('ip', 'link', 'set', dev, 'address', mac_address,
                      run_as_root=True)
-            _set_device_mtu(dev)
+            _set_device_mtu(dev, network.get('mtu'))
             _execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
             if not gateway:
                 # If we weren't instructed to act as a gateway then add the
