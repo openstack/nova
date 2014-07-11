@@ -119,7 +119,7 @@ class QuotaSetsTest(test.TestCase):
         self.mox.ReplayAll()
         body = {'quota_set': {'instances': 50, 'cores': 50,
                               'ram': 51200, 'floating_ips': 10,
-                              'fixed_ips': -1, 'metadata_items': 128,
+                              'metadata_items': 128,
                               'injected_files': 5,
                               'injected_file_content_bytes': 10240,
                               'injected_file_path_bytes': 255,
@@ -139,7 +139,7 @@ class QuotaSetsTest(test.TestCase):
         self.mox.ReplayAll()
         body = {'quota_set': {'instances': 0, 'cores': 0,
                               'ram': 0, 'floating_ips': 0,
-                              'fixed_ips': 0, 'metadata_items': 0,
+                              'metadata_items': 0,
                               'injected_files': 0,
                               'injected_file_content_bytes': 0,
                               'injected_file_path_bytes': 0,

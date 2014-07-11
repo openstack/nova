@@ -221,7 +221,7 @@ class InstanceActionEventList(base.ObjectListBase, base.NovaObject):
         }
     child_versions = {
         '1.0': '1.0',
-        '1.0': '1.1',
+        '1.1': '1.1',
         }
 
     @base.remotable_classmethod

@@ -681,7 +681,6 @@ class ExtensionsXMLSerializerTest(test.TestCase):
                 "description": "Adds the capability to share an image.",
                 "links": [{"rel": "describedby",
                             "type": "application/pdf",
-                            "type": "application/vnd.sun.wadl+xml",
                             "href": "http://foo.com/api/ext/cs-pie.pdf"},
                            {"rel": "describedby",
                             "type": "application/vnd.sun.wadl+xml",

@@ -84,7 +84,6 @@ def get_test_instance(context=None, flavor=None, obj=False):
                      'bridge_name': 'br100',
                      'vcpus': 4,
                      'root_gb': 40,
-                     'project_id': 'fake',
                      'bridge': 'br101',
                      'image_ref': 'cedef40a-ed67-4d10-800e-17455edce175',
                      'instance_type_id': '5',

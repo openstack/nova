@@ -1968,7 +1968,6 @@ class CloudTestCase(test.TestCase):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
                     'name': 'fake_name',
                     'container_format': 'ami',
-                    'status': 'active',
                     'properties': {
                     'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                     'ramdisk_id': 'cedef40a-ed67-4d10-800e-17455edce175',
@@ -1989,7 +1988,6 @@ class CloudTestCase(test.TestCase):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
                     'name': 'fake_name',
                     'container_format': 'ami',
-                    'status': 'active',
                     'properties': {
                     'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                     'ramdisk_id': 'cedef40a-ed67-4d10-800e-17455edce175',
@@ -2011,7 +2009,6 @@ class CloudTestCase(test.TestCase):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
                     'name': 'fake_name',
                     'container_format': 'ami',
-                    'status': 'active',
                     'properties': {
                     'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                     'ramdisk_id': 'cedef40a-ed67-4d10-800e-17455edce175',
@@ -2185,7 +2182,6 @@ class CloudTestCase(test.TestCase):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
                     'name': 'fake_name',
                     'container_format': 'ami',
-                    'status': 'active',
                     'properties': {
                         'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
                         'ramdisk_id': 'cedef40a-ed67-4d10-800e-17455edce175',
