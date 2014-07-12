@@ -17,8 +17,8 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
 from nova import db
 from nova import exception
+from nova.i18n import _
 from nova import image
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova.scheduler import utils as scheduler_utils

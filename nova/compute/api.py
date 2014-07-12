@@ -43,6 +43,7 @@ from nova import crypto
 from nova.db import base
 from nova import exception
 from nova import hooks
+from nova.i18n import _
 from nova import image
 from nova import network
 from nova.network import model as network_model
@@ -54,7 +55,6 @@ from nova.objects import base as obj_base
 from nova.objects import quotas as quotas_obj
 from nova.objects import security_group as security_group_obj
 from nova.openstack.common import excutils
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 from nova.openstack.common import timeutils

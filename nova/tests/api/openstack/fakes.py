@@ -719,7 +719,7 @@ def stub_bdm_get_all_by_instance(context, instance_uuid, use_slave=False):
             'volume_id': 'volume_id2', 'instance_uuid': instance_uuid})]
 
 
-def fake_get_available_languages(domain):
+def fake_get_available_languages():
     existing_translations = ['en_GB', 'en_AU', 'de', 'zh_CN', 'en_US']
     return existing_translations
 

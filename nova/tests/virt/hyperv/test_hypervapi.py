@@ -34,8 +34,8 @@ from nova.compute import task_states
 from nova import context
 from nova import db
 from nova import exception
+from nova.i18n import _
 from nova.image import glance
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import units
 from nova import test
 from nova.tests import fake_network

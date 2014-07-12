@@ -25,13 +25,13 @@ from oslo.config import cfg
 from nova.compute import flavors
 import nova.context
 from nova import db
+from nova.i18n import _
 from nova.image import glance
 from nova import network
 from nova.network import model as network_model
 from nova.objects import base as obj_base
 from nova.openstack.common import context as common_context
 from nova.openstack.common import excutils
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log
 from nova.openstack.common import timeutils
 from nova import rpc

@@ -15,8 +15,8 @@
 """Bench of utility methods used by filters."""
 
 
+from nova.i18n import _LI
 from nova.objects import aggregate
-from nova.openstack.common.gettextutils import _LI
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)

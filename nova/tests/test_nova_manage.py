@@ -22,7 +22,7 @@ from nova.cmd import manage
 from nova import context
 from nova import db
 from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova import test
 from nova.tests.db import fakes as db_fakes
 from nova.tests.objects import test_network

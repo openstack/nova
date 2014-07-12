@@ -20,8 +20,8 @@ all invocations of get_key.
 
 
 from nova import exception
+from nova.i18n import _
 from nova.keymgr import mock_key_mgr
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 

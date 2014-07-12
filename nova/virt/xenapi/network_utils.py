@@ -19,7 +19,7 @@ their lookup functions.
 """
 
 from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 
 
 def find_network_with_name_label(session, name_label):

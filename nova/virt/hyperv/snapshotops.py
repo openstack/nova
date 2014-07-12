@@ -21,8 +21,8 @@ import os
 from oslo.config import cfg
 
 from nova.compute import task_states
+from nova.i18n import _
 from nova.image import glance
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import utilsfactory
 

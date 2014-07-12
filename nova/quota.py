@@ -23,8 +23,8 @@ import six
 
 from nova import db
 from nova import exception
+from nova.i18n import _
 from nova.objects import keypair as keypair_obj
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils

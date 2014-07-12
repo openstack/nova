@@ -29,9 +29,9 @@ from nova.api.openstack import xmlutil
 from nova import compute
 from nova.compute import api as compute_api
 from nova import exception
+from nova.i18n import _
 from nova.network.security_group import neutron_driver
 from nova.network.security_group import openstack_driver
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import xmlutils
 from nova.virt import netutils

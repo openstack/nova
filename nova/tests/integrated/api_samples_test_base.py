@@ -19,7 +19,7 @@ import re
 from lxml import etree
 import six
 
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova import test

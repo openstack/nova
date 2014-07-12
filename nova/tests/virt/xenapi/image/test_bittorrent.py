@@ -17,7 +17,7 @@ import mox
 import pkg_resources
 
 from nova import context
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova import test
 from nova.tests.virt.xenapi import stubs
 from nova.virt.xenapi import driver as xenapi_conn

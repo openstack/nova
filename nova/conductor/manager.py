@@ -31,6 +31,7 @@ from nova.compute import vm_states
 from nova.conductor.tasks import live_migrate
 from nova.db import base
 from nova import exception
+from nova.i18n import _
 from nova import image
 from nova import manager
 from nova import network
@@ -40,7 +41,6 @@ from nova import objects
 from nova.objects import base as nova_object
 from nova.objects import quotas as quotas_obj
 from nova.openstack.common import excutils
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils

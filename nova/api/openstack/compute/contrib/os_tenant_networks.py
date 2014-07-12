@@ -22,8 +22,8 @@ from webob import exc
 from nova.api.openstack import extensions
 from nova import context as nova_context
 from nova import exception
+from nova.i18n import _
 import nova.network
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import quota
 

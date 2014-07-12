@@ -26,7 +26,7 @@ if sys.platform == 'win32':
 
 from xml.etree import ElementTree
 
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova.openstack.common import units
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import vhdutils

@@ -20,13 +20,13 @@ import functools
 
 from nova.compute import flavors
 from nova import exception
+from nova.i18n import _
 from nova.network import base_api
 from nova.network import floating_ips
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.objects import base as obj_base
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import policy
 from nova import utils

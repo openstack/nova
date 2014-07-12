@@ -46,7 +46,7 @@ import functools
 
 import stevedore
 
-from nova.openstack.common.gettextutils import _LE
+from nova.i18n import _LE
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)

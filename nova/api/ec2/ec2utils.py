@@ -21,10 +21,10 @@ from nova import availability_zones
 from nova import context
 from nova import db
 from nova import exception
+from nova.i18n import _
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import base as obj_base
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import memorycache
 from nova.openstack.common import timeutils

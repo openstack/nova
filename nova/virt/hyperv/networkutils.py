@@ -23,7 +23,7 @@ import uuid
 if sys.platform == 'win32':
     import wmi
 
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova.virt.hyperv import vmutils
 
 

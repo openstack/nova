@@ -18,7 +18,7 @@ import re
 import mock
 
 from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova.openstack.common import units
 from nova import test
 from nova.tests.virt.vmwareapi import fake

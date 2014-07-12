@@ -25,9 +25,9 @@ from nova import compute
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import exception
+from nova.i18n import _
 from nova import network
 from nova.openstack.common import fileutils
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import timeutils
 from nova import utils
 

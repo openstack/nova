@@ -20,7 +20,7 @@ import webob.exc
 from nova.api.openstack import extensions
 from nova import compute
 from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 
 
 ALIAS = "os-hypervisors"

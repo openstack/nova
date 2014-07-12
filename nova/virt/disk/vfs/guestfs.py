@@ -15,7 +15,7 @@
 from eventlet import tpool
 
 from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova.openstack.common import log as logging
 from nova.virt.disk.vfs import api as vfs
 

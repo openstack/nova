@@ -27,8 +27,8 @@ from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import db
 from nova import exception
+from nova.i18n import _
 from nova import notifications
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils

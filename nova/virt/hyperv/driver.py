@@ -17,7 +17,7 @@
 A Hyper-V Nova Compute driver.
 """
 
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova.openstack.common import log as logging
 from nova.virt import driver
 from nova.virt.hyperv import hostops

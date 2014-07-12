@@ -22,9 +22,9 @@ from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova import db
 from nova import exception
+from nova.i18n import _
 from nova import notifications
 from nova.objects import base as obj_base
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import rpc

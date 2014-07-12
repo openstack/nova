@@ -18,8 +18,8 @@ import webob.exc
 
 from nova.api.openstack import extensions
 from nova import exception
+from nova.i18n import _
 from nova import objects
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 CONF = cfg.CONF

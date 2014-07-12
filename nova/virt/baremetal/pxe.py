@@ -26,10 +26,10 @@ from oslo.config import cfg
 
 from nova.compute import flavors
 from nova import exception
+from nova.i18n import _
 from nova.objects import flavor as flavor_obj
 from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import fileutils
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.openstack.common import timeutils

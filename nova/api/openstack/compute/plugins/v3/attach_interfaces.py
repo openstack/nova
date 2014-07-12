@@ -24,8 +24,8 @@ from nova.api.openstack import extensions
 from nova.api import validation
 from nova import compute
 from nova import exception
+from nova.i18n import _
 from nova import network
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 

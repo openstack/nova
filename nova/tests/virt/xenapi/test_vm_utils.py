@@ -27,7 +27,7 @@ from nova.compute import power_state
 from nova.compute import vm_mode
 from nova import context
 from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova.openstack.common import processutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import units

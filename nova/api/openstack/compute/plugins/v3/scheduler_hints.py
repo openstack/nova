@@ -15,7 +15,7 @@
 import webob.exc
 
 from nova.api.openstack import extensions
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 
 ALIAS = "os-scheduler-hints"
 

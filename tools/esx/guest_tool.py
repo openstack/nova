@@ -28,7 +28,7 @@ import subprocess
 import sys
 import time
 
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 
 
 PLATFORM_WIN = 'win32'

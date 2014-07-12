@@ -24,7 +24,7 @@ import urllib2
 from oslo.config import cfg
 import suds
 
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova import utils
 from nova.virt.vmwareapi import error_util
 
