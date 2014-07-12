@@ -798,6 +798,35 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 self._test_sync_to_stop(power_state.RUNNING, vs, ps,
                                         stop=False)
 
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_sync_instance_power_state')
+    def test_query_driver_power_state_and_sync_pending_task(
+            self, mock_sync_power_state):
+        with mock.patch.object(self.compute.driver,
+                               'get_info') as mock_get_info:
+            db_instance = objects.Instance(uuid='fake-uuid',
+                                           task_state=task_states.POWERING_OFF)
+            self.compute._query_driver_power_state_and_sync(self.context,
+                                                            db_instance)
+            self.assertFalse(mock_get_info.called)
+            self.assertFalse(mock_sync_power_state.called)
+
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_sync_instance_power_state')
+    def test_query_driver_power_state_and_sync_not_found_driver(
+            self, mock_sync_power_state):
+        error = exception.InstanceNotFound(instance_id=1)
+        with mock.patch.object(self.compute.driver,
+                               'get_info', side_effect=error) as mock_get_info:
+            db_instance = objects.Instance(uuid='fake-uuid', task_state=None)
+            self.compute._query_driver_power_state_and_sync(self.context,
+                                                            db_instance)
+            mock_get_info.assert_called_once_with(db_instance)
+            mock_sync_power_state.assert_called_once_with(self.context,
+                                                          db_instance,
+                                                          power_state.NOSTATE,
+                                                          use_slave=True)
+
     def test_run_pending_deletes(self):
         self.flags(instance_delete_interval=10)
 
