@@ -689,7 +689,7 @@ class Connection(object):
             if flags & VIR_CONNECT_LIST_DOMAINS_ACTIVE:
                 if vm.state != VIR_DOMAIN_SHUTOFF:
                     vms.append(vm)
-            if flags & VIR_CONNECT_LIST_DOMAINS_ACTIVE:
+            if flags & VIR_CONNECT_LIST_DOMAINS_INACTIVE:
                 if vm.state == VIR_DOMAIN_SHUTOFF:
                     vms.append(vm)
         return vms
