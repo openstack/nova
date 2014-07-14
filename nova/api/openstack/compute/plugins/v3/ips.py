@@ -22,6 +22,8 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.i18n import _
 
+ALIAS = 'ips'
+
 
 class IPsController(wsgi.Controller):
     """The servers addresses API controller for the OpenStack API."""
@@ -67,7 +69,7 @@ class IPs(extensions.V3APIExtensionBase):
     """Server addresses."""
 
     name = "Ips"
-    alias = "ips"
+    alias = ALIAS
     version = 1
 
     def get_resources(self):
@@ -75,7 +77,7 @@ class IPs(extensions.V3APIExtensionBase):
                   'collection_name': 'servers'}
         resources = [
             extensions.ResourceExtension(
-                'ips', IPsController(), parent=parent, member_name='ip')]
+                ALIAS, IPsController(), parent=parent, member_name='ip')]
 
         return resources
 

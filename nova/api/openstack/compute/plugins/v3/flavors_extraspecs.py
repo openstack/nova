@@ -23,15 +23,15 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 
+ALIAS = 'flavor-extra-specs'
+authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+
 
 class FlavorExtraSpecsController(object):
     """The flavor extra specs API controller for the OpenStack API."""
-    ALIAS = 'flavor-extra-specs'
 
     def __init__(self, *args, **kwargs):
         super(FlavorExtraSpecsController, self).__init__(*args, **kwargs)
-        self.authorize = extensions.extension_authorizer('compute',
-                                                         'v3:' + self.ALIAS)
 
     def _get_extra_specs(self, context, flavor_id):
         flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
@@ -41,7 +41,7 @@ class FlavorExtraSpecsController(object):
     def index(self, req, flavor_id):
         """Returns the list of extra specs for a given flavor."""
         context = req.environ['nova.context']
-        self.authorize(context, action='index')
+        authorize(context, action='index')
         return self._get_extra_specs(context, flavor_id)
 
     @extensions.expected_errors((400, 404, 409))
@@ -49,7 +49,7 @@ class FlavorExtraSpecsController(object):
     @validation.schema(flavors_extraspecs.create)
     def create(self, req, flavor_id, body):
         context = req.environ['nova.context']
-        self.authorize(context, action='create')
+        authorize(context, action='create')
 
         specs = body['extra_specs']
         try:
@@ -66,7 +66,7 @@ class FlavorExtraSpecsController(object):
     @validation.schema(flavors_extraspecs.update)
     def update(self, req, flavor_id, id, body):
         context = req.environ['nova.context']
-        self.authorize(context, action='update')
+        authorize(context, action='update')
 
         if id not in body:
             expl = _('Request body and URI mismatch')
@@ -85,7 +85,7 @@ class FlavorExtraSpecsController(object):
     def show(self, req, flavor_id, id):
         """Return a single extra spec item."""
         context = req.environ['nova.context']
-        self.authorize(context, action='show')
+        authorize(context, action='show')
         try:
             flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
             return {id: flavor.extra_specs[id]}
@@ -103,7 +103,7 @@ class FlavorExtraSpecsController(object):
     def delete(self, req, flavor_id, id):
         """Deletes an existing extra spec."""
         context = req.environ['nova.context']
-        self.authorize(context, action='delete')
+        authorize(context, action='delete')
         try:
             flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
             del flavor.extra_specs[id]
@@ -121,12 +121,12 @@ class FlavorExtraSpecsController(object):
 class FlavorsExtraSpecs(extensions.V3APIExtensionBase):
     """Flavors extra specs support."""
     name = 'FlavorsExtraSpecs'
-    alias = FlavorExtraSpecsController.ALIAS
+    alias = ALIAS
     version = 1
 
     def get_resources(self):
         extra_specs = extensions.ResourceExtension(
-                self.alias,
+                ALIAS,
                 FlavorExtraSpecsController(),
                 parent=dict(member_name='flavor', collection_name='flavors'))
 
