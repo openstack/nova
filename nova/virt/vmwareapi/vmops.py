@@ -1022,7 +1022,7 @@ class VMwareVMOps(object):
 
         self.power_off(instance)
         r_instance = copy.deepcopy(instance)
-        instance_name = r_instance['uuid'] + self._rescue_suffix
+        instance_name = r_instance.uuid + self._rescue_suffix
         self.spawn(context, r_instance, image_meta,
                    None, None, network_info,
                    instance_name=instance_name,
@@ -1034,7 +1034,7 @@ class VMwareVMOps(object):
                         "VirtualMachine", "config.hardware.device")
         (vmdk_path, adapter_type,
          disk_type) = vm_util.get_vmdk_path_and_adapter_type(
-                hardware_devices, uuid=instance['uuid'])
+                hardware_devices, uuid=instance.uuid)
         rescue_vm_ref = vm_util.get_vm_ref_from_name(self._session,
                                                      instance_name)
         self._volumeops.attach_disk_to_vm(
