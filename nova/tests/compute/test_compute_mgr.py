@@ -30,6 +30,7 @@ from nova import db
 from nova import exception
 from nova.network import model as network_model
 from nova import objects
+from nova.objects import block_device as block_device_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import uuidutils
 from nova import test
@@ -1584,6 +1585,62 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertEqual(1, len(quotas.method_calls))
         self.assertEqual(mock.call.rollback(), quotas.method_calls[0])
         set_error.assert_called_once_with(self.context, instance)
+
+    def test_cleanup_volumes(self):
+        instance = fake_instance.fake_instance_obj(self.context)
+        bdm_do_not_delete_dict = fake_block_device.FakeDbBlockDeviceDict(
+            {'volume_id': 'fake-id1', 'source_type': 'image',
+                'delete_on_termination': False})
+        bdm_delete_dict = fake_block_device.FakeDbBlockDeviceDict(
+            {'volume_id': 'fake-id2', 'source_type': 'image',
+                'delete_on_termination': True})
+        bdms = block_device_obj.block_device_make_list(self.context,
+            [bdm_do_not_delete_dict, bdm_delete_dict])
+
+        with mock.patch.object(self.compute.volume_api,
+                'delete') as volume_delete:
+            self.compute._cleanup_volumes(self.context, instance.uuid, bdms)
+            volume_delete.assert_called_once_with(self.context,
+                    bdms[1].volume_id)
+
+    def test_cleanup_volumes_exception_do_not_raise(self):
+        instance = fake_instance.fake_instance_obj(self.context)
+        bdm_dict1 = fake_block_device.FakeDbBlockDeviceDict(
+            {'volume_id': 'fake-id1', 'source_type': 'image',
+                'delete_on_termination': True})
+        bdm_dict2 = fake_block_device.FakeDbBlockDeviceDict(
+            {'volume_id': 'fake-id2', 'source_type': 'image',
+                'delete_on_termination': True})
+        bdms = block_device_obj.block_device_make_list(self.context,
+            [bdm_dict1, bdm_dict2])
+
+        with mock.patch.object(self.compute.volume_api,
+                'delete',
+                side_effect=[test.TestingException(), None]) as volume_delete:
+            self.compute._cleanup_volumes(self.context, instance.uuid, bdms,
+                    raise_exc=False)
+            calls = [mock.call(self.context, bdm.volume_id) for bdm in bdms]
+            self.assertEqual(calls, volume_delete.call_args_list)
+
+    def test_cleanup_volumes_exception_raise(self):
+        instance = fake_instance.fake_instance_obj(self.context)
+        bdm_dict1 = fake_block_device.FakeDbBlockDeviceDict(
+            {'volume_id': 'fake-id1', 'source_type': 'image',
+                'delete_on_termination': True})
+        bdm_dict2 = fake_block_device.FakeDbBlockDeviceDict(
+            {'volume_id': 'fake-id2', 'source_type': 'image',
+                'delete_on_termination': True})
+        bdms = block_device_obj.block_device_make_list(self.context,
+            [bdm_dict1, bdm_dict2])
+
+        with mock.patch.object(self.compute.volume_api,
+                'delete',
+                side_effect=[test.TestingException(), None]) as volume_delete:
+            self.assertRaises(test.TestingException,
+                    self.compute._cleanup_volumes, self.context, instance.uuid,
+                    bdms)
+            calls = [mock.call(self.context, bdm.volume_id) for bdm in bdms]
+            self.assertEqual(calls, volume_delete.call_args_list)
 
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
