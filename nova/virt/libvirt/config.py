@@ -616,6 +616,11 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                 elif self.source_type == 'network':
                     self.source_protocol = c.get('protocol')
                     self.source_name = c.get('name')
+                    for sub in c.getchildren():
+                        if sub.tag == 'host':
+                            self.source_hosts.append(sub.get('name'))
+                            self.source_ports.append(sub.get('port'))
+
             elif c.tag == 'serial':
                 self.serial = c.text
 

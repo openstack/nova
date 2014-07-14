@@ -1720,8 +1720,9 @@ class LibvirtDriver(driver.ComputeDriver):
         device_info = vconfig.LibvirtConfigGuest()
         device_info.parse_dom(xml_doc)
 
-        disks_to_snap = []         # to be snapshotted by libvirt
-        disks_to_skip = []         # local disks not snapshotted
+        disks_to_snap = []          # to be snapshotted by libvirt
+        network_disks_to_snap = []  # network disks (netfs, gluster, etc.)
+        disks_to_skip = []          # local disks not snapshotted
 
         for disk in device_info.devices:
             if (disk.root_name != 'disk'):
@@ -1731,7 +1732,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 continue
 
             if (disk.serial is None or disk.serial != volume_id):
-                disks_to_skip.append(disk.source_path)
+                disks_to_skip.append(disk.target_dev)
                 continue
 
             # disk is a Cinder volume with the correct volume_id
@@ -1739,16 +1740,23 @@ class LibvirtDriver(driver.ComputeDriver):
             disk_info = {
                 'dev': disk.target_dev,
                 'serial': disk.serial,
-                'current_file': disk.source_path
+                'current_file': disk.source_path,
+                'source_protocol': disk.source_protocol,
+                'source_name': disk.source_name,
+                'source_hosts': disk.source_hosts,
+                'source_ports': disk.source_ports
             }
 
             # Determine path for new_file based on current path
-            current_file = disk_info['current_file']
-            new_file_path = os.path.join(os.path.dirname(current_file),
-                                         new_file)
-            disks_to_snap.append((current_file, new_file_path))
+            if disk_info['current_file'] is not None:
+                current_file = disk_info['current_file']
+                new_file_path = os.path.join(os.path.dirname(current_file),
+                                             new_file)
+                disks_to_snap.append((current_file, new_file_path))
+            elif disk_info['source_protocol'] in ('gluster', 'netfs'):
+                network_disks_to_snap.append((disk_info, new_file))
 
-        if not disks_to_snap:
+        if not disks_to_snap and not network_disks_to_snap:
             msg = _('Found no disk to snapshot.')
             raise exception.NovaException(msg)
 
@@ -1761,6 +1769,20 @@ class LibvirtDriver(driver.ComputeDriver):
             snap_disk.source_type = 'file'
             snap_disk.snapshot = 'external'
             snap_disk.driver_name = 'qcow2'
+
+            snapshot.add_disk(snap_disk)
+
+        for disk_info, new_filename in network_disks_to_snap:
+            snap_disk = vconfig.LibvirtConfigGuestSnapshotDisk()
+            snap_disk.name = disk_info['dev']
+            snap_disk.source_type = 'network'
+            snap_disk.source_protocol = disk_info['source_protocol']
+            snap_disk.snapshot = 'external'
+            snap_disk.source_path = new_filename
+            old_dir = disk_info['source_name'].split('/')[0]
+            snap_disk.source_name = '%s/%s' % (old_dir, new_filename)
+            snap_disk.source_hosts = disk_info['source_hosts']
+            snap_disk.source_ports = disk_info['source_ports']
 
             snapshot.add_disk(snap_disk)
 
@@ -1907,7 +1929,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         ##### Find dev name
         my_dev = None
-        active_disk = None
 
         xml = virt_dom.XMLDesc(0)
         xml_doc = etree.fromstring(xml)
@@ -1924,14 +1945,14 @@ class LibvirtDriver(driver.ComputeDriver):
 
             if disk.serial == volume_id:
                 my_dev = disk.target_dev
-                active_disk = disk.source_path
 
-        if my_dev is None or active_disk is None:
-            msg = _('Unable to locate disk matching id: %s') % volume_id
+        if my_dev is None:
+            msg = _('Disk with id: %s '
+                    'not found attached to instance.') % volume_id
+            LOG.debug('Domain XML: %s', xml)
             raise exception.NovaException(msg)
 
-        LOG.debug("found dev, it's %(dev)s, with active disk: %(disk)s",
-                  {'dev': my_dev, 'disk': active_disk})
+        LOG.debug("found device at %s", my_dev)
 
         if delete_info['merge_target_file'] is None:
             # pull via blockRebase()

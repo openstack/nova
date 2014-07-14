@@ -1280,6 +1280,40 @@ class LibvirtConfigGuestSnapshotTest(LibvirtConfigBaseTest):
               </disks>
             </domainsnapshot>""")
 
+    def test_config_snapshot_with_network_disks(self):
+        obj = config.LibvirtConfigGuestSnapshot()
+        obj.name = "Demo"
+
+        disk = config.LibvirtConfigGuestSnapshotDisk()
+        disk.name = 'vda'
+        disk.source_name = 'source-file'
+        disk.source_type = 'network'
+        disk.source_hosts = ['host1']
+        disk.source_ports = ['12345']
+        disk.source_protocol = 'glusterfs'
+        disk.snapshot = 'external'
+        disk.driver_name = 'qcow2'
+        obj.add_disk(disk)
+
+        disk2 = config.LibvirtConfigGuestSnapshotDisk()
+        disk2.name = 'vdb'
+        disk2.snapshot = 'no'
+        obj.add_disk(disk2)
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <domainsnapshot>
+              <name>Demo</name>
+              <disks>
+               <disk name='vda' snapshot='external' type='network'>
+                <source protocol='glusterfs' name='source-file'>
+                 <host name='host1' port='12345'/>
+                </source>
+               </disk>
+               <disk name='vdb' snapshot='no'/>
+              </disks>
+            </domainsnapshot>""")
+
 
 class LibvirtConfigNodeDeviceTest(LibvirtConfigBaseTest):
 
