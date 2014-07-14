@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
+
 
 class CpuDiagnostics(object):
 
@@ -154,3 +156,21 @@ class Diagnostics(object):
                                                  write_bytes=write_bytes,
                                                  write_requests=write_requests,
                                                  errors_count=errors_count))
+
+    def serialize(self):
+        s = {}
+        for k, v in six.iteritems(self.__dict__):
+            # Treat case of CpuDiagnostics, NicDiagnostics and
+            # DiskDiagnostics - these are lists
+            if isinstance(v, list):
+                l = []
+                for value in v:
+                    l.append(value.__dict__)
+                s[k] = l
+            # Treat case of MemoryDiagnostics
+            elif isinstance(v, MemoryDiagnostics):
+                s[k] = v.__dict__
+            else:
+                s[k] = v
+        s['version'] = self.version
+        return s
