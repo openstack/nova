@@ -1293,7 +1293,7 @@ class LibvirtDriver(driver.ComputeDriver):
             with excutils.save_and_reraise_exception():
                 self._disconnect_volume(connection_info, disk_dev)
 
-    def _swap_volume(self, domain, disk_path, new_path):
+    def _swap_volume(self, domain, disk_path, new_path, resize_to):
         """Swap existing disk with a new block device."""
         # Save a copy of the domain's persistent XML file
         xml = domain.XMLDesc(
@@ -1326,11 +1326,19 @@ class LibvirtDriver(driver.ComputeDriver):
 
             domain.blockJobAbort(disk_path,
                                  libvirt.VIR_DOMAIN_BLOCK_JOB_ABORT_PIVOT)
+            if resize_to:
+                # NOTE(alex_xu): domain.blockJobAbort isn't sync call. This
+                # is bug in libvirt. So we need waiting for the pivot is
+                # finished. libvirt bug #1119173
+                while self._wait_for_block_job(domain, disk_path,
+                                               wait_for_job_clean=True):
+                    time.sleep(0.5)
+                domain.blockResize(disk_path, resize_to * units.Gi / units.Ki)
         finally:
             self._conn.defineXML(xml)
 
     def swap_volume(self, old_connection_info,
-                    new_connection_info, instance, mountpoint):
+                    new_connection_info, instance, mountpoint, resize_to):
         instance_name = instance['name']
         virt_dom = self._lookup_by_name(instance_name)
         disk_dev = mountpoint.rpartition("/")[2]
@@ -1348,7 +1356,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self._disconnect_volume(new_connection_info, disk_dev)
             raise NotImplementedError(_("Swap only supports host devices"))
 
-        self._swap_volume(virt_dom, disk_dev, conf.source_path)
+        self._swap_volume(virt_dom, disk_dev, conf.source_path, resize_to)
         self._disconnect_volume(old_connection_info, disk_dev)
 
     @staticmethod
@@ -1616,7 +1624,8 @@ class LibvirtDriver(driver.ComputeDriver):
                          instance=instance)
 
     @staticmethod
-    def _wait_for_block_job(domain, disk_path, abort_on_error=False):
+    def _wait_for_block_job(domain, disk_path, abort_on_error=False,
+                            wait_for_job_clean=False):
         """Wait for libvirt block job to complete.
 
         Libvirt may return either cur==end or an empty dict when
@@ -1637,10 +1646,12 @@ class LibvirtDriver(driver.ComputeDriver):
         except Exception:
             return False
 
-        if cur == end:
-            return False
+        if wait_for_job_clean:
+            job_ended = not status
         else:
-            return True
+            job_ended = cur == end
+
+        return not job_ended
 
     def _live_snapshot(self, domain, disk_path, out_path, image_format):
         """Snapshot an instance without downtime."""
