@@ -849,19 +849,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def list_instances(self):
         names = []
-        for domain_id in self._list_instance_ids():
-            try:
-                # We skip domains with ID 0 (hypervisors).
-                if domain_id != 0:
-                    domain = self._lookup_by_id(domain_id)
-                    names.append(domain.name())
-            except exception.InstanceNotFound:
-                # Ignore deleted instance while listing
-                continue
-
-        # extend instance list to contain also defined domains
-        names.extend([vm for vm in self._conn.listDefinedDomains()
-                    if vm not in names])
+        for dom in self._list_instance_domains(only_running=False):
+            names.append(dom.name())
 
         return names
 
