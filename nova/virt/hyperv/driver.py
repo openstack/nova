@@ -17,6 +17,8 @@
 A Hyper-V Nova Compute driver.
 """
 
+import platform
+
 from nova.i18n import _
 from nova.openstack.common import log as logging
 from nova.virt import driver
@@ -90,8 +92,8 @@ class HyperVDriver(driver.ComputeDriver):
     def get_available_resource(self, nodename):
         return self._hostops.get_available_resource()
 
-    def get_host_stats(self, refresh=False):
-        return self._hostops.get_host_stats(refresh)
+    def get_available_nodes(self, refresh=False):
+        return [platform.node()]
 
     def host_power_action(self, host, action):
         return self._hostops.host_power_action(host, action)

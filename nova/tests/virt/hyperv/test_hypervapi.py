@@ -316,35 +316,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         self.assertEqual(dic['supported_instances'],
                 '[["i686", "hyperv", "hvm"], ["x86_64", "hyperv", "hvm"]]')
 
-    def test_get_host_stats(self):
-        tot_mem_kb = 2000000L
-        free_mem_kb = 1000000L
-
-        tot_hdd_b = 4L * 1024 ** 3
-        free_hdd_b = 3L * 1024 ** 3
-
-        hostutils.HostUtils.get_memory_info().AndReturn((tot_mem_kb,
-                                                        free_mem_kb))
-
-        m = hostutils.HostUtils.get_volume_info(mox.IsA(str))
-        m.AndReturn((tot_hdd_b, free_hdd_b))
-
-        self._mox.ReplayAll()
-        dic = self._conn.get_host_stats(True)
-        self._mox.VerifyAll()
-
-        self.assertEqual(dic['disk_total'], tot_hdd_b / 1024 ** 3)
-        self.assertEqual(dic['disk_available'], free_hdd_b / 1024 ** 3)
-
-        self.assertEqual(dic['host_memory_total'], tot_mem_kb / 1024)
-        self.assertEqual(dic['host_memory_free'], free_mem_kb / 1024)
-
-        self.assertEqual(dic['disk_total'],
-                         dic['disk_used'] + dic['disk_available'])
-        self.assertEqual(dic['host_memory_total'],
-                         dic['host_memory_overhead'] +
-                         dic['host_memory_free'])
-
     def test_list_instances(self):
         fake_instances = ['fake1', 'fake2']
         vmutils.VMUtils.list_instances().AndReturn(fake_instances)

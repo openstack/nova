@@ -2029,7 +2029,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
         self.instance = fake_instance.fake_db_instance(name='foo')
 
     def test_host_state(self):
-        stats = self.conn.get_host_stats()
+        stats = self.conn.host_state.get_host_stats(False)
         # Values from fake.create_local_srs (ext SR)
         self.assertEqual(stats['disk_total'], 40000)
         self.assertEqual(stats['disk_used'], 20000)
@@ -2045,10 +2045,10 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
         self.assertEqual(stats['vcpus_used'], 0)
 
     def test_host_state_vcpus_used(self):
-        stats = self.conn.get_host_stats(True)
+        stats = self.conn.host_state.get_host_stats(True)
         self.assertEqual(stats['vcpus_used'], 0)
         xenapi_fake.create_vm(self.instance['name'], 'Running')
-        stats = self.conn.get_host_stats(True)
+        stats = self.conn.host_state.get_host_stats(True)
         self.assertEqual(stats['vcpus_used'], 4)
 
     def test_pci_passthrough_devices_whitelist(self):
@@ -2056,20 +2056,25 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
         # match with _plugin_xenhost_get_pci_device_details method in fake.py.
         white_list = '{"vendor_id":"10de", "product_id":"11bf"}'
         self.flags(pci_passthrough_whitelist=[white_list])
-        stats = self.conn.get_host_stats()
+        stats = self.conn.host_state.get_host_stats(False)
         self.assertEqual(len(stats['pci_passthrough_devices']), 1)
 
     def test_pci_passthrough_devices_no_whitelist(self):
-        stats = self.conn.get_host_stats()
+        stats = self.conn.host_state.get_host_stats(False)
         self.assertEqual(len(stats['pci_passthrough_devices']), 0)
 
     def test_host_state_missing_sr(self):
+        # Must trigger construction of 'host_state' property
+        # before introducing the stub which raises the error
+        hs = self.conn.host_state
+
         def fake_safe_find_sr(session):
             raise exception.StorageRepositoryNotFound('not there')
 
         self.stubs.Set(vm_utils, 'safe_find_sr', fake_safe_find_sr)
         self.assertRaises(exception.StorageRepositoryNotFound,
-                          self.conn.get_host_stats)
+                          hs.get_host_stats,
+                          refresh=True)
 
     def _test_host_action(self, method, action, expected=None):
         result = method('host', action)
@@ -2114,7 +2119,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
         self.assertEqual(result, 'fake uptime')
 
     def test_supported_instances_is_included_in_host_state(self):
-        stats = self.conn.get_host_stats()
+        stats = self.conn.host_state.get_host_stats(False)
         self.assertIn('supported_instances', stats)
 
     def test_supported_instances_is_calculated_by_to_supported_instances(self):
@@ -2124,7 +2129,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
             return "SOMERETURNVALUE"
         self.stubs.Set(host, 'to_supported_instances', to_supported_instances)
 
-        stats = self.conn.get_host_stats()
+        stats = self.conn.host_state.get_host_stats(False)
         self.assertEqual("SOMERETURNVALUE", stats['supported_instances'])
 
     def test_update_stats_caches_hostname(self):
@@ -2157,9 +2162,9 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
                 data = dict(data, host_hostname='bar')
 
         self.mox.ReplayAll()
-        stats = self.conn.get_host_stats(refresh=True)
+        stats = self.conn.host_state.get_host_stats(refresh=True)
         self.assertEqual('foo', stats['hypervisor_hostname'])
-        stats = self.conn.get_host_stats(refresh=True)
+        stats = self.conn.host_state.get_host_stats(refresh=True)
         self.assertEqual('foo', stats['hypervisor_hostname'])
 
 

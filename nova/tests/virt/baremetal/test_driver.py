@@ -23,7 +23,6 @@ import mock
 import mox
 from oslo.config import cfg
 
-from nova.compute import arch
 from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
@@ -161,20 +160,6 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         )
 
         return result
-
-    def test_get_host_stats(self):
-        node = self._create_node()
-        stats = self.driver.get_host_stats()
-        self.assertIsInstance(stats, list)
-        self.assertEqual(len(stats), 1)
-        stats = stats[0]
-        self.assertEqual(stats['cpu_arch'], arch.X86_64)
-        self.assertEqual(stats['test_spec'], 'test_value')
-        self.assertEqual(stats['hypervisor_type'], 'baremetal')
-        self.assertEqual(stats['hypervisor_hostname'], node['node']['uuid'])
-        self.assertEqual(stats['host'], 'test_host')
-        self.assertEqual(stats['vcpus'], 2)
-        self.assertEqual(stats['host_memory_total'], 2048)
 
     def test_spawn_ok(self):
         node = self._create_node()

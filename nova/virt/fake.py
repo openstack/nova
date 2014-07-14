@@ -55,7 +55,6 @@ def set_nodes(nodes):
     It has effect on the following methods:
         get_available_nodes()
         get_available_resource
-        get_host_stats()
 
     To restore the change, call restore_nodes()
     """
@@ -391,16 +390,12 @@ class FakeDriver(driver.ComputeDriver):
         if nodename not in _FAKE_NODES:
             return {}
 
-        status = self.get_host_stats()
-        # samples expect '?' instead of {}
-        if isinstance(status, list):
-            for host in status:
-                if host["hypervisor_hostname"] == nodename:
-                    host['cpu_info'] = '?'
-                    return host
-        else:
-            status['cpu_info'] = '?'
-            return status
+        host_status = self.host_status_base.copy()
+        host_status['hypervisor_hostname'] = nodename
+        host_status['host_hostname'] = nodename
+        host_status['host_name_label'] = nodename
+        host_status['cpu_info'] = '?'
+        return host_status
 
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
         return
@@ -447,22 +442,6 @@ class FakeDriver(driver.ComputeDriver):
     def test_remove_vm(self, instance_name):
         """Removes the named VM, as if it crashed. For testing."""
         self.instances.pop(instance_name)
-
-    def get_host_stats(self, refresh=False):
-        """Return fake Host Status of ram, disk, network."""
-        stats = []
-        for nodename in _FAKE_NODES:
-            host_status = self.host_status_base.copy()
-            host_status['hypervisor_hostname'] = nodename
-            host_status['host_hostname'] = nodename
-            host_status['host_name_label'] = nodename
-            stats.append(host_status)
-        if len(stats) == 0:
-            raise exception.NovaException("FakeDriver has no node")
-        elif len(stats) == 1:
-            return stats[0]
-        else:
-            return stats
 
     def host_power_action(self, host, action):
         """Reboots, shuts down or powers up the host."""

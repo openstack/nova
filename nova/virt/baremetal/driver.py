@@ -534,34 +534,6 @@ class BareMetalDriver(driver.ComputeDriver):
         self.firewall_driver.unfilter_instance(instance_ref,
                                                 network_info=network_info)
 
-    def get_host_stats(self, refresh=False):
-        caps = []
-        context = nova_context.get_admin_context()
-        nodes = db.bm_node_get_all(context,
-                                     service_host=CONF.host)
-        for node in nodes:
-            res = self._node_resource(node)
-            nodename = str(node['uuid'])
-            data = {}
-            data['vcpus'] = res['vcpus']
-            data['vcpus_used'] = res['vcpus_used']
-            data['cpu_info'] = res['cpu_info']
-            data['disk_total'] = res['local_gb']
-            data['disk_used'] = res['local_gb_used']
-            data['disk_available'] = res['local_gb'] - res['local_gb_used']
-            data['host_memory_total'] = res['memory_mb']
-            data['host_memory_free'] = res['memory_mb'] - res['memory_mb_used']
-            data['hypervisor_type'] = res['hypervisor_type']
-            data['hypervisor_version'] = res['hypervisor_version']
-            data['hypervisor_hostname'] = nodename
-            data['supported_instances'] = self.supported_instances
-            data.update(self.extra_specs)
-            data['host'] = CONF.host
-            data['node'] = nodename
-            # TODO(NTTdocomo): put node's extra specs here
-            caps.append(data)
-        return caps
-
     def plug_vifs(self, instance, network_info):
         """Plugin VIFs into networks."""
         self._plug_vifs(instance, network_info)

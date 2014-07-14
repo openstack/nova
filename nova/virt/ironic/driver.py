@@ -819,23 +819,6 @@ class IronicDriver(virt_driver.ComputeDriver):
                     icli, instance, 'power on')
         timer.start(interval=CONF.ironic.api_retry_interval).wait()
 
-    def get_host_stats(self, refresh=False):
-        """Return the currently known stats for all Ironic nodes.
-
-        :param refresh: Boolean value; If True run update first. Ignored by
-            this driver.
-        :returns: a list of dictionaries; each dictionary contains the
-            stats for a node.
-
-        """
-        caps = []
-        icli = client_wrapper.IronicClientWrapper()
-        node_list = icli.call("node.list")
-        for node in node_list:
-            data = self._node_resource(node)
-            caps.append(data)
-        return caps
-
     def refresh_security_group_rules(self, security_group_id):
         """Refresh security group rules from data store.
 

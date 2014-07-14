@@ -431,14 +431,6 @@ class VMwareVCDriver(driver.ComputeDriver):
         LOG.debug("The available nodes are: %s", node_list)
         return node_list
 
-    def get_host_stats(self, refresh=False):
-        """Return currently known host stats."""
-        stats_list = []
-        nodes = self.get_available_nodes()
-        for node in nodes:
-            stats_list.append(self.get_available_resource(node))
-        return stats_list
-
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
         """Create VM instance."""

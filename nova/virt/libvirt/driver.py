@@ -4909,7 +4909,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Temporary: convert supported_instances into a string, while keeping
         # the RPC version as JSON. Can be changed when RPC broadcast is removed
-        stats = self.get_host_stats(refresh=True)
+        stats = self.host_state.get_host_stats(True)
         stats['supported_instances'] = jsonutils.dumps(
                 stats['supported_instances'])
         return stats
@@ -5749,12 +5749,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self.firewall_driver.unfilter_instance(instance,
                                                network_info=network_info)
 
-    def get_host_stats(self, refresh=False):
-        """Return the current state of the host.
-
-        If 'refresh' is True, run update the stats first.
-        """
-        return self.host_state.get_host_stats(refresh=refresh)
+    def get_available_nodes(self, refresh=False):
+        return [self._get_hypervisor_hostname()]
 
     def get_host_cpu_stats(self):
         """Return the current CPU state of the host."""

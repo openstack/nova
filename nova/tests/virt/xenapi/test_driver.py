@@ -51,7 +51,7 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
         driver = self._get_driver()
         driver._session.product_version = (6, 8, 2)
 
-        self.stubs.Set(driver, 'get_host_stats', self.host_stats)
+        self.stubs.Set(driver.host_state, 'get_host_stats', self.host_stats)
 
         resources = driver.get_available_resource(None)
         self.assertEqual(6008002, resources['hypervisor_version'])
