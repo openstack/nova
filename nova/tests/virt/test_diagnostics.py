@@ -118,3 +118,42 @@ class DiagnosticsTests(test.NoDBTestCase):
         self.assertEqual(0, diags.memory_details.maximum)
         self.assertEqual(0, diags.memory_details.used)
         self.assertEqual('1.0', diags.version)
+
+    def test_add_cpu(self):
+        diags = diagnostics.Diagnostics()
+        self.assertEqual([], diags.cpu_details)
+        diags.add_cpu(time=7)
+        self.assertEqual(1, len(diags.cpu_details))
+        self.assertEqual(7, diags.cpu_details[0].time)
+
+    def test_add_nic(self):
+        diags = diagnostics.Diagnostics()
+        self.assertEqual([], diags.nic_details)
+        diags.add_nic(mac_address='00:00:ca:fe:00:00',
+                      rx_octets=1, rx_errors=2, rx_drop=3, rx_packets=4,
+                      tx_octets=5, tx_errors=6, tx_drop=7, tx_packets=8)
+        self.assertEqual(1, len(diags.nic_details))
+        self.assertEqual('00:00:ca:fe:00:00', diags.nic_details[0].mac_address)
+        self.assertEqual(1, diags.nic_details[0].rx_octets)
+        self.assertEqual(2, diags.nic_details[0].rx_errors)
+        self.assertEqual(3, diags.nic_details[0].rx_drop)
+        self.assertEqual(4, diags.nic_details[0].rx_packets)
+        self.assertEqual(5, diags.nic_details[0].tx_octets)
+        self.assertEqual(6, diags.nic_details[0].tx_errors)
+        self.assertEqual(7, diags.nic_details[0].tx_drop)
+        self.assertEqual(8, diags.nic_details[0].tx_packets)
+
+    def test_add_disk(self):
+        diags = diagnostics.Diagnostics()
+        self.assertEqual([], diags.disk_details)
+        diags.add_disk(id='fake_disk_id',
+                       read_bytes=1, read_requests=2,
+                       write_bytes=3, write_requests=4,
+                       errors_count=5)
+        self.assertEqual(1, len(diags.disk_details))
+        self.assertEqual('fake_disk_id', diags.disk_details[0].id)
+        self.assertEqual(1, diags.disk_details[0].read_bytes)
+        self.assertEqual(2, diags.disk_details[0].read_requests)
+        self.assertEqual(3, diags.disk_details[0].write_bytes)
+        self.assertEqual(4, diags.disk_details[0].write_requests)
+        self.assertEqual(5, diags.disk_details[0].errors_count)

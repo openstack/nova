@@ -129,3 +129,28 @@ class Diagnostics(object):
         else:
             self.disk_details = []
         self.memory_details = MemoryDiagnostics()
+
+    def add_cpu(self, time=0):
+        self.cpu_details.append(CpuDiagnostics(time=time))
+
+    def add_nic(self, mac_address='00:00:00:00:00:00',
+                rx_octets=0, rx_errors=0, rx_drop=0, rx_packets=0,
+                tx_octets=0, tx_errors=0, tx_drop=0, tx_packets=0):
+        self.nic_details.append(NicDiagnostics(mac_address=mac_address,
+                                               rx_octets=rx_octets,
+                                               rx_errors=rx_errors,
+                                               rx_drop=rx_drop,
+                                               rx_packets=rx_packets,
+                                               tx_octets=tx_octets,
+                                               tx_errors=tx_errors,
+                                               tx_drop=tx_drop,
+                                               tx_packets=tx_packets))
+
+    def add_disk(self, id='', read_bytes=0, read_requests=0,
+                 write_bytes=0, write_requests=0, errors_count=0):
+        self.disk_details.append(DiskDiagnostics(id=id,
+                                                 read_bytes=read_bytes,
+                                                 read_requests=read_requests,
+                                                 write_bytes=write_bytes,
+                                                 write_requests=write_requests,
+                                                 errors_count=errors_count))
