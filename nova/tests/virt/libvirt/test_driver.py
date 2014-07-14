@@ -2909,8 +2909,6 @@ class LibvirtConnTestCase(test.TestCase,
 
     def test_get_all_block_devices(self):
         xml = [
-            # NOTE(vish): id 0 is skipped
-            None,
             """
                 <domain type='kvm'>
                     <devices>
@@ -2946,17 +2944,17 @@ class LibvirtConnTestCase(test.TestCase,
             """,
         ]
 
-        def fake_lookup(id):
-            return FakeVirtDomain(xml[id])
+        def fake_list_all(flags):
+            return [FakeVirtDomain(xml[0], id=3, name="instance00000001"),
+                    FakeVirtDomain(xml[1], id=1, name="instance00000002"),
+                    FakeVirtDomain(xml[2], id=5, name="instance00000003")]
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.numOfDomains = lambda: 4
-        libvirt_driver.LibvirtDriver._conn.listDomainsID = lambda: range(4)
-        libvirt_driver.LibvirtDriver._conn.lookupByID = fake_lookup
+        libvirt_driver.LibvirtDriver._conn.listAllDomains = fake_list_all
 
         self.mox.ReplayAll()
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        devices = conn._get_all_block_devices()
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        devices = drvr._get_all_block_devices()
         self.assertEqual(devices, ['/path/to/dev/1', '/path/to/dev/3'])
 
     def test_snapshot_in_ami_format(self):
