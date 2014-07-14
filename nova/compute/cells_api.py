@@ -392,16 +392,6 @@ class ComputeCellsAPI(compute_api.API):
         return self._call_to_cells(context, instance, 'get_console_output',
                 *args, **kwargs)
 
-    def lock(self, context, instance):
-        """Lock the given instance."""
-        super(ComputeCellsAPI, self).lock(context, instance)
-        self._cast_to_cells(context, instance, 'lock')
-
-    def unlock(self, context, instance):
-        """Unlock the given instance."""
-        super(ComputeCellsAPI, self).lock(context, instance)
-        self._cast_to_cells(context, instance, 'unlock')
-
     @check_instance_cell
     def _attach_volume(self, context, instance, volume_id, device,
                        disk_bus, device_type):
