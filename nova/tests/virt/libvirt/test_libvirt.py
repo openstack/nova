@@ -7467,15 +7467,15 @@ class IptablesFirewallTestCase(test.TestCase):
         self.fw.instance_rules(instance_ref,
                                mox.IgnoreArg()).AndReturn((None, None))
         self.fw.add_filters_for_instance(instance_ref, mox.IgnoreArg(),
-                                         mox.IgnoreArg())
+                                         mox.IgnoreArg(), mox.IgnoreArg())
         self.fw.instance_rules(instance_ref,
                                mox.IgnoreArg()).AndReturn((None, None))
         self.fw.add_filters_for_instance(instance_ref, mox.IgnoreArg(),
-                                         mox.IgnoreArg())
+                                         mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
 
         self.fw.prepare_instance_filter(instance_ref, mox.IgnoreArg())
-        self.fw.instances[instance_ref['id']] = instance_ref
+        self.fw.instance_info[instance_ref['id']] = (instance_ref, None)
         self.fw.do_refresh_security_group_rules("fake")
 
     def test_unfilter_instance_undefines_nwfilter(self):
