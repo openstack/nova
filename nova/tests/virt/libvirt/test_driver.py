@@ -6719,17 +6719,25 @@ class LibvirtConnTestCase(test.TestCase,
                 else:
                     return ([1] * self._vcpus, [True] * self._vcpus)
 
-        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        conn = driver._conn
-        self.mox.StubOutWithMock(driver, '_list_instance_ids')
-        conn.lookupByID = self.mox.CreateMockAnything()
+            def ID(self):
+                return 1
 
-        driver._list_instance_ids().AndReturn([1, 2])
-        conn.lookupByID(1).AndReturn(DiagFakeDomain(None))
-        conn.lookupByID(2).AndReturn(DiagFakeDomain(5))
+            def name(self):
+                return "instance000001"
+
+            def UUIDString(self):
+                return "19479fee-07a5-49bb-9138-d3738280d63c"
+
+        def fake_list_all(flags):
+            return [DiagFakeDomain(None), DiagFakeDomain(5)]
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.listAllDomains = fake_list_all
 
         self.mox.ReplayAll()
-        self.assertEqual(5, driver._get_vcpu_used())
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        self.assertEqual(5, drvr._get_vcpu_used())
 
     def test_failing_vcpu_count_none(self):
         """Domain will return zero if the current number of vcpus used
@@ -6744,16 +6752,22 @@ class LibvirtConnTestCase(test.TestCase,
             def vcpus(self):
                 return None
 
-        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        conn = driver._conn
-        self.mox.StubOutWithMock(driver, '_list_instance_ids')
-        conn.lookupByID = self.mox.CreateMockAnything()
+            def ID(self):
+                return 1
 
-        driver._list_instance_ids().AndReturn([1])
-        conn.lookupByID(1).AndReturn(DiagFakeDomain())
+            def name(self):
+                return "instance000001"
+
+        def fake_list_all(flags):
+            return [DiagFakeDomain()]
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.listAllDomains = fake_list_all
 
         self.mox.ReplayAll()
-        self.assertEqual(0, driver._get_vcpu_used())
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        self.assertEqual(0, drvr._get_vcpu_used())
 
     def test_get_instance_capabilities(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)

@@ -3878,24 +3878,16 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.libvirt.virt_type == 'lxc':
             return total + 1
 
-        dom_ids = self._list_instance_ids()
-        for dom_id in dom_ids:
+        for dom in self._list_instance_domains():
             try:
-                dom = self._lookup_by_id(dom_id)
-                try:
-                    vcpus = dom.vcpus()
-                except libvirt.libvirtError as e:
-                    LOG.warn(_LW("couldn't obtain the vpu count from "
-                                 "domain id: %(id)s, exception: %(ex)s"),
-                             {"id": dom_id, "ex": e})
-                else:
-                    if vcpus is not None and len(vcpus) > 1:
-                        total += len(vcpus[1])
-
-            except exception.InstanceNotFound:
-                LOG.info(_LI("libvirt can't find a domain with id: %s"),
-                         dom_id)
-                continue
+                vcpus = dom.vcpus()
+            except libvirt.libvirtError as e:
+                LOG.warn(_LW("couldn't obtain the vpu count from domain id:"
+                             " %(uuid)s, exception: %(ex)s") %
+                         {"uuid": dom.UUIDString(), "ex": e})
+            else:
+                if vcpus is not None and len(vcpus) > 1:
+                    total += len(vcpus[1])
             # NOTE(gtt116): give change to do other task.
             greenthread.sleep(0)
         return total
