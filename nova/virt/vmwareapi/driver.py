@@ -699,7 +699,7 @@ class VMwareVCDriver(VMwareESXDriver):
 
     def unrescue(self, instance, network_info):
         """Unrescue the specified instance."""
-        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops = self._get_vmops_for_compute_node(instance.node)
         _vmops.unrescue(instance)
 
     def power_off(self, instance):
