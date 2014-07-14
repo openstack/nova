@@ -86,11 +86,11 @@ class SecurityGroupBase(object):
                 to_port = int(to_port)
             except ValueError:
                 if ip_protocol.upper() == 'ICMP':
-                    raise exception.InvalidInput(reason="Type and"
-                         " Code must be integers for ICMP protocol type")
+                    raise exception.InvalidInput(reason=_("Type and"
+                         " Code must be integers for ICMP protocol type"))
                 else:
-                    raise exception.InvalidInput(reason="To and From ports "
-                          "must be integers")
+                    raise exception.InvalidInput(reason=_("To and From ports "
+                          "must be integers"))
 
             if ip_protocol.upper() not in ['TCP', 'UDP', 'ICMP']:
                 raise exception.InvalidIpProtocol(protocol=ip_protocol)
