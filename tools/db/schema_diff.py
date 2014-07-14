@@ -21,12 +21,24 @@ release into a single file. This is a manual and, unfortunately, error-prone
 process. To ensure that the schema doesn't change, this tool can be used to
 diff the compacted DB schema to the original, uncompacted form.
 
+The database is specified by providing a SQLAlchemy connection URL WITHOUT the
+database-name portion (that will be filled in automatically with a temporary
+database name).
 
 The schema versions are specified by providing a git ref (a branch name or
 commit hash) and a SQLAlchemy-Migrate version number:
+
 Run like:
 
-    ./tools/db/schema_diff.py mysql master:latest my_branch:82
+    MYSQL:
+
+    ./tools/db/schema_diff.py mysql://root@localhost \
+                              master:latest my_branch:82
+
+    POSTGRESQL:
+
+    ./tools/db/schema_diff.py postgresql://localhost \
+                              master:latest my_branch:82
 """
 
 from __future__ import print_function
@@ -43,10 +55,15 @@ from nova.openstack.common.gettextutils import _
 ### Dump
 
 
-def dump_db(db_driver, db_name, migration_version, dump_filename):
+def dump_db(db_driver, db_name, db_url, migration_version, dump_filename):
+    if not db_url.endswith('/'):
+        db_url += '/'
+
+    db_url += db_name
+
     db_driver.create(db_name)
     try:
-        migrate(db_driver, db_name, migration_version)
+        _migrate(db_url, migration_version)
         db_driver.dump(db_name, dump_filename)
     finally:
         db_driver.drop(db_name)
@@ -71,7 +88,7 @@ def diff_files(filename1, filename2):
 ### Database
 
 
-class MySQL(object):
+class Mysql(object):
     def create(self, name):
         subprocess.check_call(['mysqladmin', '-u', 'root', 'create', name])
 
@@ -83,11 +100,8 @@ class MySQL(object):
                 'mysqldump -u root %(name)s > %(dump_filename)s' % locals(),
                 shell=True)
 
-    def url(self, name):
-        return 'mysql://root@localhost/%s' % name
 
-
-class Postgres(object):
+class Postgresql(object):
     def create(self, name):
         subprocess.check_call(['createdb', name])
 
@@ -99,17 +113,12 @@ class Postgres(object):
                 'pg_dump %(name)s > %(dump_filename)s' % locals(),
                 shell=True)
 
-    def url(self, name):
-        return 'postgresql://localhost/%s' % name
 
-
-def _get_db_driver_class(db_type):
-    if db_type == "mysql":
-        return MySQL
-    elif db_type == "postgres":
-        return Postgres
-    else:
-        raise Exception(_("database %s not supported") % db_type)
+def _get_db_driver_class(db_url):
+    try:
+        return globals()[db_url.split('://')[0].capitalize()]
+    except KeyError:
+        raise Exception(_("database %s not supported") % db_url)
 
 
 ### Migrate
@@ -118,28 +127,28 @@ def _get_db_driver_class(db_type):
 MIGRATE_REPO = os.path.join(os.getcwd(), "nova/db/sqlalchemy/migrate_repo")
 
 
-def migrate(db_driver, db_name, migration_version):
+def _migrate(db_url, migration_version):
     earliest_version = _migrate_get_earliest_version()
 
     # NOTE(sirp): sqlalchemy-migrate currently cannot handle the skipping of
     # migration numbers.
     _migrate_cmd(
-            db_driver, db_name, 'version_control', str(earliest_version - 1))
+            db_url, 'version_control', str(earliest_version - 1))
 
     upgrade_cmd = ['upgrade']
     if migration_version != 'latest':
         upgrade_cmd.append(str(migration_version))
 
-    _migrate_cmd(db_driver, db_name, *upgrade_cmd)
+    _migrate_cmd(db_url, *upgrade_cmd)
 
 
-def _migrate_cmd(db_driver, db_name, *cmd):
+def _migrate_cmd(db_url, *cmd):
     manage_py = os.path.join(MIGRATE_REPO, 'manage.py')
 
     args = ['python', manage_py]
     args += cmd
     args += ['--repository=%s' % MIGRATE_REPO,
-             '--url=%s' % db_driver.url(db_name)]
+             '--url=%s' % db_url]
 
     subprocess.check_call(args)
 
@@ -200,7 +209,7 @@ def usage(msg=None):
         print("ERROR: %s" % msg, file=sys.stderr)
 
     prog = "schema_diff.py"
-    args = ["<mysql|postgres>", "<orig-branch:orig-version>",
+    args = ["<db-url>", "<orig-branch:orig-version>",
             "<new-branch:new-version>"]
 
     print("usage: %s %s" % (prog, ' '.join(args)), file=sys.stderr)
@@ -209,9 +218,9 @@ def usage(msg=None):
 
 def parse_options():
     try:
-        db_type = sys.argv[1]
+        db_url = sys.argv[1]
     except IndexError:
-        usage("must specify DB type")
+        usage("must specify DB connection url")
 
     try:
         orig_branch, orig_version = sys.argv[2].split(':')
@@ -223,7 +232,7 @@ def parse_options():
     except IndexError:
         usage('new branch and version required (e.g. master:82)')
 
-    return db_type, orig_branch, orig_version, new_branch, new_version
+    return db_url, orig_branch, orig_version, new_branch, new_version
 
 
 def main():
@@ -236,7 +245,7 @@ def main():
     NEW_DUMP = NEW_DB + ".dump"
 
     options = parse_options()
-    db_type, orig_branch, orig_version, new_branch, new_version = options
+    db_url, orig_branch, orig_version, new_branch, new_version = options
 
     # Since we're going to be switching branches, ensure user doesn't have any
     # uncommited changes
@@ -244,18 +253,18 @@ def main():
         die("You have uncommited changes. Please commit them before running "
             "this command.")
 
-    db_driver = _get_db_driver_class(db_type)()
+    db_driver = _get_db_driver_class(db_url)()
 
     users_branch = git_current_branch_name()
     git_checkout(orig_branch)
 
     try:
         # Dump Original Schema
-        dump_db(db_driver, ORIG_DB, orig_version, ORIG_DUMP)
+        dump_db(db_driver, ORIG_DB, db_url, orig_version, ORIG_DUMP)
 
         # Dump New Schema
         git_checkout(new_branch)
-        dump_db(db_driver, NEW_DB, new_version, NEW_DUMP)
+        dump_db(db_driver, NEW_DB, db_url, new_version, NEW_DUMP)
 
         diff_files(ORIG_DUMP, NEW_DUMP)
     finally:
