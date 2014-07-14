@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import exception
 from nova import test
 from nova.virt import diagnostics
 
@@ -208,3 +209,23 @@ class DiagnosticsTests(test.NoDBTestCase):
                     'version': '1.0'}
         result = diags.serialize()
         self.assertEqual(expected, result)
+
+    def test_diagnostics_invalid_input(self):
+        self.assertRaises(exception.InvalidInput,
+                          diagnostics.Diagnostics,
+                          cpu_details='invalid type')
+        self.assertRaises(exception.InvalidInput,
+                          diagnostics.Diagnostics,
+                          cpu_details=['invalid entry'])
+        self.assertRaises(exception.InvalidInput,
+                          diagnostics.Diagnostics,
+                          nic_details='invalid type')
+        self.assertRaises(exception.InvalidInput,
+                          diagnostics.Diagnostics,
+                          nic_details=['invalid entry'])
+        self.assertRaises(exception.InvalidInput,
+                          diagnostics.Diagnostics,
+                          disk_details='invalid type')
+        self.assertRaises(exception.InvalidInput,
+                          diagnostics.Diagnostics,
+                          disk_details=['invalid entry'])
