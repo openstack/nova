@@ -3888,7 +3888,7 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 if vcpus is not None and len(vcpus) > 1:
                     total += len(vcpus[1])
-            # NOTE(gtt116): give change to do other task.
+            # NOTE(gtt116): give other tasks a chance.
             greenthread.sleep(0)
         return total
 
@@ -4865,7 +4865,7 @@ class LibvirtDriver(driver.ComputeDriver):
             except exception.InstanceNotFound:
                 # Instance was deleted during the check so ignore it
                 pass
-            # NOTE(gtt116): give change to do other task.
+            # NOTE(gtt116): give other tasks a chance.
             greenthread.sleep(0)
         return disk_over_committed_size
 
