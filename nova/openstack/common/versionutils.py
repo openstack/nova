@@ -18,6 +18,7 @@ Helpers for comparing version strings.
 """
 
 import functools
+
 import pkg_resources
 
 from nova.openstack.common.gettextutils import _
@@ -52,18 +53,34 @@ class deprecated(object):
     >>> @deprecated(as_of=deprecated.ICEHOUSE, remove_in=+1)
     ... def c(): pass
 
+    4. Specifying the deprecated functionality will not be removed:
+    >>> @deprecated(as_of=deprecated.ICEHOUSE, remove_in=0)
+    ... def d(): pass
+
+    5. Specifying a replacement, deprecated functionality will not be removed:
+    >>> @deprecated(as_of=deprecated.ICEHOUSE, in_favor_of='f()', remove_in=0)
+    ... def e(): pass
+
     """
 
+    # NOTE(morganfainberg): Bexar is used for unit test purposes, it is
+    # expected we maintain a gap between Bexar and Folsom in this list.
+    BEXAR = 'B'
     FOLSOM = 'F'
     GRIZZLY = 'G'
     HAVANA = 'H'
     ICEHOUSE = 'I'
+    JUNO = 'J'
 
     _RELEASES = {
+        # NOTE(morganfainberg): Bexar is used for unit test purposes, it is
+        # expected we maintain a gap between Bexar and Folsom in this list.
+        'B': 'Bexar',
         'F': 'Folsom',
         'G': 'Grizzly',
         'H': 'Havana',
         'I': 'Icehouse',
+        'J': 'Juno',
     }
 
     _deprecated_msg_with_alternative = _(
@@ -73,6 +90,12 @@ class deprecated(object):
     _deprecated_msg_no_alternative = _(
         '%(what)s is deprecated as of %(as_of)s and may be '
         'removed in %(remove_in)s. It will not be superseded.')
+
+    _deprecated_msg_with_alternative_no_removal = _(
+        '%(what)s is deprecated as of %(as_of)s in favor of %(in_favor_of)s.')
+
+    _deprecated_msg_with_no_alternative_no_removal = _(
+        '%(what)s is deprecated as of %(as_of)s. It will not be superseded.')
 
     def __init__(self, as_of, in_favor_of=None, remove_in=2, what=None):
         """Initialize decorator
@@ -119,9 +142,19 @@ class deprecated(object):
 
         if self.in_favor_of:
             details['in_favor_of'] = self.in_favor_of
-            msg = self._deprecated_msg_with_alternative
+            if self.remove_in > 0:
+                msg = self._deprecated_msg_with_alternative
+            else:
+                # There are no plans to remove this function, but it is
+                # now deprecated.
+                msg = self._deprecated_msg_with_alternative_no_removal
         else:
-            msg = self._deprecated_msg_no_alternative
+            if self.remove_in > 0:
+                msg = self._deprecated_msg_no_alternative
+            else:
+                # There are no plans to remove this function, but it is
+                # now deprecated.
+                msg = self._deprecated_msg_with_no_alternative_no_removal
         return msg, details
 
 

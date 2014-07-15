@@ -22,7 +22,6 @@ from nova.openstack.common import timeutils
 
 memcache_opts = [
     cfg.ListOpt('memcached_servers',
-                default=None,
                 help='Memcached servers or None for in process cache.'),
 ]
 
@@ -36,11 +35,8 @@ def get_client(memcached_servers=None):
     if not memcached_servers:
         memcached_servers = CONF.memcached_servers
     if memcached_servers:
-        try:
-            import memcache
-            client_cls = memcache.Client
-        except ImportError:
-            pass
+        import memcache
+        client_cls = memcache.Client
 
     return client_cls(memcached_servers, debug=0)
 

@@ -168,6 +168,10 @@ def dumps(value, default=to_primitive, **kwargs):
     return json.dumps(value, default=default, **kwargs)
 
 
+def dump(obj, fp, *args, **kwargs):
+    return json.dump(obj, fp, *args, **kwargs)
+
+
 def loads(s, encoding='utf-8', **kwargs):
     return json.loads(strutils.safe_decode(s, encoding), **kwargs)
 
