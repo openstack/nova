@@ -684,7 +684,12 @@ def compute_node_statistics(context):
                          func.sum(models.ComputeNode.running_vms),
                          func.sum(models.ComputeNode.disk_available_least),
                          base_model=models.ComputeNode,
-                         read_deleted="no").first()
+                         read_deleted="no").\
+                         filter(models.Service.disabled == False).\
+                         filter(
+                            models.Service.id ==
+                            models.ComputeNode.service_id).\
+                         first()
 
     # Build a dict of the info--making no assumptions about result
     fields = ('count', 'vcpus', 'memory_mb', 'local_gb', 'vcpus_used',
