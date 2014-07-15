@@ -407,14 +407,6 @@ class HostStateTestCase(test.NoDBTestCase):
         host.update_from_compute_node(compute)
 
         self.assertEqual(5, host.num_instances)
-        self.assertEqual(3, host.num_instances_by_project['12345'])
-        self.assertEqual(1, host.num_instances_by_project['23456'])
-        self.assertEqual(2, host.vm_states[vm_states.BUILDING])
-        self.assertEqual(1, host.vm_states[vm_states.SUSPENDED])
-        self.assertEqual(1, host.task_states[task_states.RESIZE_MIGRATING])
-        self.assertEqual(2, host.task_states[task_states.MIGRATING])
-        self.assertEqual(4, host.num_instances_by_os_type['linux'])
-        self.assertEqual(1, host.num_instances_by_os_type['windoze'])
         self.assertEqual(42, host.num_io_ops)
         self.assertEqual(10, len(host.stats))
 
@@ -476,14 +468,6 @@ class HostStateTestCase(test.NoDBTestCase):
         host.update_from_compute_node(compute)
 
         self.assertEqual(5, host.num_instances)
-        self.assertEqual(3, host.num_instances_by_project['12345'])
-        self.assertEqual(1, host.num_instances_by_project['23456'])
-        self.assertEqual(2, host.vm_states[vm_states.BUILDING])
-        self.assertEqual(1, host.vm_states[vm_states.SUSPENDED])
-        self.assertEqual(1, host.task_states[task_states.UNSHELVING])
-        self.assertEqual(2, host.task_states[task_states.RESCUING])
-        self.assertEqual(4, host.num_instances_by_os_type['linux'])
-        self.assertEqual(1, host.num_instances_by_os_type['windoze'])
         self.assertEqual(42, host.num_io_ops)
         self.assertEqual(10, len(host.stats))
 
@@ -504,12 +488,6 @@ class HostStateTestCase(test.NoDBTestCase):
         host.consume_from_instance(instance)
 
         self.assertEqual(2, host.num_instances)
-        self.assertEqual(2, host.num_instances_by_project['12345'])
-        self.assertEqual(1, host.vm_states[vm_states.BUILDING])
-        self.assertEqual(1, host.vm_states[vm_states.PAUSED])
-        self.assertEqual(1, host.task_states[task_states.SCHEDULING])
-        self.assertEqual(1, host.task_states[None])
-        self.assertEqual(2, host.num_instances_by_os_type['Linux'])
         self.assertEqual(1, host.num_io_ops)
 
     def test_resources_consumption_from_compute_node(self):
