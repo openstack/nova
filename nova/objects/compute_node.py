@@ -27,7 +27,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
     # Version 1.2: String attributes updated to support unicode
     # Version 1.3: Added stats field
     # Version 1.4: Added host ip field
-    VERSION = '1.4'
+    # Version 1.5: Added numa_topology field
+    VERSION = '1.5'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -50,10 +51,13 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         'metrics': fields.StringField(nullable=True),
         'stats': fields.DictOfNullableStringsField(nullable=True),
         'host_ip': fields.IPAddressField(nullable=True),
+        'numa_topology': fields.StringField(nullable=True),
         }
 
     def obj_make_compatible(self, primitive, target_version):
         target_version = utils.convert_version_to_tuple(target_version)
+        if target_version < (1, 5) and 'numa_topology' in primitive:
+            del primitive['numa_topology']
         if target_version < (1, 4) and 'host_ip' in primitive:
             del primitive['host_ip']
         if target_version < (1, 3) and 'stats' in primitive:
@@ -137,7 +141,8 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     # Version 1.1 ComputeNode version 1.3
     # Version 1.2 Add get_by_service()
     # Version 1.3 ComputeNode version 1.4
-    VERSION = '1.3'
+    # Version 1.4 ComputeNode version 1.5
+    VERSION = '1.4'
     fields = {
         'objects': fields.ListOfObjectsField('ComputeNode'),
         }
@@ -147,6 +152,7 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
         '1.1': '1.3',
         '1.2': '1.3',
         '1.3': '1.4',
+        '1.4': '1.5',
         }
 
     @base.remotable_classmethod

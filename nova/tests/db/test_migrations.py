@@ -772,6 +772,24 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         oslodbutils.get_table(engine, 'instance_group_metadata')
         oslodbutils.get_table(engine, 'shadow_instance_group_metadata')
 
+    def _check_251(self, engine, data):
+        self.assertColumnExists(engine, 'compute_nodes', 'numa_topology')
+        self.assertColumnExists(
+                engine, 'shadow_compute_nodes', 'numa_topology')
+
+        compute_nodes = oslodbutils.get_table(engine, 'compute_nodes')
+        shadow_compute_nodes = oslodbutils.get_table(
+                engine, 'shadow_compute_nodes')
+        self.assertIsInstance(compute_nodes.c.numa_topology.type,
+                              sqlalchemy.types.Text)
+        self.assertIsInstance(shadow_compute_nodes.c.numa_topology.type,
+                              sqlalchemy.types.Text)
+
+    def _post_downgrade_251(self, engine):
+        self.assertColumnNotExists(engine, 'compute_nodes', 'numa_topology')
+        self.assertColumnNotExists(
+                engine, 'shadow_compute_nodes', 'numa_topology')
+
 
 class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
