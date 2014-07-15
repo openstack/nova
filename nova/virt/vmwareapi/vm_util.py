@@ -204,6 +204,9 @@ def create_controller_spec(client_factory, key,
     elif adapter_type == constants.ADAPTER_TYPE_LSILOGICSAS:
         virtual_controller = client_factory.create(
                                 'ns0:VirtualLsiLogicSASController')
+    elif adapter_type == constants.ADAPTER_TYPE_PARAVIRTUAL:
+        virtual_controller = client_factory.create(
+                                'ns0:ParaVirtualSCSIController')
     else:
         virtual_controller = client_factory.create(
                                 'ns0:VirtualLsiLogicController')
@@ -437,6 +440,8 @@ def get_vmdk_path_and_adapter_type(hardware_devices, uuid=None):
             adapter_type_dict[device.key] = constants.ADAPTER_TYPE_IDE
         elif device.__class__.__name__ == "VirtualLsiLogicSASController":
             adapter_type_dict[device.key] = constants.ADAPTER_TYPE_LSILOGICSAS
+        elif device.__class__.__name__ == "ParaVirtualSCSIController":
+            adapter_type_dict[device.key] = constants.ADAPTER_TYPE_PARAVIRTUAL
 
     adapter_type = adapter_type_dict.get(vmdk_controller_key, "")
 
@@ -457,7 +462,8 @@ def _is_ide_controller(device):
 def _is_scsi_controller(device):
     return device.__class__.__name__ in ['VirtualLsiLogicController',
                                          'VirtualLsiLogicSASController',
-                                         'VirtualBusLogicController']
+                                         'VirtualBusLogicController',
+                                         'ParaVirtualSCSIController']
 
 
 def _find_allocated_slots(devices):
@@ -493,7 +499,8 @@ def allocate_controller_key_and_unit_number(client_factory, devices,
         ret = _find_controller_slot(ide_keys, taken, 2)
     elif adapter_type in [constants.DEFAULT_ADAPTER_TYPE,
                           constants.ADAPTER_TYPE_LSILOGICSAS,
-                          constants.ADAPTER_TYPE_BUSLOGIC]:
+                          constants.ADAPTER_TYPE_BUSLOGIC,
+                          constants.ADAPTER_TYPE_PARAVIRTUAL]:
         scsi_keys = [dev.key for dev in devices if _is_scsi_controller(dev)]
         ret = _find_controller_slot(scsi_keys, taken, 16)
     if ret:
@@ -1244,11 +1251,12 @@ def get_mo_id_from_instance(instance):
 def get_vmdk_adapter_type(adapter_type):
     """Return the adapter type to be used in vmdk descriptor.
 
-    Adapter type in vmdk descriptor is same for LSI-SAS & LSILogic
+    Adapter type in vmdk descriptor is same for LSI-SAS, LSILogic & ParaVirtual
     because Virtual Disk Manager API does not recognize the newer controller
     types.
     """
-    if adapter_type == constants.ADAPTER_TYPE_LSILOGICSAS:
+    if adapter_type in [constants.ADAPTER_TYPE_LSILOGICSAS,
+                        constants.ADAPTER_TYPE_PARAVIRTUAL]:
         vmdk_adapter_type = constants.DEFAULT_ADAPTER_TYPE
     else:
         vmdk_adapter_type = adapter_type
