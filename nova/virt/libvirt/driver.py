@@ -3909,15 +3909,16 @@ class LibvirtDriver(driver.ComputeDriver):
         idx3 = m.index('Cached:')
         if CONF.libvirt.virt_type == 'xen':
             used = 0
-            for domain_id in self._list_instance_ids():
+            for dom in self._list_instance_domains(only_guests=False):
                 try:
-                    dom_mem = int(self._lookup_by_id(domain_id).info()[2])
-                except exception.InstanceNotFound:
-                    LOG.info(_LI("libvirt can't find a domain with id: %s"),
-                             domain_id)
+                    dom_mem = int(dom.info()[2])
+                except libvirt.libvirtError as e:
+                    LOG.warn(_LW("couldn't obtain the memory from domain:"
+                                 " %(uuid)s, exception: %(ex)s") %
+                             {"uuid": dom.UUIDString(), "ex": e})
                     continue
                 # skip dom0
-                if domain_id != 0:
+                if dom.ID() != 0:
                     used += dom_mem
                 else:
                     # the mem reported by dom0 is be greater of what
