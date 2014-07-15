@@ -257,9 +257,9 @@ class API(object):
         cinderclient(context).volumes.roll_detaching(volume_id)
 
     @translate_volume_exception
-    def attach(self, context, volume_id, instance_uuid, mountpoint):
+    def attach(self, context, volume_id, instance_uuid, mountpoint, mode='rw'):
         cinderclient(context).volumes.attach(volume_id, instance_uuid,
-                                             mountpoint)
+                                             mountpoint, mode=mode)
 
     @translate_volume_exception
     def detach(self, context, volume_id):

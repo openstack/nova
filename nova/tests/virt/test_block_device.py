@@ -280,7 +280,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
     def _test_volume_attach(self, driver_bdm, bdm_dict,
                             fake_volume, check_attach=True,
                             fail_check_attach=False, driver_attach=False,
-                            fail_driver_attach=False):
+                            fail_driver_attach=False, access_mode='rw'):
         elevated_context = self.context.elevated()
         self.stubs.Set(self.context, 'elevated',
                        lambda: elevated_context)
@@ -288,8 +288,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.mox.StubOutWithMock(encryptors, 'get_encryption_metadata')
         instance = {'id': 'fake_id', 'uuid': 'fake_uuid'}
         connector = {'ip': 'fake_ip', 'host': 'fake_host'}
-        connection_info = {'data': {}}
-        expected_conn_info = {'data': {},
+        connection_info = {'data': {'access_mode': access_mode}}
+        expected_conn_info = {'data': {'access_mode': access_mode},
                               'serial': fake_volume['id']}
         enc_data = {'fake': 'enc_data'}
 
@@ -333,7 +333,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                 return instance, expected_conn_info
 
         self.volume_api.attach(elevated_context, fake_volume['id'],
-                          'fake_uuid', bdm_dict['device_name']).AndReturn(None)
+                          'fake_uuid', bdm_dict['device_name'],
+                          mode=access_mode).AndReturn(None)
         driver_bdm._bdm_obj.save(self.context).AndReturn(None)
         return instance, expected_conn_info
 
@@ -344,6 +345,20 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
         instance, expected_conn_info = self._test_volume_attach(
                 test_bdm, self.volume_bdm, volume)
+
+        self.mox.ReplayAll()
+
+        test_bdm.attach(self.context, instance,
+                        self.volume_api, self.virt_driver)
+        self.assertThat(test_bdm['connection_info'],
+                        matchers.DictMatches(expected_conn_info))
+
+    def test_volume_attach_ro(self):
+        test_bdm = self.driver_classes['volume'](self.volume_bdm)
+        volume = {'id': 'fake-volume-id-1'}
+
+        instance, expected_conn_info = self._test_volume_attach(
+                test_bdm, self.volume_bdm, volume, access_mode='ro')
 
         self.mox.ReplayAll()
 

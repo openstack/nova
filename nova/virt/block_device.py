@@ -247,8 +247,12 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                     volume_api.terminate_connection(context, volume_id,
                                                     connector)
         self['connection_info'] = connection_info
-        volume_api.attach(context, volume_id,
-                          instance['uuid'], self['mount_device'])
+
+        mode = 'rw'
+        if 'data' in connection_info:
+            mode = connection_info['data'].get('access_mode', 'rw')
+        volume_api.attach(context, volume_id, instance['uuid'],
+                          self['mount_device'], mode=mode)
 
     @update_db
     def refresh_connection_info(self, context, instance,
