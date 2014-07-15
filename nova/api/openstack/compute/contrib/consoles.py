@@ -103,16 +103,6 @@ class ConsolesController(wsgi.Controller):
 
         return {'console': {'type': console_type, 'url': output['url']}}
 
-    def get_actions(self):
-        """Return the actions the extension adds, as required by contract."""
-        actions = [extensions.ActionExtension("servers", "os-getVNCConsole",
-                                              self.get_vnc_console),
-                   extensions.ActionExtension("servers", "os-getSPICEConsole",
-                                              self.get_spice_console),
-                   extensions.ActionExtension("servers", "os-getRDPConsole",
-                                              self.get_rdp_console)]
-        return actions
-
 
 class Consoles(extensions.ExtensionDescriptor):
     """Interactive Console support."""
