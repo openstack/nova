@@ -707,6 +707,16 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         self.assertColumnNotExists(engine, 'networks', 'enable_dhcp')
         self.assertColumnNotExists(engine, 'networks', 'share_address')
 
+    def _check_246(self, engine, data):
+        pci_devices = oslodbutils.get_table(engine, 'pci_devices')
+        self.assertEqual(1, len([fk for fk in pci_devices.foreign_keys
+                                 if fk.parent.name == 'compute_node_id']))
+
+    def _post_downgrade_246(self, engine):
+        pci_devices = oslodbutils.get_table(engine, 'pci_devices')
+        self.assertEqual(0, len([fk for fk in pci_devices.foreign_keys
+                                 if fk.parent.name == 'compute_node_id']))
+
 
 class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
