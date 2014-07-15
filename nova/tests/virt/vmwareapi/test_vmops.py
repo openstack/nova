@@ -19,6 +19,7 @@ import mock
 
 from nova.compute import power_state
 from nova import context
+from nova import db
 from nova import exception
 from nova.network import model as network_model
 from nova import objects
@@ -655,7 +656,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                    mock_get_datacenter_ref_and_name,
                    mock_get_datastore,
                    block_device_info=None,
-                   power_on=True):
+                   power_on=True,
+                   allocations=None):
 
         self._vmops._volumeops = mock.Mock()
         image = {
@@ -702,13 +704,16 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             mock_get_vif_info.assert_called_once_with(
                     self._session, None, False,
                     constants.DEFAULT_VIF_MODEL, network_info)
+            if allocations is None:
+                allocations = {}
             mock_get_create_spec.assert_called_once_with(
                     self._session._get_vim().client.factory,
                     self._instance,
                     'fake_uuid',
                     'fake_ds',
                     [],
-                    'otherGuest')
+                    'otherGuest',
+                    allocations=allocations)
             mock_create_vm.assert_called_once_with(
                     self._session,
                     self._instance,
@@ -831,3 +836,32 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             break
         else:
             self.fail('NIC not configured')
+
+    def test_spawn_cpu_limit(self):
+        def _fake_flavor_get(context, id):
+            flavor = stubs._fake_flavor_get(context, id)
+            flavor['extra_specs'].update({'quota:cpu_limit': 7})
+            return flavor
+
+        with mock.patch.object(db, 'flavor_get', _fake_flavor_get):
+            self._test_spawn(allocations={'cpu_limit': 7})
+
+    def test_spawn_cpu_reservation(self):
+        def _fake_flavor_get(context, id):
+            flavor = stubs._fake_flavor_get(context, id)
+            flavor['extra_specs'].update({'quota:cpu_reservation': 7})
+            return flavor
+
+        with mock.patch.object(db, 'flavor_get', _fake_flavor_get):
+            self._test_spawn(allocations={'cpu_reservation': 7})
+
+    def test_spawn_cpu_allocations(self):
+        def _fake_flavor_get(context, id):
+            flavor = stubs._fake_flavor_get(context, id)
+            flavor['extra_specs'].update({'quota:cpu_limit': 7,
+                                          'quota:cpu_reservation': 6})
+            return flavor
+
+        with mock.patch.object(db, 'flavor_get', _fake_flavor_get):
+            self._test_spawn(allocations={'cpu_limit': 7,
+                                          'cpu_reservation': 6})
