@@ -327,6 +327,20 @@ class TestWSGIService(test.TestCase):
         self.assertNotEqual(0, test_service.port)
         test_service.stop()
 
+    def test_reset_pool_size_to_default(self):
+        test_service = service.WSGIService("test_service")
+        test_service.start()
+
+        # Stopping the service, which in turn sets pool size to 0
+        test_service.stop()
+        self.assertEqual(test_service.server._pool.size, 0)
+
+        # Resetting pool size to default
+        test_service.reset()
+        test_service.start()
+        self.assertEqual(test_service.server._pool.size,
+                         CONF.wsgi_default_pool_size)
+
 
 class TestLauncher(test.TestCase):
 

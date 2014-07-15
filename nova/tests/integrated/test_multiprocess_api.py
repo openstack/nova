@@ -207,6 +207,20 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
         self.assertTrue(os.WIFEXITED(status))
         self.assertEqual(os.WEXITSTATUS(status), 0)
 
+    def test_restart_sighup(self):
+        start_workers = self._spawn()
+
+        os.kill(self.pid, signal.SIGHUP)
+
+        # Wait at most 5 seconds to restart a worker
+        cond = lambda: start_workers == self._get_workers()
+        timeout = 5
+        self._wait(cond, timeout)
+
+        # Make sure worker pids match
+        end_workers = self._get_workers()
+        self.assertEqual(start_workers, end_workers)
+
 
 class MultiprocessWSGITestV3(client.TestOpenStackClientV3Mixin,
                              MultiprocessWSGITest):

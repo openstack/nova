@@ -157,6 +157,20 @@ class TestWSGIServer(test.NoDBTestCase):
         server.stop()
         server.wait()
 
+    def test_reset_pool_size_to_default(self):
+        server = nova.wsgi.Server("test_resize", None,
+            host="127.0.0.1", max_url_len=16384)
+        server.start()
+
+        # Stopping the server, which in turn sets pool size to 0
+        server.stop()
+        self.assertEqual(server._pool.size, 0)
+
+        # Resetting pool size to default
+        server.reset()
+        server.start()
+        self.assertEqual(server._pool.size, CONF.wsgi_default_pool_size)
+
 
 class TestWSGIServerWithSSL(test.NoDBTestCase):
     """WSGI server with SSL tests."""
