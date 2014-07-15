@@ -56,6 +56,7 @@ def main():
     # Setup flags
     CONF.set_default('web', '/usr/share/novnc')
     config.parse_args(sys.argv)
+    logging.setup("nova")
 
     if CONF.ssl_only and not os.path.exists(CONF.cert):
         print("SSL only and %s not found" % CONF.cert)
