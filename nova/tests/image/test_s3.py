@@ -14,12 +14,12 @@
 #    under the License.
 
 import binascii
-import eventlet
-import mox
 import os
 import tempfile
 
+import eventlet
 import fixtures
+import mox
 
 from nova.api.ec2 import ec2utils
 from nova import context

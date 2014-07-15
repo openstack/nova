@@ -15,8 +15,8 @@
 
 import contextlib
 import copy
-import fixtures
 
+import fixtures
 import mock
 import mox
 

@@ -20,7 +20,6 @@ import base64
 import hashlib
 import hmac
 import json
-import mock
 import re
 
 try:
@@ -28,6 +27,7 @@ try:
 except ImportError:
     import pickle
 
+import mock
 from oslo.config import cfg
 import webob
 

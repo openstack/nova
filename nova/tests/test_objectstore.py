@@ -18,11 +18,11 @@
 Unittets for S3 objectstore clone.
 """
 
-import boto
 import os
 import shutil
 import tempfile
 
+import boto
 from boto import exception as boto_exception
 from boto.s3 import connection as s3
 from oslo.config import cfg

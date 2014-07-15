@@ -19,9 +19,10 @@ APIRequest class
 """
 
 import datetime
-from lxml import etree
 # TODO(termie): replace minidom with etree
 from xml.dom import minidom
+
+from lxml import etree
 
 from nova.api.ec2 import ec2utils
 from nova import exception

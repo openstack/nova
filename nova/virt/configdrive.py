@@ -19,12 +19,12 @@ import os
 import shutil
 import tempfile
 
-from nova.openstack.common import strutils
 from oslo.config import cfg
 
 from nova import exception
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import strutils
 from nova.openstack.common import units
 from nova import utils
 from nova import version

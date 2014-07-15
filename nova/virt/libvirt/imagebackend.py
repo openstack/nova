@@ -17,9 +17,8 @@ import abc
 import contextlib
 import os
 
-import six
-
 from oslo.config import cfg
+import six
 
 from nova import exception
 from nova.openstack.common import excutils

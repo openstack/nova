@@ -16,11 +16,11 @@
 
 import base64
 import re
-import stevedore
 
 from oslo.config import cfg
 from oslo import messaging
 import six
+import stevedore
 import webob
 from webob import exc
 

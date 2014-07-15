@@ -12,9 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import contextlib
 import datetime
 
-import contextlib
 import mock
 from oslo.config import cfg
 

@@ -14,8 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 import urllib
+
+from lxml import etree
 import webob
 
 from nova.api.openstack.compute.contrib import floating_ip_dns

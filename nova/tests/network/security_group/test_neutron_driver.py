@@ -14,7 +14,6 @@
 #    under the License.
 #
 import mox
-
 from neutronclient.common import exceptions as n_exc
 from neutronclient.v2_0 import client
 

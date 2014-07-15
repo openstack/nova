@@ -18,9 +18,8 @@
 
 import pprint
 
-from testtools import content
-
 from lxml import etree
+from testtools import content
 
 
 class DictKeysMismatch(object):

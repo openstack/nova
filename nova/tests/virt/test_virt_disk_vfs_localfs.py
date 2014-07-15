@@ -19,7 +19,6 @@ from nova.openstack.common import processutils
 from nova import test
 from nova.tests import utils as tests_utils
 import nova.utils
-
 from nova.virt.disk.vfs import localfs as vfsimpl
 
 CONF = cfg.CONF

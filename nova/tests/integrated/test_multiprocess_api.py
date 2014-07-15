@@ -17,11 +17,12 @@
 Test multiprocess enabled API service.
 """
 import errno
-import fixtures
 import os
 import signal
 import time
 import traceback
+
+import fixtures
 
 from nova.openstack.common import log as logging
 from nova import service

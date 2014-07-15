@@ -13,6 +13,7 @@
 #    under the License.
 
 import uuid
+
 import webob
 
 from nova.api.openstack.compute.plugins.v3 import shelve

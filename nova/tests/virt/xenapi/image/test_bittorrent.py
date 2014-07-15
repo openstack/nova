@@ -13,9 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import pkg_resources
-
 import mox
+import pkg_resources
 
 from nova import context
 from nova.openstack.common.gettextutils import _

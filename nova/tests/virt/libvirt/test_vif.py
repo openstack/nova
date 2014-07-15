@@ -13,6 +13,7 @@
 #    under the License.
 
 import contextlib
+
 from lxml import etree
 import mock
 from oslo.config import cfg

@@ -33,14 +33,15 @@
     """
 
 import copy
+
 import jsonschema
+from oslo.config import cfg
 
 from nova import exception
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.pci import pci_utils
 from nova import utils
-from oslo.config import cfg
 
 pci_alias_opts = [
     cfg.MultiStrOpt('pci_alias',

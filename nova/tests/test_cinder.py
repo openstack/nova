@@ -12,14 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from cinderclient import exceptions as cinder_exception
 import six.moves.urllib.parse as urlparse
 
-from cinderclient import exceptions as cinder_exception
 from nova import context
 from nova import exception
-from nova.volume import cinder
-
 from nova import test
+from nova.volume import cinder
 
 
 def _stub_volume(**kwargs):

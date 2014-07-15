@@ -22,19 +22,18 @@ import contextlib
 import datetime
 import operator
 import sys
-import testtools
 import time
 import traceback
 import uuid
 
+from eventlet import greenthread
 import mock
 import mox
 from oslo.config import cfg
 from oslo import messaging
 import six
+import testtools
 from testtools import matchers as testtools_matchers
-
-from eventlet import greenthread
 
 import nova
 from nova import availability_zones

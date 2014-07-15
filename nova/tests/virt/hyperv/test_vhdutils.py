@@ -15,7 +15,6 @@
 import mock
 
 from nova import test
-
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import vhdutils
 from nova.virt.hyperv import vmutils

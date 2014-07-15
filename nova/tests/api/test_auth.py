@@ -13,6 +13,7 @@
 #    under the License.
 
 import json
+
 from oslo.config import cfg
 import webob
 import webob.exc

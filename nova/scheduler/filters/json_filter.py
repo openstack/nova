@@ -15,6 +15,7 @@
 
 
 import operator
+
 import six
 
 from nova.openstack.common import jsonutils

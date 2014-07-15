@@ -13,10 +13,10 @@
 #    under the License.
 
 import base64
-import fixtures
 import sys
 import traceback
 
+import fixtures
 import mock
 import netaddr
 import six

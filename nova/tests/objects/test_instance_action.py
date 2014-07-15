@@ -12,8 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 import traceback
+
+import mock
 
 from nova import db
 from nova.objects import instance_action

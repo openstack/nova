@@ -17,9 +17,9 @@ Tests For Filter Scheduler.
 """
 
 import contextlib
-import mock
 import uuid
 
+import mock
 import mox
 
 from nova.compute import utils as compute_utils

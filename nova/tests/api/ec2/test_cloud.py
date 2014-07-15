@@ -20,12 +20,12 @@ import base64
 import copy
 import datetime
 import functools
-import iso8601
 import os
 import string
 import tempfile
 
 import fixtures
+import iso8601
 import mock
 from oslo.config import cfg
 

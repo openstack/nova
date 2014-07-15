@@ -17,11 +17,12 @@
 
 """Test cases for sqlite-specific logic"""
 
-from nova import test
 from sqlalchemy import create_engine
 from sqlalchemy import Column, BigInteger, String
 import sqlalchemy.engine.reflection
 from sqlalchemy.ext.declarative import declarative_base
+
+from nova import test
 
 
 class TestSqlite(test.NoDBTestCase):

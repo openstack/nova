@@ -15,9 +15,9 @@
 
 """Tests for compute resource tracking."""
 
-import mock
 import uuid
 
+import mock
 from oslo.config import cfg
 
 from nova.compute import flavors

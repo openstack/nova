@@ -11,6 +11,7 @@
 #    under the License.
 
 import inspect
+
 import webob
 
 from nova.api.openstack import extensions

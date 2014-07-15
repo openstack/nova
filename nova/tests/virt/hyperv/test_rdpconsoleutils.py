@@ -13,7 +13,6 @@
 #    under the License.
 
 from nova import test
-
 from nova.virt.hyperv import rdpconsoleutils
 
 

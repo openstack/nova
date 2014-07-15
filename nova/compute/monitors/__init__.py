@@ -23,9 +23,8 @@ that needs to be implemented by Resource Monitor.
 import functools
 import types
 
-import six
-
 from oslo.config import cfg
+import six
 
 from nova import loadables
 from nova.openstack.common.gettextutils import _

@@ -21,7 +21,6 @@
 import os
 
 import mox
-
 from oslo.config import cfg
 from testtools import matchers
 

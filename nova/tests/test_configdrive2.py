@@ -14,16 +14,16 @@
 #    under the License.
 
 
-import mox
 import os
 import tempfile
 
-from nova import test
+import mox
+from oslo.config import cfg
 
 from nova.openstack.common import fileutils
+from nova import test
 from nova import utils
 from nova.virt import configdrive
-from oslo.config import cfg
 
 CONF = cfg.CONF
 
