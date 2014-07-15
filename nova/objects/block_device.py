@@ -98,10 +98,10 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject):
                                               reason='instance assigned')
 
         db_bdm = db.block_device_mapping_create(context, updates, legacy=False)
+        self._from_db_object(context, self, db_bdm)
         if cell_type == 'compute':
             cells_api = cells_rpcapi.CellsAPI()
-            cells_api.bdm_update_or_create_at_top(context, db_bdm, create=True)
-        self._from_db_object(context, self, db_bdm)
+            cells_api.bdm_update_or_create_at_top(context, self, create=True)
 
     @base.remotable
     def destroy(self, context):
@@ -127,11 +127,11 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject):
         updates.pop('id', None)
         updated = db.block_device_mapping_update(self._context, self.id,
                                                  updates, legacy=False)
+        self._from_db_object(context, self, updated)
         cell_type = cells_opts.get_cell_type()
         if cell_type == 'compute':
             cells_api = cells_rpcapi.CellsAPI()
-            cells_api.bdm_update_or_create_at_top(context, updated)
-        self._from_db_object(context, self, updated)
+            cells_api.bdm_update_or_create_at_top(context, self)
 
     @base.remotable_classmethod
     def get_by_volume_id(cls, context, volume_id,
