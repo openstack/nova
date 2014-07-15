@@ -399,6 +399,13 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
+    def get_instance_diagnostics(self, instance):
+        """Return data about VM diagnostics.
+
+        :param instance: nova.objects.instance.Instance
+        """
+        raise NotImplementedError()
+
     def get_all_bw_counters(self, instances):
         """Return bandwidth usage counters for each interface on each
            running VM.

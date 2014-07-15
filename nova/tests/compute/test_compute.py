@@ -3370,6 +3370,41 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(diagnostics, expected_diagnostic)
         self.compute.terminate_instance(self.context, instance, [], [])
 
+    def test_instance_diagnostics(self):
+        # Make sure we can get diagnostics for an instance.
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance, {}, {}, [], None,
+                None, True, None, False)
+
+        diagnostics = self.compute.get_instance_diagnostics(self.context,
+                instance=instance)
+        expected = {'config_drive': True,
+                    'cpu_details': [{'time': 17300000000}],
+                    'disk_details': [{'errors_count': 0,
+                                      'id': 'fake-disk-id',
+                                      'read_bytes': 262144,
+                                      'read_requests': 112,
+                                      'write_bytes': 5778432,
+                                      'write_requests': 488}],
+                    'driver': 'fake',
+                    'hypervisor_os': 'fake-os',
+                    'memory_details': {'maximum': 524288, 'used': 0},
+                    'nic_details': [{'mac_address': '01:23:45:67:89:ab',
+                                     'rx_drop': 0,
+                                     'rx_errors': 0,
+                                     'rx_octets': 2070139,
+                                     'rx_packets': 26701,
+                                     'tx_drop': 0,
+                                     'tx_errors': 0,
+                                     'tx_octets': 140208,
+                                     'tx_packets': 662}],
+                    'state': 'running',
+                    'uptime': 46664,
+                    'version': '1.0'}
+        self.assertEqual(expected, diagnostics)
+        self.compute.terminate_instance(self.context,
+                self._objectify(instance), [], [])
+
     def test_add_fixed_ip_usage_notification(self):
         def dummy(*args, **kwargs):
             pass
@@ -8996,6 +9031,20 @@ class ComputeAPITestCase(BaseTestCase):
         self.mox.ReplayAll()
 
         self.compute_api.get_diagnostics(self.context, instance)
+
+        self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
+                       lambda *a, **kw: None)
+        self.compute_api.delete(self.context, self._objectify(instance))
+
+    def test_get_instance_diagnostics(self):
+        instance = self._create_fake_instance()
+
+        rpcapi = compute_rpcapi.ComputeAPI
+        self.mox.StubOutWithMock(rpcapi, 'get_instance_diagnostics')
+        rpcapi.get_instance_diagnostics(self.context, instance=instance)
+        self.mox.ReplayAll()
+
+        self.compute_api.get_instance_diagnostics(self.context, instance)
 
         self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
                        lambda *a, **kw: None)

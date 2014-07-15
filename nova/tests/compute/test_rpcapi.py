@@ -289,6 +289,10 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('get_diagnostics', 'call',
                 instance=self.fake_instance, version='2.0')
 
+    def test_get_instance_diagnostics(self):
+        self._test_compute_api('get_instance_diagnostics', 'call',
+                instance=self.fake_instance, version='3.31')
+
     def test_get_vnc_console(self):
         self._test_compute_api('get_vnc_console', 'call',
                 instance=self.fake_instance_obj, console_type='type',

@@ -257,6 +257,7 @@ class ComputeAPI(object):
         3.28 - Update get_console_output() to accept a new-world object
         3.29 - Make check_instance_shared_storage accept a new-world object
         3.30 - Make remove_volume_connection() accept a new-world object
+        3.31 - Add get_instance_diagnostics
     '''
 
     VERSION_ALIASES = {
@@ -486,6 +487,14 @@ class ComputeAPI(object):
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'get_diagnostics', instance=instance)
+
+    def get_instance_diagnostics(self, ctxt, instance):
+        instance_p = jsonutils.to_primitive(instance)
+        kwargs = {'instance': instance_p}
+        version = '3.31'
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=version)
+        return cctxt.call(ctxt, 'get_instance_diagnostics', **kwargs)
 
     def get_vnc_console(self, ctxt, instance, console_type):
         if self.client.can_send_version('3.2'):

@@ -290,6 +290,15 @@ class ComputeCellsAPI(compute_api.API):
         super(ComputeCellsAPI, self).get_diagnostics(context, instance)
         return self._call_to_cells(context, instance, 'get_diagnostics')
 
+    def get_instance_diagnostics(self, context, instance):
+        """Retrieve diagnostics for the given instance."""
+        # FIXME(comstud): Cache this?
+        # Also: only calling super() to get state/policy checking
+        super(ComputeCellsAPI, self).get_instance_diagnostics(context,
+                                                              instance)
+        return self._call_to_cells(context, instance,
+                                   'get_instance_diagnostics')
+
     @check_instance_cell
     def rescue(self, context, instance, rescue_password=None,
                rescue_image_ref=None):
