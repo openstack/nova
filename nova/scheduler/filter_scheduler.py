@@ -89,7 +89,7 @@ class FilterScheduler(driver.Scheduler):
         scheduler_utils.populate_retry(filter_properties,
                                        instance_uuids[0])
         weighed_hosts = self._schedule(context, request_spec,
-                                       filter_properties, instance_uuids)
+                                       filter_properties)
 
         # NOTE: Pop instance_uuids as individual creates do not need the
         # set of uuids. Do not pop before here as the upper exception
@@ -137,9 +137,8 @@ class FilterScheduler(driver.Scheduler):
     def select_destinations(self, context, request_spec, filter_properties):
         """Selects a filtered set of hosts and nodes."""
         num_instances = request_spec['num_instances']
-        instance_uuids = request_spec.get('instance_uuids')
         selected_hosts = self._schedule(context, request_spec,
-                                        filter_properties, instance_uuids)
+                                        filter_properties)
 
         # Couldn't fulfill the request_spec
         if len(selected_hosts) < num_instances:
@@ -221,14 +220,14 @@ class FilterScheduler(driver.Scheduler):
                 filter_properties['group_policies'] = group.policies
         return update_group_hosts
 
-    def _schedule(self, context, request_spec, filter_properties,
-                  instance_uuids=None):
+    def _schedule(self, context, request_spec, filter_properties):
         """Returns a list of hosts that meet the required specs,
         ordered by their fitness.
         """
         elevated = context.elevated()
         instance_properties = request_spec['instance_properties']
         instance_type = request_spec.get("instance_type", None)
+        instance_uuids = request_spec.get("instance_uuids", None)
 
         update_group_hosts = self._setup_instance_group(context,
                 filter_properties)
