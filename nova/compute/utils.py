@@ -466,31 +466,3 @@ class EventReporter(object):
                 self.context, uuid, self.event_name, exc_val=exc_val,
                 exc_tb=exc_tb, want_result=False)
         return False
-
-
-def periodic_task_spacing_warn(config_option_name):
-    """Decorator to warn about an upcoming breaking change in methods which
-    use the @periodic_task decorator.
-
-    Some methods using the @periodic_task decorator specify spacing=0 or
-    None to mean "do not call this method", but the decorator itself uses
-    0/None to mean "call at the default rate".
-
-    Starting with the K release the Nova methods will be changed to conform
-    to the Oslo decorator.  This decorator should be present wherever a
-    spacing value from user-supplied config is passed to @periodic_task, and
-    there is also a check to skip the method if the value is zero.  It will
-    log a warning if the spacing value from config is 0/None.
-    """
-    # TODO(gilliard) remove this decorator, its usages and the early returns
-    # near them after the K release.
-    def wrapper(f):
-        if (hasattr(f, "_periodic_spacing") and
-                (f._periodic_spacing == 0 or f._periodic_spacing is None)):
-            LOG.warning(_LW("Value of 0 or None specified for %s."
-                " This behaviour will change in meaning in the K release, to"
-                " mean 'call at the default rate' rather than 'do not call'."
-                " To keep the 'do not call' behaviour, use a negative value."),
-                config_option_name)
-        return f
-    return wrapper

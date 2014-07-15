@@ -23,9 +23,7 @@ imagecache_opts = [
                default=2400,
                help='Number of seconds to wait between runs of the image '
                     'cache manager. Set to -1 to disable. '
-                    'Setting this to 0 will disable, but this will change in '
-                    'the K release to mean "run at the default rate".'),
-    # TODO(gilliard): Clean the above message after the K release
+                    'Setting this to 0 will run at the default rate.'),
     cfg.StrOpt('image_cache_subdirectory_name',
                default='_base',
                help='Where cached images are stored under $instances_path. '
