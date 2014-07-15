@@ -38,6 +38,13 @@ class PauseServerTests(admin_only_action_common.CommonTests):
     def test_pause_unpause(self):
         self._test_actions(['pause', 'unpause'])
 
+    def test_actions_raise_on_not_implemented(self):
+        for action in ['pause', 'unpause']:
+            self.mox.StubOutWithMock(self.compute_api, action)
+            self._test_not_implemented_state(action)
+            # Re-mock this.
+            self.mox.StubOutWithMock(self.compute_api, 'get')
+
     def test_pause_unpause_with_non_existed_instance(self):
         self._test_actions_with_non_existed_instance(['pause', 'unpause'])
 

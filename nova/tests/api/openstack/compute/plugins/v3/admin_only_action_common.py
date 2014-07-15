@@ -92,6 +92,28 @@ class CommonMixin(object):
         self.mox.VerifyAll()
         self.mox.UnsetStubs()
 
+    def _test_not_implemented_state(self, action, method=None):
+        if method is None:
+            method = action
+
+        instance = self._stub_instance_get()
+        body = {}
+        compute_api_args_map = {}
+        args, kwargs = compute_api_args_map.get(action, ((), {}))
+        getattr(self.compute_api, method)(self.context, instance,
+                                          *args, **kwargs).AndRaise(
+                NotImplementedError())
+
+        self.mox.ReplayAll()
+
+        res = self._make_request('/servers/%s/action' % instance.uuid,
+                                 {action: body})
+        self.assertEqual(501, res.status_int)
+        # Do these here instead of tearDown because this method is called
+        # more than once for the same test case
+        self.mox.VerifyAll()
+        self.mox.UnsetStubs()
+
     def _test_invalid_state(self, action, method=None, body_map=None,
                             compute_api_args_map=None):
         if method is None:
