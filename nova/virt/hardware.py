@@ -187,7 +187,7 @@ class VirtCPUTopology(object):
 
     @staticmethod
     def get_topology_constraints(flavor, image_meta):
-        """Get the topology constraints declared in flavour or image
+        """Get the topology constraints declared in flavor or image
 
         :param flavor: Flavor object to read extra specs from
         :param image_meta: Image object to read image metadata from
