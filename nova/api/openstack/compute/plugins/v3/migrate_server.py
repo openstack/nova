@@ -63,6 +63,9 @@ class MigrateServerController(wsgi.Controller):
                     'migrate')
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.NoValidHost as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
+
         return webob.Response(status_int=202)
 
     @extensions.expected_errors((400, 404, 409))

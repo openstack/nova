@@ -16,6 +16,7 @@
 import base64
 import uuid
 
+import mock
 import mox
 from oslo.config import cfg
 import webob
@@ -863,6 +864,16 @@ class ServerActionsControllerTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller._action_resize,
+                          req, FAKE_UUID, body)
+
+    @mock.patch('nova.compute.api.API.resize',
+                side_effect=exception.NoValidHost(reason=''))
+    def test_resize_raises_no_valid_host(self, mock_resize):
+        body = dict(resize=dict(flavorRef="http://localhost/3"))
+
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_resize,
                           req, FAKE_UUID, body)
 

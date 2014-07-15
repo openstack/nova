@@ -1970,7 +1970,8 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
                                  'admin-actions-resume', {})
         self.assertEqual(response.status, 202)
 
-    def test_post_migrate(self):
+    @mock.patch('nova.conductor.manager.ComputeTaskManager._cold_migrate')
+    def test_post_migrate(self, mock_cold_migrate):
         # Get api samples to migrate server request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-migrate', {})
