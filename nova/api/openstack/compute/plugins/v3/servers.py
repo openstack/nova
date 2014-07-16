@@ -239,7 +239,7 @@ class ServersController(wsgi.Controller):
         # disabled. Note that the tenant_id parameter is filtered out
         # by remove_invalid_options above unless the requestor is an
         # admin.
-        if 'tenant_id' in search_opts and not 'all_tenants' in search_opts:
+        if 'tenant_id' in search_opts and 'all_tenants' not in search_opts:
             # We do not need to add the all_tenants flag if the tenant
             # id associated with the token is the tenant id
             # specified. This is done so a request that does not need

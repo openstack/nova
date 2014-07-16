@@ -55,7 +55,7 @@ class ConvertedException(webob.exc.WSGIHTTPException):
 
 def _cleanse_dict(original):
     """Strip all admin_password, new_pass, rescue_pass keys from a dict."""
-    return dict((k, v) for k, v in original.iteritems() if not "_pass" in k)
+    return dict((k, v) for k, v in original.iteritems() if "_pass" not in k)
 
 
 def wrap_exception(notifier=None, get_notifier=None):
