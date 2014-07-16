@@ -19,7 +19,6 @@ import webob
 from nova.api.openstack.compute.plugins.v3 import flavors_extraspecs
 import nova.db
 from nova import exception
-from nova.openstack.common.db import exception as db_exc
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests.objects import test_flavor
@@ -194,7 +193,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
 
     def test_create_flavor_db_duplicate(self):
         def fake_instance_type_extra_specs_update_or_create(*args, **kwargs):
-            raise db_exc.DBDuplicateEntry()
+            raise exception.FlavorExtraSpecUpdateCreateFailed(id=1, retries=5)
 
         self.stubs.Set(nova.db,
                        'flavor_extra_specs_update_or_create',
@@ -302,7 +301,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
 
     def test_update_flavor_db_duplicate(self):
         def fake_instance_type_extra_specs_update_or_create(*args, **kwargs):
-            raise db_exc.DBDuplicateEntry()
+            raise exception.FlavorExtraSpecUpdateCreateFailed(id=1, retries=5)
 
         self.stubs.Set(nova.db,
                        'flavor_extra_specs_update_or_create',

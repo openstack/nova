@@ -3038,8 +3038,8 @@ class InstanceTypeExtraSpecsTestCase(BaseInstanceTypeTestCase):
 
         get_id = counted()
         self.stubs.Set(sqlalchemy_api, '_flavor_get_id_from_flavor', get_id)
-        self.assertRaises(db_exc.DBDuplicateEntry, sqlalchemy_api.
-                          flavor_extra_specs_update_or_create,
+        self.assertRaises(exception.FlavorExtraSpecUpdateCreateFailed,
+                          sqlalchemy_api.flavor_extra_specs_update_or_create,
                           self.ctxt, 1, {}, 5)
         self.assertEqual(get_id.counter, 5)
 

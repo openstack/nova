@@ -20,7 +20,6 @@ from nova.api.openstack import wsgi
 from nova.compute import flavors
 from nova import exception
 from nova import objects
-from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common.gettextutils import _
 
 
@@ -69,9 +68,8 @@ class FlavorExtraSpecsController(object):
             flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
             flavor.extra_specs = dict(flavor.extra_specs, **specs)
             flavor.save()
-        except db_exc.DBDuplicateEntry:
-            msg = _("Concurrent transaction has been committed, try again")
-            raise webob.exc.HTTPConflict(explanation=msg)
+        except exception.FlavorExtraSpecUpdateCreateFailed as e:
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
         except exception.FlavorNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         return body
@@ -91,9 +89,8 @@ class FlavorExtraSpecsController(object):
             flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
             flavor.extra_specs = dict(flavor.extra_specs, **body)
             flavor.save()
-        except db_exc.DBDuplicateEntry:
-            msg = _("Concurrent transaction has been committed, try again")
-            raise webob.exc.HTTPConflict(explanation=msg)
+        except exception.FlavorExtraSpecUpdateCreateFailed as e:
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
         except exception.FlavorNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         return body
