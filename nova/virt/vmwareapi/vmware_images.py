@@ -20,19 +20,19 @@ Utility functions for Image transfer.
 import os
 
 from nova import exception
-from nova.image import glance
+from nova import image
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import io_util
 from nova.virt.vmwareapi import read_write_util
 
 LOG = logging.getLogger(__name__)
+IMAGE_API = image.API()
 
 QUEUE_BUFFER_SIZE = 10
 
 
 def start_transfer(context, read_file_handle, data_size,
-        write_file_handle=None, image_service=None, image_id=None,
-        image_meta=None):
+        write_file_handle=None, image_id=None, image_meta=None):
     """Start the data transfer from the reader to the writer.
     Reader writes to the pipe and the writer reads from the pipe. This means
     that the total transfer time boils down to the slower of the read/write
@@ -59,9 +59,9 @@ def start_transfer(context, read_file_handle, data_size,
     # handle to Glance Client instance, but to be sure of the transfer we need
     # to be sure of the status of the image on glance changing to active.
     # The GlanceWriteThread handles the same for us.
-    elif image_service and image_id:
+    elif image_id:
         write_thread = io_util.GlanceWriteThread(context, thread_safe_pipe,
-                image_service, image_id, image_meta)
+                image_id, image_meta)
     # Start the read and write threads.
     read_event = read_thread.start()
     write_event = write_thread.start()
@@ -122,11 +122,9 @@ def fetch_image(context, instance, host, dc_name, ds_name, file_path,
                'data_store_name': ds_name},
               instance=instance)
 
-    (image_service, image_id) = glance.get_remote_image_service(context,
-                                                                image_ref)
-    metadata = image_service.show(context, image_id)
+    metadata = IMAGE_API.get(context, image_ref)
     file_size = int(metadata['size'])
-    read_iter = image_service.download(context, image_id)
+    read_iter = IMAGE_API.download(context, image_ref)
     read_file_handle = read_write_util.GlanceFileRead(read_iter)
     write_file_handle = read_write_util.VMwareHTTPWriteFile(
         host, dc_name, ds_name, cookies, file_path, file_size)
@@ -152,8 +150,7 @@ def upload_image(context, image, instance, **kwargs):
                                 kwargs.get("cookies"),
                                 kwargs.get("file_path"))
     file_size = read_file_handle.get_size()
-    (image_service, image_id) = glance.get_remote_image_service(context, image)
-    metadata = image_service.show(context, image_id)
+    metadata = IMAGE_API.get(context, image)
 
     # The properties and other fields that we need to set for the image.
     image_metadata = {"disk_format": "vmdk",
@@ -171,8 +168,7 @@ def upload_image(context, image, instance, **kwargs):
                                             kwargs.get("image_version"),
                                      "owner_id": instance['project_id']}}
     start_transfer(context, read_file_handle, file_size,
-                   image_service=image_service,
-                   image_id=image_id, image_meta=image_metadata)
+                   image_id=metadata['id'], image_meta=image_metadata)
     LOG.debug("Uploaded image %s to the Glance image server", image,
               instance=instance)
 
@@ -185,8 +181,7 @@ def get_vmdk_size_and_properties(context, image, instance):
 
     LOG.debug("Getting image size for the image %s", image,
               instance=instance)
-    (image_service, image_id) = glance.get_remote_image_service(context, image)
-    meta_data = image_service.show(context, image_id)
+    meta_data = IMAGE_API.get(context, image)
     size, properties = meta_data["size"], meta_data["properties"]
     LOG.debug("Got image size of %(size)s for the image %(image)s",
               {'size': size, 'image': image}, instance=instance)

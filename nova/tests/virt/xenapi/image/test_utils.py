@@ -15,87 +15,57 @@
 
 import tarfile
 
-from nova.image import glance
+import mock
+
 from nova import test
 from nova.virt.xenapi.image import utils
 
 
+@mock.patch.object(utils, 'IMAGE_API')
 class GlanceImageTestCase(test.NoDBTestCase):
+
     def _get_image(self):
-        return utils.GlanceImage('context', 'href')
+        return utils.GlanceImage(mock.sentinel.context,
+                                 mock.sentinel.image_ref)
 
-    def _stub_out_glance_services(self):
-        image_service = self.mox.CreateMock(glance.GlanceImageService)
-        self.mox.StubOutWithMock(utils.glance, 'get_remote_image_service')
-        utils.glance.get_remote_image_service('context', 'href').AndReturn(
-            (image_service, 'id'))
-        return image_service
-
-    def test__image_id(self):
-        self._stub_out_glance_services()
-        self.mox.ReplayAll()
+    def test_meta(self, mocked):
+        mocked.get.return_value = mock.sentinel.meta
 
         image = self._get_image()
+        self.assertEqual(mock.sentinel.meta, image.meta)
+        mocked.get.assert_called_once_with(mock.sentinel.context,
+                                           mock.sentinel.image_ref)
 
-        self.assertEqual('id', image._image_id)
-
-    def test__image_service(self):
-        image_service = self._stub_out_glance_services()
-        self.mox.ReplayAll()
-
-        image = self._get_image()
-        self.assertEqual(image_service, image._image_service)
-
-    def test_meta(self):
-        image_service = self._stub_out_glance_services()
-        image_service.show('context', 'id').AndReturn('metadata')
-        self.mox.ReplayAll()
+    def test_download_to(self, mocked):
+        mocked.download.return_value = None
 
         image = self._get_image()
-        self.assertEqual('metadata', image.meta)
+        result = image.download_to(mock.sentinel.fobj)
+        self.assertIsNone(result)
+        mocked.download.assert_called_once_with(mock.sentinel.context,
+                                                mock.sentinel.image_ref,
+                                                mock.sentinel.fobj)
 
-    def test_meta_caching(self):
-        self._stub_out_glance_services()
-        self.mox.ReplayAll()
-
-        image = self._get_image()
-        image._cached_meta = 'metadata'
-        self.assertEqual('metadata', image.meta)
-
-    def test_download_to(self):
-        image_service = self._stub_out_glance_services()
-        image_service.download('context', 'id', 'fobj').AndReturn('result')
-        self.mox.ReplayAll()
+    def test_is_raw_tgz_empty_meta(self, mocked):
+        mocked.get.return_value = {}
 
         image = self._get_image()
-        self.assertEqual('result', image.download_to('fobj'))
-
-    def test_is_raw_tgz_empty_meta(self):
-        self._stub_out_glance_services()
-        self.mox.ReplayAll()
-
-        image = self._get_image()
-        image._cached_meta = {}
-
         self.assertEqual(False, image.is_raw_tgz())
 
-    def test_is_raw_tgz_for_raw_tgz(self):
-        self._stub_out_glance_services()
-        self.mox.ReplayAll()
+    def test_is_raw_tgz_for_raw_tgz(self, mocked):
+        mocked.get.return_value = {
+            'disk_format': 'raw',
+            'container_format': 'tgz'
+        }
 
         image = self._get_image()
-        image._cached_meta = {'disk_format': 'raw', 'container_format': 'tgz'}
-
         self.assertEqual(True, image.is_raw_tgz())
 
-    def test_data(self):
-        image_service = self._stub_out_glance_services()
-        image_service.download('context', 'id').AndReturn('data')
-        self.mox.ReplayAll()
-
+    def test_data(self, mocked):
+        mocked.download.return_value = mock.sentinel.image
         image = self._get_image()
 
-        self.assertEqual('data', image.data())
+        self.assertEqual(mock.sentinel.image, image.data())
 
 
 class RawImageTestCase(test.NoDBTestCase):

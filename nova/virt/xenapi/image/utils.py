@@ -16,33 +16,32 @@
 import shutil
 import tarfile
 
-from nova.image import glance
+from nova import image
+
+IMAGE_API = image.API()
 
 
 class GlanceImage(object):
     def __init__(self, context, image_href_or_id):
         self._context = context
-        self._image_service, self._image_id = glance.get_remote_image_service(
-            context, image_href_or_id)
+        self._image_id = image_href_or_id
         self._cached_meta = None
 
     @property
     def meta(self):
         if self._cached_meta is None:
-            self._cached_meta = self._image_service.show(
-                self._context, self._image_id)
+            self._cached_meta = IMAGE_API.get(self._context, self._image_id)
         return self._cached_meta
 
     def download_to(self, fileobj):
-        return self._image_service.download(
-            self._context, self._image_id, fileobj)
+        return IMAGE_API.download(self._context, self._image_id, fileobj)
 
     def is_raw_tgz(self):
         return ['raw', 'tgz'] == [
             self.meta.get(key) for key in ('disk_format', 'container_format')]
 
     def data(self):
-        return self._image_service.download(self._context, self._image_id)
+        return IMAGE_API.download(self._context, self._image_id)
 
 
 class RawImage(object):
