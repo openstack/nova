@@ -26,10 +26,18 @@ import netaddr
 from oslo.config import cfg
 
 from nova.network import model
+from nova import paths
 
 CONF = cfg.CONF
+
+netutils_opts = [
+    cfg.StrOpt('injected_network_template',
+               default=paths.basedir_def('nova/virt/interfaces.template'),
+               help='Template file for injected network'),
+]
+
+CONF.register_opts(netutils_opts)
 CONF.import_opt('use_ipv6', 'nova.netconf')
-CONF.import_opt('injected_network_template', 'nova.virt.disk.api')
 
 
 def get_net_and_mask(cidr):
