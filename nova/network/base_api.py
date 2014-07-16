@@ -19,7 +19,7 @@ import inspect
 from nova.db import base
 from nova import hooks
 from nova.network import model as network_model
-from nova.objects import instance_info_cache as info_cache_obj
+from nova import objects
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -40,8 +40,7 @@ def update_instance_cache_with_nw_info(impl, context, instance,
         # NOTE(comstud): The save() method actually handles updating or
         # creating the instance.  We don't need to retrieve the object
         # from the DB first.
-        ic = info_cache_obj.InstanceInfoCache.new(context,
-                                                  instance['uuid'])
+        ic = objects.InstanceInfoCache.new(context, instance['uuid'])
         ic.network_info = nw_info
         ic.save(update_cells=update_cells)
     except Exception:

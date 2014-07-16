@@ -16,10 +16,7 @@
 import netaddr
 
 from nova import ipv6
-from nova.objects import fixed_ip as fixed_ip_obj
-from nova.objects import floating_ip as floating_ip_obj
-from nova.objects import network as network_obj
-from nova.objects import virtual_interface as vif_obj
+from nova import objects
 
 
 def get_ipam_lib(net_man):
@@ -43,7 +40,7 @@ class NeutronNovaIPAMLib(object):
         """Returns information about the IPv4 and IPv6 subnets
            associated with a Neutron Network UUID.
         """
-        n = network_obj.Network.get_by_uuid(context.elevated(), net_id)
+        n = objects.Network.get_by_uuid(context.elevated(), net_id)
         subnet_v4 = {
             'network_id': n.uuid,
             'cidr': n.cidr,
@@ -83,10 +80,10 @@ class NeutronNovaIPAMLib(object):
            the specified virtual interface, based on the fixed_ips table.
         """
         # TODO(tr3buchet): link fixed_ips to vif by uuid so only 1 db call
-        vif_rec = vif_obj.VirtualInterface.get_by_uuid(context, vif_id)
+        vif_rec = objects.VirtualInterface.get_by_uuid(context, vif_id)
         if not vif_rec:
             return []
-        fixed_ips = fixed_ip_obj.FixedIPList.get_by_virtual_interface_id(
+        fixed_ips = objects.FixedIPList.get_by_virtual_interface_id(
             context, vif_rec.id)
         return [str(fixed_ip.address) for fixed_ip in fixed_ips]
 
@@ -95,8 +92,8 @@ class NeutronNovaIPAMLib(object):
            associated with the specified virtual interface.
         """
         admin_context = context.elevated()
-        network = network_obj.Network.get_by_uuid(admin_context, net_id)
-        vif_rec = vif_obj.VirtualInterface.get_by_uuid(context, vif_id)
+        network = objects.Network.get_by_uuid(admin_context, net_id)
+        vif_rec = objects.VirtualInterface.get_by_uuid(context, vif_id)
         if network.cidr_v6 and vif_rec and vif_rec.address:
             ip = ipv6.to_global(network.cidr_v6,
                                 vif_rec.address,
@@ -105,5 +102,5 @@ class NeutronNovaIPAMLib(object):
         return []
 
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
-        return floating_ip_obj.FloatingIPList.get_by_fixed_address(
+        return objects.FloatingIPList.get_by_fixed_address(
             context, fixed_address)

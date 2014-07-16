@@ -23,11 +23,6 @@ from nova.db import base
 from nova import exception
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
-from nova.objects import dns_domain as dns_domain_obj
-from nova.objects import fixed_ip as fixed_ip_obj
-from nova.objects import floating_ip as floating_ip_obj
-from nova.objects import network as network_obj
-from nova.objects import service as service_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
@@ -77,8 +72,8 @@ class FloatingIP(object):
 
         admin_context = context.get_admin_context()
         try:
-            floating_ips = floating_ip_obj.FloatingIPList.get_by_host(
-                admin_context, self.host)
+            floating_ips = objects.FloatingIPList.get_by_host(admin_context,
+                                                              self.host)
         except exception.NotFound:
             return
 
@@ -159,7 +154,7 @@ class FloatingIP(object):
                 instance_uuid = instance.uuid
 
         try:
-            fixed_ips = fixed_ip_obj.FixedIPList.get_by_instance_uuid(
+            fixed_ips = objects.FixedIPList.get_by_instance_uuid(
                 context, instance_uuid)
         except exception.FixedIpNotFoundForInstance:
             fixed_ips = []
@@ -167,8 +162,8 @@ class FloatingIP(object):
         kwargs['fixed_ips'] = fixed_ips
         for fixed_ip in fixed_ips:
             fixed_id = fixed_ip.id
-            floating_ips = floating_ip_obj.FloatingIPList.get_by_fixed_ip_id(
-                context, fixed_id)
+            floating_ips = objects.FloatingIPList.get_by_fixed_ip_id(context,
+                                                                     fixed_id)
             # disassociate floating ips related to fixed_ip
             for floating_ip in floating_ips:
                 address = str(floating_ip.address)
@@ -225,7 +220,7 @@ class FloatingIP(object):
             raise exception.FloatingIpLimitExceeded()
 
         try:
-            floating_ip = floating_ip_obj.FloatingIP.allocate_address(
+            floating_ip = objects.FloatingIP.allocate_address(
                 context, project_id, pool, auto_assigned=auto_assigned)
             payload = dict(project_id=project_id, floating_ip=floating_ip)
             self.notifier.info(context,
@@ -246,8 +241,7 @@ class FloatingIP(object):
     def deallocate_floating_ip(self, context, address,
                                affect_auto_assigned=False):
         """Returns a floating ip to the pool."""
-        floating_ip = floating_ip_obj.FloatingIP.get_by_address(context,
-                                                                address)
+        floating_ip = objects.FloatingIP.get_by_address(context, address)
 
         # handle auto_assigned
         if not affect_auto_assigned and floating_ip.auto_assigned:
@@ -283,8 +277,7 @@ class FloatingIP(object):
             LOG.exception(_("Failed to update usages deallocating "
                             "floating IP"))
 
-        floating_ip_ref = floating_ip_obj.FloatingIP.deallocate(context,
-                                                                address)
+        floating_ip_ref = objects.FloatingIP.deallocate(context, address)
         # floating_ip_ref will be None if concurrently another
         # API call has also deallocated the same floating ip
         if floating_ip_ref is None:
@@ -308,8 +301,8 @@ class FloatingIP(object):
         side has already verified that the fixed_address is legal by
         checking access to the instance.
         """
-        floating_ip = floating_ip_obj.FloatingIP.get_by_address(
-            context, floating_address)
+        floating_ip = objects.FloatingIP.get_by_address(context,
+                                                        floating_address)
         # handle auto_assigned
         if not affect_auto_assigned and floating_ip.auto_assigned:
             return
@@ -329,12 +322,11 @@ class FloatingIP(object):
 
             self.disassociate_floating_ip(context, floating_address)
 
-        fixed_ip = fixed_ip_obj.FixedIP.get_by_address(context,
-                                                       fixed_address)
+        fixed_ip = objects.FixedIP.get_by_address(context, fixed_address)
 
         # send to correct host, unless i'm the correct host
-        network = network_obj.Network.get_by_id(context.elevated(),
-                                                fixed_ip.network_id)
+        network = objects.Network.get_by_id(context.elevated(),
+                                            fixed_ip.network_id)
         if network.multi_host:
             instance = objects.Instance.get_by_uuid(
                 context, fixed_ip.instance_uuid)
@@ -364,10 +356,8 @@ class FloatingIP(object):
         @utils.synchronized(unicode(floating_address))
         def do_associate():
             # associate floating ip
-            floating = floating_ip_obj.FloatingIP.associate(context,
-                                                            floating_address,
-                                                            fixed_address,
-                                                            self.host)
+            floating = objects.FloatingIP.associate(context, floating_address,
+                                                    fixed_address, self.host)
             fixed = floating.fixed_ip
             if not fixed:
                 # NOTE(vish): ip was already associated
@@ -379,8 +369,8 @@ class FloatingIP(object):
             except processutils.ProcessExecutionError as e:
                 with excutils.save_and_reraise_exception():
                     try:
-                        floating_ip_obj.FloatingIP.disassociate(
-                            context, floating_address)
+                        objects.FloatingIP.disassociate(context,
+                                                        floating_address)
                     except Exception:
                         LOG.warn(_('Failed to disassociated floating '
                                    'address: %s'), floating_address)
@@ -408,8 +398,7 @@ class FloatingIP(object):
         Makes sure everything makes sense then calls _disassociate_floating_ip,
         rpc'ing to correct host if i'm not it.
         """
-        floating_ip = floating_ip_obj.FloatingIP.get_by_address(context,
-                                                                address)
+        floating_ip = objects.FloatingIP.get_by_address(context, address)
 
         # handle auto assigned
         if not affect_auto_assigned and floating_ip.auto_assigned:
@@ -423,17 +412,16 @@ class FloatingIP(object):
             floating_address = floating_ip.address
             raise exception.FloatingIpNotAssociated(address=floating_address)
 
-        fixed_ip = fixed_ip_obj.FixedIP.get_by_id(context,
-                                                  floating_ip.fixed_ip_id)
+        fixed_ip = objects.FixedIP.get_by_id(context, floating_ip.fixed_ip_id)
 
         # send to correct host, unless i'm the correct host
-        network = network_obj.Network.get_by_id(context.elevated(),
-                                                fixed_ip.network_id)
+        network = objects.Network.get_by_id(context.elevated(),
+                                            fixed_ip.network_id)
         interface = floating_ip.interface
         if network.multi_host:
             instance = objects.Instance.get_by_uuid(
                 context, fixed_ip.instance_uuid)
-            service = service_obj.Service.get_by_host_and_topic(
+            service = objects.Service.get_by_host_and_topic(
                 context.elevated(), instance.host, CONF.network_topic)
             if service and self.servicegroup_api.service_is_up(service):
                 host = instance.host
@@ -470,8 +458,7 @@ class FloatingIP(object):
             #             don't worry about this case because the minuscule
             #             window where the ip is on both hosts shouldn't cause
             #             any problems.
-            floating = floating_ip_obj.FloatingIP.disassociate(context,
-                                                               address)
+            floating = objects.FloatingIP.disassociate(context, address)
             fixed = floating.fixed_ip
             if not fixed:
                 # NOTE(vish): ip was already disassociated
@@ -492,8 +479,7 @@ class FloatingIP(object):
         """Returns a floating IP as a dict."""
         # NOTE(vish): This is no longer used but can't be removed until
         #             we major version the network_rpcapi.
-        return dict(floating_ip_obj.FloatingIP.get_by_id(
-                context, id).iteritems())
+        return dict(objects.FloatingIP.get_by_id(context, id).iteritems())
 
     def get_floating_pools(self, context):
         """Returns list of floating pools."""
@@ -505,7 +491,7 @@ class FloatingIP(object):
         """Returns list of floating ip pools."""
         # NOTE(vish): This is no longer used but can't be removed until
         #             we major version the network_rpcapi.
-        pools = floating_ip_obj.FloatingIP.get_pool_names(context)
+        pools = objects.FloatingIP.get_pool_names(context)
         return [dict(name=name) for name in pools]
 
     def get_floating_ip_by_address(self, context, address):
@@ -553,8 +539,7 @@ class FloatingIP(object):
         LOG.info(_("Starting migration network for instance %s"),
                  instance_uuid)
         for address in floating_addresses:
-            floating_ip = floating_ip_obj.FloatingIP.get_by_address(context,
-                                                                    address)
+            floating_ip = objects.FloatingIP.get_by_address(context, address)
 
             if self._is_stale_floating_ip_address(context, floating_ip):
                 LOG.warn(_("Floating ip address |%(address)s| no longer "
@@ -590,8 +575,7 @@ class FloatingIP(object):
                  instance_uuid)
 
         for address in floating_addresses:
-            floating_ip = floating_ip_obj.FloatingIP.get_by_address(context,
-                                                                    address)
+            floating_ip = objects.FloatingIP.get_by_address(context, address)
 
             if self._is_stale_floating_ip_address(context, floating_ip):
                 LOG.warn(_("Floating ip address |%(address)s| no longer "
@@ -625,7 +609,7 @@ class FloatingIP(object):
     def get_dns_domains(self, context):
         domains = []
 
-        domain_list = dns_domain_obj.DNSDomainList.get_all(context)
+        domain_list = objects.DNSDomainList.get_all(context)
         floating_driver_domain_list = self.floating_dns_manager.get_domains()
         instance_driver_domain_list = self.instance_dns_manager.get_domains()
 
@@ -673,7 +657,7 @@ class FloatingIP(object):
                                                              domain)
 
     def create_private_dns_domain(self, context, domain, av_zone):
-        dns_domain_obj.DNSDomain.register_for_zone(context, domain, av_zone)
+        objects.DNSDomain.register_for_zone(context, domain, av_zone)
         try:
             self.instance_dns_manager.create_domain(domain)
         except exception.FloatingIpDNSExists:
@@ -682,7 +666,7 @@ class FloatingIP(object):
                      {'domain': domain, 'av_zone': av_zone})
 
     def create_public_dns_domain(self, context, domain, project):
-        dns_domain_obj.DNSDomain.register_for_project(context, domain, project)
+        objects.DNSDomain.register_for_project(context, domain, project)
         try:
             self.floating_dns_manager.create_domain(domain)
         except exception.FloatingIpDNSExists:
@@ -691,7 +675,7 @@ class FloatingIP(object):
                      {'domain': domain, 'project': project})
 
     def delete_dns_domain(self, context, domain):
-        dns_domain_obj.DNSDomain.delete_by_domain(context, domain)
+        objects.DNSDomain.delete_by_domain(context, domain)
         self.floating_dns_manager.delete_domain(domain)
 
 

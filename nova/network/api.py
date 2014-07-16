@@ -26,9 +26,6 @@ from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import fixed_ip as fixed_ip_obj
-from nova.objects import floating_ip as floating_ip_obj
-from nova.objects import network as network_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import policy
@@ -108,7 +105,7 @@ class API(base_api.NetworkAPI):
 
     @wrap_check_policy
     def get_fixed_ip_by_address(self, context, address):
-        return fixed_ip_obj.FixedIP.get_by_address(context, address)
+        return objects.FixedIP.get_by_address(context, address)
 
     @wrap_check_policy
     def get_floating_ip(self, context, id):
@@ -462,17 +459,17 @@ class API(base_api.NetworkAPI):
 
     def _is_multi_host(self, context, instance):
         try:
-            fixed_ips = fixed_ip_obj.FixedIPList.get_by_instance_uuid(
+            fixed_ips = objects.FixedIPList.get_by_instance_uuid(
                 context, instance['uuid'])
         except exception.FixedIpNotFoundForInstance:
             return False
-        network = network_obj.Network.get_by_id(context,
-                                                fixed_ips[0].network_id,
-                                                project_only='allow_none')
+        network = objects.Network.get_by_id(context,
+                                            fixed_ips[0].network_id,
+                                            project_only='allow_none')
         return network.multi_host
 
     def _get_floating_ip_addresses(self, context, instance):
-        return floating_ip_obj.FloatingIP.get_addresses_by_instance(
+        return objects.FloatingIP.get_addresses_by_instance(
             context, instance)
 
     @wrap_check_policy

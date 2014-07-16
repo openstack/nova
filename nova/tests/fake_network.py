@@ -25,9 +25,8 @@ from nova.network import manager as network_manager
 from nova.network import model as network_model
 from nova.network import nova_ipam_lib
 from nova.network import rpcapi as network_rpcapi
+from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import instance_info_cache
-from nova.objects import pci_device as pci_device_obj
 from nova.objects import virtual_interface as vif_obj
 from nova.openstack.common import jsonutils
 from nova.pci import pci_device
@@ -516,17 +515,16 @@ def _get_instances_with_cached_ips(orig_func, *args, **kwargs):
     """
     instances = orig_func(*args, **kwargs)
     context = args[0]
-    fake_device = pci_device_obj.PciDevice.get_by_dev_addr(context, 1, 'a')
+    fake_device = objects.PciDevice.get_by_dev_addr(context, 1, 'a')
 
     def _info_cache_for(instance):
         info_cache = dict(test_instance_info_cache.fake_info_cache,
                           network_info=_get_fake_cache(),
                           instance_uuid=instance['uuid'])
         if isinstance(instance, obj_base.NovaObject):
-            _info_cache = instance_info_cache.InstanceInfoCache()
-            instance_info_cache.InstanceInfoCache._from_db_object(context,
-                                                                  _info_cache,
-                                                                  info_cache)
+            _info_cache = objects.InstanceInfoCache(context)
+            objects.InstanceInfoCache._from_db_object(context, _info_cache,
+                                                      info_cache)
             info_cache = _info_cache
         instance['info_cache'] = info_cache
 
