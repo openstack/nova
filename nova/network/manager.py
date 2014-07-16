@@ -1330,7 +1330,7 @@ class NetworkManager(manager.Manager):
         #             to properties of the manager class?
         bottom_reserved = self._bottom_reserved_ips
         top_reserved = self._top_reserved_ips
-        if extra_reserved == None:
+        if extra_reserved is None:
             extra_reserved = []
 
         if not fixed_cidr:

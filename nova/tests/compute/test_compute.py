@@ -3881,7 +3881,7 @@ class ComputeTestCase(BaseTestCase):
 
     def _check_locked_by(self, instance_uuid, locked_by):
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['locked'], locked_by != None)
+        self.assertEqual(instance['locked'], locked_by is not None)
         self.assertEqual(instance['locked_by'], locked_by)
         return instance
 
@@ -6616,7 +6616,7 @@ class ComputeTestCase(BaseTestCase):
         uuid = instance['uuid']
 
         self.mox.StubOutWithMock(self.compute, '_sync_instance_power_state')
-        if power_state != None:
+        if power_state is not None:
             self.compute._sync_instance_power_state(
                 mox.IgnoreArg(),
                 mox.ContainsKeyValue('uuid', uuid),

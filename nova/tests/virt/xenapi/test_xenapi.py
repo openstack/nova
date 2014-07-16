@@ -559,7 +559,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.assertEqual(self.vm['memory_dynamic_min'], mem_bytes)
         self.assertEqual(self.vm['VCPUs_max'], str(vcpus))
         self.assertEqual(self.vm['VCPUs_at_startup'], str(vcpus))
-        if vcpu_weight == None:
+        if vcpu_weight is None:
             self.assertEqual(self.vm['VCPUs_params'], {})
         else:
             self.assertEqual(self.vm['VCPUs_params'],

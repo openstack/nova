@@ -424,7 +424,7 @@ def create_vbd(session, vm_ref, vdi_ref, userdevice, vbd_type='disk',
     """Create a VBD record and returns its reference."""
     vbd_rec = {}
     vbd_rec['VM'] = vm_ref
-    if vdi_ref == None:
+    if vdi_ref is None:
         vdi_ref = 'OpaqueRef:NULL'
     vbd_rec['VDI'] = vdi_ref
     vbd_rec['userdevice'] = str(userdevice)

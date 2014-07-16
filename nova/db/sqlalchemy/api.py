@@ -43,7 +43,10 @@ from sqlalchemy.schema import Table
 from sqlalchemy.sql.expression import asc
 from sqlalchemy.sql.expression import desc
 from sqlalchemy.sql.expression import select
+from sqlalchemy.sql import false
 from sqlalchemy.sql import func
+from sqlalchemy.sql import null
+from sqlalchemy.sql import true
 from sqlalchemy import String
 
 from nova import block_device
@@ -262,7 +265,7 @@ def model_query(context, model, *args, **kwargs):
         if project_only == 'allow_none':
             query = query.\
                 filter(or_(base_model.project_id == context.project_id,
-                           base_model.project_id == None))
+                           base_model.project_id == null()))
         else:
             query = query.filter_by(project_id=context.project_id)
 
@@ -685,7 +688,7 @@ def compute_node_statistics(context):
                          func.sum(models.ComputeNode.disk_available_least),
                          base_model=models.ComputeNode,
                          read_deleted="no").\
-                         filter(models.Service.disabled == False).\
+                         filter(models.Service.disabled == false()).\
                          filter(
                             models.Service.id ==
                             models.ComputeNode.service_id).\
@@ -907,7 +910,7 @@ def floating_ip_deallocate(context, address):
         floating_ip_ref = model_query(context, models.FloatingIp,
                                       session=session).\
                           filter_by(address=address).\
-                          filter(models.FloatingIp.project_id != None).\
+                          filter(models.FloatingIp.project_id != null()).\
                           with_lockmode('update').\
                           first()
 
@@ -1129,7 +1132,7 @@ def fixed_ip_associate(context, address, instance_uuid, network_id=None,
     session = get_session()
     with session.begin():
         network_or_none = or_(models.FixedIp.network_id == network_id,
-                              models.FixedIp.network_id == None)
+                              models.FixedIp.network_id == null())
         fixed_ip_ref = model_query(context, models.FixedIp, session=session,
                                    read_deleted="no").\
                                filter(network_or_none).\
@@ -1162,7 +1165,7 @@ def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
     session = get_session()
     with session.begin():
         network_or_none = or_(models.FixedIp.network_id == network_id,
-                              models.FixedIp.network_id == None)
+                              models.FixedIp.network_id == null())
         fixed_ip_ref = model_query(context, models.FixedIp, session=session,
                                    read_deleted="no").\
                                filter(network_or_none).\
@@ -1234,12 +1237,12 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
     #             join with update doesn't work.
     with session.begin():
         host_filter = or_(and_(models.Instance.host == host,
-                               models.Network.multi_host == True),
+                               models.Network.multi_host == true()),
                           models.Network.host == host)
         result = model_query(context, models.FixedIp.id,
                              base_model=models.FixedIp, read_deleted="no",
                              session=session).\
-                filter(models.FixedIp.allocated == False).\
+                filter(models.FixedIp.allocated == false()).\
                 filter(models.FixedIp.updated_at < time).\
                 join((models.Network,
                       models.Network.id == models.FixedIp.network_id)).\
@@ -1930,7 +1933,7 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
                 # but until then we test it explicitly as a workaround.
                 not_soft_deleted = or_(
                     models.Instance.vm_state != vm_states.SOFT_DELETED,
-                    models.Instance.vm_state == None
+                    models.Instance.vm_state == null()
                     )
                 query_prefix = query_prefix.filter(not_soft_deleted)
 
@@ -2079,7 +2082,7 @@ def instance_get_active_by_window_joined(context, begin, end=None,
 
     query = query.options(joinedload('info_cache')).\
                   options(joinedload('security_groups')).\
-                  filter(or_(models.Instance.terminated_at == None,
+                  filter(or_(models.Instance.terminated_at == null(),
                              models.Instance.terminated_at > begin))
     if end:
         query = query.filter(models.Instance.launched_at < end)
@@ -2655,8 +2658,8 @@ def network_get_associated_fixed_ips(context, network_id, host=None):
                           filter(models.FixedIp.network_id == network_id).\
                           join((models.VirtualInterface, vif_and)).\
                           join((models.Instance, inst_and)).\
-                          filter(models.FixedIp.instance_uuid != None).\
-                          filter(models.FixedIp.virtual_interface_id != None)
+                          filter(models.FixedIp.instance_uuid != null()).\
+                          filter(models.FixedIp.virtual_interface_id != null())
     if host:
         query = query.filter(models.Instance.host == host)
     result = query.all()
@@ -2964,7 +2967,7 @@ def _quota_usage_get_all(context, project_id, user_id=None):
     result = {'project_id': project_id}
     if user_id:
         query = query.filter(or_(models.QuotaUsage.user_id == user_id,
-                                 models.QuotaUsage.user_id == None))
+                                 models.QuotaUsage.user_id == null()))
         result['user_id'] = user_id
 
     rows = query.all()
@@ -3018,7 +3021,7 @@ def quota_usage_update(context, project_id, user_id, resource, **kwargs):
                      filter_by(project_id=project_id).\
                      filter_by(resource=resource).\
                      filter(or_(models.QuotaUsage.user_id == user_id,
-                                models.QuotaUsage.user_id == None)).\
+                                models.QuotaUsage.user_id == null())).\
                      update(updates)
 
     if not result:
@@ -4284,7 +4287,7 @@ def _flavor_get_query(context, session=None, read_deleted=None):
                        read_deleted=read_deleted).\
                        options(joinedload('extra_specs'))
     if not context.is_admin:
-        the_filter = [models.InstanceTypes.is_public == True]
+        the_filter = [models.InstanceTypes.is_public == true()]
         the_filter.extend([
             models.InstanceTypes.projects.any(project_id=context.project_id)
         ])
@@ -4840,9 +4843,9 @@ def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
 def vol_get_usage_by_time(context, begin):
     """Return volumes usage that have been updated after a specified time."""
     return model_query(context, models.VolumeUsage, read_deleted="yes").\
-                   filter(or_(models.VolumeUsage.tot_last_refreshed == None,
+                   filter(or_(models.VolumeUsage.tot_last_refreshed == null(),
                               models.VolumeUsage.tot_last_refreshed > begin,
-                              models.VolumeUsage.curr_last_refreshed == None,
+                              models.VolumeUsage.curr_last_refreshed == null(),
                               models.VolumeUsage.curr_last_refreshed > begin,
                               )).\
                               all()
