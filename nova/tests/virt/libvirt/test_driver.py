@@ -78,6 +78,7 @@ from nova.virt import driver
 from nova.virt import event as virtevent
 from nova.virt import fake
 from nova.virt import firewall as base_firewall
+from nova.virt import hardware
 from nova.virt import images
 from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
@@ -6898,6 +6899,72 @@ class LibvirtConnTestCase(test.TestCase,
         for key in actctualvfs[0].keys():
             if key not in ['phys_function', 'virt_functions', 'label']:
                 self.assertEqual(actctualvfs[0][key], expectvfs[1][key])
+
+    def test_get_host_numa_topology(self):
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.topology = vconfig.LibvirtConfigCapsNUMATopology()
+
+        cell_0 = vconfig.LibvirtConfigCapsNUMACell()
+        cell_0.id = 0
+        cell_0.memory = 512
+        cpu_0_0 = vconfig.LibvirtConfigCapsNUMACPU()
+        cpu_0_0.id = 0
+        cpu_0_0.socket_id = 0
+        cpu_0_0.core_id = 0
+        cpu_0_0.sibling = 0
+        cpu_0_1 = vconfig.LibvirtConfigCapsNUMACPU()
+        cpu_0_1.id = 1
+        cpu_0_1.socket_id = 0
+        cpu_0_1.core_id = 1
+        cpu_0_1.sibling = 1
+        cell_0.cpus = [cpu_0_0, cpu_0_1]
+
+        cell_1 = vconfig.LibvirtConfigCapsNUMACell()
+        cell_1.id = 1
+        cell_1.memory = 512
+        cpu_1_0 = vconfig.LibvirtConfigCapsNUMACPU()
+        cpu_1_0.id = 2
+        cpu_1_0.socket_id = 1
+        cpu_1_0.core_id = 0
+        cpu_1_0.sibling = 2
+        cpu_1_1 = vconfig.LibvirtConfigCapsNUMACPU()
+        cpu_1_1.id = 3
+        cpu_1_1.socket_id = 1
+        cpu_1_1.core_id = 1
+        cpu_1_1.sibling = 3
+        cell_1.cpus = [cpu_1_0, cpu_1_1]
+
+        caps.host.topology.cells = [cell_0, cell_1]
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        expected_topo_dict = {'cells': [
+                                {'cpus': '0,1', 'cpu_usage': 0,
+                                  'mem': {'total': 512, 'used': 0},
+                                  'id': 0},
+                                {'cpus': '3', 'cpu_usage': 0,
+                                  'mem': {'total': 512, 'used': 0},
+                                  'id': 1}]}
+        with contextlib.nested(
+                mock.patch.object(
+                    conn, '_get_host_capabilities', return_value=caps),
+                mock.patch.object(
+                    hardware, 'get_vcpu_pin_set', return_value=set([0, 1, 3]))
+                ):
+            got_topo = conn._get_host_numa_topology()
+            got_topo_dict = got_topo._to_dict()
+            self.assertThat(
+                    expected_topo_dict, matchers.DictMatches(got_topo_dict))
+
+    def test_get_host_numa_topology_empty(self):
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.topology = None
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        with mock.patch.object(
+                conn, '_get_host_capabilities', return_value=caps):
+            self.assertIsNone(conn._get_host_numa_topology())
 
     def test_diagnostic_vcpus_exception(self):
         xml = """
