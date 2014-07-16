@@ -983,6 +983,11 @@ class ComputeManager(manager.Manager):
                          instance=instance)
                 instance.task_state = None
                 instance.save()
+        if instance.task_state == task_states.MIGRATING:
+            # Live migration did not complete, but instance is on this
+            # host, so reset the state.
+            instance.task_state = None
+            instance.save(expected_task_state=[task_states.MIGRATING])
 
         db_state = instance.power_state
         drv_state = self._get_power_state(context, instance)
