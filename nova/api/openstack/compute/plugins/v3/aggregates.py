@@ -103,7 +103,7 @@ class AggregateController(wsgi.Controller):
 
         return self._marshall_aggregate(aggregate)
 
-    @extensions.expected_errors(404)
+    @extensions.expected_errors((400, 404))
     @wsgi.response(204)
     def delete(self, req, id):
         """Removes an aggregate by id."""
@@ -113,6 +113,8 @@ class AggregateController(wsgi.Controller):
             self.api.delete_aggregate(context, id)
         except exception.AggregateNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InvalidAggregateAction as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('add_host')
