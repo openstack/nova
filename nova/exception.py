@@ -969,6 +969,11 @@ class FlavorAccessNotFound(NotFound):
                 "%(project_id)s combination.")
 
 
+class FlavorExtraSpecUpdateCreateFailed(NovaException):
+    msg_fmt = _("Flavor %(id)d extra spec cannot be updated or created "
+                "after %(retries)d retries.")
+
+
 class CellNotFound(NotFound):
     msg_fmt = _("Cell %(cell_name)s doesn't exist.")
 

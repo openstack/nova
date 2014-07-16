@@ -93,8 +93,8 @@ class FlavorExtraSpecsController(object):
             flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
             flavor.extra_specs = dict(flavor.extra_specs, **specs)
             flavor.save()
-        except exception.MetadataLimitExceeded as error:
-            raise exc.HTTPBadRequest(explanation=error.format_message())
+        except exception.FlavorExtraSpecUpdateCreateFailed as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.FlavorNotFound as error:
             raise exc.HTTPNotFound(explanation=error.format_message())
         return body
@@ -114,8 +114,8 @@ class FlavorExtraSpecsController(object):
             flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
             flavor.extra_specs = dict(flavor.extra_specs, **body)
             flavor.save()
-        except exception.MetadataLimitExceeded as error:
-            raise exc.HTTPBadRequest(explanation=error.format_message())
+        except exception.FlavorExtraSpecUpdateCreateFailed as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.FlavorNotFound as error:
             raise exc.HTTPNotFound(explanation=error.format_message())
         return body
