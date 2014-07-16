@@ -562,7 +562,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.31')
+    target = messaging.Target(version='3.32')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -4690,6 +4690,39 @@ class ComputeManager(manager.Manager):
                                    self._rollback_live_migration,
                                    block_migration, migrate_data)
 
+    def _live_migration_cleanup_flags(self, block_migration, migrate_data):
+        """Determine whether disks or intance path need to be cleaned up after
+        live migration (at source on success, at destination on rollback)
+
+        Block migration needs empty image at destination host before migration
+        starts, so if any failure occurs, any empty images has to be deleted.
+
+        Also Volume backed live migration w/o shared storage needs to delete
+        newly created instance-xxx dir on the destination as a part of its
+        rollback process
+
+        :param block_migration: if true, it was a block migration
+        :param migrate_data: implementation specific data
+        :returns: (bool, bool) -- do_cleanup, destroy_disks
+        """
+        # NOTE(angdraug): block migration wouldn't have been allowed if either
+        #                 block storage or instance path were shared
+        is_shared_block_storage = not block_migration
+        is_shared_instance_path = not block_migration
+        if migrate_data:
+            is_shared_block_storage = migrate_data.get(
+                    'is_shared_block_storage', is_shared_block_storage)
+            is_shared_instance_path = migrate_data.get(
+                    'is_shared_instance_path', is_shared_instance_path)
+
+        # No instance booting at source host, but instance dir
+        # must be deleted for preparing next block migration
+        # must be deleted for preparing next live migration w/o shared storage
+        do_cleanup = block_migration or not is_shared_instance_path
+        destroy_disks = not is_shared_block_storage
+
+        return (do_cleanup, destroy_disks)
+
     @wrap_exception()
     @wrap_instance_fault
     def _post_live_migration(self, ctxt, instance,
@@ -4755,16 +4788,15 @@ class ComputeManager(manager.Manager):
         self.compute_rpcapi.post_live_migration_at_destination(ctxt,
                 instance, block_migration, dest)
 
-        # No instance booting at source host, but instance dir
-        # must be deleted for preparing next block migration
-        # must be deleted for preparing next live migration w/o shared storage
-        is_shared_storage = True
-        if migrate_data:
-            is_shared_storage = migrate_data.get('is_shared_storage', True)
-        if block_migration or not is_shared_storage:
-            self.driver.cleanup(ctxt, instance, network_info)
+        do_cleanup, destroy_disks = self._live_migration_cleanup_flags(
+                block_migration, migrate_data)
+
+        if do_cleanup:
+            self.driver.cleanup(ctxt, instance, network_info,
+                                destroy_disks=destroy_disks,
+                                migrate_data=migrate_data)
         else:
-            # self.driver.destroy() usually performs  vif unplugging
+            # self.driver.cleanup() usually performs  vif unplugging
             # but we must do it explicitly here when block_migration
             # is false, as the network devices at the source must be
             # torn down
@@ -4887,20 +4919,13 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(context, instance,
                                           "live_migration._rollback.start")
 
-        # Block migration needs empty image at destination host
-        # before migration starts, so if any failure occurs,
-        # any empty images has to be deleted.
-        # Also Volume backed live migration w/o shared storage needs to delete
-        # newly created instance-xxx dir on the destination as a part of its
-        # rollback process
-        is_volume_backed = False
-        is_shared_storage = True
-        if migrate_data:
-            is_volume_backed = migrate_data.get('is_volume_backed', False)
-            is_shared_storage = migrate_data.get('is_shared_storage', True)
-        if block_migration or (is_volume_backed and not is_shared_storage):
-            self.compute_rpcapi.rollback_live_migration_at_destination(context,
-                    instance, dest)
+        do_cleanup, destroy_disks = self._live_migration_cleanup_flags(
+                block_migration, migrate_data)
+
+        if do_cleanup:
+            self.compute_rpcapi.rollback_live_migration_at_destination(
+                    context, instance, dest, destroy_disks=destroy_disks,
+                    migrate_data=migrate_data)
 
         self._notify_about_instance_usage(context, instance,
                                           "live_migration._rollback.end")
@@ -4908,7 +4933,9 @@ class ComputeManager(manager.Manager):
     @object_compat
     @wrap_exception()
     @wrap_instance_fault
-    def rollback_live_migration_at_destination(self, context, instance):
+    def rollback_live_migration_at_destination(self, context, instance,
+                                               destroy_disks=True,
+                                               migrate_data=None):
         """Cleaning up image directory that is created pre_live_migration.
 
         :param context: security context
@@ -4927,8 +4954,9 @@ class ComputeManager(manager.Manager):
         #             from remote volumes if necessary
         block_device_info = self._get_instance_block_device_info(context,
                                                                  instance)
-        self.driver.rollback_live_migration_at_destination(context, instance,
-                        network_info, block_device_info)
+        self.driver.rollback_live_migration_at_destination(
+                        context, instance, network_info, block_device_info,
+                        destroy_disks=destroy_disks, migrate_data=migrate_data)
         self._notify_about_instance_usage(
                         context, instance, "live_migration.rollback.dest.end",
                         network_info=network_info)

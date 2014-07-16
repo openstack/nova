@@ -967,10 +967,10 @@ class LibvirtDriver(driver.ComputeDriver):
             self._destroy(instance)
 
     def destroy(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True):
+                destroy_disks=True, migrate_data=None):
         self._destroy(instance)
         self.cleanup(context, instance, network_info, block_device_info,
-                     destroy_disks)
+                     destroy_disks, migrate_data)
 
     def _undefine_domain(self, instance):
         try:
@@ -1004,7 +1004,7 @@ class LibvirtDriver(driver.ComputeDriver):
                               {'errcode': errcode, 'e': e}, instance=instance)
 
     def cleanup(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True):
+                destroy_disks=True, migrate_data=None):
         self._undefine_domain(instance)
         self._unplug_vifs(instance, network_info, True)
         retry = True
@@ -1077,9 +1077,12 @@ class LibvirtDriver(driver.ComputeDriver):
                                  {'vol_id': vol.get('volume_id'), 'exc': exc},
                                  instance=instance)
 
-        if destroy_disks:
+        if destroy_disks or (
+                migrate_data and migrate_data.get('is_shared_block_storage',
+                                                  False)):
             self._delete_instance_files(instance)
 
+        if destroy_disks:
             self._cleanup_lvm(instance)
             #NOTE(haomai): destroy volumes if needed
             if CONF.libvirt.images_type == 'rbd':
@@ -4278,6 +4281,7 @@ class LibvirtDriver(driver.ComputeDriver):
         filename = self._create_shared_storage_test_file()
 
         return {"filename": filename,
+                "image_type": CONF.libvirt.images_type,
                 "block_migration": block_migration,
                 "disk_over_commit": disk_over_commit,
                 "disk_available_mb": disk_available_mb}
@@ -4306,16 +4310,15 @@ class LibvirtDriver(driver.ComputeDriver):
         # Checking shared storage connectivity
         # if block migration, instances_paths should not be on shared storage.
         source = CONF.host
-        filename = dest_check_data["filename"]
-        block_migration = dest_check_data["block_migration"]
-        is_volume_backed = dest_check_data.get('is_volume_backed', False)
-        has_local_disks = bool(
-            jsonutils.loads(self.get_instance_disk_info(instance['name'])))
 
-        shared = self._check_shared_storage_test_file(filename)
+        dest_check_data.update({'is_shared_block_storage':
+                self._is_shared_block_storage(instance, dest_check_data)})
+        dest_check_data.update({'is_shared_instance_path':
+                self._is_shared_instance_path(dest_check_data)})
 
-        if block_migration:
-            if shared:
+        if dest_check_data['block_migration']:
+            if (dest_check_data['is_shared_block_storage'] or
+                    dest_check_data['is_shared_instance_path']):
                 reason = _("Block migration can not be used "
                            "with shared storage.")
                 raise exception.InvalidLocalStorage(reason=reason, path=source)
@@ -4323,11 +4326,11 @@ class LibvirtDriver(driver.ComputeDriver):
                                     dest_check_data['disk_available_mb'],
                                     dest_check_data['disk_over_commit'])
 
-        elif not shared and (not is_volume_backed or has_local_disks):
+        elif not (dest_check_data['is_shared_block_storage'] or
+                  dest_check_data['is_shared_instance_path']):
             reason = _("Live migration can not be used "
                        "without shared storage.")
             raise exception.InvalidSharedStorage(reason=reason, path=source)
-        dest_check_data.update({"is_shared_storage": shared})
 
         # NOTE(mikal): include the instance directory name here because it
         # doesn't yet exist on the destination but we want to force that
@@ -4337,6 +4340,33 @@ class LibvirtDriver(driver.ComputeDriver):
         dest_check_data['instance_relative_path'] = instance_path
 
         return dest_check_data
+
+    def _is_shared_block_storage(self, instance, dest_check_data):
+        """Check if all block storage of an instance can be shared
+        between source and destination of a live migration.
+
+        Returns true if the instance is volume backed and has no local disks,
+        or if the image backend is the same on source and destination and the
+        backend shares block storage between compute nodes.
+        """
+        if (CONF.libvirt.images_type == dest_check_data.get('image_type') and
+                self.image_backend.backend().is_shared_block_storage()):
+            return True
+
+        if (dest_check_data.get('is_volume_backed') and
+                not bool(jsonutils.loads(
+                    self.get_instance_disk_info(instance['name'])))):
+            # pylint: disable E1120
+            return True
+
+        return False
+
+    def _is_shared_instance_path(self, dest_check_data):
+        """Check if instance path is shared between source and
+        destination of a live migration.
+        """
+        return self._check_shared_storage_test_file(
+                    dest_check_data["filename"])
 
     def _assert_dest_node_has_enough_disk(self, context, instance,
                                              available_mb, disk_over_commit):
@@ -4659,31 +4689,37 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def rollback_live_migration_at_destination(self, context, instance,
                                                network_info,
-                                               block_device_info):
+                                               block_device_info,
+                                               destroy_disks=True,
+                                               migrate_data=None):
         """Clean up destination node after a failed live migration."""
-        self.destroy(context, instance, network_info, block_device_info)
+        self.destroy(context, instance, network_info, block_device_info,
+                     destroy_disks, migrate_data)
 
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info, disk_info, migrate_data=None):
         """Preparation live migration."""
         # Steps for volume backed instance live migration w/o shared storage.
-        is_shared_storage = True
-        is_volume_backed = False
+        is_shared_block_storage = True
+        is_shared_instance_path = True
         is_block_migration = True
         instance_relative_path = None
         if migrate_data:
-            is_shared_storage = migrate_data.get('is_shared_storage', True)
-            is_volume_backed = migrate_data.get('is_volume_backed', False)
+            is_shared_block_storage = migrate_data.get(
+                    'is_shared_block_storage', True)
+            is_shared_instance_path = migrate_data.get(
+                    'is_shared_instance_path', True)
             is_block_migration = migrate_data.get('block_migration', True)
             instance_relative_path = migrate_data.get('instance_relative_path')
 
-        if not is_shared_storage:
-            # NOTE(mikal): block migration of instances using config drive is
+        if not (is_shared_instance_path and is_shared_block_storage):
+            # NOTE(mikal): live migration of instances using config drive is
             # not supported because of a bug in libvirt (read only devices
             # are not copied by libvirt). See bug/1246201
             if configdrive.required_by(instance):
-                raise exception.NoBlockMigrationForConfigDriveInLibVirt()
+                raise exception.NoLiveMigrationForConfigDriveInLibVirt()
 
+        if not is_shared_instance_path:
             # NOTE(mikal): this doesn't use libvirt_utils.get_instance_path
             # because we are ensuring that the same instance directory name
             # is used as was at the source
@@ -4697,11 +4733,16 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.DestinationDiskExists(path=instance_dir)
             os.mkdir(instance_dir)
 
+        if not is_shared_block_storage:
             # Ensure images and backing files are present.
             self._create_images_and_backing(context, instance,
                                             instance_dir, disk_info)
 
-        if is_volume_backed and not (is_block_migration or is_shared_storage):
+        if not (is_block_migration or is_shared_instance_path):
+            # NOTE(angdraug): when block storage is shared between source and
+            # destination and instance path isn't (e.g. volume backed or rbd
+            # backed instance), instance path on destination has to be prepared
+
             # Touch the console.log file, required by libvirt.
             console_file = self._get_console_log_path(instance)
             libvirt_utils.file_open(console_file, 'a').close()

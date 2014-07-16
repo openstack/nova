@@ -366,7 +366,8 @@ class BareMetalDriver(driver.ComputeDriver):
                 "for instance %r") % instance['uuid'])
         _update_state(ctx, node, instance, state)
 
-    def destroy(self, context, instance, network_info, block_device_info=None):
+    def destroy(self, context, instance, network_info, block_device_info=None,
+                destroy_disks=True, migrate_data=None):
         context = nova_context.get_admin_context()
 
         try:
@@ -399,7 +400,7 @@ class BareMetalDriver(driver.ComputeDriver):
                                 "baremetal database: %s") % e)
 
     def cleanup(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True):
+                destroy_disks=True, migrate_data=None):
         """Cleanup after instance being destroyed."""
         pass
 
