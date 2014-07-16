@@ -18,6 +18,7 @@
 import os.path
 import StringIO
 
+import mock
 import six.moves.urllib.request as urlrequest
 
 from nova import context
@@ -99,21 +100,17 @@ class PolicyTestCase(test.NoDBTestCase):
         result = policy.enforce(self.context, action, self.target)
         self.assertEqual(result, True)
 
-    def test_enforce_http_true(self):
-
-        def fakeurlopen(url, post_data):
-            return StringIO.StringIO("True")
-        self.stubs.Set(urlrequest, 'urlopen', fakeurlopen)
+    @mock.patch.object(urlrequest, 'urlopen',
+                       return_value=StringIO.StringIO("True"))
+    def test_enforce_http_true(self, mock_urlrequest):
         action = "example:get_http"
         target = {}
         result = policy.enforce(self.context, action, target)
         self.assertEqual(result, True)
 
-    def test_enforce_http_false(self):
-
-        def fakeurlopen(url, post_data):
-            return StringIO.StringIO("False")
-        self.stubs.Set(urlrequest, 'urlopen', fakeurlopen)
+    @mock.patch.object(urlrequest, 'urlopen',
+                       return_value=StringIO.StringIO("False"))
+    def test_enforce_http_false(self, mock_urlrequest):
         action = "example:get_http"
         target = {}
         self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
