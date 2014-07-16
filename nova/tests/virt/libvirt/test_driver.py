@@ -3851,8 +3851,8 @@ class LibvirtConnTestCase(test.TestCase,
                                  network_info, disk_info, image_meta)
         tree = etree.fromstring(xml)
         disks = tree.findall('./devices/disk/driver')
-        for disk in disks:
-            self.assertEqual(disk.get("cache"), "none")
+        for guest_disk in disks:
+            self.assertEqual(guest_disk.get("cache"), "none")
 
         directio_supported = False
 
@@ -3865,8 +3865,8 @@ class LibvirtConnTestCase(test.TestCase,
                                  network_info, disk_info, image_meta)
         tree = etree.fromstring(xml)
         disks = tree.findall('./devices/disk/driver')
-        for disk in disks:
-            self.assertEqual(disk.get("cache"), "writethrough")
+        for guest_disk in disks:
+            self.assertEqual(guest_disk.get("cache"), "writethrough")
 
     def _check_xml_and_disk_bus(self, image_meta,
                                 block_device_info, wantConfig):

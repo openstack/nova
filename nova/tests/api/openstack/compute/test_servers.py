@@ -2774,7 +2774,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(compute_api.API, '_validate_bdm', _validate_bdm)
         self.stubs.Set(objects.Instance, 'destroy', _instance_destroy)
 
-        for _ in xrange(len(bdm_exceptions)):
+        for _unused in xrange(len(bdm_exceptions)):
             params = {'block_device_mapping_v2': [bdm.copy()]}
             self.assertRaises(webob.exc.HTTPBadRequest,
                               self._test_create_extra, params)
