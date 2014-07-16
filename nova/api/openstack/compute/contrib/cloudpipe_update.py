@@ -51,8 +51,9 @@ class CloudpipeUpdateController(wsgi.Controller):
                 network.vpn_public_address = vpn_ip
                 network.vpn_public_port = vpn_port
                 network.save()
-        except (TypeError, KeyError, ValueError):
-            raise webob.exc.HTTPUnprocessableEntity()
+        except (TypeError, KeyError, ValueError) as ex:
+            msg = _("Invalid request body: %s") % unicode(ex)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         return webob.exc.HTTPAccepted()
 
