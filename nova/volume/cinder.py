@@ -21,20 +21,22 @@ Handles all requests relating to volumes + cinder.
 import copy
 import sys
 
+from cinderclient import client as cinder_client
 from cinderclient import exceptions as cinder_exception
 from cinderclient import service_catalog
-from cinderclient.v1 import client as cinder_client
 from oslo.config import cfg
+import six.moves.urllib.parse as urlparse
 
 from nova import availability_zones as az
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LW
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 
 cinder_opts = [
     cfg.StrOpt('cinder_catalog_info',
-            default='volume:cinder:publicURL',
+            default='volumev2:cinder:publicURL',
             help='Info to match when looking for cinder in the service '
                  'catalog. Format is: separated values of the form: '
                  '<service_type>:<service_name>:<endpoint_type>'),
@@ -65,41 +67,17 @@ CONF.register_opts(cinder_opts)
 
 LOG = logging.getLogger(__name__)
 
+CINDER_URL = None
+
 
 def cinderclient(context):
-
-    # FIXME: the cinderclient ServiceCatalog object is mis-named.
-    #        It actually contains the entire access blob.
-    # Only needed parts of the service catalog are passed in, see
-    # nova/context.py.
-    compat_catalog = {
-        'access': {'serviceCatalog': context.service_catalog or []}
-    }
-    sc = service_catalog.ServiceCatalog(compat_catalog)
-    if CONF.cinder_endpoint_template:
-        url = CONF.cinder_endpoint_template % context.to_dict()
-    else:
-        info = CONF.cinder_catalog_info
-        service_type, service_name, endpoint_type = info.split(':')
-        # extract the region if set in configuration
-        if CONF.os_region_name:
-            attr = 'region'
-            filter_value = CONF.os_region_name
-        else:
-            attr = None
-            filter_value = None
-        url = sc.url_for(attr=attr,
-                         filter_value=filter_value,
-                         service_type=service_type,
-                         service_name=service_name,
-                         endpoint_type=endpoint_type)
-
-    LOG.debug('Cinderclient connection created using URL: %s', url)
-
-    c = cinder_client.Client(context.user_id,
+    global CINDER_URL
+    version = get_cinder_client_version(context)
+    c = cinder_client.Client(version,
+                             context.user_id,
                              context.auth_token,
                              project_id=context.project_id,
-                             auth_url=url,
+                             auth_url=CINDER_URL,
                              insecure=CONF.cinder_api_insecure,
                              retries=CONF.cinder_http_retries,
                              timeout=CONF.cinder_http_timeout,
@@ -107,7 +85,7 @@ def cinderclient(context):
     # noauth extracts user_id:project_id from auth_token
     c.client.auth_token = context.auth_token or '%s:%s' % (context.user_id,
                                                            context.project_id)
-    c.client.management_url = url
+    c.client.management_url = CINDER_URL
     return c
 
 
@@ -134,10 +112,14 @@ def _untranslate_volume_summary_view(context, vol):
         d['mountpoint'] = att['device']
     else:
         d['attach_status'] = 'detached'
-
-    d['display_name'] = vol.display_name
-    d['display_description'] = vol.display_description
-
+    # NOTE(dzyu) volume(cinder) v2 API uses 'name' instead of 'display_name',
+    # and use 'description' instead of 'display_description' for volume.
+    if hasattr(vol, 'display_name'):
+        d['display_name'] = vol.display_name
+        d['display_description'] = vol.display_description
+    else:
+        d['display_name'] = vol.name
+        d['display_description'] = vol.description
     # TODO(jdg): Information may be lost in this translation
     d['volume_type_id'] = vol.volume_type
     d['snapshot_id'] = vol.snapshot_id
@@ -161,8 +143,16 @@ def _untranslate_snapshot_summary_view(context, snapshot):
     d['progress'] = snapshot.progress
     d['size'] = snapshot.size
     d['created_at'] = snapshot.created_at
-    d['display_name'] = snapshot.display_name
-    d['display_description'] = snapshot.display_description
+
+    # NOTE(dzyu) volume(cinder) v2 API uses 'name' instead of 'display_name',
+    # 'description' instead of 'display_description' for snapshot.
+    if hasattr(snapshot, 'display_name'):
+        d['display_name'] = snapshot.display_name
+        d['display_description'] = snapshot.display_description
+    else:
+        d['display_name'] = snapshot.name
+        d['display_description'] = snapshot.description
+
     d['volume_id'] = snapshot.volume_id
     d['project_id'] = snapshot.project_id
     d['volume_size'] = snapshot.size
@@ -211,6 +201,61 @@ def translate_snapshot_exception(method):
             raise exc_value, None, exc_trace
         return res
     return wrapper
+
+
+def get_cinder_client_version(context):
+    """Parse cinder client version by endpoint url.
+
+    :param context: Nova auth context.
+    :return: str value(1 or 2).
+    """
+    global CINDER_URL
+    # FIXME: the cinderclient ServiceCatalog object is mis-named.
+    #        It actually contains the entire access blob.
+    # Only needed parts of the service catalog are passed in, see
+    # nova/context.py.
+    compat_catalog = {
+        'access': {'serviceCatalog': context.service_catalog or []}
+    }
+    sc = service_catalog.ServiceCatalog(compat_catalog)
+    if CONF.cinder_endpoint_template:
+        url = CONF.cinder_endpoint_template % context.to_dict()
+    else:
+        info = CONF.cinder_catalog_info
+        service_type, service_name, endpoint_type = info.split(':')
+        # extract the region if set in configuration
+        if CONF.os_region_name:
+            attr = 'region'
+            filter_value = CONF.os_region_name
+        else:
+            attr = None
+            filter_value = None
+        url = sc.url_for(attr=attr,
+                         filter_value=filter_value,
+                         service_type=service_type,
+                         service_name=service_name,
+                         endpoint_type=endpoint_type)
+    LOG.debug('Cinderclient connection created using URL: %s', url)
+
+    valid_versions = ['v1', 'v2']
+    magic_tuple = urlparse.urlsplit(url)
+    scheme, netloc, path, query, frag = magic_tuple
+    components = path.split("/")
+    for version in valid_versions:
+        if version in components[1]:
+            version = version[1:]
+
+            if not CINDER_URL and version == '1':
+                msg = _LW('Cinder V1 API is deprecated as of the Juno '
+                          'release, and Nova is still configured to use it. '
+                          'Enable the V2 API in Cinder and set '
+                          'cinder_catalog_info in nova.conf to use it.')
+                LOG.warn(msg)
+
+            CINDER_URL = url
+            return version
+    msg = _("Invalid client version, must be one of: %s") % valid_versions
+    raise cinder_exception.UnsupportedVersion(msg)
 
 
 class API(object):
@@ -312,14 +357,20 @@ class API(object):
             snapshot_id = None
 
         kwargs = dict(snapshot_id=snapshot_id,
-                      display_name=name,
-                      display_description=description,
                       volume_type=volume_type,
                       user_id=context.user_id,
                       project_id=context.project_id,
                       availability_zone=availability_zone,
                       metadata=metadata,
                       imageRef=image_id)
+
+        version = get_cinder_client_version(context)
+        if version == '1':
+            kwargs['display_name'] = name
+            kwargs['display_description'] = description
+        elif version == '2':
+            kwargs['name'] = name
+            kwargs['description'] = description
 
         try:
             item = cinderclient(context).volumes.create(size, **kwargs)
