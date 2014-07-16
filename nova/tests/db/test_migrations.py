@@ -717,6 +717,26 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         self.assertEqual(0, len([fk for fk in pci_devices.foreign_keys
                                  if fk.parent.name == 'compute_node_id']))
 
+    def _check_247(self, engine, data):
+        quota_usages = oslodbutils.get_table(engine, 'quota_usages')
+        self.assertFalse(quota_usages.c.resource.nullable)
+
+        pci_devices = oslodbutils.get_table(engine, 'pci_devices')
+        self.assertTrue(pci_devices.c.deleted.nullable)
+        self.assertFalse(pci_devices.c.product_id.nullable)
+        self.assertFalse(pci_devices.c.vendor_id.nullable)
+        self.assertFalse(pci_devices.c.dev_type.nullable)
+
+    def _post_downgrade_247(self, engine):
+        quota_usages = oslodbutils.get_table(engine, 'quota_usages')
+        self.assertTrue(quota_usages.c.resource.nullable)
+
+        pci_devices = oslodbutils.get_table(engine, 'pci_devices')
+        self.assertFalse(pci_devices.c.deleted.nullable)
+        self.assertTrue(pci_devices.c.product_id.nullable)
+        self.assertTrue(pci_devices.c.vendor_id.nullable)
+        self.assertTrue(pci_devices.c.dev_type.nullable)
+
 
 class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
