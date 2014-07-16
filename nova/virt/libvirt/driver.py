@@ -3356,12 +3356,11 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.add_device(consolelog)
 
             consolepty = vconfig.LibvirtConfigGuestSerial()
-            consolepty.type = "pty"
-            guest.add_device(consolepty)
         else:
             consolepty = vconfig.LibvirtConfigGuestConsole()
-            consolepty.type = "pty"
-            guest.add_device(consolepty)
+
+        consolepty.type = "pty"
+        guest.add_device(consolepty)
 
         # We want a tablet if VNC is enabled,
         # or SPICE is enabled and the SPICE agent is disabled
