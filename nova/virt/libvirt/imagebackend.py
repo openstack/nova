@@ -57,13 +57,6 @@ __imagebackend_opts = [
                 default=False,
                 help='Create sparse logical volumes (with virtualsize)'
                      ' if this flag is set to True.'),
-    cfg.StrOpt('volume_clear',
-               default='zero',
-               help='Method used to wipe old volumes (valid options are: '
-                    'none, zero, shred)'),
-    cfg.IntOpt('volume_clear_size',
-               default=0,
-               help='Size in MiB to wipe at start of old volumes. 0 => all'),
     cfg.StrOpt('images_rbd_pool',
                default='rbd',
                help='The RADOS pool in which rbd volumes are stored'),
