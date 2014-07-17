@@ -1857,7 +1857,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def test_rescheduled_exception_deallocate_network_if_dhcp(self):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(self.compute.driver,
-                'dhcp_options_for_instance')
+                'macs_for_instance')
         self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                 'build_instances')
@@ -1869,7 +1869,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.filter_properties).AndRaise(
                         exception.RescheduledException(reason='',
                             instance_uuid=self.instance['uuid']))
-        self.compute.driver.dhcp_options_for_instance(self.instance).AndReturn(
+        self.compute.driver.macs_for_instance(self.instance).AndReturn(
                 {'fake': 'options'})
         self.compute._cleanup_allocated_networks(self.context, self.instance,
                 self.requested_networks)
