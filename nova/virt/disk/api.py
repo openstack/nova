@@ -37,7 +37,6 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
-from nova import paths
 from nova import utils
 from nova.virt.disk.mount import api as mount
 from nova.virt.disk.vfs import api as vfs
@@ -47,10 +46,6 @@ from nova.virt import images
 LOG = logging.getLogger(__name__)
 
 disk_opts = [
-    cfg.StrOpt('injected_network_template',
-               default=paths.basedir_def('nova/virt/interfaces.template'),
-               help='Template file for injected network'),
-
     # NOTE(yamahata): ListOpt won't work because the command may include a
     #                 comma. For example:
     #
