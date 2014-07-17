@@ -22,16 +22,22 @@ from nova.openstack.common import timeutils
 class FakeDbBlockDeviceDict(block_device.BlockDeviceDict):
     """Defaults db fields - useful for mocking database calls."""
 
-    def __init__(self, bdm_dict=None, **kwargs):
+    def __init__(self, bdm_dict=None, anon=False, **kwargs):
         bdm_dict = bdm_dict or {}
         db_id = bdm_dict.pop('id', 1)
         instance_uuid = bdm_dict.pop('instance_uuid', str(uuid.uuid4()))
 
         super(FakeDbBlockDeviceDict, self).__init__(bdm_dict=bdm_dict,
                                                     **kwargs)
-        fake_db_fields = {'id': db_id, 'instance_uuid': instance_uuid,
-                          'created_at': timeutils.utcnow(),
-                          'updated_at': timeutils.utcnow(),
+        fake_db_fields = {'instance_uuid': instance_uuid,
                           'deleted_at': None,
                           'deleted': 0}
+        if not anon:
+            fake_db_fields['id'] = db_id
+            fake_db_fields['created_at'] = timeutils.utcnow()
+            fake_db_fields['updated_at'] = timeutils.utcnow()
         self.update(fake_db_fields)
+
+
+def AnonFakeDbBlockDeviceDict(bdm_dict, **kwargs):
+    return FakeDbBlockDeviceDict(bdm_dict=bdm_dict, anon=True, **kwargs)
