@@ -20,14 +20,16 @@ Management class for basic VM operations.
 import functools
 import os
 
+from eventlet import timeout as etimeout
 from oslo.config import cfg
 
 from nova.api.metadata import base as instance_metadata
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LI, _LW
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import loopingcall
 from nova.openstack.common import processutils
 from nova.openstack.common import units
 from nova import utils
@@ -69,13 +71,22 @@ hyperv_opts = [
                       'the ratio between the total RAM assigned to an '
                       'instance and its startup RAM amount. For example a '
                       'ratio of 2.0 for an instance with 1024MB of RAM '
-                      'implies 512MB of RAM allocated at startup')
+                      'implies 512MB of RAM allocated at startup'),
+    cfg.IntOpt('wait_soft_reboot_seconds',
+               default=60,
+               help='Number of seconds to wait for instance to shut down after'
+                    ' soft reboot request is made. We fall back to hard reboot'
+                    ' if instance does not shutdown within this window.'),
 ]
 
 CONF = cfg.CONF
 CONF.register_opts(hyperv_opts, 'hyperv')
 CONF.import_opt('use_cow_images', 'nova.virt.driver')
 CONF.import_opt('network_api_class', 'nova.network')
+
+SHUTDOWN_TIME_INCREMENT = 5
+REBOOT_TYPE_SOFT = 'SOFT'
+REBOOT_TYPE_HARD = 'HARD'
 
 
 def check_admin_permissions(function):
@@ -393,8 +404,38 @@ class VMOps(object):
     def reboot(self, instance, network_info, reboot_type):
         """Reboot the specified instance."""
         LOG.debug("Rebooting instance", instance=instance)
+
+        if reboot_type == REBOOT_TYPE_SOFT:
+            if self._soft_shutdown(instance):
+                self.power_on(instance)
+                return
+
         self._set_vm_state(instance['name'],
                            constants.HYPERV_VM_STATE_REBOOT)
+
+    def _soft_shutdown(self, instance,
+                       timeout=CONF.hyperv.wait_soft_reboot_seconds):
+        """Perform a soft shutdown on the VM.
+
+           :return: True if the instance was shutdown within time limit,
+                    False otherwise.
+        """
+        LOG.debug("Performing Soft shutdown on instance", instance=instance)
+
+        try:
+            self._vmutils.soft_shutdown_vm(instance.name)
+            if self._wait_for_power_off(instance.name, timeout):
+                LOG.info(_LI("Soft shutdown succeded."), instance=instance)
+                return True
+        except vmutils.HyperVException as e:
+            # Exception is raised when trying to shutdown the instance
+            # while it is still booting.
+            LOG.warning(_LW("Soft shutdown failed: %s"), e, instance=instance)
+            return False
+
+        LOG.warning(_LW("Timed out while waiting for soft shutdown."),
+                    instance=instance)
+        return False
 
     def pause(self, instance):
         """Pause VM instance."""
@@ -443,3 +484,36 @@ class VMOps(object):
                 LOG.error(_("Failed to change vm state of %(vm_name)s"
                             " to %(req_state)s"),
                           {'vm_name': vm_name, 'req_state': req_state})
+
+    def _get_vm_state(self, instance_name):
+        summary_info = self._vmutils.get_vm_summary_info(instance_name)
+        return summary_info['EnabledState']
+
+    def _wait_for_power_off(self, instance_name, time_limit):
+        """Waiting for a VM to be in a disabled state.
+
+           :return: True if the instance is shutdown within time_limit,
+                    False otherwise.
+        """
+
+        desired_vm_states = [constants.HYPERV_VM_STATE_DISABLED]
+
+        def _check_vm_status(instance_name):
+            if self._get_vm_state(instance_name) in desired_vm_states:
+                raise loopingcall.LoopingCallDone()
+
+        periodic_call = loopingcall.FixedIntervalLoopingCall(_check_vm_status,
+                                                             instance_name)
+
+        try:
+            # add a timeout to the periodic call.
+            periodic_call.start(interval=SHUTDOWN_TIME_INCREMENT)
+            etimeout.with_timeout(time_limit, periodic_call.wait)
+        except etimeout.Timeout:
+            # VM did not shutdown in the expected time_limit.
+            return False
+        finally:
+            # stop the periodic call, in case of exceptions or Timeout.
+            periodic_call.stop()
+
+        return True
