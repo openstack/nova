@@ -117,7 +117,7 @@ class _GroupAntiAffinityFilter(AffinityFilter):
                     "in %(configured)s", {'host': host_state.host,
                                            'configured': group_hosts})
         if group_hosts:
-            return not host_state.host in group_hosts
+            return host_state.host not in group_hosts
 
         # No groups configured
         return True

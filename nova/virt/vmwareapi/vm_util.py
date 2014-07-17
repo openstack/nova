@@ -377,7 +377,7 @@ def get_vmdk_path_and_adapter_type(hardware_devices, uuid=None):
 def _find_controller_slot(controller_keys, taken, max_unit_number):
     for controller_key in controller_keys:
         for unit_number in range(max_unit_number):
-            if not unit_number in taken.get(controller_key, []):
+            if unit_number not in taken.get(controller_key, []):
                 return controller_key, unit_number
 
 
