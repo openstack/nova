@@ -19,7 +19,9 @@ import webob
 from webob import exc
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas.v3 import attach_interfaces
 from nova.api.openstack import extensions
+from nova.api import validation
 from nova import compute
 from nova import exception
 from nova import network
@@ -76,6 +78,7 @@ class InterfaceAttachmentController(object):
         return {'interface_attachment': _translate_interface_attachment_view(
                 port_info['port'])}
 
+    @validation.schema(attach_interfaces.create)
     def create(self, req, server_id, body):
         """Attach an interface to an instance."""
         context = req.environ['nova.context']
