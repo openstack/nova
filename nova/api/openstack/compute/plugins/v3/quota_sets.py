@@ -21,9 +21,9 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 import nova.context
-from nova import db
 from nova import exception
 from nova.i18n import _
+from nova import objects
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 from nova import quota
@@ -158,11 +158,11 @@ class QuotaSetsController(wsgi.Controller):
             maximum = settable_quotas[key]['maximum']
             self._validate_quota_limit(value, minimum, maximum)
             try:
-                db.quota_create(context, project_id, key, value,
-                                user_id=user_id)
+                objects.Quotas.create_limit(context, project_id,
+                                            key, value, user_id=user_id)
             except exception.QuotaExists:
-                db.quota_update(context, project_id, key, value,
-                                user_id=user_id)
+                objects.Quotas.update_limit(context, project_id,
+                                            key, value, user_id=user_id)
             except exception.AdminRequired:
                 raise webob.exc.HTTPForbidden()
         return self._format_quota_set(id, self._get_quotas(context, id,
