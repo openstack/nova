@@ -17,11 +17,12 @@ import webob
 from webob import exc
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas.v3 import migrate_server
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import compute
 from nova import exception
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 
@@ -70,27 +71,20 @@ class MigrateServerController(wsgi.Controller):
 
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('migrate_live')
+    @validation.schema(migrate_server.migrate_live)
     def _migrate_live(self, req, id, body):
         """Permit admins to (live) migrate a server to a new host."""
         context = req.environ["nova.context"]
         authorize(context, 'migrate_live')
 
-        try:
-            block_migration = body["migrate_live"]["block_migration"]
-            disk_over_commit = body["migrate_live"]["disk_over_commit"]
-            host = body["migrate_live"]["host"]
-        except (TypeError, KeyError):
-            msg = _("host, block_migration and disk_over_commit must "
-                    "be specified for live migration.")
-            raise exc.HTTPBadRequest(explanation=msg)
+        block_migration = body["migrate_live"]["block_migration"]
+        disk_over_commit = body["migrate_live"]["disk_over_commit"]
+        host = body["migrate_live"]["host"]
 
-        try:
-            block_migration = strutils.bool_from_string(block_migration,
-                                                        strict=True)
-            disk_over_commit = strutils.bool_from_string(disk_over_commit,
-                                                         strict=True)
-        except ValueError as err:
-            raise exc.HTTPBadRequest(explanation=str(err))
+        block_migration = strutils.bool_from_string(block_migration,
+                                                    strict=True)
+        disk_over_commit = strutils.bool_from_string(disk_over_commit,
+                                                     strict=True)
 
         try:
             instance = common.get_instance(self.compute_api, context, id,

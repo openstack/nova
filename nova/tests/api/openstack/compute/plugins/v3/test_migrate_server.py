@@ -117,11 +117,22 @@ class MigrateServerTests(admin_only_action_common.CommonTests):
                  'disk_over_commit': "False"}
         self._test_migrate_live_succeeded(param)
 
-    def test_migrate_live_missing_dict_param(self):
+    def test_migrate_live_without_host(self):
         res = self._make_request('/servers/FAKE/action',
-                                 {'migrate_live': {'dummy': 'hostname',
-                                                   'block_migration': False,
+                                 {'migrate_live': {'block_migration': False,
                                                    'disk_over_commit': False}})
+        self.assertEqual(400, res.status_int)
+
+    def test_migrate_live_without_block_migration(self):
+        res = self._make_request('/servers/FAKE/action',
+                                 {'migrate_live': {'host': 'hostname',
+                                                   'disk_over_commit': False}})
+        self.assertEqual(400, res.status_int)
+
+    def test_migrate_live_without_disk_over_commit(self):
+        res = self._make_request('/servers/FAKE/action',
+                                 {'migrate_live': {'host': 'hostname',
+                                                   'block_migration': False}})
         self.assertEqual(400, res.status_int)
 
     def test_migrate_live_with_invalid_block_migration(self):
