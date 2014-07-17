@@ -1672,6 +1672,7 @@ def _instance_data_get_for_user(context, project_id, user_id, session=None):
 
 
 @require_context
+@_retry_on_deadlock
 def instance_destroy(context, instance_uuid, constraint=None):
     session = get_session()
     with session.begin():
