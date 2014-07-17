@@ -658,6 +658,21 @@ class MetadataHandlerTestCase(test.TestCase):
                                 headers=None)
         self.assertEqual(response.status_int, 500)
 
+    @mock.patch('nova.utils.constant_time_compare')
+    def test_by_instance_id_uses_constant_time_compare(self, mock_compare):
+        mock_compare.side_effect = test.TestingException
+
+        req = webob.Request.blank('/')
+        hnd = handler.MetadataRequestHandler()
+
+        req.headers['X-Instance-ID'] = 'fake-inst'
+        req.headers['X-Tenant-ID'] = 'fake-proj'
+
+        self.assertRaises(test.TestingException,
+                          hnd._handle_instance_id_request, req)
+
+        self.assertEqual(1, mock_compare.call_count)
+
     def test_user_data_with_neutron_instance_id(self):
         expected_instance_id = 'a-b-c-d'
 
