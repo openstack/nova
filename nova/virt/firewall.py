@@ -181,9 +181,11 @@ class IptablesFirewallDriver(FirewallDriver):
         ipv4_rules, ipv6_rules = self.instance_rules(instance, network_info)
         self.add_filters_for_instance(instance, network_info, ipv4_rules,
                                       ipv6_rules)
-        LOG.debug('Filters added to instance', instance=instance)
+        LOG.debug('Filters added to instance: %s', instance['id'],
+                  instance=instance)
         self.refresh_provider_fw_rules()
-        LOG.debug('Provider Firewall Rules refreshed', instance=instance)
+        LOG.debug('Provider Firewall Rules refreshed: %s', instance['id'],
+                  instance=instance)
         # Ensure that DHCP request rule is updated if necessary
         if (self.dhcp_create and not self.dhcp_created):
             self.iptables.ipv4['filter'].add_rule(
@@ -364,9 +366,6 @@ class IptablesFirewallDriver(FirewallDriver):
             rules = rules_cls.get_by_security_group(ctxt, security_group)
 
             for rule in rules:
-                LOG.debug('Adding security group rule: %r', rule,
-                          instance=instance)
-
                 if not rule['cidr']:
                     version = 4
                 else:
@@ -394,7 +393,6 @@ class IptablesFirewallDriver(FirewallDriver):
                 elif protocol == 'icmp':
                     args += self._build_icmp_rule(rule, version)
                 if rule['cidr']:
-                    LOG.debug('Using cidr %r', rule['cidr'], instance=instance)
                     args += ['-s', str(rule['cidr'])]
                     fw_rules += [' '.join(args)]
                 else:
@@ -418,11 +416,10 @@ class IptablesFirewallDriver(FirewallDriver):
                                 subrule = args + ['-s %s' % ip]
                                 fw_rules += [' '.join(subrule)]
 
-                LOG.debug('Using fw_rules: %r', fw_rules, instance=instance)
-
         ipv4_rules += ['-j $sg-fallback']
         ipv6_rules += ['-j $sg-fallback']
-
+        LOG.debug('Security Groups %s translated to ipv4: %r, ipv6: %r',
+            security_groups, ipv4_rules, ipv6_rules, instance=instance)
         return ipv4_rules, ipv6_rules
 
     def instance_filter_exists(self, instance, network_info):
