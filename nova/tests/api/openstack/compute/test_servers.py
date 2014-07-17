@@ -196,6 +196,8 @@ class ServersControllerTest(ControllerTest):
 
     def setUp(self):
         super(ServersControllerTest, self).setUp()
+        self.compute_api = self.controller.compute_api
+        self.context = context.RequestContext('fake', 'fake')
 
     def test_can_check_loaded_extensions(self):
         self.ext_mgr.extensions = {'os-fake': None}
@@ -258,6 +260,25 @@ class ServersControllerTest(ControllerTest):
         req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
+
+    def test_get_server_no_image(self):
+
+        def return_instance(self, *args, **kwargs):
+            return fakes.stub_instance(id=1, uuid=FAKE_UUID,
+                                       project_id=str(uuid.uuid4()),
+                                       image_ref='')
+
+        def fake_add_image_ref(context, instance):
+            instance['image_ref'] = 'fake_image'
+            return instance
+
+        self.stubs.Set(db, 'instance_get_by_uuid', return_instance)
+        self.stubs.Set(instance_obj, 'add_image_ref', fake_add_image_ref)
+
+        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
+        server = self.controller.show(req, FAKE_UUID)
+
+        self.assertEqual('fake_image', server['server']['image']['id'])
 
     def test_unique_host_id(self):
         """Create two servers with the same host and different
@@ -516,6 +537,29 @@ class ServersControllerTest(ControllerTest):
             ]
 
             self.assertEqual(s['links'], expected_links)
+
+    def test_get_servers_no_image(self):
+
+        def fake_get_all(compute_self, context, search_opts=None,
+                         sort_key=None, sort_dir='desc',
+                         limit=None, marker=None, want_objects=False):
+            db_list = [fakes.stub_instance(100,
+                                           uuid=FAKE_UUID,
+                                           image_ref='')]
+            return instance_obj._make_instance_list(
+                context, objects.InstanceList(), db_list, FIELDS)
+
+        def fake_add_image_ref(context, instance):
+            instance['image_ref'] = 'fake_image'
+            return instance
+
+        self.stubs.Set(instance_obj, 'add_image_ref', fake_add_image_ref)
+        self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
+
+        req = fakes.HTTPRequest.blank('/fake/servers/detail')
+        res_dict = self.controller.detail(req)
+        for s in res_dict['servers']:
+            self.assertEqual('fake_image', s['image']['id'])
 
     def test_get_servers_with_limit(self):
         req = fakes.HTTPRequest.blank('/fake/servers?limit=3')

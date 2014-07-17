@@ -14,6 +14,7 @@
 
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
+from nova import compute
 from nova.compute import flavors
 from nova import db
 from nova import exception
@@ -565,6 +566,20 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         notifications.send_update(context, instance_dict, instance_dict)
         if not md_was_changed:
             self.obj_reset_changes(['metadata'])
+
+
+def add_image_ref(context, instance):
+    """Helper method to add image_ref to instance object."""
+    if not instance['image_ref']:
+        compute_api = compute.API()
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance['uuid'])
+        if compute_api.is_volume_backed_instance(context, instance, bdms):
+            props = bdms.root_metadata(
+                    context, compute_api.image_api,
+                    compute_api.volume_api)
+            instance['image_ref'] = props['image_id']
+    return instance
 
 
 def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
