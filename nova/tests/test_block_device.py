@@ -386,6 +386,16 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         self.assertNotIn('db_field1', dev_dict)
         self.assertFalse('db_field2'in dev_dict)
 
+        # Passing kwargs to constructor works
+        dev_dict = block_device.BlockDeviceDict(field1='foo')
+        self.assertIn('field1', dev_dict)
+        self.assertIn('field2', dev_dict)
+        self.assertIsNone(dev_dict['field2'])
+        dev_dict = block_device.BlockDeviceDict(
+                {'field1': 'foo'}, field2='bar')
+        self.assertEqual('foo', dev_dict['field1'])
+        self.assertEqual('bar', dev_dict['field2'])
+
     def test_validate(self):
         self.assertRaises(exception.InvalidBDMFormat,
                           block_device.BlockDeviceDict,
