@@ -3717,18 +3717,6 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
                 self._objectify(instance), [], [])
 
-    def test_delete_instance_succedes_on_volume_fail(self):
-        instance = self._create_fake_instance_obj()
-
-        def fake_cleanup_volumes(context, instance):
-            raise test.TestingException()
-
-        self.stubs.Set(self.compute, '_cleanup_volumes',
-                       fake_cleanup_volumes)
-
-        self.compute._delete_instance(self.context, instance, [],
-                                      self.none_quotas)
-
     def test_delete_instance_keeps_net_on_power_off_fail(self):
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
         self.mox.StubOutWithMock(self.compute, '_deallocate_network')
