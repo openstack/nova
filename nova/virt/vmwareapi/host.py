@@ -21,6 +21,7 @@ from nova import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common import units
 from nova import utils
+from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 
@@ -80,7 +81,7 @@ class Host(object):
 
 def _get_ds_capacity_and_freespace(session, cluster=None):
     try:
-        ds = vm_util.get_datastore(session, cluster)
+        ds = ds_util.get_datastore(session, cluster)
         return ds.capacity, ds.freespace
     except exception.DatastoreNotFound:
         return 0, 0

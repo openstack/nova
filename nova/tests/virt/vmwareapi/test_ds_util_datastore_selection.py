@@ -17,7 +17,6 @@ import re
 from nova.openstack.common import units
 from nova import test
 from nova.virt.vmwareapi import ds_util
-from nova.virt.vmwareapi import vm_util
 
 ResultSet = collections.namedtuple('ResultSet', ['objects'])
 ResultSetToken = collections.namedtuple('ResultSet', ['objects', 'token'])
@@ -26,10 +25,10 @@ DynamicProperty = collections.namedtuple('Property', ['name', 'val'])
 MoRef = collections.namedtuple('ManagedObjectReference', ['value'])
 
 
-class VMwareVMUtilDatastoreSelectionTestCase(test.NoDBTestCase):
+class VMwareDSUtilDatastoreSelectionTestCase(test.NoDBTestCase):
 
     def setUp(self):
-        super(VMwareVMUtilDatastoreSelectionTestCase, self).setUp()
+        super(VMwareDSUtilDatastoreSelectionTestCase, self).setUp()
         self.data = [
             ['VMFS', 'os-some-name', True, 987654321, 12346789],
             ['NFS', 'another-name', True, 9876543210, 123467890],
@@ -63,7 +62,7 @@ class VMwareVMUtilDatastoreSelectionTestCase(test.NoDBTestCase):
         datastores = self.build_result_set(self.data)
         best_match = ds_util.Datastore(ref='fake_ref', name='ds',
                               capacity=0, freespace=0)
-        rec = vm_util._select_datastore(datastores, best_match)
+        rec = ds_util._select_datastore(datastores, best_match)
 
         self.assertIsNotNone(rec.ref, "could not find datastore!")
         self.assertEqual('ds-001', rec.ref.value,
@@ -77,7 +76,7 @@ class VMwareVMUtilDatastoreSelectionTestCase(test.NoDBTestCase):
 
         best_match = ds_util.Datastore(ref='fake_ref', name='ds',
                               capacity=0, freespace=0)
-        rec = vm_util._select_datastore(datastores, best_match)
+        rec = ds_util._select_datastore(datastores, best_match)
 
         self.assertEqual(rec, best_match)
 
@@ -87,7 +86,7 @@ class VMwareVMUtilDatastoreSelectionTestCase(test.NoDBTestCase):
 
         best_match = ds_util.Datastore(ref='fake_ref', name='ds',
                               capacity=0, freespace=0)
-        rec = vm_util._select_datastore(datastores,
+        rec = ds_util._select_datastore(datastores,
                                         best_match,
                                         datastore_regex)
 
@@ -108,7 +107,7 @@ class VMwareVMUtilDatastoreSelectionTestCase(test.NoDBTestCase):
 
         best_match = ds_util.Datastore(ref='fake_ref', name='ds',
                               capacity=0, freespace=0)
-        rec = vm_util._select_datastore(datastores,
+        rec = ds_util._select_datastore(datastores,
                                         best_match,
                                         datastore_regex)
 
@@ -135,7 +134,7 @@ class VMwareVMUtilDatastoreSelectionTestCase(test.NoDBTestCase):
         best_match = ds_util.Datastore(ref='fake_ref', name='ds',
                               capacity=0, freespace=0)
 
-        rec = vm_util._select_datastore(datastores, best_match)
+        rec = ds_util._select_datastore(datastores, best_match)
         self.assertEqual(rec, best_match, "no matches were expected")
 
     def test_filter_datastores_best_match(self):
@@ -153,7 +152,7 @@ class VMwareVMUtilDatastoreSelectionTestCase(test.NoDBTestCase):
         # the current best match is better than all candidates
         best_match = ds_util.Datastore(ref='ds-100', name='best-ds-good',
                               capacity=20 * units.Gi, freespace=19 * units.Gi)
-        rec = vm_util._select_datastore(datastores,
+        rec = ds_util._select_datastore(datastores,
                                         best_match,
                                         datastore_regex)
         self.assertEqual(rec, best_match, "did not match datastore properly")
