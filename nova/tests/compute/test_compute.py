@@ -7208,7 +7208,7 @@ class ComputeAPITestCase(BaseTestCase):
             info['image_ref'] = kwargs['instance'].image_ref
             info['clean'] = kwargs['instance'].obj_what_changed() == set()
 
-        self.stubs.Set(self.compute_api.compute_rpcapi, 'rebuild_instance',
+        self.stubs.Set(self.compute_api.compute_task_api, 'rebuild_instance',
                        fake_rpc_rebuild)
 
         image_ref = instance["image_ref"] + '-new_image_ref'
@@ -9195,7 +9195,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.stubs.Set(self.compute_api.servicegroup_api, 'service_is_up',
                 fake_service_is_up)
-        self.stubs.Set(self.compute_api.compute_rpcapi, 'rebuild_instance',
+        self.stubs.Set(self.compute_api.compute_task_api, 'rebuild_instance',
                 fake_rebuild_instance)
         self.compute_api.evacuate(self.context.elevated(),
                                   instance,

@@ -54,6 +54,7 @@ from nova.tests import fake_block_device
 from nova.tests import fake_instance
 from nova.tests import fake_notifier
 from nova.tests import fake_server_actions
+from nova.tests import fake_utils
 from nova import utils
 
 
@@ -86,6 +87,8 @@ class _BaseTestCase(object):
 
         self.stubs.Set(rpc.RequestContextSerializer, 'deserialize_context',
                        fake_deserialize_context)
+
+        fake_utils.stub_out_utils_spawn_n(self.stubs)
 
     def _create_fake_instance(self, params=None, type_name='m1.tiny'):
         if not params:
@@ -1119,6 +1122,21 @@ class _BaseTaskTestCase(object):
         self.stubs.Set(rpc.RequestContextSerializer, 'deserialize_context',
                        fake_deserialize_context)
 
+    def _prepare_rebuild_args(self, update_args=None):
+        rebuild_args = {'new_pass': 'admin_password',
+                        'injected_files': 'files_to_inject',
+                        'image_ref': 'image_ref',
+                        'orig_image_ref': 'orig_image_ref',
+                        'orig_sys_metadata': 'orig_sys_meta',
+                        'bdms': {},
+                        'recreate': False,
+                        'on_shared_storage': False,
+                        'preserve_ephemeral': False,
+                        'host': 'compute-host'}
+        if update_args:
+            rebuild_args.update(update_args)
+        return rebuild_args
+
     def test_live_migrate(self):
         inst = fake_instance.fake_db_instance()
         inst_obj = objects.Instance._from_db_object(
@@ -1476,6 +1494,83 @@ class _BaseTaskTestCase(object):
         system_metadata['shelved_image_id'] = 'fake_image_id'
         system_metadata['shelved_host'] = 'fake-mini'
         self.conductor_manager.unshelve_instance(self.context, instance)
+
+    def test_rebuild_instance(self):
+        db_instance = jsonutils.to_primitive(self._create_fake_instance())
+        inst_obj = objects.Instance.get_by_uuid(self.context,
+                                                db_instance['uuid'])
+        rebuild_args = self._prepare_rebuild_args({'host': inst_obj.host})
+
+        with contextlib.nested(
+            mock.patch.object(self.conductor_manager.compute_rpcapi,
+                              'rebuild_instance'),
+            mock.patch.object(self.conductor_manager.scheduler_rpcapi,
+                              'select_destinations')
+        ) as (rebuild_mock, select_dest_mock):
+            self.conductor_manager.rebuild_instance(context=self.context,
+                                            instance=inst_obj,
+                                            **rebuild_args)
+            self.assertFalse(select_dest_mock.called)
+            rebuild_mock.assert_called_once_with(self.context,
+                               instance=inst_obj,
+                               **rebuild_args)
+
+    def test_rebuild_instance_with_scheduler(self):
+        db_instance = jsonutils.to_primitive(self._create_fake_instance())
+        inst_obj = objects.Instance.get_by_uuid(self.context,
+                                                db_instance['uuid'])
+        inst_obj.host = 'noselect'
+        rebuild_args = self._prepare_rebuild_args({'host': None})
+        expected_host = 'thebesthost'
+        request_spec = {}
+        filter_properties = {'ignore_hosts': [(inst_obj.host)]}
+
+        with contextlib.nested(
+            mock.patch.object(self.conductor_manager.compute_rpcapi,
+                              'rebuild_instance'),
+            mock.patch.object(self.conductor_manager.scheduler_rpcapi,
+                              'select_destinations',
+                              return_value=[{'host': expected_host}]),
+            mock.patch('nova.scheduler.utils.build_request_spec',
+                       return_value=request_spec)
+        ) as (rebuild_mock, select_dest_mock, bs_mock):
+            self.conductor_manager.rebuild_instance(context=self.context,
+                                            instance=inst_obj,
+                                            **rebuild_args)
+            select_dest_mock.assert_called_once_with(self.context,
+                                                     request_spec,
+                                                     filter_properties)
+            rebuild_args['host'] = expected_host
+            rebuild_mock.assert_called_once_with(self.context,
+                                            instance=inst_obj,
+                                            **rebuild_args)
+
+    def test_rebuild_instance_with_scheduler_no_host(self):
+        db_instance = jsonutils.to_primitive(self._create_fake_instance())
+        inst_obj = objects.Instance.get_by_uuid(self.context,
+                                                db_instance['uuid'])
+        inst_obj.host = 'noselect'
+        rebuild_args = self._prepare_rebuild_args({'host': None})
+        request_spec = {}
+        filter_properties = {'ignore_hosts': [(inst_obj.host)]}
+
+        with contextlib.nested(
+            mock.patch.object(self.conductor_manager.compute_rpcapi,
+                              'rebuild_instance'),
+            mock.patch.object(self.conductor_manager.scheduler_rpcapi,
+                              'select_destinations',
+                              side_effect=exc.NoValidHost(reason='')),
+            mock.patch('nova.scheduler.utils.build_request_spec',
+                       return_value=request_spec)
+        ) as (rebuild_mock, select_dest_mock, bs_mock):
+            self.assertRaises(exc.NoValidHost,
+                              self.conductor_manager.rebuild_instance,
+                              context=self.context, instance=inst_obj,
+                              **rebuild_args)
+            select_dest_mock.assert_called_once_with(self.context,
+                                                     request_spec,
+                                                     filter_properties)
+            self.assertFalse(rebuild_mock.called)
 
 
 class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
