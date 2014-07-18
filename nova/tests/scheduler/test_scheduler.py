@@ -280,7 +280,7 @@ class SchedulerTestCase(test.NoDBTestCase):
         super(SchedulerTestCase, self).setUp()
         self.stubs.Set(compute_api, 'API', fakes.FakeComputeAPI)
 
-        def fake_show(meh, context, id):
+        def fake_show(meh, context, id, **kwargs):
             if id:
                 return {'id': id, 'min_disk': None, 'min_ram': None,
                         'name': 'fake_name',

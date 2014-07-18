@@ -142,7 +142,7 @@ class CloudTestCase(test.TestCase):
         self.useFixture(fixtures.FakeLogger('boto'))
         fake_utils.stub_out_utils_spawn_n(self.stubs)
 
-        def fake_show(meh, context, id):
+        def fake_show(meh, context, id, **kwargs):
             return {'id': id,
                     'name': 'fake_name',
                     'container_format': 'ami',
@@ -1503,7 +1503,7 @@ class CloudTestCase(test.TestCase):
                 'mappings': mappings2,
                 'block_device_mapping': block_device_mapping2}}
 
-        def fake_show(meh, context, image_id):
+        def fake_show(meh, context, image_id, **kwargs):
             _images = [copy.deepcopy(image1), copy.deepcopy(image2)]
             for i in _images:
                 if str(i['id']) == str(image_id):
@@ -1599,7 +1599,7 @@ class CloudTestCase(test.TestCase):
     def test_describe_image_attribute(self):
         describe_image_attribute = self.cloud.describe_image_attribute
 
-        def fake_show(meh, context, id):
+        def fake_show(meh, context, id, **kwargs):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
                     'name': 'fake_name',
                     'status': 'active',
@@ -1667,7 +1667,7 @@ class CloudTestCase(test.TestCase):
                 'type': 'machine'},
             'is_public': False}
 
-        def fake_show(meh, context, id):
+        def fake_show(meh, context, id, **kwargs):
             return copy.deepcopy(fake_metadata)
 
         def fake_detail(self, context, **kwargs):
@@ -1940,7 +1940,7 @@ class CloudTestCase(test.TestCase):
                   'max_count': 1}
         run_instances = self.cloud.run_instances
 
-        def fake_show(self, context, id):
+        def fake_show(self, context, id, **kwargs):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
                     'name': 'fake_name',
                     'properties': {
@@ -1971,7 +1971,7 @@ class CloudTestCase(test.TestCase):
                   'max_count': 0}
         run_instances = self.cloud.run_instances
 
-        def fake_show(self, context, id):
+        def fake_show(self, context, id, **kwargs):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
                     'name': 'fake_name',
                     'container_format': 'ami',
@@ -1991,7 +1991,7 @@ class CloudTestCase(test.TestCase):
                   'min_count': 0}
         run_instances = self.cloud.run_instances
 
-        def fake_show(self, context, id):
+        def fake_show(self, context, id, **kwargs):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
                     'name': 'fake_name',
                     'container_format': 'ami',
@@ -2012,7 +2012,7 @@ class CloudTestCase(test.TestCase):
                   'min_count': 2}
         run_instances = self.cloud.run_instances
 
-        def fake_show(self, context, id):
+        def fake_show(self, context, id, **kwargs):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
                     'name': 'fake_name',
                     'container_format': 'ami',
@@ -2034,7 +2034,7 @@ class CloudTestCase(test.TestCase):
                  }
         run_instances = self.cloud.run_instances
 
-        def fake_show(self, context, id):
+        def fake_show(self, context, id, **kwargs):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
                     'name': 'fake_name',
                     'properties': {
@@ -2085,7 +2085,7 @@ class CloudTestCase(test.TestCase):
 
         run_instances = self.cloud.run_instances
 
-        def fake_show(self, context, id):
+        def fake_show(self, context, id, **kwargs):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
                     'name': 'fake_name',
                     'properties': {
@@ -2185,7 +2185,7 @@ class CloudTestCase(test.TestCase):
                   'max_count': 1}
         run_instances = self.cloud.run_instances
 
-        def fake_show_stat_active(self, context, id):
+        def fake_show_stat_active(self, context, id, **kwargs):
             return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
                     'name': 'fake_name',
                     'container_format': 'ami',
@@ -2461,7 +2461,7 @@ class CloudTestCase(test.TestCase):
                   'max_count': 1}
         ec2_instance_id = self._run_instance(**kwargs)
 
-        def fake_show(meh, context, id):
+        def fake_show(meh, context, id, **kwargs):
             bdm = [dict(snapshot_id=snapshots[0],
                         volume_size=1,
                         device_name='sda1',
@@ -2777,7 +2777,7 @@ class CloudTestCase(test.TestCase):
         test_dia_iisb('stop', image_id='ami-2',
                      block_device_mapping=block_device_mapping)
 
-        def fake_show(self, context, id_):
+        def fake_show(self, context, id_, **kwargs):
             LOG.debug("id_ %s", id_)
 
             prop = {}

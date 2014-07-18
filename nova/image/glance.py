@@ -284,18 +284,41 @@ class GlanceImageService(object):
 
         return _images
 
-    def show(self, context, image_id):
-        """Returns a dict with image data for the given opaque image id."""
+    def show(self, context, image_id, include_locations=False):
+        """Returns a dict with image data for the given opaque image id.
+
+        :param context: The context object to pass to image client
+        :param image_id: The UUID of the image
+        :param include_locations: (Optional) include locations in the returned
+                                  dict of information if the image service API
+                                  supports it. If the image service API does
+                                  not support the locations attribute, it will
+                                  still be included in the returned dict, as an
+                                  empty list.
+        """
+        version = 1
+        if include_locations:
+            version = 2
         try:
-            image = self._client.call(context, 1, 'get', image_id)
+            image = self._client.call(context, version, 'get', image_id)
         except Exception:
             _reraise_translated_image_exception(image_id)
 
         if not _is_image_available(context, image):
             raise exception.ImageNotFound(image_id=image_id)
 
-        base_image_meta = _translate_from_glance(image)
-        return base_image_meta
+        image = _translate_from_glance(image)
+        if include_locations:
+            locations = image.get('locations', None) or []
+            du = image.get('direct_url', None)
+            if du:
+                locations.append({'url': du, 'metadata': {}})
+            image['locations'] = locations
+        else:
+            image.pop('locations', None)
+            image.pop('direct_url', None)
+
+        return image
 
     def _get_transfer_module(self, scheme):
         try:
@@ -310,8 +333,8 @@ class GlanceImageService(object):
     def download(self, context, image_id, data=None, dst_path=None):
         """Calls out to Glance for data and writes data."""
         if CONF.glance.allowed_direct_url_schemes and dst_path is not None:
-            locations = _get_locations(self._client, context, image_id)
-            for entry in locations:
+            image = self.show(context, image_id, include_locations=True)
+            for entry in image.get('locations', []):
                 loc_url = entry['url']
                 loc_meta = entry['metadata']
                 o = urlparse.urlparse(loc_url)
@@ -394,25 +417,6 @@ class GlanceImageService(object):
         except glanceclient.exc.HTTPForbidden:
             raise exception.ImageNotAuthorized(image_id=image_id)
         return True
-
-
-def _get_locations(client, context, image_id):
-    """Returns the direct url representing the backend storage location,
-    or None if this attribute is not shown by Glance.
-    """
-    try:
-        image_meta = client.call(context, 2, 'get', image_id)
-    except Exception:
-        _reraise_translated_image_exception(image_id)
-
-    if not _is_image_available(context, image_meta):
-        raise exception.ImageNotFound(image_id=image_id)
-
-    locations = getattr(image_meta, 'locations', [])
-    du = getattr(image_meta, 'direct_url', None)
-    if du:
-        locations.append({'url': du, 'metadata': {}})
-    return locations
 
 
 def _extract_query_params(params):
@@ -538,7 +542,8 @@ def _extract_attributes(image):
                         'container_format', 'status', 'id',
                         'name', 'created_at', 'updated_at',
                         'deleted', 'deleted_at', 'checksum',
-                        'min_disk', 'min_ram', 'is_public']
+                        'min_disk', 'min_ram', 'is_public',
+                        'direct_url', 'locations']
 
     queued = getattr(image, 'status') == 'queued'
     queued_exclude_attrs = ['disk_format', 'container_format']

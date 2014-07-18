@@ -94,7 +94,7 @@ class CinderCloudTestCase(test.TestCase):
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    volume_api_class='nova.tests.fake_volume.API')
 
-        def fake_show(meh, context, id):
+        def fake_show(meh, context, id, **kwargs):
             return {'id': id,
                     'name': 'fake_name',
                     'container_format': 'ami',
@@ -686,7 +686,7 @@ class CinderCloudTestCase(test.TestCase):
                 'mappings': mappings2,
                 'block_device_mapping': block_device_mapping2}}
 
-        def fake_show(meh, context, image_id):
+        def fake_show(meh, context, image_id, **kwargs):
             _images = [copy.deepcopy(image1), copy.deepcopy(image2)]
             for i in _images:
                 if str(i['id']) == str(image_id):

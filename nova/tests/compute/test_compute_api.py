@@ -1833,7 +1833,7 @@ class _ComputeAPIUnitTestMixIn(object):
             'properties': {"auto_disk_config": "Disabled"},
         }
 
-        def fake_show(obj, context, image_id):
+        def fake_show(obj, context, image_id, **kwargs):
             return self.fake_image
         fake_image.stub_out_image_service(self.stubs)
         self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)

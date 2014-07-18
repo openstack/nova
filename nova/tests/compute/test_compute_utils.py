@@ -409,7 +409,7 @@ class UsageInfoTestCase(test.TestCase):
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
 
-        def fake_show(meh, context, id):
+        def fake_show(meh, context, id, **kwargs):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
 
         self.stubs.Set(nova.tests.image.fake._FakeImageService,

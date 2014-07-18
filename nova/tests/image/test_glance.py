@@ -219,7 +219,8 @@ class TestGlanceImageService(test.NoDBTestCase):
 
             def get(self, image_id):
                 return type('GlanceTestDirectUrlMeta', (object,),
-                            {'direct_url': 'file://%s' + self.s_tmpfname})
+                            {'status': 'active',
+                             'direct_url': 'file://%s' + self.s_tmpfname})
 
         client = MyGlanceStubClient()
         (outfd, tmpfname) = tempfile.mkstemp(prefix='directURLdst')
@@ -248,7 +249,8 @@ class TestGlanceImageService(test.NoDBTestCase):
 
             def get(self, image_id):
                 return type('GlanceLocations', (object,),
-                            {'locations': [
+                            {'status': 'active',
+                             'locations': [
                                 {'url': 'file:///' + os.devnull,
                                  'metadata': desc}]})
 
@@ -287,7 +289,8 @@ class TestGlanceImageService(test.NoDBTestCase):
 
             def get(self, image_id):
                 return type('GlanceLocations', (object,),
-                            {'locations': [
+                            {'status': 'active',
+                             'locations': [
                                 {'url': 'file:///' + os.devnull,
                                  'metadata': desc}]})
 
@@ -327,7 +330,8 @@ class TestGlanceImageService(test.NoDBTestCase):
 
             def get(self, image_id):
                 return type('GlanceLocations', (object,),
-                            {'locations': [{'url': file_url,
+                            {'status': 'active',
+                             'locations': [{'url': file_url,
                                             'metadata': file_system_desc}]})
 
             def data(self, image_id):
@@ -362,7 +366,8 @@ class TestGlanceImageService(test.NoDBTestCase):
 
             def get(self, image_id):
                 return type('GlanceLocations', (object,),
-                            {'locations': [{'url': file_url,
+                            {'status': 'active',
+                             'locations': [{'url': file_url,
                                             'metadata': {}}]})
 
             def data(self, image_id):
@@ -488,6 +493,8 @@ class TestGlanceImageService(test.NoDBTestCase):
             'status': None,
             'properties': {},
             'owner': None,
+            'locations': None,
+            'direct_url': None
         }
         self.assertEqual(expected, observed)
 
@@ -502,68 +509,6 @@ def _create_failing_glance_client(info):
             return {}
 
     return MyGlanceStubClient()
-
-
-class TestGetLocations(test.NoDBTestCase):
-    """Tests the internal _get_locations function."""
-
-    class ImageSpecV2(object):
-        visibility = None
-        properties = None
-        locations = None
-        direct_url = None
-
-    @mock.patch('nova.image.glance._is_image_available')
-    def test_success_has_locations(self, avail_mock):
-        avail_mock.return_value = True
-        locations = [
-            mock.sentinel.loc1
-        ]
-        image_meta = mock.MagicMock(locations=locations,
-                                    spec=TestGetLocations.ImageSpecV2)
-
-        client_mock = mock.MagicMock()
-        client_mock.call.return_value = image_meta
-        locs = glance._get_locations(client_mock, mock.sentinel.ctx,
-                                     mock.sentinel.image_id)
-        client_mock.call.assert_called_once_with(mock.sentinel.ctx,
-                                                 2, 'get',
-                                                 mock.sentinel.image_id)
-        self.assertEqual(locations, locs)
-        avail_mock.assert_called_once_with(mock.sentinel.ctx, image_meta)
-
-    @mock.patch('nova.image.glance._is_image_available')
-    def test_success_direct_uri_added_to_locations(self, avail_mock):
-        avail_mock.return_value = True
-        locations = [
-            mock.sentinel.loc1
-        ]
-        image_meta = mock.MagicMock(locations=locations,
-                                    spec=TestGetLocations.ImageSpecV2,
-                                    direct_uri=mock.sentinel.duri)
-
-        client_mock = mock.MagicMock()
-        client_mock.call.return_value = image_meta
-        locs = glance._get_locations(client_mock, mock.sentinel.ctx,
-                                     mock.sentinel.image_id)
-        client_mock.call.assert_called_once_with(mock.sentinel.ctx,
-                                                 2, 'get',
-                                                 mock.sentinel.image_id)
-        expected = locations
-        expected.append({"url": mock.sentinel.duri, "metadata": {}})
-        self.assertEqual(expected, locs)
-
-    @mock.patch('nova.image.glance._reraise_translated_image_exception')
-    @mock.patch('nova.image.glance._is_image_available')
-    def test_get_locations_not_found(self, avail_mock, reraise_mock):
-        raised = exception.ImageNotFound(image_id=123)
-        reraise_mock.side_effect = raised
-
-        client_mock = mock.MagicMock()
-        client_mock.call.side_effect = glanceclient.exc.NotFound
-        self.assertRaises(exception.ImageNotFound, glance._get_locations,
-                          client_mock, mock.sentinel.ctx,
-                          mock.sentinel.image_id)
 
 
 class TestIsImageAvailable(test.NoDBTestCase):
@@ -697,18 +642,19 @@ class TestShow(test.NoDBTestCase):
     @mock.patch('nova.image.glance._is_image_available')
     def test_show_success(self, is_avail_mock, trans_from_mock):
         is_avail_mock.return_value = True
-        trans_from_mock.return_value = mock.sentinel.trans_from
+        trans_from_mock.return_value = {'mock': mock.sentinel.trans_from}
         client = mock.MagicMock()
-        client.call.return_value = mock.sentinel.images_0
+        client.call.return_value = {}
         ctx = mock.sentinel.ctx
         service = glance.GlanceImageService(client)
         info = service.show(ctx, mock.sentinel.image_id)
 
         client.call.assert_called_once_with(ctx, 1, 'get',
                                             mock.sentinel.image_id)
-        is_avail_mock.assert_called_once_with(ctx, mock.sentinel.images_0)
-        trans_from_mock.assert_called_once_with(mock.sentinel.images_0)
-        self.assertEqual(mock.sentinel.trans_from, info)
+        is_avail_mock.assert_called_once_with(ctx, {})
+        trans_from_mock.assert_called_once_with({})
+        self.assertIn('mock', info)
+        self.assertEqual(mock.sentinel.trans_from, info['mock'])
 
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._is_image_available')
@@ -753,7 +699,7 @@ class TestShow(test.NoDBTestCase):
         client = mock.MagicMock()
 
         # fake image cls without disk_format, container_format, name attributes
-        class fake_image_cls(object):
+        class fake_image_cls(dict):
             id = 'b31aa5dd-f07a-4748-8f15-398346887584'
             deleted = False
             protected = False
@@ -780,6 +726,47 @@ class TestShow(test.NoDBTestCase):
                                      'properties'])
 
         self.assertEqual(NOVA_IMAGE_ATTRIBUTES, set(image_info.keys()))
+
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_include_locations_success(self, avail_mock, trans_from_mock):
+        locations = [mock.sentinel.loc1]
+        avail_mock.return_value = True
+        trans_from_mock.return_value = {'locations': locations}
+
+        client = mock.Mock()
+        client.call.return_value = mock.sentinel.image
+        service = glance.GlanceImageService(client)
+        ctx = mock.sentinel.ctx
+        image_id = mock.sentinel.image_id
+        info = service.show(ctx, image_id, include_locations=True)
+
+        client.call.assert_called_once_with(ctx, 2, 'get', image_id)
+        avail_mock.assert_called_once_with(ctx, mock.sentinel.image)
+        trans_from_mock.assert_called_once_with(mock.sentinel.image)
+        self.assertIn('locations', info)
+        self.assertEqual(locations, info['locations'])
+
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_include_direct_uri_success(self, avail_mock, trans_from_mock):
+        locations = [mock.sentinel.loc1]
+        avail_mock.return_value = True
+        trans_from_mock.return_value = {'locations': locations,
+                                        'direct_uri': mock.sentinel.duri}
+
+        client = mock.Mock()
+        client.call.return_value = mock.sentinel.image
+        service = glance.GlanceImageService(client)
+        ctx = mock.sentinel.ctx
+        image_id = mock.sentinel.image_id
+        info = service.show(ctx, image_id, include_locations=True)
+
+        client.call.assert_called_once_with(ctx, 2, 'get', image_id)
+        expected = locations
+        expected.append({'url': mock.sentinel.duri, 'metadata': {}})
+        self.assertIn('locations', info)
+        self.assertEqual(expected, info['locations'])
 
 
 class TestDetail(test.NoDBTestCase):

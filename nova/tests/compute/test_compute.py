@@ -223,7 +223,7 @@ class BaseTestCase(test.TestCase):
         self.none_quotas = objects.Quotas.from_reservations(
                 self.context, None)
 
-        def fake_show(meh, context, id):
+        def fake_show(meh, context, id, **kwargs):
             if id:
                 return {'id': id, 'min_disk': None, 'min_ram': None,
                         'name': 'fake_name',
@@ -2835,7 +2835,7 @@ class ComputeTestCase(BaseTestCase):
     def _test_snapshot_deletes_image_on_failure(self, status, exc):
         self.fake_image_delete_called = False
 
-        def fake_show(self_, context, image_id):
+        def fake_show(self_, context, image_id, **kwargs):
             self.assertEqual('fakesnap', image_id)
             image = {'id': image_id,
                      'status': status}
@@ -6842,7 +6842,7 @@ class ComputeAPITestCase(BaseTestCase):
                            'ramdisk_id': 'fake_ramdisk_id'},
         }
 
-        def fake_show(obj, context, image_id):
+        def fake_show(obj, context, image_id, **kwargs):
             if image_id:
                 return self.fake_image
             else:
@@ -10574,7 +10574,7 @@ class ComputeInactiveImageTestCase(BaseTestCase):
     def setUp(self):
         super(ComputeInactiveImageTestCase, self).setUp()
 
-        def fake_show(meh, context, id):
+        def fake_show(meh, context, id, **kwargs):
             return {'id': id, 'min_disk': None, 'min_ram': None,
                     'name': 'fake_name',
                     'status': 'deleted',
