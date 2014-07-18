@@ -23,32 +23,10 @@ from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
 
 
-class fake_session(object):
-    def __init__(self, ret=None):
-        self.ret = ret
-
-    def _get_vim(self):
-        return fake.FakeVim()
-
-    def _call_method(self, module, method, *args, **kwargs):
-        return self.ret
-
-    def _wait_for_task(self, task_ref):
-        task_info = self._call_method('module', "get_dynamic_property",
-                        task_ref, "Task", "info")
-        if task_info.state == 'success':
-            return task_info
-        else:
-            error_info = 'fake error'
-            error = task_info.error
-            name = error.fault.__class__.__name__
-            raise error_util.get_fault_class(name)(error_info)
-
-
 class DsUtilTestCase(test.NoDBTestCase):
     def setUp(self):
         super(DsUtilTestCase, self).setUp()
-        self.session = fake_session()
+        self.session = fake.FakeSession()
         self.flags(api_retry_count=1, group='vmware')
         fake.reset()
 
@@ -126,22 +104,31 @@ class DsUtilTestCase(test.NoDBTestCase):
                 datastorePath = kwargs.get('datastorePath')
                 self.assertEqual('fake-path', datastorePath)
                 return 'fake_exists_task'
-            elif method == 'get_dynamic_property':
-                info = fake.DataObject()
-                info.name = 'search_task'
-                info.state = 'success'
-                result = fake.DataObject()
-                result.path = 'fake-path'
-                matched = fake.DataObject()
-                matched.path = 'fake-file'
-                result.file = [matched]
-                info.result = result
-                return info
+
             # Should never get here
             self.fail()
 
-        with mock.patch.object(self.session, '_call_method',
-                               fake_call_method):
+        def fake_wait_for_task(task_ref):
+            if task_ref == 'fake_exists_task':
+                result_file = fake.DataObject()
+                result_file.path = 'fake-file'
+
+                result = fake.DataObject()
+                result.file = [result_file]
+
+                task_info = fake.DataObject()
+                task_info.result = result
+
+                return task_info
+
+            # Should never get here
+            self.fail()
+
+        with contextlib.nested(
+                mock.patch.object(self.session, '_call_method',
+                                  fake_call_method),
+                mock.patch.object(self.session, '_wait_for_task',
+                                  fake_wait_for_task)):
             file_exists = ds_util.file_exists(self.session,
                     'fake-browser', 'fake-path', 'fake-file')
             self.assertTrue(file_exists)
@@ -150,20 +137,22 @@ class DsUtilTestCase(test.NoDBTestCase):
         def fake_call_method(module, method, *args, **kwargs):
             if method == 'SearchDatastore_Task':
                 return 'fake_exists_task'
-            elif method == 'get_dynamic_property':
-                info = fake.DataObject()
-                info.name = 'search_task'
-                info.state = 'error'
-                error = fake.DataObject()
-                error.localizedMessage = "Error message"
-                error.fault = fake.FileNotFound()
-                info.error = error
-                return info
+
             # Should never get here
             self.fail()
 
-        with mock.patch.object(self.session, '_call_method',
-                               fake_call_method):
+        def fake_wait_for_task(task_ref):
+            if task_ref == 'fake_exists_task':
+                raise error_util.FileNotFoundException()
+
+            # Should never get here
+            self.fail()
+
+        with contextlib.nested(
+                mock.patch.object(self.session, '_call_method',
+                                  fake_call_method),
+                mock.patch.object(self.session, '_wait_for_task',
+                                  fake_wait_for_task)):
             file_exists = ds_util.file_exists(self.session,
                     'fake-browser', 'fake-path', 'fake-file')
             self.assertFalse(file_exists)

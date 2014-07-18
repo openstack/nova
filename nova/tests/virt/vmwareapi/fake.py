@@ -994,6 +994,40 @@ class FakeFactory(object):
         return DataObject(obj_name)
 
 
+class FakeSession(object):
+    """Fake Session Class."""
+
+    def __init__(self):
+        self.vim = FakeVim()
+
+    def _get_vim(self):
+        return self.vim
+
+    def _call_method(self, module, method, *args, **kwargs):
+        raise NotImplementedError()
+
+    def _wait_for_task(self, task_ref):
+        raise NotImplementedError()
+
+
+class FakeObjectRetrievalSession(FakeSession):
+    """A session for faking object retrieval tasks.
+
+    _call_method() returns a given set of objects
+    sequentially, regardless of the method called.
+    """
+
+    def __init__(self, *ret):
+        super(FakeObjectRetrievalSession, self).__init__()
+        self.ret = ret
+        self.ind = 0
+
+    def _call_method(self, module, method, *args, **kwargs):
+        # return fake objects in a circular manner
+        self.ind = (self.ind + 1) % len(self.ret)
+        return self.ret[self.ind - 1]
+
+
 class FakeVim(object):
     """Fake VIM Class."""
 

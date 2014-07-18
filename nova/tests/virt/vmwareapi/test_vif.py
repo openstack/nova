@@ -24,7 +24,6 @@ from nova import test
 from nova.tests import matchers
 from nova.tests import utils
 from nova.tests.virt.vmwareapi import fake
-from nova.tests.virt.vmwareapi import test_vm_util
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import network_util
 from nova.virt.vmwareapi import vif
@@ -54,7 +53,7 @@ class VMwareVifTestCase(test.NoDBTestCase):
                                   ovs_interfaceid=None,
                                   rxtx_cap=3)
         ])[0]
-        self.session = test_vm_util.fake_session()
+        self.session = fake.FakeSession()
         self.cluster = None
 
     def tearDown(self):
