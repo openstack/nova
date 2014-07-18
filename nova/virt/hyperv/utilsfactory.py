@@ -15,6 +15,7 @@
 
 from oslo.config import cfg
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import hostutils
 from nova.virt.hyperv import livemigrationutils
@@ -57,20 +58,30 @@ def _get_class(v1_class, v2_class, force_v1_flag):
     return cls
 
 
+def _get_virt_utils_class(v1_class, v2_class):
+    # The "root/virtualization" WMI namespace is no longer supported on
+    # Windows Server / Hyper-V Server 2012 R2 / Windows 8.1
+    # (kernel version 6.3) or above.
+    if (CONF.hyperv.force_hyperv_utils_v1 and
+            get_hostutils().check_min_windows_version(6, 3)):
+        raise vmutils.HyperVException(
+            _('The "force_hyperv_utils_v1" option cannot be set to "True" '
+              'on Windows Server / Hyper-V Server 2012 R2 or above as the WMI '
+              '"root/virtualization" namespace is no longer supported.'))
+    return _get_class(v1_class, v2_class, CONF.hyperv.force_hyperv_utils_v1)
+
+
 def get_vmutils(host='.'):
-    return _get_class(vmutils.VMUtils, vmutilsv2.VMUtilsV2,
-                      CONF.hyperv.force_hyperv_utils_v1)(host)
+    return _get_virt_utils_class(vmutils.VMUtils, vmutilsv2.VMUtilsV2)(host)
 
 
 def get_vhdutils():
-    return _get_class(vhdutils.VHDUtils, vhdutilsv2.VHDUtilsV2,
-                      CONF.hyperv.force_hyperv_utils_v1)()
+    return _get_virt_utils_class(vhdutils.VHDUtils, vhdutilsv2.VHDUtilsV2)()
 
 
 def get_networkutils():
-    return _get_class(networkutils.NetworkUtils,
-                      networkutilsv2.NetworkUtilsV2,
-                      CONF.hyperv.force_hyperv_utils_v1)()
+    return _get_virt_utils_class(networkutils.NetworkUtils,
+                           networkutilsv2.NetworkUtilsV2)()
 
 
 def get_hostutils():
@@ -91,6 +102,5 @@ def get_livemigrationutils():
 
 
 def get_rdpconsoleutils():
-    return _get_class(rdpconsoleutils.RDPConsoleUtils,
-                      rdpconsoleutilsv2.RDPConsoleUtilsV2,
-                      CONF.hyperv.force_hyperv_utils_v1)()
+    return _get_virt_utils_class(rdpconsoleutils.RDPConsoleUtils,
+                      rdpconsoleutilsv2.RDPConsoleUtilsV2)()
