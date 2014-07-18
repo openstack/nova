@@ -1942,6 +1942,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
     def test_rescheduled_exception_do_not_deallocate_network(self):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'deallocate_networks_on_reschedule')
         self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                 'build_instances')
@@ -1953,6 +1955,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.filter_properties).AndRaise(
                         exception.RescheduledException(reason='',
                             instance_uuid=self.instance['uuid']))
+        self.compute.driver.deallocate_networks_on_reschedule(
+                self.instance).AndReturn(False)
         self.compute.compute_task_api.build_instances(self.context,
                 [self.instance], self.image, self.filter_properties,
                 self.admin_pass, self.injected_files, self.requested_networks,
@@ -1970,10 +1974,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
 
-    def test_rescheduled_exception_deallocate_network_if_dhcp(self):
+    def test_rescheduled_exception_deallocate_network(self):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(self.compute.driver,
-                'dhcp_options_for_instance')
+                                 'deallocate_networks_on_reschedule')
         self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                 'build_instances')
@@ -1985,8 +1989,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.filter_properties).AndRaise(
                         exception.RescheduledException(reason='',
                             instance_uuid=self.instance['uuid']))
-        self.compute.driver.dhcp_options_for_instance(self.instance).AndReturn(
-                {'fake': 'options'})
+        self.compute.driver.deallocate_networks_on_reschedule(
+                self.instance).AndReturn(True)
         self.compute._cleanup_allocated_networks(self.context, self.instance,
                 self.requested_networks)
         self.compute.compute_task_api.build_instances(self.context,
