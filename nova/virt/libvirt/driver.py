@@ -4975,34 +4975,39 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_disk_over_committed_size_total(self):
         """Return total over committed disk size for all instances."""
         # Disk size that all instance uses : virtual_size - disk_size
-        instances_name = self.list_instances()
         disk_over_committed_size = 0
-        for i_name in instances_name:
+        for dom in self._list_instance_domains():
             try:
+                xml = dom.XMLDesc(0)
                 disk_infos = jsonutils.loads(
-                        self.get_instance_disk_info(i_name))
+                        self._get_instance_disk_info(dom.name(), xml))
                 for info in disk_infos:
                     disk_over_committed_size += int(
                         info['over_committed_disk_size'])
+            except libvirt.libvirtError as ex:
+                error_code = ex.get_error_code()
+                LOG.warn(_LW(
+                    'Error from libvirt while getting description of '
+                    '%(instance_name)s: [Error Code %(error_code)s] %(ex)s'
+                ) % {'instance_name': dom.name(),
+                     'error_code': error_code,
+                     'ex': ex})
             except OSError as e:
                 if e.errno == errno.ENOENT:
                     LOG.warn(_LW('Periodic task is updating the host stat, '
                                  'it is trying to get disk %(i_name)s, '
                                  'but disk file was removed by concurrent '
                                  'operations such as resize.'),
-                                {'i_name': i_name})
+                                {'i_name': dom.name()})
                 if e.errno == errno.EACCES:
                     LOG.warn(_LW('Periodic task is updating the host stat, '
                                  'it is trying to get disk %(i_name)s, '
                                  'but access is denied. It is most likely '
                                  'due to a VM that exists on the compute '
                                  'node but is not managed by Nova.'),
-                             {'i_name': i_name})
+                             {'i_name': dom.name()})
                 else:
                     raise
-            except exception.InstanceNotFound:
-                # Instance was deleted during the check so ignore it
-                pass
             # NOTE(gtt116): give other tasks a chance.
             greenthread.sleep(0)
         return disk_over_committed_size
