@@ -126,6 +126,8 @@ class HyperVAPIBaseTestCase(test.NoDBTestCase):
                        fake_get_remote_image_service)
 
         def fake_check_min_windows_version(fake_self, major, minor):
+            if [major, minor] >= [6, 3]:
+                return False
             return self._check_min_windows_version_satisfied
         self.stubs.Set(hostutils.HostUtils, 'check_min_windows_version',
                        fake_check_min_windows_version)

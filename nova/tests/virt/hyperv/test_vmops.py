@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 from nova import exception
 from nova import test
 from nova.tests import fake_instance
@@ -27,8 +29,14 @@ class VMOpsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(VMOpsTestCase, self).setUp()
         self.context = 'fake-context'
-        self.flags(force_hyperv_utils_v1=True, group='hyperv')
-        self.flags(force_volumeutils_v1=True, group='hyperv')
+
+        # utilsfactory will check the host OS version via get_hostutils,
+        # in order to return the proper Utils Class, so it must be mocked.
+        patched_func = mock.patch.object(vmops.utilsfactory,
+                                 "get_hostutils")
+        patched_func.start()
+        self.addCleanup(patched_func.stop)
+
         self._vmops = vmops.VMOps()
 
     def test_attach_config_drive(self):
