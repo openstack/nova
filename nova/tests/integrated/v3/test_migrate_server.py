@@ -16,6 +16,7 @@
 from nova.conductor import manager as conductor_manager
 from nova import db
 from nova.tests.integrated.v3 import test_servers
+from nova import utils
 
 
 class MigrateServerSamplesJsonTest(test_servers.ServersSampleBase):
@@ -55,7 +56,8 @@ class MigrateServerSamplesJsonTest(test_servers.ServersSampleBase):
                            report_count=1,
                            updated_at='foo',
                            hypervisor_type='bar',
-                           hypervisor_version='1000',
+                           hypervisor_version=utils.convert_version_to_int(
+                               '1.0'),
                            disabled=False)
             return {'compute_node': [service]}
         self.stubs.Set(db, "service_get_by_compute_host", fake_get_compute)
