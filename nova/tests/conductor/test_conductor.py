@@ -666,8 +666,7 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
     def test_aggregate_host_add(self):
         aggregate_ref = self._setup_aggregate_with_host()
 
-        self.assertTrue(any([host == 'bar'
-                             for host in aggregate_ref['hosts']]))
+        self.assertIn('bar', aggregate_ref['hosts'])
 
         db.aggregate_delete(self.context.elevated(), aggregate_ref['id'])
 
@@ -680,8 +679,7 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         aggregate_ref = db.aggregate_get(self.context.elevated(),
                 aggregate_ref['id'])
 
-        self.assertFalse(any([host == 'bar'
-                              for host in aggregate_ref['hosts']]))
+        self.assertNotIn('bar', aggregate_ref['hosts'])
 
         db.aggregate_delete(self.context.elevated(), aggregate_ref['id'])
 

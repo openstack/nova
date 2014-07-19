@@ -802,8 +802,7 @@ class VMRefOrRaiseVMNotFoundTestCase(VMUtilsTestBase):
         try:
             vm_utils.vm_ref_or_raise('session', 'somename')
         except exception.InstanceNotFound as e:
-            self.assertTrue(
-                'somename' in str(e))
+            self.assertIn('somename', str(e))
         mock.VerifyAll()
 
 

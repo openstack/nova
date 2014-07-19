@@ -87,9 +87,9 @@ class MigrationsTestCase(test.NoDBTestCase):
             'migrations': migrations.output(migrations_obj)}
 
         for mig in migrations_in_progress['migrations']:
-            self.assertTrue('id' in mig)
-            self.assertTrue('deleted' not in mig)
-            self.assertTrue('deleted_at' not in mig)
+            self.assertIn('id', mig)
+            self.assertNotIn('deleted', mig)
+            self.assertNotIn('deleted_at', mig)
 
         filters = {'host': 'host1', 'status': 'migrating',
                    'cell_name': 'ChildCell'}
