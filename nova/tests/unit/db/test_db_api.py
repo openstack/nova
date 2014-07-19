@@ -2632,6 +2632,9 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         set_and_check(meta)
         del meta['gigawatts']
         set_and_check(meta)
+        self.ctxt.read_deleted = 'yes'
+        self.assertNotIn('gigawatts',
+            db.instance_system_metadata_get(self.ctxt, instance.uuid))
 
     def test_security_group_in_use(self):
         db.instance_create(self.ctxt, dict(host='foo'))

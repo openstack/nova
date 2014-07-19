@@ -828,11 +828,12 @@ def last_bytes(file_like_object, num):
     return (file_like_object.read(), remaining)
 
 
-def metadata_to_dict(metadata):
+def metadata_to_dict(metadata, filter_deleted=False):
     result = {}
     for item in metadata:
-        if not item.get('deleted'):
-            result[item['key']] = item['value']
+        if not filter_deleted and item.get('deleted'):
+            continue
+        result[item['key']] = item['value']
     return result
 
 
@@ -856,7 +857,8 @@ def instance_sys_meta(instance):
     if isinstance(instance['system_metadata'], dict):
         return instance['system_metadata']
     else:
-        return metadata_to_dict(instance['system_metadata'])
+        return metadata_to_dict(instance['system_metadata'],
+                                filter_deleted=True)
 
 
 def get_wrapped_function(function):
@@ -1103,7 +1105,7 @@ def get_image_from_system_metadata(system_meta):
     properties = {}
 
     if not isinstance(system_meta, dict):
-        system_meta = metadata_to_dict(system_meta)
+        system_meta = metadata_to_dict(system_meta, filter_deleted=True)
 
     for key, value in six.iteritems(system_meta):
         if value is None:
