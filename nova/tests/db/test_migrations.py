@@ -865,4 +865,4 @@ class ProjectTestCase(test.NoDBTestCase):
 
         helpful_msg = (_("The following migrations are missing a downgrade:"
                          "\n\t%s") % '\n\t'.join(sorted(missing_downgrade)))
-        self.assertTrue(not missing_downgrade, helpful_msg)
+        self.assertFalse(missing_downgrade, helpful_msg)
