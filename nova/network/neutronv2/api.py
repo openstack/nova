@@ -573,8 +573,8 @@ class API(base_api.NetworkAPI):
                                                               port_req_body)
                     return self._get_instance_nw_info(context, instance)
                 except Exception as ex:
-                    msg = _("Unable to update port %(portid)s on subnet "
-                            "%(subnet_id)s with failure: %(exception)s")
+                    msg = ("Unable to update port %(portid)s on subnet "
+                           "%(subnet_id)s with failure: %(exception)s")
                     LOG.debug(msg, {'portid': p['id'],
                                     'subnet_id': subnet['id'],
                                     'exception': ex})
@@ -602,8 +602,8 @@ class API(base_api.NetworkAPI):
                 neutronv2.get_client(context).update_port(p['id'],
                                                           port_req_body)
             except Exception as ex:
-                msg = _("Unable to update port %(portid)s with"
-                        " failure: %(exception)s")
+                msg = ("Unable to update port %(portid)s with"
+                       " failure: %(exception)s")
                 LOG.debug(msg, {'portid': p['id'], 'exception': ex})
             return self._get_instance_nw_info(context, instance)
 
