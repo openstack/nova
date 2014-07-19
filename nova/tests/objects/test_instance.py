@@ -21,7 +21,6 @@ import netaddr
 
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import flavors
-from nova import context
 from nova import db
 from nova import exception
 from nova.network import model as network_model
@@ -1089,14 +1088,3 @@ class TestInstanceObjectMisc(test.NoDBTestCase):
         self.stubs.Set(instance, '_INSTANCE_OPTIONAL_JOINED_FIELDS', ['bar'])
         self.assertEqual(['bar'], instance._expected_cols(['foo', 'bar']))
         self.assertIsNone(instance._expected_cols(None))
-
-
-class TestAddImageRef(test.TestCase):
-    @mock.patch('nova.objects.BlockDeviceMappingList.root_metadata')
-    def test_add_image_ref(self, mock_root_metadata):
-        mock_root_metadata.return_value = {'image_id': 'fake_image'}
-        fake_instance = fakes.stub_instance(id=1, uuid=fakes.FAKE_UUID,
-                                            image_ref='')
-        ctx = context.RequestContext('fake-user', 'fake-project')
-        new_instance = instance.add_image_ref(ctx, fake_instance)
-        self.assertEqual('fake_image', new_instance['image_ref'])
