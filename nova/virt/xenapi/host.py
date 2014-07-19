@@ -25,9 +25,9 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import exception
+from nova.i18n import _
 from nova import objects
 from nova.objects import service as service_obj
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.pci import pci_whitelist

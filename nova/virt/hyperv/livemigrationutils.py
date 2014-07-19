@@ -19,7 +19,7 @@ if sys.platform == 'win32':
     import wmi
 
 from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import vmutils
 from nova.virt.hyperv import vmutilsv2

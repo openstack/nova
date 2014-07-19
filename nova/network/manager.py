@@ -56,6 +56,7 @@ from oslo import messaging
 from nova import conductor
 from nova import context
 from nova import exception
+from nova.i18n import _
 from nova import ipv6
 from nova import manager
 from nova.network import api as network_api
@@ -67,7 +68,6 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import quotas as quotas_obj
 from nova.openstack.common import excutils
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task

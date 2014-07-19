@@ -18,7 +18,6 @@ import inspect
 
 from nova import context
 from nova import exception
-from nova.openstack.common import gettextutils
 from nova import test
 
 
@@ -139,16 +138,6 @@ class NovaExceptionTestCase(test.NoDBTestCase):
         self.flags(fatal_exception_format_errors=False)
         exc = FakeNovaException_Remote(lame_arg='lame')
         self.assertEqual(exc.format_message(), "some message %(somearg)s")
-
-    def test_format_message_gettext_msg_returned(self):
-        class FakeNovaException(exception.NovaException):
-            msg_fmt = gettextutils.Message("Some message %(param)s",
-                                           domain='nova')
-
-        exc = FakeNovaException(param='blah')
-        msg = exc.format_message()
-        self.assertIsInstance(msg, gettextutils.Message)
-        self.assertEqual(msg, "Some message blah")
 
 
 class ExceptionTestCase(test.NoDBTestCase):

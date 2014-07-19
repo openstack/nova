@@ -19,7 +19,7 @@ from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 
 ALIAS = "os-server-actions"
 authorize_actions = extensions.extension_authorizer('compute',

@@ -21,7 +21,7 @@ import webob.exc
 
 from nova.api.openstack import extensions
 from nova import compute
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova import utils
 
 CONF = cfg.CONF

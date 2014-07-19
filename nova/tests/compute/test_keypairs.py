@@ -20,7 +20,7 @@ from nova.compute import api as compute_api
 from nova import context
 from nova import db
 from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova import quota
 from nova.tests.compute import test_compute
 from nova.tests import fake_notifier

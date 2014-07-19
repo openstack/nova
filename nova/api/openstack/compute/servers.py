@@ -33,9 +33,9 @@ from nova import block_device
 from nova import compute
 from nova.compute import flavors
 from nova import exception
+from nova.i18n import _
 from nova import objects
 from nova.objects import instance as instance_obj
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 from nova.openstack.common import timeutils

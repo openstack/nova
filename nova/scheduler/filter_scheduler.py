@@ -25,8 +25,8 @@ from oslo.config import cfg
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
+from nova.i18n import _
 from nova.objects import instance_group as instance_group_obj
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.pci import pci_request
 from nova import rpc

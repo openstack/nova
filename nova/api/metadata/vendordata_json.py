@@ -20,7 +20,7 @@ import errno
 from oslo.config import cfg
 
 from nova.api.metadata import base
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 

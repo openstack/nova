@@ -34,8 +34,8 @@ import webob.dec
 import webob.exc
 
 from nova import exception
+from nova.i18n import _
 from nova.openstack.common import excutils
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 wsgi_opts = [

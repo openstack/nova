@@ -18,7 +18,7 @@ import errno
 import os
 import shutil
 
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova.openstack.common import log as logging
 from nova.virt.disk import api as disk_api
 from nova.virt.libvirt import utils as libvirt_utils

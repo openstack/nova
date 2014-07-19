@@ -20,8 +20,8 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import exception
+from nova.i18n import _
 from nova import objects
-from nova.openstack.common.gettextutils import _
 
 
 class FlavorExtraSpecsController(object):

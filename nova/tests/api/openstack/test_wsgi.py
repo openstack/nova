@@ -17,7 +17,7 @@ import webob
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import exception
-from nova.openstack.common import gettextutils
+from nova import i18n
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import utils
@@ -132,7 +132,7 @@ class RequestTest(test.NoDBTestCase):
                  'id2': compute_nodes[2]})
 
     def test_from_request(self):
-        self.stubs.Set(gettextutils, 'get_available_languages',
+        self.stubs.Set(i18n, 'get_available_languages',
                        fakes.fake_get_available_languages)
 
         request = wsgi.Request.blank('/')
@@ -143,7 +143,7 @@ class RequestTest(test.NoDBTestCase):
     def test_asterisk(self):
         # asterisk should match first available if there
         # are not any other available matches
-        self.stubs.Set(gettextutils, 'get_available_languages',
+        self.stubs.Set(i18n, 'get_available_languages',
                        fakes.fake_get_available_languages)
 
         request = wsgi.Request.blank('/')
@@ -152,7 +152,7 @@ class RequestTest(test.NoDBTestCase):
         self.assertEqual(request.best_match_language(), 'en_GB')
 
     def test_prefix(self):
-        self.stubs.Set(gettextutils, 'get_available_languages',
+        self.stubs.Set(i18n, 'get_available_languages',
                        fakes.fake_get_available_languages)
 
         request = wsgi.Request.blank('/')
@@ -161,7 +161,7 @@ class RequestTest(test.NoDBTestCase):
         self.assertEqual(request.best_match_language(), 'zh_CN')
 
     def test_secondary(self):
-        self.stubs.Set(gettextutils, 'get_available_languages',
+        self.stubs.Set(i18n, 'get_available_languages',
                        fakes.fake_get_available_languages)
 
         request = wsgi.Request.blank('/')
@@ -170,7 +170,7 @@ class RequestTest(test.NoDBTestCase):
         self.assertEqual(request.best_match_language(), 'en_GB')
 
     def test_none_found(self):
-        self.stubs.Set(gettextutils, 'get_available_languages',
+        self.stubs.Set(i18n, 'get_available_languages',
                        fakes.fake_get_available_languages)
 
         request = wsgi.Request.blank('/')
@@ -179,7 +179,7 @@ class RequestTest(test.NoDBTestCase):
         self.assertIs(request.best_match_language(), None)
 
     def test_no_lang_header(self):
-        self.stubs.Set(gettextutils, 'get_available_languages',
+        self.stubs.Set(i18n, 'get_available_languages',
                        fakes.fake_get_available_languages)
 
         request = wsgi.Request.blank('/')

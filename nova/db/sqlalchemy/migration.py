@@ -23,7 +23,7 @@ import sqlalchemy
 
 from nova.db.sqlalchemy import api as db_session
 from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 
 INIT_VERSION = 215
 _REPOSITORY = None

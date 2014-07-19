@@ -24,7 +24,7 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute_api
 from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 
 
 ALIAS = 'keypairs'

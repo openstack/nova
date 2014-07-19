@@ -16,8 +16,8 @@
 from webob import exc
 
 from nova import context
+from nova.i18n import _
 from nova import objects
-from nova.openstack.common.gettextutils import _
 from nova import utils
 
 

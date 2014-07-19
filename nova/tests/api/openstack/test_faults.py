@@ -25,7 +25,7 @@ import nova.api.openstack
 from nova.api.openstack import common
 from nova.api.openstack import wsgi
 from nova import exception
-from nova.openstack.common import gettextutils
+from nova import i18n
 from nova.openstack.common import jsonutils
 from nova import test
 
@@ -33,22 +33,21 @@ from nova import test
 class TestFaultWrapper(test.NoDBTestCase):
     """Tests covering `nova.api.openstack:FaultWrapper` class."""
 
-    @mock.patch('nova.openstack.common.gettextutils.translate')
-    def test_safe_exception_translated(self, mock_translate):
-        msg = gettextutils.Message('Should be translated.', domain='nova')
-        safe_exception = exception.NotFound()
-        safe_exception.msg_fmt = msg
+    @mock.patch('oslo.i18n.translate')
+    @mock.patch('nova.i18n.get_available_languages')
+    def test_safe_exception_translated(self, mock_languages, mock_translate):
+        def fake_translate(value, locale):
+            return "I've been translated!"
+
+        mock_translate.side_effect = fake_translate
+
+        # Create an exception, passing a translatable message with a
+        # known value we can test for later.
+        safe_exception = exception.NotFound(i18n._('Should be translated.'))
         safe_exception.safe = True
         safe_exception.code = 404
 
         req = webob.Request.blank('/')
-
-        def fake_translate(mesg, locale):
-            if mesg == "Should be translated.":
-                return "I've been translated!"
-            return mesg
-
-        mock_translate.side_effect = fake_translate
 
         def raiser(*args, **kwargs):
             raise safe_exception
@@ -56,9 +55,12 @@ class TestFaultWrapper(test.NoDBTestCase):
         wrapper = nova.api.openstack.FaultWrapper(raiser)
         response = req.get_response(wrapper)
 
+        # The text of the exception's message attribute (replaced
+        # above with a non-default value) should be passed to
+        # translate().
+        mock_translate.assert_any_call(u'Should be translated.', None)
+        # The return value from translate() should appear in the response.
         self.assertIn("I've been translated!", unicode(response.body))
-        mock_translate.assert_any_call(
-                u'Should be translated.', None)
 
 
 class TestFaults(test.NoDBTestCase):
@@ -175,7 +177,7 @@ class TestFaults(test.NoDBTestCase):
     def test_raise_localize_explanation(self):
         msgid = "String with params: %s"
         params = ('blah', )
-        lazy_gettext = gettextutils._
+        lazy_gettext = i18n._
         expl = lazy_gettext(msgid) % params
 
         @webob.dec.wsgify

@@ -27,10 +27,10 @@ from nova.cells import state as cells_state
 from nova.cells import utils as cells_utils
 from nova import context
 from nova import exception
+from nova.i18n import _
 from nova import manager
 from nova import objects
 from nova.objects import base as base_obj
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task

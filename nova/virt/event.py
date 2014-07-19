@@ -22,7 +22,7 @@ driver.
 
 import time
 
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 
 EVENT_LIFECYCLE_STARTED = 0
 EVENT_LIFECYCLE_STOPPED = 1

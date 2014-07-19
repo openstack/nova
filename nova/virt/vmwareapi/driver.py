@@ -28,8 +28,7 @@ from oslo.config import cfg
 import suds
 
 from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common.gettextutils import _LC
+from nova.i18n import _, _LC
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall

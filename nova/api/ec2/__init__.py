@@ -32,8 +32,8 @@ from nova.api.ec2 import faults
 from nova.api import validator
 from nova import context
 from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common.gettextutils import _LE
+from nova.i18n import _
+from nova.i18n import _LE
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging

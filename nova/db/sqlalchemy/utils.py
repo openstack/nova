@@ -23,8 +23,8 @@ from sqlalchemy.types import NullType
 
 from nova.db.sqlalchemy import api as db
 from nova import exception
+from nova.i18n import _
 from nova.openstack.common.db.sqlalchemy import utils as oslodbutils
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 

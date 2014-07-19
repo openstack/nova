@@ -23,7 +23,7 @@ from lxml import etree
 import six
 
 from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova import utils
 
 

@@ -23,8 +23,8 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 import nova.exception
+from nova.i18n import _
 from nova import objects
-from nova.openstack.common.gettextutils import _
 from nova import utils
 
 # NOTE(russellb) There is one other policy, 'legacy', but we don't allow that

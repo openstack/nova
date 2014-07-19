@@ -18,8 +18,8 @@
 from oslo.config import cfg
 
 from nova.cloudpipe import pipelib
-from nova.openstack.common.gettextutils import _LI
-from nova.openstack.common.gettextutils import _LW
+from nova.i18n import _LI
+from nova.i18n import _LW
 from nova.openstack.common import log as logging
 import nova.virt.firewall as base_firewall
 from nova.virt import netutils

@@ -40,7 +40,7 @@ import math
 from oslo.config import cfg
 import six.moves.urllib.parse as urlparse
 
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import units

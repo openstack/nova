@@ -28,8 +28,8 @@ import sys
 from oslo.config import cfg
 import webob.exc
 
+from nova.i18n import _
 from nova.openstack.common import excutils
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import safe_utils
 

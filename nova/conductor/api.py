@@ -20,7 +20,7 @@ from oslo import messaging
 from nova import baserpc
 from nova.conductor import manager
 from nova.conductor import rpcapi
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova.openstack.common import log as logging
 from nova import utils
 

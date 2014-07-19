@@ -20,8 +20,8 @@ from nova.api.openstack.compute.views import images as views_images
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
+from nova.i18n import _
 import nova.image.glance
-from nova.openstack.common.gettextutils import _
 import nova.utils
 
 

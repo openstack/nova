@@ -25,8 +25,8 @@ from oslo.config import cfg
 
 from nova import context
 from nova import exception
+from nova.i18n import _
 from nova import objects
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import versionutils
 from nova import utils

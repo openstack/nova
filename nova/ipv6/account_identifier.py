@@ -21,7 +21,7 @@ import hashlib
 
 import netaddr
 
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 
 
 def to_global(prefix, mac, project_id):

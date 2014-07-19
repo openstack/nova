@@ -22,8 +22,8 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.compute import flavors
 from nova import exception
+from nova.i18n import _
 from nova import objects
-from nova.openstack.common.gettextutils import _
 from nova import utils
 
 authorize = extensions.extension_authorizer('compute', 'flavorextraspecs')

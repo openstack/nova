@@ -24,9 +24,9 @@ import os
 from oslo.config import cfg
 
 from nova import exception
+from nova.i18n import _
 from nova import image
 from nova.openstack.common import fileutils
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import imageutils
 from nova.openstack.common import log as logging
 from nova import utils

@@ -38,12 +38,12 @@ from nova.compute import api as compute_api
 from nova.compute import vm_states
 from nova import db
 from nova import exception
+from nova.i18n import _
 from nova.image import s3
 from nova import network
 from nova.network.security_group import neutron_driver
 from nova import objects
 from nova.objects import base as obj_base
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import quota

@@ -14,7 +14,7 @@
 
 import pbr.version
 
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 
 NOVA_VENDOR = "OpenStack Foundation"
 NOVA_PRODUCT = "OpenStack Nova"

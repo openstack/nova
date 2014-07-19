@@ -29,9 +29,9 @@ this class.
 import array
 
 from nova import exception
+from nova.i18n import _
 from nova.keymgr import key
 from nova.keymgr import key_mgr
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova import utils

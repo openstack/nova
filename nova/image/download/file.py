@@ -18,8 +18,8 @@ import logging
 from oslo.config import cfg
 
 from nova import exception
+from nova.i18n import _
 import nova.image.download.base as xfer_base
-from nova.openstack.common.gettextutils import _
 import nova.virt.libvirt.utils as lv_utils
 
 

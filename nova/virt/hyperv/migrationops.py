@@ -18,8 +18,8 @@ Management class for migration / resize operations.
 """
 import os
 
+from nova.i18n import _
 from nova.openstack.common import excutils
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import units
 from nova.virt.hyperv import imagecache

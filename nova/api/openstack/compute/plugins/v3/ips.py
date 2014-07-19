@@ -20,7 +20,7 @@ from nova.api.openstack import common
 from nova.api.openstack.compute.views import addresses as views_addresses
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 
 
 class IPsController(wsgi.Controller):

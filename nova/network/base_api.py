@@ -18,10 +18,10 @@ import inspect
 
 from nova.db import base
 from nova import hooks
+from nova.i18n import _
 from nova.network import model as network_model
 from nova import objects
 from nova.openstack.common import excutils
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 

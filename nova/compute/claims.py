@@ -18,8 +18,8 @@ Claim objects for use with resource tracking.
 """
 
 from nova import exception
+from nova.i18n import _
 from nova.objects import base as obj_base
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.pci import pci_request

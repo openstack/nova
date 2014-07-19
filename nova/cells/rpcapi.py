@@ -27,8 +27,8 @@ from oslo.config import cfg
 from oslo import messaging
 
 from nova import exception
+from nova.i18n import _
 from nova.objects import base as objects_base
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import rpc

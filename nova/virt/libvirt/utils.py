@@ -25,9 +25,9 @@ import platform
 from lxml import etree
 from oslo.config import cfg
 
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common.gettextutils import _LI
-from nova.openstack.common.gettextutils import _LW
+from nova.i18n import _
+from nova.i18n import _LI
+from nova.i18n import _LW
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova import utils

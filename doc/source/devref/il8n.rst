@@ -21,4 +21,4 @@ in nova/tests/test_localization.py.
 
 The ``_()`` function is found by doing::
 
-    from nova.openstack.common.gettextutils import _
+    from nova.i18n import _

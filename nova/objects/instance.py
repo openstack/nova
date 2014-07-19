@@ -18,11 +18,11 @@ from nova import compute
 from nova.compute import flavors
 from nova import db
 from nova import exception
+from nova.i18n import _
 from nova import notifications
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import utils

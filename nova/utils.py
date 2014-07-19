@@ -41,9 +41,8 @@ from oslo import messaging
 import six
 
 from nova import exception
+from nova.i18n import _
 from nova.openstack.common import excutils
-from nova.openstack.common import gettextutils
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
@@ -444,8 +443,6 @@ def utf8(value):
     """
     if isinstance(value, unicode):
         return value.encode('utf-8')
-    elif isinstance(value, gettextutils.Message):
-        return unicode(value).encode('utf-8')
     assert isinstance(value, str)
     return value
 

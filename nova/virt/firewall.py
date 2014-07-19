@@ -19,12 +19,12 @@ from oslo.config import cfg
 
 from nova.compute import utils as compute_utils
 from nova import context
+from nova.i18n import _
+from nova.i18n import _LI
 from nova.network import linux_net
 from nova import objects
 from nova.objects import security_group as security_group_obj
 from nova.objects import security_group_rule as security_group_rule_obj
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common.gettextutils import _LI
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova import utils

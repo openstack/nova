@@ -22,7 +22,7 @@ from migrate.versioning.repository import Repository
 import sqlalchemy
 
 from nova import exception
-from nova.openstack.common.gettextutils import _
+from nova.i18n import _
 from nova.virt.baremetal.db.sqlalchemy import session
 
 INIT_VERSION = 0

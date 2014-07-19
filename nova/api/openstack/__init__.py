@@ -27,9 +27,9 @@ import webob.exc
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import exception
+from nova.i18n import _
+from nova.i18n import translate
 from nova import notifications
-from nova.openstack.common import gettextutils
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import utils
 from nova import wsgi as base_wsgi
@@ -107,12 +107,8 @@ class FaultWrapper(base_wsgi.Middleware):
         # inconsistent with the EC2 API to hide every exception,
         # including those that are safe to expose, see bug 1021373
         if safe:
-            if isinstance(inner.msg_fmt, gettextutils.Message):
-                user_locale = req.best_match_language()
-                inner_msg = gettextutils.translate(
-                        inner.msg_fmt, user_locale)
-            else:
-                inner_msg = unicode(inner)
+            user_locale = req.best_match_language()
+            inner_msg = translate(inner.message, user_locale)
             outer.explanation = '%s: %s' % (inner.__class__.__name__,
                                             inner_msg)
 

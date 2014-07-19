@@ -32,8 +32,8 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context as nova_context
 from nova import exception
+from nova.i18n import _, _LE
 from nova.openstack.common import excutils
-from nova.openstack.common.gettextutils import _, _LE
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils

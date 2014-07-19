@@ -33,8 +33,8 @@ encryption key so *any* volume can be decrypted once the fixed key is known.
 
 from oslo.config import cfg
 
+from nova.i18n import _
 from nova.keymgr import single_key_mgr
-from nova.openstack.common.gettextutils import _
 
 key_mgr_opts = [
     cfg.StrOpt('fixed_key',
