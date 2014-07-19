@@ -1101,12 +1101,14 @@ class VlanNetworkTestCase(test.TestCase):
 
         self.network.allocate_floating_ip(ctxt, ctxt.project_id)
 
-    def test_deallocate_floating_ip(self):
+    @mock.patch('nova.quota.QUOTAS.reserve')
+    @mock.patch('nova.quota.QUOTAS.commit')
+    def test_deallocate_floating_ip(self, mock_commit, mock_reserve):
         ctxt = context.RequestContext('testuser', 'testproject',
                                       is_admin=False)
 
         def fake1(*args, **kwargs):
-            pass
+            return dict(test_floating_ip.fake_floating_ip)
 
         def fake2(*args, **kwargs):
             return dict(test_floating_ip.fake_floating_ip,
@@ -1127,9 +1129,13 @@ class VlanNetworkTestCase(test.TestCase):
                           ctxt,
                           mox.IgnoreArg())
 
+        mock_reserve.return_value = 'reserve'
         # this time should not raise
         self.stubs.Set(self.network.db, 'floating_ip_get_by_address', fake3)
         self.network.deallocate_floating_ip(ctxt, ctxt.project_id)
+
+        mock_commit.assert_called_once_with(ctxt, 'reserve',
+                                            project_id='testproject')
 
     @mock.patch('nova.db.fixed_ip_get')
     def test_associate_floating_ip(self, fixed_get):

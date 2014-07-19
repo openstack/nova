@@ -106,7 +106,7 @@ class FloatingIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
 
     @obj_base.remotable_classmethod
     def deallocate(cls, context, address):
-        db.floating_ip_deallocate(context, address)
+        return db.floating_ip_deallocate(context, address)
 
     @obj_base.remotable_classmethod
     def destroy(cls, context, address):
