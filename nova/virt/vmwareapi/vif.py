@@ -156,7 +156,7 @@ def get_network_ref(session, cluster, vif, is_neutron):
 
 def get_vif_info(session, cluster, is_neutron, vif_model, network_info):
     vif_infos = []
-    if not network_info:
+    if network_info is None:
         return vif_infos
     for vif in network_info:
         mac_address = vif['address']

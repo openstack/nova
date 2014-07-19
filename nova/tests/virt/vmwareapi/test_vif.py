@@ -328,6 +328,11 @@ class VMwareVifTestCase(test.NoDBTestCase):
                                     'is_neutron', 'fake_model', None)
         self.assertEqual([], vif_info)
 
+    def test_get_vif_info_empty_list(self):
+        vif_info = vif.get_vif_info('fake_session', 'fake_cluster',
+                                    'is_neutron', 'fake_model', [])
+        self.assertEqual([], vif_info)
+
     @mock.patch.object(vif, 'get_network_ref', return_value='fake_ref')
     def test_get_vif_info(self, mock_get_network_ref):
         network_info = utils.get_test_network_info()
