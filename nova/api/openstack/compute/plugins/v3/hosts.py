@@ -17,8 +17,10 @@
 
 import webob.exc
 
+from nova.api.openstack.compute.schemas.v3 import hosts
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.i18n import _
@@ -92,49 +94,29 @@ class HostController(wsgi.Controller):
         return {'hosts': hosts}
 
     @extensions.expected_errors((400, 404, 501))
+    @validation.schema(hosts.update)
     def update(self, req, id, body):
         """:param body: example format {'host': {'status': 'enable',
                                      'maintenance_mode': 'enable'}}
            :returns:
         """
-        def read_enabled(orig_val, msg):
+        def read_enabled(orig_val):
             """:param orig_val: A string with either 'enable' or 'disable'. May
                                 be surrounded by whitespace, and case doesn't
                                 matter
-               :param msg: The message to be passed to HTTPBadRequest. A single
-                           %s will be replaced with orig_val.
                :returns: True for 'enabled' and False for 'disabled'
             """
             val = orig_val.strip().lower()
-            if val == "enable":
-                return True
-            elif val == "disable":
-                return False
-            else:
-                raise webob.exc.HTTPBadRequest(explanation=msg % orig_val)
+            return val == "enable"
         context = req.environ['nova.context']
         authorize(context)
         # See what the user wants to 'update'
-        if not self.is_valid_body(body, 'host'):
-            raise webob.exc.HTTPBadRequest(
-                explanation=_("The request body invalid"))
-        params = dict([(k.strip().lower(), v)
-                       for k, v in body['host'].iteritems()])
-        orig_status = status = params.pop('status', None)
-        orig_maint_mode = maint_mode = params.pop('maintenance_mode', None)
-        # Validate the request
-        if len(params) > 0:
-            # Some extra param was passed. Fail.
-            explanation = _("Invalid update setting: '%s'") % params.keys()[0]
-            raise webob.exc.HTTPBadRequest(explanation=explanation)
-        if orig_status is not None:
-            status = read_enabled(orig_status, _("Invalid status: '%s'"))
-        if orig_maint_mode is not None:
-            maint_mode = read_enabled(orig_maint_mode, _("Invalid mode: '%s'"))
-        if status is None and maint_mode is None:
-            explanation = _("'status' or 'maintenance_mode' needed for "
-                            "host update")
-            raise webob.exc.HTTPBadRequest(explanation=explanation)
+        status = body['host'].get('status')
+        maint_mode = body['host'].get('maintenance_mode')
+        if status is not None:
+            status = read_enabled(status)
+        if maint_mode is not None:
+            maint_mode = read_enabled(maint_mode)
         # Make the calls and merge the results
         result = {'host': id}
         if status is not None:
