@@ -140,6 +140,19 @@ class DatastorePath(object):
     def rel_path(self):
         return self._rel_path
 
+    def join(self, *paths):
+        if paths:
+            if None in paths:
+                raise ValueError(_("path component cannot be None"))
+            return DatastorePath(self.datastore,
+                                 posixpath.join(self._rel_path, *paths))
+        return self
+
+    def __eq__(self, other):
+        return (isinstance(other, DatastorePath) and
+                self._datastore_name == other._datastore_name and
+                self._rel_path == other._rel_path)
+
     @classmethod
     def parse(cls, datastore_path):
         """Constructs a DatastorePath object given a datastore path string."""

@@ -384,6 +384,28 @@ class DatastorePathTestCase(test.NoDBTestCase):
             p = ds_util.DatastorePath(t[0], *t[1])
             self.assertNotEqual(str(canonical_p), str(p))
 
+    def test_equal(self):
+        a = ds_util.DatastorePath('ds_name', 'a')
+        b = ds_util.DatastorePath('ds_name', 'a')
+        self.assertEqual(a, b)
+
+    def test_join(self):
+        p = ds_util.DatastorePath('ds_name', 'a')
+        ds_path = p.join('b')
+        self.assertEqual('[ds_name] a/b', str(ds_path))
+
+        p = ds_util.DatastorePath('ds_name', 'a')
+        ds_path = p.join()
+        self.assertEqual('[ds_name] a', str(ds_path))
+
+        bad_args = [
+            [None],
+            ['', None],
+            ['a', None],
+            ['a', None, 'b']]
+        for arg in bad_args:
+            self.assertRaises(ValueError, p.join, *arg)
+
     def test_ds_path_parse(self):
         p = ds_util.DatastorePath.parse('[dsname]')
         self.assertEqual('dsname', p.datastore)
