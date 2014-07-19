@@ -144,6 +144,48 @@ class AdditionalPropertiesDisableTestCase(APIValidationTestCase):
                                     expected_detail=detail)
 
 
+class PatternPropertiesTestCase(APIValidationTestCase):
+
+    def setUp(self):
+        super(PatternPropertiesTestCase, self).setUp()
+        schema = {
+            'patternProperties': {
+                '^[a-zA-Z0-9]{1,10}$': {
+                    'type': 'string'
+                },
+            },
+            'additionalProperties': False,
+        }
+
+        @validation.schema(request_body_schema=schema)
+        def post(body):
+            return 'Validation succeeded.'
+
+        self.post = post
+
+    def test_validate_patternProperties(self):
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': 'bar'}))
+
+    def test_validate_patternProperties_fails(self):
+        detail = "Additional properties are not allowed ('__' was unexpected)"
+        self.check_validation_error(self.post, body={'__': 'bar'},
+                                    expected_detail=detail)
+
+        detail = "Additional properties are not allowed ('' was unexpected)"
+        self.check_validation_error(self.post, body={'': 'bar'},
+                                    expected_detail=detail)
+
+        detail = ("Additional properties are not allowed ('0123456789a' was"
+                  " unexpected)")
+        self.check_validation_error(self.post, body={'0123456789a': 'bar'},
+                                    expected_detail=detail)
+
+        detail = "expected string or buffer"
+        self.check_validation_error(self.post, body={None: 'bar'},
+                                    expected_detail=detail)
+
+
 class StringTestCase(APIValidationTestCase):
 
     def setUp(self):
