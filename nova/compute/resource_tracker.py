@@ -76,6 +76,7 @@ class ResourceTracker(object):
         monitor_handler = monitors.ResourceMonitorHandler()
         self.monitors = monitor_handler.choose_monitors(self)
         self.notifier = rpc.get_notifier()
+        self.old_resources = {}
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def instance_claim(self, context, instance_ref, limits=None):
@@ -439,8 +440,17 @@ class ResourceTracker(object):
         if 'pci_stats' in resources:
             LOG.audit(_("PCI stats: %s"), resources['pci_stats'])
 
+    def _resource_change(self, resources):
+        """Check to see if any resouces have changed."""
+        if cmp(resources, self.old_resources) != 0:
+            self.old_resources = resources
+            return True
+        return False
+
     def _update(self, context, values):
         """Persist the compute node updates to the DB."""
+        if not self._resource_change(values):
+            return
         if "service" in self.compute_node:
             del self.compute_node['service']
         self.compute_node = self.conductor_api.compute_node_update(

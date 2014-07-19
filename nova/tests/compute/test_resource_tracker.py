@@ -425,6 +425,7 @@ class BaseTrackerTestCase(BaseTestCase):
 
         self.updated = False
         self.deleted = False
+        self.update_call_count = 0
 
         self.tracker = self._tracker()
         self._migrations = {}
@@ -450,9 +451,8 @@ class BaseTrackerTestCase(BaseTestCase):
 
     def _fake_compute_node_update(self, ctx, compute_node_id, values,
             prune_stats=False):
+        self.update_call_count += 1
         self.updated = True
-        values['stats'] = [{"key": "num_instances", "value": "1"}]
-
         self.compute.update(values)
         return self.compute
 
@@ -1144,3 +1144,20 @@ class ComputeMonitorTestCase(BaseTestCase):
             self.context, 'compute.metrics.update', payload)
 
         self.assertEqual(metrics, expected_metrics)
+
+
+class TrackerPeriodicTestCase(BaseTrackerTestCase):
+
+    def test_periodic_status_update(self):
+        # verify update called on instantiation
+        self.assertEqual(1, self.update_call_count)
+
+        # verify update not called if no change to resources
+        self.tracker.update_available_resource(self.context)
+        self.assertEqual(1, self.update_call_count)
+
+        # verify update is called when resources change
+        driver = self.tracker.driver
+        driver.memory_mb += 1
+        self.tracker.update_available_resource(self.context)
+        self.assertEqual(2, self.update_call_count)
