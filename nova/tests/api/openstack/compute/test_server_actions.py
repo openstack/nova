@@ -763,6 +763,22 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertEqual(instance_meta['kernel_id'], '1')
         self.assertEqual(instance_meta['ramdisk_id'], '2')
 
+    @mock.patch.object(compute_api.API, 'rebuild')
+    def test_rebuild_instance_raise_auto_disk_config_exc(self, mock_rebuild):
+        body = {
+            "rebuild": {
+                "imageRef": self._image_href,
+            },
+        }
+
+        req = fakes.HTTPRequest.blank(self.url)
+        mock_rebuild.side_effect = exception.AutoDiskConfigDisabledByImage(
+            image='dummy')
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_rebuild,
+                          req, FAKE_UUID, body)
+
     def test_resize_server(self):
 
         body = dict(resize=dict(flavorRef="http://localhost/3"))
@@ -864,6 +880,18 @@ class ServerActionsControllerTest(test.TestCase):
     @mock.patch('nova.compute.api.API.resize',
                 side_effect=exception.NoValidHost(reason=''))
     def test_resize_raises_no_valid_host(self, mock_resize):
+        body = dict(resize=dict(flavorRef="http://localhost/3"))
+
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_resize,
+                          req, FAKE_UUID, body)
+
+    @mock.patch.object(compute_api.API, 'resize')
+    def test_resize_instance_raise_auto_disk_config_exc(self, mock_resize):
+        mock_resize.side_effect = exception.AutoDiskConfigDisabledByImage(
+            image='dummy')
+
         body = dict(resize=dict(flavorRef="http://localhost/3"))
 
         req = fakes.HTTPRequest.blank(self.url)
