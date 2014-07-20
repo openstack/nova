@@ -19,19 +19,21 @@ from nova.api.openstack import common
 from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _
-from nova.image import glance
+import nova.image
 
 
 class Controller(object):
     """The image metadata API controller for the OpenStack API."""
 
     def __init__(self):
-        self.image_service = glance.get_default_image_service()
+        self.image_api = nova.image.API()
 
     def _get_image(self, context, image_id):
         try:
-            return self.image_service.show(context, image_id)
-        except exception.NotFound:
+            return self.image_api.get(context, image_id)
+        except exception.ImageNotAuthorized as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())
+        except exception.ImageNotFound:
             msg = _("Image not found.")
             raise exc.HTTPNotFound(explanation=msg)
 
@@ -62,7 +64,8 @@ class Controller(object):
         common.check_img_metadata_properties_quota(context,
                                                    image['properties'])
         try:
-            image = self.image_service.update(context, image_id, image, None)
+            image = self.image_api.update(context, image_id, image, data=None,
+                                          purge_props=True)
         except exception.ImageNotAuthorized as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(metadata=image['properties'])
@@ -90,7 +93,8 @@ class Controller(object):
         common.check_img_metadata_properties_quota(context,
                                                    image['properties'])
         try:
-            self.image_service.update(context, image_id, image, None)
+            self.image_api.update(context, image_id, image, data=None,
+                                  purge_props=True)
         except exception.ImageNotAuthorized as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(meta=meta)
@@ -104,7 +108,8 @@ class Controller(object):
         common.check_img_metadata_properties_quota(context, metadata)
         image['properties'] = metadata
         try:
-            self.image_service.update(context, image_id, image, None)
+            self.image_api.update(context, image_id, image, data=None,
+                                  purge_props=True)
         except exception.ImageNotAuthorized as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(metadata=metadata)
@@ -118,7 +123,8 @@ class Controller(object):
             raise exc.HTTPNotFound(explanation=msg)
         image['properties'].pop(id)
         try:
-            self.image_service.update(context, image_id, image, None)
+            self.image_api.update(context, image_id, image, data=None,
+                                  purge_props=True)
         except exception.ImageNotAuthorized as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
 

@@ -36,14 +36,13 @@ from nova.compute import vm_states
 from nova import context
 from nova.db.sqlalchemy import models
 from nova import exception as exc
-import nova.image.glance
+import nova.netconf
 from nova.network import api as network_api
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import quota
 from nova.tests import fake_block_device
 from nova.tests import fake_network
-from nova.tests.glance import stubs as glance_stubs
 from nova.tests.objects import test_keypair
 from nova import utils
 from nova import wsgi
@@ -246,62 +245,6 @@ def stub_out_nw_api(stubs, cls=None, private=None, publics=None):
         cls = Fake
     stubs.Set(network_api, 'API', cls)
     fake_network.stub_out_nw_api_get_instance_nw_info(stubs)
-
-
-# TODO(jaypipes): Remove this when stub_out_glance() is removed after
-# image metadata pieces are fixed to call nova.image.API instead of the
-# nova.image.glance module directly.
-def _make_image_fixtures():
-    NOW_GLANCE_FORMAT = "2010-10-11T10:30:22"
-
-    image_id = 123
-
-    fixtures = []
-
-    def add_fixture(**kwargs):
-        fixtures.append(kwargs)
-
-    # Public image
-    add_fixture(id=image_id, name='public image', is_public=True,
-                status='active', properties={'key1': 'value1'},
-                min_ram="128", min_disk="10", size='25165824')
-    image_id += 1
-
-    # Snapshot for User 1
-    uuid = 'aa640691-d1a7-4a67-9d3c-d35ee6b3cc74'
-    snapshot_properties = {'instance_uuid': uuid, 'user_id': 'fake'}
-    for status in ('queued', 'saving', 'active', 'killed',
-                   'deleted', 'pending_delete'):
-        deleted = False if status != 'deleted' else True
-        deleted_at = NOW_GLANCE_FORMAT if deleted else None
-
-        add_fixture(id=image_id, name='%s snapshot' % status,
-                    is_public=False, status=status,
-                    properties=snapshot_properties, size='25165824',
-                    deleted=deleted, deleted_at=deleted_at)
-        image_id += 1
-
-    # Image without a name
-    add_fixture(id=image_id, is_public=True, status='active', properties={})
-    # Image for permission tests
-    image_id += 1
-    add_fixture(id=image_id, is_public=True, status='active', properties={},
-                owner='authorized_fake')
-
-    return fixtures
-
-
-def stub_out_glance(stubs):
-    def fake_get_remote_image_service():
-        client = glance_stubs.StubGlanceClient(_make_image_fixtures())
-        client_wrapper = nova.image.glance.GlanceClientWrapper()
-        client_wrapper.host = 'fake_host'
-        client_wrapper.port = 9292
-        client_wrapper.client = client
-        return nova.image.glance.GlanceImageService(client=client_wrapper)
-    stubs.Set(nova.image.glance,
-              'get_default_image_service',
-              fake_get_remote_image_service)
 
 
 class FakeToken(object):
