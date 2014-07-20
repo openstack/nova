@@ -21,7 +21,7 @@ and as a WSGI layer
 import copy
 
 from lxml import etree
-import six.moves.urllib.parse as urlparse
+import mock
 import webob
 
 from nova.api.openstack.compute import images
@@ -31,11 +31,13 @@ from nova import exception
 from nova.image import glance
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import image_fixtures
 from nova.tests import matchers
 
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
 ATOMNS = "{http://www.w3.org/2005/Atom}"
 NOW_API_FORMAT = "2010-10-11T10:30:22Z"
+IMAGE_FIXTURES = image_fixtures.get_image_fixtures()
 
 
 class ImagesControllerTest(test.NoDBTestCase):
@@ -50,7 +52,6 @@ class ImagesControllerTest(test.NoDBTestCase):
         fakes.stub_out_key_pair_funcs(self.stubs)
         fakes.stub_out_compute_api_snapshot(self.stubs)
         fakes.stub_out_compute_api_backup(self.stubs)
-        fakes.stub_out_glance(self.stubs)
 
         self.controller = images.Controller()
         self.uuid = 'fa95aaf5-ab3b-4cd8-88c0-2be7dd051aaf'
@@ -61,8 +62,6 @@ class ImagesControllerTest(test.NoDBTestCase):
         self.server_bookmark = (
             "http://localhost/fake/servers/" + self.server_uuid)
         self.alternate = "%s/fake/images/%s"
-        self.fake_req = fakes.HTTPRequest.blank('/v2/fake/images/123')
-        self.actual_image = self.controller.show(self.fake_req, '124')
 
         self.expected_image_123 = {
             "image": {'id': '123',
@@ -139,16 +138,19 @@ class ImagesControllerTest(test.NoDBTestCase):
             },
         }
 
-        self.image_service = self.mox.CreateMockAnything()
+    @mock.patch('nova.image.api.API.get', return_value=IMAGE_FIXTURES[0])
+    def test_get_image(self, get_mocked):
+        request = fakes.HTTPRequest.blank('/v2/fake/images/123')
+        actual_image = self.controller.show(request, '123')
+        self.assertThat(actual_image,
+                        matchers.DictMatches(self.expected_image_123))
+        get_mocked.assert_called_once_with(mock.ANY, '123')
 
-    def test_get_image(self):
-        self.assertThat(self.actual_image,
-                        matchers.DictMatches(self.expected_image_124))
-
-    def test_get_image_with_custom_prefix(self):
+    @mock.patch('nova.image.api.API.get', return_value=IMAGE_FIXTURES[1])
+    def test_get_image_with_custom_prefix(self, _get_mocked):
         self.flags(osapi_compute_link_prefix='https://zoo.com:42',
                    osapi_glance_link_prefix='http://circus.com:34')
-        fake_req = fakes.HTTPRequest.blank('/v2/fake/images/123')
+        fake_req = fakes.HTTPRequest.blank('/v2/fake/images/124')
         actual_image = self.controller.show(fake_req, '124')
 
         expected_image = self.expected_image_124
@@ -165,14 +167,18 @@ class ImagesControllerTest(test.NoDBTestCase):
 
         self.assertThat(actual_image, matchers.DictMatches(expected_image))
 
-    def test_get_image_404(self):
+    @mock.patch('nova.image.api.API.get', side_effect=exception.NotFound)
+    def test_get_image_404(self, _get_mocked):
         fake_req = fakes.HTTPRequest.blank('/v2/fake/images/unknown')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.show, fake_req, 'unknown')
 
-    def test_get_image_details(self):
+    @mock.patch('nova.image.api.API.get_all', return_value=IMAGE_FIXTURES)
+    def test_get_image_details(self, get_all_mocked):
         request = fakes.HTTPRequest.blank('/v2/fake/images/detail')
         response = self.controller.detail(request)
+
+        get_all_mocked.assert_called_once_with(mock.ANY, filters={})
         response_list = response["images"]
 
         image_125 = copy.deepcopy(self.expected_image_124["image"])
@@ -254,49 +260,24 @@ class ImagesControllerTest(test.NoDBTestCase):
 
         self.assertThat(expected, matchers.DictListMatches(response_list))
 
-    def test_get_image_details_with_limit(self):
+    @mock.patch('nova.image.api.API.get_all')
+    def test_get_image_details_with_limit(self, get_all_mocked):
         request = fakes.HTTPRequest.blank('/v2/fake/images/detail?limit=2')
-        response = self.controller.detail(request)
-        response_list = response["images"]
-        response_links = response["images_links"]
+        self.controller.detail(request)
+        get_all_mocked.assert_called_once_with(mock.ANY, limit=2, filters={})
 
-        expected = [self.expected_image_123["image"],
-                    self.expected_image_124["image"]]
-
-        self.assertThat(expected, matchers.DictListMatches(response_list))
-
-        href_parts = urlparse.urlparse(response_links[0]['href'])
-        self.assertEqual('/v2/fake/images', href_parts.path)
-        params = urlparse.parse_qs(href_parts.query)
-
-        self.assertThat({'limit': ['2'], 'marker': ['124']},
-                        matchers.DictMatches(params))
-
-    def test_get_image_details_with_limit_and_page_size(self):
+    @mock.patch('nova.image.api.API.get_all')
+    def test_get_image_details_with_limit_and_page_size(self, get_all_mocked):
         request = fakes.HTTPRequest.blank(
             '/v2/fake/images/detail?limit=2&page_size=1')
-        response = self.controller.detail(request)
-        response_list = response["images"]
-        response_links = response["images_links"]
+        self.controller.detail(request)
+        get_all_mocked.assert_called_once_with(mock.ANY, limit=2, filters={},
+                                               page_size=1)
 
-        expected = [self.expected_image_123["image"],
-                    self.expected_image_124["image"]]
-
-        self.assertThat(expected, matchers.DictListMatches(response_list))
-
-        href_parts = urlparse.urlparse(response_links[0]['href'])
-        self.assertEqual('/v2/fake/images', href_parts.path)
-        params = urlparse.parse_qs(href_parts.query)
-
-        self.assertThat({'limit': ['2'], 'page_size': ['1'],
-                         'marker': ['124']}, matchers.DictMatches(params))
-
-    def _detail_request(self, filters, request):
-        context = request.environ['nova.context']
-        self.image_service.detail(context, filters=filters).AndReturn([])
-        self.mox.ReplayAll()
-        controller = images.Controller(image_service=self.image_service)
-        controller.detail(request)
+    @mock.patch('nova.image.api.API.get_all')
+    def _detail_request(self, filters, request, get_all_mocked):
+        self.controller.detail(request)
+        get_all_mocked.assert_called_once_with(mock.ANY, filters=filters)
 
     def test_image_detail_filter_with_name(self):
         filters = {'name': 'testname'}
@@ -348,14 +329,11 @@ class ImagesControllerTest(test.NoDBTestCase):
         request = fakes.HTTPRequest.blank('/v2/fake/images/detail')
         self._detail_request(filters, request)
 
-    def test_image_detail_invalid_marker(self):
-        class InvalidImageService(object):
-            def detail(self, *args, **kwargs):
-                raise exception.Invalid('meow')
-
+    @mock.patch('nova.image.api.API.get_all', side_effect=exception.Invalid)
+    def test_image_detail_invalid_marker(self, _get_all_mocked):
         request = fakes.HTTPRequest.blank('/v2/images?marker=invalid')
-        controller = images.Controller(image_service=InvalidImageService())
-        self.assertRaises(webob.exc.HTTPBadRequest, controller.detail, request)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.detail,
+                          request)
 
     def test_generate_alternate_link(self):
         view = images_view.ViewBuilder()
@@ -364,25 +342,26 @@ class ImagesControllerTest(test.NoDBTestCase):
         actual_url = "%s/fake/images/1" % glance.generate_glance_url()
         self.assertEqual(generated_url, actual_url)
 
-    def test_delete_image(self):
+    @mock.patch('nova.image.api.API.delete')
+    def test_delete_image(self, delete_mocked):
         request = fakes.HTTPRequest.blank('/v2/fake/images/124')
         request.method = 'DELETE'
         response = self.controller.delete(request, '124')
         self.assertEqual(response.status_int, 204)
+        delete_mocked.assert_called_once_with(mock.ANY, '124')
 
-    def test_delete_deleted_image(self):
-        """If you try to delete a deleted image, you get back 403 Forbidden."""
-
-        deleted_image_id = 128
-        # see nova.tests.api.openstack.fakes:_make_image_fixtures
-
-        request = fakes.HTTPRequest.blank(
-              '/v2/fake/images/%s' % deleted_image_id)
+    @mock.patch('nova.image.api.API.delete',
+                side_effect=exception.ImageNotAuthorized(image_id='123'))
+    def test_delete_deleted_image(self, _delete_mocked):
+        # If you try to delete a deleted image, you get back 403 Forbidden.
+        request = fakes.HTTPRequest.blank('/v2/fake/images/123')
         request.method = 'DELETE'
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.delete,
-             request, '%s' % deleted_image_id)
+                          request, '123')
 
-    def test_delete_image_not_found(self):
+    @mock.patch('nova.image.api.API.delete',
+                side_effect=exception.ImageNotFound(image_id='123'))
+    def test_delete_image_not_found(self, _delete_mocked):
         request = fakes.HTTPRequest.blank('/v2/fake/images/300')
         request.method = 'DELETE'
         self.assertRaises(webob.exc.HTTPNotFound,
