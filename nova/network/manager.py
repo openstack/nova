@@ -893,7 +893,7 @@ class NetworkManager(manager.Manager):
                 fip.allocated = True
                 fip.virtual_interface_id = vif.id
                 fip.save()
-                cleanup.append(fip.disassociate)
+                cleanup.append(functools.partial(fip.disassociate, context))
 
                 self._do_trigger_security_group_members_refresh_for_instance(
                     instance_id)

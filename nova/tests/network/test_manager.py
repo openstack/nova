@@ -730,7 +730,7 @@ class FlatNetworkTestCase(test.TestCase):
                 mock.call(instance.uuid, '')
             ])
 
-        mock_fixedip_disassociate.assert_called_once()
+        mock_fixedip_disassociate.assert_called_once_with(self.context)
 
 
 class FlatDHCPNetworkTestCase(test.TestCase):
