@@ -35,7 +35,6 @@ from nova.compute import flavors
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.objects import instance as instance_obj
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
@@ -600,8 +599,6 @@ class Controller(wsgi.Controller):
                                                      limit=limit,
                                                      marker=marker,
                                                      want_objects=True)
-            for instance in instance_list:
-                instance_obj.add_image_ref(context, instance)
         except exception.MarkerNotFound:
             msg = _('marker [%s] not found') % marker
             raise exc.HTTPBadRequest(explanation=msg)
@@ -769,8 +766,7 @@ class Controller(wsgi.Controller):
             context = req.environ['nova.context']
             instance = self.compute_api.get(context, id,
                                             want_objects=True)
-            req.cache_db_instance(instance_obj.add_image_ref(context,
-                                                             instance))
+            req.cache_db_instance(instance)
             return self._view_builder.show(req, instance)
         except exception.NotFound:
             msg = _("Instance could not be found")
