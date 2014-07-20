@@ -1681,6 +1681,22 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                            'node': self.instance_node}),
                 matchers.DictMatches(expected))
 
+    def test_get_instance_diagnostics(self):
+        self._create_vm()
+        expected = {'uptime': 0,
+                    'memory_details': {'used': 0, 'maximum': 512},
+                    'nic_details': [],
+                    'driver': 'vmwareapi',
+                    'state': 'running',
+                    'version': '1.0',
+                    'cpu_details': [],
+                    'disk_details': [],
+                    'hypervisor_os': 'esxi',
+                    'config_drive': False}
+        actual = self.conn.get_instance_diagnostics(
+                {'name': 1, 'uuid': self.uuid, 'node': self.instance_node})
+        self.assertThat(actual.serialize(), matchers.DictMatches(expected))
+
     def test_get_console_output(self):
         self.assertRaises(NotImplementedError, self.conn.get_console_output,
             None, None)
