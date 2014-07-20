@@ -282,7 +282,7 @@ def _get_allowed_datastores(data_stores, datastore_regex, allowed_types):
         ds_name = propdict['summary.name']
         if (propdict['summary.accessible'] and ds_type in allowed_types):
             if datastore_regex is None or datastore_regex.match(ds_name):
-                allowed.append({'ref': obj_content.obj, 'name': ds_name})
+                allowed.append(Datastore(ref=obj_content.obj, name=ds_name))
 
     return allowed
 
@@ -418,7 +418,7 @@ def get_sub_folders(session, ds_browser, ds_path):
             session._get_vim(),
             "SearchDatastore_Task",
             ds_browser,
-            datastorePath=ds_path)
+            datastorePath=str(ds_path))
     try:
         task_info = session._wait_for_task(search_task)
     except error_util.FileNotFoundException:

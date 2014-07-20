@@ -46,7 +46,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
     def test_timestamp_cleanup(self):
         def fake_get_timestamp(ds_browser, ds_path):
             self.assertEqual('fake-ds-browser', ds_browser)
-            self.assertEqual('fake-ds-path', ds_path)
+            self.assertEqual('[fake-ds] fake-path', str(ds_path))
             if not self.exists:
                 return
             ts = '%s%s' % (imagecache.TIMESTAMP_PREFIX,
@@ -61,19 +61,21 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         ) as (_get_timestamp, _file_delete):
             self.exists = False
             self._imagecache.timestamp_cleanup(
-                    'fake-dc-ref', 'fake-ds-browser', 'fake-ds-path')
+                    'fake-dc-ref', 'fake-ds-browser',
+                    ds_util.DatastorePath('fake-ds', 'fake-path'))
             self.assertEqual(0, _file_delete.call_count)
             self.exists = True
             self._imagecache.timestamp_cleanup(
-                    'fake-dc-ref', 'fake-ds-browser', 'fake-ds-path')
+                    'fake-dc-ref', 'fake-ds-browser',
+                    ds_util.DatastorePath('fake-ds', 'fake-path'))
             _file_delete.assert_called_once_with(self._session,
-                    'fake-ds-path/ts-2012-11-22-12-00-00',
+                    '[fake-ds] fake-path/ts-2012-11-22-12-00-00',
                     'fake-dc-ref')
 
     def test_get_timestamp(self):
         def fake_get_sub_folders(session, ds_browser, ds_path):
             self.assertEqual('fake-ds-browser', ds_browser)
-            self.assertEqual('fake-ds-path', ds_path)
+            self.assertEqual('[fake-ds] fake-path', str(ds_path))
             if self.exists:
                 files = set()
                 files.add(self._file_name)
@@ -84,12 +86,14 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                               fake_get_sub_folders)
         ):
             self.exists = True
-            ts = self._imagecache._get_timestamp('fake-ds-browser',
-                                                 'fake-ds-path')
+            ts = self._imagecache._get_timestamp(
+                    'fake-ds-browser',
+                    ds_util.DatastorePath('fake-ds', 'fake-path'))
             self.assertEqual(self._file_name, ts)
             self.exists = False
-            ts = self._imagecache._get_timestamp('fake-ds-browser',
-                                                 'fake-ds-path')
+            ts = self._imagecache._get_timestamp(
+                    'fake-ds-browser',
+                    ds_util.DatastorePath('fake-ds', 'fake-path'))
             self.assertIsNone(ts)
 
     def test_get_timestamp_filename(self):
@@ -131,9 +135,8 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                               fake_get_sub_folders)
         ) as (_get_dynamic, _get_sub_folders):
             fake_ds_ref = fake.ManagedObjectReference('fake-ds-ref')
-            datastore = {'name': 'ds', 'ref': fake_ds_ref}
-            ds_path = ds_util.build_datastore_path(datastore['name'],
-                                                   'base_folder')
+            datastore = ds_util.Datastore(name='ds', ref=fake_ds_ref)
+            ds_path = datastore.build_path('base_folder')
             images = self._imagecache._list_datastore_images(
                     ds_path, datastore)
             originals = set()
@@ -146,29 +149,30 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         def fake_get_ds_browser(ds_ref):
             return 'fake-ds-browser'
 
-        def fake_get_timestamp(ds_browser, path):
+        def fake_get_timestamp(ds_browser, ds_path):
             self._get_timestamp_called += 1
-            if path == 'fake-ds-path/fake-image-1':
+            path = str(ds_path)
+            if path == '[fake-ds] fake-path/fake-image-1':
                 # No time stamp exists
                 return
-            if path == 'fake-ds-path/fake-image-2':
+            if path == '[fake-ds] fake-path/fake-image-2':
                 # Timestamp that will be valid => no deletion
                 return 'ts-2012-11-22-10-00-00'
-            if path == 'fake-ds-path/fake-image-3':
+            if path == '[fake-ds] fake-path/fake-image-3':
                 # Timestamp that will be invalid => deletion
                 return 'ts-2012-11-20-12-00-00'
             self.fail()
 
         def fake_mkdir(session, ts_path, dc_ref):
             self.assertEqual(
-                    'fake-ds-path/fake-image-1/ts-2012-11-22-12-00-00',
+                    '[fake-ds] fake-path/fake-image-1/ts-2012-11-22-12-00-00',
                     ts_path)
 
-        def fake_file_delete(session, path, dc_ref):
-            self.assertEqual('fake-ds-path/fake-image-3', path)
+        def fake_file_delete(session, ds_path, dc_ref):
+            self.assertEqual('[fake-ds] fake-path/fake-image-3', str(ds_path))
 
-        def fake_timestamp_cleanup(dc_ref, ds_browser, path):
-            self.assertEqual('fake-ds-path/fake-image-4', path)
+        def fake_timestamp_cleanup(dc_ref, ds_browser, ds_path):
+            self.assertEqual('[fake-ds] fake-path/fake-image-4', str(ds_path))
 
         with contextlib.nested(
             mock.patch.object(self._imagecache, '_get_ds_browser',
@@ -184,15 +188,16 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         ) as (_get_ds_browser, _get_timestamp, _mkdir, _file_delete,
               _timestamp_cleanup):
             timeutils.set_time_override(override_time=self._time)
-            datastore = {'name': 'ds', 'ref': 'fake-ds-ref'}
+            datastore = ds_util.Datastore(name='ds', ref='fake-ds-ref')
             dc_info = vmops.DcInfo(ref='dc_ref', name='name',
                                    vmFolder='vmFolder')
             self._get_timestamp_called = 0
             self._imagecache.originals = set(['fake-image-1', 'fake-image-2',
                                               'fake-image-3', 'fake-image-4'])
             self._imagecache.used_images = set(['fake-image-4'])
-            self._imagecache._age_cached_images('fake-context',
-                    datastore, dc_info, 'fake-ds-path')
+            self._imagecache._age_cached_images(
+                    'fake-context', datastore, dc_info,
+                    ds_util.DatastorePath('fake-ds', 'fake-path'))
             self.assertEqual(3, self._get_timestamp_called)
 
     def test_update(self):
@@ -202,7 +207,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
         def fake_age_cached_images(context, datastore,
                                    dc_info, ds_path):
-            self.assertEqual('[ds] fake-base-folder', ds_path)
+            self.assertEqual('[ds] fake-base-folder', str(ds_path))
             self.assertEqual(self.images,
                              self._imagecache.used_images)
             self.assertEqual(self.images,
@@ -228,7 +233,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                           'vm_state': '',
                           'task_state': ''}]
             self.images = set(['1', '2'])
-            datastore = {'name': 'ds', 'ref': 'fake-ds-ref'}
+            datastore = ds_util.Datastore(name='ds', ref='fake-ds-ref')
             dc_info = vmops.DcInfo(ref='dc_ref', name='name',
                                    vmFolder='vmFolder')
             datastores_info = [(datastore, dc_info)]

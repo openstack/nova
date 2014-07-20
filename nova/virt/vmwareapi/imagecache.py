@@ -78,15 +78,15 @@ class ImageCacheManager(imagecache.ImageCacheManager):
 
     def timestamp_folder_get(self, ds_path, image_id):
         """Returns the timestamp folder."""
-        return '%s/%s' % (ds_path, image_id)
+        return ds_path.join(image_id)
 
     def timestamp_cleanup(self, dc_ref, ds_browser, ds_path):
         ts = self._get_timestamp(ds_browser, ds_path)
         if ts:
-            ts_path = '%s/%s' % (ds_path, ts)
+            ts_path = ds_path.join(ts)
             LOG.debug("Timestamp path %s exists. Deleting!", ts_path)
             # Image is used - no longer need timestamp folder
-            self._folder_delete(ts_path, dc_ref)
+            self._folder_delete(str(ts_path), dc_ref)
 
     def _get_timestamp(self, ds_browser, ds_path):
         files = ds_util.get_sub_folders(self._session, ds_browser, ds_path)
@@ -119,7 +119,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
             - unexplained_images
             - originals
         """
-        ds_browser = self._get_ds_browser(datastore['ref'])
+        ds_browser = self._get_ds_browser(datastore.ref)
         originals = ds_util.get_sub_folders(self._session, ds_browser,
                                             ds_path)
         return {'unexplained_images': [],
@@ -130,36 +130,35 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         """Ages cached images."""
         age_seconds = CONF.remove_unused_original_minimum_age_seconds
         unused_images = self.originals - self.used_images
-        ds_browser = self._get_ds_browser(datastore['ref'])
+        ds_browser = self._get_ds_browser(datastore.ref)
         for image in unused_images:
             path = self.timestamp_folder_get(ds_path, image)
             # Lock to ensure that the spawn will not try and access a image
             # that is currently being deleted on the datastore.
-            with lockutils.lock(path, lock_file_prefix='nova-vmware-ts',
+            with lockutils.lock(str(path), lock_file_prefix='nova-vmware-ts',
                                 external=True):
                 ts = self._get_timestamp(ds_browser, path)
                 if not ts:
-                    ts_path = '%s/%s' % (path,
-                                         self._get_timestamp_filename())
+                    ts_path = path.join(self._get_timestamp_filename())
                     try:
-                        ds_util.mkdir(self._session, ts_path, dc_info.ref)
+                        ds_util.mkdir(self._session, str(ts_path), dc_info.ref)
                     except error_util.FileAlreadyExistsException:
                         LOG.debug("Timestamp already exists.")
                     LOG.info(_("Image %s is no longer used by this node. "
                                "Pending deletion!"), image)
                 else:
-                    dt = self._get_datetime_from_filename(ts)
+                    dt = self._get_datetime_from_filename(str(ts))
                     if timeutils.is_older_than(dt, age_seconds):
                         LOG.info(_("Image %s is no longer used. "
                                    "Deleting!"), path)
                         # Image has aged - delete the image ID folder
-                        self._folder_delete(path, dc_info.ref)
+                        self._folder_delete(str(path), dc_info.ref)
 
         # If the image is used and the timestamp file exists then we delete
         # the timestamp.
         for image in self.used_images:
             path = self.timestamp_folder_get(ds_path, image)
-            with lockutils.lock(path, lock_file_prefix='nova-vmware-ts',
+            with lockutils.lock(str(path), lock_file_prefix='nova-vmware-ts',
                                 external=True):
                 self.timestamp_cleanup(dc_info.ref, ds_browser,
                                        path)
@@ -176,8 +175,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         self.used_images = set(running['used_images'].keys())
         # perform the aging and image verification per datastore
         for (datastore, dc_info) in datastores_info:
-            ds_path = ds_util.build_datastore_path(datastore['name'],
-                                                   self._base_folder)
+            ds_path = datastore.build_path(self._base_folder)
             images = self._list_datastore_images(ds_path, datastore)
             self.originals = images['originals']
             self._age_cached_images(context, datastore, dc_info, ds_path)
