@@ -134,7 +134,8 @@ class VMwareVMOps(object):
                 # Clean up files created during the extend operation
                 files = [name.replace(".vmdk", "-flat.vmdk"), name]
                 for file in files:
-                    self._delete_datastore_file(instance, file, dc_ref)
+                    ds_path = ds_util.DatastorePath.parse(file)
+                    self._delete_datastore_file(instance, ds_path, dc_ref)
 
         LOG.debug("Extended root virtual disk")
 
@@ -354,7 +355,7 @@ class VMwareVMOps(object):
                         # directory.
                         ds_util.mkdir(
                                 self._session,
-                                str(datastore.build_path(upload_folder)),
+                                datastore.build_path(upload_folder),
                                 dc_info.ref)
                         LOG.debug("Create virtual disk on %s",
                                   datastore.name, instance=instance)
@@ -367,7 +368,7 @@ class VMwareVMOps(object):
                         LOG.debug("Virtual disk created on %s.",
                                   datastore.name, instance=instance)
                         self._delete_datastore_file(instance,
-                                                    str(flat_ds_loc),
+                                                    flat_ds_loc,
                                                     dc_info.ref)
                         upload_rel_path = flat_ds_loc.rel_path
                     else:
@@ -392,11 +393,11 @@ class VMwareVMOps(object):
                                               str(upload_path_loc),
                                               copy_spec)
                     self._delete_datastore_file(instance,
-                                                str(sparse_ds_loc),
+                                                sparse_ds_loc,
                                                 dc_info.ref)
                 base_folder = '%s/%s' % (self._base_folder, upload_name)
-                dest_folder = str(datastore.build_path(base_folder))
-                src_folder = str(datastore.build_path(upload_folder))
+                dest_folder = datastore.build_path(base_folder)
+                src_folder = datastore.build_path(upload_folder)
                 try:
                     ds_util.file_move(self._session, dc_info.ref,
                                       src_folder, dest_folder)
@@ -409,8 +410,8 @@ class VMwareVMOps(object):
 
                 # Delete the temp upload folder
                 self._delete_datastore_file(instance,
-                                            str(datastore.build_path(
-                                                    tmp_upload_folder)),
+                                            datastore.build_path(
+                                                    tmp_upload_folder),
                                             dc_info.ref)
             else:
                 # linked clone base disk exists
@@ -763,10 +764,10 @@ class VMwareVMOps(object):
         # will be copied to. A random name is chosen so that we don't have
         # name clashes.
         random_name = uuidutils.generate_uuid()
-        dest_vmdk_file_path = ds_util.build_datastore_path(datastore_name,
-                   "%s/%s.vmdk" % (self._tmp_folder, random_name))
-        dest_vmdk_data_file_path = ds_util.build_datastore_path(datastore_name,
-                   "%s/%s-flat.vmdk" % (self._tmp_folder, random_name))
+        dest_vmdk_file_path = ds_util.DatastorePath(
+                datastore_name, self._tmp_folder, "%s.vmdk" % random_name)
+        dest_vmdk_data_file_path = ds_util.DatastorePath(
+                datastore_name, self._tmp_folder, "%s-flat.vmdk" % random_name)
         dc_info = self.get_datacenter_ref_and_name(ds_ref)
 
         def _copy_vmdk_content():
@@ -783,7 +784,7 @@ class VMwareVMOps(object):
                 service_content.virtualDiskManager,
                 sourceName=vmdk_file_path_before_snapshot,
                 sourceDatacenter=dc_info.ref,
-                destName=dest_vmdk_file_path,
+                destName=str(dest_vmdk_file_path),
                 destDatacenter=dc_info.ref,
                 destSpec=copy_spec,
                 force=False)
@@ -919,7 +920,7 @@ class VMwareVMOps(object):
             # the datastore.
             if destroy_disks and vm_ds_path:
                 try:
-                    dir_ds_compliant_path = str(vm_ds_path.parent)
+                    dir_ds_compliant_path = vm_ds_path.parent
                     LOG.debug("Deleting contents of the VM from "
                               "datastore %(datastore_name)s",
                               {'datastore_name': vm_ds_path.datastore},
@@ -1455,7 +1456,7 @@ class VMwareVMOps(object):
         exists. If this throws and exception 'FileAlreadyExistsException'
         then the folder already exists on the datastore.
         """
-        path = ds_util.build_datastore_path(ds_name, folder)
+        path = ds_util.DatastorePath(ds_name, folder)
         dc_info = self.get_datacenter_ref_and_name(ds_ref)
         try:
             ds_util.mkdir(self._session, path, dc_info.ref)
@@ -1478,9 +1479,9 @@ class VMwareVMOps(object):
         # Ensure that the cache folder exists
         self.check_cache_folder(ds_name, ds_ref)
         # Check if the file exists or not.
-        folder_path = ds_util.build_datastore_path(ds_name, folder_name)
+        folder_ds_path = ds_util.DatastorePath(ds_name, folder_name)
         file_exists = ds_util.file_exists(self._session, ds_browser,
-                                          folder_path, file_name)
+                                          folder_ds_path, file_name)
         return file_exists
 
     def inject_network_info(self, instance, network_info):
@@ -1500,8 +1501,8 @@ class VMwareVMOps(object):
                                                       self._datastore_regex)
         datastores_info = []
         for ds in datastores:
-            ds_info = self.get_datacenter_ref_and_name(ds.ref)
-            datastores_info.append((ds, ds_info))
+            dc_info = self.get_datacenter_ref_and_name(ds.ref)
+            datastores_info.append((ds, dc_info))
         self._imagecache.update(context, instances, datastores_info)
 
     def _get_valid_vms_from_retrieve_result(self, retrieve_result):

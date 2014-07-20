@@ -320,14 +320,14 @@ def get_available_datastores(session, cluster=None, datastore_regex=None):
     return allowed
 
 
-def file_delete(session, datastore_path, dc_ref):
-    LOG.debug("Deleting the datastore file %s", datastore_path)
+def file_delete(session, ds_path, dc_ref):
+    LOG.debug("Deleting the datastore file %s", ds_path)
     vim = session._get_vim()
     file_delete_task = session._call_method(
             session._get_vim(),
             "DeleteDatastoreFile_Task",
             vim.get_service_content().fileManager,
-            name=datastore_path,
+            name=str(ds_path),
             datacenter=dc_ref)
     session._wait_for_task(file_delete_task)
     LOG.debug("Deleted the datastore file")
@@ -362,9 +362,9 @@ def file_move(session, dc_ref, src_file, dst_file):
             session._get_vim(),
             "MoveDatastoreFile_Task",
             vim.get_service_content().fileManager,
-            sourceName=src_file,
+            sourceName=str(src_file),
             sourceDatacenter=dc_ref,
-            destinationName=dst_file,
+            destinationName=str(dst_file),
             destinationDatacenter=dc_ref)
     session._wait_for_task(move_task)
     LOG.debug("File moved")
@@ -384,7 +384,7 @@ def file_exists(session, ds_browser, ds_path, file_name):
     search_task = session._call_method(session._get_vim(),
                                              "SearchDatastore_Task",
                                              ds_browser,
-                                             datastorePath=ds_path,
+                                             datastorePath=str(ds_path),
                                              searchSpec=search_spec)
     try:
         task_info = session._wait_for_task(search_task)
@@ -404,7 +404,7 @@ def mkdir(session, ds_path, dc_ref):
     LOG.debug("Creating directory with path %s", ds_path)
     session._call_method(session._get_vim(), "MakeDirectory",
             session._get_vim().get_service_content().fileManager,
-            name=ds_path, datacenter=dc_ref,
+            name=str(ds_path), datacenter=dc_ref,
             createParentDirectories=True)
     LOG.debug("Created directory with path %s", ds_path)
 

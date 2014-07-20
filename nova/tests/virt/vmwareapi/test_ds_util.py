@@ -47,7 +47,7 @@ class DsUtilTestCase(test.NoDBTestCase):
         def fake_call_method(module, method, *args, **kwargs):
             self.assertEqual('DeleteDatastoreFile_Task', method)
             name = kwargs.get('name')
-            self.assertEqual('fake-datastore-path', name)
+            self.assertEqual('[ds] fake/path', name)
             datacenter = kwargs.get('datacenter')
             self.assertEqual('fake-dc-ref', datacenter)
             return 'fake_delete_task'
@@ -57,8 +57,9 @@ class DsUtilTestCase(test.NoDBTestCase):
             mock.patch.object(self.session, '_call_method',
                               fake_call_method)
         ) as (_wait_for_task, _call_method):
+            ds_path = ds_util.DatastorePath('ds', 'fake/path')
             ds_util.file_delete(self.session,
-                                'fake-datastore-path', 'fake-dc-ref')
+                                ds_path, 'fake-dc-ref')
             _wait_for_task.assert_has_calls([
                    mock.call('fake_delete_task')])
 
@@ -80,8 +81,10 @@ class DsUtilTestCase(test.NoDBTestCase):
             mock.patch.object(self.session, '_call_method',
                               fake_call_method)
         ) as (_wait_for_task, _call_method):
+            src_ds_path = ds_util.DatastorePath('ds', 'tmp/src')
+            dst_ds_path = ds_util.DatastorePath('ds', 'base/dst')
             ds_util.file_move(self.session,
-                              'fake-dc-ref', '[ds] tmp/src', '[ds] base/dst')
+                              'fake-dc-ref', src_ds_path, dst_ds_path)
             _wait_for_task.assert_has_calls([
                    mock.call('fake_move_task')])
 
@@ -89,7 +92,7 @@ class DsUtilTestCase(test.NoDBTestCase):
         def fake_call_method(module, method, *args, **kwargs):
             self.assertEqual('MakeDirectory', method)
             name = kwargs.get('name')
-            self.assertEqual('fake-path', name)
+            self.assertEqual('[ds] fake/path', name)
             datacenter = kwargs.get('datacenter')
             self.assertEqual('fake-dc-ref', datacenter)
             createParentDirectories = kwargs.get('createParentDirectories')
@@ -97,7 +100,8 @@ class DsUtilTestCase(test.NoDBTestCase):
 
         with mock.patch.object(self.session, '_call_method',
                                fake_call_method):
-            ds_util.mkdir(self.session, 'fake-path', 'fake-dc-ref')
+            ds_path = ds_util.DatastorePath('ds', 'fake/path')
+            ds_util.mkdir(self.session, ds_path, 'fake-dc-ref')
 
     def test_file_exists(self):
         def fake_call_method(module, method, *args, **kwargs):
@@ -105,7 +109,7 @@ class DsUtilTestCase(test.NoDBTestCase):
                 ds_browser = args[0]
                 self.assertEqual('fake-browser', ds_browser)
                 datastorePath = kwargs.get('datastorePath')
-                self.assertEqual('fake-path', datastorePath)
+                self.assertEqual('[ds] fake/path', datastorePath)
                 return 'fake_exists_task'
 
             # Should never get here
@@ -118,6 +122,7 @@ class DsUtilTestCase(test.NoDBTestCase):
 
                 result = fake.DataObject()
                 result.file = [result_file]
+                result.path = '[ds] fake/path'
 
                 task_info = fake.DataObject()
                 task_info.result = result
@@ -132,8 +137,9 @@ class DsUtilTestCase(test.NoDBTestCase):
                                   fake_call_method),
                 mock.patch.object(self.session, '_wait_for_task',
                                   fake_wait_for_task)):
+            ds_path = ds_util.DatastorePath('ds', 'fake/path')
             file_exists = ds_util.file_exists(self.session,
-                    'fake-browser', 'fake-path', 'fake-file')
+                    'fake-browser', ds_path, 'fake-file')
             self.assertTrue(file_exists)
 
     def test_file_exists_fails(self):
@@ -156,8 +162,9 @@ class DsUtilTestCase(test.NoDBTestCase):
                                   fake_call_method),
                 mock.patch.object(self.session, '_wait_for_task',
                                   fake_wait_for_task)):
+            ds_path = ds_util.DatastorePath('ds', 'fake/path')
             file_exists = ds_util.file_exists(self.session,
-                    'fake-browser', 'fake-path', 'fake-file')
+                    'fake-browser', ds_path, 'fake-file')
             self.assertFalse(file_exists)
 
     def test_get_datastore(self):
