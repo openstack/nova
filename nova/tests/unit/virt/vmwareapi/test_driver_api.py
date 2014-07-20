@@ -1398,39 +1398,33 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertRaises(exception.InstanceNotFound, self.conn.power_off,
                           self.instance)
 
-    def test_resume_state_on_host_boot(self):
-        self._create_vm()
-        self.mox.StubOutWithMock(vm_util, 'get_vm_state_from_name')
-        self.mox.StubOutWithMock(self.conn, "reboot")
-        vm_util.get_vm_state_from_name(mox.IgnoreArg(),
-            self.instance['uuid']).AndReturn("poweredOff")
-        self.conn.reboot(self.context, self.instance, 'network_info',
-            'hard', None)
-        self.mox.ReplayAll()
+    @mock.patch.object(driver.VMwareVCDriver, 'reboot')
+    @mock.patch.object(vm_util, 'get_vm_state',
+                       return_value='poweredOff')
+    def test_resume_state_on_host_boot(self, mock_get_vm_state,
+                                       mock_reboot):
+        self._create_instance()
         self.conn.resume_state_on_host_boot(self.context, self.instance,
-            'network_info')
+                'network_info')
+        mock_get_vm_state.assert_called_once_with(self.conn._session,
+                                                  self.instance)
+        mock_reboot.assert_called_once_with(self.context, self.instance,
+                                            'network_info', 'hard', None)
 
-    def test_resume_state_on_host_boot_no_reboot_1(self):
-        """Don't call reboot on instance which is poweredon."""
-        self._create_vm()
-        self.mox.StubOutWithMock(vm_util, 'get_vm_state_from_name')
-        self.mox.StubOutWithMock(self.conn, 'reboot')
-        vm_util.get_vm_state_from_name(mox.IgnoreArg(),
-            self.instance['uuid']).AndReturn("poweredOn")
-        self.mox.ReplayAll()
-        self.conn.resume_state_on_host_boot(self.context, self.instance,
-            'network_info')
-
-    def test_resume_state_on_host_boot_no_reboot_2(self):
-        """Don't call reboot on instance which is suspended."""
-        self._create_vm()
-        self.mox.StubOutWithMock(vm_util, 'get_vm_state_from_name')
-        self.mox.StubOutWithMock(self.conn, 'reboot')
-        vm_util.get_vm_state_from_name(mox.IgnoreArg(),
-            self.instance['uuid']).AndReturn("suspended")
-        self.mox.ReplayAll()
-        self.conn.resume_state_on_host_boot(self.context, self.instance,
-            'network_info')
+    def test_resume_state_on_host_boot_no_reboot(self):
+        self._create_instance()
+        for state in ['poweredOn', 'suspended']:
+            with contextlib.nested(
+                mock.patch.object(driver.VMwareVCDriver, 'reboot'),
+                mock.patch.object(vm_util, 'get_vm_state',
+                                  return_value=state)
+            ) as (mock_reboot, mock_get_vm_state):
+                self.conn.resume_state_on_host_boot(self.context,
+                                                    self.instance,
+                                                    'network_info')
+                mock_get_vm_state.assert_called_once_with(self.conn._session,
+                                                          self.instance)
+                self.assertFalse(mock_reboot.called)
 
     def destroy_rescued(self, fake_method):
         self._rescue()

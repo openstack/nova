@@ -237,17 +237,10 @@ class VMwareVCDriver(driver.ComputeDriver):
         """resume guest state when a host is booted."""
         # Check if the instance is running already and avoid doing
         # anything if it is.
-        instances = self.list_instances()
-        if instance['uuid'] not in instances:
-            LOG.warning(_LW('Instance cannot be found in host, or in an '
-                            'unknown state.'), instance=instance)
-        else:
-            state = vm_util.get_vm_state_from_name(self._session,
-                                                   instance['uuid'])
-            ignored_states = ['poweredon', 'suspended']
-
-            if state.lower() in ignored_states:
-                return
+        state = vm_util.get_vm_state(self._session, instance)
+        ignored_states = ['poweredon', 'suspended']
+        if state.lower() in ignored_states:
+            return
         # Instance is not up and could be in an unknown state.
         # Be as absolute as possible about getting it back into
         # a known and running state.

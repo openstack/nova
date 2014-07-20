@@ -982,8 +982,8 @@ def get_host_name_for_vm(session, instance):
                                 host_ref, "HostSystem", "name")
 
 
-def get_vm_state_from_name(session, vm_name):
-    vm_ref = get_vm_ref_from_name(session, vm_name)
+def get_vm_state(session, instance):
+    vm_ref = get_vm_ref(session, instance)
     vm_state = session._call_method(vim_util, "get_dynamic_property",
                 vm_ref, "VirtualMachine", "runtime.powerState")
     return vm_state
