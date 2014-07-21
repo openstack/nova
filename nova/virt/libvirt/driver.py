@@ -1740,27 +1740,27 @@ class LibvirtDriver(driver.ComputeDriver):
         network_disks_to_snap = []  # network disks (netfs, gluster, etc.)
         disks_to_skip = []          # local disks not snapshotted
 
-        for disk in device_info.devices:
-            if (disk.root_name != 'disk'):
+        for guest_disk in device_info.devices:
+            if (guest_disk.root_name != 'disk'):
                 continue
 
-            if (disk.target_dev is None):
+            if (guest_disk.target_dev is None):
                 continue
 
-            if (disk.serial is None or disk.serial != volume_id):
-                disks_to_skip.append(disk.target_dev)
+            if (guest_disk.serial is None or guest_disk.serial != volume_id):
+                disks_to_skip.append(guest_disk.target_dev)
                 continue
 
             # disk is a Cinder volume with the correct volume_id
 
             disk_info = {
-                'dev': disk.target_dev,
-                'serial': disk.serial,
-                'current_file': disk.source_path,
-                'source_protocol': disk.source_protocol,
-                'source_name': disk.source_name,
-                'source_hosts': disk.source_hosts,
-                'source_ports': disk.source_ports
+                'dev': guest_disk.target_dev,
+                'serial': guest_disk.serial,
+                'current_file': guest_disk.source_path,
+                'source_protocol': guest_disk.source_protocol,
+                'source_name': guest_disk.source_name,
+                'source_hosts': guest_disk.source_hosts,
+                'source_ports': guest_disk.source_ports
             }
 
             # Determine path for new_file based on current path
@@ -1952,15 +1952,15 @@ class LibvirtDriver(driver.ComputeDriver):
         device_info = vconfig.LibvirtConfigGuest()
         device_info.parse_dom(xml_doc)
 
-        for disk in device_info.devices:
-            if (disk.root_name != 'disk'):
+        for guest_disk in device_info.devices:
+            if (guest_disk.root_name != 'disk'):
                 continue
 
-            if (disk.target_dev is None or disk.serial is None):
+            if (guest_disk.target_dev is None or guest_disk.serial is None):
                 continue
 
-            if disk.serial == volume_id:
-                my_dev = disk.target_dev
+            if guest_disk.serial == volume_id:
+                my_dev = guest_disk.target_dev
 
         if my_dev is None:
             msg = _('Disk with id: %s '
@@ -3348,20 +3348,20 @@ class LibvirtDriver(driver.ComputeDriver):
                 tmhpet.present = False
                 clk.add_timer(tmhpet)
 
-        for cfg in self._get_guest_storage_config(instance,
+        for config in self._get_guest_storage_config(instance,
                                                   image_meta,
                                                   disk_info,
                                                   rescue,
                                                   block_device_info,
                                                   flavor):
-            guest.add_device(cfg)
+            guest.add_device(config)
 
         for vif in network_info:
-            cfg = self.vif_driver.get_config(instance,
+            config = self.vif_driver.get_config(instance,
                                              vif,
                                              image_meta,
                                              flavor)
-            guest.add_device(cfg)
+            guest.add_device(config)
 
         if ((CONF.libvirt.virt_type == "qemu" or
              CONF.libvirt.virt_type == "kvm")):
@@ -5349,17 +5349,17 @@ class LibvirtDriver(driver.ComputeDriver):
         # get io status
         xml = domain.XMLDesc(0)
         dom_io = get_io_devices(xml)
-        for disk in dom_io["volumes"]:
+        for guest_disk in dom_io["volumes"]:
             try:
                 # blockStats might launch an exception if the method
                 # is not supported by the underlying hypervisor being
                 # used by libvirt
-                stats = domain.blockStats(disk)
-                output[disk + "_read_req"] = stats[0]
-                output[disk + "_read"] = stats[1]
-                output[disk + "_write_req"] = stats[2]
-                output[disk + "_write"] = stats[3]
-                output[disk + "_errors"] = stats[4]
+                stats = domain.blockStats(guest_disk)
+                output[guest_disk + "_read_req"] = stats[0]
+                output[guest_disk + "_read"] = stats[1]
+                output[guest_disk + "_write_req"] = stats[2]
+                output[guest_disk + "_write"] = stats[3]
+                output[guest_disk + "_errors"] = stats[4]
             except libvirt.libvirtError:
                 pass
         for interface in dom_io["ifaces"]:

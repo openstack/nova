@@ -2867,9 +2867,9 @@ def _create_service_entries(context, values={'avail_zone1': ['fake_host1',
                                                          'fake_host2'],
                                          'avail_zone2': ['fake_host3'], }):
     for avail_zone, hosts in values.iteritems():
-        for host in hosts:
+        for service_host in hosts:
             db.service_create(context,
-                              {'host': host,
+                              {'host': service_host,
                                'binary': 'nova-compute',
                                'topic': 'compute',
                                'report_count': 0})
@@ -3063,8 +3063,8 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         if metadata:
             aggregate.metadata.update(metadata)
         aggregate.create(self.context)
-        for host in hosts:
-            aggregate.add_host(host)
+        for aggregate_host in hosts:
+            aggregate.add_host(aggregate_host)
         return aggregate
 
     def test_add_host_to_aggregate_invalid_changing_status(self):
@@ -3104,9 +3104,9 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         metadata = {pool_states.POOL_FLAG: "XenAPI",
                     pool_states.KEY: pool_states.ACTIVE}
         db.aggregate_metadata_add(self.context, aggr['id'], metadata)
-        for host in values[fake_zone]:
+        for aggregate_host in values[fake_zone]:
             aggr = self.api.add_host_to_aggregate(self.context,
-                                                  aggr['id'], host)
+                                                  aggr['id'], aggregate_host)
         # let's mock the fact that the aggregate is in error!
         expected = self.api.remove_host_from_aggregate(self.context,
                                                        aggr['id'],

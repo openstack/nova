@@ -398,26 +398,26 @@ class ApiEc2TestCase(test.TestCase):
             (True, "test name", bad_amazon_ec2),
             (False, bad_strict_ec2, "test desc"),
         ]
-        for test in test_raise:
+        for t in test_raise:
             self.expect_http()
             self.mox.ReplayAll()
-            self.flags(ec2_strict_validation=test[0])
+            self.flags(ec2_strict_validation=t[0])
             self.assertRaises(boto_exc.EC2ResponseError,
                               self.ec2.create_security_group,
-                              test[1],
-                              test[2])
+                              t[1],
+                              t[2])
         test_accept = [
             (False, bad_amazon_ec2, "test desc"),
             (False, "test name", bad_amazon_ec2),
         ]
-        for test in test_accept:
+        for t in test_accept:
             self.expect_http()
             self.mox.ReplayAll()
-            self.flags(ec2_strict_validation=test[0])
-            self.ec2.create_security_group(test[1], test[2])
+            self.flags(ec2_strict_validation=t[0])
+            self.ec2.create_security_group(t[1], t[2])
             self.expect_http()
             self.mox.ReplayAll()
-            self.ec2.delete_security_group(test[1])
+            self.ec2.delete_security_group(t[1])
 
     def test_group_name_valid_length_security_group(self):
         """Test that we sanely handle invalid security group names.

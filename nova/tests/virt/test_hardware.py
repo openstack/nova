@@ -294,24 +294,24 @@ class VCPUTopologyTest(test.NoDBTestCase):
             },
         ]
 
-        for test in testdata:
-            if type(test["expect"]) == tuple:
+        for topo_test in testdata:
+            if type(topo_test["expect"]) == tuple:
                 (preferred,
                  maximum) = hw.VirtCPUTopology.get_topology_constraints(
-                     test["flavor"],
-                     test["image"])
+                     topo_test["flavor"],
+                     topo_test["image"])
 
-                self.assertEqual(test["expect"][0], preferred.sockets)
-                self.assertEqual(test["expect"][1], preferred.cores)
-                self.assertEqual(test["expect"][2], preferred.threads)
-                self.assertEqual(test["expect"][3], maximum.sockets)
-                self.assertEqual(test["expect"][4], maximum.cores)
-                self.assertEqual(test["expect"][5], maximum.threads)
+                self.assertEqual(topo_test["expect"][0], preferred.sockets)
+                self.assertEqual(topo_test["expect"][1], preferred.cores)
+                self.assertEqual(topo_test["expect"][2], preferred.threads)
+                self.assertEqual(topo_test["expect"][3], maximum.sockets)
+                self.assertEqual(topo_test["expect"][4], maximum.cores)
+                self.assertEqual(topo_test["expect"][5], maximum.threads)
             else:
-                self.assertRaises(test["expect"],
+                self.assertRaises(topo_test["expect"],
                                   hw.VirtCPUTopology.get_topology_constraints,
-                                  test["flavor"],
-                                  test["image"])
+                                  topo_test["flavor"],
+                                  topo_test["image"])
 
     def test_possible_configs(self):
         testdata = [
@@ -400,28 +400,28 @@ class VCPUTopologyTest(test.NoDBTestCase):
             },
         ]
 
-        for test in testdata:
-            if type(test["expect"]) == list:
+        for topo_test in testdata:
+            if type(topo_test["expect"]) == list:
                 actual = []
                 for topology in hw.VirtCPUTopology.get_possible_topologies(
-                        test["vcpus"],
-                        hw.VirtCPUTopology(test["maxsockets"],
-                                           test["maxcores"],
-                                           test["maxthreads"]),
-                        test["allow_threads"]):
+                        topo_test["vcpus"],
+                        hw.VirtCPUTopology(topo_test["maxsockets"],
+                                           topo_test["maxcores"],
+                                           topo_test["maxthreads"]),
+                        topo_test["allow_threads"]):
                     actual.append([topology.sockets,
                                    topology.cores,
                                    topology.threads])
 
-                self.assertEqual(test["expect"], actual)
+                self.assertEqual(topo_test["expect"], actual)
             else:
-                self.assertRaises(test["expect"],
+                self.assertRaises(topo_test["expect"],
                                   hw.VirtCPUTopology.get_possible_topologies,
-                                  test["vcpus"],
-                                  hw.VirtCPUTopology(test["maxsockets"],
-                                                     test["maxcores"],
-                                                     test["maxthreads"]),
-                                  test["allow_threads"])
+                                  topo_test["vcpus"],
+                                  hw.VirtCPUTopology(topo_test["maxsockets"],
+                                                     topo_test["maxcores"],
+                                                     topo_test["maxthreads"]),
+                                  topo_test["allow_threads"])
 
     def test_sorting_configs(self):
         testdata = [
@@ -492,26 +492,26 @@ class VCPUTopologyTest(test.NoDBTestCase):
             },
         ]
 
-        for test in testdata:
+        for topo_test in testdata:
             actual = []
             possible = hw.VirtCPUTopology.get_possible_topologies(
-                test["vcpus"],
-                hw.VirtCPUTopology(test["maxsockets"],
-                                   test["maxcores"],
-                                   test["maxthreads"]),
-                test["allow_threads"])
+                topo_test["vcpus"],
+                hw.VirtCPUTopology(topo_test["maxsockets"],
+                                   topo_test["maxcores"],
+                                   topo_test["maxthreads"]),
+                topo_test["allow_threads"])
 
             tops = hw.VirtCPUTopology.sort_possible_topologies(
                 possible,
-                hw.VirtCPUTopology(test["sockets"],
-                                   test["cores"],
-                                   test["threads"]))
+                hw.VirtCPUTopology(topo_test["sockets"],
+                                   topo_test["cores"],
+                                   topo_test["threads"]))
             for topology in tops:
                 actual.append([topology.sockets,
                                topology.cores,
                                topology.threads])
 
-            self.assertEqual(test["expect"], actual)
+            self.assertEqual(topo_test["expect"], actual)
 
     def test_best_config(self):
         testdata = [
@@ -626,12 +626,12 @@ class VCPUTopologyTest(test.NoDBTestCase):
             },
         ]
 
-        for test in testdata:
+        for topo_test in testdata:
             topology = hw.VirtCPUTopology.get_desirable_configs(
-                test["flavor"],
-                test["image"],
-                test["allow_threads"])[0]
+                topo_test["flavor"],
+                topo_test["image"],
+                topo_test["allow_threads"])[0]
 
-            self.assertEqual(test["expect"][0], topology.sockets)
-            self.assertEqual(test["expect"][1], topology.cores)
-            self.assertEqual(test["expect"][2], topology.threads)
+            self.assertEqual(topo_test["expect"][0], topology.sockets)
+            self.assertEqual(topo_test["expect"][1], topology.cores)
+            self.assertEqual(topo_test["expect"][2], topology.threads)

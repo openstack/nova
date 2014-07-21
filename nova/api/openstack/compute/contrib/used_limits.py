@@ -61,11 +61,11 @@ class UsedLimitsController(wsgi.Controller):
             'totalSecurityGroupsUsed': 'security_groups',
         }
         used_limits = {}
-        for display_name, quota in quota_map.iteritems():
-            if quota in quotas:
-                reserved = (quotas[quota]['reserved']
+        for display_name, key in quota_map.iteritems():
+            if key in quotas:
+                reserved = (quotas[key]['reserved']
                             if self._reserved(req) else 0)
-                used_limits[display_name] = quotas[quota]['in_use'] + reserved
+                used_limits[display_name] = quotas[key]['in_use'] + reserved
 
         resp_obj.obj['limits']['absolute'].update(used_limits)
 

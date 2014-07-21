@@ -515,9 +515,9 @@ class CinderCloudTestCase(test.TestCase):
     def _tearDownBlockDeviceMapping(self, inst1, inst2, volumes):
         for vol in volumes:
             self.volume_api.delete(self.context, vol['id'])
-        for uuid in (inst1['uuid'], inst2['uuid']):
+        for instance_uuid in (inst1['uuid'], inst2['uuid']):
             for bdm in db.block_device_mapping_get_all_by_instance(
-                    self.context, uuid):
+                    self.context, instance_uuid):
                 db.block_device_mapping_destroy(self.context, bdm['id'])
         db.instance_destroy(self.context, inst2['uuid'])
         db.instance_destroy(self.context, inst1['uuid'])

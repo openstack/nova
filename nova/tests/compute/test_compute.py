@@ -6158,8 +6158,9 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute._poll_unconfirmed_resizes(ctxt)
 
-        for uuid, status in expected_migration_status.iteritems():
-            self.assertEqual(status, fetch_instance_migration_status(uuid))
+        for instance_uuid, status in expected_migration_status.iteritems():
+            self.assertEqual(status,
+                             fetch_instance_migration_status(instance_uuid))
 
     def test_instance_build_timeout_mixed_instances(self):
         # Tests that instances which failed to build within the configured
