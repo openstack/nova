@@ -650,6 +650,10 @@ class ExternalNetworkAttachForbidden(Forbidden):
                 "external network %(network_uuid)s")
 
 
+class NetworkMissingPhysicalNetwork(NovaException):
+    msg_fmt = _("Physical network is missing for network %(network_uuid)s")
+
+
 class DatastoreNotFound(NotFound):
     msg_fmt = _("Could not find the datastore reference(s) which the VM uses.")
 
