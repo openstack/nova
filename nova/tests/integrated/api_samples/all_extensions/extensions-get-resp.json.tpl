@@ -671,6 +671,14 @@
             "name": "ServerGroups",
             "namespace": "http://docs.openstack.org/compute/ext/servergroups/api/v2",
             "updated": "%(isotime)s"
+        },
+        {
+            "alias": "os-extended-evacuate-find-host",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ExtendedEvacuateFindHost",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_evacuate_find_host/api/v2",
+            "updated": "%(isotime)s"
         }
     ]
 }

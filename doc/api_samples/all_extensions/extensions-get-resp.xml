@@ -118,6 +118,11 @@
   <extension alias="os-evacuate" updated="2013-01-06T00:00:00Z" namespace="http://docs.openstack.org/compute/ext/evacuate/api/v2" name="Evacuate">
     <description>Enables server evacuation.</description>
   </extension>
+  <extension alias="os-extended-evacuate-find-host" updated="2014-02-12T00:00:00Z" namespace="http://docs.openstack.org/compute/ext/extended_evacuate_find_host/api/v2" name="ExtendedEvacuateFindHost">
+    <description>Enables server evacuation without target host. Scheduler will select
+       one to target.
+    </description>
+  </extension>
   <extension alias="os-extended-floating-ips" updated="2013-04-19T00:00:00Z" namespace="http://docs.openstack.org/compute/ext/extended_floating_ips/api/v2" name="ExtendedFloatingIps">
     <description>Adds optional fixed_address to the add floating IP command.</description>
   </extension>

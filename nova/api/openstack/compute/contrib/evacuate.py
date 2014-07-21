@@ -28,15 +28,17 @@ authorize = extensions.extension_authorizer('compute', 'evacuate')
 
 
 class Controller(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, ext_mgr, *args, **kwargs):
         super(Controller, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
         self.host_api = compute.HostAPI()
+        self.ext_mgr = ext_mgr
 
     @wsgi.action('evacuate')
     def _evacuate(self, req, id, body):
         """Permit admins to evacuate a server from a failed host
         to a new one.
+        If host is empty, the scheduler will select one.
         """
         context = req.environ["nova.context"]
         authorize(context)
@@ -45,12 +47,18 @@ class Controller(wsgi.Controller):
             raise exc.HTTPBadRequest(_("Malformed request body"))
         evacuate_body = body["evacuate"]
 
+        host = evacuate_body.get("host")
+
+        if (not host and
+                not self.ext_mgr.is_loaded('os-extended-evacuate-find-host')):
+            msg = _("host must be specified.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
         try:
-            host = evacuate_body["host"]
             on_shared_storage = strutils.bool_from_string(
                                             evacuate_body["onSharedStorage"])
         except (TypeError, KeyError):
-            msg = _("host and onSharedStorage must be specified.")
+            msg = _("onSharedStorage must be specified.")
             raise exc.HTTPBadRequest(explanation=msg)
 
         password = None
@@ -65,11 +73,12 @@ class Controller(wsgi.Controller):
         elif not on_shared_storage:
             password = utils.generate_password()
 
-        try:
-            self.host_api.service_get_by_compute_host(context, host)
-        except exception.NotFound:
-            msg = _("Compute host %s not found.") % host
-            raise exc.HTTPNotFound(explanation=msg)
+        if host is not None:
+            try:
+                self.host_api.service_get_by_compute_host(context, host)
+            except exception.NotFound:
+                msg = _("Compute host %s not found.") % host
+                raise exc.HTTPNotFound(explanation=msg)
 
         try:
             instance = self.compute_api.get(context, id, want_objects=True)
@@ -99,6 +108,6 @@ class Evacuate(extensions.ExtensionDescriptor):
     updated = "2013-01-06T00:00:00Z"
 
     def get_controller_extensions(self):
-        controller = Controller()
+        controller = Controller(self.ext_mgr)
         extension = extensions.ControllerExtension(self, 'servers', controller)
         return [extension]

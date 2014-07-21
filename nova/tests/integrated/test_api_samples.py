@@ -3238,6 +3238,53 @@ class EvacuateXmlTest(EvacuateJsonTest):
     ctype = 'xml'
 
 
+class EvacuateFindHostSampleJsonTest(ServersSampleBase):
+    extends_name = ("nova.api.openstack.compute.contrib"
+                      ".evacuate.Evacuate")
+
+    extension_name = ("nova.api.openstack.compute.contrib"
+                ".extended_evacuate_find_host.Extended_evacuate_find_host")
+
+    @mock.patch('nova.compute.manager.ComputeManager._check_instance_exists')
+    @mock.patch('nova.compute.api.HostAPI.service_get_by_compute_host')
+    @mock.patch('nova.conductor.manager.ComputeTaskManager.rebuild_instance')
+    def test_server_evacuate(self, rebuild_mock, service_get_mock,
+                             check_instance_mock):
+        self.uuid = self._post_server()
+
+        req_subs = {
+            "adminPass": "MySecretPass",
+            "onSharedStorage": 'False'
+        }
+
+        check_instance_mock.return_value = False
+
+        def fake_service_get_by_compute_host(self, context, host):
+            return {
+                    'host_name': host,
+                    'service': 'compute',
+                    'zone': 'nova'
+                    }
+        service_get_mock.side_effect = fake_service_get_by_compute_host
+        with mock.patch.object(service_group_api.API, 'service_is_up',
+                               return_value=False):
+            response = self._do_post('servers/%s/action' % self.uuid,
+                                     'server-evacuate-find-host-req', req_subs)
+            subs = self._get_regexes()
+            self._verify_response('server-evacuate-find-host-resp', subs,
+                                  response, 200)
+        rebuild_mock.assert_called_once_with(mock.ANY, instance=mock.ANY,
+                orig_image_ref=mock.ANY, image_ref=mock.ANY,
+                injected_files=mock.ANY, new_pass="MySecretPass",
+                orig_sys_metadata=mock.ANY, bdms=mock.ANY, recreate=mock.ANY,
+                on_shared_storage=False, preserve_ephemeral=mock.ANY,
+                host=None)
+
+
+class EvacuateFindHostSampleXmlTests(EvacuateFindHostSampleJsonTest):
+    ctype = "xml"
+
+
 class FloatingIpDNSJsonTest(ApiSampleTestBaseV2):
     extension_name = ("nova.api.openstack.compute.contrib.floating_ip_dns."
                       "Floating_ip_dns")
