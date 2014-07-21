@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-06-30 06:07+0000\n"
-"PO-Revision-Date: 2014-06-30 05:01+0000\n"
+"POT-Creation-Date: 2014-07-21 06:03+0000\n"
+"PO-Revision-Date: 2014-07-16 14:42+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Chinese (China) (http://www.transifex.com/projects/p/nova/"
 "language/zh_CN/)\n"
@@ -19,27 +19,33 @@ msgstr ""
 "Generated-By: Babel 1.3\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
+#: nova/compute/manager.py:5422
+#, python-format
+msgid ""
+"During sync_power_state the instance has a pending task (%(task)s). Skip."
+msgstr ""
+
 #: nova/openstack/common/eventlet_backdoor.py:141
 #, python-format
 msgid "Eventlet backdoor listening on %(port)s for process %(pid)d"
 msgstr ""
 
-#: nova/openstack/common/lockutils.py:83
+#: nova/openstack/common/lockutils.py:82
 #, python-format
 msgid "Created lock path: %s"
 msgstr "已创建锁路径：%s"
 
-#: nova/openstack/common/lockutils.py:250
+#: nova/openstack/common/lockutils.py:251
 #, python-format
 msgid "Failed to remove file %(file)s"
 msgstr ""
 
-#: nova/openstack/common/periodic_task.py:125
+#: nova/openstack/common/periodic_task.py:126
 #, python-format
 msgid "Skipping periodic task %(task)s because its interval is negative"
 msgstr "正在跳过周期性任务 %(task)s，因为其时间间隔为负"
 
-#: nova/openstack/common/periodic_task.py:130
+#: nova/openstack/common/periodic_task.py:131
 #, python-format
 msgid "Skipping periodic task %(task)s because it is disabled"
 msgstr "正在跳过周期性任务 %(task)s，因为它已禁用"
@@ -101,121 +107,126 @@ msgstr "正在从表 %(table)s 中删除具有id %(id)s 的重复行"
 msgid "%(num_values)d values found, of which the minimum value will be used."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:894
+#: nova/virt/firewall.py:446
+#, python-format
+msgid "instance chain %s disappeared during refresh, skipping"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:839
+#, python-format
+msgid ""
+"Unable to use bulk domain list APIs, falling back to slow code path: %(ex)s"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:958
 msgid "Instance destroyed successfully."
 msgstr "实例销毁成功。"
 
-#: nova/virt/libvirt/driver.py:904
+#: nova/virt/libvirt/driver.py:968
 msgid "Instance may be started again."
 msgstr "可再次启动实例。"
 
-#: nova/virt/libvirt/driver.py:914
+#: nova/virt/libvirt/driver.py:978
 msgid "Going to destroy instance again."
 msgstr "将再次销毁实例。"
 
-#: nova/virt/libvirt/driver.py:1518
+#: nova/virt/libvirt/driver.py:1574
 msgid "Beginning live snapshot process"
 msgstr "正在开始实时快照流程"
 
-#: nova/virt/libvirt/driver.py:1521
+#: nova/virt/libvirt/driver.py:1577
 msgid "Beginning cold snapshot process"
 msgstr "正在结束冷快照流程"
 
-#: nova/virt/libvirt/driver.py:1550
+#: nova/virt/libvirt/driver.py:1606
 msgid "Snapshot extracted, beginning image upload"
 msgstr "已抽取快照，正在开始映像上载"
 
-#: nova/virt/libvirt/driver.py:1562
+#: nova/virt/libvirt/driver.py:1618
 msgid "Snapshot image upload complete"
 msgstr "快照映像上载完成"
 
-#: nova/virt/libvirt/driver.py:1972
+#: nova/virt/libvirt/driver.py:2049
 msgid "Instance soft rebooted successfully."
 msgstr "已成功执行实例软重新引导。"
 
-#: nova/virt/libvirt/driver.py:2015
+#: nova/virt/libvirt/driver.py:2092
 msgid "Instance shutdown successfully."
 msgstr "已成功关闭实例。"
 
-#: nova/virt/libvirt/driver.py:2023
+#: nova/virt/libvirt/driver.py:2100
 msgid "Instance may have been rebooted during soft reboot, so return now."
 msgstr "在软重新引导期间，可能已重新引导实例，因此会立即返回。"
 
-#: nova/virt/libvirt/driver.py:2091
+#: nova/virt/libvirt/driver.py:2168
 msgid "Instance rebooted successfully."
 msgstr "实例成功重启。"
 
-#: nova/virt/libvirt/driver.py:2259
+#: nova/virt/libvirt/driver.py:2336
 msgid "Instance spawned successfully."
 msgstr "实例成功生产。"
 
-#: nova/virt/libvirt/driver.py:2275
+#: nova/virt/libvirt/driver.py:2352
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
 msgstr "data：%(data)r, fpath: %(fpath)r"
 
-#: nova/virt/libvirt/driver.py:2314 nova/virt/libvirt/driver.py:2341
+#: nova/virt/libvirt/driver.py:2391 nova/virt/libvirt/driver.py:2418
 #, python-format
 msgid "Truncated console log returned, %d bytes ignored"
 msgstr "已返回截断的控制台日志，忽略了 %d 个字节"
 
-#: nova/virt/libvirt/driver.py:2568
+#: nova/virt/libvirt/driver.py:2645
 msgid "Creating image"
 msgstr "正在创建镜像"
 
-#: nova/virt/libvirt/driver.py:2677
+#: nova/virt/libvirt/driver.py:2754
 msgid "Using config drive"
 msgstr "正在使用配置驱动器"
 
-#: nova/virt/libvirt/driver.py:2686
+#: nova/virt/libvirt/driver.py:2763
 #, python-format
 msgid "Creating config drive at %(path)s"
 msgstr "正在 %(path)s 处创建配置驱动器"
 
-#: nova/virt/libvirt/driver.py:3223
+#: nova/virt/libvirt/driver.py:3315
 msgid "Configuring timezone for windows instance to localtime"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3694 nova/virt/libvirt/driver.py:3821
-#: nova/virt/libvirt/driver.py:3849
-#, python-format
-msgid "libvirt can't find a domain with id: %s"
-msgstr ""
-
-#: nova/virt/libvirt/driver.py:4109
+#: nova/virt/libvirt/driver.py:4193
 #, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. Instance="
 "%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4115
+#: nova/virt/libvirt/driver.py:4199
 #, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
 "device"
 msgstr "对于实例 %s，在 libvirt 中找不到域。无法获取设备的块统计信息"
 
-#: nova/virt/libvirt/driver.py:4330
+#: nova/virt/libvirt/driver.py:4441
 #, python-format
 msgid "Instance launched has CPU info: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4986
+#: nova/virt/libvirt/driver.py:5174
 msgid "Instance running successfully."
 msgstr "实例正在成功运行。"
 
-#: nova/virt/libvirt/driver.py:5226
+#: nova/virt/libvirt/driver.py:5414
 #, python-format
 msgid "Deleting instance files %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5238
+#: nova/virt/libvirt/driver.py:5426
 #, python-format
 msgid "Deletion of %s failed"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5241
+#: nova/virt/libvirt/driver.py:5429
 #, python-format
 msgid "Deletion of %s complete"
 msgstr ""
@@ -228,7 +239,7 @@ msgstr "在 nwfilter 里调用 setup_basic_filtering"
 msgid "Ensuring static filters"
 msgstr "正在确保静态过滤器"
 
-#: nova/virt/libvirt/firewall.py:306
+#: nova/virt/libvirt/firewall.py:304
 msgid "Attempted to unfilter instance which is not filtered"
 msgstr "试图不过滤没有过滤的实例"
 
@@ -287,11 +298,11 @@ msgstr "损坏的基文件：%s"
 msgid "Removable base files: %s"
 msgstr "可删除的基文件：%s"
 
-#: nova/virt/libvirt/utils.py:530
+#: nova/virt/libvirt/utils.py:536
 msgid "findmnt tool is not installed"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:1352
+#: nova/virt/xenapi/vm_utils.py:1353
 #, python-format
 msgid ""
 "Image creation data, cacheable: %(cache)s, downloaded: %(downloaded)s "
