@@ -8127,6 +8127,73 @@ Active:          8381604 kB
                               conn.cleanup, 'ctxt', fake_inst, 'netinfo')
             unplug.assert_called_once_with(fake_inst, 'netinfo', True)
 
+    def test_swap_volume(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+
+        mock_dom = mock.MagicMock()
+
+        with mock.patch.object(drvr._conn, 'defineXML',
+                               create=True) as mock_define:
+            xmldoc = "<domain/>"
+            srcfile = "/first/path"
+            dstfile = "/second/path"
+
+            mock_dom.XMLDesc.return_value = xmldoc
+            mock_dom.isPersistent.return_value = True
+
+            drvr._swap_volume(mock_dom, srcfile, dstfile)
+
+            mock_dom.XMLDesc.assert_called_once_with(0)
+            mock_dom.blockRebase.assert_called_once_with(
+                srcfile, dstfile, 0,
+                libvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
+                libvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT)
+
+            mock_define.assert_called_once_with(xmldoc)
+
+    def test_live_snapshot(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+
+        mock_dom = mock.MagicMock()
+
+        with contextlib.nested(
+                mock.patch.object(drvr._conn, 'defineXML', create=True),
+                mock.patch.object(fake_libvirt_utils, 'get_disk_size'),
+                mock.patch.object(fake_libvirt_utils, 'get_disk_backing_file'),
+                mock.patch.object(fake_libvirt_utils, 'create_cow_image'),
+                mock.patch.object(fake_libvirt_utils, 'chown'),
+                mock.patch.object(fake_libvirt_utils, 'extract_snapshot'),
+        ) as (mock_define, mock_size, mock_backing, mock_create_cow,
+              mock_chown, mock_snapshot):
+
+            xmldoc = "<domain/>"
+            srcfile = "/first/path"
+            dstfile = "/second/path"
+            bckfile = "/other/path"
+            dltfile = dstfile + ".delta"
+
+            mock_dom.XMLDesc.return_value = xmldoc
+            mock_dom.isPersistent.return_value = True
+            mock_size.return_value = 1004009
+            mock_backing.return_value = bckfile
+
+            drvr._live_snapshot(mock_dom, srcfile, dstfile, "qcow2")
+
+            mock_dom.XMLDesc.assert_called_once_with(0)
+            mock_dom.blockRebase.assert_called_once_with(
+                srcfile, dltfile, 0,
+                libvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
+                libvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT |
+                libvirt.VIR_DOMAIN_BLOCK_REBASE_SHALLOW)
+
+            mock_size.assert_called_once_with(srcfile)
+            mock_backing.assert_called_once_with(srcfile, basename=False)
+            mock_create_cow.assert_called_once_with(bckfile, dltfile, 1004009)
+            mock_chown.assert_called_once_with(dltfile, os.getuid())
+            mock_snapshot.assert_called_once_with(dltfile, "qcow2",
+                                                  dstfile, "qcow2")
+            mock_define.assert_called_once_with(xmldoc)
+
 
 class HostStateTestCase(test.TestCase):
 
