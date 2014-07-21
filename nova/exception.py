@@ -823,6 +823,10 @@ class InvalidQuotaValue(Invalid):
                 "resources: %(unders)s")
 
 
+class InvalidQuotaMethodUsage(Invalid):
+    msg_fmt = _("Wrong quota method %(method)s used on resource %(res)s")
+
+
 class QuotaNotFound(NotFound):
     msg_fmt = _("Quota could not be found")
 

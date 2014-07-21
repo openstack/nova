@@ -428,6 +428,47 @@ class BaseResourceTestCase(test.TestCase):
 
         self.assertEqual(quota_value, 20)
 
+    def test_valid_method_call_check_invalid_input(self):
+        resources = {'dummy': 1}
+
+        self.assertRaises(exception.InvalidQuotaMethodUsage,
+                          quota._valid_method_call_check_resources,
+                          resources, 'limit')
+
+    def test_valid_method_call_check_invalid_method(self):
+        resources = {'key_pairs': 1}
+
+        self.assertRaises(exception.InvalidQuotaMethodUsage,
+                          quota._valid_method_call_check_resources,
+                          resources, 'dummy')
+
+    def test_valid_method_call_check_multiple(self):
+        resources = {'key_pairs': 1, 'dummy': 2}
+
+        self.assertRaises(exception.InvalidQuotaMethodUsage,
+                          quota._valid_method_call_check_resources,
+                          resources, 'check')
+
+        resources = {'key_pairs': 1, 'instances': 2, 'dummy': 3}
+
+        self.assertRaises(exception.InvalidQuotaMethodUsage,
+                          quota._valid_method_call_check_resources,
+                          resources, 'check')
+
+    def test_valid_method_call_check_wrong_method_reserve(self):
+        resources = {'key_pairs': 1}
+
+        self.assertRaises(exception.InvalidQuotaMethodUsage,
+                          quota._valid_method_call_check_resources,
+                          resources, 'reserve')
+
+    def test_valid_method_call_check_wrong_method_check(self):
+        resources = {'fixed_ips': 1}
+
+        self.assertRaises(exception.InvalidQuotaMethodUsage,
+                          quota._valid_method_call_check_resources,
+                          resources, 'check')
+
 
 class QuotaEngineTestCase(test.TestCase):
     def test_init(self):
