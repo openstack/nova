@@ -19,6 +19,7 @@ from nova import exception
 from nova import test
 from nova.tests import fake_instance
 from nova.virt.hyperv import constants
+from nova.virt.hyperv import pathutils
 from nova.virt.hyperv import vmops
 from nova.virt.hyperv import vmutils
 
@@ -83,7 +84,7 @@ class VMOpsTestCase(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(self.context)
         with mock.patch.object(self._vmops, '_set_vm_state') as mock_set_state:
             self._vmops.reboot(instance, {}, reboot_type)
-            mock_set_state.assert_called_once_with(instance.name, vm_state)
+            mock_set_state.assert_called_once_with(instance, vm_state)
 
     @mock.patch("nova.virt.hyperv.vmutils.VMUtils.soft_shutdown_vm")
     @mock.patch("nova.virt.hyperv.vmops.VMOps._wait_for_power_off")
@@ -135,3 +136,23 @@ class VMOpsTestCase(test.NoDBTestCase):
         result = self._vmops._wait_for_power_off(
             mock.sentinel.FAKE_VM_NAME, vmops.SHUTDOWN_TIME_INCREMENT)
         self.assertFalse(result)
+
+    @mock.patch("__builtin__.open")
+    @mock.patch("os.path.exists")
+    @mock.patch.object(pathutils.PathUtils, 'get_vm_console_log_paths')
+    def test_get_console_output_exception(self,
+                                          fake_get_vm_log_path,
+                                          fake_path_exists,
+                                          fake_open):
+        fake_vm = mock.MagicMock()
+
+        fake_open.side_effect = vmutils.HyperVException
+        fake_path_exists.return_value = True
+        fake_get_vm_log_path.return_value = (
+            mock.sentinel.fake_console_log_path,
+            mock.sentinel.fake_console_log_archived)
+
+        with mock.patch('nova.virt.hyperv.vmops.open', fake_open, create=True):
+            self.assertRaises(vmutils.HyperVException,
+                              self._vmops.get_console_output,
+                              fake_vm)

@@ -165,3 +165,9 @@ class PathUtils(object):
         dir_name = os.path.join('export', instance_name)
         return self._get_instances_sub_dir(dir_name, create_dir=True,
                                            remove_dir=True)
+
+    def get_vm_console_log_paths(self, vm_name, remote_server=None):
+        instance_dir = self.get_instance_dir(vm_name,
+                                             remote_server)
+        console_log_path = os.path.join(instance_dir, 'console.log')
+        return console_log_path, console_log_path + '.1'

@@ -27,6 +27,7 @@ from nova.api.metadata import base as instance_metadata
 from nova import exception
 from nova.i18n import _, _LI, _LW
 from nova.openstack.common import excutils
+from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
@@ -36,6 +37,7 @@ from nova import utils
 from nova.virt import configdrive
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import imagecache
+from nova.virt.hyperv import ioutils
 from nova.virt.hyperv import utilsfactory
 from nova.virt.hyperv import vmutils
 from nova.virt.hyperv import volumeops
@@ -107,6 +109,8 @@ class VMOps(object):
         'nova.virt.hyperv.vif.HyperVNovaNetworkVIFDriver',
     }
 
+    _MAX_CONSOLE_BYTES = units.Mi
+
     def __init__(self):
         self._vmutils = utilsfactory.get_vmutils()
         self._vhdutils = utilsfactory.get_vhdutils()
@@ -115,6 +119,7 @@ class VMOps(object):
         self._imagecache = imagecache.ImageCache()
         self._vif_driver = None
         self._load_vif_driver_class()
+        self._vm_log_writers = {}
 
     def _load_vif_driver_class(self):
         try:
@@ -309,6 +314,8 @@ class VMOps(object):
         if CONF.hyperv.enable_instance_metrics_collection:
             self._vmutils.enable_vm_metrics_collection(instance_name)
 
+        self._create_vm_com_port_pipe(instance)
+
     def _create_config_drive(self, instance, injected_files, admin_password):
         if CONF.config_drive_format != 'iso9660':
             raise vmutils.UnsupportedConfigDriveFormatException(
@@ -410,7 +417,7 @@ class VMOps(object):
                 self.power_on(instance)
                 return
 
-        self._set_vm_state(instance['name'],
+        self._set_vm_state(instance,
                            constants.HYPERV_VM_STATE_REBOOT)
 
     def _soft_shutdown(self, instance,
@@ -440,50 +447,63 @@ class VMOps(object):
     def pause(self, instance):
         """Pause VM instance."""
         LOG.debug("Pause instance", instance=instance)
-        self._set_vm_state(instance["name"],
+        self._set_vm_state(instance,
                            constants.HYPERV_VM_STATE_PAUSED)
 
     def unpause(self, instance):
         """Unpause paused VM instance."""
         LOG.debug("Unpause instance", instance=instance)
-        self._set_vm_state(instance["name"],
+        self._set_vm_state(instance,
                            constants.HYPERV_VM_STATE_ENABLED)
 
     def suspend(self, instance):
         """Suspend the specified instance."""
         LOG.debug("Suspend instance", instance=instance)
-        self._set_vm_state(instance["name"],
+        self._set_vm_state(instance,
                            constants.HYPERV_VM_STATE_SUSPENDED)
 
     def resume(self, instance):
         """Resume the suspended VM instance."""
         LOG.debug("Resume instance", instance=instance)
-        self._set_vm_state(instance["name"],
+        self._set_vm_state(instance,
                            constants.HYPERV_VM_STATE_ENABLED)
 
     def power_off(self, instance):
         """Power off the specified instance."""
         LOG.debug("Power off instance", instance=instance)
-        self._set_vm_state(instance["name"],
+        self._set_vm_state(instance,
                            constants.HYPERV_VM_STATE_DISABLED)
 
     def power_on(self, instance):
         """Power on the specified instance."""
         LOG.debug("Power on instance", instance=instance)
-        self._set_vm_state(instance["name"],
+        self._set_vm_state(instance,
                            constants.HYPERV_VM_STATE_ENABLED)
 
-    def _set_vm_state(self, vm_name, req_state):
+    def _set_vm_state(self, instance, req_state):
+        instance_name = instance['name']
+        instance_uuid = instance['uuid']
+
         try:
-            self._vmutils.set_vm_state(vm_name, req_state)
-            LOG.debug("Successfully changed state of VM %(vm_name)s"
-                      " to: %(req_state)s",
-                      {'vm_name': vm_name, 'req_state': req_state})
+            self._vmutils.set_vm_state(instance_name, req_state)
+
+            if req_state in (constants.HYPERV_VM_STATE_DISABLED,
+                             constants.HYPERV_VM_STATE_REBOOT):
+                self._delete_vm_console_log(instance)
+            if req_state in (constants.HYPERV_VM_STATE_ENABLED,
+                             constants.HYPERV_VM_STATE_REBOOT):
+                self.log_vm_serial_output(instance_name,
+                                          instance_uuid)
+
+            LOG.debug("Successfully changed state of VM %(instance_name)s"
+                      " to: %(req_state)s", {'instance_name': instance_name,
+                                             'req_state': req_state})
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.error(_("Failed to change vm state of %(vm_name)s"
+                LOG.error(_("Failed to change vm state of %(instance_name)s"
                             " to %(req_state)s"),
-                          {'vm_name': vm_name, 'req_state': req_state})
+                          {'instance_name': instance_name,
+                           'req_state': req_state})
 
     def _get_vm_state(self, instance_name):
         summary_info = self._vmutils.get_vm_summary_info(instance_name)
@@ -517,3 +537,77 @@ class VMOps(object):
             periodic_call.stop()
 
         return True
+
+    def log_vm_serial_output(self, instance_name, instance_uuid):
+        # Uses a 'thread' that will run in background, reading
+        # the console output from the according named pipe and
+        # write it to a file.
+        console_log_path = self._pathutils.get_vm_console_log_paths(
+            instance_name)[0]
+        pipe_path = r'\\.\pipe\%s' % instance_uuid
+
+        vm_log_writer = ioutils.IOThread(pipe_path, console_log_path,
+                                         self._MAX_CONSOLE_BYTES)
+        self._vm_log_writers[instance_uuid] = vm_log_writer
+
+        vm_log_writer.start()
+
+    def get_console_output(self, instance):
+        console_log_paths = (
+            self._pathutils.get_vm_console_log_paths(instance['name']))
+
+        try:
+            instance_log = ''
+            for console_log_path in console_log_paths:
+                if os.path.exists(console_log_path):
+                    with open(console_log_path, 'rb') as fp:
+                        instance_log += fp.read()
+            return instance_log
+        except IOError as err:
+            msg = _("Could not get instance console log. Error: %s") % err
+            raise vmutils.HyperVException(msg, instance=instance)
+
+    def _delete_vm_console_log(self, instance):
+        console_log_files = self._pathutils.get_vm_console_log_paths(
+            instance['name'])
+
+        vm_log_writer = self._vm_log_writers.get(instance['uuid'])
+        if vm_log_writer:
+            vm_log_writer.join()
+
+        for log_file in console_log_files:
+            fileutils.delete_if_exists(log_file)
+
+    def copy_vm_console_logs(self, vm_name, dest_host):
+        local_log_paths = self._pathutils.get_vm_console_log_paths(
+            vm_name)
+        remote_log_paths = self._pathutils.get_vm_console_log_paths(
+            vm_name, remote_server=dest_host)
+
+        for local_log_path, remote_log_path in (local_log_paths,
+                                                remote_log_paths):
+            if self._pathutils.exists(local_log_path):
+                self._pathutils.copy(local_log_path,
+                                     remote_log_path)
+
+    def _create_vm_com_port_pipe(self, instance):
+        # Creates a pipe to the COM 0 serial port of the specified vm.
+        pipe_path = r'\\.\pipe\%s' % instance['uuid']
+        self._vmutils.get_vm_serial_port_connection(
+            instance['name'], update_connection=pipe_path)
+
+    def restart_vm_log_writers(self):
+        # Restart the VM console log writers after nova compute restarts.
+        active_instances = self._vmutils.get_active_instances()
+        for instance_name in active_instances:
+            instance_path = self._pathutils.get_instance_dir(instance_name)
+
+            # Skip instances that are not created by Nova
+            if not os.path.exists(instance_path):
+                continue
+
+            vm_serial_conn = self._vmutils.get_vm_serial_port_connection(
+                instance_name)
+            if vm_serial_conn:
+                instance_uuid = os.path.basename(vm_serial_conn[0])
+                self.log_vm_serial_output(instance_name, instance_uuid)

@@ -69,6 +69,7 @@ class VMUtils(object):
     _IDE_DVD_RES_SUB_TYPE = 'Microsoft Virtual CD/DVD Disk'
     _IDE_CTRL_RES_SUB_TYPE = 'Microsoft Emulated IDE Controller'
     _SCSI_CTRL_RES_SUB_TYPE = 'Microsoft Synthetic SCSI Controller'
+    _SERIAL_PORT_RES_SUB_TYPE = 'Microsoft Serial Port'
 
     _SETTINGS_DEFINE_STATE_CLASS = 'Msvm_SettingsDefineState'
     _VIRTUAL_SYSTEM_SETTING_DATA_CLASS = 'Msvm_VirtualSystemSettingData'
@@ -600,3 +601,28 @@ class VMUtils(object):
     def enable_vm_metrics_collection(self, vm_name):
         raise NotImplementedError(_("Metrics collection is not supported on "
                                     "this version of Hyper-V"))
+
+    def get_vm_serial_port_connection(self, vm_name, update_connection=None):
+        vm = self._lookup_vm_check(vm_name)
+
+        vmsettings = vm.associators(
+            wmi_result_class=self._VIRTUAL_SYSTEM_SETTING_DATA_CLASS)
+        rasds = vmsettings[0].associators(
+            wmi_result_class=self._RESOURCE_ALLOC_SETTING_DATA_CLASS)
+        serial_port = (
+            [r for r in rasds if
+             r.ResourceSubType == self._SERIAL_PORT_RES_SUB_TYPE][0])
+
+        if update_connection:
+            serial_port.Connection = [update_connection]
+            self._modify_virt_resource(serial_port, vm.path_())
+
+        return serial_port.Connection
+
+    def get_active_instances(self):
+        """Return the names of all the active instances known to Hyper-V."""
+        vm_names = [v.ElementName for v in
+                    self._conn.Msvm_ComputerSystem(Caption="Virtual Machine")
+                    if v.EnabledState == constants.HYPERV_VM_STATE_ENABLED]
+
+        return vm_names

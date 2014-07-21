@@ -44,7 +44,7 @@ class HyperVDriver(driver.ComputeDriver):
         self._rdpconsoleops = rdpconsoleops.RDPConsoleOps()
 
     def init_host(self, host):
-        pass
+        self._vmops.restart_vm_log_writers()
 
     def list_instances(self):
         return self._vmops.list_instances()
@@ -221,3 +221,6 @@ class HyperVDriver(driver.ComputeDriver):
 
     def get_rdp_console(self, context, instance):
         return self._rdpconsoleops.get_rdp_console(instance)
+
+    def get_console_output(self, context, instance):
+        return self._vmops.get_console_output(instance)
