@@ -150,6 +150,13 @@ class FakeSchedulerAPI(object):
         pass
 
 
+class FakeComputeTaskAPI(object):
+
+    def resize_instance(self, context, instance, extra_instance_updates,
+                        scheduler_hint, flavor, reservations):
+        pass
+
+
 class BaseTestCase(test.TestCase):
 
     def setUp(self):
@@ -231,7 +238,10 @@ class BaseTestCase(test.TestCase):
         self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
 
         fake_rpcapi = FakeSchedulerAPI()
+        fake_taskapi = FakeComputeTaskAPI()
         self.stubs.Set(self.compute, 'scheduler_rpcapi', fake_rpcapi)
+        self.stubs.Set(self.compute, 'compute_task_api', fake_taskapi)
+
         fake_network.set_stub_network_methods(self.stubs)
         fake_server_actions.stub_out_action_events(self.stubs)
 
@@ -10170,12 +10180,12 @@ class ComputeReschedulingResizeTestCase(ComputeReschedulingTestCase):
         instance = fake_instance.fake_db_instance(uuid=instance_uuid)
         instance = self._objectify(instance)
         instance_type = {}
-        image = None
         reservations = None
 
-        scheduler_method = self.compute.scheduler_rpcapi.prep_resize
-        method_args = (instance, instance_type, image, request_spec,
-                filter_properties, reservations)
+        scheduler_method = self.compute.compute_task_api.resize_instance
+        scheduler_hint = dict(filter_properties=filter_properties)
+        method_args = (instance, None, scheduler_hint, instance_type,
+                       reservations)
 
         return self.compute._reschedule(self.context, request_spec,
                 filter_properties, instance, scheduler_method,
@@ -10462,13 +10472,14 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
         raises another exception
         """
         instance = self._create_fake_instance_obj()
-        method_args = (None, instance, self.instance_type, None, None,
-                None)
+        scheduler_hint = dict(filter_properties={})
+        method_args = (instance, None, scheduler_hint, self.instance_type,
+                       None)
         self.mox.StubOutWithMock(self.compute, "_reschedule")
 
         self.compute._reschedule(
                 self.context, None, None, instance,
-                self.compute.scheduler_rpcapi.prep_resize, method_args,
+                self.compute.compute_task_api.resize_instance, method_args,
                 task_states.RESIZE_PREP).AndRaise(
                         InnerTestingException("Inner"))
         self.mox.ReplayAll()
@@ -10487,12 +10498,14 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
         rescheduled.
         """
         instance = self._create_fake_instance_obj()
-        method_args = (None, instance, self.instance_type, None, None, None)
+        scheduler_hint = dict(filter_properties={})
+        method_args = (instance, None, scheduler_hint, self.instance_type,
+                       None)
         self.mox.StubOutWithMock(self.compute, "_reschedule")
 
         self.compute._reschedule(
                 self.context, None, None, instance,
-                self.compute.scheduler_rpcapi.prep_resize, method_args,
+                self.compute.compute_task_api.resize_instance, method_args,
                 task_states.RESIZE_PREP).AndReturn(False)
         self.mox.ReplayAll()
 
@@ -10508,8 +10521,10 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
     def test_reschedule_true(self):
         # If rescheduled, the original resize exception should be logged.
         instance = self._create_fake_instance_obj()
-        instance_p = obj_base.obj_to_primitive(instance)
-        method_args = (instance_p, self.instance_type, None, {}, {}, None)
+        scheduler_hint = dict(filter_properties={})
+        method_args = (instance, None, scheduler_hint, self.instance_type,
+                       None)
+
         try:
             raise test.TestingException("Original")
         except Exception:
@@ -10519,7 +10534,7 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
             self.mox.StubOutWithMock(self.compute, "_log_original_error")
             self.compute._reschedule(self.context, {}, {},
                     instance,
-                    self.compute.scheduler_rpcapi.prep_resize, method_args,
+                    self.compute.compute_task_api.resize_instance, method_args,
                     task_states.RESIZE_PREP, exc_info).AndReturn(True)
 
             self.compute._log_original_error(exc_info, instance.uuid)
