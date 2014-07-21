@@ -4225,7 +4225,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.DestinationDiskExists(path=instance_dir)
             os.mkdir(instance_dir)
 
-        if not is_shared_block_storage:
+        if not (is_shared_block_storage or is_shared_instance_path):
             # Ensure images and backing files are present.
             self._create_images_and_backing(context, instance, instance_dir,
                                             disk_info)

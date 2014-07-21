@@ -3307,6 +3307,30 @@ class LibvirtConnTestCase(test.TestCase):
         conn.pre_live_migration(self.context, instance, block_device_info=None,
                                 network_info=[], disk_info={})
 
+    def test_pre_live_migration_with_shared_instance_path(self):
+        migrate_data = {'is_shared_block_storage': False,
+                        'block_migration': False}
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = db.instance_create(self.context, self.test_instance)
+        # creating mocks
+        with contextlib.nested(
+            mock.patch.object(conn,
+                              '_create_images_and_backing'),
+            mock.patch.object(conn,
+                              'ensure_filtering_rules_for_instance'),
+            mock.patch.object(conn, 'plug_vifs'),
+        ) as (
+            create_image_mock,
+            rules_mock,
+            plug_mock,
+        ):
+            conn.pre_live_migration(self.context, instance,
+                                    block_device_info=None,
+                                    network_info=[], disk_info={},
+                                    migrate_data=migrate_data)
+            self.assertFalse(create_image_mock.called)
+
     def test_get_instance_disk_info_works_correctly(self):
         # Test data
         instance_ref = db.instance_create(self.context, self.test_instance)
