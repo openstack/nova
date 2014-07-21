@@ -2651,8 +2651,9 @@ class ComputeManager(manager.Manager):
             instance.launched_at = timeutils.utcnow()
             instance.save(expected_task_state=[task_states.REBUILD_SPAWNING])
 
-            LOG.info(_("bringing vm to original state: '%s'") % orig_vm_state)
             if orig_vm_state == vm_states.STOPPED:
+                LOG.info(_LI("bringing vm to original state: '%s'"),
+                         orig_vm_state, instance=instance)
                 instance.vm_state = vm_states.ACTIVE
                 instance.task_state = task_states.POWERING_OFF
                 instance.progress = 0
