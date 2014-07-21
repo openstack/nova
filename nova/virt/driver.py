@@ -1308,6 +1308,18 @@ class ComputeDriver(object):
         """Default the missing device names in the block device mapping."""
         raise NotImplementedError()
 
+    def is_supported_fs_format(self, fs_type):
+        """Check whether the file format is supported by this driver
+
+        :param fs_type: the file system type to be checked,
+                        the validate values are defined at disk API module.
+        """
+        # NOTE(jichenjc): Return False here so that every hypervisor
+        #                 need to define their supported file system
+        #                 type and implement this function at their
+        #                 virt layer.
+        return False
+
 
 def load_compute_driver(virtapi, compute_driver=None):
     """Load a compute driver module.

@@ -75,6 +75,14 @@ CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
 
 _MKFS_COMMAND = {}
 _DEFAULT_MKFS_COMMAND = None
+
+FS_FORMAT_EXT2 = "ext2"
+FS_FORMAT_EXT3 = "ext3"
+FS_FORMAT_EXT4 = "ext4"
+FS_FORMAT_XFS = "xfs"
+FS_FORMAT_NTFS = "ntfs"
+FS_FORMAT_VFAT = "vfat"
+
 _DEFAULT_FS_BY_OSTYPE = {'linux': 'ext3',
                          'windows': 'ntfs'}
 
