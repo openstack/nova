@@ -13,8 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 from nova.compute import api as compute_api
-from nova.compute import rpcapi as compute_rpcapi
+from nova.compute import manager as compute_manager
 from nova.servicegroup import api as service_group_api
 from nova.tests.integrated.v3 import test_servers
 
@@ -22,15 +24,9 @@ from nova.tests.integrated.v3 import test_servers
 class EvacuateJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-evacuate"
 
-    def test_server_evacuate(self):
-        uuid = self._post_server()
-
-        # Note (wingwj): The host can't be the same one.
-        req_subs = {
-            'host': 'testHost',
-            "adminPass": "MySecretPass",
-            "onSharedStorage": 'False'
-        }
+    def _test_evacuate(self, req_subs, server_req, server_resp,
+                       expected_resp_code):
+        self.uuid = self._post_server()
 
         def fake_service_is_up(self, service):
             """Simulate validation of instance host is down."""
@@ -44,24 +40,52 @@ class EvacuateJsonTest(test_servers.ServersSampleBase):
                     'zone': 'nova'
                     }
 
-        def fake_rebuild_instance(_self, ctxt, instance, new_pass,
-                                  injected_files, image_ref, orig_image_ref,
-                                  orig_sys_metadata, bdms, recreate=False,
-                                  on_shared_storage=False, host=None,
-                                  preserve_ephemeral=False, kwargs=None):
-            """Simulate that given parameters are correct."""
-            self.assertEqual(uuid, instance["uuid"])
-            self.assertEqual(new_pass, "MySecretPass")
-            self.assertEqual(host, "testHost")
+        def fake_check_instance_exists(self, context, instance):
+            """Simulate validation of instance does not exist."""
+            return False
 
         self.stubs.Set(service_group_api.API, 'service_is_up',
                        fake_service_is_up)
         self.stubs.Set(compute_api.HostAPI, 'service_get_by_compute_host',
                        fake_service_get_by_compute_host)
-        self.stubs.Set(compute_rpcapi.ComputeAPI, 'rebuild_instance',
-                       fake_rebuild_instance)
+        self.stubs.Set(compute_manager.ComputeManager,
+                       '_check_instance_exists',
+                       fake_check_instance_exists)
 
-        response = self._do_post('servers/%s/action' % uuid,
-                                 'server-evacuate-req', req_subs)
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 server_req, req_subs)
         subs = self._get_regexes()
-        self._verify_response('server-evacuate-resp', subs, response, 202)
+        self._verify_response(server_resp, subs, response, expected_resp_code)
+
+    @mock.patch('nova.conductor.manager.ComputeTaskManager.rebuild_instance')
+    def test_server_evacuate(self, rebuild_mock):
+        # Note (wingwj): The host can't be the same one
+        req_subs = {
+            'host': 'testHost',
+            "adminPass": "MySecretPass",
+            "onSharedStorage": 'False'
+        }
+        self._test_evacuate(req_subs, 'server-evacuate-req',
+                            'server-evacuate-resp', 202)
+        rebuild_mock.assert_called_once_with(mock.ANY, instance=mock.ANY,
+                orig_image_ref=mock.ANY, image_ref=mock.ANY,
+                injected_files=mock.ANY, new_pass="MySecretPass",
+                orig_sys_metadata=mock.ANY, bdms=mock.ANY, recreate=mock.ANY,
+                on_shared_storage=False, preserve_ephemeral=mock.ANY,
+                host='testHost')
+
+    @mock.patch('nova.conductor.manager.ComputeTaskManager.rebuild_instance')
+    def test_server_evacuate_find_host(self, rebuild_mock):
+        req_subs = {
+            "adminPass": "MySecretPass",
+            "onSharedStorage": 'False'
+        }
+        self._test_evacuate(req_subs, 'server-evacuate-find-host-req',
+                            'server-evacuate-find-host-resp', 202)
+
+        rebuild_mock.assert_called_once_with(mock.ANY, instance=mock.ANY,
+                orig_image_ref=mock.ANY, image_ref=mock.ANY,
+                injected_files=mock.ANY, new_pass="MySecretPass",
+                orig_sys_metadata=mock.ANY, bdms=mock.ANY, recreate=mock.ANY,
+                on_shared_storage=False, preserve_ephemeral=mock.ANY,
+                host=None)
