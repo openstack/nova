@@ -128,7 +128,7 @@ class _BaseTestCase(object):
 
     def test_instance_update_invalid_key(self):
         # NOTE(danms): the real DB API call ignores invalid keys
-        if self.db == None:
+        if self.db is None:
             self.conductor = utils.ExceptionHelper(self.conductor)
             self.assertRaises(KeyError,
                               self._do_update, 'any-uuid', foobar=1)

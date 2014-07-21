@@ -54,7 +54,7 @@ class HypervisorsController(object):
                 'host': hypervisor['service']['host'],
                 }
 
-        if servers != None:
+        if servers is not None:
             hyp_dict['servers'] = [dict(name=serv['name'], id=serv['uuid'])
                                    for serv in servers]
 

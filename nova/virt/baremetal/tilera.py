@@ -319,7 +319,7 @@ class Tilera(base.NodeDriver):
 
             status = row.get('task_state')
             if (status == baremetal_states.DEPLOYING and
-                    locals['started'] == False):
+                    locals['started'] is False):
                 LOG.info(_('Tilera deploy started for instance %s')
                            % instance['uuid'])
                 locals['started'] = True

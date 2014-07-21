@@ -468,7 +468,7 @@ class PXE(base.NodeDriver):
 
                 status = row.get('task_state')
                 if (status == baremetal_states.DEPLOYING
-                        and locals['started'] == False):
+                        and locals['started'] is False):
                     LOG.info(_("PXE deploy started for instance %s")
                                 % instance['uuid'])
                     locals['started'] = True

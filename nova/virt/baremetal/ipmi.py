@@ -107,16 +107,16 @@ class IPMI(base.PowerManager):
         self.password = node['pm_password']
         self.port = node['terminal_port']
 
-        if self.node_id == None:
+        if self.node_id is None:
             raise exception.InvalidParameterValue(_("Node id not supplied "
                 "to IPMI"))
-        if self.address == None:
+        if self.address is None:
             raise exception.InvalidParameterValue(_("Address not supplied "
                 "to IPMI"))
-        if self.user == None:
+        if self.user is None:
             raise exception.InvalidParameterValue(_("User not supplied "
                 "to IPMI"))
-        if self.password == None:
+        if self.password is None:
             raise exception.InvalidParameterValue(_("Password not supplied "
                 "to IPMI"))
 

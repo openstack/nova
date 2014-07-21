@@ -83,7 +83,7 @@ def _has_flavor_access(flavorid, projectid):
 def fake_get_all_flavors_sorted_list(context, inactive=False,
                                      filters=None, sort_key='flavorid',
                                      sort_dir='asc', limit=None, marker=None):
-    if filters == None or filters['is_public'] == None:
+    if filters is None or filters['is_public'] is None:
         return sorted(INSTANCE_TYPES.values(), key=lambda item: item[sort_key])
 
     res = {}
