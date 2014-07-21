@@ -2718,6 +2718,12 @@ class LibvirtDriver(driver.ComputeDriver):
         for idx, eph in enumerate(driver.block_device_info_get_ephemerals(
                 block_device_info)):
             disk_image = image(blockinfo.get_eph_disk(idx))
+
+            specified_fs = eph.get('guest_format')
+            if specified_fs and not self.is_supported_fs_format(specified_fs):
+                msg = _("%s format is not supported") % specified_fs
+                raise exception.InvalidBDMFormat(details=msg)
+
             fn = functools.partial(self._create_ephemeral,
                                    fs_label='ephemeral%d' % idx,
                                    os_type=instance["os_type"],
@@ -5453,6 +5459,10 @@ class LibvirtDriver(driver.ComputeDriver):
                                        instance, root_device_name,
                                        ephemerals, swap,
                                        block_device_mapping)
+
+    def is_supported_fs_format(self, fs_type):
+        return fs_type in [disk.FS_FORMAT_EXT2, disk.FS_FORMAT_EXT3,
+                           disk.FS_FORMAT_EXT4, disk.FS_FORMAT_XFS]
 
 
 class HostState(object):
