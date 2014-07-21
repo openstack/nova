@@ -368,6 +368,22 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.assertEqual(server_info[0], 'myscheme')
         self.assertEqual(server_info[1], 'myaddress')
 
+    expected_raw_diagnostics = {
+        'vbd_xvdb_write': '0.0',
+        'memory_target': '4294967296.0000',
+        'memory_internal_free': '1415564.0000',
+        'memory': '4294967296.0000',
+        'vbd_xvda_write': '0.0',
+        'cpu0': '0.0042',
+        'vif_0_tx': '287.4134',
+        'vbd_xvda_read': '0.0',
+        'vif_0_rx': '1816.0144',
+        'vif_2_rx': '0.0',
+        'vif_2_tx': '0.0',
+        'vbd_xvdb_read': '0.0',
+        'last_update': '1328795567',
+    }
+
     def test_get_diagnostics(self):
         def fake_get_rrd(host, vm_uuid):
             path = os.path.dirname(os.path.realpath(__file__))
@@ -375,24 +391,47 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                 return re.sub(r'\s', '', f.read())
         self.stubs.Set(vm_utils, '_get_rrd', fake_get_rrd)
 
-        fake_diagnostics = {
-            'vbd_xvdb_write': '0.0',
-            'memory_target': '4294967296.0000',
-            'memory_internal_free': '1415564.0000',
-            'memory': '4294967296.0000',
-            'vbd_xvda_write': '0.0',
-            'cpu0': '0.0042',
-            'vif_0_tx': '287.4134',
-            'vbd_xvda_read': '0.0',
-            'vif_0_rx': '1816.0144',
-            'vif_2_rx': '0.0',
-            'vif_2_tx': '0.0',
-            'vbd_xvdb_read': '0.0',
-            'last_update': '1328795567',
-        }
+        expected = self.expected_raw_diagnostics
         instance = self._create_instance()
-        expected = self.conn.get_diagnostics(instance)
-        self.assertThat(fake_diagnostics, matchers.DictMatches(expected))
+        actual = self.conn.get_diagnostics(instance)
+        self.assertThat(actual, matchers.DictMatches(expected))
+
+    def test_get_instance_diagnostics(self):
+        def fake_get_rrd(host, vm_uuid):
+            path = os.path.dirname(os.path.realpath(__file__))
+            with open(os.path.join(path, 'vm_rrd.xml')) as f:
+                return re.sub(r'\s', '', f.read())
+        self.stubs.Set(vm_utils, '_get_rrd', fake_get_rrd)
+
+        expected = {
+            'config_drive': False,
+            'state': 'running',
+            'driver': 'xenapi',
+            'version': '1.0',
+            'uptime': 0,
+            'hypervisor_os': None,
+            'cpu_details': [{'time': 0}, {'time': 0},
+                            {'time': 0}, {'time': 0}],
+            'nic_details': [{'mac_address': '00:00:00:00:00:00',
+                             'rx_drop': 0,
+                             'rx_errors': 0,
+                             'rx_octets': 0,
+                             'rx_packets': 0,
+                             'tx_drop': 0,
+                             'tx_errors': 0,
+                             'tx_octets': 0,
+                             'tx_packets': 0}],
+            'disk_details': [{'errors_count': 0,
+                              'id': '',
+                              'read_bytes': 0,
+                              'read_requests': 0,
+                              'write_bytes': 0,
+                              'write_requests': 0}],
+            'memory_details': {'maximum': 8192, 'used': 0}}
+
+        instance = self._create_instance()
+        actual = self.conn.get_instance_diagnostics(instance)
+        self.assertEqual(expected, actual.serialize())
 
     def test_get_vnc_console(self):
         instance = self._create_instance(obj=True)

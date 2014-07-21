@@ -344,6 +344,10 @@ class XenAPIDriver(driver.ComputeDriver):
         """Return data about VM diagnostics."""
         return self._vmops.get_diagnostics(instance)
 
+    def get_instance_diagnostics(self, instance):
+        """Return data about VM diagnostics."""
+        return self._vmops.get_instance_diagnostics(instance)
+
     def get_all_bw_counters(self, instances):
         """Return bandwidth usage counters for each interface on each
            running VM.

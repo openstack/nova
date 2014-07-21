@@ -1512,6 +1512,12 @@ class VMOps(object):
         vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
         return vm_utils.compile_diagnostics(vm_rec)
 
+    def get_instance_diagnostics(self, instance):
+        """Return data about VM diagnostics using the common API."""
+        vm_ref = self._get_vm_opaque_ref(instance)
+        vm_rec = self._session.VM.get_record(vm_ref)
+        return vm_utils.compile_instance_diagnostics(instance, vm_rec)
+
     def _get_vif_device_map(self, vm_rec):
         vif_map = {}
         for vif in [self._session.call_xenapi("VIF.get_record", vrec)
