@@ -194,6 +194,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
         self.mox.StubOutWithMock(self.rt, 'instance_claim')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'migrate_instance_finish')
 
         self.deleted_image_id = None
 
@@ -218,6 +220,9 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 mox.IgnoreArg()).AndReturn('fake_bdm')
         db_instance['key_data'] = None
         db_instance['auto_disk_config'] = None
+        self.compute.network_api.migrate_instance_finish(
+                self.context, instance, {'source_compute': '',
+                                         'dest_compute': self.compute.host})
         self.compute.driver.spawn(self.context, instance, image,
                 injected_files=[], admin_password=None,
                 network_info=[],
@@ -276,6 +281,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
         self.mox.StubOutWithMock(self.rt, 'instance_claim')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'migrate_instance_finish')
 
         self.compute._notify_about_instance_usage(self.context, instance,
                 'unshelve.start')
@@ -288,6 +295,9 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 mox.IgnoreArg()).AndReturn('fake_bdm')
         db_instance['key_data'] = None
         db_instance['auto_disk_config'] = None
+        self.compute.network_api.migrate_instance_finish(
+                self.context, instance, {'source_compute': '',
+                                         'dest_compute': self.compute.host})
         self.rt.instance_claim(self.context, instance, limits).AndReturn(
                 claims.Claim(db_instance, self.rt, _fake_resources()))
         self.compute.driver.spawn(self.context, instance, None,

@@ -4010,7 +4010,6 @@ class ComputeManager(manager.Manager):
         instance.task_state = task_states.SPAWNING
         instance.save()
 
-        network_info = self._get_instance_nw_info(context, instance)
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
         block_device_info = self._prep_block_device(context, instance, bdms)
@@ -4028,6 +4027,9 @@ class ComputeManager(manager.Manager):
             shelved_image_ref = instance.image_ref
             instance.image_ref = image['id']
 
+        self.network_api.migrate_instance_finish(context, instance,
+            {'source_compute': '', 'dest_compute': self.host})
+        network_info = self._get_instance_nw_info(context, instance)
         try:
             with rt.instance_claim(context, instance, limits):
                 self.driver.spawn(context, instance, image, injected_files=[],
