@@ -23,6 +23,8 @@ policy belongs in the 'designer.py' module which provides simplified
 helpers for populating up config object instances.
 """
 
+import time
+
 from nova import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common import units
@@ -32,6 +34,9 @@ from lxml import etree
 
 
 LOG = logging.getLogger(__name__)
+
+# Namespace to use for Nova specific metadata items in XML
+NOVA_NS = "http://openstack.org/xmlns/libvirt/nova/1.0"
 
 
 class LibvirtConfigObject(object):
@@ -43,18 +48,20 @@ class LibvirtConfigObject(object):
         self.ns_prefix = kwargs.get('ns_prefix')
         self.ns_uri = kwargs.get('ns_uri')
 
-    @staticmethod
-    def _text_node(name, value):
-        child = etree.Element(name)
+    def _new_node(self, name):
+        if self.ns_uri is None:
+            return etree.Element(name)
+        else:
+            return etree.Element("{" + self.ns_uri + "}" + name,
+                                 nsmap={self.ns_prefix: self.ns_uri})
+
+    def _text_node(self, name, value):
+        child = self._new_node(name)
         child.text = str(value)
         return child
 
     def format_dom(self):
-        if self.ns_uri is None:
-            return etree.Element(self.root_name)
-        else:
-            return etree.Element("{" + self.ns_uri + "}" + self.root_name,
-                                 nsmap={self.ns_prefix: self.ns_uri})
+        return self._new_node(self.root_name)
 
     def parse_str(self, xmlstr):
         self.parse_dom(etree.fromstring(xmlstr))
@@ -1186,6 +1193,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.os_smbios = None
         self.os_mach_type = None
         self.devices = []
+        self.metadata = []
 
     def _format_basic_props(self, root):
         root.append(self._text_node("uuid", self.uuid))
@@ -1197,6 +1205,12 @@ class LibvirtConfigGuest(LibvirtConfigObject):
             root.append(vcpu)
         else:
             root.append(self._text_node("vcpu", self.vcpus))
+
+        if len(self.metadata) > 0:
+            metadata = etree.Element("metadata")
+            for m in self.metadata:
+                metadata.append(m.format_dom())
+            root.append(metadata)
 
     def _format_os(self, root):
         os = etree.Element("os")
@@ -1435,3 +1449,102 @@ class LibvirtConfigGuestRng(LibvirtConfigGuestDevice):
         dev.append(backend)
 
         return dev
+
+
+class LibvirtConfigGuestMetaNovaInstance(LibvirtConfigObject):
+
+    def __init__(self):
+        super(LibvirtConfigGuestMetaNovaInstance,
+              self).__init__(root_name="instance",
+                             ns_prefix="nova",
+                             ns_uri=NOVA_NS)
+
+        self.package = None
+        self.flavor = None
+        self.name = None
+        self.creationTime = None
+        self.owner = None
+        self.roottype = None
+        self.rootid = None
+
+    def format_dom(self):
+        meta = super(LibvirtConfigGuestMetaNovaInstance, self).format_dom()
+
+        pkg = self._new_node("package")
+        pkg.set("version", self.package)
+        meta.append(pkg)
+        if self.name is not None:
+            meta.append(self._text_node("name", self.name))
+        if self.creationTime is not None:
+            timestr = time.strftime("%Y-%m-%d %H:%M:%S",
+                                    time.gmtime(self.creationTime))
+            meta.append(self._text_node("creationTime", timestr))
+        if self.flavor is not None:
+            meta.append(self.flavor.format_dom())
+        if self.owner is not None:
+            meta.append(self.owner.format_dom())
+
+        if self.roottype is not None and self.rootid is not None:
+            root = self._new_node("root")
+            root.set("type", self.roottype)
+            root.set("uuid", str(self.rootid))
+            meta.append(root)
+
+        return meta
+
+
+class LibvirtConfigGuestMetaNovaFlavor(LibvirtConfigObject):
+
+    def __init__(self):
+        super(LibvirtConfigGuestMetaNovaFlavor,
+              self).__init__(root_name="flavor",
+                             ns_prefix="nova",
+                             ns_uri=NOVA_NS)
+
+        self.name = None
+        self.memory = None
+        self.disk = None
+        self.swap = None
+        self.ephemeral = None
+        self.vcpus = None
+
+    def format_dom(self):
+        meta = super(LibvirtConfigGuestMetaNovaFlavor, self).format_dom()
+        meta.set("name", self.name)
+        if self.memory is not None:
+            meta.append(self._text_node("memory", str(self.memory)))
+        if self.disk is not None:
+            meta.append(self._text_node("disk", str(self.disk)))
+        if self.swap is not None:
+            meta.append(self._text_node("swap", str(self.swap)))
+        if self.ephemeral is not None:
+            meta.append(self._text_node("ephemeral", str(self.ephemeral)))
+        if self.vcpus is not None:
+            meta.append(self._text_node("vcpus", str(self.vcpus)))
+        return meta
+
+
+class LibvirtConfigGuestMetaNovaOwner(LibvirtConfigObject):
+
+    def __init__(self):
+        super(LibvirtConfigGuestMetaNovaOwner,
+              self).__init__(root_name="owner",
+                             ns_prefix="nova",
+                             ns_uri=NOVA_NS)
+
+        self.userid = None
+        self.username = None
+        self.projectid = None
+        self.projectname = None
+
+    def format_dom(self):
+        meta = super(LibvirtConfigGuestMetaNovaOwner, self).format_dom()
+        if self.userid is not None and self.username is not None:
+            user = self._text_node("user", self.username)
+            user.set("uuid", self.userid)
+            meta.append(user)
+        if self.projectid is not None and self.projectname is not None:
+            project = self._text_node("project", self.projectname)
+            project.set("uuid", self.projectid)
+            meta.append(project)
+        return meta
