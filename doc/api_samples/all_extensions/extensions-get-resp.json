@@ -313,6 +313,14 @@
             "updated": "2014-01-04T00:00:00Z"
         },
         {
+            "alias": "os-hypervisor-status",
+            "description": "Show hypervisor status.",
+            "links": [],
+            "name": "HypervisorStatus",
+            "namespace": "http://docs.openstack.org/compute/ext/hypervisor_status/api/v1.1",
+            "updated": "2014-04-17T00:00:00Z"
+        },
+        {
             "alias": "os-extended-services",
             "description": "Extended services support.",
             "links": [],

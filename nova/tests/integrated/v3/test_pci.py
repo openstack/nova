@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 from nova import db
 from nova.openstack.common import jsonutils
 from nova.tests.integrated.v3 import api_sample_base
@@ -83,6 +85,8 @@ class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
                                   "current_workload": 0,
                                   "disk_available_least": 0,
                                   "host_ip": "1.1.1.1",
+                                  "state": "up",
+                                  "status": "enabled",
                                   "free_disk_gb": 1028,
                                   "free_ram_mb": 7680,
                                   "hypervisor_hostname": "fake-mini",
@@ -94,8 +98,10 @@ class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
                                   "memory_mb": 8192,
                                   "memory_mb_used": 512,
                                   "running_vms": 0,
-                                  "service": {"host": '043b3cacf6f34c90a724'
-                                                      '5151fc8ebcda'},
+                                  "service": {"host": '043b3cacf6f34c90a'
+                                                      '7245151fc8ebcda',
+                                              "disabled": False,
+                                              "disabled_reason": None},
                                   "vcpus": 1,
                                   "vcpus_used": 0,
                                   "service_id": 2,
@@ -110,13 +116,12 @@ class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
                                                             ' "0x1"]]',
                                             "key1": "value1"}}]}
 
-    def test_pci_show(self):
-        def fake_compute_node_get(context, id):
-            self.fake_compute_node['pci_stats'] = jsonutils.dumps(
-                self.fake_compute_node['pci_stats'])
-            return self.fake_compute_node
-
-        self.stubs.Set(db, 'compute_node_get', fake_compute_node_get)
+    @mock.patch("nova.servicegroup.API.service_is_up", return_value=True)
+    @mock.patch("nova.db.compute_node_get")
+    def test_pci_show(self, mock_db, mock_service):
+        self.fake_compute_node['pci_stats'] = jsonutils.dumps(
+            self.fake_compute_node['pci_stats'])
+        mock_db.return_value = self.fake_compute_node
         hypervisor_id = 1
         response = self._do_get('os-hypervisors/%s' % hypervisor_id)
         subs = {
@@ -126,13 +131,13 @@ class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
         self._verify_response('hypervisors-pci-show-resp',
                               subs, response, 200)
 
-    def test_pci_detail(self):
-        def fake_compute_node_get_all(context):
-            self.fake_compute_node['pci_stats'] = jsonutils.dumps(
-                self.fake_compute_node['pci_stats'])
-            return [self.fake_compute_node]
+    @mock.patch("nova.servicegroup.API.service_is_up", return_value=True)
+    @mock.patch("nova.db.compute_node_get_all")
+    def test_pci_detail(self, mock_db, mock_service):
+        self.fake_compute_node['pci_stats'] = jsonutils.dumps(
+            self.fake_compute_node['pci_stats'])
 
-        self.stubs.Set(db, 'compute_node_get_all', fake_compute_node_get_all)
+        mock_db.return_value = [self.fake_compute_node]
         hypervisor_id = 1
         subs = {
             'hypervisor_id': hypervisor_id

@@ -13,6 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
+import mock
 from webob import exc
 
 from nova.api.openstack.compute.plugins.v3 import hypervisors
@@ -32,6 +35,7 @@ TEST_HYPERS = [
                       topic="compute_topic",
                       report_count=5,
                       disabled=False,
+                      disabled_reason=None,
                       availability_zone="nova"),
          vcpus=4,
          memory_mb=10 * 1024,
@@ -57,6 +61,7 @@ TEST_HYPERS = [
                       topic="compute_topic",
                       report_count=5,
                       disabled=False,
+                      disabled_reason=None,
                       availability_zone="nova"),
          vcpus=4,
          memory_mb=10 * 1024,
@@ -134,6 +139,8 @@ class HypervisorsTest(test.NoDBTestCase):
     def setUp(self):
         super(HypervisorsTest, self).setUp()
         self.controller = hypervisors.HypervisorsController()
+        self.controller.servicegroup_api.service_is_up = mock.MagicMock(
+            return_value=True)
 
         self.stubs.Set(db, 'compute_node_get_all', fake_compute_node_get_all)
         self.stubs.Set(db, 'compute_node_search_by_hypervisor',
@@ -148,7 +155,9 @@ class HypervisorsTest(test.NoDBTestCase):
     def test_view_hypervisor_nodetail_noservers(self):
         result = self.controller._view_hypervisor(TEST_HYPERS[0], False)
 
-        self.assertEqual(result, dict(id=1, hypervisor_hostname="hyper1"))
+        self.assertEqual(dict(id=1, hypervisor_hostname="hyper1",
+                              state='up', status='enabled'),
+                         result)
 
     def test_view_hypervisor_detail_noservers(self):
         result = self.controller._view_hypervisor(TEST_HYPERS[0], True)
@@ -156,6 +165,8 @@ class HypervisorsTest(test.NoDBTestCase):
         self.assertEqual(result, dict(
                 id=1,
                 hypervisor_hostname="hyper1",
+                state='up',
+                status='enabled',
                 vcpus=4,
                 memory_mb=10 * 1024,
                 local_gb=250,
@@ -171,7 +182,7 @@ class HypervisorsTest(test.NoDBTestCase):
                 cpu_info='cpu_info',
                 disk_available_least=100,
                 host_ip='1.1.1.1',
-                service=dict(id=1, host='compute1')))
+                service=dict(id=1, host='compute1', disabled_reason=None)))
 
     def test_view_hypervisor_servers(self):
         result = self.controller._view_hypervisor(TEST_HYPERS[0], False,
@@ -180,11 +191,29 @@ class HypervisorsTest(test.NoDBTestCase):
         self.assertEqual(result, dict(
                 id=1,
                 hypervisor_hostname="hyper1",
+                state='up',
+                status='enabled',
                 servers=[
                     dict(name="inst1", id="uuid1"),
                     dict(name="inst2", id="uuid2"),
                     dict(name="inst3", id="uuid3"),
                     dict(name="inst4", id="uuid4")]))
+
+    def test_view_hypervisor_service_status(self):
+        result = self.controller._view_hypervisor(TEST_HYPERS[0], False)
+        self.assertEqual('up', result['state'])
+        self.assertEqual('enabled', result['status'])
+
+        self.controller.servicegroup_api.service_is_up.return_value = False
+        result = self.controller._view_hypervisor(TEST_HYPERS[0], False)
+        self.assertEqual('down', result['state'])
+        self.assertEqual('enabled', result['status'])
+
+        hyper = copy.deepcopy(TEST_HYPERS[0])
+        hyper['service']['disabled'] = True
+        result = self.controller._view_hypervisor(hyper, False)
+        self.assertEqual('down', result['state'])
+        self.assertEqual('disabled', result['status'])
 
     def test_index(self):
         req = fakes.HTTPRequestV3.blank('/os-hypervisors',
@@ -192,8 +221,14 @@ class HypervisorsTest(test.NoDBTestCase):
         result = self.controller.index(req)
 
         self.assertEqual(result, dict(hypervisors=[
-                    dict(id=1, hypervisor_hostname="hyper1"),
-                    dict(id=2, hypervisor_hostname="hyper2")]))
+                    dict(id=1,
+                         hypervisor_hostname="hyper1",
+                         state='up',
+                         status='enabled'),
+                    dict(id=2,
+                         hypervisor_hostname="hyper2",
+                         state='up',
+                         status='enabled')]))
 
     def test_index_non_admin(self):
         req = fakes.HTTPRequestV3.blank('/os-hypervisors')
@@ -207,8 +242,11 @@ class HypervisorsTest(test.NoDBTestCase):
 
         self.assertEqual(result, dict(hypervisors=[
                     dict(id=1,
-                         service=dict(id=1, host="compute1"),
+                         service=dict(
+                             id=1, host="compute1", disabled_reason=None),
                          vcpus=4,
+                         state='up',
+                         status='enabled',
                          memory_mb=10 * 1024,
                          local_gb=250,
                          vcpus_used=2,
@@ -225,8 +263,11 @@ class HypervisorsTest(test.NoDBTestCase):
                          disk_available_least=100,
                          host_ip='1.1.1.1'),
                     dict(id=2,
-                         service=dict(id=2, host="compute2"),
+                         service=dict(id=2, host="compute2",
+                                      disabled_reason=None),
                          vcpus=4,
+                         state='up',
+                         status='enabled',
                          memory_mb=10 * 1024,
                          local_gb=250,
                          vcpus_used=2,
@@ -265,8 +306,10 @@ class HypervisorsTest(test.NoDBTestCase):
 
         self.assertEqual(result, dict(hypervisor=dict(
                     id=1,
-                    service=dict(id=1, host="compute1"),
+                    service=dict(id=1, host="compute1", disabled_reason=None),
                     vcpus=4,
+                    state='up',
+                    status='enabled',
                     memory_mb=10 * 1024,
                     local_gb=250,
                     vcpus_used=2,
@@ -319,6 +362,8 @@ class HypervisorsTest(test.NoDBTestCase):
         self.assertEqual(result, dict(hypervisor=dict(
                     id=1,
                     hypervisor_hostname="hyper1",
+                    state='up',
+                    status='enabled',
                     uptime="fake uptime")))
 
     def test_uptime_non_integer_id(self):
@@ -336,8 +381,10 @@ class HypervisorsTest(test.NoDBTestCase):
                                         use_admin_context=True)
         result = self.controller.search(req)
         self.assertEqual(result, dict(hypervisors=[
-                    dict(id=1, hypervisor_hostname="hyper1"),
-                    dict(id=2, hypervisor_hostname="hyper2")]))
+                    dict(id=1, hypervisor_hostname="hyper1",
+                         state='up', status='enabled'),
+                    dict(id=2, hypervisor_hostname="hyper2",
+                         state='up', status='enabled')]))
 
     def test_search_non_exist(self):
         def fake_compute_node_search_by_hypervisor_return_empty(context,
@@ -362,6 +409,8 @@ class HypervisorsTest(test.NoDBTestCase):
         self.assertEqual(result, dict(hypervisor=
                     dict(id=1,
                          hypervisor_hostname="hyper1",
+                         state='up',
+                         status='enabled',
                          servers=[
                             dict(name="inst1", id="uuid1"),
                             dict(name="inst3", id="uuid3")])))
@@ -387,6 +436,8 @@ class HypervisorsTest(test.NoDBTestCase):
         self.assertEqual(result, dict(hypervisor=
                     dict(id=1,
                          hypervisor_hostname="hyper1",
+                         state='up',
+                         status='enabled',
                          servers=[])))
 
     def test_servers_with_non_integer_hypervisor_id(self):

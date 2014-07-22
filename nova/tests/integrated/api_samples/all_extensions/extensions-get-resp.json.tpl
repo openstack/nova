@@ -417,6 +417,14 @@
             "updated": "%(isotime)s"
         },
         {
+            "alias": "os-hypervisor-status",
+            "description": "%(text)s",
+            "links": [],
+            "name": "HypervisorStatus",
+            "namespace": "http://docs.openstack.org/compute/ext/hypervisor_status/api/v1.1",
+            "updated": "%(isotime)s"
+        },
+        {
             "alias": "os-server-external-events",
             "description": "%(text)s",
             "links": [],
