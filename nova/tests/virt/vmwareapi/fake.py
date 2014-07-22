@@ -439,6 +439,20 @@ class VirtualMachine(ManagedObject):
             ('featureRequirement', [key1, key2])]
         self.set("summary.runtime", runtime)
 
+    def _update_extra_config(self, extra):
+        extra_config = self.get("config.extraConfig")
+        values = extra_config.OptionValue
+        for value in values:
+            if value.key == extra.key:
+                value.value = extra.value
+                return
+        kv = DataObject()
+        kv.key = extra.key
+        kv.value = extra.value
+        extra_config.OptionValue.append(kv)
+        self.set("config.extraConfig", extra_config)
+        extra_config = self.get("config.extraConfig")
+
     def reconfig(self, factory, val):
         """Called to reconfigure the VM. Actually customizes the property
         setting of the Virtual Machine object.
@@ -461,6 +475,11 @@ class VirtualMachine(ManagedObject):
         try:
             if not hasattr(val, 'deviceChange'):
                 return
+
+            if hasattr(val, 'extraConfig'):
+                # there are 2 cases - new entry or update an existing one
+                for extra in val.extraConfig:
+                    self._update_extra_config(extra)
 
             if len(val.deviceChange) < 2:
                 return

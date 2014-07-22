@@ -1536,6 +1536,74 @@ class VMwareVMOps(object):
         except exception.InstanceNotFound:
             return False
 
+    def attach_interface(self, instance, image_meta, vif):
+        """Attach an interface to the instance."""
+        vif_model = image_meta.get("hw_vif_model",
+                                   constants.DEFAULT_VIF_MODEL)
+        vif_model = vm_util.convert_vif_model(vif_model)
+        vif_info = vmwarevif.get_vif_dict(self._session, self._cluster,
+                                          vif_model, utils.is_neutron(), vif)
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        # Ensure that there is not a race with the port index management
+        with lockutils.lock(instance.uuid,
+                            lock_file_prefix='nova-vmware-hot-plug'):
+            port_index = vm_util.get_attach_port_index(self._session, vm_ref)
+            client_factory = self._session._get_vim().client.factory
+            attach_config_spec = vm_util.get_network_attach_config_spec(
+                                        client_factory, vif_info, port_index)
+            LOG.debug("Reconfiguring VM to attach interface",
+                      instance=instance)
+            try:
+                vm_util.reconfigure_vm(self._session, vm_ref,
+                                       attach_config_spec)
+            except Exception as e:
+                LOG.error(_LE('Attaching network adapter failed. Exception: '
+                              ' %s'),
+                          e, instance=instance)
+                raise exception.InterfaceAttachFailed(
+                        instance=instance['uuid'])
+        LOG.debug("Reconfigured VM to attach interface", instance=instance)
+
+    def detach_interface(self, instance, vif):
+        """Detach an interface from the instance."""
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        # Ensure that there is not a race with the port index management
+        with lockutils.lock(instance.uuid,
+                            lock_file_prefix='nova-vmware-hot-plug'):
+            port_index = vm_util.get_vm_detach_port_index(self._session,
+                                                          vm_ref,
+                                                          vif['id'])
+            if port_index is None:
+                msg = _("No device with interface-id %s exists on "
+                        "VM") % vif['id']
+                raise exception.NotFound(msg)
+
+            hardware_devices = self._session._call_method(vim_util,
+                            "get_dynamic_property", vm_ref,
+                            "VirtualMachine", "config.hardware.device")
+            device = vmwarevif.get_network_device(hardware_devices,
+                                                  vif['address'])
+            if device is None:
+                msg = _("No device with MAC address %s exists on the "
+                        "VM") % vif['address']
+                raise exception.NotFound(msg)
+
+            client_factory = self._session._get_vim().client.factory
+            detach_config_spec = vm_util.get_network_detach_config_spec(
+                                        client_factory, device, port_index)
+            LOG.debug("Reconfiguring VM to detach interface",
+                      instance=instance)
+            try:
+                vm_util.reconfigure_vm(self._session, vm_ref,
+                                       detach_config_spec)
+            except Exception as e:
+                LOG.error(_LE('Detaching network adapter failed. Exception: '
+                              '%s'),
+                          e, instance=instance)
+                raise exception.InterfaceDetachFailed(
+                        instance=instance['uuid'])
+        LOG.debug("Reconfigured VM to detach interface", instance=instance)
+
 
 class VMwareVCVMOps(VMwareVMOps):
     """Management class for VM-related tasks.

@@ -376,6 +376,14 @@ class VMwareESXDriver(driver.ComputeDriver):
         """Efficient override of base instance_exists method."""
         return self._vmops.instance_exists(instance)
 
+    def attach_interface(self, instance, image_meta, vif):
+        """Attach an interface to the instance."""
+        self._vmops.attach_interface(instance, image_meta, vif)
+
+    def detach_interface(self, instance, vif):
+        """Detach an interface from the instance."""
+        self._vmops.detach_interface(instance, vif)
+
 
 class VMwareVCDriver(VMwareESXDriver):
     """The VC host connection object."""
@@ -801,6 +809,16 @@ class VMwareVCDriver(VMwareESXDriver):
         """Efficient override of base instance_exists method."""
         _vmops = self._get_vmops_for_compute_node(instance['node'])
         return _vmops.instance_exists(instance)
+
+    def attach_interface(self, instance, image_meta, vif):
+        """Attach an interface to the instance."""
+        _vmops = self._get_vmops_for_compute_node(instance.node)
+        _vmops.attach_interface(instance, image_meta, vif)
+
+    def detach_interface(self, instance, vif):
+        """Detach an interface from the instance."""
+        _vmops = self._get_vmops_for_compute_node(instance.node)
+        _vmops.detach_interface(instance, vif)
 
 
 class VMwareAPISession(object):
