@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 2014.2.dev374.g4e35f5f\n"
+"Project-Id-Version: nova 2014.2.dev763.g740fa02\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-06-30 06:08+0000\n"
+"POT-Creation-Date: 2014-07-21 06:03+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,8 +17,13 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 1.3\n"
 
-#: nova/compute/manager.py:1998
+#: nova/compute/manager.py:2002
 msgid "No more network or fixed IP to be allocated"
+msgstr ""
+
+#: nova/compute/manager.py:2267
+#, python-format
+msgid "Failed to delete volume: %(volume_id)s due to %(exc)s"
 msgstr ""
 
 #: nova/consoleauth/manager.py:84
@@ -90,12 +95,12 @@ msgstr ""
 msgid "Could not decode ram_allocation_ratio: '%s'"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:368
+#: nova/virt/libvirt/driver.py:374
 #, python-format
 msgid "Invalid cachemode %(cache_mode)s specified for disk type %(disk_type)s."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:606
+#: nova/virt/libvirt/driver.py:620
 #, python-format
 msgid ""
 "The libvirt driver is not tested on %(type)s/%(arch)s by the OpenStack "
@@ -103,108 +108,122 @@ msgid ""
 "see: https://wiki.openstack.org/wiki/HypervisorSupportMatrix"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:656
+#: nova/virt/libvirt/driver.py:671
 #, python-format
 msgid "URI %(uri)s does not support events: %(error)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:672
+#: nova/virt/libvirt/driver.py:687
 #, python-format
 msgid "URI %(uri)s does not support connection events: %(error)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:865
+#: nova/virt/libvirt/driver.py:929
 msgid "Cannot destroy instance, operation time out"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:971
+#: nova/virt/libvirt/driver.py:953
+msgid "During wait destroy, instance disappeared."
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:1035
 msgid "Instance may be still running, destroy it again."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1026
+#: nova/virt/libvirt/driver.py:1088
 #, python-format
 msgid "Ignoring Volume Error on vol %(vol_id)s during delete %(exc)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1076
+#: nova/virt/libvirt/driver.py:1141
 #, python-format
 msgid "Volume %(disk)s possibly unsafe to remove, please clean up manually"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1357 nova/virt/libvirt/driver.py:1365
+#: nova/virt/libvirt/driver.py:1415 nova/virt/libvirt/driver.py:1423
 msgid "During detach_volume, instance disappeared."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1410
+#: nova/virt/libvirt/driver.py:1466
 msgid "During detach_interface, instance disappeared."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1976
+#: nova/virt/libvirt/driver.py:2053
 msgid "Failed to soft reboot instance. Trying hard reboot."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2537
+#: nova/virt/libvirt/driver.py:2614
 #, python-format
 msgid "Image %s not found on disk storage. Continue without injecting data"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2700
+#: nova/virt/libvirt/driver.py:2777
 msgid "File injection into a boot from volume instance is not supported"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2775
+#: nova/virt/libvirt/driver.py:2852
 msgid "Instance disappeared while detaching a PCI device from it."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2830
+#: nova/virt/libvirt/driver.py:2907
 #, python-format
 msgid "Cannot update service status on host: %s,since it is not registered."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2833
+#: nova/virt/libvirt/driver.py:2910
 #, python-format
 msgid "Cannot update service status on host: %s,due to an unexpected exception."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2861
+#: nova/virt/libvirt/driver.py:2938
 #, python-format
 msgid "URI %(uri)s does not support full set of host capabilities: %(error)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3672
+#: nova/virt/libvirt/driver.py:3763
 #, python-format
 msgid "Timeout waiting for vif plugging callback for instance %(uuid)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3750
+#: nova/virt/libvirt/driver.py:3784
+#, python-format
+msgid "couldn't obtain the XML from domain: %(uuid)s, exception: %(ex)s"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:3841
 msgid ""
 "Cannot get the number of cpu, because this function is not implemented "
 "for this platform. "
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3813
+#: nova/virt/libvirt/driver.py:3901
 #, python-format
-msgid "couldn't obtain the vpu count from domain id: %(id)s, exception: %(ex)s"
+msgid "couldn't obtain the vpu count from domain id: %(uuid)s, exception: %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4050
+#: nova/virt/libvirt/driver.py:3932
+#, python-format
+msgid "couldn't obtain the memory from domain: %(uuid)s, exception: %(ex)s"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:4134
 #, python-format
 msgid "URI %(uri)s does not support listDevices: %(error)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4594
+#: nova/virt/libvirt/driver.py:4789
 #, python-format
 msgid "plug_vifs() failed %(cnt)d. Retry up to %(max_retry)d."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4727
+#: nova/virt/libvirt/driver.py:4990
 #, python-format
 msgid ""
 "Error from libvirt while getting description of %(instance_name)s: [Error"
 " Code %(error_code)s] %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4805
+#: nova/virt/libvirt/driver.py:4998
 #, python-format
 msgid ""
 "Periodic task is updating the host stat, it is trying to get disk "
@@ -212,7 +231,7 @@ msgid ""
 "resize."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4811
+#: nova/virt/libvirt/driver.py:5004
 #, python-format
 msgid ""
 "Periodic task is updating the host stat, it is trying to get disk "
@@ -245,7 +264,7 @@ msgstr ""
 msgid "Unknown base file: %s"
 msgstr ""
 
-#: nova/virt/libvirt/lvm.py:68
+#: nova/virt/libvirt/lvm.py:67
 #, python-format
 msgid ""
 "Volume group %(vg)s will not be able to hold sparse volume %(lv)s. "
@@ -257,12 +276,12 @@ msgstr ""
 msgid "systool is not installed"
 msgstr ""
 
-#: nova/virt/libvirt/utils.py:242
+#: nova/virt/libvirt/utils.py:248
 #, python-format
 msgid "rbd remove %(name)s in pool %(pool)s failed"
 msgstr ""
 
-#: nova/virt/libvirt/vif.py:827
+#: nova/virt/libvirt/vif.py:767
 #, python-format
 msgid ""
 "VIF driver \"%s\" is marked as deprecated and will be removed in the Juno"
@@ -274,56 +293,56 @@ msgstr ""
 msgid "Unknown content in connection_info/qos_specs: %s"
 msgstr ""
 
-#: nova/virt/libvirt/volume.py:294
+#: nova/virt/libvirt/volume.py:297
 #, python-format
 msgid ""
 "ISCSI volume not yet found at: %(disk_dev)s. Will rescan & retry.  Try "
 "number: %(tries)s"
 msgstr ""
 
-#: nova/virt/libvirt/volume.py:361
+#: nova/virt/libvirt/volume.py:364
 #, python-format
 msgid "Unable to delete volume device %s"
 msgstr ""
 
-#: nova/virt/libvirt/volume.py:372
+#: nova/virt/libvirt/volume.py:375
 #, python-format
 msgid ""
 "Failed to remove multipath device descriptor %(dev_mapper)s. Exception "
 "message: %(msg)s"
 msgstr ""
 
-#: nova/virt/libvirt/volume.py:694 nova/virt/libvirt/volume.py:843
+#: nova/virt/libvirt/volume.py:697 nova/virt/libvirt/volume.py:846
 #, python-format
 msgid "%s is already mounted"
 msgstr ""
 
-#: nova/virt/libvirt/volume.py:739
+#: nova/virt/libvirt/volume.py:742
 #, python-format
 msgid "AoE volume not yet found at: %(aoedevpath)s. Try number: %(tries)s"
 msgstr ""
 
-#: nova/virt/libvirt/volume.py:931
+#: nova/virt/libvirt/volume.py:934
 #, python-format
 msgid ""
 "Fibre volume not yet found at: %(mount_device)s. Will rescan & retry.  "
 "Try number: %(tries)s"
 msgstr ""
 
-#: nova/virt/libvirt/volume.py:1033
+#: nova/virt/libvirt/volume.py:1036
 msgid "Value required for 'scality_sofs_config'"
 msgstr ""
 
-#: nova/virt/libvirt/volume.py:1044
+#: nova/virt/libvirt/volume.py:1047
 #, python-format
 msgid "Cannot access 'scality_sofs_config': %s"
 msgstr ""
 
-#: nova/virt/libvirt/volume.py:1050
+#: nova/virt/libvirt/volume.py:1053
 msgid "Cannot execute /sbin/mount.sofs"
 msgstr ""
 
-#: nova/virt/libvirt/volume.py:1065
+#: nova/virt/libvirt/volume.py:1068
 msgid "Cannot mount Scality SOFS, check syslog for errors"
 msgstr ""
 
