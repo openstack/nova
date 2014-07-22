@@ -248,6 +248,9 @@ def stub_out_nw_api(stubs, cls=None, private=None, publics=None):
     fake_network.stub_out_nw_api_get_instance_nw_info(stubs)
 
 
+# TODO(jaypipes): Remove this when stub_out_glance() is removed after
+# image metadata pieces are fixed to call nova.image.API instead of the
+# nova.image.glance module directly.
 def _make_image_fixtures():
     NOW_GLANCE_FORMAT = "2010-10-11T10:30:22"
 

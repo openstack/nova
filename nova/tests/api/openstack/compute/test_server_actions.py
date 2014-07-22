@@ -30,7 +30,6 @@ from nova import db
 from nova import exception
 from nova.image import glance
 from nova import objects
-from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import uuidutils
 from nova import test
@@ -88,13 +87,9 @@ class ServerActionsControllerTest(test.TestCase):
         self.stubs.Set(db, 'instance_update_and_get_original',
                        instance_update_and_get_original)
 
-        fakes.stub_out_glance(self.stubs)
         fakes.stub_out_nw_api(self.stubs)
         fakes.stub_out_compute_api_snapshot(self.stubs)
         fake.stub_out_image_service(self.stubs)
-        service_class = 'nova.image.glance.GlanceImageService'
-        self.service = importutils.import_object(service_class)
-        self.sent_to_glance = {}
         self.flags(allow_instance_snapshots=True,
                    enable_instance_password=True)
         self.uuid = FAKE_UUID

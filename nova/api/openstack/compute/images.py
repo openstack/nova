@@ -21,7 +21,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
 from nova.i18n import _
-import nova.image.glance
+import nova.image
 import nova.utils
 
 
@@ -89,15 +89,9 @@ class Controller(wsgi.Controller):
 
     _view_builder_class = views_images.ViewBuilder
 
-    def __init__(self, image_service=None, **kwargs):
-        """Initialize new `ImageController`.
-
-        :param image_service: `nova.image.glance:GlanceImageService`
-
-        """
+    def __init__(self, **kwargs):
         super(Controller, self).__init__(**kwargs)
-        self._image_service = (image_service or
-                               nova.image.glance.get_default_image_service())
+        self._image_api = nova.image.API()
 
     def _get_filters(self, req):
         """Return a dictionary of query param filters from the request.
@@ -136,7 +130,7 @@ class Controller(wsgi.Controller):
         context = req.environ['nova.context']
 
         try:
-            image = self._image_service.show(context, id)
+            image = self._image_api.get(context, id)
         except (exception.NotFound, exception.InvalidImageRef):
             explanation = _("Image not found.")
             raise webob.exc.HTTPNotFound(explanation=explanation)
@@ -152,7 +146,7 @@ class Controller(wsgi.Controller):
         """
         context = req.environ['nova.context']
         try:
-            self._image_service.delete(context, id)
+            self._image_api.delete(context, id)
         except exception.ImageNotFound:
             explanation = _("Image not found.")
             raise webob.exc.HTTPNotFound(explanation=explanation)
@@ -178,8 +172,8 @@ class Controller(wsgi.Controller):
             params[key] = val
 
         try:
-            images = self._image_service.detail(context, filters=filters,
-                                                **page_params)
+            images = self._image_api.get_all(context, filters=filters,
+                                             **page_params)
         except exception.Invalid as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         return self._view_builder.index(req, images)
@@ -198,8 +192,8 @@ class Controller(wsgi.Controller):
         for key, val in page_params.iteritems():
             params[key] = val
         try:
-            images = self._image_service.detail(context, filters=filters,
-                                                **page_params)
+            images = self._image_api.get_all(context, filters=filters,
+                                             **page_params)
         except exception.Invalid as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
 
