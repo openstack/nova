@@ -854,12 +854,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return doms
 
-    # TODO(Shrews): Remove when libvirt Bugzilla bug # 836647 is fixed.
-    def _list_instance_ids(self):
-        if self._conn.numOfDomains() == 0:
-            return []
-        return self._conn.listDomainsID()
-
     def list_instances(self):
         names = []
         for dom in self._list_instance_domains(only_running=False):
