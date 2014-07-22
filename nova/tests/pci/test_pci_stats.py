@@ -14,7 +14,7 @@
 #    under the License.
 
 from nova import exception
-from nova.objects import pci_device
+from nova import objects
 from nova.openstack.common import jsonutils
 from nova.pci import pci_stats as pci
 from nova import test
@@ -51,9 +51,9 @@ pci_requests_multiple = [{'count': 1,
 
 class PciDeviceStatsTestCase(test.NoDBTestCase):
     def _create_fake_devs(self):
-        self.fake_dev_1 = pci_device.PciDevice.create(fake_pci_1)
-        self.fake_dev_2 = pci_device.PciDevice.create(fake_pci_2)
-        self.fake_dev_3 = pci_device.PciDevice.create(fake_pci_3)
+        self.fake_dev_1 = objects.PciDevice.create(fake_pci_1)
+        self.fake_dev_2 = objects.PciDevice.create(fake_pci_2)
+        self.fake_dev_3 = objects.PciDevice.create(fake_pci_3)
 
         map(self.pci_stats.add_device,
             [self.fake_dev_1, self.fake_dev_2, self.fake_dev_3])
