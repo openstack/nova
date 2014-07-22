@@ -5104,18 +5104,25 @@ def aggregate_metadata_get_by_metadata_key(context, aggregate_id, key):
 
 
 def aggregate_host_get_by_metadata_key(context, key):
-    query = model_query(context, models.Aggregate)
-    query = query.join("_metadata")
-    query = query.filter(models.AggregateMetadata.key == key)
-    query = query.options(contains_eager("_metadata"))
-    query = query.options(joinedload("_hosts"))
-    rows = query.all()
-
+    rows = aggregate_get_by_metadata_key(context, key)
     metadata = collections.defaultdict(set)
     for agg in rows:
         for agghost in agg._hosts:
             metadata[agghost.host].add(agg._metadata[0]['value'])
     return dict(metadata)
+
+
+def aggregate_get_by_metadata_key(context, key):
+    """Return rows that match metadata key.
+
+    :param key Matches metadata key.
+    """
+    query = model_query(context, models.Aggregate)
+    query = query.join("_metadata")
+    query = query.filter(models.AggregateMetadata.key == key)
+    query = query.options(contains_eager("_metadata"))
+    query = query.options(joinedload("_hosts"))
+    return query.all()
 
 
 def aggregate_update(context, aggregate_id, values):

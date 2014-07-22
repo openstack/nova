@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 from nova import db
 from nova import exception
 from nova.objects import aggregate
@@ -160,6 +162,29 @@ class _TestAggregateObject(object):
                                  ).AndReturn([fake_aggregate])
         self.mox.ReplayAll()
         aggs = aggregate.AggregateList.get_by_host(self.context, 'fake-host')
+        self.assertEqual(1, len(aggs))
+        self.compare_obj(aggs[0], fake_aggregate, subs=SUBS)
+
+    @mock.patch('nova.db.aggregate_get_by_metadata_key')
+    def test_get_by_metadata_key(self, get_by_metadata_key):
+        get_by_metadata_key.return_value = [fake_aggregate]
+        aggs = aggregate.AggregateList.get_by_metadata_key(
+            self.context, 'this')
+        self.assertEqual(1, len(aggs))
+        self.compare_obj(aggs[0], fake_aggregate, subs=SUBS)
+
+    @mock.patch('nova.db.aggregate_get_by_metadata_key')
+    def test_get_by_metadata_key_and_hosts_no_match(self, get_by_metadata_key):
+        get_by_metadata_key.return_value = [fake_aggregate]
+        aggs = aggregate.AggregateList.get_by_metadata_key(
+            self.context, 'this', hosts=['baz'])
+        self.assertEqual(0, len(aggs))
+
+    @mock.patch('nova.db.aggregate_get_by_metadata_key')
+    def test_get_by_metadata_key_and_hosts_match(self, get_by_metadata_key):
+        get_by_metadata_key.return_value = [fake_aggregate]
+        aggs = aggregate.AggregateList.get_by_metadata_key(
+            self.context, 'this', hosts=['foo', 'bar'])
         self.assertEqual(1, len(aggs))
         self.compare_obj(aggs[0], fake_aggregate, subs=SUBS)
 
