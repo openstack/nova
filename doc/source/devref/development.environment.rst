@@ -123,7 +123,7 @@ Using fake computes for tests
 -----------------------------
 
 The number of instances supported by fake computes is not limited by physical
-constraints. It allows to perform stress tests on a deployment with few
+constraints. It allows you to perform stress tests on a deployment with few
 resources (typically a laptop). But you must avoid using scheduler filters
 limiting the number of instances per compute (like RamFilter, DiskFilter,
 AggregateCoreFilter), otherwise they will limit the number of instances per
