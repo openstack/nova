@@ -14,7 +14,6 @@
 #    under the License.
 
 import contextlib
-import copy
 
 import fixtures
 import mock
@@ -125,7 +124,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         injected_files = injected_files or []
         read_file_handle = mock.MagicMock()
         write_file_handle = mock.MagicMock()
-        self.image_ref = self.instance['image_ref']
+        self.image_ref = self.test_instance.image_ref
 
         def fake_read_handle(read_iter):
             return read_file_handle
@@ -151,7 +150,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
                                 side_effect=fake_read_handle),
              mock.patch.object(vmware_images, 'start_transfer')
         ) as (fake_http_write, fake_glance_read, fake_start_transfer):
-            self.conn.spawn(self.context, self.instance, self.image,
+            self.conn.spawn(self.context, self.test_instance, self.image,
                         injected_files=injected_files,
                         admin_password=admin_password,
                         network_info=self.network_info,
@@ -161,11 +160,10 @@ class ConfigDriveTestCase(test.NoDBTestCase):
                 write_file_handle=write_file_handle)
 
     def test_create_vm_with_config_drive_verify_method_invocation(self):
-        self.instance = copy.deepcopy(self.test_instance)
-        self.instance['config_drive'] = 'True'
+        self.test_instance.config_drive = 'True'
         self.mox.StubOutWithMock(vmops.VMwareVMOps, '_create_config_drive')
         self.mox.StubOutWithMock(vmops.VMwareVMOps, '_attach_cdrom_to_vm')
-        self.conn._vmops._create_config_drive(self.instance,
+        self.conn._vmops._create_config_drive(self.test_instance,
                                                mox.IgnoreArg(),
                                                mox.IgnoreArg(),
                                                mox.IgnoreArg(),
@@ -185,8 +183,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         self._spawn_vm()
 
     def test_create_vm_without_config_drive(self):
-        self.instance = copy.deepcopy(self.test_instance)
-        self.instance['config_drive'] = None
+        self.test_instance.config_drive = None
         self.mox.StubOutWithMock(vmops.VMwareVMOps, '_create_config_drive')
         self.mox.StubOutWithMock(vmops.VMwareVMOps, '_attach_cdrom_to_vm')
         self.mox.ReplayAll()
@@ -196,6 +193,5 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         self._spawn_vm()
 
     def test_create_vm_with_config_drive(self):
-        self.instance = copy.deepcopy(self.test_instance)
-        self.instance['config_drive'] = 'True'
+        self.test_instance.config_drive = 'True'
         self._spawn_vm()
