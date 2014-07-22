@@ -62,8 +62,6 @@ from nova.i18n import _LI
 from nova.i18n import _LW
 from nova import image
 from nova import objects
-from nova.objects import flavor as flavor_obj
-from nova.objects import service as service_obj
 from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
@@ -1422,7 +1420,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def attach_interface(self, instance, image_meta, vif):
         virt_dom = self._lookup_by_name(instance['name'])
-        flavor = flavor_obj.Flavor.get_by_id(
+        flavor = objects.Flavor.get_by_id(
             nova_context.get_admin_context(read_deleted='yes'),
             instance['instance_type_id'])
         self.vif_driver.plug(instance, vif)
@@ -1443,7 +1441,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def detach_interface(self, instance, vif):
         virt_dom = self._lookup_by_name(instance['name'])
-        flavor = flavor_obj.Flavor.get_by_id(
+        flavor = objects.Flavor.get_by_id(
             nova_context.get_admin_context(read_deleted='yes'),
             instance['instance_type_id'])
         cfg = self.vif_driver.get_config(instance, vif, None, flavor)
@@ -2881,7 +2879,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         ctx = nova_context.get_admin_context()
         try:
-            service = service_obj.Service.get_by_compute_host(ctx, CONF.host)
+            service = objects.Service.get_by_compute_host(ctx, CONF.host)
 
             if service.disabled != disable_service:
                 # Note(jang): this is a quick fix to stop operator-
@@ -3183,7 +3181,7 @@ class LibvirtDriver(driver.ComputeDriver):
             'kernel_id' if a kernel is needed for the rescue image.
         """
 
-        flavor = flavor_obj.Flavor.get_by_id(
+        flavor = objects.Flavor.get_by_id(
             nova_context.get_admin_context(read_deleted='yes'),
             instance['instance_type_id'])
         inst_path = libvirt_utils.get_instance_path(instance)

@@ -48,7 +48,6 @@ from nova.i18n import _
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import base as objects_base
-from nova.objects import instance_fault as instance_fault_obj
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -1103,7 +1102,7 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
         log_str = _("Got message to create instance fault: "
                     "%(instance_fault)s")
         LOG.debug(log_str, {'instance_fault': instance_fault})
-        fault = instance_fault_obj.InstanceFault(context=message.ctxt)
+        fault = objects.InstanceFault(context=message.ctxt)
         fault.update(instance_fault)
         fault.create()
 

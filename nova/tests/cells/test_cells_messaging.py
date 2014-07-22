@@ -33,7 +33,6 @@ from nova.network import model as network_model
 from nova import objects
 from nova.objects import base as objects_base
 from nova.objects import fields as objects_fields
-from nova.objects import instance_fault as instance_fault_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
@@ -1621,7 +1620,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
                                'message': 'fake-message',
                                'details': 'fake-details'}
 
-        if_mock = mock.Mock(spec_set=instance_fault_obj.InstanceFault)
+        if_mock = mock.Mock(spec_set=objects.InstanceFault)
 
         def _check_create():
             self.assertEqual('fake-message', if_mock.message)
@@ -1631,8 +1630,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
 
         if_mock.create.side_effect = _check_create
 
-        with mock.patch.object(instance_fault_obj,
-                               'InstanceFault') as if_obj_mock:
+        with mock.patch.object(objects, 'InstanceFault') as if_obj_mock:
             if_obj_mock.return_value = if_mock
             self.src_msg_runner.instance_fault_create_at_top(
                     self.ctxt, fake_instance_fault)

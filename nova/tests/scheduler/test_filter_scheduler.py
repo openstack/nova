@@ -27,7 +27,7 @@ from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
-from nova.objects import instance_group as instance_group_obj
+from nova import objects
 from nova.pci import pci_request
 from nova.scheduler import driver
 from nova.scheduler import filter_scheduler
@@ -375,7 +375,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         instance = fake_instance.fake_instance_obj(self.context,
                 params={'host': 'hostA'})
 
-        group = instance_group_obj.InstanceGroup()
+        group = objects.InstanceGroup()
         group.name = 'pele'
         group.uuid = str(uuid.uuid4())
         group.members = [instance.uuid]
@@ -393,10 +393,9 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         }
 
         with contextlib.nested(
-            mock.patch.object(instance_group_obj.InstanceGroup, func,
-                               return_value=group),
-            mock.patch.object(instance_group_obj.InstanceGroup, 'get_hosts',
-                               return_value=['hostA']),
+            mock.patch.object(objects.InstanceGroup, func, return_value=group),
+            mock.patch.object(objects.InstanceGroup, 'get_hosts',
+                              return_value=['hostA']),
         ) as (get_group, get_hosts):
             update_group_hosts = sched._setup_instance_group(self.context,
                     filter_properties)

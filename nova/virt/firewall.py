@@ -23,8 +23,6 @@ from nova.i18n import _
 from nova.i18n import _LI
 from nova.network import linux_net
 from nova import objects
-from nova.objects import security_group as security_group_obj
-from nova.objects import security_group_rule as security_group_rule_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova import utils
@@ -357,13 +355,13 @@ class IptablesFirewallDriver(FirewallDriver):
             # Allow RA responses
             self._do_ra_rules(ipv6_rules, network_info)
 
-        security_groups = security_group_obj.SecurityGroupList.get_by_instance(
+        security_groups = objects.SecurityGroupList.get_by_instance(
             ctxt, instance)
 
         # then, security group chains and rules
         for security_group in security_groups:
-            rules_cls = security_group_rule_obj.SecurityGroupRuleList
-            rules = rules_cls.get_by_security_group(ctxt, security_group)
+            rules = objects.SecurityGroupRuleList.get_by_security_group(
+                    ctxt, security_group)
 
             for rule in rules:
                 if not rule['cidr']:

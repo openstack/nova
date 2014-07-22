@@ -23,6 +23,7 @@ import six
 
 from nova.compute import manager
 from nova import exception
+from nova import objects
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -784,8 +785,7 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         # Previous status of the service: disabled: False
         service_mock.configure_mock(disabled_reason='None',
                                     disabled=False)
-        from nova.objects import service as service_obj
-        with mock.patch.object(service_obj.Service, "get_by_compute_host",
+        with mock.patch.object(objects.Service, "get_by_compute_host",
                                return_value=service_mock):
             self.connection._set_host_enabled(False, 'ERROR!')
             self.assertTrue(service_mock.disabled)
@@ -798,8 +798,7 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         # Previous status of the service: disabled: True, 'AUTO: ERROR'
         service_mock.configure_mock(disabled_reason='AUTO: ERROR',
                                     disabled=True)
-        from nova.objects import service as service_obj
-        with mock.patch.object(service_obj.Service, "get_by_compute_host",
+        with mock.patch.object(objects.Service, "get_by_compute_host",
                                return_value=service_mock):
             self.connection._set_host_enabled(True)
             self.assertFalse(service_mock.disabled)
@@ -812,8 +811,7 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         # Previous status of the service: disabled: True, 'Manually disabled'
         service_mock.configure_mock(disabled_reason='Manually disabled',
                                     disabled=True)
-        from nova.objects import service as service_obj
-        with mock.patch.object(service_obj.Service, "get_by_compute_host",
+        with mock.patch.object(objects.Service, "get_by_compute_host",
                                return_value=service_mock):
             self.connection._set_host_enabled(True)
             self.assertTrue(service_mock.disabled)
@@ -826,8 +824,7 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         # Previous status of the service: disabled: True, 'Manually disabled'
         service_mock.configure_mock(disabled_reason='Manually disabled',
                                     disabled=True)
-        from nova.objects import service as service_obj
-        with mock.patch.object(service_obj.Service, "get_by_compute_host",
+        with mock.patch.object(objects.Service, "get_by_compute_host",
                                return_value=service_mock):
             self.connection._set_host_enabled(False, 'ERROR!')
             self.assertTrue(service_mock.disabled)

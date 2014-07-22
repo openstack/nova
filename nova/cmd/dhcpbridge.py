@@ -35,7 +35,6 @@ from nova.i18n import _
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.objects import base as objects_base
-from nova.objects import network as network_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -72,7 +71,7 @@ def del_lease(mac, ip_address):
 def init_leases(network_id):
     """Get the list of hosts for a network."""
     ctxt = context.get_admin_context()
-    network = network_obj.Network.get_by_id(ctxt, network_id)
+    network = objects.Network.get_by_id(ctxt, network_id)
     network_manager = importutils.import_object(CONF.network_manager)
     return network_manager.get_dhcp_leases(ctxt, network)
 

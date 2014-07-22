@@ -26,7 +26,7 @@ from oslo.config import cfg
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
 from nova.i18n import _
-from nova.objects import instance_group as instance_group_obj
+from nova import objects
 from nova.openstack.common import log as logging
 from nova.pci import pci_request
 from nova import rpc
@@ -208,8 +208,7 @@ class FilterScheduler(driver.Scheduler):
         scheduler_hints = filter_properties.get('scheduler_hints') or {}
         group_hint = scheduler_hints.get('group', None)
         if group_hint:
-            group = instance_group_obj.InstanceGroup.get_by_hint(context,
-                        group_hint)
+            group = objects.InstanceGroup.get_by_hint(context, group_hint)
             policies = set(('anti-affinity', 'affinity'))
             if any((policy in policies) for policy in group.policies):
                 update_group_hosts = True
