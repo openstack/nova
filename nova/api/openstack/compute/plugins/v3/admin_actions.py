@@ -16,18 +16,21 @@ import webob
 from webob import exc
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas.v3 import reset_server_state
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import compute
 from nova.compute import vm_states
 from nova import exception
-from nova.i18n import _
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 ALIAS = "os-admin-actions"
 
 # States usable in resetState action
+# NOTE: It is necessary to update the schema of nova/api/openstack/compute/
+# schemas/v3/reset_server_state.py, when updating this state_map.
 state_map = dict(active=vm_states.ACTIVE, error=vm_states.ERROR)
 
 
@@ -71,18 +74,14 @@ class AdminActionsController(wsgi.Controller):
 
     @extensions.expected_errors((400, 404))
     @wsgi.action('reset_state')
+    @validation.schema(reset_server_state.reset_state)
     def _reset_state(self, req, id, body):
         """Permit admins to reset the state of a server."""
         context = req.environ["nova.context"]
         authorize(context, 'reset_state')
 
         # Identify the desired state from the body
-        try:
-            state = state_map[body["reset_state"]["state"]]
-        except (TypeError, KeyError):
-            msg = _("Desired state must be specified.  Valid states "
-                    "are: %s") % ', '.join(sorted(state_map.keys()))
-            raise exc.HTTPBadRequest(explanation=msg)
+        state = state_map[body["reset_state"]["state"]]
 
         instance = common.get_instance(self.compute_api, context, id,
                                        want_objects=True)
