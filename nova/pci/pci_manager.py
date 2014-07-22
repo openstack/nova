@@ -180,7 +180,7 @@ class PciDevTracker(object):
                     # at least it avoids some confusion and, if needed,
                     # we can add more action like killing the instance
                     # by force in future.
-                    self.stale[dev['address']] = dev
+                    self.stale[new_value['address']] = new_value
                 else:
                     pci_device.update_device(existed, new_value)
 
