@@ -18,6 +18,7 @@
 import webob
 from webob import exc
 
+from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova import compute
 from nova import exception
@@ -122,6 +123,9 @@ class InterfaceAttachmentController(object):
             LOG.exception(e)
             msg = _("Failed to attach interface")
             raise webob.exc.HTTPInternalServerError(explanation=msg)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'attach_interface')
 
         return self.show(req, server_id, vif['id'])
 
@@ -153,6 +157,9 @@ class InterfaceAttachmentController(object):
         except NotImplementedError:
             msg = _("Network driver does not support this function.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'detach_interface')
 
         return webob.Response(status_int=202)
 

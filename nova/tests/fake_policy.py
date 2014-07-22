@@ -59,6 +59,9 @@ policy_data = """
     "compute:attach_volume": "",
     "compute:detach_volume": "",
 
+    "compute:attach_interface": "",
+    "compute:detach_interface": "",
+
     "compute:set_admin_password": "",
 
     "compute:rescue": "",

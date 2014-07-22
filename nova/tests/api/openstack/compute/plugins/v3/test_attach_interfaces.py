@@ -376,6 +376,47 @@ class InterfaceAttachTests(test.NoDBTestCase):
         param = {'fixed_ips': 'non_array'}
         self._test_attach_interface_with_invalid_parameter(param)
 
+    def test_attach_interface_with_invalid_state(self):
+        def fake_attach_interface_invalid_state(*args, **kwargs):
+            raise exception.InstanceInvalidState(
+                instance_uuid='', attr='', state='',
+                method='attach_interface')
+
+        self.stubs.Set(compute_api.API, 'attach_interface',
+                       fake_attach_interface_invalid_state)
+        attachments = attach_interfaces.InterfaceAttachmentController()
+        req = webob.Request.blank(
+            '/v3/servers/fake/os-attach-interfaces/attach')
+        req.method = 'POST'
+        req.body = jsonutils.dumps({'interface_attachment':
+                                    {'net_id': FAKE_NET_ID1}})
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+        self.assertRaises(exc.HTTPConflict,
+                          attachments.create, req, FAKE_UUID1,
+                          body=jsonutils.loads(req.body))
+
+    def test_detach_interface_with_invalid_state(self):
+        def fake_detach_interface_invalid_state(*args, **kwargs):
+            raise exception.InstanceInvalidState(
+                instance_uuid='', attr='', state='',
+                method='detach_interface')
+
+        self.stubs.Set(compute_api.API, 'detach_interface',
+                       fake_detach_interface_invalid_state)
+        attachments = attach_interfaces.InterfaceAttachmentController()
+        req = webob.Request.blank(
+            '/v3/servers/fake/os-attach-interfaces/delete')
+        req.method = 'DELETE'
+        req.body = jsonutils.dumps({})
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+        self.assertRaises(exc.HTTPConflict,
+                          attachments.delete,
+                          req,
+                          FAKE_UUID1,
+                          FAKE_NET_ID1)
+
 
 class InterfaceAttachTestsWithMock(test.NoDBTestCase):
     def setUp(self):
