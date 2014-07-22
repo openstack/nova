@@ -58,8 +58,8 @@ class ImagePropertiesFilter(filters.BaseCellFilter):
                 l = list(version)
                 version = str(l[0])
 
-            if version is None or self._matches_version(version,
-                                                hypervisor_version_requires):
+            if not version or self._matches_version(version,
+                                            hypervisor_version_requires):
                 filtered_cells.append(cell)
 
         return filtered_cells
