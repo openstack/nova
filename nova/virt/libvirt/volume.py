@@ -36,7 +36,7 @@ from nova import paths
 from nova.storage import linuxscsi
 from nova import utils
 from nova.virt.libvirt import config as vconfig
-from nova.virt.libvirt import utils as virtutils
+from nova.virt.libvirt import utils as libvirt_utils
 
 LOG = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ class LibvirtBaseVolumeDriver(object):
         """Connect the volume. Returns xml for libvirt."""
 
         conf = vconfig.LibvirtConfigGuestDisk()
-        conf.driver_name = virtutils.pick_disk_driver_name(
+        conf.driver_name = libvirt_utils.pick_disk_driver_name(
             self.connection._get_hypervisor_version(),
             self.is_block_dev
         )
@@ -674,7 +674,7 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
         """
         mount_path = os.path.join(CONF.libvirt.nfs_mount_point_base,
                                   utils.get_hash_str(nfs_export))
-        if not virtutils.is_mounted(mount_path, nfs_export):
+        if not libvirt_utils.is_mounted(mount_path, nfs_export):
             self._mount_nfs(mount_path, nfs_export, options, ensure=True)
         return mount_path
 
@@ -824,7 +824,7 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
         """
         mount_path = os.path.join(CONF.libvirt.glusterfs_mount_point_base,
                                   utils.get_hash_str(glusterfs_export))
-        if not virtutils.is_mounted(mount_path, glusterfs_export):
+        if not libvirt_utils.is_mounted(mount_path, glusterfs_export):
             self._mount_glusterfs(mount_path, glusterfs_export,
                                   options, ensure=True)
         return mount_path
@@ -894,7 +894,7 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
         # We need to look for wwns on every hba
         # because we don't know ahead of time
         # where they will show up.
-        hbas = virtutils.get_fc_hbas_info()
+        hbas = libvirt_utils.get_fc_hbas_info()
         host_devices = []
         for hba in hbas:
             pci_num = self._get_pci_num(hba)
