@@ -1515,7 +1515,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                               self.network_info,
                               None, self.destroy_disks)
             mock_destroy.assert_called_once_with(self.instance,
-                                                 self.network_info,
                                                  self.destroy_disks)
 
     def test_destroy_instance_without_compute(self):
@@ -2525,7 +2524,6 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase,
                               self.network_info,
                               None, self.destroy_disks)
             mock_destroy.assert_called_once_with(self.instance,
-                                                 self.network_info,
                                                  self.destroy_disks)
 
     def test_destroy_instance_without_compute(self):
