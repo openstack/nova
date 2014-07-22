@@ -99,6 +99,8 @@ class SchedulerManager(manager.Manager):
                                                   'task_state': None},
                                                   context, ex, request_spec)
 
+    # NOTE(sbauza): Remove this method when the scheduler rpc interface is
+    # bumped to 4.x as it is no longer used.
     def prep_resize(self, context, image, request_spec, filter_properties,
                     instance, instance_type, reservations):
         """Tries to call schedule_prep_resize on the driver.
