@@ -67,7 +67,8 @@ def _get_first_network(network, version):
 
 
 def get_injected_network_template(network_info, use_ipv6=CONF.use_ipv6,
-                                    template=CONF.injected_network_template):
+                                  template=CONF.injected_network_template,
+                                  libvirt_virt_type=None):
     """Returns a rendered network template for the given network_info.
 
     :param network_info:
@@ -75,6 +76,8 @@ def get_injected_network_template(network_info, use_ipv6=CONF.use_ipv6,
     :param use_ipv6: If False, do not return IPv6 template information
         even if an IPv6 subnet is present in network_info.
     :param template: Path to the interfaces template file.
+    :param libvirt_virt_type: The Libvirt `virt_type`, will be `None` for
+        other hypervisors..
     """
     if not (network_info and template):
         return
@@ -153,4 +156,5 @@ def get_injected_network_template(network_info, use_ipv6=CONF.use_ipv6,
                              trim_blocks=True)
     template = env.get_template(tmpl_file)
     return template.render({'interfaces': nets,
-                            'use_ipv6': ipv6_is_available})
+                            'use_ipv6': ipv6_is_available,
+                            'libvirt_virt_type': libvirt_virt_type})

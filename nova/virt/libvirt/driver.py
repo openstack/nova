@@ -2590,7 +2590,8 @@ class LibvirtDriver(driver.ComputeDriver):
             admin_pass = None
 
         # Handles the network injection.
-        net = netutils.get_injected_network_template(network_info)
+        net = netutils.get_injected_network_template(
+                network_info, libvirt_virt_type=CONF.libvirt.virt_type)
 
         # Handles the metadata injection
         metadata = instance.get('metadata')
