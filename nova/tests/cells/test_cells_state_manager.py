@@ -16,12 +16,16 @@
 Tests For CellStateManager
 """
 
+import mock
+import six
+
 from oslo.config import cfg
 
 from nova.cells import state
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
+from nova.openstack.common import fileutils
 from nova import test
 
 
@@ -77,6 +81,19 @@ class TestCellsStateManager(test.TestCase):
         e = self.assertRaises(cfg.ConfigFilesNotFoundError,
                               state.CellStateManager)
         self.assertEqual(['no_such_file_exists.conf'], e.config_files)
+
+    @mock.patch.object(cfg.ConfigOpts, 'find_file')
+    @mock.patch.object(fileutils, 'read_cached_file')
+    def test_filemanager_returned(self, mock_read_cached_file, mock_find_file):
+        mock_find_file.return_value = "/etc/nova/cells.json"
+        mock_read_cached_file.return_value = (False, six.StringIO({}))
+        self.flags(cells_config='cells.json', group='cells')
+        self.assertIsInstance(state.CellStateManager(),
+                              state.CellStateManagerFile)
+
+    def test_dbmanager_returned(self):
+        self.assertIsInstance(state.CellStateManager(),
+                              state.CellStateManagerDB)
 
     def test_capacity_no_reserve(self):
         # utilize entire cell
