@@ -301,6 +301,17 @@ def find_sr_from_vbd(session, vbd_ref):
     return sr_ref
 
 
+def find_sr_from_vdi(session, vdi_ref):
+    """Find the SR reference from the VDI reference."""
+    try:
+        sr_ref = session.call_xenapi("VDI.get_SR", vdi_ref)
+    except session.XenAPI.Failure as exc:
+        LOG.exception(exc)
+        raise exception.StorageError(
+                reason=_('Unable to find SR from VDI %s') % vdi_ref)
+    return sr_ref
+
+
 def find_vbd_by_number(session, vm_ref, dev_number):
     """Get the VBD reference from the device number."""
     vbd_refs = session.VM.get_VBDs(vm_ref)

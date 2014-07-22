@@ -204,3 +204,20 @@ class VolumeOps(object):
                     raise
 
         return bad_devices
+
+    def safe_cleanup_from_vdis(self, vdi_refs):
+        # A helper method to detach volumes that are not associated with an
+        # instance
+
+        for vdi_ref in vdi_refs:
+            try:
+                sr_ref = volume_utils.find_sr_from_vdi(self._session, vdi_ref)
+            except exception.StorageError as exc:
+                LOG.debug(exc.format_message())
+                continue
+            try:
+                # Forget (i.e. disconnect) SR only if not in use
+                volume_utils.purge_sr(self._session, sr_ref)
+            except Exception:
+                LOG.debug('Ignoring error while purging sr: %s' % sr_ref,
+                        exc_info=True)

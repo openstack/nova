@@ -41,6 +41,36 @@ class SROps(stubs.XenAPITestBaseNoDB):
                                                       'sr_uuid'),
                          None)
 
+    def test_find_sr_from_vdi(self):
+        vdi_ref = 'fake-ref'
+
+        def fake_call_xenapi(method, *args):
+            self.assertEqual(method, 'VDI.get_SR')
+            self.assertEqual(args[0], vdi_ref)
+            return args[0]
+
+        session = mock.Mock()
+        session.call_xenapi.side_effect = fake_call_xenapi
+        self.assertEqual(volume_utils.find_sr_from_vdi(session, vdi_ref),
+                         vdi_ref)
+
+    def test_find_sr_from_vdi_exception(self):
+        vdi_ref = 'fake-ref'
+
+        class FakeException(Exception):
+            pass
+
+        def fake_call_xenapi(method, *args):
+            self.assertEqual(method, 'VDI.get_SR')
+            self.assertEqual(args[0], vdi_ref)
+            return args[0]
+
+        session = mock.Mock()
+        session.XenAPI.Failure = FakeException
+        session.call_xenapi.side_effect = FakeException
+        self.assertRaises(exception.StorageError,
+                volume_utils.find_sr_from_vdi, session, vdi_ref)
+
 
 class ISCSIParametersTestCase(stubs.XenAPITestBaseNoDB):
     def test_target_host(self):
