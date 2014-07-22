@@ -933,7 +933,7 @@ iface eth0 inet static
     dns-nameservers 192.168.1.3 192.168.1.4
 iface eth0 inet6 static
     address 2001:db8:0:1::1
-    netmask ffff:ffff:ffff:ffff::
+    netmask 64
     gateway 2001:db8:0:1::1
 """
             self.assertEqual(expected, actual)

@@ -66,8 +66,7 @@ def _get_first_network(network, version):
         pass
 
 
-def get_injected_network_template(network_info, use_ipv6=CONF.use_ipv6,
-                                  template=CONF.injected_network_template,
+def get_injected_network_template(network_info, use_ipv6=None, template=None,
                                   libvirt_virt_type=None):
     """Returns a rendered network template for the given network_info.
 
@@ -79,6 +78,12 @@ def get_injected_network_template(network_info, use_ipv6=CONF.use_ipv6,
     :param libvirt_virt_type: The Libvirt `virt_type`, will be `None` for
         other hypervisors..
     """
+    if use_ipv6 is None:
+        use_ipv6 = CONF.use_ipv6
+
+    if not template:
+        template = CONF.injected_network_template
+
     if not (network_info and template):
         return
 

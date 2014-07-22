@@ -54,6 +54,7 @@ from nova.virt import diagnostics
 from nova.virt.disk import api as disk
 from nova.virt.disk.vfs import localfs as vfsimpl
 from nova.virt import hardware
+from nova.virt import netutils
 from nova.virt.xenapi import agent
 from nova.virt.xenapi.image import utils as image_utils
 from nova.virt.xenapi import volume_utils
@@ -1737,12 +1738,13 @@ def lookup(session, name_label, check_rescue=False):
 def preconfigure_instance(session, instance, vdi_ref, network_info):
     """Makes alterations to the image before launching as part of spawn.
     """
+    key = str(instance['key_data'])
+    net = netutils.get_injected_network_template(network_info)
+    metadata = instance['metadata']
 
     # As mounting the image VDI is expensive, we only want do it once,
     # if at all, so determine whether it's required first, and then do
     # everything
-    mount_required = False
-    key, net, metadata = _prepare_injectables(instance, network_info)
     mount_required = key or net or metadata
     if not mount_required:
         return
@@ -2478,103 +2480,6 @@ def _mounted_processing(device, key, net, metadata):
         else:
             LOG.info(_('Failed to mount filesystem (expected for '
                        'non-linux instances): %s') % err)
-
-
-def _prepare_injectables(inst, network_info):
-    """prepares the ssh key and the network configuration file to be
-    injected into the disk image
-    """
-    #do the import here - Jinja2 will be loaded only if injection is performed
-    import jinja2
-    tmpl_path, tmpl_file = os.path.split(CONF.injected_network_template)
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(tmpl_path),
-                             trim_blocks=True)
-    template = env.get_template(tmpl_file)
-
-    metadata = inst['metadata']
-    key = str(inst['key_data'])
-    net = None
-    if network_info:
-        ifc_num = -1
-        interfaces_info = []
-        for vif in network_info:
-            ifc_num += 1
-            try:
-                if not vif['network'].get_meta('injected'):
-                    # network is not specified injected
-                    continue
-            except KeyError:
-                # vif network is None
-                continue
-
-            # NOTE(tr3buchet): using all subnets in case dns is stored in a
-            #                  subnet that isn't chosen as first v4 or v6
-            #                  subnet in the case where there is more than one
-            # dns = list of address of each dns entry from each vif subnet
-            dns = [ip['address'] for subnet in vif['network']['subnets']
-                                 for ip in subnet['dns']]
-            dns = ' '.join(dns).strip()
-
-            interface_info = {'name': 'eth%d' % ifc_num,
-                              'address': '',
-                              'netmask': '',
-                              'gateway': '',
-                              'broadcast': '',
-                              'dns': dns or '',
-                              'address_v6': '',
-                              'netmask_v6': '',
-                              'gateway_v6': '',
-                              'use_ipv6': CONF.use_ipv6}
-
-            # NOTE(tr3buchet): the original code used the old network_info
-            #                  which only supported a single ipv4 subnet
-            #                  (and optionally, a single ipv6 subnet).
-            #                  I modified it to use the new network info model,
-            #                  which adds support for multiple v4 or v6
-            #                  subnets. I chose to ignore any additional
-            #                  subnets, just as the original code ignored
-            #                  additional IP information
-
-            # populate v4 info if v4 subnet and ip exist
-            try:
-                # grab the first v4 subnet (or it raises)
-                subnet = [s for s in vif['network']['subnets']
-                            if s['version'] == 4][0]
-                # get the subnet's first ip (or it raises)
-                ip = subnet['ips'][0]
-
-                # populate interface_info
-                subnet_netaddr = subnet.as_netaddr()
-                interface_info['address'] = ip['address']
-                interface_info['netmask'] = subnet_netaddr.netmask
-                interface_info['gateway'] = subnet['gateway']['address']
-                interface_info['broadcast'] = subnet_netaddr.broadcast
-            except IndexError:
-                # there isn't a v4 subnet or there are no ips
-                pass
-
-            # populate v6 info if v6 subnet and ip exist
-            try:
-                # grab the first v6 subnet (or it raises)
-                subnet = [s for s in vif['network']['subnets']
-                            if s['version'] == 6][0]
-                # get the subnet's first ip (or it raises)
-                ip = subnet['ips'][0]
-
-                # populate interface_info
-                interface_info['address_v6'] = ip['address']
-                interface_info['netmask_v6'] = subnet.as_netaddr().netmask
-                interface_info['gateway_v6'] = subnet['gateway']['address']
-            except IndexError:
-                # there isn't a v6 subnet or there are no ips
-                pass
-
-            interfaces_info.append(interface_info)
-
-        if interfaces_info:
-            net = template.render({'interfaces': interfaces_info,
-                                   'use_ipv6': CONF.use_ipv6})
-    return key, net, metadata
 
 
 def ensure_correct_host(session):
