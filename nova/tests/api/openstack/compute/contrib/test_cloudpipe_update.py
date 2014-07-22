@@ -57,7 +57,7 @@ class CloudpipeUpdateTest(test.NoDBTestCase):
     def test_cloudpipe_configure_project_bad_url(self):
         req = fakes.HTTPRequest.blank(
             '/v2/fake/os-cloudpipe/configure-projectx')
-        body = {"vpn_ip": "1.2.3.4", "vpn_port": 222}
+        body = {"configure_project": {"vpn_ip": "1.2.3.4", "vpn_port": 222}}
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.update, req,
                           'configure-projectx', body)
@@ -65,7 +65,7 @@ class CloudpipeUpdateTest(test.NoDBTestCase):
     def test_cloudpipe_configure_project_bad_data(self):
         req = fakes.HTTPRequest.blank(
             '/v2/fake/os-cloudpipe/configure-project')
-        body = {"vpn_ipxx": "1.2.3.4", "vpn_port": 222}
+        body = {"configure_project": {"vpn_ipxx": "1.2.3.4", "vpn_port": 222}}
         self.assertRaises(webob.exc.HTTPUnprocessableEntity,
                           self.controller.update, req,
                           'configure-project', body)
