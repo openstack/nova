@@ -609,7 +609,6 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     def test_get_host_stats(self):
         host_status = self.connection.get_host_stats()
         self._check_available_resource_fields(host_status)
-        self.assertIsInstance(host_status['hypervisor_version'], int)
 
     @catch_notimplementederror
     def test_get_available_resource(self):
