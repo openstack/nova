@@ -16,7 +16,6 @@
 import datetime
 import uuid
 
-import glanceclient.v1.images
 import routes
 import six
 import webob
@@ -287,20 +286,6 @@ def _make_image_fixtures():
                 owner='authorized_fake')
 
     return fixtures
-
-
-def stub_out_glanceclient_create(stubs, sent_to_glance):
-    """We return the metadata sent to glance by modifying the sent_to_glance
-    dict in place
-    """
-    orig_add_image = glanceclient.v1.images.ImageManager.create
-
-    def fake_create(context, metadata, data=None):
-        sent_to_glance['metadata'] = metadata
-        sent_to_glance['data'] = data
-        return orig_add_image(metadata, data)
-
-    stubs.Set(glanceclient.v1.images.ImageManager, 'create', fake_create)
 
 
 def stub_out_glance(stubs):
