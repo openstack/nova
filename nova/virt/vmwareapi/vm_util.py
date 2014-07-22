@@ -1380,11 +1380,10 @@ def power_on_instance(session, instance, vm_ref=None):
         LOG.debug("VM already powered on", instance=instance)
 
 
-def get_values_from_object_properties(session, props, properties):
+def get_values_from_object_properties(session, props):
     """Get the specific values from a object list.
 
-    The object values will be returned as a dictionary. The keys for the
-    dictionary will be the 'properties'.
+    The object values will be returned as a dictionary.
     """
     dictionary = {}
     while props:

@@ -723,12 +723,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def test_get_values(self):
         objects = self._create_fake_vm_objects()
-        lst_properties = ['runtime.powerState',
-                          'summary.guest.toolsStatus',
-                          'summary.guest.toolsRunningStatus']
         query = vm_util.get_values_from_object_properties(
-            fake.FakeObjectRetrievalSession(objects),
-            objects, lst_properties)
+            fake.FakeObjectRetrievalSession(objects), objects)
         self.assertEqual('poweredOn', query['runtime.powerState'])
         self.assertEqual('guestToolsRunning',
                          query['summary.guest.toolsRunningStatus'])
