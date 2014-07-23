@@ -5581,11 +5581,12 @@ class ComputeManager(manager.Manager):
             LOG.debug("CONF.reclaim_instance_interval <= 0, skipping...")
             return
 
-        # FIXME(comstud): Dummy quota object for now. See bug 1296414.
-        # We have potential for inconsistency if we decide here to not
-        # update quotas. _delete_instance() should determine whether or
-        # not to update quotas based on if instance is in a SOFT_DELETED
-        # state or not.
+        # TODO(comstud, jichenjc): Dummy quota object for now See bug 1296414.
+        # The only case that the quota might be inconsistent is
+        # the compute node died between set instance state to SOFT_DELETED
+        # and quota commit to DB. When compute node starts again
+        # it will have no idea the reservation is committed or not or even
+        # expired, since it's a rare case, so marked as todo.
         quotas = quotas_obj.Quotas.from_reservations(context, None)
 
         filters = {'vm_state': vm_states.SOFT_DELETED,
