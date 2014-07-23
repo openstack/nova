@@ -24,7 +24,7 @@ from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova import conductor
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LW
 from nova.network import base_api
 from nova.network import model as network_model
 from nova.network import neutronv2
@@ -185,6 +185,8 @@ class API(base_api.NetworkAPI):
         :param dhcp_opts: Optional DHCP options.
         :returns: ID of the created port.
         :raises PortLimitExceeded: If neutron fails with an OverQuota error.
+        :raises NoMoreFixedIps: If neutron fails with
+            IpAddressGenerationFailure error.
         """
         try:
             if fixed_ip:
@@ -206,11 +208,16 @@ class API(base_api.NetworkAPI):
             LOG.debug('Successfully created port: %s', port_id,
                       instance=instance)
             return port_id
-        except neutron_client_exc.NeutronClientException as e:
-            # NOTE(mriedem): OverQuota in neutron is a 409
-            if e.status_code == 409:
-                LOG.warning(_('Neutron error: quota exceeded'))
-                raise exception.PortLimitExceeded()
+        except neutron_client_exc.OverQuotaClient:
+            LOG.warning(_LW(
+                'Neutron error: Port quota exceeded in tenant: %s'),
+                port_req_body['port']['tenant_id'], instance=instance)
+            raise exception.PortLimitExceeded()
+        except neutron_client_exc.IpAddressGenerationFailureClient:
+            LOG.warning(_LW('Neutron error: No more fixed IPs in network: %s'),
+                        network_id, instance=instance)
+            raise exception.NoMoreFixedIps()
+        except neutron_client_exc.NeutronClientException:
             with excutils.save_and_reraise_exception():
                 LOG.exception(_('Neutron error creating port on network %s'),
                               network_id, instance=instance)
