@@ -1694,8 +1694,9 @@ class ComputeManager(manager.Manager):
             root_bdm.save()
 
         def _is_mapping(bdm):
-            return (bdm.source_type in ('image', 'volume', 'snapshot') and
-                    driver_block_device.is_implemented(bdm))
+            return (bdm.source_type in ('image', 'volume', 'snapshot', 'blank')
+                    and bdm.destination_type == 'volume'
+                    and driver_block_device.is_implemented(bdm))
 
         ephemerals = filter(block_device.new_format_is_ephemeral,
                             block_devices)
@@ -1729,6 +1730,11 @@ class ComputeManager(manager.Manager):
                         do_check_attach=do_check_attach) +
                     driver_block_device.attach_block_devices(
                         driver_block_device.convert_images(bdms),
+                        context, instance, self.volume_api,
+                        self.driver, self._await_block_device_map_created,
+                        do_check_attach=do_check_attach) +
+                    driver_block_device.attach_block_devices(
+                        driver_block_device.convert_blanks(bdms),
                         context, instance, self.volume_api,
                         self.driver, self._await_block_device_map_created,
                         do_check_attach=do_check_attach))

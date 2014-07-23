@@ -524,6 +524,16 @@ class TestBlockDeviceDict(test.NoDBTestCase):
                 block_device.BlockDeviceDict.from_api(api),
                 matchers.IsSubDictOf(new))
 
+    def test_from_api_invalid_blank_id(self):
+        api_dict = {'id': 1,
+                    'source_type': 'blank',
+                    'destination_type': 'volume',
+                    'uuid': 'fake-volume-id-1',
+                    'delete_on_termination': True,
+                    'boot_index': -1}
+        self.assertRaises(exception.InvalidBDMFormat,
+                          block_device.BlockDeviceDict.from_api, api_dict)
+
     def test_legacy(self):
         for legacy, new in zip(self.legacy_mapping, self.new_mapping):
             self.assertThat(

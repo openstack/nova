@@ -1094,6 +1094,80 @@ class ComputeVolumeTestCase(BaseTestCase):
                           self.context, instance, bdms)
         self.assertTrue(mock_create.called)
 
+    @mock.patch.object(nova.virt.block_device, 'get_swap')
+    @mock.patch.object(nova.virt.block_device, 'convert_blanks')
+    @mock.patch.object(nova.virt.block_device, 'convert_images')
+    @mock.patch.object(nova.virt.block_device, 'convert_snapshots')
+    @mock.patch.object(nova.virt.block_device, 'convert_volumes')
+    @mock.patch.object(nova.virt.block_device, 'convert_ephemerals')
+    @mock.patch.object(nova.virt.block_device, 'convert_swap')
+    @mock.patch.object(nova.virt.block_device, 'attach_block_devices')
+    def test_prep_block_device_with_blanks(self, attach_block_devices,
+                                           convert_swap, convert_ephemerals,
+                                           convert_volumes, convert_snapshots,
+                                           convert_images, convert_blanks,
+                                           get_swap):
+        instance = self._create_fake_instance()
+        instance['root_device_name'] = '/dev/vda'
+        root_volume = objects.BlockDeviceMapping(
+             **fake_block_device.FakeDbBlockDeviceDict({
+                'instance_uuid': 'fake-instance',
+                'source_type': 'image',
+                'destination_type': 'volume',
+                'image_id': 'fake-image-id-1',
+                'volume_size': 1,
+                'boot_index': 0}))
+        blank_volume1 = objects.BlockDeviceMapping(
+             **fake_block_device.FakeDbBlockDeviceDict({
+                'instance_uuid': 'fake-instance',
+                'source_type': 'blank',
+                'destination_type': 'volume',
+                'volume_size': 1,
+                'boot_index': 1}))
+        blank_volume2 = objects.BlockDeviceMapping(
+             **fake_block_device.FakeDbBlockDeviceDict({
+                'instance_uuid': 'fake-instance',
+                'source_type': 'blank',
+                'destination_type': 'volume',
+                'volume_size': 1,
+                'boot_index': 2}))
+        bdms = [blank_volume1, blank_volume2, root_volume]
+
+        def fake_attach_block_devices(bdm, *args, **kwargs):
+            return bdm
+
+        convert_swap.return_value = []
+        convert_ephemerals.return_value = []
+        convert_volumes.return_value = [blank_volume1, blank_volume2]
+        convert_snapshots.return_value = []
+        convert_images.return_value = [root_volume]
+        convert_blanks.return_value = []
+        attach_block_devices.side_effect = fake_attach_block_devices
+        get_swap.return_value = []
+
+        expected_block_device_info = {
+            'root_device_name': '/dev/vda',
+            'swap': [],
+            'ephemerals': [],
+            'block_device_mapping': bdms
+        }
+
+        manager = compute_manager.ComputeManager()
+        manager.use_legacy_block_device_info = False
+        block_device_info = manager._prep_block_device(self.context, instance,
+                                                       bdms)
+
+        convert_swap.assert_called_once_with(bdms)
+        convert_ephemerals.assert_called_once_with(bdms)
+        convert_volumes.assert_called_once_with(bdms)
+        convert_snapshots.assert_called_once_with(bdms)
+        convert_images.assert_called_once_with(bdms)
+        convert_blanks.assert_called_once_with(bdms)
+
+        self.assertEqual(expected_block_device_info, block_device_info)
+        self.assertEqual(4, attach_block_devices.call_count)
+        get_swap.assert_called_once_with([])
+
 
 class ComputeTestCase(BaseTestCase):
     def test_wrap_instance_fault(self):
@@ -6799,6 +6873,64 @@ class ComputeTestCase(BaseTestCase):
         self.compute._default_block_device_names(self.context,
                                                  instance,
                                                  {}, bdms)
+
+    def test_default_block_device_names_with_blank_volumes(self):
+        instance = self._create_fake_instance()
+        image_meta = {}
+        root_volume = objects.BlockDeviceMapping(
+             **fake_block_device.FakeDbBlockDeviceDict({
+                'id': 1, 'instance_uuid': 'fake-instance',
+                'source_type': 'volume',
+                'destination_type': 'volume',
+                'image_id': 'fake-image-id-1',
+                'boot_index': 0}))
+        blank_volume1 = objects.BlockDeviceMapping(
+             **fake_block_device.FakeDbBlockDeviceDict({
+                'id': 2, 'instance_uuid': 'fake-instance',
+                'source_type': 'blank',
+                'destination_type': 'volume',
+                'boot_index': -1}))
+        blank_volume2 = objects.BlockDeviceMapping(
+             **fake_block_device.FakeDbBlockDeviceDict({
+                'id': 3, 'instance_uuid': 'fake-instance',
+                'source_type': 'blank',
+                'destination_type': 'volume',
+                'boot_index': -1}))
+        ephemeral = objects.BlockDeviceMapping(
+             **fake_block_device.FakeDbBlockDeviceDict({
+                'id': 4, 'instance_uuid': 'fake-instance',
+                'source_type': 'blank',
+                'destination_type': 'local'}))
+        swap = objects.BlockDeviceMapping(
+             **fake_block_device.FakeDbBlockDeviceDict({
+                'id': 5, 'instance_uuid': 'fake-instance',
+                'source_type': 'blank',
+                'destination_type': 'local',
+                'guest_format': 'swap'
+                }))
+        bdms = block_device_obj.block_device_make_list(
+            self.context, [root_volume, blank_volume1, blank_volume2,
+                           ephemeral, swap])
+
+        with contextlib.nested(
+            mock.patch.object(self.compute, '_default_root_device_name',
+                              return_value='/dev/vda'),
+            mock.patch.object(self.compute, '_instance_update'),
+            mock.patch.object(objects.BlockDeviceMapping, 'save'),
+            mock.patch.object(self.compute,
+                              '_default_device_names_for_instance')
+        ) as (default_root_device, instance_update, object_save,
+              default_device_names):
+            self.compute._default_block_device_names(self.context, instance,
+                                                     image_meta, bdms)
+            default_root_device.assert_called_once_with(instance, image_meta,
+                                                        bdms[0])
+            instance_update.assert_called_once_with(
+                self.context, instance['uuid'], root_device_name='/dev/vda')
+            self.assertTrue(object_save.called)
+            default_device_names.assert_called_once_with(instance,
+                '/dev/vda', [bdms[-2]], [bdms[-1]],
+                [bdm for bdm in bdms[:-2]])
 
     def test_reserve_block_device_name(self):
         instance = self._create_fake_instance_obj(
