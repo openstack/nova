@@ -83,8 +83,8 @@ FS_FORMAT_XFS = "xfs"
 FS_FORMAT_NTFS = "ntfs"
 FS_FORMAT_VFAT = "vfat"
 
-_DEFAULT_FS_BY_OSTYPE = {'linux': 'ext3',
-                         'windows': 'ntfs'}
+_DEFAULT_FS_BY_OSTYPE = {'linux': FS_FORMAT_EXT3,
+                         'windows': FS_FORMAT_NTFS}
 
 for s in CONF.virt_mkfs:
     # NOTE(yamahata): mkfs command may includes '=' for its options.
@@ -100,7 +100,7 @@ def get_fs_type_for_os_type(os_type):
     return os_type if _MKFS_COMMAND.get(os_type) else 'default'
 
 
-def mkfs(os_type, fs_label, target, run_as_root=True):
+def mkfs(os_type, fs_label, target, run_as_root=True, specified_fs=None):
     """Format a file or block device using
        a user provided command for each os type.
        If user has not provided any configuration,
@@ -114,10 +114,12 @@ def mkfs(os_type, fs_label, target, run_as_root=True):
     if mkfs_command:
         utils.execute(*mkfs_command.split(), run_as_root=run_as_root)
     else:
-        default_fs = CONF.default_ephemeral_format
-        if not default_fs:
-            default_fs = _DEFAULT_FS_BY_OSTYPE.get(os_type, 'ext3')
-        utils.mkfs(default_fs, target, fs_label, run_as_root=run_as_root)
+        if not specified_fs:
+            specified_fs = CONF.default_ephemeral_format
+            if not specified_fs:
+                specified_fs = _DEFAULT_FS_BY_OSTYPE.get(os_type, 'ext3')
+
+        utils.mkfs(specified_fs, target, fs_label, run_as_root=run_as_root)
 
 
 def resize2fs(image, check_exit_code=False, run_as_root=False):
