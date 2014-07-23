@@ -3,7 +3,7 @@
     {
             "status": "ACTIVE",
             "created": "%(isotime)s",
-            "os-server-usage:launched_at": "%(strtime)s",
+            "OS-SRV-USG:launched_at": "%(strtime)s",
             "user_id": "fake",
             "addresses": {
                 "private": [
@@ -38,7 +38,7 @@
                 ]
             },
             "id": "%(uuid)s",
-            "os-server-usage:terminated_at": null,
+            "OS-SRV-USG:terminated_at": null,
             "tenant_id": "openstack",
             "progress": 0,
             "flavor": {

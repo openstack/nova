@@ -1,7 +1,7 @@
 {
     "server": {
-        "os-server-usage:launched_at": "%(strtime)s",
-        "os-server-usage:terminated_at": null,
+        "OS-SRV-USG:launched_at": "%(strtime)s",
+        "OS-SRV-USG:terminated_at": null,
         "addresses": {
             "private": [
                 {
