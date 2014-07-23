@@ -1644,6 +1644,7 @@ class _ComputeAPIUnitTestMixIn(object):
             'properties': {'mappings': []},
             'status': 'fake-status',
             'location': 'far-away',
+            'owner': 'fake-tenant',
         }
 
         expect_meta = {
