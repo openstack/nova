@@ -73,6 +73,71 @@ class ApiTestCase(test.TestCase):
         self.context = context.RequestContext('fake-user',
                                               'fake-project')
 
+    @mock.patch('nova.objects.NetworkList.get_all')
+    def test_get_all(self, mock_get_all):
+        mock_get_all.return_value = mock.sentinel.get_all
+        self.assertEqual(mock.sentinel.get_all,
+                         self.network_api.get_all(self.context))
+        mock_get_all.assert_called_once_with(self.context,
+                                             project_only=True)
+
+    @mock.patch('nova.objects.NetworkList.get_all')
+    def test_get_all_no_networks(self, mock_get_all):
+        mock_get_all.side_effect = exception.NoNetworksFound
+        self.assertEqual([], self.network_api.get_all(self.context))
+        mock_get_all.assert_called_once_with(self.context,
+                                             project_only=True)
+
+    @mock.patch('nova.objects.Network.get_by_uuid')
+    def test_get(self, mock_get):
+        mock_get.return_value = mock.sentinel.get_by_uuid
+        with mock.patch.object(self.context, 'elevated') as elevated:
+            elevated.return_value = mock.sentinel.elevated_context
+            self.assertEqual(mock.sentinel.get_by_uuid,
+                             self.network_api.get(self.context, 'fake-uuid'))
+        mock_get.assert_called_once_with(mock.sentinel.elevated_context,
+                                         'fake-uuid')
+
+    @mock.patch('nova.objects.Network.get_by_id')
+    @mock.patch('nova.db.virtual_interface_get_by_instance')
+    def test_get_vifs_by_instance(self, mock_get_by_instance,
+                                  mock_get_by_id):
+        mock_get_by_instance.return_value = [
+            {'network_id': mock.sentinel.network_id}]
+        mock_get_by_id.return_value = objects.Network()
+        mock_get_by_id.return_value.uuid = mock.sentinel.network_uuid
+        instance = objects.Instance(uuid=mock.sentinel.inst_uuid)
+        vifs = self.network_api.get_vifs_by_instance(self.context,
+                                                     instance)
+        self.assertEqual(1, len(vifs))
+        self.assertEqual({'network_id': mock.sentinel.network_id,
+                          'net_uuid': str(mock.sentinel.network_uuid)},
+                         vifs[0])
+        mock_get_by_instance.assert_called_once_with(
+            self.context, str(mock.sentinel.inst_uuid))
+        mock_get_by_id.assert_called_once_with(self.context,
+                                               mock.sentinel.network_id,
+                                               project_only='allow_none')
+
+    @mock.patch('nova.objects.Network.get_by_id')
+    @mock.patch('nova.db.virtual_interface_get_by_address')
+    def test_get_vif_by_mac_address(self, mock_get_by_address,
+                                    mock_get_by_id):
+        mock_get_by_address.return_value = {
+            'network_id': mock.sentinel.network_id}
+        mock_get_by_id.return_value = objects.Network(
+            uuid=mock.sentinel.network_uuid)
+        vif = self.network_api.get_vif_by_mac_address(self.context,
+                                                      mock.sentinel.mac)
+        self.assertEqual({'network_id': mock.sentinel.network_id,
+                          'net_uuid': str(mock.sentinel.network_uuid)},
+                         vif)
+        mock_get_by_address.assert_called_once_with(self.context,
+                                                    mock.sentinel.mac)
+        mock_get_by_id.assert_called_once_with(self.context,
+                                               mock.sentinel.network_id,
+                                               project_only='allow_none')
+
     def test_allocate_for_instance_handles_macs_passed(self):
         # If a macs argument is supplied to the 'nova-network' API, it is just
         # ignored. This test checks that the call down to the rpcapi layer

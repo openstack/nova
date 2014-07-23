@@ -78,13 +78,13 @@ class API(base_api.NetworkAPI):
         belong to the user's project.
         """
         try:
-            return self.db.network_get_all(context, project_only=True)
+            return objects.NetworkList.get_all(context, project_only=True)
         except exception.NoNetworksFound:
             return []
 
     @wrap_check_policy
     def get(self, context, network_uuid):
-        return self.db.network_get_by_uuid(context.elevated(), network_uuid)
+        return objects.Network.get_by_uuid(context.elevated(), network_uuid)
 
     @wrap_check_policy
     def create(self, context, **kwargs):
@@ -146,9 +146,9 @@ class API(base_api.NetworkAPI):
                                                          instance['uuid'])
         for vif in vifs:
             if vif.get('network_id') is not None:
-                network = self.db.network_get(context, vif['network_id'],
-                                              project_only="allow_none")
-                vif['net_uuid'] = network['uuid']
+                network = objects.Network.get_by_id(context, vif['network_id'],
+                                                    project_only='allow_none')
+                vif['net_uuid'] = network.uuid
         return vifs
 
     @wrap_check_policy
@@ -156,9 +156,9 @@ class API(base_api.NetworkAPI):
         vif = self.db.virtual_interface_get_by_address(context,
                                                        mac_address)
         if vif.get('network_id') is not None:
-            network = self.db.network_get(context, vif['network_id'],
-                                          project_only="allow_none")
-            vif['net_uuid'] = network['uuid']
+            network = objects.Network.get_by_id(context, vif['network_id'],
+                                                project_only='allow_none')
+            vif['net_uuid'] = network.uuid
         return vif
 
     @wrap_check_policy
