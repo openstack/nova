@@ -232,8 +232,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         not_our_host = 'not-' + our_host
         fake_context = 'fake-context'
 
-        deleted_instance = instance_obj.Instance(host=not_our_host,
-                                                 uuid='fake-uuid')
+        deleted_instance = fake_instance.fake_instance_obj(
+                self.context, host=not_our_host, uuid='fake-uuid')
 
         self.mox.StubOutWithMock(self.compute.driver, 'init_host')
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
@@ -271,12 +271,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.mox.UnsetStubs()
 
     def test_init_instance_failed_resume_sets_error(self):
-        instance = instance_obj.Instance(self.context)
-        instance.uuid = 'fake-uuid'
-        instance.info_cache = None
-        instance.power_state = power_state.RUNNING
-        instance.vm_state = vm_states.ACTIVE
-        instance.task_state = None
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid='fake-uuid',
+                info_cache=None,
+                power_state=power_state.RUNNING,
+                vm_state=vm_states.ACTIVE,
+                task_state=None,
+                expected_attrs=['info_cache'])
 
         self.flags(resume_guests_state_on_host_boot=True)
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
@@ -305,12 +307,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.compute._init_instance('fake-context', instance)
 
     def test_init_instance_stuck_in_deleting(self):
-        instance = instance_obj.Instance(self.context)
-        instance.uuid = 'fake-uuid'
-        instance.info_cache = None
-        instance.power_state = power_state.RUNNING
-        instance.vm_state = vm_states.ACTIVE
-        instance.task_state = task_states.DELETING
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid='fake-uuid',
+                power_state=power_state.RUNNING,
+                vm_state=vm_states.ACTIVE,
+                task_state=task_states.DELETING)
 
         self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
                                  'get_by_instance_uuid')
@@ -334,12 +336,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         sys_meta = {
             'old_vm_state': old_vm_state
             }
-        instance = instance_obj.Instance(self.context)
-        instance.uuid = 'foo'
-        instance.vm_state = vm_states.ERROR
-        instance.task_state = task_states.RESIZE_MIGRATING
-        instance.power_state = power_state.SHUTDOWN
-        instance.system_metadata = sys_meta
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid='foo',
+                vm_state=vm_states.ERROR,
+                task_state=task_states.RESIZE_MIGRATING,
+                power_state=power_state.SHUTDOWN,
+                system_metadata=sys_meta,
+                expected_attrs=['system_metadata'])
 
         self.mox.StubOutWithMock(compute_utils, 'get_nw_info_for_instance')
         self.mox.StubOutWithMock(self.compute.driver, 'plug_vifs')
@@ -383,10 +387,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self._test_init_instance_reverts_crashed_migrations(old_vm_state=None)
 
     def test_init_instance_sets_building_error(self):
-        instance = instance_obj.Instance(self.context)
-        instance.uuid = 'foo'
-        instance.vm_state = vm_states.BUILDING
-        instance.task_state = None
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid='foo',
+                vm_state=vm_states.BUILDING,
+                task_state=None)
         with mock.patch.object(instance, 'save') as save:
             self.compute._init_instance(self.context, instance)
             save.assert_called_once_with()
@@ -401,10 +406,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertEqual(vm_states.ERROR, instance.vm_state)
 
     def test_init_instance_sets_building_tasks_error_scheduling(self):
-        instance = instance_obj.Instance(self.context)
-        instance.uuid = 'foo'
-        instance.vm_state = None
-        instance.task_state = task_states.SCHEDULING
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid='foo',
+                vm_state=None,
+                task_state=task_states.SCHEDULING)
         self._test_init_instance_sets_building_tasks_error(instance)
 
     def test_init_instance_sets_building_tasks_error_block_device(self):
@@ -476,10 +482,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.mox.VerifyAll()
 
     def test_init_instance_deletes_error_deleting_instance(self):
-        instance = instance_obj.Instance(self.context)
-        instance.uuid = 'foo'
-        instance.vm_state = vm_states.ERROR
-        instance.task_state = task_states.DELETING
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid='fake',
+                vm_state=vm_states.ERROR,
+                task_state=task_states.DELETING)
         self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
                                  'get_by_instance_uuid')
         self.mox.StubOutWithMock(self.compute, '_delete_instance')
