@@ -1,7 +1,4 @@
 {
-    "service":
-    {
-        "host": "%(host)s",
-        "binary": "%(binary)s"
-    }
+    "host": "%(host)s",
+    "binary": "%(binary)s"
 }
