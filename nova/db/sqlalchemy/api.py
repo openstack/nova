@@ -208,23 +208,36 @@ def model_query(context, model, *args, **kwargs):
             model parameter.
     """
 
-    use_slave = kwargs.get('use_slave') or False
+    # We pass a function here rather than a value so we can lazily evaluate
+    # get_session. In all cases we want to use the default value even if we've
+    # been explicitly passed a value of None
+    def _default(kwarg, default):
+        val = kwargs.get(kwarg)
+        if val is None:
+            return default()
+        return val
+
+    use_slave = _default('use_slave', lambda: False)
+
+    # Can't use a slave if it's not specified
     if CONF.database.slave_connection == '':
         use_slave = False
 
-    session = kwargs.get('session') or get_session(use_slave=use_slave)
-    read_deleted = kwargs.get('read_deleted') or context.read_deleted
-    project_only = kwargs.get('project_only', False)
+    session = _default('session', lambda: get_session(use_slave=use_slave))
+    read_deleted = _default('read_deleted', lambda: context.read_deleted)
+    project_only = _default('project_only', lambda: False)
+
+    # No default for base_model; it's handled below
+    base_model = kwargs.get('base_model')
 
     def issubclassof_nova_base(obj):
         return isinstance(obj, type) and issubclass(obj, models.NovaBase)
 
-    base_model = model
-    if not issubclassof_nova_base(base_model):
-        base_model = kwargs.get('base_model', None)
-        if not issubclassof_nova_base(base_model):
-            raise Exception(_("model or base_model parameter should be "
-                              "subclass of NovaBase"))
+    if issubclassof_nova_base(model):
+        base_model = model
+    elif not issubclassof_nova_base(base_model):
+        raise ValueError(_("model or base_model parameter should be "
+                           "subclass of NovaBase"))
 
     query = session.query(model, *args)
 
@@ -236,8 +249,8 @@ def model_query(context, model, *args, **kwargs):
     elif read_deleted == 'only':
         query = query.filter(base_model.deleted != default_deleted_value)
     else:
-        raise Exception(_("Unrecognized read_deleted value '%s'")
-                            % read_deleted)
+        raise ValueError(_("Unrecognized read_deleted value '%s'")
+                           % read_deleted)
 
     if nova.context.is_user_context(context) and project_only:
         if project_only == 'allow_none':
@@ -1552,7 +1565,7 @@ def _validate_unique_server_name(context, session, name):
 
     lowername = name.lower()
     base_query = model_query(context, models.Instance, session=session,
-                             read_deleted=False).\
+                             read_deleted='no').\
             filter(func.lower(models.Instance.hostname) == lowername)
 
     if CONF.osapi_compute_unique_server_name_scope == 'project':

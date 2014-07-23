@@ -432,6 +432,45 @@ class NotDbApiTestCase(DbTestCase):
         sqlalchemy_api.convert_objects_related_datetimes(test3, *datetime_keys)
         self.assertEqual(test3, expected_dict)
 
+    def test_model_query_invalid_arguments(self):
+        # read_deleted shouldn't accept invalid values
+        self.assertRaises(ValueError, sqlalchemy_api.model_query,
+                          self.context, models.Instance, read_deleted=False)
+        self.assertRaises(ValueError, sqlalchemy_api.model_query,
+                          self.context, models.Instance, read_deleted="foo")
+
+        # Check either model or base_model is a subclass of NovaBase
+        self.assertRaises(ValueError, sqlalchemy_api.model_query,
+                          self.context, "")
+        self.assertRaises(ValueError, sqlalchemy_api.model_query,
+                          self.context, "", base_model="")
+
+    @mock.patch.object(sqlalchemy_api, 'get_session')
+    def test_model_query_use_slave_false(self, mock_get_session):
+        sqlalchemy_api.model_query(self.context, models.Instance,
+                                   use_slave=False)
+        mock_get_session.assert_called_once_with(use_slave=False)
+
+    @mock.patch.object(sqlalchemy_api, 'get_session')
+    def test_model_query_use_slave_no_slave_connection(self, mock_get_session):
+        self.flags(slave_connection='', group='database')
+        sqlalchemy_api.model_query(self.context, models.Instance,
+                                   use_slave=True)
+        mock_get_session.assert_called_once_with(use_slave=False)
+
+    @mock.patch.object(sqlalchemy_api, 'get_session')
+    def test_model_query_use_slave_true(self, mock_get_session):
+        self.flags(slave_connection='foo://bar', group='database')
+        sqlalchemy_api.model_query(self.context, models.Instance,
+                                   use_slave=True)
+        mock_get_session.assert_called_once_with(use_slave=True)
+
+    @mock.patch.object(sqlalchemy_api, 'get_session')
+    def test_model_query_lazy_session_default(self, mock_get_session):
+        sqlalchemy_api.model_query(self.context, models.Instance,
+                                   session=mock.MagicMock())
+        self.assertFalse(mock_get_session.called)
+
 
 class AggregateDBApiTestCase(test.TestCase):
     def setUp(self):
