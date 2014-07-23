@@ -42,6 +42,10 @@ class NopClaim(object):
     def memory_mb(self):
         return 0
 
+    @property
+    def vcpus(self):
+        return 0
+
     def __enter__(self):
         return self
 
@@ -53,8 +57,8 @@ class NopClaim(object):
         pass
 
     def __str__(self):
-        return "[Claim: %d MB memory, %d GB disk]" % (self.memory_mb,
-                self.disk_gb)
+        return "[Claim: %d MB memory, %d GB disk, %d VCPUS]" % (self.memory_mb,
+                self.disk_gb, self.vcpus)
 
 
 class Claim(NopClaim):
@@ -98,6 +102,10 @@ class Claim(NopClaim):
     def memory_mb(self):
         return self.instance['memory_mb'] + self.overhead['memory_mb']
 
+    @property
+    def vcpus(self):
+        return self.instance['vcpus']
+
     def abort(self):
         """Compute operation requiring claimed resources has failed or
         been aborted.
@@ -122,16 +130,18 @@ class Claim(NopClaim):
         # unlimited:
         memory_mb_limit = limits.get('memory_mb')
         disk_gb_limit = limits.get('disk_gb')
+        vcpu_limit = limits.get('vcpu')
 
         msg = _("Attempting claim: memory %(memory_mb)d MB, disk %(disk_gb)d "
-                "GB")
-        params = {'memory_mb': self.memory_mb, 'disk_gb': self.disk_gb}
+                "GB, VCPUs %(vcpus)d")
+        params = {'memory_mb': self.memory_mb, 'disk_gb': self.disk_gb,
+                  'vcpus': self.vcpus}
         LOG.audit(msg % params, instance=self.instance)
 
         reasons = [self._test_memory(resources, memory_mb_limit),
                    self._test_disk(resources, disk_gb_limit),
+                   self._test_cpu(resources, vcpu_limit),
                    self._test_pci()]
-        reasons = reasons + self._test_ext_resources(limits)
         reasons = [r for r in reasons if r is not None]
         if len(reasons) > 0:
             raise exception.ComputeResourcesUnavailable(reason=
@@ -166,9 +176,14 @@ class Claim(NopClaim):
             if not can_claim:
                 return _('Claim pci failed.')
 
-    def _test_ext_resources(self, limits):
-        return self.tracker.ext_resources_handler.test_resources(
-            self.instance, limits)
+    def _test_cpu(self, resources, limit):
+        type_ = _("CPUs")
+        unit = "VCPUs"
+        total = resources['vcpus']
+        used = resources['vcpus_used']
+        requested = self.vcpus
+
+        return self._test(type_, unit, total, used, requested, limit)
 
     def _test(self, type_, unit, total, used, requested, limit):
         """Test if the given type of resource needed for a claim can be safely
@@ -220,6 +235,10 @@ class ResizeClaim(Claim):
     def memory_mb(self):
         return self.instance_type['memory_mb'] + self.overhead['memory_mb']
 
+    @property
+    def vcpus(self):
+        return self.instance_type['vcpus']
+
     def _test_pci(self):
         pci_requests = pci_request.get_instance_pci_requests(
             self.instance, 'new_')
@@ -228,10 +247,6 @@ class ResizeClaim(Claim):
                 pci_requests)
             if not claim:
                 return _('Claim pci failed.')
-
-    def _test_ext_resources(self, limits):
-        return self.tracker.ext_resources_handler.test_resources(
-            self.instance_type, limits)
 
     def abort(self):
         """Compute operation requiring claimed resources has failed or
