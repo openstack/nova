@@ -131,12 +131,20 @@ class _TestFixedIPObject(object):
         self.assertFalse(instance_get.called)
 
     @mock.patch('nova.db.fixed_ip_get_by_floating_address')
-    def test_get_by_floating_ip(self, get):
+    def test_get_by_floating_address(self, get):
         get.return_value = fake_fixed_ip
         fixedip = fixed_ip.FixedIP.get_by_floating_address(self.context,
                                                            '1.2.3.4')
         get.assert_called_once_with(self.context, '1.2.3.4')
         self._compare(fixedip, fake_fixed_ip)
+
+    @mock.patch('nova.db.fixed_ip_get_by_floating_address')
+    def test_get_by_floating_address_none(self, get):
+        get.return_value = None
+        fixedip = fixed_ip.FixedIP.get_by_floating_address(self.context,
+                                                           '1.2.3.4')
+        get.assert_called_once_with(self.context, '1.2.3.4')
+        self.assertIsNone(fixedip)
 
     @mock.patch('nova.db.fixed_ip_get_by_network_host')
     def test_get_by_network_and_host(self, get):

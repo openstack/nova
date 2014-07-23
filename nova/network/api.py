@@ -101,7 +101,7 @@ class API(base_api.NetworkAPI):
 
     @wrap_check_policy
     def get_fixed_ip(self, context, id):
-        return self.db.fixed_ip_get(context, id)
+        return objects.FixedIP.get_by_id(context, id)
 
     @wrap_check_policy
     def get_fixed_ip_by_address(self, context, address):
@@ -134,11 +134,11 @@ class API(base_api.NetworkAPI):
 
     @wrap_check_policy
     def get_instance_id_by_floating_address(self, context, address):
-        fixed_ip = self.db.fixed_ip_get_by_floating_address(context, address)
+        fixed_ip = objects.FixedIP.get_by_floating_address(context, address)
         if fixed_ip is None:
             return None
         else:
-            return fixed_ip['instance_uuid']
+            return fixed_ip.instance_uuid
 
     @wrap_check_policy
     def get_vifs_by_instance(self, context, instance):
