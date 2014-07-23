@@ -904,10 +904,10 @@ class ServersController(wsgi.Controller):
                                                           bdms):
                 img = instance['image_ref']
                 if not img:
-                    props = bdms.root_metadata(
+                    properties = bdms.root_metadata(
                             context, self.compute_api.image_api,
                             self.compute_api.volume_api)
-                    image_meta = {'properties': props}
+                    image_meta = {'properties': properties}
                 else:
                     image_meta = self.compute_api.image_api.get(context, img)
 
