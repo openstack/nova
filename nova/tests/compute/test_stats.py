@@ -136,8 +136,6 @@ class StatsTestCase(test.NoDBTestCase):
         self.assertEqual(1, self.stats["num_vm_None"])
         self.assertEqual(2, self.stats["num_vm_" + vm_states.BUILDING])
 
-        self.assertEqual(10, self.stats.num_vcpus_used)
-
     def test_calculate_workload(self):
         self.stats._increment("num_task_None")
         self.stats._increment("num_task_" + task_states.SCHEDULING)
@@ -191,7 +189,6 @@ class StatsTestCase(test.NoDBTestCase):
         self.assertEqual(0, self.stats.num_instances_for_project("1234"))
         self.assertEqual(0, self.stats.num_os_type("Linux"))
         self.assertEqual(0, self.stats["num_vm_" + vm_states.BUILDING])
-        self.assertEqual(0, self.stats.num_vcpus_used)
 
     def test_io_workload(self):
         vms = [vm_states.ACTIVE, vm_states.BUILDING, vm_states.PAUSED]
