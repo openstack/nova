@@ -323,7 +323,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         global libvirt
         if libvirt is None:
-            libvirt = __import__('libvirt')
+            libvirt = importutils.import_module('libvirt')
 
         self._skip_list_all_domains = False
         self._host_state = None

@@ -20,6 +20,7 @@ from oslo.config import cfg
 from nova.cloudpipe import pipelib
 from nova.i18n import _LI
 from nova.i18n import _LW
+from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 import nova.virt.firewall as base_firewall
 from nova.virt import netutils
@@ -44,7 +45,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         global libvirt
         if libvirt is None:
             try:
-                libvirt = __import__('libvirt')
+                libvirt = importutils.import_module('libvirt')
             except ImportError:
                 LOG.warn(_LW("Libvirt module could not be loaded. "
                              "NWFilterFirewall will not work correctly."))
