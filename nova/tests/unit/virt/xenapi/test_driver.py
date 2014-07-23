@@ -45,7 +45,8 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
                 'supported_instances': arch.X86_64,
                 'host_cpu_info': {'cpu_count': 50},
                 'vcpus_used': 10,
-                'pci_passthrough_devices': ''}
+                'pci_passthrough_devices': '',
+                'host_other-config': {'iscsi_iqn': 'someiqn'}}
 
     def test_available_resource(self):
         driver = self._get_driver()
@@ -99,3 +100,36 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
     def test_public_api_signatures(self):
         inst = self._get_driver()
         self.assertPublicAPISignatures(driver.ComputeDriver(None), inst)
+
+    def test_get_volume_connector(self):
+        ip = '123.123.123.123'
+        driver = self._get_driver()
+        self.flags(connection_url='http://%s' % ip,
+                   connection_password='test_pass', group='xenserver')
+        self.stubs.Set(driver.host_state, 'get_host_stats', self.host_stats)
+
+        connector = driver.get_volume_connector({'uuid': 'fake'})
+        self.assertIn('ip', connector)
+        self.assertEqual(connector['ip'], ip)
+        self.assertIn('initiator', connector)
+        self.assertEqual(connector['initiator'], 'someiqn')
+
+    def test_get_block_storage_ip(self):
+        my_ip = '123.123.123.123'
+        connection_ip = '124.124.124.124'
+        driver = self._get_driver()
+        self.flags(connection_url='http://%s' % connection_ip,
+                   group='xenserver')
+        self.flags(my_ip=my_ip, my_block_storage_ip=my_ip)
+
+        ip = driver._get_block_storage_ip()
+        self.assertEqual(connection_ip, ip)
+
+    def test_get_block_storage_ip_conf(self):
+        driver = self._get_driver()
+        my_ip = '123.123.123.123'
+        my_block_storage_ip = '124.124.124.124'
+        self.flags(my_ip=my_ip, my_block_storage_ip=my_block_storage_ip)
+
+        ip = driver._get_block_storage_ip()
+        self.assertEqual(my_block_storage_ip, ip)

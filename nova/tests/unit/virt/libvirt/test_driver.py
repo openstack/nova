@@ -857,6 +857,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         result = conn.get_volume_connector(volume)
         self.assertThat(expected, matchers.DictMatches(result))
 
+    def test_get_connector_storage_ip(self):
+        ip = '100.100.100.100'
+        storage_ip = '101.101.101.101'
+        self.flags(my_block_storage_ip=storage_ip, my_ip=ip)
+        volume = {
+            'id': 'fake'
+        }
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        result = conn.get_volume_connector(volume)
+        self.assertEqual(storage_ip, result['ip'])
+
     def test_lifecycle_event_registration(self):
         calls = []
 

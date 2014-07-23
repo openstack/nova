@@ -386,10 +386,16 @@ class XenAPIDriver(driver.ComputeDriver):
                          instance=instance)
                 self._initiator = None
         return {
-            'ip': self.get_host_ip_addr(),
+            'ip': self._get_block_storage_ip(),
             'initiator': self._initiator,
             'host': self._hypervisor_hostname
         }
+
+    def _get_block_storage_ip(self):
+        # If CONF.my_block_storage_ip is set, use it.
+        if CONF.my_block_storage_ip != CONF.my_ip:
+            return CONF.my_block_storage_ip
+        return self.get_host_ip_addr()
 
     @staticmethod
     def get_host_ip_addr():

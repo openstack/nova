@@ -208,7 +208,7 @@ class VolumeOps(object):
                 LOG.warn(_('Could not determine iscsi initiator name'),
                          instance=instance)
         return {
-            'ip': CONF.my_ip,
+            'ip': CONF.my_block_storage_ip,
             'host': CONF.host,
             'initiator': self._initiator,
         }
