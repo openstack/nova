@@ -747,6 +747,23 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         index_names = [idx.name for idx in reservations.indexes]
         self.assertNotIn('reservations_deleted_expire_idx', index_names)
 
+    def _check_249(self, engine, data):
+        # Assert that only one index exists that covers columns
+        # instance_uuid and device_name
+        bdm = oslodbutils.get_table(engine, 'block_device_mapping')
+        self.assertEqual(1, len([i for i in bdm.indexes
+                                 if [c.name for c in i.columns] ==
+                                    ['instance_uuid', 'device_name']]))
+
+    def _post_downgrade_249(self, engine):
+        # The duplicate index is not created on downgrade, so this
+        # asserts that only one index exists that covers columns
+        # instance_uuid and device_name
+        bdm = oslodbutils.get_table(engine, 'block_device_mapping')
+        self.assertEqual(1, len([i for i in bdm.indexes
+                                 if [c.name for c in i.columns] ==
+                                    ['instance_uuid', 'device_name']]))
+
 
 class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
