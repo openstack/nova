@@ -1048,7 +1048,7 @@ def propset_dict(propset):
     if propset is None:
         return {}
 
-    #TODO(hartsocks): once support for Python 2.6 is dropped
+    # TODO(hartsocks): once support for Python 2.6 is dropped
     # change to {[(prop.name, prop.val) for prop in propset]}
     return dict([(prop.name, prop.val) for prop in propset])
 

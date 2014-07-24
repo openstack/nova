@@ -149,9 +149,9 @@ class HostState(object):
         self.service = ReadOnlyDict(service)
 
     def _update_metrics_from_compute_node(self, compute):
-        #NOTE(llu): The 'or []' is to avoid json decode failure of None
-        #           returned from compute.get, because DB schema allows
-        #           NULL in the metrics column
+        # NOTE(llu): The 'or []' is to avoid json decode failure of None
+        #            returned from compute.get, because DB schema allows
+        #            NULL in the metrics column
         metrics = compute.get('metrics', []) or []
         if metrics:
             metrics = jsonutils.loads(metrics)
@@ -189,7 +189,7 @@ class HostState(object):
 
         self.disk_mb_used = compute['local_gb_used'] * 1024
 
-        #NOTE(jogo) free_ram_mb can be negative
+        # NOTE(jogo) free_ram_mb can be negative
         self.free_ram_mb = compute['free_ram_mb']
         self.total_usable_ram_mb = all_ram_mb
         self.total_usable_disk_gb = compute['local_gb']

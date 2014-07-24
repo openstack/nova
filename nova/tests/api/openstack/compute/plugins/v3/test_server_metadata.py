@@ -515,19 +515,19 @@ class ServerMetaDataTest(BaseTest):
         req.method = 'PUT'
         req.headers["content-type"] = "application/json"
 
-        #test for long key
+        # test for long key
         data = {"metadata": {"a" * 260: "value1"}}
         req.body = jsonutils.dumps(data)
         self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
                           self.controller.update_all, req, self.uuid, data)
 
-        #test for long value
+        # test for long value
         data = {"metadata": {"key": "v" * 260}}
         req.body = jsonutils.dumps(data)
         self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
                           self.controller.update_all, req, self.uuid, data)
 
-        #test for empty key.
+        # test for empty key.
         data = {"metadata": {"": "value1"}}
         req.body = jsonutils.dumps(data)
         self.assertRaises(webob.exc.HTTPBadRequest,

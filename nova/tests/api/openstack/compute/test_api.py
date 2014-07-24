@@ -79,7 +79,7 @@ class APITest(test.NoDBTestCase):
         def raise_webob_exc(req):
             raise webob.exc.HTTPNotFound(explanation='Raised a webob.exc')
 
-        #api.application = raise_webob_exc
+        # api.application = raise_webob_exc
         api = self._wsgi_app(raise_webob_exc)
         resp = webob.Request.blank('/').get_response(api)
         self.assertEqual(resp.status_int, 404, resp.body)
@@ -90,7 +90,7 @@ class APITest(test.NoDBTestCase):
             exc = webob.exc.HTTPNotFound(explanation='Raised a webob.exc')
             return wsgi.Fault(exc)
 
-        #api.application = raise_api_fault
+        # api.application = raise_api_fault
         api = self._wsgi_app(raise_api_fault)
         resp = webob.Request.blank('/').get_response(api)
         self.assertIn('itemNotFound', resp.body)
@@ -101,7 +101,7 @@ class APITest(test.NoDBTestCase):
         def fail(req):
             raise Exception("Threw an exception")
 
-        #api.application = fail
+        # api.application = fail
         api = self._wsgi_app(fail)
         resp = webob.Request.blank('/').get_response(api)
         self.assertIn('{"computeFault', resp.body)
@@ -112,7 +112,7 @@ class APITest(test.NoDBTestCase):
         def fail(req):
             raise Exception("Threw an exception")
 
-        #api.application = fail
+        # api.application = fail
         api = self._wsgi_app(fail)
         resp = webob.Request.blank('/.xml').get_response(api)
         self.assertIn('<computeFault', resp.body)

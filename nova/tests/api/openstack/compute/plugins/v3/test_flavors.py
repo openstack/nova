@@ -484,9 +484,6 @@ class FlavorDisabledTest(test.TestCase):
         super(FlavorDisabledTest, self).setUp()
         fakes.stub_out_nw_api(self.stubs)
 
-        #def fake_flavor_get_all(*args, **kwargs):
-        #    return FAKE_FLAVORS
-        #
         self.stubs.Set(nova.compute.flavors, "get_all_flavors_sorted_list",
                        fake_get_all_flavors_sorted_list)
         self.stubs.Set(nova.compute.flavors,

@@ -154,7 +154,7 @@ class _FakeImageService(object):
         self._imagedata = {}
         super(_FakeImageService, self).__init__()
 
-    #TODO(bcwaldon): implement optional kwargs such as limit, sort_dir
+    # TODO(bcwaldon): implement optional kwargs such as limit, sort_dir
     def detail(self, context, **kwargs):
         """Return list of detailed image information."""
         return copy.deepcopy(self.images.values())

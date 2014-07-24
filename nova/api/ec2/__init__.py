@@ -76,7 +76,7 @@ CONF.register_opts(ec2_opts)
 CONF.import_opt('use_forwarded_for', 'nova.api.auth')
 
 
-## Fault Wrapper around all EC2 requests ##
+# Fault Wrapper around all EC2 requests
 class FaultWrapper(wsgi.Middleware):
     """Calls the middleware stack, captures any exceptions into faults."""
 

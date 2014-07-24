@@ -70,7 +70,7 @@ class FileTransfer(xfer_base.TransferBase):
 
     desc_required_keys = ['id', 'mountpoint']
 
-    #NOTE(jbresnah) because the group under which these options are added is
+    # NOTE(jbresnah) because the group under which these options are added is
     # dyncamically determined these options need to stay out of global space
     # or they will confuse generate_sample.sh
     filesystem_opts = [
@@ -143,7 +143,7 @@ class FileTransfer(xfer_base.TransferBase):
     def download(self, context, url_parts, dst_file, metadata, **kwargs):
         self.filesystems = self._get_options()
         if not self.filesystems:
-            #NOTE(jbresnah) when nothing is configured assume legacy behavior
+            # NOTE(jbresnah) when nothing is configured assume legacy behavior
             nova_mountpoint = '/'
             glance_mountpoint = '/'
         else:

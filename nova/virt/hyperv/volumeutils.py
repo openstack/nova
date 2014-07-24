@@ -64,7 +64,7 @@ class VolumeUtils(basevolumeutils.BaseVolumeUtils):
             self.execute('iscsicli.exe', 'RefreshTargetPortal',
                          target_address, target_port)
         else:
-            #Adding target portal to iscsi initiator. Sending targets
+            # Adding target portal to iscsi initiator. Sending targets
             self.execute('iscsicli.exe', 'AddTargetPortal',
                          target_address, target_port,
                          '*', '*', '*', '*', '*', '*', '*', '*', '*', '*', '*',
@@ -74,7 +74,7 @@ class VolumeUtils(basevolumeutils.BaseVolumeUtils):
         """Ensure that the target is logged in."""
 
         self._login_target_portal(target_portal)
-        #Listing targets
+        # Listing targets
         self.execute('iscsicli.exe', 'ListTargets')
 
         retry_count = CONF.hyperv.volume_attach_retry_count

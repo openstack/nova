@@ -65,7 +65,7 @@ class Server_diagnostics(extensions.ExtensionDescriptor):
 
     def get_resources(self):
         parent_def = {'member_name': 'server', 'collection_name': 'servers'}
-        #NOTE(bcwaldon): This should be prefixed with 'os-'
+        # NOTE(bcwaldon): This should be prefixed with 'os-'
         ext = extensions.ResourceExtension('diagnostics',
                                            ServerDiagnosticsController(),
                                            parent=parent_def)

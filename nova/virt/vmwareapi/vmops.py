@@ -202,7 +202,7 @@ class VMwareVMOps(object):
                 datastore_regex=self._datastore_regex)
         dc_info = self.get_datacenter_ref_and_name(datastore.ref)
 
-        #TODO(hartsocks): this pattern is confusing, reimplement as methods
+        # TODO(hartsocks): this pattern is confusing, reimplement as methods
         # The use of nested functions in this file makes for a confusing and
         # hard to maintain file. At some future date, refactor this method to
         # be a full-fledged method. This will also make unit testing easier.
@@ -1320,7 +1320,7 @@ class VMwareVMOps(object):
                                         uptime=uptime)
         diags.memory_details.maximum = data.get('memorySizeMB', 0)
         diags.memory_details.used = data.get('guestMemoryUsage', 0)
-        #TODO(garyk): add in cpu, nic and disk stats
+        # TODO(garyk): add in cpu, nic and disk stats
         return diags
 
     def _get_vnc_console_connection(self, instance):

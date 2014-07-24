@@ -50,9 +50,9 @@ class NeutronNovaIPAMLib(object):
             'version': 4,
             'dns1': n.dns1,
             'dns2': n.dns2}
-        #TODO(tr3buchet): I'm noticing we've assumed here that all dns is v4.
-        #                 this is probably bad as there is no way to add v6
-        #                 dns to nova
+        # TODO(tr3buchet): I'm noticing we've assumed here that all dns is v4.
+        #                  this is probably bad as there is no way to add v6
+        #                  dns to nova
         subnet_v6 = {
             'network_id': n.uuid,
             'cidr': n.cidr_v6,

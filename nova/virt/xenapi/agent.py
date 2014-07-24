@@ -338,7 +338,7 @@ class XenAPIBasedAgent(object):
     def resetnetwork(self):
         LOG.debug('Resetting network', instance=self.instance)
 
-        #NOTE(johngarbutt) old FreeBSD and Gentoo agents return 500 on success
+        # NOTE(johngarbutt) old FreeBSD and Gentoo agents return 500 on success
         return self._call_agent('resetnetwork',
                             timeout=CONF.xenserver.agent_resetnetwork_timeout,
                             success_codes=['0', '500'])

@@ -258,9 +258,9 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         iscsi_properties = connection_info['data']
 
         if self.use_multipath:
-            #multipath installed, discovering other targets if available
-            #multipath should be configured on the nova-compute node,
-            #in order to fit storage vendor
+            # multipath installed, discovering other targets if available
+            # multipath should be configured on the nova-compute node,
+            # in order to fit storage vendor
             out = self._run_iscsiadm_bare(['-m',
                                           'discovery',
                                           '-t',
@@ -312,7 +312,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                        'tries': tries})
 
         if self.use_multipath:
-            #we use the multipath device instead of the single path device
+            # we use the multipath device instead of the single path device
             self._rescan_multipath()
 
             multipath_device = self._get_multipath_device_name(host_device)
@@ -465,8 +465,8 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                                   "node.session.auth.password",
                                   iscsi_properties['auth_password'])
 
-        #duplicate logins crash iscsiadm after load,
-        #so we scan active sessions to see if the node is logged in.
+        # duplicate logins crash iscsiadm after load,
+        # so we scan active sessions to see if the node is logged in.
         out = self._run_iscsiadm_bare(["-m", "session"],
                                       run_as_root=True,
                                       check_exit_code=[0, 1, 21])[0] or ""
@@ -487,8 +487,8 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                                    ("--login",),
                                    check_exit_code=[0, 255])
             except processutils.ProcessExecutionError as err:
-                #as this might be one of many paths,
-                #only set successful logins to startup automatically
+                # as this might be one of many paths,
+                # only set successful logins to startup automatically
                 if err.exit_code in [15]:
                     self._iscsiadm_update(iscsi_properties,
                                           "node.startup",
@@ -730,7 +730,7 @@ class LibvirtAOEVolumeDriver(LibvirtBaseVolumeDriver):
             # NOTE(jbr_): If aoedevpath does not exist, do a discover.
             self._aoe_discover()
 
-        #NOTE(jbr_): Device path is not always present immediately
+        # NOTE(jbr_): Device path is not always present immediately
         def _wait_for_device_discovery(aoedevpath, mount_device):
             tries = self.tries
             if os.path.exists(aoedevpath):

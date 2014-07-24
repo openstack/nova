@@ -48,7 +48,7 @@ class NetworkUtils(object):
 
     def create_vswitch_port(self, vswitch_path, port_name):
         switch_svc = self._conn.Msvm_VirtualSwitchManagementService()[0]
-        #Create a port on the vswitch.
+        # Create a port on the vswitch.
         (new_port, ret_val) = switch_svc.CreateSwitchPort(
             Name=str(uuid.uuid4()),
             FriendlyName=port_name,

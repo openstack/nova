@@ -980,7 +980,7 @@ def get_dhcp_opts(context, network_ref):
             vifs = objects.VirtualInterfaceList.get_by_instance_uuid(
                     context, instance_uuid)
             if vifs:
-                #offer a default gateway to the first virtual interface
+                # offer a default gateway to the first virtual interface
                 default_gw_vif[instance_uuid] = vifs[0].id
 
         for fixedip in fixedips:

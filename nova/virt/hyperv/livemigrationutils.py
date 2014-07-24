@@ -181,7 +181,6 @@ class LiveMigrationUtils(object):
         for sasd in sasds:
             if (sasd.ResourceType == 31 and sasd.ResourceSubType ==
                     "Microsoft:Hyper-V:Virtual Hard Disk"):
-                #sasd.PoolId = ""
                 new_resource_setting_data.append(sasd.GetText_(1))
         return new_resource_setting_data
 

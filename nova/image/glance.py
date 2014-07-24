@@ -148,7 +148,7 @@ def _create_glance_client(context, host, port, use_ssl, version=1):
         params['token'] = context.auth_token
         params['identity_headers'] = generate_identity_headers(context)
     if utils.is_valid_ipv6(host):
-        #if so, it is ipv6 address, need to wrap it with '[]'
+        # if so, it is ipv6 address, need to wrap it with '[]'
         host = '[%s]' % host
     endpoint = '%s://%s:%s' % (scheme, host, port)
     return glanceclient.Client(str(version), endpoint, **params)
@@ -250,7 +250,7 @@ class GlanceImageService(object):
 
     def __init__(self, client=None):
         self._client = client or GlanceClientWrapper()
-        #NOTE(jbresnah) build the table of download handlers at the beginning
+        # NOTE(jbresnah) build the table of download handlers at the beginning
         # so that operators can catch errors at load time rather than whenever
         # a user attempts to use a module.  Note this cannot be done in glance
         # space when this python module is loaded because the download module
@@ -366,7 +366,7 @@ class GlanceImageService(object):
         """Modify the given image with the new data."""
         image_meta = _translate_to_glance(image_meta)
         image_meta['purge_props'] = purge_props
-        #NOTE(bcwaldon): id is not an editable field, but it is likely to be
+        # NOTE(bcwaldon): id is not an editable field, but it is likely to be
         # passed in by calling code. Let's be nice and ignore it.
         image_meta.pop('id', None)
         if data:
@@ -529,7 +529,7 @@ def _convert_to_string(metadata):
 
 
 def _extract_attributes(image):
-    #NOTE(hdd): If a key is not found, base.Resource.__getattr__() may perform
+    # NOTE(hdd): If a key is not found, base.Resource.__getattr__() may perform
     # a get(), resulting in a useless request back to glance. This list is
     # therefore sorted, with dependent attributes as the end
     # 'deleted_at' depends on 'deleted'
@@ -552,7 +552,7 @@ def _extract_attributes(image):
         # image may not have 'name' attr
         elif attr == 'name':
             output[attr] = getattr(image, attr, None)
-        #NOTE(liusheng): queued image may not have these attributes and 'name'
+        # NOTE(liusheng): queued image may not have these attributes and 'name'
         elif queued and attr in queued_exclude_attrs:
             output[attr] = getattr(image, attr, None)
         else:
@@ -624,7 +624,7 @@ def get_remote_image_service(context, image_href):
     :returns: a tuple of the form (image_service, image_id)
 
     """
-    #NOTE(bcwaldon): If image_href doesn't look like a URI, assume its a
+    # NOTE(bcwaldon): If image_href doesn't look like a URI, assume its a
     # standalone image ID
     if '/' not in str(image_href):
         image_service = get_default_image_service()

@@ -363,7 +363,7 @@ class VMOps(object):
         try:
             if self._vmutils.vm_exists(instance_name):
 
-                #Stop the VM first.
+                # Stop the VM first.
                 self.power_off(instance)
 
                 storage = self._vmutils.get_vm_storage_paths(instance_name)

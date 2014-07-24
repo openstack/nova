@@ -1086,7 +1086,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if destroy_disks:
             self._cleanup_lvm(instance)
-            #NOTE(haomai): destroy volumes if needed
+            # NOTE(haomai): destroy volumes if needed
             if CONF.libvirt.images_type == 'rbd':
                 self._cleanup_rbd(instance)
 
@@ -1932,7 +1932,7 @@ class LibvirtDriver(driver.ComputeDriver):
         except exception.InstanceNotFound:
             raise exception.InstanceNotRunning(instance_id=instance.uuid)
 
-        ##### Find dev name
+        # Find dev name
         my_dev = None
 
         xml = virt_dom.XMLDesc(0)
@@ -3617,7 +3617,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                             container_dir=container_dir,
                                             use_cow=CONF.use_cow_images)
         try:
-            #Note(GuanQiang): save container root device name here, used for
+            # Note(GuanQiang): save container root device name here, used for
             #                 detaching the linked image device when deleting
             #                 the lxc instance.
             if container_root_device:
@@ -4097,7 +4097,7 @@ class LibvirtDriver(driver.ComputeDriver):
             "vendor_id": cfgdev.pci_capability.vendor_id[2:6],
             }
 
-        #requirement by DataBase Model
+        # requirement by DataBase Model
         device['label'] = 'label_%(vendor_id)s_%(product_id)s' % device
         device.update(_get_device_type(cfgdev))
         return device
@@ -4207,9 +4207,9 @@ class LibvirtDriver(driver.ComputeDriver):
         return domain.interfaceStats(iface_id)
 
     def get_console_pool_info(self, console_type):
-        #TODO(mdragon): console proxy should be implemented for libvirt,
-        #               in case someone wants to use it with kvm or
-        #               such. For now return fake data.
+        # TODO(mdragon): console proxy should be implemented for libvirt,
+        #                in case someone wants to use it with kvm or
+        #                such. For now return fake data.
         return {'address': '127.0.0.1',
                 'username': 'fakeuser',
                 'password': 'fakepassword'}
@@ -5038,7 +5038,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def get_host_uptime(self, host):
         """Returns the result of calling "uptime"."""
-        #NOTE(dprince): host seems to be ignored for this call and in
+        # NOTE(dprince): host seems to be ignored for this call and in
         # other compute drivers as well. Perhaps we should remove it?
         out, err = utils.execute('env', 'LANG=C', 'uptime')
         return out
@@ -5537,7 +5537,7 @@ class HostState(object):
         disk_info_dict = self.driver._get_local_gb_info()
         data = {}
 
-        #NOTE(dprince): calling capabilities before getVersion works around
+        # NOTE(dprince): calling capabilities before getVersion works around
         # an initialization issue with some versions of Libvirt (1.0.5.5).
         # See: https://bugzilla.redhat.com/show_bug.cgi?id=1000116
         # See: https://bugs.launchpad.net/nova/+bug/1215593

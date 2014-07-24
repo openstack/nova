@@ -104,11 +104,11 @@ class VMUtilsV2(vmutils.VMUtils):
 
         drive = self._get_new_resource_setting_data(res_sub_type)
 
-        #Set the IDE ctrller as parent.
+        # Set the IDE ctrller as parent.
         drive.Parent = ctrller_path
         drive.Address = drive_addr
         drive.AddressOnParent = drive_addr
-        #Add the cloned disk drive object to the vm.
+        # Add the cloned disk drive object to the vm.
         new_resources = self._add_virt_resource(drive, vm.path_())
         drive_path = new_resources[0]
 
@@ -157,7 +157,7 @@ class VMUtilsV2(vmutils.VMUtils):
         vm = self._lookup_vm_check(vm_name)
 
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
-        #Remove the VM. It does not destroy any associated virtual disk.
+        # Remove the VM. It does not destroy any associated virtual disk.
         (job_path, ret_val) = vs_man_svc.DestroySystem(vm.path_())
         self.check_ret_val(ret_val, job_path)
 

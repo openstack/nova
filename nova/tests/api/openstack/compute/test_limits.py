@@ -938,7 +938,7 @@ class LimitsXMLSerializationTest(test.NoDBTestCase):
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'limits')
 
-        #verify absolute limits
+        # verify absolute limits
         absolutes = root.xpath('ns:absolute/ns:limit', namespaces=NS)
         self.assertEqual(len(absolutes), 4)
         for limit in absolutes:
@@ -946,7 +946,7 @@ class LimitsXMLSerializationTest(test.NoDBTestCase):
             value = limit.get('value')
             self.assertEqual(value, str(fixture['limits']['absolute'][name]))
 
-        #verify rate limits
+        # verify rate limits
         rates = root.xpath('ns:rates/ns:rate', namespaces=NS)
         self.assertEqual(len(rates), 2)
         for i, rate in enumerate(rates):
@@ -972,10 +972,10 @@ class LimitsXMLSerializationTest(test.NoDBTestCase):
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'limits')
 
-        #verify absolute limits
+        # verify absolute limits
         absolutes = root.xpath('ns:absolute/ns:limit', namespaces=NS)
         self.assertEqual(len(absolutes), 0)
 
-        #verify rate limits
+        # verify rate limits
         rates = root.xpath('ns:rates/ns:rate', namespaces=NS)
         self.assertEqual(len(rates), 0)

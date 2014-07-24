@@ -40,11 +40,11 @@ begin3 = end2 = datetime.datetime(2012, 7, 6, 6, 0, 0)
 end3 = datetime.datetime(2012, 7, 7, 6, 0, 0)
 
 
-#test data
+# test data
 
 
 TEST_LOGS1 = [
-    #all services done, no errors.
+    # all services done, no errors.
     dict(host="plonk", period_beginning=begin1, period_ending=end1,
          state="DONE", errors=0, task_items=23, message="test1"),
     dict(host="baz", period_beginning=begin1, period_ending=end1,
@@ -57,7 +57,7 @@ TEST_LOGS1 = [
 
 
 TEST_LOGS2 = [
-    #some still running...
+    # some still running...
     dict(host="plonk", period_beginning=begin2, period_ending=end2,
          state="DONE", errors=0, task_items=23, message="test5"),
     dict(host="baz", period_beginning=begin2, period_ending=end2,
@@ -70,7 +70,7 @@ TEST_LOGS2 = [
 
 
 TEST_LOGS3 = [
-    #some errors..
+    # some errors..
     dict(host="plonk", period_beginning=begin3, period_ending=end3,
          state="DONE", errors=0, task_items=23, message="test9"),
     dict(host="baz", period_beginning=begin3, period_ending=end3,

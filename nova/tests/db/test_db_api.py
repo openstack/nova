@@ -332,7 +332,7 @@ class AggregateDBApiTestCase(test.TestCase):
                         matchers.DictMatches(_get_fake_aggr_metadata()))
 
     def test_aggregate_create_delete_create_with_metadata(self):
-        #test for bug 1052479
+        # test for bug 1052479
         ctxt = context.get_admin_context()
         result = _create_aggregate(context=ctxt)
         expected_metadata = db.aggregate_metadata_get(ctxt, result['id'])
@@ -1635,29 +1635,29 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         instance = self.create_instance_with_args(
             metadata={'foo': 'bar'})
         self.create_instance_with_args()
-        #For format 'tag-'
+        # For format 'tag-'
         result = db.instance_get_all_by_filters(
             self.ctxt, {'filter': [
                 {'name': 'tag-key', 'value': 'foo'},
                 {'name': 'tag-value', 'value': 'bar'},
             ]})
         self._assertEqualListsOfInstances([instance], result)
-        #For format 'tag:'
+        # For format 'tag:'
         result = db.instance_get_all_by_filters(
             self.ctxt, {'filter': [
                 {'name': 'tag:foo', 'value': 'bar'},
             ]})
         self._assertEqualListsOfInstances([instance], result)
-        #For non-existent tag
+        # For non-existent tag
         result = db.instance_get_all_by_filters(
             self.ctxt, {'filter': [
                 {'name': 'tag:foo', 'value': 'barred'},
             ]})
         self.assertEqual([], result)
 
-        #Confirm with deleted tags
+        # Confirm with deleted tags
         db.instance_metadata_delete(self.ctxt, instance['uuid'], 'foo')
-        #For format 'tag-'
+        # For format 'tag-'
         result = db.instance_get_all_by_filters(
             self.ctxt, {'filter': [
                 {'name': 'tag-key', 'value': 'foo'},
@@ -1668,7 +1668,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 {'name': 'tag-value', 'value': 'bar'}
             ]})
         self.assertEqual([], result)
-        #For format 'tag:'
+        # For format 'tag:'
         result = db.instance_get_all_by_filters(
             self.ctxt, {'filter': [
                 {'name': 'tag:foo', 'value': 'bar'},
@@ -2784,10 +2784,10 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
             real_it = db.flavor_get_all(self.ctxt, filters=filters)
             self._assertEqualListsOfObjects(expected_it, real_it)
 
-        #no filter
+        # no filter
         assert_multi_filter_flavor_get()
 
-        #test only with one filter
+        # test only with one filter
         for filt in mem_filts:
             assert_multi_filter_flavor_get(filt)
         for filt in root_filts:
@@ -2797,7 +2797,7 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         for filt in is_public_filts:
             assert_multi_filter_flavor_get(filt)
 
-        #test all filters together
+        # test all filters together
         for mem in mem_filts:
             for root in root_filts:
                 for disabled in disabled_filts:

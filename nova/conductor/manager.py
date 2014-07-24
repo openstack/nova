@@ -571,7 +571,7 @@ class ComputeTaskManager(base.Base):
                 exception.InstanceNotRunning,
                 exception.MigrationPreCheckError) as ex:
             with excutils.save_and_reraise_exception():
-                #TODO(johngarbutt) - eventually need instance actions here
+                # TODO(johngarbutt) - eventually need instance actions here
                 request_spec = {'instance_properties': {
                     'uuid': instance['uuid'], },
                 }

@@ -405,10 +405,10 @@ class Dict(CompoundFieldType):
             raise ValueError(_('A dict is required here'))
         for key, element in value.items():
             if not isinstance(key, six.string_types):
-                #NOTE(guohliu) In order to keep compatibility with python3
-                #we need to use six.string_types rather than basestring here,
-                #since six.string_types is a tuple, so we need to pass the
-                #real type in.
+                # NOTE(guohliu) In order to keep compatibility with python3
+                # we need to use six.string_types rather than basestring here,
+                # since six.string_types is a tuple, so we need to pass the
+                # real type in.
                 raise KeyTypeError(six.string_types[0], key)
             value[key] = self._element_type.coerce(
                 obj, '%s["%s"]' % (attr, key), element)

@@ -464,15 +464,15 @@ class HostFiltersTestCase(test.NoDBTestCase):
         service = {'disabled': False}
         host = fakes.FakeHostState('fake_host', 'fake_node',
                 {'service': service})
-        #True since empty
+        # True since empty
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
         fakes.FakeInstance(context=self.context,
                            params={'host': 'fake_host', 'instance_type_id': 1})
-        #True since same type
+        # True since same type
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
-        #False since different type
+        # False since different type
         self.assertFalse(filt_cls.host_passes(host, filter2_properties))
-        #False since node not homogeneous
+        # False since node not homogeneous
         fakes.FakeInstance(context=self.context,
                            params={'host': 'fake_host', 'instance_type_id': 2})
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
@@ -488,13 +488,13 @@ class HostFiltersTestCase(test.NoDBTestCase):
         service = {'disabled': False}
         host = fakes.FakeHostState('fake_host', 'fake_node',
                 {'service': service})
-        #True since no aggregates
+        # True since no aggregates
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
-        #True since type matches aggregate, metadata
+        # True since type matches aggregate, metadata
         self._create_aggregate_with_host(name='fake_aggregate',
                 hosts=['fake_host'], metadata={'instance_type': 'fake1'})
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
-        #False since type matches aggregate, metadata
+        # False since type matches aggregate, metadata
         self.assertFalse(filt_cls.host_passes(host, filter2_properties))
 
     def test_ram_filter_fails_on_memory(self):

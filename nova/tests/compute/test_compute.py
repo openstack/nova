@@ -1528,7 +1528,7 @@ class ComputeTestCase(BaseTestCase):
         params = {'vm_state': vm_states.ERROR,
                   'task_state': task_states.SCHEDULING}
         self._create_fake_instance(params=params)
-        #check state is failed even after the periodic poll
+        # check state is failed even after the periodic poll
         self.compute.periodic_tasks(context.get_admin_context())
         self._assert_state({'vm_state': vm_states.ERROR,
                             'task_state': task_states.SCHEDULING})
@@ -1550,7 +1550,7 @@ class ComputeTestCase(BaseTestCase):
                           injected_files=None, admin_password=None,
                           is_first_time=True, node=None,
                           legacy_bdm_in_spec=False)
-        #check state is failed even after the periodic poll
+        # check state is failed even after the periodic poll
         self._assert_state({'vm_state': vm_states.ERROR,
                             'task_state': None})
         self.compute.periodic_tasks(context.get_admin_context())
@@ -1573,7 +1573,7 @@ class ComputeTestCase(BaseTestCase):
                           injected_files=None, admin_password=None,
                           is_first_time=True, node=None,
                           legacy_bdm_in_spec=False)
-        #check state is failed even after the periodic poll
+        # check state is failed even after the periodic poll
         self._assert_state({'vm_state': vm_states.ERROR,
                             'task_state': None})
         self.compute.periodic_tasks(context.get_admin_context())
@@ -1597,7 +1597,7 @@ class ComputeTestCase(BaseTestCase):
                           injected_files=None, admin_password=None,
                           is_first_time=True, node=None,
                           legacy_bdm_in_spec=False)
-        #check state is failed even after the periodic poll
+        # check state is failed even after the periodic poll
         self._assert_state({'vm_state': vm_states.ERROR,
                             'task_state': None})
         self.compute.periodic_tasks(context.get_admin_context())
@@ -1669,7 +1669,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_can_terminate_on_error_state(self):
         # Make sure that the instance can be terminated in ERROR state.
-        #check failed to schedule --> terminate
+        # check failed to schedule --> terminate
         params = {'vm_state': vm_states.ERROR}
         instance = self._create_fake_instance_obj(params=params)
         self.compute.terminate_instance(self.context, instance, [], [])
@@ -4725,7 +4725,7 @@ class ComputeTestCase(BaseTestCase):
                 self.context.elevated(),
                 instance.uuid, 'pre-migrating')
 
-        #verify
+        # verify
         self.assertRaises(test.TestingException, self.compute.resize_instance,
                           self.context, instance=instance,
                           migration=migration, image={},
@@ -6175,7 +6175,7 @@ class ComputeTestCase(BaseTestCase):
             instance.update(filters)
             old_instances.append(fake_instance.fake_db_instance(**instance))
 
-        #not expired
+        # not expired
         instances = list(old_instances)  # copy the contents of old_instances
         new_instance = {
             'uuid': str(uuid.uuid4()),
@@ -10640,7 +10640,7 @@ class EvacuateHostTestCase(BaseTestCase):
         """Confirm evacuate scenario updates vm_state to stopped
         if instance is in stopped state
         """
-        #Initialize the VM to stopped state
+        # Initialize the VM to stopped state
         db.instance_update(self.context, self.inst_ref['uuid'],
                            {"vm_state": vm_states.STOPPED})
         self.inst_ref['vm_state'] = vm_states.STOPPED
@@ -10650,7 +10650,7 @@ class EvacuateHostTestCase(BaseTestCase):
 
         self._rebuild()
 
-        #Check the vm state is reset to stopped
+        # Check the vm state is reset to stopped
         instance = db.instance_get(self.context, self.inst_ref['id'])
         self.assertEqual(instance['vm_state'], vm_states.STOPPED)
 

@@ -46,11 +46,11 @@ class API(object):
 
         :param context: The `nova.context.Context` object for the request
         """
-        #TODO(jaypipes): Refactor glance.get_remote_image_service and
-        #                glance.get_default_image_service into a single
-        #                method that takes a context and actually respects
-        #                it, returning a real session object that keeps
-        #                the context alive...
+        # TODO(jaypipes): Refactor glance.get_remote_image_service and
+        #                 glance.get_default_image_service into a single
+        #                 method that takes a context and actually respects
+        #                 it, returning a real session object that keeps
+        #                 the context alive...
         return glance.get_default_image_service()
 
     def get_all(self, context, **kwargs):

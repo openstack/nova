@@ -302,7 +302,7 @@ class _BaseTestCase(test.TestCase):
 
     def json_comparator(self, expected, obj_val):
         # json-ify an object field for comparison with its db str
-        #equivalent
+        # equivalent
         self.assertEqual(expected, jsonutils.dumps(obj_val))
 
     def str_comparator(self, expected, obj_val):

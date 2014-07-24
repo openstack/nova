@@ -266,7 +266,7 @@ class VMOps(object):
 
         def create_disks_step(undo_mgr, disk_image_type, image_meta,
                               name_label):
-            #TODO(johngarbutt) clean up if this is not run
+            # TODO(johngarbutt) clean up if this is not run
             vdis = vm_utils.import_all_migrated_disks(self._session,
                                                       instance)
 
@@ -994,7 +994,7 @@ class VMOps(object):
                           instance=instance)
             try:
                 self._restore_orig_vm_and_cleanup_orphan(instance)
-                #TODO(johngarbutt) should also cleanup VHDs at destination
+                # TODO(johngarbutt) should also cleanup VHDs at destination
             except Exception as rollback_error:
                 LOG.warn(_("_migrate_disk_resizing_up failed to "
                            "rollback: %s"), rollback_error,

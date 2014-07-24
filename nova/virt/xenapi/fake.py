@@ -12,8 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 #
-#============================================================================
-#
+
+
 # Parts of this file are based upon xmlrpclib.py, the XML-RPC client
 # interface included in the Python distribution.
 #
@@ -630,7 +630,7 @@ class SessionBase(object):
         return self.VDI_copy(_1, vdi_to_clone_ref, sr_ref)
 
     def host_compute_free_memory(self, _1, ref):
-        #Always return 12GB available
+        # Always return 12GB available
         return 12 * units.Gi
 
     def _plugin_agent_version(self, method, args):

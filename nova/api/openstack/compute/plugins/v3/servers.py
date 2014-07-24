@@ -454,7 +454,7 @@ class ServersController(wsgi.Controller):
         # Replace with an extension point when the os-networks
         # extension is ported. Currently reworked
         # to take into account is_neutron
-        #if (self.ext_mgr.is_loaded('os-networks')
+        # if (self.ext_mgr.is_loaded('os-networks')
         #        or utils.is_neutron()):
         #    requested_networks = server_dict.get('networks')
 

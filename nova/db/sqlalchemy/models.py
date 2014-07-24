@@ -537,9 +537,10 @@ class BlockDeviceMapping(BASE, NovaBase):
         Index('block_device_mapping_instance_uuid_volume_id_idx',
               'instance_uuid', 'volume_id'),
         Index('block_device_mapping_instance_uuid_idx', 'instance_uuid'),
-        #TODO(sshturm) Should be dropped. `virtual_name` was dropped
-        #in 186 migration,
-        #Duplicates `block_device_mapping_instance_uuid_device_name_idx` index.
+        # TODO(sshturm) Should be dropped. `virtual_name` was dropped
+        # in 186 migration,
+        # Duplicates `block_device_mapping_instance_uuid_device_name_idx`
+        # index.
         Index("block_device_mapping_instance_uuid_virtual_name"
               "_device_name_idx", 'instance_uuid', 'device_name'),
     )
@@ -569,7 +570,7 @@ class BlockDeviceMapping(BASE, NovaBase):
     # With EC2 API,
     # default True for ami specified device.
     # default False for created with other timing.
-    #TODO(sshturm) add default in db
+    # TODO(sshturm) add default in db
     delete_on_termination = Column(Boolean, default=False)
 
     snapshot_id = Column(String(36))
@@ -735,7 +736,7 @@ class Migration(BASE, NovaBase):
     old_instance_type_id = Column(Integer())
     new_instance_type_id = Column(Integer())
     instance_uuid = Column(String(36), ForeignKey('instances.uuid'))
-    #TODO(_cerberus_): enum
+    # TODO(_cerberus_): enum
     status = Column(String(255))
 
     instance = relationship("Instance", foreign_keys=instance_uuid,
@@ -838,12 +839,12 @@ class FixedIp(BASE, NovaBase):
     instance_uuid = Column(String(36), ForeignKey('instances.uuid'))
     # associated means that a fixed_ip has its instance_id column set
     # allocated means that a fixed_ip has its virtual_interface_id column set
-    #TODO(sshturm) add default in db
+    # TODO(sshturm) add default in db
     allocated = Column(Boolean, default=False)
     # leased means dhcp bridge has leased the ip
-    #TODO(sshturm) add default in db
+    # TODO(sshturm) add default in db
     leased = Column(Boolean, default=False)
-    #TODO(sshturm) add default in db
+    # TODO(sshturm) add default in db
     reserved = Column(Boolean, default=False)
     host = Column(String(255))
     network = relationship(Network,
@@ -879,7 +880,7 @@ class FloatingIp(BASE, NovaBase):
     project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
     auto_assigned = Column(Boolean, default=False)
-    #TODO(sshturm) add default in db
+    # TODO(sshturm) add default in db
     pool = Column(String(255))
     interface = Column(String(255))
     fixed_ip = relationship(FixedIp,

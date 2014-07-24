@@ -1165,7 +1165,7 @@ iface eth0 inet6 static
 
         def fake_resetnetwork(self, method, args):
             fake_resetnetwork.called = True
-            #NOTE(johngarbutt): as returned by FreeBSD and Gentoo
+            # NOTE(johngarbutt): as returned by FreeBSD and Gentoo
             return jsonutils.dumps({'returncode': '500',
                                     'message': 'success'})
         self.stubs.Set(stubs.FakeSessionForVMTests,
@@ -2741,7 +2741,7 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
                                        'from_port': 200,
                                        'to_port': 299,
                                        'cidr': '192.168.99.0/24'})
-        #validate the extra rule
+        # validate the extra rule
         self.fw.refresh_security_group_rules(secgroup)
         regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p udp --dport 200:299'
                            ' -s 192.168.99.0/24')

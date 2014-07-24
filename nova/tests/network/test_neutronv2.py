@@ -39,10 +39,10 @@ from nova import utils
 
 CONF = cfg.CONF
 
-#NOTE: Neutron client raises Exception which is discouraged by HACKING.
-#      We set this variable here and use it for assertions below to avoid
-#      the hacking checks until we can make neutron client throw a custom
-#      exception class instead.
+# NOTE: Neutron client raises Exception which is discouraged by HACKING.
+#       We set this variable here and use it for assertions below to avoid
+#       the hacking checks until we can make neutron client throw a custom
+#       exception class instead.
 NEUTRON_CLIENT_EXCEPTION = Exception
 
 
@@ -2525,7 +2525,7 @@ class TestNeutronClientForAdminScenarios(test.TestCase):
         client.Client.__init__(**kwargs).WithSideEffects(client_mock)
         self.mox.ReplayAll()
 
-        #clean global
+        # clean global
         token_store = neutronv2.AdminTokenStore.get()
         token_store.admin_auth_token = None
         if admin_context:

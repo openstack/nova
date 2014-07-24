@@ -24,7 +24,7 @@ from nova.i18n import _
 from nova import wsgi
 
 
-#default request size is 112k
+# default request size is 112k
 max_request_body_size_opt = cfg.IntOpt('osapi_max_request_body_size',
                                        default=114688,
                                        help='The maximum body size '

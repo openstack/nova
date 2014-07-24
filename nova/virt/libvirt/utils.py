@@ -531,7 +531,7 @@ def is_mounted(mount_path, source=None):
     except processutils.ProcessExecutionError as exc:
         return False
     except OSError as exc:
-        #info since it's not required to have this tool.
+        # info since it's not required to have this tool.
         if exc.errno == errno.ENOENT:
             LOG.info(_LI("findmnt tool is not installed"))
         return False

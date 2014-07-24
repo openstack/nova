@@ -89,7 +89,7 @@ class _TestComputeNodeObject(object):
         compute = compute_node.ComputeNode()
         compute.service_id = 456
         compute.stats = fake_stats
-        #NOTE (pmurray): host_ip is coerced to an IPAddress
+        # NOTE (pmurray): host_ip is coerced to an IPAddress
         compute.host_ip = fake_host_ip
         compute.create(self.context)
         self.compare_obj(compute, fake_compute_node,
@@ -121,7 +121,7 @@ class _TestComputeNodeObject(object):
         compute.id = 123
         compute.vcpus_used = 3
         compute.stats = fake_stats
-        #NOTE (pmurray): host_ip is coerced to an IPAddress
+        # NOTE (pmurray): host_ip is coerced to an IPAddress
         compute.host_ip = fake_host_ip
         compute.save(self.context)
         self.compare_obj(compute, fake_compute_node,

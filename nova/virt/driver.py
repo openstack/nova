@@ -1145,7 +1145,7 @@ class ComputeDriver(object):
 
     def add_to_aggregate(self, context, aggregate, host, **kwargs):
         """Add a compute host to an aggregate."""
-        #NOTE(jogo) Currently only used for XenAPI-Pool
+        # NOTE(jogo) Currently only used for XenAPI-Pool
         raise NotImplementedError()
 
     def remove_from_aggregate(self, context, aggregate, host, **kwargs):
