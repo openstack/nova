@@ -24,7 +24,6 @@ from oslo.config import cfg
 from nova.compute import claims
 from nova.compute import flavors
 from nova.compute import monitors
-from nova.compute import resources as ext_resources
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import conductor
@@ -47,10 +46,7 @@ resource_tracker_opts = [
                help='Amount of memory in MB to reserve for the host'),
     cfg.StrOpt('compute_stats_class',
                default='nova.compute.stats.Stats',
-               help='Class that will manage stats for the local compute host'),
-    cfg.ListOpt('compute_resources',
-                default=['vcpu'],
-                help='The names of the extra resources to track.'),
+               help='Class that will manage stats for the local compute host')
 ]
 
 CONF = cfg.CONF
@@ -79,8 +75,6 @@ class ResourceTracker(object):
         self.conductor_api = conductor.API()
         monitor_handler = monitors.ResourceMonitorHandler()
         self.monitors = monitor_handler.choose_monitors(self)
-        self.ext_resources_handler = \
-            ext_resources.ResourceHandler(CONF.compute_resources)
         self.notifier = rpc.get_notifier()
         self.old_resources = {}
 
@@ -235,10 +229,12 @@ class ResourceTracker(object):
                 instance_type = self._get_instance_type(ctxt, instance, prefix)
 
             if instance_type['id'] == itype['id']:
+                self.stats.update_stats_for_migration(itype, sign=-1)
                 if self.pci_tracker:
                     self.pci_tracker.update_pci_for_migration(instance,
                                                               sign=-1)
                 self._update_usage(self.compute_node, itype, sign=-1)
+                self.compute_node['stats'] = jsonutils.dumps(self.stats)
 
                 ctxt = context.get_admin_context()
                 self._update(ctxt, self.compute_node)
@@ -381,20 +377,9 @@ class ResourceTracker(object):
             LOG.info(_('Compute_service record updated for %(host)s:%(node)s')
                     % {'host': self.host, 'node': self.nodename})
 
-    def _write_ext_resources(self, resources):
-        resources['stats'] = {}
-        resources['stats'].update(self.stats)
-        self.ext_resources_handler.write_resources(resources)
-
     def _create(self, context, values):
         """Create the compute node in the DB."""
         # initialize load stats from existing instances:
-        self._write_ext_resources(values)
-        # NOTE(pmurray): the stats field is stored as a json string. The
-        # json conversion will be done automatically by the ComputeNode object
-        # so this can be removed when using ComputeNode.
-        values['stats'] = jsonutils.dumps(values['stats'])
-
         self.compute_node = self.conductor_api.compute_node_create(context,
                                                                    values)
 
@@ -464,17 +449,10 @@ class ResourceTracker(object):
 
     def _update(self, context, values):
         """Persist the compute node updates to the DB."""
-        self._write_ext_resources(values)
-        # NOTE(pmurray): the stats field is stored as a json string. The
-        # json conversion will be done automatically by the ComputeNode object
-        # so this can be removed when using ComputeNode.
-        values['stats'] = jsonutils.dumps(values['stats'])
-
         if not self._resource_change(values):
             return
         if "service" in self.compute_node:
             del self.compute_node['service']
-
         self.compute_node = self.conductor_api.compute_node_update(
             context, self.compute_node, values)
         if self.pci_tracker:
@@ -497,7 +475,7 @@ class ResourceTracker(object):
                                      resources['local_gb_used'])
 
         resources['running_vms'] = self.stats.num_instances
-        self.ext_resources_handler.update_from_instance(usage, sign)
+        resources['vcpus_used'] = self.stats.num_vcpus_used
 
     def _update_usage_from_migration(self, context, instance, resources,
                                      migration):
@@ -540,9 +518,11 @@ class ResourceTracker(object):
                     migration['old_instance_type_id'])
 
         if itype:
+            self.stats.update_stats_for_migration(itype)
             if self.pci_tracker:
                 self.pci_tracker.update_pci_for_migration(instance)
             self._update_usage(resources, itype)
+            resources['stats'] = jsonutils.dumps(self.stats)
             if self.pci_tracker:
                 resources['pci_stats'] = jsonutils.dumps(
                         self.pci_tracker.stats)
@@ -615,6 +595,7 @@ class ResourceTracker(object):
             self._update_usage(resources, instance, sign=sign)
 
         resources['current_workload'] = self.stats.calculate_workload()
+        resources['stats'] = jsonutils.dumps(self.stats)
         if self.pci_tracker:
             resources['pci_stats'] = jsonutils.dumps(self.pci_tracker.stats)
         else:
@@ -634,15 +615,13 @@ class ResourceTracker(object):
         # set some initial values, reserve room for host/hypervisor:
         resources['local_gb_used'] = CONF.reserved_host_disk_mb / 1024
         resources['memory_mb_used'] = CONF.reserved_host_memory_mb
+        resources['vcpus_used'] = 0
         resources['free_ram_mb'] = (resources['memory_mb'] -
                                     resources['memory_mb_used'])
         resources['free_disk_gb'] = (resources['local_gb'] -
                                      resources['local_gb_used'])
         resources['current_workload'] = 0
         resources['running_vms'] = 0
-
-        # Reset values for extended resources
-        self.ext_resources_handler.reset_resources(resources, self.driver)
 
         for instance in instances:
             if instance['vm_state'] == vm_states.DELETED:
