@@ -67,11 +67,12 @@ class VHDUtilsV2(vhdutils.VHDUtils):
         self._create_vhd(self._VHD_TYPE_DYNAMIC, vhd_format, path,
                          max_internal_size=max_internal_size)
 
-    def create_differencing_vhd(self, path, parent_path):
+    def create_differencing_vhd(self, path, parent_path, size=None):
         parent_vhd_info = self.get_vhd_info(parent_path)
         self._create_vhd(self._VHD_TYPE_DIFFERENCING,
                          parent_vhd_info["Format"],
-                         path, parent_path=parent_path)
+                         path, parent_path=parent_path,
+                         max_internal_size=size)
 
     def _create_vhd(self, vhd_type, format, path, max_internal_size=None,
                     parent_path=None):
@@ -132,8 +133,9 @@ class VHDUtilsV2(vhdutils.VHDUtils):
             vhd_info = self.get_vhd_info(vhd_path)
             vhd_type = vhd_info['Type']
             if vhd_type == self._VHD_TYPE_DIFFERENCING:
-                raise vmutils.HyperVException(_("Differencing VHDX images "
-                                                "are not supported"))
+                vhd_parent = self.get_vhd_parent_path(vhd_path)
+                return self.get_internal_vhd_size_by_file_size(vhd_parent,
+                    new_vhd_file_size)
             else:
                 try:
                     with open(vhd_path, 'rb') as f:

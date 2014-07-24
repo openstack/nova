@@ -72,7 +72,10 @@ class VHDUtils(object):
             Path=path, MaxInternalSize=max_internal_size)
         self._vmutils.check_ret_val(ret_val, job_path)
 
-    def create_differencing_vhd(self, path, parent_path):
+    def create_differencing_vhd(self, path, parent_path, size=None):
+        if size is not None:
+            raise vmutils.HyperVException(_('VHD differencing disks cannot be '
+                                            'resized'))
         image_man_svc = self._conn.Msvm_ImageManagementService()[0]
 
         (job_path, ret_val) = image_man_svc.CreateDifferencingVirtualHardDisk(
@@ -148,9 +151,9 @@ class VHDUtils(object):
                                  (hs + ddhs + fs)) * bs / (bes + bs)
             return max_internal_size
         else:
-            raise vmutils.HyperVException(_("The %(vhd_type)s type VHD "
-                                            "is not supported") %
-                                            {"vhd_type": vhd_type})
+            vhd_parent = self.get_vhd_parent_path(vhd_path)
+            return self.get_internal_vhd_size_by_file_size(vhd_parent,
+                new_vhd_file_size)
 
     def _get_vhd_dynamic_blk_size(self, vhd_path):
         blk_size_offset = VHD_BLK_SIZE_OFFSET

@@ -136,9 +136,12 @@ class VMOps(object):
 
     def _create_root_vhd(self, context, instance):
         base_vhd_path = self._imagecache.get_cached_image(context, instance)
+        base_vhd_info = self._vhdutils.get_vhd_info(base_vhd_path)
+        base_vhd_size = base_vhd_info['MaxInternalSize']
         format_ext = base_vhd_path.split('.')[-1]
         root_vhd_path = self._pathutils.get_root_vhd_path(instance['name'],
                                                           format_ext)
+        root_vhd_size = instance['root_gb'] * units.Gi
 
         try:
             if CONF.use_cow_images:
@@ -147,8 +150,24 @@ class VMOps(object):
                           {'base_vhd_path': base_vhd_path,
                            'root_vhd_path': root_vhd_path},
                           instance=instance)
-                self._vhdutils.create_differencing_vhd(root_vhd_path,
-                                                       base_vhd_path)
+                vhd_type = self._vhdutils.get_vhd_format(base_vhd_path)
+                if vhd_type == constants.DISK_FORMAT_VHDX:
+                    # Differencing vhdx images can be resized, so we use
+                    # the flavor size when creating the root image
+                    root_vhd_internal_size = (
+                        self._vhdutils.get_internal_vhd_size_by_file_size(
+                            base_vhd_path, root_vhd_size))
+                    if not self._is_resize_needed(root_vhd_path, base_vhd_size,
+                                                  root_vhd_internal_size,
+                                                  instance):
+                        root_vhd_internal_size = None
+
+                    self._vhdutils.create_differencing_vhd(
+                        root_vhd_path, base_vhd_path, root_vhd_internal_size)
+                else:
+                    # The base image had already been resized
+                    self._vhdutils.create_differencing_vhd(root_vhd_path,
+                                                           base_vhd_path)
             else:
                 LOG.debug("Copying VHD image %(base_vhd_path)s to target: "
                           "%(root_vhd_path)s",
@@ -157,27 +176,13 @@ class VMOps(object):
                           instance=instance)
                 self._pathutils.copyfile(base_vhd_path, root_vhd_path)
 
-                base_vhd_info = self._vhdutils.get_vhd_info(base_vhd_path)
-                base_vhd_size = base_vhd_info['MaxInternalSize']
-                root_vhd_size = instance['root_gb'] * units.Gi
-
                 root_vhd_internal_size = (
                         self._vhdutils.get_internal_vhd_size_by_file_size(
                             root_vhd_path, root_vhd_size))
 
-                if root_vhd_internal_size < base_vhd_size:
-                    error_msg = _("Cannot resize a VHD to a smaller size, the"
-                                  " original size is %(base_vhd_size)s, the"
-                                  " newer size is %(root_vhd_size)s"
-                                  ) % {'base_vhd_size': base_vhd_size,
-                                       'root_vhd_size': root_vhd_internal_size}
-                    raise vmutils.HyperVException(error_msg)
-                elif root_vhd_internal_size > base_vhd_size:
-                    LOG.debug("Resizing VHD %(root_vhd_path)s to new "
-                              "size %(root_vhd_size)s",
-                              {'root_vhd_size': root_vhd_internal_size,
-                               'root_vhd_path': root_vhd_path},
-                              instance=instance)
+                if self._is_resize_needed(root_vhd_path, base_vhd_size,
+                                          root_vhd_internal_size,
+                                          instance):
                     self._vhdutils.resize_vhd(root_vhd_path,
                                               root_vhd_internal_size,
                                               is_file_max_size=False)
@@ -187,6 +192,23 @@ class VMOps(object):
                     self._pathutils.remove(root_vhd_path)
 
         return root_vhd_path
+
+    def _is_resize_needed(self, vhd_path, old_size, new_size, instance):
+        if new_size < old_size:
+            error_msg = _("Cannot resize a VHD to a smaller size, the"
+                          " original size is %(old_size)s, the"
+                          " newer size is %(new_size)s"
+                          ) % {'old_size': old_size,
+                               'new_size': new_size}
+            raise vmutils.VHDResizeException(error_msg)
+        elif new_size > old_size:
+            LOG.debug("Resizing VHD %(vhd_path)s to new "
+                      "size %(new_size)s" %
+                      {'new_size': new_size,
+                       'vhd_path': vhd_path},
+                      instance=instance)
+            return True
+        return False
 
     def create_ephemeral_vhd(self, instance):
         eph_vhd_size = instance.get('ephemeral_gb', 0) * units.Gi

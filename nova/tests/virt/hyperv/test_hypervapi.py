@@ -1022,15 +1022,25 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase,
             m.AndReturn(self._test_instance_dir)
 
             self._setup_get_cached_image_mocks(cow, vhd_format)
+            m = vhdutils.VHDUtils.get_vhd_info(mox.IsA(str))
+            m.AndReturn({'MaxInternalSize': 1024, 'FileSize': 1024,
+                         'Type': 2})
 
             if cow:
-                vhdutils.VHDUtils.create_differencing_vhd(mox.IsA(str),
-                                                          mox.IsA(str))
+                m = vhdutils.VHDUtils.get_vhd_format(mox.IsA(str))
+                m.AndReturn(vhd_format)
+                if vhd_format == constants.DISK_FORMAT_VHD:
+                    vhdutils.VHDUtils.create_differencing_vhd(mox.IsA(str),
+                                                              mox.IsA(str))
+                else:
+                    m = vhdutils.VHDUtils.get_internal_vhd_size_by_file_size(
+                        mox.IsA(str), mox.IsA(object))
+                    m.AndReturn(1025)
+                    vhdutils.VHDUtils.create_differencing_vhd(mox.IsA(str),
+                                                              mox.IsA(str),
+                                                              mox.IsA(int))
             else:
                 fake.PathUtils.copyfile(mox.IsA(str), mox.IsA(str))
-                m = vhdutils.VHDUtils.get_vhd_info(mox.IsA(str))
-                m.AndReturn({'MaxInternalSize': 1024, 'FileSize': 1024,
-                             'Type': 2})
                 m = vhdutils.VHDUtils.get_internal_vhd_size_by_file_size(
                     mox.IsA(str), mox.IsA(object))
                 m.AndReturn(1025)

@@ -35,6 +35,11 @@ class VHDUtilsV2TestCase(test.NoDBTestCase):
     _FAKE_LOG_SIZE = 1048576
     _FAKE_LOGICAL_SECTOR_SIZE = 4096
     _FAKE_METADATA_SIZE = 1048576
+    _FAKE_VHD_INFO = {'ParentPath': _FAKE_PARENT_VHD_PATH,
+                      'Format': _FAKE_FORMAT,
+                      'BlockSize': _FAKE_BLOCK_SIZE,
+                      'LogicalSectorSize': _FAKE_LOGICAL_SECTOR_SIZE,
+                      'Type': _FAKE_TYPE}
 
     def setUp(self):
         self._vhdutils = vhdutilsv2.VHDUtilsV2()
@@ -166,13 +171,16 @@ class VHDUtilsV2TestCase(test.NoDBTestCase):
         self.mock_get.assert_called_once_with(self._FAKE_VHD_PATH,
                                               self._FAKE_MAK_INTERNAL_SIZE)
 
-    def test_get_vhdx_internal_size(self):
-        self._vhdutils.get_vhd_info = mock.MagicMock(
-            return_value={'ParentPath': self._FAKE_PARENT_VHD_PATH,
-                          'Format': self._FAKE_FORMAT,
-                          'BlockSize': self._FAKE_BLOCK_SIZE,
-                          'LogicalSectorSize': self._FAKE_LOGICAL_SECTOR_SIZE,
-                          'Type': self._FAKE_TYPE})
+    def _test_get_vhdx_internal_size(self, vhd_type):
+        self._vhdutils.get_vhd_info = mock.MagicMock()
+        self._vhdutils.get_vhd_parent_path = mock.Mock(
+            return_value=self._FAKE_PARENT_VHD_PATH)
+
+        if vhd_type == 4:
+            self._vhdutils.get_vhd_info.side_effect = [
+                {'Type': vhd_type}, self._FAKE_VHD_INFO]
+        else:
+            self._vhdutils.get_vhd_info.return_value = self._FAKE_VHD_INFO
         self._vhdutils._get_vhdx_log_size = mock.MagicMock(
             return_value=self._FAKE_LOG_SIZE)
         self._vhdutils._get_vhdx_metadata_size_and_offset = mock.MagicMock(
@@ -188,6 +196,12 @@ class VHDUtilsV2TestCase(test.NoDBTestCase):
 
         self.assertEqual(self._FAKE_MAK_INTERNAL_SIZE - self._FAKE_BLOCK_SIZE,
                          internal_size)
+
+    def test_get_vhdx_internal_size_dynamic(self):
+        self._test_get_vhdx_internal_size(3)
+
+    def test_get_vhdx_internal_size_differencing(self):
+        self._test_get_vhdx_internal_size(4)
 
     def test_get_vhdx_current_header(self):
         VHDX_HEADER_OFFSETS = [64 * 1024, 128 * 1024]
