@@ -1,6 +1,4 @@
 {
-    "host": {
-        "host": "%(host_name)s",
-        "power_action": "reboot"
-    }
+    "host": "%(host_name)s",
+    "power_action": "reboot"
 }
