@@ -21,7 +21,6 @@ import webob
 
 from nova.api.openstack.compute.plugins.v3 import flavor_access
 from nova.api.openstack.compute.plugins.v3 import flavor_manage
-from nova.api.openstack.compute.plugins.v3 import flavor_rxtx
 from nova.compute import flavors
 from nova import context
 from nova import db
@@ -106,7 +105,7 @@ class FlavorManageTest(test.NoDBTestCase):
                 "ephemeral": 1,
                 "id": unicode('1234'),
                 "swap": 512,
-                "%s:rxtx_factor" % flavor_rxtx.ALIAS: 1,
+                "rxtx_factor": 1,
                 "flavor-access:is_public": True,
             }
         }
@@ -120,7 +119,7 @@ class FlavorManageTest(test.NoDBTestCase):
                 "ephemeral": 1,
                 "id": unicode('1234'),
                 "swap": 512,
-                "%s:rxtx_factor" % flavor_rxtx.ALIAS: 1,
+                "rxtx_factor": 1,
                 "flavor-access:is_public": True,
             }
         }
@@ -232,7 +231,7 @@ class FlavorManageTest(test.NoDBTestCase):
                 "ephemeral": 1,
                 "id": unicode('1234'),
                 "swap": 512,
-                "%s:rxtx_factor" % flavor_rxtx.ALIAS: 1,
+                "rxtx_factor": 1,
                 "flavor-access:is_public": True,
             }
         }
@@ -304,8 +303,7 @@ class FlavorManageTest(test.NoDBTestCase):
 
     def test_create_with_minus_rxtx_factor(self):
         rxtx_factor = -1
-        self.base_request_dict['flavor'][('%s:rxtx_factor'
-            % flavor_rxtx.ALIAS)] = rxtx_factor
+        self.base_request_dict['flavor']['rxtx_factor'] = rxtx_factor
         self._test_create_bad_request(self.base_request_dict)
 
     def test_create_with_non_boolean_is_public(self):
@@ -340,7 +338,7 @@ class PrivateFlavorManageTest(test.TestCase):
                 "ephemeral": 1,
                 "id": unicode('1234'),
                 "swap": 512,
-                "%s:rxtx_factor" % flavor_rxtx.ALIAS: 1,
+                "rxtx_factor": 1,
                 "flavor-access:is_public": False
             }
         }

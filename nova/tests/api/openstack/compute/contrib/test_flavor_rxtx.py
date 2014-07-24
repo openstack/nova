@@ -26,14 +26,22 @@ FAKE_FLAVORS = {
         "name": 'flavor 1',
         "memory_mb": '256',
         "root_gb": '10',
+        "swap": '5',
+        "disabled": False,
+        "ephemeral_gb": '20',
         "rxtx_factor": '1.0',
+        "vcpus": 1,
     },
     'flavor 2': {
         "flavorid": '2',
         "name": 'flavor 2',
         "memory_mb": '512',
         "root_gb": '10',
+        "swap": '10',
+        "ephemeral_gb": '25',
         "rxtx_factor": None,
+        "disabled": False,
+        "vcpus": 1,
     },
 }
 
@@ -51,12 +59,12 @@ def fake_get_all_flavors_sorted_list(context=None, inactive=False,
     ]
 
 
-class FlavorRxtxTest(test.NoDBTestCase):
+class FlavorRxtxTestV21(test.NoDBTestCase):
     content_type = 'application/json'
-    prefix = ''
+    _prefix = '/v3'
 
     def setUp(self):
-        super(FlavorRxtxTest, self).setUp()
+        super(FlavorRxtxTestV21, self).setUp()
         ext = ('nova.api.openstack.compute.contrib'
               '.flavor_rxtx.Flavor_rxtx')
         self.flags(osapi_compute_extension=[ext])
@@ -70,8 +78,12 @@ class FlavorRxtxTest(test.NoDBTestCase):
     def _make_request(self, url):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(self._get_app())
         return res
+
+    def _get_app(self):
+        return fakes.wsgi_app_v3(init_only=('servers',
+            'flavors', 'os-flavor-rxtx'))
 
     def _get_flavor(self, body):
         return jsonutils.loads(body).get('flavor')
@@ -80,17 +92,17 @@ class FlavorRxtxTest(test.NoDBTestCase):
         return jsonutils.loads(body).get('flavors')
 
     def assertFlavorRxtx(self, flavor, rxtx):
-        self.assertEqual(str(flavor.get('%srxtx_factor' % self.prefix)), rxtx)
+        self.assertEqual(str(flavor.get('rxtx_factor')), rxtx)
 
     def test_show(self):
-        url = '/v2/fake/flavors/1'
+        url = self._prefix + '/flavors/1'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
         self.assertFlavorRxtx(self._get_flavor(res.body), '1.0')
 
     def test_detail(self):
-        url = '/v2/fake/flavors/detail'
+        url = self._prefix + '/flavors/detail'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
@@ -99,7 +111,14 @@ class FlavorRxtxTest(test.NoDBTestCase):
         self.assertFlavorRxtx(flavors[1], '')
 
 
-class FlavorRxtxXmlTest(FlavorRxtxTest):
+class FlavorRxtxTestV20(FlavorRxtxTestV21):
+    _prefix = "/v2/fake"
+
+    def _get_app(self):
+        return fakes.wsgi_app()
+
+
+class FlavorRxtxXmlTest(FlavorRxtxTestV20):
     content_type = 'application/xml'
 
     def _get_flavor(self, body):

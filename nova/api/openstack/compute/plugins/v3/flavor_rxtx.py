@@ -25,7 +25,7 @@ class FlavorRxtxController(wsgi.Controller):
     def _extend_flavors(self, req, flavors):
         for flavor in flavors:
             db_flavor = req.get_db_flavor(flavor['id'])
-            key = '%s:rxtx_factor' % FlavorRxtx.alias
+            key = 'rxtx_factor'
             flavor[key] = db_flavor['rxtx_factor'] or ""
 
     def _show(self, req, resp_obj):
