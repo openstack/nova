@@ -326,7 +326,7 @@ class LibvirtVifTestCase(test.TestCase):
         default_inst_type['extra_specs'] = dict(extra_specs + quota_bandwidth)
         conf = self._get_conf()
         nic = driver.get_config(self.instance, vif, image_meta,
-                                default_inst_type)
+                                default_inst_type, CONF.libvirt.virt_type)
         conf.add_device(nic)
         return conf.to_xml()
 

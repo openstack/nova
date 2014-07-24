@@ -1426,7 +1426,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self.vif_driver.plug(instance, vif)
         self.firewall_driver.setup_basic_filtering(instance, [vif])
         cfg = self.vif_driver.get_config(instance, vif, image_meta,
-                                         flavor)
+                                         flavor, CONF.libvirt.virt_type)
         try:
             flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
             state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
@@ -1444,7 +1444,8 @@ class LibvirtDriver(driver.ComputeDriver):
         flavor = objects.Flavor.get_by_id(
             nova_context.get_admin_context(read_deleted='yes'),
             instance['instance_type_id'])
-        cfg = self.vif_driver.get_config(instance, vif, None, flavor)
+        cfg = self.vif_driver.get_config(instance, vif, None, flavor,
+                                         CONF.libvirt.virt_type)
         try:
             self.vif_driver.unplug(instance, vif)
             flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
@@ -3327,10 +3328,9 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.add_device(config)
 
         for vif in network_info:
-            config = self.vif_driver.get_config(instance,
-                                             vif,
-                                             image_meta,
-                                             flavor)
+            config = self.vif_driver.get_config(
+                instance, vif, image_meta,
+                flavor, CONF.libvirt.virt_type)
             guest.add_device(config)
 
         if ((CONF.libvirt.virt_type == "qemu" or

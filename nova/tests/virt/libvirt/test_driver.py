@@ -7480,11 +7480,13 @@ Active:          8381604 kB
             self.context, test_instance['instance_type_id'])
         expected = conn.vif_driver.get_config(test_instance, network_info[0],
                                               fake_image_meta,
-                                              fake_flavor)
+                                              fake_flavor,
+                                              CONF.libvirt.virt_type)
         self.mox.StubOutWithMock(conn.vif_driver, 'get_config')
         conn.vif_driver.get_config(test_instance, network_info[0],
                                    fake_image_meta,
-                                   mox.IsA(objects.Flavor)).\
+                                   mox.IsA(objects.Flavor),
+                                   CONF.libvirt.virt_type).\
                                    AndReturn(expected)
 
         self.mox.ReplayAll()
@@ -9979,14 +9981,16 @@ class LibvirtDriverTestCase(test.TestCase):
         elif method == 'detach_interface':
             fake_image_meta = None
         expected = self.libvirtconnection.vif_driver.get_config(
-            instance, network_info[0], fake_image_meta, fake_flavor)
+            instance, network_info[0], fake_image_meta, fake_flavor,
+            CONF.libvirt.virt_type)
 
         self.mox.StubOutWithMock(self.libvirtconnection.vif_driver,
                                  'get_config')
         self.libvirtconnection.vif_driver.get_config(
             instance, network_info[0],
             fake_image_meta,
-            mox.IsA(objects.Flavor)).AndReturn(expected)
+            mox.IsA(objects.Flavor),
+            CONF.libvirt.virt_type).AndReturn(expected)
         domain.info().AndReturn([power_state])
         if method == 'attach_interface':
             domain.attachDeviceFlags(expected.to_xml(), expected_flags)
