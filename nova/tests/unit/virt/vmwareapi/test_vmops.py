@@ -739,7 +739,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_use_iso_image_without_root_disk(self):
         self._test_use_iso_image(with_root_disk=False)
 
-    def _verify_spawn_method_calls(self, mock_call_method):
+    def _verify_spawn_method_calls(self, mock_call_method, extras=None):
         # TODO(vui): More explicit assertions of spawn() behavior
         # are waiting on additional refactoring pertaining to image
         # handling/manipulation. Till then, we continue to assert on the
@@ -753,6 +753,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                             'SearchDatastore_Task',
                             'ExtendVirtualDisk_Task',
         ]
+        if extras:
+            expected_methods.extend(extras)
 
         recorded_methods = [c[1][1] for c in mock_call_method.mock_calls]
         self.assertEqual(expected_methods, recorded_methods)
@@ -873,7 +875,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             else:
                 self.assertFalse(mock_power_on_instance.called)
 
-            if block_device_info:
+            if (block_device_info and
+                'block_device_mapping' in block_device_info):
                 root_disk = block_device_info['block_device_mapping'][0]
                 mock_attach = self._vmops._volumeops.attach_root_volume
                 mock_attach.assert_called_once_with(
@@ -897,7 +900,10 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                         upload_file_name,
                         cookies='Fake-CookieJar')
                 self.assertTrue(len(_wait_for_task.mock_calls) > 0)
-                self._verify_spawn_method_calls(_call_method)
+                extras = None
+                if block_device_info and 'ephemerals' in block_device_info:
+                    extras = ['CreateVirtualDisk_Task']
+                self._verify_spawn_method_calls(_call_method, extras)
 
                 dc_ref = 'fake_dc_ref'
                 source_file = unicode('[fake_ds] vmware_base/%s/%s.vmdk' %
@@ -989,6 +995,82 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         }
         self._test_spawn(block_device_info=block_device_info,
                          config_drive=True)
+
+    def test_spawn_with_block_device_info_ephemerals(self):
+        ephemerals = [{'device_type': 'disk',
+                       'disk_bus': 'virtio',
+                       'device_name': '/dev/vdb',
+                       'size': 1}]
+        block_device_info = {'ephemerals': ephemerals}
+        self._test_spawn(block_device_info=block_device_info)
+
+    def _get_fake_vi(self):
+        image_info = images.VMwareImage(
+                image_id=self._image_id,
+                file_size=7,
+                linked_clone=False)
+        vi = vmops.VirtualMachineInstanceConfigInfo(
+                self._instance, 'fake_uuid', image_info,
+                self._ds, self._dc_info, mock.Mock())
+        return vi
+
+    @mock.patch.object(vm_util, 'create_virtual_disk')
+    def test_create_and_attach_ephemeral_disk(self, mock_create):
+        vi = self._get_fake_vi()
+        self._vmops._volumeops = mock.Mock()
+        mock_attach_disk_to_vm = self._vmops._volumeops.attach_disk_to_vm
+
+        self._vmops._create_and_attach_ephemeral_disk(self._instance,
+                                                      'fake-vm-ref',
+                                                      vi, 1,
+                                                      'fake-adapter-type',
+                                                      'fake-filename')
+        path = str(ds_util.DatastorePath(vi.datastore.name, 'fake_uuid',
+                                         'fake-filename'))
+        mock_create.assert_called_once_with(
+                self._session, self._dc_info.ref, 'fake-adapter-type',
+                'thin', path, 1)
+        mock_attach_disk_to_vm.assert_called_once_with(
+                'fake-vm-ref', self._instance, 'fake-adapter-type',
+                'thin', path, 1, False)
+
+    def test_create_ephemeral_with_bdi(self):
+        ephemerals = [{'device_type': 'disk',
+                       'disk_bus': 'virtio',
+                       'device_name': '/dev/vdb',
+                       'size': 1}]
+        block_device_info = {'ephemerals': ephemerals}
+        vi = self._get_fake_vi()
+        with mock.patch.object(
+            self._vmops, '_create_and_attach_ephemeral_disk') as mock_caa:
+            self._vmops._create_ephemeral(block_device_info,
+                                          self._instance,
+                                          'fake-vm-ref',
+                                          vi)
+            mock_caa.assert_called_once_with(self._instance, 'fake-vm-ref',
+                                             vi, 1 * units.Mi, 'virtio',
+                                             'ephemeral_0.vmdk')
+
+    def _test_create_ephemeral_from_instance(self, bdi):
+        vi = self._get_fake_vi()
+        with mock.patch.object(
+            self._vmops, '_create_and_attach_ephemeral_disk') as mock_caa:
+            self._vmops._create_ephemeral(bdi,
+                                          self._instance,
+                                          'fake-vm-ref',
+                                          vi)
+            mock_caa.assert_called_once_with(self._instance, 'fake-vm-ref',
+                                             vi, 1 * units.Mi, 'lsiLogic',
+                                             'ephemeral_0.vmdk')
+
+    def test_create_ephemeral_with_bdi_but_no_ephemerals(self):
+        block_device_info = {'ephemerals': []}
+        self._instance.ephemeral_gb = 1
+        self._test_create_ephemeral_from_instance(block_device_info)
+
+    def test_create_ephemeral_with_no_bdi(self):
+        self._instance.ephemeral_gb = 1
+        self._test_create_ephemeral_from_instance(None)
 
     def test_build_virtual_machine(self):
         image_id = nova.tests.unit.image.fake.get_valid_image_id()

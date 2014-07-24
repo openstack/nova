@@ -477,6 +477,43 @@ class VMwareVMOps(object):
                 LOG.debug("Cleaning up location %s", str(tmp_dir_loc))
                 self._delete_datastore_file(str(tmp_dir_loc), vi.dc_info.ref)
 
+    def _create_and_attach_ephemeral_disk(self, instance, vm_ref, vi, size,
+                                          adapter_type, filename):
+        path = str(ds_util.DatastorePath(vi.datastore.name, instance.uuid,
+                                         filename))
+        disk_type = constants.DISK_TYPE_THIN
+        vm_util.create_virtual_disk(
+                self._session, vi.dc_info.ref,
+                adapter_type,
+                disk_type,
+                path,
+                size)
+
+        self._volumeops.attach_disk_to_vm(
+                vm_ref, vi.instance,
+                adapter_type, disk_type,
+                path, size, False)
+
+    def _create_ephemeral(self, bdi, instance, vm_ref, vi):
+        ephemerals = None
+        if bdi is not None:
+            ephemerals = driver.block_device_info_get_ephemerals(bdi)
+            for idx, eph in enumerate(ephemerals):
+                size = eph['size'] * units.Mi
+                adapter_type = eph.get('disk_bus', vi.ii.adapter_type)
+                filename = vm_util.get_ephemeral_name(idx)
+                self._create_and_attach_ephemeral_disk(instance, vm_ref, vi,
+                                                       size, adapter_type,
+                                                       filename)
+        # There may be block devices defined but no ephemerals. In this case
+        # we need to allocate a ephemeral disk if required
+        if not ephemerals and instance.ephemeral_gb:
+            size = instance.ephemeral_gb * units.Mi
+            filename = vm_util.get_ephemeral_name(0)
+            self._create_and_attach_ephemeral_disk(instance, vm_ref, vi,
+                                                   size, vi.ii.adapter_type,
+                                                   filename)
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None,
               instance_name=None, power_on=True):
@@ -550,6 +587,9 @@ class VMwareVMOps(object):
                 self._use_disk_image_as_linked_clone(vm_ref, vi)
             else:
                 self._use_disk_image_as_full_clone(vm_ref, vi)
+
+        # Create ephemeral disks
+        self._create_ephemeral(block_device_info, instance, vm_ref, vi)
 
         if configdrive.required_by(instance):
             self._configure_config_drive(

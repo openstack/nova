@@ -385,12 +385,15 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                     'flavorid': '1', 'vcpu_weight': None, 'id': 2}
 
     def _create_instance(self, node=None, set_image_ref=True,
-                         uuid=None, instance_type='m1.large'):
+                         uuid=None, instance_type='m1.large',
+                         ephemeral=None):
         if not node:
             node = self.node_name
         if not uuid:
             uuid = uuidutils.generate_uuid()
         self.type_data = self._get_instance_type_by_name(instance_type)
+        if ephemeral is not None:
+            self.type_data['ephemeral_gb'] = ephemeral
         values = {'name': 'fake_name',
                   'id': 1,
                   'uuid': uuid,
@@ -416,17 +419,19 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                 self.context, **values)
 
     def _create_vm(self, node=None, num_instances=1, uuid=None,
-                   instance_type='m1.large', powered_on=True):
+                   instance_type='m1.large', powered_on=True,
+                   ephemeral=None, bdi=None):
         """Create and spawn the VM."""
         if not node:
             node = self.node_name
         self._create_instance(node=node, uuid=uuid,
-                              instance_type=instance_type)
+                              instance_type=instance_type,
+                              ephemeral=ephemeral)
         self.assertIsNone(vm_util.vm_ref_cache_get(self.uuid))
         self.conn.spawn(self.context, self.instance, self.image,
                         injected_files=[], admin_password=None,
                         network_info=self.network_info,
-                        block_device_info=None)
+                        block_device_info=bdi)
         self._check_vm_record(num_instances=num_instances,
                               powered_on=powered_on)
         self.assertIsNotNone(vm_util.vm_ref_cache_get(self.uuid))
@@ -643,6 +648,35 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.image['disk_format'] = 'iso'
         self._create_vm()
         self.assertEqual(self.iso_index, 2)
+
+    def test_ephemeral_disk_attach(self):
+        self._create_vm(ephemeral=50)
+        path = ds_util.DatastorePath(self.ds, self.uuid,
+                                     'ephemeral_0.vmdk')
+        self.assertTrue(vmwareapi_fake.get_file(str(path)))
+
+    def test_ephemeral_disk_attach_from_bdi(self):
+        ephemerals = [{'device_type': 'disk',
+                       'disk_bus': 'lsiLogic',
+                       'size': 25},
+                      {'device_type': 'disk',
+                       'disk_bus': 'lsiLogic',
+                       'size': 25}]
+        bdi = {'ephemerals': ephemerals}
+        self._create_vm(bdi=bdi, ephemeral=50)
+        path = ds_util.DatastorePath(self.ds, self.uuid,
+                                     'ephemeral_0.vmdk')
+        self.assertTrue(vmwareapi_fake.get_file(str(path)))
+        path = ds_util.DatastorePath(self.ds, self.uuid,
+                                     'ephemeral_1.vmdk')
+        self.assertTrue(vmwareapi_fake.get_file(str(path)))
+
+    def test_ephemeral_disk_attach_from_bdii_with_no_ephs(self):
+        bdi = {'ephemerals': []}
+        self._create_vm(bdi=bdi, ephemeral=50)
+        path = ds_util.DatastorePath(self.ds, self.uuid,
+                                     'ephemeral_0.vmdk')
+        self.assertTrue(vmwareapi_fake.get_file(str(path)))
 
     def test_cdrom_attach_with_config_drive(self):
         self.flags(force_config_drive=True)
