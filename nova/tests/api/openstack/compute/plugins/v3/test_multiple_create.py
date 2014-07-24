@@ -20,6 +20,7 @@ from oslo.config import cfg
 import webob
 
 from nova.api.openstack.compute import plugins
+from nova.api.openstack.compute.plugins.v3 import block_device_mapping
 from nova.api.openstack.compute.plugins.v3 import multiple_create
 from nova.api.openstack.compute.plugins.v3 import servers
 from nova.compute import api as compute_api
@@ -416,12 +417,12 @@ class ServersControllerCreateTest(test.TestCase):
         are requested with a list of block device mappings for volumes.
         """
         min_count = 2
-        bdm = [{'device_name': 'foo1', 'volume_id': 'vol-xxxx'},
-               {'device_name': 'foo2', 'volume_id': 'vol-yyyy'}
+        bdm = [{'source_type': 'volume', 'uuid': 'vol-xxxx'},
+               {'source_type': 'volume', 'uuid': 'vol-yyyy'}
         ]
         params = {
-                  'block_device_mapping': bdm,
-                  'min_count': min_count
+                  block_device_mapping.ATTRIBUTE_NAME: bdm,
+                  multiple_create.MIN_ATTRIBUTE_NAME: min_count
         }
         old_create = compute_api.API.create
 
@@ -431,30 +432,34 @@ class ServersControllerCreateTest(test.TestCase):
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self._test_create_extra, params, no_image=True)
+        exc = self.assertRaises(webob.exc.HTTPBadRequest,
+                                self._test_create_extra, params, no_image=True)
+        self.assertEqual("Cannot attach one or more volumes to multiple "
+                         "instances", exc.explanation)
 
     def test_create_multiple_instances_with_single_volume_bdm(self):
         """Test that a BadRequest is raised if multiple instances
         are requested to boot from a single volume.
         """
         min_count = 2
-        bdm = [{'device_name': 'foo1', 'volume_id': 'vol-xxxx'}]
+        bdm = [{'source_type': 'volume', 'uuid': 'vol-xxxx'}]
         params = {
-                 'block_device_mapping': bdm,
+                 block_device_mapping.ATTRIBUTE_NAME: bdm,
                  multiple_create.MIN_ATTRIBUTE_NAME: min_count
         }
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
             self.assertEqual(kwargs['min_count'], 2)
-            self.assertEqual(kwargs['block_device_mapping']['volume_id'],
+            self.assertEqual(kwargs['block_device_mapping'][0]['volume_id'],
                             'vol-xxxx')
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self._test_create_extra, params, no_image=True)
+        exc = self.assertRaises(webob.exc.HTTPBadRequest,
+                                self._test_create_extra, params, no_image=True)
+        self.assertEqual("Cannot attach one or more volumes to multiple "
+                         "instances", exc.explanation)
 
     def test_create_multiple_instance_with_non_integer_max_count(self):
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
