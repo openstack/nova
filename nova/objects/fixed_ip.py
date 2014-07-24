@@ -94,7 +94,7 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
 
     @obj_base.remotable_classmethod
     def get_by_floating_address(cls, context, address):
-        db_fixedip = db.fixed_ip_get_by_floating_address(context, address)
+        db_fixedip = db.fixed_ip_get_by_floating_address(context, str(address))
         if db_fixedip is not None:
             return cls._from_db_object(context, cls(context), db_fixedip)
 
