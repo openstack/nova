@@ -48,35 +48,35 @@ DEV_PREFIX_ETH = 'eth'
 
 
 def is_vif_model_valid_for_virt(virt_type, vif_model):
-        valid_models = {
-            'qemu': [network_model.VIF_MODEL_VIRTIO,
-                     network_model.VIF_MODEL_NE2K_PCI,
-                     network_model.VIF_MODEL_PCNET,
-                     network_model.VIF_MODEL_RTL8139,
-                     network_model.VIF_MODEL_E1000,
-                     network_model.VIF_MODEL_SPAPR_VLAN],
-            'kvm': [network_model.VIF_MODEL_VIRTIO,
-                    network_model.VIF_MODEL_NE2K_PCI,
-                    network_model.VIF_MODEL_PCNET,
-                    network_model.VIF_MODEL_RTL8139,
-                    network_model.VIF_MODEL_E1000,
-                    network_model.VIF_MODEL_SPAPR_VLAN],
-            'xen': [network_model.VIF_MODEL_NETFRONT,
-                    network_model.VIF_MODEL_NE2K_PCI,
-                    network_model.VIF_MODEL_PCNET,
-                    network_model.VIF_MODEL_RTL8139,
-                    network_model.VIF_MODEL_E1000],
-            'lxc': [],
-            'uml': [],
-            }
+    valid_models = {
+        'qemu': [network_model.VIF_MODEL_VIRTIO,
+                 network_model.VIF_MODEL_NE2K_PCI,
+                 network_model.VIF_MODEL_PCNET,
+                 network_model.VIF_MODEL_RTL8139,
+                 network_model.VIF_MODEL_E1000,
+                 network_model.VIF_MODEL_SPAPR_VLAN],
+        'kvm': [network_model.VIF_MODEL_VIRTIO,
+                network_model.VIF_MODEL_NE2K_PCI,
+                network_model.VIF_MODEL_PCNET,
+                network_model.VIF_MODEL_RTL8139,
+                network_model.VIF_MODEL_E1000,
+                network_model.VIF_MODEL_SPAPR_VLAN],
+        'xen': [network_model.VIF_MODEL_NETFRONT,
+                network_model.VIF_MODEL_NE2K_PCI,
+                network_model.VIF_MODEL_PCNET,
+                network_model.VIF_MODEL_RTL8139,
+                network_model.VIF_MODEL_E1000],
+        'lxc': [],
+        'uml': [],
+        }
 
-        if vif_model is None:
-            return True
+    if vif_model is None:
+        return True
 
-        if virt_type not in valid_models:
-            raise exception.UnsupportedVirtType(virt=virt_type)
+    if virt_type not in valid_models:
+        raise exception.UnsupportedVirtType(virt=virt_type)
 
-        return vif_model in valid_models[virt_type]
+    return vif_model in valid_models[virt_type]
 
 
 class LibvirtGenericVIFDriver(object):
