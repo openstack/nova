@@ -23,7 +23,6 @@ Usual usage in an openstack.common module:
 """
 
 import copy
-import functools
 import gettext
 import locale
 from logging import handlers
@@ -42,7 +41,7 @@ class TranslatorFactory(object):
     """Create translator functions
     """
 
-    def __init__(self, domain, lazy=False, localedir=None):
+    def __init__(self, domain, localedir=None):
         """Establish a set of translation functions for the domain.
 
         :param domain: Name of translation domain,
@@ -55,7 +54,6 @@ class TranslatorFactory(object):
         :type localedir: str
         """
         self.domain = domain
-        self.lazy = lazy
         if localedir is None:
             localedir = os.environ.get(domain.upper() + '_LOCALEDIR')
         self.localedir = localedir
@@ -75,16 +73,19 @@ class TranslatorFactory(object):
         """
         if domain is None:
             domain = self.domain
-        if self.lazy:
-            return functools.partial(Message, domain=domain)
-        t = gettext.translation(
-            domain,
-            localedir=self.localedir,
-            fallback=True,
-        )
-        if six.PY3:
-            return t.gettext
-        return t.ugettext
+        t = gettext.translation(domain,
+                                localedir=self.localedir,
+                                fallback=True)
+        # Use the appropriate method of the translation object based
+        # on the python version.
+        m = t.gettext if six.PY3 else t.ugettext
+
+        def f(msg):
+            """oslo.i18n.gettextutils translation function."""
+            if USE_LAZY:
+                return Message(msg, domain=domain)
+            return m(msg)
+        return f
 
     @property
     def primary(self):
@@ -147,19 +148,11 @@ def enable_lazy():
     your project is importing _ directly instead of using the
     gettextutils.install() way of importing the _ function.
     """
-    # FIXME(dhellmann): This function will be removed in oslo.i18n,
-    # because the TranslatorFactory makes it superfluous.
-    global _, _LI, _LW, _LE, _LC, USE_LAZY
-    tf = TranslatorFactory('nova', lazy=True)
-    _ = tf.primary
-    _LI = tf.log_info
-    _LW = tf.log_warning
-    _LE = tf.log_error
-    _LC = tf.log_critical
+    global USE_LAZY
     USE_LAZY = True
 
 
-def install(domain, lazy=False):
+def install(domain):
     """Install a _() function using the given translation domain.
 
     Given a translation domain, install a _() function using gettext's
@@ -170,26 +163,14 @@ def install(domain, lazy=False):
     a translation-domain-specific environment variable (e.g.
     NOVA_LOCALEDIR).
 
+    Note that to enable lazy translation, enable_lazy must be
+    called.
+
     :param domain: the translation domain
-    :param lazy: indicates whether or not to install the lazy _() function.
-                 The lazy _() introduces a way to do deferred translation
-                 of messages by installing a _ that builds Message objects,
-                 instead of strings, which can then be lazily translated into
-                 any available locale.
     """
-    if lazy:
-        from six import moves
-        tf = TranslatorFactory(domain, lazy=True)
-        moves.builtins.__dict__['_'] = tf.primary
-    else:
-        localedir = '%s_LOCALEDIR' % domain.upper()
-        if six.PY3:
-            gettext.install(domain,
-                            localedir=os.environ.get(localedir))
-        else:
-            gettext.install(domain,
-                            localedir=os.environ.get(localedir),
-                            unicode=True)
+    from six import moves
+    tf = TranslatorFactory(domain)
+    moves.builtins.__dict__['_'] = tf.primary
 
 
 class Message(six.text_type):

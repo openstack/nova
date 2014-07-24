@@ -50,6 +50,28 @@ SLUGIFY_STRIP_RE = re.compile(r"[^\w\s-]")
 SLUGIFY_HYPHENATE_RE = re.compile(r"[-\s]+")
 
 
+# NOTE(flaper87): The following 3 globals are used by `mask_password`
+_SANITIZE_KEYS = ['adminPass', 'admin_pass', 'password', 'admin_password']
+
+# NOTE(ldbragst): Let's build a list of regex objects using the list of
+# _SANITIZE_KEYS we already have. This way, we only have to add the new key
+# to the list of _SANITIZE_KEYS and we can generate regular expressions
+# for XML and JSON automatically.
+_SANITIZE_PATTERNS = []
+_FORMAT_PATTERNS = [r'(%(key)s\s*[=]\s*[\"\']).*?([\"\'])',
+                    r'(<%(key)s>).*?(</%(key)s>)',
+                    r'([\"\']%(key)s[\"\']\s*:\s*[\"\']).*?([\"\'])',
+                    r'([\'"].*?%(key)s[\'"]\s*:\s*u?[\'"]).*?([\'"])',
+                    r'([\'"].*?%(key)s[\'"]\s*,\s*\'--?[A-z]+\'\s*,\s*u?[\'"])'
+                    '.*?([\'"])',
+                    r'(%(key)s\s*--?[A-z]+\s*)\S+(\s*)']
+
+for key in _SANITIZE_KEYS:
+    for pattern in _FORMAT_PATTERNS:
+        reg_ex = re.compile(pattern % {'key': key}, re.DOTALL)
+        _SANITIZE_PATTERNS.append(reg_ex)
+
+
 def int_from_bool_as_string(subject):
     """Interpret a string as a boolean and return either 1 or 0.
 
@@ -237,3 +259,37 @@ def to_slug(value, incoming=None, errors="strict"):
         "ascii", "ignore").decode("ascii")
     value = SLUGIFY_STRIP_RE.sub("", value).strip().lower()
     return SLUGIFY_HYPHENATE_RE.sub("-", value)
+
+
+def mask_password(message, secret="***"):
+    """Replace password with 'secret' in message.
+
+    :param message: The string which includes security information.
+    :param secret: value with which to replace passwords.
+    :returns: The unicode value of message with the password fields masked.
+
+    For example:
+
+    >>> mask_password("'adminPass' : 'aaaaa'")
+    "'adminPass' : '***'"
+    >>> mask_password("'admin_pass' : 'aaaaa'")
+    "'admin_pass' : '***'"
+    >>> mask_password('"password" : "aaaaa"')
+    '"password" : "***"'
+    >>> mask_password("'original_password' : 'aaaaa'")
+    "'original_password' : '***'"
+    >>> mask_password("u'original_password' :   u'aaaaa'")
+    "u'original_password' :   u'***'"
+    """
+    message = six.text_type(message)
+
+    # NOTE(ldbragst): Check to see if anything in message contains any key
+    # specified in _SANITIZE_KEYS, if not then just return the message since
+    # we don't have to mask any passwords.
+    if not any(key in message for key in _SANITIZE_KEYS):
+        return message
+
+    secret = r'\g<1>' + secret + r'\g<2>'
+    for pattern in _SANITIZE_PATTERNS:
+        message = re.sub(pattern, secret, message)
+    return message
