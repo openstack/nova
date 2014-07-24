@@ -69,7 +69,6 @@ class _IntegratedTestBase(test.TestCase):
         f = self._get_flags()
         self.flags(**f)
         self.flags(verbose=True)
-        self.flags(periodic_enable=False)
 
         self.useFixture(test.ReplaceModule('crypto', fake_crypto))
         nova.tests.image.fake.stub_out_image_service(self.stubs)
