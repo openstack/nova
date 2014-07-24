@@ -877,27 +877,56 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.mox.VerifyAll()
 
-    def test_direct_fetch_fail(self):
+    def test_direct_fetch_fail_no_layering_support(self):
+        self.prepare_mocks()
         image = self.image_class(self.INSTANCE, self.NAME)
-        self.stubs.Set(image, '_is_cloneable', lambda: True)
-        self.assertRaises(exception.ImageUnacceptable,
-                          image.direct_fetch, 'image_id',
-                          {'disk_format': 'raw'},
-                          [{'url': 'rbd://a/b/c/d'}])
-        self.rbd.RBD_FEATURE_LAYERING = 1
-        self.assertRaises(exception.ImageUnacceptable,
-                          image.direct_fetch, 'image_id',
-                          {},
-                          [{'url': 'rbd://a/b/c/d'}])
-        self.assertRaises(exception.ImageUnacceptable,
-                          image.direct_fetch, 'image_id',
-                          {'disk_format': 'raw'},
-                          [])
-        self.stubs.Set(image, '_is_cloneable', lambda: False)
-        self.assertRaises(exception.ImageUnacceptable,
-                          image.direct_fetch, 'image_id',
-                          {'disk_format': 'raw'},
-                          [{'url': 'rbd://a/b/c/d'}])
+        self.stubs.Set(image, '_supports_layering', lambda: False)
+        self.assertRaisesRegexp(
+            exception.ImageUnacceptable,
+            'installed version of librbd does not support cloning',
+            image.direct_fetch,
+            'image_id',
+            {'disk_format': 'raw'},
+            [{'url': 'rbd://a/b/c/d'}]
+        )
+
+    def test_direct_fetch_fail_no_supported_image_format(self):
+        self.prepare_mocks()
+        image = self.image_class(self.INSTANCE, self.NAME)
+        self.assertRaisesRegexp(
+            exception.ImageUnacceptable,
+            'Image is not raw format',
+            image.direct_fetch,
+            'image_id',
+            {},
+            [{'url': 'rbd://a/b/c/d'}]
+        )
+
+    def test_direct_fetch_fail_no_image_locations(self):
+        self.prepare_mocks()
+        image = self.image_class(self.INSTANCE, self.NAME)
+        self.stubs.Set(image, '_is_cloneable', lambda x: True)
+        self.assertRaisesRegexp(
+            exception.ImageUnacceptable,
+            'No image locations are accessible',
+            image.direct_fetch,
+            'image_id',
+            {'disk_format': 'raw'},
+            []
+        )
+
+    def test_direct_fetch_fail_no_cloneable_image(self):
+        self.prepare_mocks()
+        image = self.image_class(self.INSTANCE, self.NAME)
+        self.stubs.Set(image, '_is_cloneable', lambda x: False)
+        self.assertRaisesRegexp(
+            exception.ImageUnacceptable,
+            'No image locations are accessible',
+            image.direct_fetch,
+            'image_id',
+            {'disk_format': 'raw'},
+            [{'url': 'rbd://a/b/c/d'}]
+    )
 
     def test_good_locations(self):
         image = self.image_class(self.INSTANCE, self.NAME)
