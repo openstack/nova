@@ -1073,6 +1073,15 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual(len(servers), 1)
         self.assertEqual(servers[0]['id'], server_uuid)
 
+    @mock.patch.object(compute_api.API, 'get_all')
+    def test_get_servers_flavor_not_found(self, get_all_mock):
+        get_all_mock.side_effect = exception.FlavorNotFound(flavor_id=1)
+
+        req = fakes.HTTPRequest.blank(
+                    '/fake/servers?status=active&flavor=abc')
+        servers = self.controller.index(req)['servers']
+        self.assertEqual(0, len(servers))
+
     def test_get_servers_allows_changes_since(self):
         server_uuid = str(uuid.uuid4())
 
