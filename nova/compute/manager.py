@@ -4790,6 +4790,17 @@ class ComputeManager(manager.Manager):
                                                 instance,
                                                 migration)
 
+        destroy_vifs = False
+        try:
+            self.driver.post_live_migration_at_source(ctxt, instance,
+                                                      network_info)
+        except NotImplementedError as ex:
+            LOG.debug(ex, instance=instance)
+            # For all hypervisors other than libvirt, there is a possibility
+            # they are unplugging networks from source node in the cleanup
+            # method
+            destroy_vifs = True
+
         # Define domain at destination host, without doing it,
         # pause/suspend/terminate do not work.
         self.compute_rpcapi.post_live_migration_at_destination(ctxt,
@@ -4801,16 +4812,9 @@ class ComputeManager(manager.Manager):
         if do_cleanup:
             self.driver.cleanup(ctxt, instance, network_info,
                                 destroy_disks=destroy_disks,
-                                migrate_data=migrate_data)
-        else:
-            # self.driver.cleanup() usually performs  vif unplugging
-            # but we must do it explicitly here when block_migration
-            # is false, as the network devices at the source must be
-            # torn down
-            try:
-                self.driver.unplug_vifs(instance, network_info)
-            except NotImplementedError as e:
-                LOG.debug(e, instance=instance)
+                                migrate_data=migrate_data,
+                                destroy_vifs=destroy_vifs)
+
         # NOTE(tr3buchet): tear down networks on source host
         self.network_api.setup_networks_on_host(ctxt, instance,
                                                 self.host, teardown=True)

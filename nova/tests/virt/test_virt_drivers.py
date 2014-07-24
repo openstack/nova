@@ -34,6 +34,7 @@ from nova.tests.virt.libvirt import fake_libvirt_utils
 from nova.tests.virt.libvirt import test_driver
 from nova.virt import event as virtevent
 from nova.virt import fake
+from nova.virt import libvirt
 from nova.virt.libvirt import imagebackend
 
 LOG = logging.getLogger(__name__)
@@ -829,3 +830,21 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
             self.connection._set_host_enabled(False, 'ERROR!')
             self.assertTrue(service_mock.disabled)
             self.assertEqual(service_mock.disabled_reason, 'Manually disabled')
+
+    @catch_notimplementederror
+    @mock.patch.object(libvirt.driver.LibvirtDriver, '_unplug_vifs')
+    def test_unplug_vifs_with_destroy_vifs_false(self, unplug_vifs_mock):
+        instance_ref, network_info = self._get_running_instance()
+        self.connection.cleanup(self.ctxt, instance_ref, network_info,
+                                destroy_vifs=False)
+        self.assertEqual(unplug_vifs_mock.call_count, 0)
+
+    @catch_notimplementederror
+    @mock.patch.object(libvirt.driver.LibvirtDriver, '_unplug_vifs')
+    def test_unplug_vifs_with_destroy_vifs_true(self, unplug_vifs_mock):
+        instance_ref, network_info = self._get_running_instance()
+        self.connection.cleanup(self.ctxt, instance_ref, network_info,
+                                destroy_vifs=True)
+        self.assertEqual(unplug_vifs_mock.call_count, 1)
+        unplug_vifs_mock.assert_called_once_with(instance_ref,
+                                            network_info, True)

@@ -1006,9 +1006,11 @@ class LibvirtDriver(driver.ComputeDriver):
                               {'errcode': errcode, 'e': e}, instance=instance)
 
     def cleanup(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True, migrate_data=None):
+                destroy_disks=True, migrate_data=None, destroy_vifs=True):
         self._undefine_domain(instance)
-        self._unplug_vifs(instance, network_info, True)
+        if destroy_vifs:
+            self._unplug_vifs(instance, network_info, True)
+
         retry = True
         while retry:
             try:
@@ -4870,6 +4872,15 @@ class LibvirtDriver(driver.ComputeDriver):
             connection_info = vol['connection_info']
             disk_dev = vol['mount_device'].rpartition("/")[2]
             self._disconnect_volume(connection_info, disk_dev)
+
+    def post_live_migration_at_source(self, context, instance, network_info):
+        """Unplug VIFs from networks at source.
+
+        :param context: security context
+        :param instance: instance object reference
+        :param network_info: instance network information
+        """
+        self.unplug_vifs(instance, network_info)
 
     def post_live_migration_at_destination(self, context,
                                            instance,

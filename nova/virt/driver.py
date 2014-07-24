@@ -319,7 +319,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def cleanup(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True, migrate_data=None):
+                destroy_disks=True, migrate_data=None, destroy_vifs=True):
         """Cleanup the instance resources .
 
         Instance should have been destroyed from the Hypervisor before calling
@@ -694,6 +694,16 @@ class ComputeDriver(object):
         :param migrate_data: if not None, it is a dict which has data
         """
         pass
+
+    def post_live_migration_at_source(self, context, instance, network_info):
+        """Unplug VIFs from networks at source.
+
+        :param context: security context
+        :param instance: instance object reference
+        :param network_info: instance network information
+        """
+        raise NotImplementedError(_("Hypervisor driver does not support "
+                                    "post_live_migration_at_source method"))
 
     def post_live_migration_at_destination(self, context, instance,
                                            network_info,
