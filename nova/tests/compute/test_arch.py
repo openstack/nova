@@ -50,6 +50,12 @@ class ArchTest(test.NoDBTestCase):
     def test_canonicalize_case(self):
         self.assertEqual(arch.X86_64, arch.canonicalize("X86_64"))
 
+    def test_canonicalize_compat_xen1(self):
+        self.assertEqual(arch.I686, arch.canonicalize("x86_32"))
+
+    def test_canonicalize_compat_xen2(self):
+        self.assertEqual(arch.I686, arch.canonicalize("x86_32p"))
+
     def test_canonicalize_bogus(self):
         self.assertRaises(exception.InvalidArchitectureName,
                           arch.canonicalize,

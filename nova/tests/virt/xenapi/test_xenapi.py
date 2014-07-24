@@ -27,6 +27,7 @@ import mox
 from oslo.config import cfg
 
 from nova.compute import api as compute_api
+from nova.compute import arch
 from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
@@ -2167,18 +2168,18 @@ class ToSupportedInstancesTestCase(test.NoDBTestCase):
             host.to_supported_instances(None))
 
     def test_return_value(self):
-        self.assertEqual([('x86_64', 'xapi', 'xen')],
+        self.assertEqual([(arch.X86_64, 'xapi', 'xen')],
              host.to_supported_instances([u'xen-3.0-x86_64']))
 
     def test_invalid_values_do_not_break(self):
-        self.assertEqual([('x86_64', 'xapi', 'xen')],
+        self.assertEqual([(arch.X86_64, 'xapi', 'xen')],
              host.to_supported_instances([u'xen-3.0-x86_64', 'spam']))
 
     def test_multiple_values(self):
         self.assertEqual(
             [
-                ('x86_64', 'xapi', 'xen'),
-                ('x86_32', 'xapi', 'hvm')
+                (arch.X86_64, 'xapi', 'xen'),
+                (arch.I686, 'xapi', 'hvm')
             ],
             host.to_supported_instances([u'xen-3.0-x86_64', 'hvm-3.0-x86_32'])
         )

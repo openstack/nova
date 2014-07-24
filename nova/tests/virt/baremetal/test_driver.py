@@ -23,6 +23,7 @@ import mock
 import mox
 from oslo.config import cfg
 
+from nova.compute import arch
 from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
@@ -51,7 +52,7 @@ COMMON_FLAGS = dict(
 
 BAREMETAL_FLAGS = dict(
     driver='nova.virt.baremetal.fake.FakeDriver',
-    flavor_extra_specs=['cpu_arch:test', 'test_spec:test_value'],
+    flavor_extra_specs=['cpu_arch:x86_64', 'test_spec:test_value'],
     power_manager='nova.virt.baremetal.fake.FakePowerManager',
     vif_driver='nova.virt.baremetal.fake.FakeVifDriver',
     volume_driver='nova.virt.baremetal.fake.FakeVolumeDriver',
@@ -167,7 +168,7 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         self.assertIsInstance(stats, list)
         self.assertEqual(len(stats), 1)
         stats = stats[0]
-        self.assertEqual(stats['cpu_arch'], 'test')
+        self.assertEqual(stats['cpu_arch'], arch.X86_64)
         self.assertEqual(stats['test_spec'], 'test_value')
         self.assertEqual(stats['hypervisor_type'], 'baremetal')
         self.assertEqual(stats['hypervisor_hostname'], node['node']['uuid'])
@@ -396,9 +397,9 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
                          node['node_info']['memory_mb'])
         self.assertEqual(resources['memory_mb_used'], 0)
         self.assertEqual(resources['supported_instances'],
-                '[["test", "baremetal", "baremetal"]]')
+                '[["x86_64", "baremetal", "baremetal"]]')
         self.assertEqual(resources['stats'],
-                         '{"cpu_arch": "test", "baremetal_driver": '
+                         '{"cpu_arch": "x86_64", "baremetal_driver": '
                          '"nova.virt.baremetal.fake.FakeDriver", '
                          '"test_spec": "test_value"}')
 

@@ -22,6 +22,7 @@ A driver for Bare-metal platform.
 
 from oslo.config import cfg
 
+from nova.compute import arch
 from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
@@ -142,15 +143,19 @@ class BareMetalDriver(driver.ComputeDriver):
             keyval[0] = keyval[0].strip()
             keyval[1] = keyval[1].strip()
             extra_specs[keyval[0]] = keyval[1]
-        if 'cpu_arch' not in extra_specs:
-            LOG.warning(
-                    _('cpu_arch is not found in flavor_extra_specs'))
-            extra_specs['cpu_arch'] = ''
+
         self.extra_specs = extra_specs
 
-        self.supported_instances = [
-                (extra_specs['cpu_arch'], 'baremetal', 'baremetal'),
-                ]
+        if 'cpu_arch' not in extra_specs:
+            LOG.info(
+                _('cpu_arch is not found in flavor_extra_specs'))
+            self.supported_instances = []
+        else:
+            self.supported_instances = [(
+                arch.canonicalize(extra_specs['cpu_arch']),
+                'baremetal',
+                'baremetal'
+            ), ]
 
     @classmethod
     def instance(cls):

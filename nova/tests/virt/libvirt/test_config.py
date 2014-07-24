@@ -14,6 +14,7 @@
 
 from lxml import etree
 
+from nova.compute import arch
 from nova.openstack.common import units
 from nova import test
 from nova.tests import matchers
@@ -274,7 +275,7 @@ class LibvirtConfigCPUTest(LibvirtConfigBaseTest):
         obj = config.LibvirtConfigCPU()
         obj.model = "Penryn"
         obj.vendor = "Intel"
-        obj.arch = "x86_64"
+        obj.arch = arch.X86_64
 
         obj.add_feature(config.LibvirtConfigCPUFeature("mtrr"))
         obj.add_feature(config.LibvirtConfigCPUFeature("apic"))
@@ -294,7 +295,7 @@ class LibvirtConfigCPUTest(LibvirtConfigBaseTest):
         obj = config.LibvirtConfigCPU()
         obj.model = "Penryn"
         obj.vendor = "Intel"
-        obj.arch = "x86_64"
+        obj.arch = arch.X86_64
 
         obj.add_feature(config.LibvirtConfigCPUFeature("mtrr"))
         obj.add_feature(config.LibvirtConfigCPUFeature("apic"))
@@ -345,7 +346,7 @@ class LibvirtConfigGuestCPUTest(LibvirtConfigBaseTest):
         obj = config.LibvirtConfigGuestCPU()
         obj.model = "Penryn"
         obj.vendor = "Intel"
-        obj.arch = "x86_64"
+        obj.arch = arch.X86_64
         obj.mode = "custom"
 
         obj.add_feature(config.LibvirtConfigGuestCPUFeature("mtrr"))

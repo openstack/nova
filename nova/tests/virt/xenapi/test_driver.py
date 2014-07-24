@@ -17,6 +17,7 @@ import math
 
 import mock
 
+from nova.compute import arch
 from nova.openstack.common import units
 from nova.tests.virt import test_driver
 from nova.tests.virt.xenapi import stubs
@@ -42,7 +43,7 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB,
                 'disk_used': 2 * units.Gi,
                 'disk_allocated': 4 * units.Gi,
                 'host_hostname': 'somename',
-                'supported_instances': 'x86_64',
+                'supported_instances': arch.X86_64,
                 'host_cpu_info': {'cpu_count': 50},
                 'vcpus_used': 10,
                 'pci_passthrough_devices': ''}

@@ -22,6 +22,7 @@ import uuid
 
 from oslo.config import cfg
 
+from nova.compute import arch
 from nova import exception
 import nova.image.glance
 from nova.openstack.common import log as logging
@@ -53,7 +54,7 @@ class _FakeImageService(object):
                  'size': '25165824',
                  'properties': {'kernel_id': CONF.null_kernel,
                                 'ramdisk_id': CONF.null_kernel,
-                                'architecture': 'x86_64'}}
+                                'architecture': arch.X86_64}}
 
         image2 = {'id': 'a2459075-d96c-40d5-893e-577ff92e721c',
                  'name': 'fakeimage123456',
@@ -125,7 +126,7 @@ class _FakeImageService(object):
                  'size': '49163826',
                  'properties': {'kernel_id': CONF.null_kernel,
                                 'ramdisk_id': CONF.null_kernel,
-                                'architecture': 'x86_64',
+                                'architecture': arch.X86_64,
                                 'auto_disk_config': 'False'}}
 
         image7 = {'id': '70a599e0-31e7-49b7-b260-868f441e862b',
@@ -141,7 +142,7 @@ class _FakeImageService(object):
                  'size': '74185822',
                  'properties': {'kernel_id': CONF.null_kernel,
                                 'ramdisk_id': CONF.null_kernel,
-                                'architecture': 'x86_64',
+                                'architecture': arch.X86_64,
                                 'auto_disk_config': 'True'}}
 
         self.create(None, image1)

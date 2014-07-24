@@ -22,6 +22,7 @@ import mock
 import mox
 
 from nova.compute import api as compute_api
+from nova.compute import arch
 from nova.compute import cells_api as compute_cells_api
 from nova.compute import flavors
 from nova.compute import instance_actions
@@ -133,7 +134,7 @@ class _ComputeAPIUnitTestMixIn(object):
         instance.vcpus = 0
         instance.root_gb = 0
         instance.ephemeral_gb = 0
-        instance.architecture = 'x86_64'
+        instance.architecture = arch.X86_64
         instance.os_type = 'Linux'
         instance.locked = False
         instance.created_at = now
@@ -1921,7 +1922,7 @@ class _ComputeAPIUnitTestMixIn(object):
         flavor = instance.get_flavor()
         image_href = ''
         image = {"min_ram": 10, "min_disk": 1,
-                 "properties": {'architecture': 'x86_64'}}
+                 "properties": {'architecture': arch.X86_64}}
         admin_pass = ''
         files_to_inject = []
         bdms = []
@@ -1960,11 +1961,11 @@ class _ComputeAPIUnitTestMixIn(object):
         get_flavor.return_value = test_flavor.fake_flavor
         orig_image_href = 'orig_image'
         orig_image = {"min_ram": 10, "min_disk": 1,
-                      "properties": {'architecture': 'x86_64',
+                      "properties": {'architecture': arch.X86_64,
                                      'vm_mode': 'hvm'}}
         new_image_href = 'new_image'
         new_image = {"min_ram": 10, "min_disk": 1,
-                     "properties": {'architecture': 'x86_64',
+                     "properties": {'architecture': arch.X86_64,
                                     'vm_mode': 'xen'}}
         admin_pass = ''
         files_to_inject = []

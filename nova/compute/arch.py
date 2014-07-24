@@ -149,6 +149,10 @@ def canonicalize(name):
     if newname in ("i386", "i486", "i586"):
         newname = I686
 
+    # Xen mistake from Icehouse or earlier
+    if newname in ("x86_32", "x86_32p"):
+        newname = I686
+
     if not is_valid(newname):
         raise exception.InvalidArchitectureName(arch=name)
 

@@ -17,6 +17,7 @@ from lxml import etree
 import time
 import uuid
 
+from nova.compute import arch
 from nova.i18n import _
 
 # Allow passing None to the various connect methods
@@ -24,7 +25,7 @@ from nova.i18n import _
 allow_default_uri_connection = True
 
 # string indicating the CPU arch
-node_arch = 'x86_64'  # or 'i686' (or whatever else uname -m might return)
+node_arch = arch.X86_64  # or 'i686' (or whatever else uname -m might return)
 
 # memory size in kilobytes
 node_kB_mem = 4096
@@ -860,7 +861,7 @@ class Connection(object):
 
   <guest>
     <os_type>hvm</os_type>
-    <arch name='arm'>
+    <arch name='armv7l'>
       <wordsize>32</wordsize>
       <emulator>/usr/bin/qemu-system-arm</emulator>
       <machine>integratorcp</machine>
@@ -988,7 +989,8 @@ class Connection(object):
 
         arch_node = tree.find('./arch')
         if arch_node is not None:
-            if arch_node.text not in ['x86_64', 'i686']:
+            if arch_node.text not in [arch.X86_64,
+                                      arch.I686]:
                 return VIR_CPU_COMPARE_INCOMPATIBLE
 
         model_node = tree.find('./model')
