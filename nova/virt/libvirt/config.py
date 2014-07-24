@@ -111,6 +111,118 @@ class LibvirtConfigCaps(LibvirtConfigObject):
         return caps
 
 
+class LibvirtConfigCapsNUMATopology(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigCapsNUMATopology, self).__init__(
+            root_name="topology",
+            **kwargs)
+
+        self.cells = []
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigCapsNUMATopology, self).parse_dom(xmldoc)
+
+        xmlcells = xmldoc.getchildren()[0]
+        for xmlcell in xmlcells.getchildren():
+            cell = LibvirtConfigCapsNUMACell()
+            cell.parse_dom(xmlcell)
+            self.cells.append(cell)
+
+    def format_dom(self):
+        topo = super(LibvirtConfigCapsNUMATopology, self).format_dom()
+
+        cells = etree.Element("cells")
+        cells.set("num", str(len(self.cells)))
+        topo.append(cells)
+
+        for cell in self.cells:
+            cells.append(cell.format_dom())
+
+        return topo
+
+
+class LibvirtConfigCapsNUMACell(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigCapsNUMACell, self).__init__(root_name="cell",
+                                                        **kwargs)
+
+        self.id = None
+        self.memory = None
+        self.cpus = []
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigCapsNUMACell, self).parse_dom(xmldoc)
+
+        self.id = int(xmldoc.get("id"))
+        for c in xmldoc.getchildren():
+            if c.tag == "memory":
+                self.memory = int(c.text)
+            elif c.tag == "cpus":
+                for c2 in c.getchildren():
+                    cpu = LibvirtConfigCapsNUMACPU()
+                    cpu.parse_dom(c2)
+                    self.cpus.append(cpu)
+
+    def format_dom(self):
+        cell = super(LibvirtConfigCapsNUMACell, self).format_dom()
+
+        cell.set("id", str(self.id))
+
+        mem = etree.Element("memory")
+        mem.set("unit", "KiB")
+        mem.text = str(self.memory)
+        cell.append(mem)
+
+        cpus = etree.Element("cpus")
+        cpus.set("num", str(len(self.cpus)))
+        for cpu in self.cpus:
+            cpus.append(cpu.format_dom())
+        cell.append(cpus)
+
+        return cell
+
+
+class LibvirtConfigCapsNUMACPU(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigCapsNUMACPU, self).__init__(root_name="cpu",
+                                                       **kwargs)
+
+        self.id = None
+        self.socket_id = None
+        self.core_id = None
+        self.siblings = None
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigCapsNUMACPU, self).parse_dom(xmldoc)
+
+        self.id = int(xmldoc.get("id"))
+        if xmldoc.get("socket_id") is not None:
+            self.socket_id = int(xmldoc.get("socket_id"))
+        if xmldoc.get("core_id") is not None:
+            self.core_id = int(xmldoc.get("core_id"))
+
+        if xmldoc.get("siblings") is not None:
+            self.siblings = hardware.parse_cpu_spec(
+                xmldoc.get("siblings"))
+
+    def format_dom(self):
+        cpu = super(LibvirtConfigCapsNUMACPU, self).format_dom()
+
+        cpu.set("id", str(self.id))
+        if self.socket_id is not None:
+            cpu.set("socket_id", str(self.socket_id))
+        if self.core_id is not None:
+            cpu.set("core_id", str(self.core_id))
+        if self.siblings is not None:
+            cpu.set("siblings",
+                    hardware.format_cpu_spec(self.siblings))
+
+        return cpu
+
+
 class LibvirtConfigCapsHost(LibvirtConfigObject):
 
     def __init__(self, **kwargs):
@@ -119,6 +231,7 @@ class LibvirtConfigCapsHost(LibvirtConfigObject):
 
         self.cpu = None
         self.uuid = None
+        self.topology = None
 
     def parse_dom(self, xmldoc):
         super(LibvirtConfigCapsHost, self).parse_dom(xmldoc)
@@ -130,6 +243,9 @@ class LibvirtConfigCapsHost(LibvirtConfigObject):
                 self.cpu = cpu
             elif c.tag == "uuid":
                 self.uuid = c.text
+            elif c.tag == "topology":
+                self.topology = LibvirtConfigCapsNUMATopology()
+                self.topology.parse_dom(c)
 
     def format_dom(self):
         caps = super(LibvirtConfigCapsHost, self).format_dom()
@@ -138,6 +254,8 @@ class LibvirtConfigCapsHost(LibvirtConfigObject):
             caps.append(self._text_node("uuid", self.uuid))
         if self.cpu:
             caps.append(self.cpu.format_dom())
+        if self.topology:
+            caps.append(self.topology.format_dom())
 
         return caps
 
