@@ -16,12 +16,16 @@
 Tests For CellStateManager
 """
 
+import time
+
+import mock
 from oslo.config import cfg
 
 from nova.cells import state
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
+from nova.openstack.common.db import exception as db_exc
 from nova import test
 
 
@@ -143,6 +147,19 @@ class TestCellsStateManager(test.TestCase):
         state_manager = self._get_state_manager(reserve_percent)
         my_state = state_manager.get_my_state()
         return my_state.capacities
+
+
+class TestCellStateManagerException(test.TestCase):
+    @mock.patch.object(time, 'sleep')
+    def test_init_db_error(self, mock_sleep):
+        class TestCellStateManagerDB(state.CellStateManagerDB):
+            def __init__(self):
+                self._cell_data_sync = mock.Mock()
+                self._cell_data_sync.side_effect = [db_exc.DBError(), []]
+                super(TestCellStateManagerDB, self).__init__()
+        test = TestCellStateManagerDB()
+        mock_sleep.assert_called_once_with(30)
+        self.assertEqual(test._cell_data_sync.call_count, 2)
 
 
 class TestCellsGetCapacity(TestCellsStateManager):
