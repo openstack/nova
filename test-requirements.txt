@@ -9,7 +9,7 @@ MySQL-python
 psycopg2
 pylint==0.25.2
 python-subunit>=0.0.18
-sphinx>=1.1.2,<1.2
+sphinx>=1.1.2,<1.1.999
 oslosphinx
 testrepository>=0.0.18
 testtools>=0.9.34
