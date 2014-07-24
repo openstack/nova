@@ -112,26 +112,26 @@ class API(base_api.NetworkAPI):
     def get_floating_ip(self, context, id):
         if not utils.is_int_like(id):
             raise exception.InvalidID(id=id)
-        return self.db.floating_ip_get(context, id)
+        return objects.FloatingIP.get_by_id(context, id)
 
     @wrap_check_policy
     def get_floating_ip_pools(self, context):
-        return self.db.floating_ip_get_pools(context)
+        return objects.FloatingIP.get_pool_names(context)
 
     @wrap_check_policy
     def get_floating_ip_by_address(self, context, address):
-        return self.db.floating_ip_get_by_address(context, address)
+        return objects.FloatingIP.get_by_address(context, address)
 
     @wrap_check_policy
     def get_floating_ips_by_project(self, context):
-        return self.db.floating_ip_get_all_by_project(context,
-                                                      context.project_id)
+        return objects.FloatingIPList.get_by_project(context,
+                                                     context.project_id)
 
     @wrap_check_policy
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
-        floating_ips = self.db.floating_ip_get_by_fixed_address(context,
-                                                                fixed_address)
-        return [floating_ip['address'] for floating_ip in floating_ips]
+        floating_ips = objects.FloatingIPList.get_by_fixed_address(
+            context, fixed_address)
+        return [str(floating_ip.address) for floating_ip in floating_ips]
 
     @wrap_check_policy
     def get_instance_id_by_floating_address(self, context, address):

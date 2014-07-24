@@ -224,6 +224,53 @@ class ApiTestCase(test.TestCase):
                           self.network_api.get_floating_ip,
                           self.context, '123zzz')
 
+    @mock.patch('nova.objects.FloatingIP.get_by_id')
+    def test_get_floating_ip(self, mock_get):
+        floating = mock.sentinel.floating
+        mock_get.return_value = floating
+        self.assertEqual(floating,
+                         self.network_api.get_floating_ip(self.context, 123))
+        mock_get.assert_called_once_with(self.context, 123)
+
+    @mock.patch('nova.objects.FloatingIP.get_pool_names')
+    def test_get_floating_ip_pools(self, mock_get):
+        pools = ['foo', 'bar']
+        mock_get.return_value = pools
+        self.assertEqual(pools,
+                         self.network_api.get_floating_ip_pools(
+                             self.context))
+
+    @mock.patch('nova.objects.FloatingIP.get_by_address')
+    def test_get_floating_ip_by_address(self, mock_get):
+        floating = mock.sentinel.floating
+        mock_get.return_value = floating
+        self.assertEqual(floating,
+                         self.network_api.get_floating_ip_by_address(
+                             self.context, mock.sentinel.address))
+        mock_get.assert_called_once_with(self.context,
+                                         mock.sentinel.address)
+
+    @mock.patch('nova.objects.FloatingIPList.get_by_project')
+    def test_get_floating_ips_by_project(self, mock_get):
+        floatings = mock.sentinel.floating_ips
+        mock_get.return_value = floatings
+        self.assertEqual(floatings,
+                         self.network_api.get_floating_ips_by_project(
+                             self.context))
+        mock_get.assert_called_once_with(self.context,
+                                         self.context.project_id)
+
+    @mock.patch('nova.objects.FloatingIPList.get_by_fixed_address')
+    def test_get_floating_ips_by_fixed_address(self, mock_get):
+        floatings = [objects.FloatingIP(id=1, address='1.2.3.4'),
+                     objects.FloatingIP(id=2, address='5.6.7.8')]
+        mock_get.return_value = floatings
+        self.assertEqual(['1.2.3.4', '5.6.7.8'],
+                         self.network_api.get_floating_ips_by_fixed_address(
+                             self.context, mock.sentinel.fixed_address))
+        mock_get.assert_called_once_with(self.context,
+                                         mock.sentinel.fixed_address)
+
     def _stub_migrate_instance_calls(self, method, multi_host, info):
         fake_flavor = flavors.get_default_flavor()
         fake_flavor['rxtx_factor'] = 1.21
