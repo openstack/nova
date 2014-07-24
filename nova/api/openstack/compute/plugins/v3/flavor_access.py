@@ -25,7 +25,7 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 
-ALIAS = 'flavor-access'
+ALIAS = 'os-flavor-access'
 soft_authorize = extensions.soft_extension_authorizer('compute',
                                                       'v3:' + ALIAS)
 authorize = extensions.extension_authorizer('compute', 'v3:%s' % ALIAS)
@@ -106,14 +106,14 @@ class FlavorActionController(wsgi.Controller):
             self._extend_flavor(resp_obj.obj['flavor'], db_flavor)
 
     @extensions.expected_errors((400, 403, 404, 409))
-    @wsgi.action("add_tenant_access")
+    @wsgi.action("addTenantAccess")
     @validation.schema(flavor_access.add_tenant_access)
     def _add_tenant_access(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context, action="add_tenant_access")
 
-        vals = body['add_tenant_access']
-        tenant = vals['tenant_id']
+        vals = body['addTenantAccess']
+        tenant = vals['tenant']
 
         flavor = objects.Flavor(context=context, flavorid=id)
         try:
@@ -127,14 +127,14 @@ class FlavorActionController(wsgi.Controller):
         return _marshall_flavor_access(flavor)
 
     @extensions.expected_errors((400, 403, 404))
-    @wsgi.action("remove_tenant_access")
+    @wsgi.action("removeTenantAccess")
     @validation.schema(flavor_access.remove_tenant_access)
     def _remove_tenant_access(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context, action="remove_tenant_access")
 
-        vals = body['remove_tenant_access']
-        tenant = vals['tenant_id']
+        vals = body['removeTenantAccess']
+        tenant = vals['tenant']
 
         flavor = objects.Flavor(context=context, flavorid=id)
         try:

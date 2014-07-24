@@ -16,7 +16,7 @@
                 }
             ],
             "name": "m1.tiny",
-            "flavor-access:is_public": true,
+            "os-flavor-access:is_public": true,
             "ram": 512,
             "rxtx_factor": 1.0,
             "swap": 0,
@@ -38,7 +38,7 @@
                 }
             ],
             "name": "m1.small",
-            "flavor-access:is_public": true,
+            "os-flavor-access:is_public": true,
             "ram": 2048,
             "rxtx_factor": 1.0,
             "swap": 0,
@@ -60,7 +60,7 @@
                 }
             ],
             "name": "m1.medium",
-            "flavor-access:is_public": true,
+            "os-flavor-access:is_public": true,
             "ram": 4096,
             "rxtx_factor": 1.0,
             "swap": 0,
@@ -82,7 +82,7 @@
                 }
             ],
             "name": "m1.large",
-            "flavor-access:is_public": true,
+            "os-flavor-access:is_public": true,
             "ram": 8192,
             "rxtx_factor": 1.0,
             "swap": 0,
@@ -104,7 +104,7 @@
                 }
             ],
             "name": "m1.xlarge",
-            "flavor-access:is_public": true,
+            "os-flavor-access:is_public": true,
             "ram": 16384,
             "rxtx_factor": 1.0,
             "swap": 0,

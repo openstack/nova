@@ -1,5 +1,5 @@
 {
-    "remove_tenant_access": {
-        "tenant_id": "%(tenant_id)s"
+    "removeTenantAccess": {
+        "tenant": "%(tenant_id)s"
     }
 }

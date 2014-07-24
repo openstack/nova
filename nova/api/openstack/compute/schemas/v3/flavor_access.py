@@ -15,19 +15,19 @@
 add_tenant_access = {
     'type': 'object',
     'properties': {
-        'add_tenant_access': {
+        'addTenantAccess': {
             'type': 'object',
             'properties': {
-                'tenant_id': {
+                'tenant': {
                     # defined from project_id in instance_type_projects table
                     'type': 'string', 'minLength': 1, 'maxLength': 255,
                 },
             },
-            'required': ['tenant_id'],
+            'required': ['tenant'],
             'additionalProperties': False,
         },
     },
-    'required': ['add_tenant_access'],
+    'required': ['addTenantAccess'],
     'additionalProperties': False,
 }
 
@@ -35,18 +35,18 @@ add_tenant_access = {
 remove_tenant_access = {
     'type': 'object',
     'properties': {
-        'remove_tenant_access': {
+        'removeTenantAccess': {
             'type': 'object',
             'properties': {
-                'tenant_id': {
+                'tenant': {
                     # defined from project_id in instance_type_projects table
                     'type': 'string', 'minLength': 1, 'maxLength': 255,
                 },
             },
-            'required': ['tenant_id'],
+            'required': ['tenant'],
             'additionalProperties': False,
         },
     },
-    'required': ['remove_tenant_access'],
+    'required': ['removeTenantAccess'],
     'additionalProperties': False,
 }

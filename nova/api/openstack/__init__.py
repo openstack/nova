@@ -64,12 +64,12 @@ CONF.register_opts(api_opts, api_opts_group)
 # TODO(cyeoh): Expand this list as the core APIs are ported to V3
 API_V3_CORE_EXTENSIONS = set(['consoles',
                               'extensions',
-                              'flavor-access',
                               'flavor-extra-specs',
                               'flavor-manage',
                               'flavors',
                               'ips',
                               'os-keypairs',
+                              'os-flavor-access',
                               'server-metadata',
                               'servers',
                               'versions'])
