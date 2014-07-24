@@ -1424,15 +1424,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertRaises(exception.InstanceNotFound, self.conn.power_off,
                           self.instance)
 
-    def test_power_off_suspended(self):
-        self._create_vm()
-        self.conn.suspend(self.instance)
-        info = self.conn.get_info({'uuid': self.uuid,
-                                   'node': self.instance_node})
-        self._check_vm_info(info, power_state.SUSPENDED)
-        self.assertRaises(exception.InstancePowerOffFailure,
-                          self.conn.power_off, self.instance)
-
     def test_resume_state_on_host_boot(self):
         self._create_vm()
         self.mox.StubOutWithMock(vm_util, 'get_vm_state_from_name')
@@ -1635,14 +1626,18 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         # with power_on=True, the test_destroy_rescued tests the
         # vmops.unrescue with power_on=False
         self._rescue()
-        self.test_vm_ref = None
-        self.test_device_name = None
         vm_ref = vm_util.get_vm_ref(self.conn._session,
                                     self.instance)
+        vm_rescue_ref = vm_util.get_vm_ref_from_name(self.conn._session,
+                                                     '%s-rescue' % self.uuid)
 
-        def fake_power_off_vm_ref(vm_ref):
-            self.test_vm_ref = vm_ref
-            self.assertIsNotNone(vm_ref)
+        self.poweroff_instance = vm_util.power_off_instance
+
+        def fake_power_off_instance(session, instance, vm_ref):
+            # This is called so that we actually poweroff the simulated vm.
+            # The reason for this is that there is a validation in destroy
+            # that the instance is not powered on.
+            self.poweroff_instance(session, instance, vm_ref)
 
         def fake_detach_disk_from_vm(vm_ref, instance,
                                      device_name, destroy_disk=False):
@@ -1651,15 +1646,16 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             self._check_vm_info(info, power_state.SHUTDOWN)
 
         with contextlib.nested(
-            mock.patch.object(self.conn._vmops, "_power_off_vm_ref",
-                              side_effect=fake_power_off_vm_ref),
+            mock.patch.object(vm_util, "power_off_instance",
+                              side_effect=fake_power_off_instance),
             mock.patch.object(self.conn._volumeops, "detach_disk_from_vm",
                               side_effect=fake_detach_disk_from_vm),
             mock.patch.object(vm_util, "power_on_instance"),
         ) as (poweroff, detach, fake_power_on):
             self.conn.unrescue(self.instance, None)
-            poweroff.assert_called_once_with(self.test_vm_ref)
-            detach.assert_called_once_with(self.test_vm_ref, mock.ANY,
+            poweroff.assert_called_once_with(self.conn._session, mock.ANY,
+                                             vm_rescue_ref)
+            detach.assert_called_once_with(vm_rescue_ref, mock.ANY,
                                            self.test_device_name)
             fake_power_on.assert_called_once_with(self.conn._session,
                                                   self.instance,

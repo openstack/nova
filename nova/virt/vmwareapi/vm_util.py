@@ -1479,3 +1479,19 @@ def get_vm_detach_port_index(session, vm_ref, iface_id):
             if (option.key.startswith('nvp.iface-id.') and
                 option.value == iface_id):
                 return int(option.key.split('.')[2])
+
+
+def power_off_instance(session, instance, vm_ref=None):
+    """Power off the specified instance."""
+
+    if vm_ref is None:
+        vm_ref = get_vm_ref(session, instance)
+
+    LOG.debug("Powering off the VM", instance=instance)
+    try:
+        poweroff_task = session._call_method(session._get_vim(),
+                                         "PowerOffVM_Task", vm_ref)
+        session._wait_for_task(poweroff_task)
+        LOG.debug("Powered off the VM", instance=instance)
+    except error_util.InvalidPowerStateException:
+        LOG.debug("VM already powered off", instance=instance)
