@@ -25,7 +25,7 @@ from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _LW
 from nova.network import model as network_model
 from nova import notifications
 from nova import objects
@@ -201,7 +201,7 @@ def get_image_metadata(context, image_api, image_id_or_uri, instance):
     except (exception.ImageNotAuthorized,
             exception.ImageNotFound,
             exception.Invalid) as e:
-        LOG.warning(_("Can't access image %(image_id)s: %(error)s"),
+        LOG.warning(_LW("Can't access image %(image_id)s: %(error)s"),
                     {"image_id": image_id_or_uri, "error": e},
                     instance=instance)
         image_system_meta = {}
@@ -325,7 +325,7 @@ def notify_about_host_update(context, event_suffix, host_payload):
     """
     host_identifier = host_payload.get('host_name')
     if not host_identifier:
-        LOG.warn(_("No host name specified for the notification of "
+        LOG.warn(_LW("No host name specified for the notification of "
                    "HostAPI.%s and it will be ignored"), event_suffix)
         return
 
@@ -453,7 +453,7 @@ def periodic_task_spacing_warn(config_option_name):
     def wrapper(f):
         if (hasattr(f, "_periodic_spacing") and
                 (f._periodic_spacing == 0 or f._periodic_spacing is None)):
-            LOG.warning(_("Value of 0 or None specified for %s."
+            LOG.warning(_LW("Value of 0 or None specified for %s."
                 " This behaviour will change in meaning in the K release, to"
                 " mean 'call at the default rate' rather than 'do not call'."
                 " To keep the 'do not call' behaviour, use a negative value."),
