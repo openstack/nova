@@ -16,6 +16,7 @@ from eventlet import tpool
 
 from nova import exception
 from nova.i18n import _
+from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.virt.disk.vfs import api as vfs
 
@@ -37,7 +38,7 @@ class VFSGuestFS(vfs.VFS):
 
         global guestfs
         if guestfs is None:
-            guestfs = __import__('guestfs')
+            guestfs = importutils.import_module('guestfs')
 
         self.handle = None
 
