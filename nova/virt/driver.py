@@ -33,9 +33,9 @@ from nova.virt import event as virtevent
 driver_opts = [
     cfg.StrOpt('compute_driver',
                help='Driver to use for controlling virtualization. Options '
-                   'include: libvirt.LibvirtDriver, xenapi.XenAPIDriver, '
-                   'fake.FakeDriver, baremetal.BareMetalDriver, '
-                   'vmwareapi.VMwareVCDriver'),
+                    'include: libvirt.LibvirtDriver, xenapi.XenAPIDriver, '
+                    'fake.FakeDriver, baremetal.BareMetalDriver, '
+                    'vmwareapi.VMwareVCDriver, hyperv.HyperVDriver'),
     cfg.StrOpt('default_ephemeral_format',
                help='The default format an ephemeral_volume will be '
                     'formatted with on creation.'),
