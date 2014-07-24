@@ -97,7 +97,8 @@ class API(base_api.NetworkAPI):
     @wrap_check_policy
     def disassociate(self, context, network_uuid):
         network = self.get(context, network_uuid)
-        self.db.network_disassociate(context, network['id'])
+        objects.Network.disassociate(context, network.id,
+                                     host=True, project=True)
 
     @wrap_check_policy
     def get_fixed_ip(self, context, id):
@@ -317,21 +318,21 @@ class API(base_api.NetworkAPI):
     def associate(self, context, network_uuid, host=base_api.SENTINEL,
                   project=base_api.SENTINEL):
         """Associate or disassociate host or project to network."""
-        network_id = self.get(context, network_uuid)['id']
+        network = self.get(context, network_uuid)
         if host is not base_api.SENTINEL:
             if host is None:
-                self.db.network_disassociate(context, network_id,
-                                             disassociate_host=True,
-                                             disassociate_project=False)
+                objects.Network.disassociate(context, network.id,
+                                             host=True, project=False)
             else:
-                self.db.network_set_host(context, network_id, host)
+                network.host = host
+                network.save()
         if project is not base_api.SENTINEL:
             if project is None:
-                self.db.network_disassociate(context, network_id,
-                                             disassociate_host=False,
-                                             disassociate_project=True)
+                objects.Network.disassociate(context, network.id,
+                                             host=False, project=True)
             else:
-                self.db.network_associate(context, project, network_id, True)
+                objects.Network.associate(context, project,
+                                          network_id=network.id, force=True)
 
     @wrap_check_policy
     def get_instance_nw_info(self, context, instance, **kwargs):
