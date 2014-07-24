@@ -108,7 +108,7 @@ class API(object):
                            passed to the image registry.
         :param data: Optional file handle or bytestream iterator that is
                      passed to backend storage.
-        :param purge_props: Optional, defaults to True. If set, the backend
+        :param purge_props: Optional, defaults to False. If set, the backend
                             image registry will clear all image properties
                             and replace them the image properties supplied
                             in the image_info dictionary's 'properties'
