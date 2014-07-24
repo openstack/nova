@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 from nova import context
 from nova.objects import quotas as quotas_obj
 from nova import quota
@@ -141,6 +143,20 @@ class _TestQuotasObject(object):
         self.mox.StubOutWithMock(QUOTAS, 'rollback')
         self.mox.ReplayAll()
         quotas.rollback()
+
+    @mock.patch('nova.db.quota_create')
+    def test_create_limit(self, mock_create):
+        quotas_obj.Quotas.create_limit(self.context, 'fake-project',
+                                       'foo', 10, user_id='user')
+        mock_create.assert_called_once_with(self.context, 'fake-project',
+                                            'foo', 10, user_id='user')
+
+    @mock.patch('nova.db.quota_update')
+    def test_update_limit(self, mock_update):
+        quotas_obj.Quotas.update_limit(self.context, 'fake-project',
+                                       'foo', 10, user_id='user')
+        mock_update.assert_called_once_with(self.context, 'fake-project',
+                                            'foo', 10, user_id='user')
 
 
 class TestQuotasObject(_TestQuotasObject, test_objects._LocalTest):
