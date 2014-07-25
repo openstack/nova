@@ -15,6 +15,8 @@
 
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova.i18n import _
+from nova.openstack.common import jsonutils
 
 
 class Stats(dict):
@@ -30,6 +32,21 @@ class Stats(dict):
         super(Stats, self).clear()
 
         self.states.clear()
+
+    def digest_stats(self, stats):
+        """Apply stats provided as a dict or a json encoded string."""
+        # NOTE(pmurray): allow json strings as some drivers pass in
+        # stats in that way - they shouldn't really do that.
+        if stats is None:
+            return
+        if isinstance(stats, dict):
+            self.update(stats)
+            return
+        if isinstance(stats, str):
+            _stats_from_json = jsonutils.loads(stats)
+            self.update(_stats_from_json)
+            return
+        raise ValueError(_('Unexpected type adding stats'))
 
     @property
     def io_workload(self):

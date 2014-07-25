@@ -609,8 +609,10 @@ class ResourceTracker(object):
         """
         self.tracked_instances.clear()
 
-        # purge old stats
+        # purge old stats and init with anything passed in by the driver
         self.stats.clear()
+        self.stats.digest_stats(resources.get('stats'))
+        resources['stats'] = jsonutils.dumps(self.stats)
 
         # set some initial values, reserve room for host/hypervisor:
         resources['local_gb_used'] = CONF.reserved_host_disk_mb / 1024
