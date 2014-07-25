@@ -81,6 +81,7 @@ from nova import version
 from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
 from nova.virt.disk import api as disk
+from nova.virt.disk.vfs import guestfs
 from nova.virt import driver
 from nova.virt import event as virtevent
 from nova.virt import firewall
@@ -630,6 +631,12 @@ class LibvirtDriver(driver.ComputeDriver):
         libvirt.registerErrorHandler(libvirt_error_handler, None)
         libvirt.virEventRegisterDefaultImpl()
         self._do_quality_warnings()
+
+        # Stop libguestfs using KVM unless we're also configured
+        # to use this. This solves problem where people need to
+        # stop Nova use of KVM because nested-virt is broken
+        if CONF.libvirt.virt_type != "kvm":
+            guestfs.force_tcg()
 
         if not self._has_min_version(MIN_LIBVIRT_VERSION):
             major = MIN_LIBVIRT_VERSION[0]
