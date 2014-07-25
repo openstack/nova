@@ -27,6 +27,7 @@ from nova.compute import flavors
 from nova.compute import hvtype
 from nova.compute import power_state
 from nova.compute import task_states
+from nova.compute import vm_mode
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
@@ -155,7 +156,7 @@ class BareMetalDriver(driver.ComputeDriver):
             self.supported_instances = [(
                 arch.canonicalize(extra_specs['cpu_arch']),
                 hvtype.BAREMETAL,
-                'baremetal'
+                vm_mode.HVM
             ), ]
 
     @classmethod

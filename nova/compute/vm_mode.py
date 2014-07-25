@@ -78,6 +78,9 @@ def canonicalize(mode):
     if mode == "hv":
         mode = HVM
 
+    if mode == "baremetal":
+        mode = HVM
+
     if not is_valid(mode):
         raise exception.InvalidVirtualMachineMode(vmmode=mode)
 

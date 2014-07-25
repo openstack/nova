@@ -397,7 +397,7 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
                          node['node_info']['memory_mb'])
         self.assertEqual(resources['memory_mb_used'], 0)
         self.assertEqual(resources['supported_instances'],
-                '[["x86_64", "baremetal", "baremetal"]]')
+                '[["x86_64", "baremetal", "hvm"]]')
         self.assertEqual(resources['stats'],
                          '{"cpu_arch": "x86_64", "baremetal_driver": '
                          '"nova.virt.baremetal.fake.FakeDriver", '

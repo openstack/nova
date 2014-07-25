@@ -19,6 +19,7 @@ Management class for host-related functions (start, reboot, etc).
 
 from nova.compute import arch
 from nova.compute import hvtype
+from nova.compute import vm_mode
 from nova import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common import units
@@ -92,8 +93,8 @@ class HostState(object):
                 str(summary.config.product.version))
         data["hypervisor_hostname"] = self._host_name
         data["supported_instances"] = [
-            (arch.I686, hvtype.VMWARE, 'hvm'),
-            (arch.X86_64, hvtype.VMWARE, 'hvm')]
+            (arch.I686, hvtype.VMWARE, vm_mode.HVM),
+            (arch.X86_64, hvtype.VMWARE, vm_mode.HVM)]
 
         self._stats = data
         return data

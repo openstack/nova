@@ -27,8 +27,10 @@ from oslo.config import cfg
 import six
 
 from nova.compute import arch
+from nova.compute import hvtype
 from nova.compute import power_state
 from nova.compute import task_states
+from nova.compute import vm_mode
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
@@ -120,7 +122,9 @@ def _get_nodes_supported_instances(cpu_arch=None):
     """Return supported instances for a node."""
     if not cpu_arch:
         return []
-    return [(cpu_arch, 'baremetal', 'baremetal')]
+    return [(cpu_arch,
+             hvtype.BAREMETAL,
+             vm_mode.HVM)]
 
 
 def _log_ironic_polling(what, node, instance):

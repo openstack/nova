@@ -24,6 +24,7 @@ from oslo.config import cfg
 from nova.compute import arch
 from nova.compute import hvtype
 from nova.compute import task_states
+from nova.compute import vm_mode
 from nova.compute import vm_states
 from nova import context
 from nova import exception
@@ -285,6 +286,7 @@ def to_supported_instances(host_capabilities):
             ostype, _version, guestarch = capability.split("-")
 
             guestarch = arch.canonicalize(guestarch)
+            ostype = vm_mode.canonicalize(ostype)
 
             result.append((guestarch, hvtype.XEN, ostype))
         except ValueError:
