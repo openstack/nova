@@ -34,6 +34,7 @@ from nova import objects
 from nova import test
 from nova.tests import cast_as_call
 from nova.tests import fake_network
+from nova.tests import fake_notifier
 from nova.tests import fake_utils
 from nova.tests.image import fake
 from nova.tests import matchers
@@ -125,6 +126,12 @@ class CinderCloudTestCase(test.TestCase):
 
         # Short-circuit the conductor service
         self.flags(use_local=True, group='conductor')
+
+        # Stub out the notification service so we use the no-op serializer
+        # and avoid lazy-load traces with the wrap_exception decorator in
+        # the compute service.
+        fake_notifier.stub_notifier(self.stubs)
+        self.addCleanup(fake_notifier.reset)
 
         # set up services
         self.conductor = self.start_service('conductor',
