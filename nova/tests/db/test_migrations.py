@@ -737,6 +737,16 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         self.assertTrue(pci_devices.c.vendor_id.nullable)
         self.assertTrue(pci_devices.c.dev_type.nullable)
 
+    def _check_248(self, engine, data):
+        self.assertIndexMembers(engine, 'reservations',
+                                'reservations_deleted_expire_idx',
+                                ['deleted', 'expire'])
+
+    def _post_downgrade_248(self, engine):
+        reservations = oslodbutils.get_table(engine, 'reservations')
+        index_names = [idx.name for idx in reservations.indexes]
+        self.assertNotIn('reservations_deleted_expire_idx', index_names)
+
 
 class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

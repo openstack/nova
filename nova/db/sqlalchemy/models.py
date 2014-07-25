@@ -478,6 +478,7 @@ class Reservation(BASE, NovaBase):
     __table_args__ = (
         Index('ix_reservations_project_id', 'project_id'),
         Index('reservations_uuid_idx', 'uuid'),
+        Index('reservations_deleted_expire_idx', 'deleted', 'expire'),
     )
     id = Column(Integer, primary_key=True, nullable=False)
     uuid = Column(String(36), nullable=False)
