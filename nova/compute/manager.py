@@ -4503,6 +4503,9 @@ class ComputeManager(manager.Manager):
             pass
 
     @object_compat
+    @wrap_exception()
+    @reverts_task_state
+    @wrap_instance_fault
     def attach_interface(self, context, instance, network_id, port_id,
                          requested_ip):
         """Use hotplug to add an network adapter to an instance."""
@@ -4520,6 +4523,9 @@ class ComputeManager(manager.Manager):
         return network_info[0]
 
     @object_compat
+    @wrap_exception()
+    @reverts_task_state
+    @wrap_instance_fault
     def detach_interface(self, context, instance, port_id):
         """Detach an network adapter from an instance."""
         network_info = instance.info_cache.network_info

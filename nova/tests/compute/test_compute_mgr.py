@@ -877,6 +877,48 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertFalse(c.cleaned)
         self.assertEqual('1', c.system_metadata['clean_attempts'])
 
+    def test_attach_interface_failure(self):
+        # Test that the fault methods are invoked when an attach fails
+        db_instance = fake_instance.fake_db_instance()
+        f_instance = objects.Instance._from_db_object(self.context,
+                                                      objects.Instance(),
+                                                      db_instance)
+        e = exception.InterfaceAttachFailed(instance=f_instance)
+
+        @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+        @mock.patch.object(self.compute.network_api,
+                           'allocate_port_for_instance',
+                           side_effect=e)
+        def do_test(meth, add_fault):
+            self.assertRaises(exception.InterfaceAttachFailed,
+                              self.compute.attach_interface,
+                              self.context, f_instance, 'net_id', 'port_id',
+                              None)
+            add_fault.assert_has_calls(
+                    mock.call(self.context, f_instance, e,
+                              mock.ANY))
+
+        do_test()
+
+    def test_detach_interface_failure(self):
+        # Test that the fault methods are invoked when a detach fails
+
+        # Build test data that will cause a PortNotFound exception
+        f_instance = mock.MagicMock()
+        f_instance.info_cache = mock.MagicMock()
+        f_instance.info_cache.network_info = []
+
+        @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+        @mock.patch.object(self.compute, '_set_instance_error_state')
+        def do_test(meth, add_fault):
+            self.assertRaises(exception.PortNotFound,
+                              self.compute.detach_interface,
+                              self.context, f_instance, 'port_id')
+            add_fault.assert_has_calls(
+                    mock.call(self.context, f_instance, mock.ANY, mock.ANY))
+
+        do_test()
+
     def test_swap_volume_volume_api_usage(self):
         # This test ensures that volume_id arguments are passed to volume_api
         # and that volume states are OK
