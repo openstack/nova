@@ -400,10 +400,6 @@ class API(base.Base):
         try:
             QUOTAS.limit_check(context, metadata_items=num_metadata)
         except exception.OverQuota as exc:
-            LOG.warn(_("Quota exceeded for %(pid)s, tried to set "
-                       "%(num_metadata)s metadata properties"),
-                     {'pid': context.project_id,
-                      'num_metadata': num_metadata})
             quota_metadata = exc.kwargs['quotas']['metadata_items']
             raise exception.MetadataLimitExceeded(allowed=quota_metadata)
 
