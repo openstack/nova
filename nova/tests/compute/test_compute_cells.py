@@ -16,6 +16,7 @@
 Tests For Compute w/ Cells
 """
 import functools
+import inspect
 
 import mock
 from oslo.config import cfg
@@ -23,9 +24,16 @@ from oslo.config import cfg
 from nova.cells import manager
 from nova.compute import api as compute_api
 from nova.compute import cells_api as compute_cells_api
+from nova.compute import flavors
+from nova.compute import vm_states
+from nova import context
 from nova import db
+from nova import objects
+from nova.openstack.common import timeutils
 from nova import quota
+from nova import test
 from nova.tests.compute import test_compute
+from nova.tests import fake_instance
 
 
 ORIG_COMPUTE_API = None
@@ -202,6 +210,78 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
 
         # one targeted message should have been created
         self.assertEqual(1, mock_msg.call_count)
+
+
+class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
+    def setUp(self):
+        super(CellsConductorAPIRPCRedirect, self).setUp()
+
+        self.compute_api = compute_cells_api.ComputeCellsAPI()
+        self.cells_rpcapi = mock.MagicMock()
+        self.compute_api._compute_task_api.cells_rpcapi = self.cells_rpcapi
+
+        self.context = context.RequestContext('fake', 'fake')
+
+    @mock.patch.object(compute_api.API, '_record_action_start')
+    @mock.patch.object(compute_api.API, '_provision_instances')
+    @mock.patch.object(compute_api.API, '_check_and_transform_bdm')
+    @mock.patch.object(compute_api.API, '_get_image')
+    @mock.patch.object(compute_api.API, '_validate_and_build_base_options')
+    def test_build_instances(self, _validate, _get_image, _check_bdm,
+                             _provision, _record_action_start):
+        _get_image.return_value = (None, 'fake-image')
+        _validate.return_value = (None, 1)
+        _check_bdm.return_value = 'bdms'
+        _provision.return_value = 'instances'
+
+        self.compute_api.create(self.context, 'fake-flavor', 'fake-image')
+
+        # Subsequent tests in class are verifying the hooking.  We don't check
+        # args since this is verified in compute test code.
+        self.assertTrue(self.cells_rpcapi.build_instances.called)
+
+    @mock.patch.object(compute_api.API, '_record_action_start')
+    @mock.patch.object(compute_api.API, '_resize_cells_support')
+    @mock.patch.object(compute_api.API, '_reserve_quota_delta')
+    @mock.patch.object(compute_api.API, '_upsize_quota_delta')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(flavors, 'extract_flavor')
+    @mock.patch.object(compute_api.API, '_check_auto_disk_config')
+    def test_resize_instance(self, _check, _extract, _save, _upsize, _reserve,
+                             _cells, _record):
+        _extract.return_value = {'name': 'fake', 'id': 'fake'}
+        orig_system_metadata = {}
+        instance = fake_instance.fake_instance_obj(self.context,
+                vm_state=vm_states.ACTIVE, cell_name='fake-cell',
+                launched_at=timeutils.utcnow(),
+                system_metadata=orig_system_metadata,
+                expected_attrs=['system_metadata'])
+
+        self.compute_api.resize(self.context, instance)
+        self.assertTrue(self.cells_rpcapi.resize_instance.called)
+
+    @mock.patch.object(objects.Instance, 'save')
+    def test_live_migrate_instance(self, instance_save):
+        orig_system_metadata = {}
+        instance = fake_instance.fake_instance_obj(self.context,
+                vm_state=vm_states.ACTIVE, cell_name='fake-cell',
+                launched_at=timeutils.utcnow(),
+                system_metadata=orig_system_metadata,
+                expected_attrs=['system_metadata'])
+
+        self.compute_api.live_migrate(self.context, instance,
+                True, True, 'fake_dest_host')
+
+        self.assertTrue(self.cells_rpcapi.live_migrate_instance.called)
+
+    def test_check_equal(self):
+        task_api = self.compute_api.compute_task_api
+        tests = set()
+        for (name, value) in inspect.getmembers(self, inspect.ismethod):
+            if name.startswith('test_') and name != 'test_check_equal':
+                tests.add(name[5:])
+        if tests != set(task_api.cells_compatible):
+            self.fail("Testcases not equivalent to cells_compatible list")
 
 
 class CellsComputePolicyTestCase(test_compute.ComputePolicyTestCase):
