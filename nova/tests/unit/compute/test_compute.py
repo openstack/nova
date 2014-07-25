@@ -8642,6 +8642,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         # No image BDM created if image already defines a root BDM
         base_options['root_device_name'] = 'vda'
+        base_options['image_ref'] = None
         transformed_bdm = self.compute_api._check_and_transform_bdm(
             base_options, {}, image_meta, 1, 1, [], True)
         self.assertEqual(len(transformed_bdm), 1)
