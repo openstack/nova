@@ -37,7 +37,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova import utils
 from nova.virt import imagecache
-from nova.virt.libvirt import utils as virtutils
+from nova.virt.libvirt import utils as libvirt_utils
 
 LOG = logging.getLogger(__name__)
 
@@ -291,7 +291,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                 if os.path.exists(disk_path):
                     LOG.debug('%s has a disk file', ent)
                     try:
-                        backing_file = virtutils.get_disk_backing_file(
+                        backing_file = libvirt_utils.get_disk_backing_file(
                             disk_path)
                     except processutils.ProcessExecutionError:
                         # (for bug 1261442)
@@ -516,7 +516,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                           {'id': img_id,
                            'base_file': base_file})
                 if os.path.exists(base_file):
-                    virtutils.chown(base_file, os.getuid())
+                    libvirt_utils.chown(base_file, os.getuid())
                     os.utime(base_file, None)
 
     def _age_and_verify_cached_images(self, context, all_instances, base_dir):
