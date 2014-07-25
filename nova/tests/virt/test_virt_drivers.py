@@ -28,10 +28,11 @@ from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import test
+from nova.tests import fake_block_device
 from nova.tests.image import fake as fake_image
 from nova.tests import utils as test_utils
 from nova.tests.virt.libvirt import fake_libvirt_utils
-from nova.tests.virt.libvirt import test_driver
+from nova.virt import block_device as driver_block_device
 from nova.virt import event as virtevent
 from nova.virt import fake
 from nova.virt import libvirt
@@ -456,24 +457,29 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
             'root_device_name': None,
             'swap': None,
             'ephemerals': [],
-            'block_device_mapping': [
-                test_driver.mocked_bdm(1, {
-                        'instance_uuid': instance_ref['uuid'],
-                        'connection_info': {'driver_volume_type': 'fake'},
-                        'mount_device': '/dev/sda',
+            'block_device_mapping': driver_block_device.convert_volumes([
+                fake_block_device.FakeDbBlockDeviceDict(
+                       {'id': 1, 'instance_uuid': instance_ref['uuid'],
+                        'device_name': '/dev/sda',
+                        'source_type': 'volume',
+                        'destination_type': 'volume',
                         'delete_on_termination': False,
-                        'virtual_name': None,
                         'snapshot_id': None,
                         'volume_id': 'abcdedf',
                         'volume_size': None,
                         'no_device': None
                         }),
-                ]
+                ])
         }
-        self.connection.power_on(self.ctxt, instance_ref, network_info, bdm)
-        self.connection.detach_volume(connection_info,
-                                      instance_ref,
-                                      '/dev/sda')
+        bdm['block_device_mapping'][0]['connection_info'] = (
+            {'driver_volume_type': 'fake'})
+        with mock.patch.object(
+                driver_block_device.DriverVolumeBlockDevice, 'save'):
+            self.connection.power_on(
+                    self.ctxt, instance_ref, network_info, bdm)
+            self.connection.detach_volume(connection_info,
+                                          instance_ref,
+                                          '/dev/sda')
 
     @catch_notimplementederror
     def test_get_info(self):
