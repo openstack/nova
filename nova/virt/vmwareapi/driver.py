@@ -602,7 +602,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         data = _vmops.get_instance_diagnostics(instance)
         return data
 
-    def host_power_action(self, host, action):
+    def host_power_action(self, action):
         """Host operations not supported by VC driver.
 
         This needs to override the ESX driver implementation.
@@ -616,7 +616,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         """
         raise NotImplementedError()
 
-    def set_host_enabled(self, host, enabled):
+    def set_host_enabled(self, enabled):
         """Host operations not supported by VC driver.
 
         This needs to override the ESX driver implementation.

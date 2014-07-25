@@ -3985,8 +3985,7 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     def host_power_action(self, context, action):
         """Reboots, shuts down or powers up the host."""
-        # TODO(russellb) Remove the unused host parameter from the driver API
-        return self.driver.host_power_action(None, action)
+        return self.driver.host_power_action(action)
 
     @wrap_exception()
     def host_maintenance_mode(self, context, host, mode):
@@ -3998,8 +3997,7 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     def set_host_enabled(self, context, enabled):
         """Sets the specified host's ability to accept new instances."""
-        # TODO(russellb) Remove the unused host parameter from the driver API
-        return self.driver.set_host_enabled(None, enabled)
+        return self.driver.set_host_enabled(enabled)
 
     @wrap_exception()
     def get_host_uptime(self, context):

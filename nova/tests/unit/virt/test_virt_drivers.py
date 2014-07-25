@@ -654,7 +654,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     @catch_notimplementederror
     def test_set_host_enabled(self):
-        self.connection.set_host_enabled('a useless argument?', True)
+        self.connection.set_host_enabled(True)
 
     @catch_notimplementederror
     def test_get_host_uptime(self):
@@ -662,15 +662,15 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     @catch_notimplementederror
     def test_host_power_action_reboot(self):
-        self.connection.host_power_action('a useless argument?', 'reboot')
+        self.connection.host_power_action('reboot')
 
     @catch_notimplementederror
     def test_host_power_action_shutdown(self):
-        self.connection.host_power_action('a useless argument?', 'shutdown')
+        self.connection.host_power_action('shutdown')
 
     @catch_notimplementederror
     def test_host_power_action_startup(self):
-        self.connection.host_power_action('a useless argument?', 'startup')
+        self.connection.host_power_action('startup')
 
     @catch_notimplementederror
     def test_add_to_aggregate(self):

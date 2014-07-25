@@ -46,7 +46,7 @@ class Host(object):
         self._session = session
         self._virtapi = virtapi
 
-    def host_power_action(self, _host, action):
+    def host_power_action(self, action):
         """Reboots or shuts down the host."""
         args = {"action": jsonutils.dumps(action)}
         methods = {"reboot": "host_reboot", "shutdown": "host_shutdown"}
