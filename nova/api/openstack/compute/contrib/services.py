@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.config import cfg
 import webob.exc
 
 from nova.api.openstack import extensions
@@ -25,8 +24,6 @@ from nova import servicegroup
 from nova import utils
 
 authorize = extensions.extension_authorizer('compute', 'services')
-CONF = cfg.CONF
-CONF.import_opt('service_down_time', 'nova.service')
 
 
 class ServicesIndexTemplate(xmlutil.TemplateBuilder):
