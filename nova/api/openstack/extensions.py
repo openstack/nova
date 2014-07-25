@@ -27,6 +27,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LW
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 import nova.policy
@@ -275,8 +276,8 @@ class ExtensionManager(object):
             try:
                 self.load_extension(ext_factory)
             except Exception as exc:
-                LOG.warn(_('Failed to load extension %(ext_factory)s: '
-                           '%(exc)s'),
+                LOG.warn(_LW('Failed to load extension %(ext_factory)s: '
+                             '%(exc)s'),
                          {'ext_factory': ext_factory, 'exc': exc})
 
 

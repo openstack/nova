@@ -21,7 +21,7 @@ from nova.api.openstack.compute.views import addresses as views_addresses
 from nova.api.openstack.compute.views import flavors as views_flavors
 from nova.api.openstack.compute.views import images as views_images
 from nova.compute import flavors
-from nova.i18n import _
+from nova.i18n import _LW
 from nova.objects import base as obj_base
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -194,8 +194,8 @@ class ViewBuilder(common.ViewBuilder):
     def _get_flavor(self, request, instance):
         instance_type = flavors.extract_flavor(instance)
         if not instance_type:
-            LOG.warn(_("Instance has had its instance_type removed "
-                    "from the DB"), instance=instance)
+            LOG.warn(_LW("Instance has had its instance_type removed "
+                         "from the DB"), instance=instance)
             return {}
         flavor_id = instance_type["flavorid"]
         flavor_bookmark = self._flavor_builder._get_bookmark_link(request,

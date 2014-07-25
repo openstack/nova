@@ -23,6 +23,7 @@ from nova.api.openstack import extensions
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LI
 import nova.network
 from nova.openstack.common import log as logging
 from nova import quota
@@ -122,7 +123,7 @@ class NetworkController(object):
             LOG.exception(_("Failed to update usages deallocating "
                             "network."))
 
-        LOG.info(_("Deleting network with id %s") % id)
+        LOG.info(_LI("Deleting network with id %s"), id)
 
         try:
             self.network_api.delete(context, id)

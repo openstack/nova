@@ -27,6 +27,8 @@ from nova.api.openstack import xmlutil
 from nova import exception
 from nova import i18n
 from nova.i18n import _
+from nova.i18n import _LE
+from nova.i18n import _LI
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import utils
@@ -679,14 +681,14 @@ class ResourceExceptionHandler(object):
         # http://bugs.python.org/issue7853
         elif issubclass(ex_type, TypeError):
             exc_info = (ex_type, ex_value, ex_traceback)
-            LOG.error(_('Exception handling resource: %s') % ex_value,
-                    exc_info=exc_info)
+            LOG.error(_LE('Exception handling resource: %s'), ex_value,
+                      exc_info=exc_info)
             raise Fault(webob.exc.HTTPBadRequest())
         elif isinstance(ex_value, Fault):
-            LOG.info(_("Fault thrown: %s"), unicode(ex_value))
+            LOG.info(_LI("Fault thrown: %s"), unicode(ex_value))
             raise ex_value
         elif isinstance(ex_value, webob.exc.HTTPException):
-            LOG.info(_("HTTP exception thrown: %s"), unicode(ex_value))
+            LOG.info(_LI("HTTP exception thrown: %s"), unicode(ex_value))
             raise Fault(ex_value)
 
         # We didn't handle the exception

@@ -39,6 +39,7 @@ from nova.compute import vm_states
 from nova import db
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LW
 from nova.image import s3
 from nova import network
 from nova.network.security_group import neutron_driver
@@ -1263,8 +1264,8 @@ class CloudController(object):
         # changed to support specifying a particular fixed_ip if
         # multiple exist but this may not apply to ec2..
         if len(fixed_ips) > 1:
-            msg = _('multiple fixed_ips exist, using the first: %s')
-            LOG.warning(msg, fixed_ips[0])
+            LOG.warn(_LW('multiple fixed_ips exist, using the first: %s'),
+                     fixed_ips[0])
 
         self.network_api.associate_floating_ip(context, instance,
                                                floating_address=public_ip,

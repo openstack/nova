@@ -34,6 +34,7 @@ from nova import compute
 from nova.compute import flavors
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LW
 from nova import objects
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
@@ -78,8 +79,8 @@ def make_server(elem, detailed=False):
 
     global XML_WARNING
     if not XML_WARNING:
-        LOG.warning(_('XML support has been deprecated and may be removed '
-                      'as early as the Juno release.'))
+        LOG.warn(_LW('XML support has been deprecated and may be removed '
+                     'as early as the Juno release.'))
         XML_WARNING = True
 
     if detailed:

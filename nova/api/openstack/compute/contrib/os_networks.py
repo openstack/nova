@@ -22,6 +22,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LI
 from nova import network
 from nova.openstack.common import log as logging
 
@@ -97,7 +98,7 @@ class NetworkController(wsgi.Controller):
     def delete(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
-        LOG.info(_("Deleting network with id %s") % id)
+        LOG.info(_LI("Deleting network with id %s"), id)
         try:
             self.network_api.delete(context, id)
         except exception.NetworkInUse as e:

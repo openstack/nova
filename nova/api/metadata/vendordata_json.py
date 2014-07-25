@@ -20,7 +20,7 @@ import errno
 from oslo.config import cfg
 
 from nova.api.metadata import base
-from nova.i18n import _
+from nova.i18n import _LW
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 
@@ -44,12 +44,13 @@ class JsonFileVendorData(base.VendorDataDriver):
                     data = jsonutils.load(fp)
             except IOError as e:
                 if e.errno == errno.ENOENT:
-                    LOG.warn(logprefix + _("file does not exist"))
+                    LOG.warn(logprefix + _LW("file does not exist"))
                 else:
-                    LOG.warn(logprefix + _("Unexpected IOError when reading"))
+                    LOG.warn(logprefix + _LW("Unexpected IOError when "
+                                             "reading"))
                 raise e
             except ValueError:
-                LOG.warn(logprefix + _("failed to load json"))
+                LOG.warn(logprefix + _LW("failed to load json"))
                 raise
 
         self._data = data

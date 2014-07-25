@@ -32,6 +32,7 @@ from nova import compute
 from nova.compute import flavors
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LW
 from nova.image import glance
 from nova import objects
 from nova.openstack.common import log as logging
@@ -96,13 +97,13 @@ class ServersController(wsgi.Controller):
                     if ext.obj.alias not in CONF.osapi_v3.extensions_blacklist:
                         return True
                     else:
-                        LOG.warning(_("Not loading %s because it is "
-                                      "in the blacklist"), ext.obj.alias)
+                        LOG.warn(_LW("Not loading %s because it is "
+                                     "in the blacklist"), ext.obj.alias)
                         return False
                 else:
-                    LOG.warning(
-                        _("Not loading %s because it is not in the whitelist"),
-                        ext.obj.alias)
+                    LOG.warn(
+                        _LW("Not loading %s because it is not in the "
+                            "whitelist"), ext.obj.alias)
                     return False
 
             def check_load_extension(ext):

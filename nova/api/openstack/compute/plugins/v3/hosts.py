@@ -153,9 +153,9 @@ class HostController(wsgi.Controller):
                         on the host.
         """
         if enabled:
-            LOG.audit(_("Enabling host %s.") % host_name)
+            LOG.audit(_("Enabling host %s."), host_name)
         else:
-            LOG.audit(_("Disabling host %s.") % host_name)
+            LOG.audit(_("Disabling host %s."), host_name)
         try:
             result = self.api.set_host_enabled(context, host_name=host_name,
                                                enabled=enabled)
