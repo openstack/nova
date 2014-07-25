@@ -34,6 +34,8 @@ from oslo.config import cfg
 
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LE
+from nova.i18n import _LW
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
@@ -361,8 +363,8 @@ def inject_data(image, key=None, net=None, metadata=None, admin_password=None,
             inject_val = locals()[inject]
             if inject_val:
                 raise
-        LOG.warn(_('Ignoring error injecting data into image '
-                   '(%(e)s)'), {'e': e})
+        LOG.warn(_LW('Ignoring error injecting data into image %(image)s '
+                   '(%(e)s)'), {'image': image, 'e': e})
         return False
 
     try:
@@ -383,7 +385,7 @@ def setup_container(image, container_dir, use_cow=False):
     img = _DiskImage(image=image, use_cow=use_cow, mount_dir=container_dir)
     dev = img.mount()
     if dev is None:
-        LOG.error(_("Failed to mount container filesystem '%(image)s' "
+        LOG.error(_LE("Failed to mount container filesystem '%(image)s' "
                     "on '%(target)s': %(errors)s"),
                   {"image": img, "target": container_dir,
                    "errors": img.errors})
@@ -451,8 +453,8 @@ def inject_data_into_fs(fs, key, net, metadata, admin_password, files,
             except Exception as e:
                 if inject in mandatory:
                     raise
-                LOG.warn(_('Ignoring error injecting %(inject)s into image '
-                           '(%(e)s)'), {'e': e, 'inject': inject})
+                LOG.warn(_LW('Ignoring error injecting %(inject)s into image '
+                           '(%(e)s)'), {'inject': inject, 'e': e})
                 status = False
     return status
 
