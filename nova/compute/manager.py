@@ -3591,6 +3591,17 @@ class ComputeManager(manager.Manager):
                 self.volume_api.terminate_connection(context, bdm.volume_id,
                                                      connector)
 
+    @staticmethod
+    def _save_instance_info(instance, instance_type, sys_meta):
+        flavors.save_flavor_info(sys_meta, instance_type)
+        instance.instance_type_id = instance_type['id']
+        instance.memory_mb = instance_type['memory_mb']
+        instance.vcpus = instance_type['vcpus']
+        instance.root_gb = instance_type['root_gb']
+        instance.ephemeral_gb = instance_type['ephemeral_gb']
+        instance.system_metadata = sys_meta
+        instance.save()
+
     def _finish_resize(self, context, instance, migration, disk_info,
                        image):
         resize_instance = False
@@ -3608,14 +3619,7 @@ class ComputeManager(manager.Manager):
 
         if old_instance_type_id != new_instance_type_id:
             instance_type = flavors.extract_flavor(instance, prefix='new_')
-            flavors.save_flavor_info(sys_meta, instance_type)
-            instance.instance_type_id = instance_type['id']
-            instance.memory_mb = instance_type['memory_mb']
-            instance.vcpus = instance_type['vcpus']
-            instance.root_gb = instance_type['root_gb']
-            instance.ephemeral_gb = instance_type['ephemeral_gb']
-            instance.system_metadata = sys_meta
-            instance.save()
+            self._save_instance_info(instance, instance_type, sys_meta)
             resize_instance = True
 
         # NOTE(tr3buchet): setup networks on destination host
@@ -3644,11 +3648,18 @@ class ComputeManager(manager.Manager):
         # NOTE(mriedem): If the original vm_state was STOPPED, we don't
         # automatically power on the instance after it's migrated
         power_on = old_vm_state != vm_states.STOPPED
-        self.driver.finish_migration(context, migration, instance,
-                                     disk_info,
-                                     network_info,
-                                     image, resize_instance,
-                                     block_device_info, power_on)
+
+        try:
+            self.driver.finish_migration(context, migration, instance,
+                                         disk_info,
+                                         network_info,
+                                         image, resize_instance,
+                                         block_device_info, power_on)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                if resize_instance:
+                    self._save_instance_info(instance,
+                                             old_instance_type, sys_meta)
 
         migration.status = 'finished'
         migration.save(context.elevated())
