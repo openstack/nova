@@ -22,6 +22,8 @@ from nova import compute
 from nova import exception
 from nova.i18n import _
 
+ALIAS = 'server-metadata'
+
 
 class ServerMetadataController(wsgi.Controller):
     """The server metadata API controller for the OpenStack API."""
@@ -172,7 +174,7 @@ class ServerMetadataController(wsgi.Controller):
 class ServerMetadata(extensions.V3APIExtensionBase):
     """Server Metadata API."""
     name = "ServerMetadata"
-    alias = "server-metadata"
+    alias = ALIAS
     version = 1
 
     def get_resources(self):
