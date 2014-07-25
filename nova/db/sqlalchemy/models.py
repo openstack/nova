@@ -22,8 +22,8 @@ SQLAlchemy models for nova data.
 from sqlalchemy import Column, Index, Integer, BigInteger, Enum, String, schema
 from sqlalchemy.dialects.mysql import MEDIUMTEXT
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import orm
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float
-from sqlalchemy.orm import relationship, backref, object_mapper
 from oslo.config import cfg
 
 from nova.db.sqlalchemy import types
@@ -79,8 +79,8 @@ class ComputeNode(BASE, NovaBase):
     __table_args__ = ()
     id = Column(Integer, primary_key=True)
     service_id = Column(Integer, ForeignKey('services.id'), nullable=False)
-    service = relationship(Service,
-                           backref=backref('compute_node'),
+    service = orm.relationship(Service,
+                           backref=orm.backref('compute_node'),
                            foreign_keys=service_id,
                            primaryjoin='and_('
                                 'ComputeNode.service_id == Service.id,'
@@ -180,7 +180,7 @@ class Instance(BASE, NovaBase):
             info = {}
             # NOTE(russellb): Don't use self.iteritems() here, as it will
             # result in infinite recursion on the name property.
-            for column in iter(object_mapper(self).columns):
+            for column in iter(orm.object_mapper(self).columns):
                 key = column.name
                 # prevent recursion if someone specifies %(name)s
                 # %(name)s will not be valid.
@@ -304,8 +304,8 @@ class InstanceInfoCache(BASE, NovaBase):
 
     instance_uuid = Column(String(36), ForeignKey('instances.uuid'),
                            nullable=False)
-    instance = relationship(Instance,
-                            backref=backref('info_cache', uselist=False),
+    instance = orm.relationship(Instance,
+                            backref=orm.backref('info_cache', uselist=False),
                             foreign_keys=instance_uuid,
                             primaryjoin=instance_uuid == Instance.uuid)
 
@@ -491,7 +491,7 @@ class Reservation(BASE, NovaBase):
     delta = Column(Integer, nullable=False)
     expire = Column(DateTime)
 
-    usage = relationship(
+    usage = orm.relationship(
         "QuotaUsage",
         foreign_keys=usage_id,
         primaryjoin='and_(Reservation.usage_id == QuotaUsage.id,'
@@ -547,8 +547,8 @@ class BlockDeviceMapping(BASE, NovaBase):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     instance_uuid = Column(String(36), ForeignKey('instances.uuid'))
-    instance = relationship(Instance,
-                            backref=backref('block_device_mapping'),
+    instance = orm.relationship(Instance,
+                            backref=orm.backref('block_device_mapping'),
                             foreign_keys=instance_uuid,
                             primaryjoin='and_(BlockDeviceMapping.'
                                               'instance_uuid=='
@@ -599,8 +599,8 @@ class IscsiTarget(BASE, NovaBase):
     target_num = Column(Integer)
     host = Column(String(255))
     volume_id = Column(String(36), ForeignKey('volumes.id'))
-    volume = relationship(Volume,
-                          backref=backref('iscsi_target', uselist=False),
+    volume = orm.relationship(Volume,
+                          backref=orm.backref('iscsi_target', uselist=False),
                           foreign_keys=volume_id,
                           primaryjoin='and_(IscsiTarget.volume_id==Volume.id,'
                                            'IscsiTarget.deleted==0)')
@@ -631,7 +631,7 @@ class SecurityGroup(BASE, NovaBase):
     user_id = Column(String(255))
     project_id = Column(String(255))
 
-    instances = relationship(Instance,
+    instances = orm.relationship(Instance,
                              secondary="security_group_instance_association",
                              primaryjoin='and_('
         'SecurityGroup.id == '
@@ -654,7 +654,7 @@ class SecurityGroupIngressRule(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
 
     parent_group_id = Column(Integer, ForeignKey('security_groups.id'))
-    parent_group = relationship("SecurityGroup", backref="rules",
+    parent_group = orm.relationship("SecurityGroup", backref="rules",
                                 foreign_keys=parent_group_id,
                                 primaryjoin='and_('
         'SecurityGroupIngressRule.parent_group_id == SecurityGroup.id,'
@@ -668,7 +668,7 @@ class SecurityGroupIngressRule(BASE, NovaBase):
     # Note: This is not the parent SecurityGroup. It's SecurityGroup we're
     # granting access for.
     group_id = Column(Integer, ForeignKey('security_groups.id'))
-    grantee_group = relationship("SecurityGroup",
+    grantee_group = orm.relationship("SecurityGroup",
                                  foreign_keys=group_id,
                                  primaryjoin='and_('
         'SecurityGroupIngressRule.group_id == SecurityGroup.id,'
@@ -739,7 +739,7 @@ class Migration(BASE, NovaBase):
     # TODO(_cerberus_): enum
     status = Column(String(255))
 
-    instance = relationship("Instance", foreign_keys=instance_uuid,
+    instance = orm.relationship("Instance", foreign_keys=instance_uuid,
                             primaryjoin='and_(Migration.instance_uuid == '
                                         'Instance.uuid, Instance.deleted == '
                                         '0)')
@@ -847,14 +847,14 @@ class FixedIp(BASE, NovaBase):
     # TODO(sshturm) add default in db
     reserved = Column(Boolean, default=False)
     host = Column(String(255))
-    network = relationship(Network,
-                           backref=backref('fixed_ips'),
+    network = orm.relationship(Network,
+                           backref=orm.backref('fixed_ips'),
                            foreign_keys=network_id,
                            primaryjoin='and_('
                                 'FixedIp.network_id == Network.id,'
                                 'FixedIp.deleted == 0,'
                                 'Network.deleted == 0)')
-    instance = relationship(Instance,
+    instance = orm.relationship(Instance,
                             foreign_keys=instance_uuid,
                             primaryjoin='and_('
                                 'FixedIp.instance_uuid == Instance.uuid,'
@@ -883,8 +883,8 @@ class FloatingIp(BASE, NovaBase):
     # TODO(sshturm) add default in db
     pool = Column(String(255))
     interface = Column(String(255))
-    fixed_ip = relationship(FixedIp,
-                            backref=backref('floating_ips'),
+    fixed_ip = orm.relationship(FixedIp,
+                            backref=orm.backref('floating_ips'),
                             foreign_keys=fixed_ip_id,
                             primaryjoin='and_('
                                 'FloatingIp.fixed_ip_id == FixedIp.id,'
@@ -936,7 +936,7 @@ class Console(BASE, NovaBase):
     password = Column(String(255))
     port = Column(Integer)
     pool_id = Column(Integer, ForeignKey('console_pools.id'))
-    pool = relationship(ConsolePool, backref=backref('consoles'))
+    pool = orm.relationship(ConsolePool, backref=orm.backref('consoles'))
 
 
 class InstanceMetadata(BASE, NovaBase):
@@ -949,7 +949,7 @@ class InstanceMetadata(BASE, NovaBase):
     key = Column(String(255))
     value = Column(String(255))
     instance_uuid = Column(String(36), ForeignKey('instances.uuid'))
-    instance = relationship(Instance, backref="metadata",
+    instance = orm.relationship(Instance, backref="metadata",
                             foreign_keys=instance_uuid,
                             primaryjoin='and_('
                                 'InstanceMetadata.instance_uuid == '
@@ -970,7 +970,7 @@ class InstanceSystemMetadata(BASE, NovaBase):
 
     primary_join = ('and_(InstanceSystemMetadata.instance_uuid == '
                     'Instance.uuid, InstanceSystemMetadata.deleted == 0)')
-    instance = relationship(Instance, backref="system_metadata",
+    instance = orm.relationship(Instance, backref="system_metadata",
                             foreign_keys=instance_uuid,
                             primaryjoin=primary_join)
 
@@ -988,7 +988,7 @@ class InstanceTypeProjects(BASE, NovaBase):
                               nullable=False)
     project_id = Column(String(255))
 
-    instance_type = relationship(InstanceTypes, backref="projects",
+    instance_type = orm.relationship(InstanceTypes, backref="projects",
                  foreign_keys=instance_type_id,
                  primaryjoin='and_('
                  'InstanceTypeProjects.instance_type_id == InstanceTypes.id,'
@@ -1012,7 +1012,7 @@ class InstanceTypeExtraSpecs(BASE, NovaBase):
     value = Column(String(255))
     instance_type_id = Column(Integer, ForeignKey('instance_types.id'),
                               nullable=False)
-    instance_type = relationship(InstanceTypes, backref="extra_specs",
+    instance_type = orm.relationship(InstanceTypes, backref="extra_specs",
                  foreign_keys=instance_type_id,
                  primaryjoin='and_('
                  'InstanceTypeExtraSpecs.instance_type_id == InstanceTypes.id,'
@@ -1075,13 +1075,13 @@ class Aggregate(BASE, NovaBase):
     __table_args__ = ()
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255))
-    _hosts = relationship(AggregateHost,
+    _hosts = orm.relationship(AggregateHost,
                           primaryjoin='and_('
                           'Aggregate.id == AggregateHost.aggregate_id,'
                           'AggregateHost.deleted == 0,'
                           'Aggregate.deleted == 0)')
 
-    _metadata = relationship(AggregateMetadata,
+    _metadata = orm.relationship(AggregateMetadata,
                              primaryjoin='and_('
                              'Aggregate.id == AggregateMetadata.aggregate_id,'
                              'AggregateMetadata.deleted == 0,'
@@ -1335,15 +1335,15 @@ class InstanceGroup(BASE, NovaBase):
     project_id = Column(String(255))
     uuid = Column(String(36), nullable=False)
     name = Column(String(255))
-    _policies = relationship(InstanceGroupPolicy, primaryjoin='and_('
+    _policies = orm.relationship(InstanceGroupPolicy, primaryjoin='and_('
         'InstanceGroup.id == InstanceGroupPolicy.group_id,'
         'InstanceGroupPolicy.deleted == 0,'
         'InstanceGroup.deleted == 0)')
-    _metadata = relationship(InstanceGroupMetadata, primaryjoin='and_('
+    _metadata = orm.relationship(InstanceGroupMetadata, primaryjoin='and_('
         'InstanceGroup.id == InstanceGroupMetadata.group_id,'
         'InstanceGroupMetadata.deleted == 0,'
         'InstanceGroup.deleted == 0)')
-    _members = relationship(InstanceGroupMember, primaryjoin='and_('
+    _members = orm.relationship(InstanceGroupMember, primaryjoin='and_('
         'InstanceGroup.id == InstanceGroupMember.group_id,'
         'InstanceGroupMember.deleted == 0,'
         'InstanceGroup.deleted == 0)')
@@ -1396,7 +1396,7 @@ class PciDevice(BASE, NovaBase):
     extra_info = Column(Text)
 
     instance_uuid = Column(String(36))
-    instance = relationship(Instance, backref="pci_devices",
+    instance = orm.relationship(Instance, backref="pci_devices",
                             foreign_keys=instance_uuid,
                             primaryjoin='and_('
                             'PciDevice.instance_uuid == Instance.uuid,'
