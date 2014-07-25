@@ -3098,7 +3098,7 @@ class CloudTestCase(test.TestCase):
             mock_ec2_vol_id_to_uuid.assert_called_once_with(ec2_volume_id)
 
 
-class CloudTestCaseNeutronProxy(test.TestCase):
+class CloudTestCaseNeutronProxy(test.NoDBTestCase):
     def setUp(self):
         super(CloudTestCaseNeutronProxy, self).setUp()
         cfg.CONF.set_override('security_group_api', 'neutron')

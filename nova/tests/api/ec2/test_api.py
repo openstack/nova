@@ -96,7 +96,7 @@ class FakeHttplibConnection(object):
         pass
 
 
-class XmlConversionTestCase(test.TestCase):
+class XmlConversionTestCase(test.NoDBTestCase):
     """Unit test api xml conversion."""
     def test_number_conversion(self):
         conv = ec2utils._try_convert
@@ -127,7 +127,7 @@ class XmlConversionTestCase(test.TestCase):
         self.assertEqual(conv(''), '')
 
 
-class Ec2utilsTestCase(test.TestCase):
+class Ec2utilsTestCase(test.NoDBTestCase):
     def test_ec2_id_to_id(self):
         self.assertEqual(ec2utils.ec2_id_to_id('i-0000001e'), 30)
         self.assertEqual(ec2utils.ec2_id_to_id('ami-1d'), 29)

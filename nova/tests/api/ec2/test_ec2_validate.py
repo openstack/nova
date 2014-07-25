@@ -181,7 +181,7 @@ class EC2ValidateTestCase(test.TestCase):
                               volume_id=ec2_id)
 
 
-class EC2TimestampValidationTestCase(test.TestCase):
+class EC2TimestampValidationTestCase(test.NoDBTestCase):
     """Test case for EC2 request timestamp validation."""
 
     def test_validate_ec2_timestamp_valid(self):
