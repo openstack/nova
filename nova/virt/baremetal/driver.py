@@ -24,6 +24,7 @@ from oslo.config import cfg
 
 from nova.compute import arch
 from nova.compute import flavors
+from nova.compute import hvtype
 from nova.compute import power_state
 from nova.compute import task_states
 from nova import context as nova_context
@@ -153,7 +154,7 @@ class BareMetalDriver(driver.ComputeDriver):
         else:
             self.supported_instances = [(
                 arch.canonicalize(extra_specs['cpu_arch']),
-                'baremetal',
+                hvtype.BAREMETAL,
                 'baremetal'
             ), ]
 

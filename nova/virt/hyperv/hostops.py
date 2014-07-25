@@ -24,6 +24,7 @@ import time
 from oslo.config import cfg
 
 from nova.compute import arch
+from nova.compute import hvtype
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import units
@@ -129,9 +130,9 @@ class HostOps(object):
                'hypervisor_hostname': platform.node(),
                'vcpus_used': 0,
                'cpu_info': jsonutils.dumps(cpu_info),
-                'supported_instances': jsonutils.dumps(
-                    [(arch.I686, 'hyperv', 'hvm'),
-                     (arch.X86_64, 'hyperv', 'hvm')]),
+               'supported_instances': jsonutils.dumps(
+                   [(arch.I686, hvtype.HYPERV, 'hvm'),
+                    (arch.X86_64, hvtype.HYPERV, 'hvm')]),
                'numa_topology': None,
                }
 
@@ -154,8 +155,8 @@ class HostOps(object):
         data["host_memory_free"] = free_mem_mb
         data["host_memory_free_computed"] = free_mem_mb
         data["supported_instances"] = [
-            (arch.I686, 'hyperv', 'hvm'),
-            (arch.X86_64, 'hyperv', 'hvm')]
+            (arch.I686, hvtype.HYPERV, 'hvm'),
+            (arch.X86_64, hvtype.HYPERV, 'hvm')]
         data["hypervisor_hostname"] = platform.node()
 
         self._stats = data
