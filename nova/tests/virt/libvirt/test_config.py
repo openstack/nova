@@ -1758,6 +1758,32 @@ class LibvirtConfigGuestCPUTuneTest(LibvirtConfigBaseTest):
             <period>25000</period>
           </cputune>""")
 
+    def test_config_cputune_vcpus(self):
+        cputune = config.LibvirtConfigGuestCPUTune()
+
+        vcpu0 = config.LibvirtConfigGuestCPUTuneVCPUPin()
+        vcpu0.id = 0
+        vcpu0.cpuset = set([0, 1])
+        vcpu1 = config.LibvirtConfigGuestCPUTuneVCPUPin()
+        vcpu1.id = 1
+        vcpu1.cpuset = set([2, 3])
+        vcpu2 = config.LibvirtConfigGuestCPUTuneVCPUPin()
+        vcpu2.id = 2
+        vcpu2.cpuset = set([4, 5])
+        vcpu3 = config.LibvirtConfigGuestCPUTuneVCPUPin()
+        vcpu3.id = 3
+        vcpu3.cpuset = set([6, 7])
+        cputune.vcpupin.extend([vcpu0, vcpu1, vcpu2, vcpu3])
+
+        xml = cputune.to_xml()
+        self.assertXmlEqual(xml, """
+          <cputune>
+            <vcpupin vcpu="0" cpuset="0-1"/>
+            <vcpupin vcpu="1" cpuset="2-3"/>
+            <vcpupin vcpu="2" cpuset="4-5"/>
+            <vcpupin vcpu="3" cpuset="6-7"/>
+          </cputune>""")
+
 
 class LibvirtConfigGuestMetadataNovaTest(LibvirtConfigBaseTest):
 
