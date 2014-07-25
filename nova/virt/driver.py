@@ -461,11 +461,15 @@ class ComputeDriver(object):
 
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    flavor, network_info,
-                                   block_device_info=None):
+                                   block_device_info=None,
+                                   timeout=0, retry_interval=0):
         """Transfers the disk of a running instance in multiple phases, turning
         off the instance before the end.
 
         :param instance: nova.objects.instance.Instance
+        :param timeout: time to wait for GuestOS to shutdown
+        :param retry_interval: How often to signal guest while
+                               waiting for it to shutdown
         """
         raise NotImplementedError()
 

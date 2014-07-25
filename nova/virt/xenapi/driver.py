@@ -269,11 +269,13 @@ class XenAPIDriver(driver.ComputeDriver):
 
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    flavor, network_info,
-                                   block_device_info=None):
+                                   block_device_info=None,
+                                   timeout=0, retry_interval=0):
         """Transfers the VHD of a running instance to another host, then shuts
         off the instance copies over the COW disk
         """
         # NOTE(vish): Xen currently does not use network info.
+        # TODO(PhilDay): Add support for timeout (clean shutdown)
         return self._vmops.migrate_disk_and_power_off(context, instance,
                     dest, flavor, block_device_info)
 

@@ -4810,7 +4810,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
                 self._objectify(instance), [], [])
 
-    def test_resize_instance(self):
+    def _test_resize_instance(self, clean_shutdown=True):
         # Ensure instance can be migrated/resized.
         instance = self._create_fake_instance_obj()
         instance_type = flavors.get_default_flavor()
@@ -4844,19 +4844,30 @@ class ComputeTestCase(BaseTestCase):
             mock.patch.object(
                 self.compute, '_get_instance_block_device_info',
                 return_value='fake_bdinfo'),
-            mock.patch.object(self.compute, '_terminate_volume_connections')
+            mock.patch.object(self.compute, '_terminate_volume_connections'),
+            mock.patch.object(self.compute, '_get_power_off_values',
+                return_value=(1, 2))
         ) as (mock_get_by_inst_uuid, mock_get_instance_vol_bdinfo,
-                mock_terminate_vol_conn):
+                mock_terminate_vol_conn, mock_get_power_off_values):
             self.compute.resize_instance(self.context, instance=instance,
                     migration=migration, image={}, reservations=[],
-                    instance_type=jsonutils.to_primitive(instance_type))
+                    instance_type=jsonutils.to_primitive(instance_type),
+                    clean_shutdown=clean_shutdown)
             mock_get_instance_vol_bdinfo.assert_called_once_with(
                     self.context, instance, bdms='fake_bdms')
             mock_terminate_vol_conn.assert_called_once_with(self.context,
                     instance, 'fake_bdms')
+            mock_get_power_off_values.assert_caleld_once_with(self.context,
+                    instance, clean_shutdown)
             self.assertEqual(migration.dest_compute, instance.host)
             self.compute.terminate_instance(self.context,
                     self._objectify(instance), [], [])
+
+    def test_resize_instance(self):
+        self._test_resize_instance()
+
+    def test_resize_instance_forced_shutdown(self):
+        self._test_resize_instance(clean_shutdown=False)
 
     def _test_confirm_resize(self, power_on):
         # Common test case method for confirm_resize
