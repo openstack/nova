@@ -46,20 +46,21 @@ class ComputeVMModeTest(test.NoDBTestCase):
         self.assertEqual(mode, "hvm")
 
     def test_name_pv_compat(self):
-        mode = vm_mode.name('pv')
+        mode = vm_mode.canonicalize('pv')
         self.assertEqual(vm_mode.XEN, mode)
 
     def test_name_hv_compat(self):
-        mode = vm_mode.name('hv')
+        mode = vm_mode.canonicalize('hv')
         self.assertEqual(vm_mode.HVM, mode)
 
     def test_name_hvm(self):
-        mode = vm_mode.name('hvm')
+        mode = vm_mode.canonicalize('hvm')
         self.assertEqual(vm_mode.HVM, mode)
 
     def test_name_none(self):
-        mode = vm_mode.name(None)
+        mode = vm_mode.canonicalize(None)
         self.assertIsNone(mode)
 
     def test_name_invalid(self):
-        self.assertRaises(exception.Invalid, vm_mode.name, 'invalid')
+        self.assertRaises(exception.InvalidVirtualMachineMode,
+                          vm_mode.canonicalize, 'invalid')

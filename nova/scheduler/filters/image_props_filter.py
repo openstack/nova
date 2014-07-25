@@ -48,7 +48,7 @@ class ImagePropertiesFilter(filters.BaseHostFilter):
         checked_img_props = (
             arch.canonicalize(img_arch),
             hvtype.canonicalize(img_h_type),
-            vm_mode.name(img_vm_mode)
+            vm_mode.canonicalize(img_vm_mode)
         )
 
         # Supported if no compute-related instance properties are specified
