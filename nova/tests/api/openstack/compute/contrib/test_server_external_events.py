@@ -115,9 +115,9 @@ class ServerExternalEventsTest(test.NoDBTestCase):
         body = self.default_body
         body['events'][0]['server_uuid'] = fake_instance_uuids[-1]
         req = self._create_req(body)
+        # the instance without host should not be passed to the compute layer
         result, code = self._assert_call(req, body,
-                                         [fake_instance_uuids[1],
-                                          fake_instance_uuids[-1]],
+                                         [fake_instance_uuids[1]],
                                          ['network-changed'])
         self.assertEqual(422, result['events'][0]['code'])
         self.assertEqual('failed', result['events'][0]['status'])
