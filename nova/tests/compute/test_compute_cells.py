@@ -274,6 +274,38 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
 
         self.assertTrue(self.cells_rpcapi.live_migrate_instance.called)
 
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(objects.Instance, 'get_flavor')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch.object(compute_api.API, '_get_image')
+    @mock.patch.object(compute_api.API, '_check_auto_disk_config')
+    @mock.patch.object(compute_api.API, '_checks_for_create_and_rebuild')
+    @mock.patch.object(compute_api.API, '_record_action_start')
+    def test_rebuild_instance(self, _record_action_start,
+        _checks_for_create_and_rebuild, _check_auto_disk_config,
+        _get_image, bdm_get_by_instance_uuid, get_flavor, instance_save):
+        orig_system_metadata = {}
+        instance = fake_instance.fake_instance_obj(self.context,
+                vm_state=vm_states.ACTIVE, cell_name='fake-cell',
+                launched_at=timeutils.utcnow(),
+                system_metadata=orig_system_metadata,
+                expected_attrs=['system_metadata'])
+        get_flavor.return_value = ''
+        image_href = ''
+        image = {"min_ram": 10, "min_disk": 1,
+                 "properties": {'architecture': 'x86_64'}}
+        admin_pass = ''
+        files_to_inject = []
+        bdms = []
+
+        _get_image.return_value = (None, image)
+        bdm_get_by_instance_uuid.return_value = bdms
+
+        self.compute_api.rebuild(self.context, instance, image_href,
+                                 admin_pass, files_to_inject)
+
+        self.assertTrue(self.cells_rpcapi.rebuild_instance.called)
+
     def test_check_equal(self):
         task_api = self.compute_api.compute_task_api
         tests = set()
