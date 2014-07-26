@@ -16,7 +16,7 @@ import sys
 
 from nova import exception
 from nova import test
-from nova.tests import fakeguestfs
+from nova.tests.virt.disk.vfs import fakeguestfs
 from nova.virt.disk.vfs import guestfs as vfsimpl
 
 
