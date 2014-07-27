@@ -313,8 +313,10 @@ class NetworkManager(manager.Manager):
     @utils.synchronized('get_dhcp')
     def _get_dhcp_ip(self, context, network_ref, host=None):
         """Get the proper dhcp address to listen on."""
+        # NOTE(vish): If we are sharing the dhcp_address then we can just
+        #             return the dhcp_server from the database.
         if self._uses_shared_ip(network_ref):
-            return network_ref['gateway']
+            return network_ref.get('dhcp_server') or network_ref['gateway']
 
         if not host:
             host = self.host
