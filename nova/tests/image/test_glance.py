@@ -246,14 +246,6 @@ class TestGlanceImageService(test.NoDBTestCase):
                 'fake', 'fake_host', 9292)
         return glance.GlanceImageService(client=client_wrapper)
 
-    def test_page_size(self):
-        with mock.patch.object(glance.GlanceClientWrapper, 'call') as a_mock:
-            self.service.detail(self.context, page_size=5)
-            self.assertEqual(a_mock.called, True)
-            a_mock.assert_called_with(self.context, 1, 'list',
-                                      filters={'is_public': 'none'},
-                                      page_size=5)
-
     def test_download_with_retries(self):
         tries = [0]
 
@@ -777,20 +769,22 @@ class TestDetail(test.NoDBTestCase):
         self.assertFalse(trans_from_mock.called)
         self.assertEqual([], images)
 
-    @mock.patch('nova.image.glance._extract_query_params')
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._is_image_available')
-    def test_detail_params_passed(self, is_avail_mock, _trans_from_mock,
-                                  ext_query_mock):
-        params = dict(limit=10)
-        ext_query_mock.return_value = params
+    def test_detail_params_passed(self, is_avail_mock, _trans_from_mock):
         client = mock.MagicMock()
         client.call.return_value = [mock.sentinel.images_0]
         ctx = mock.sentinel.ctx
         service = glance.GlanceImageService(client)
-        service.detail(ctx, **params)
+        service.detail(ctx, page_size=5, limit=10)
 
-        client.call.assert_called_once_with(ctx, 1, 'list', limit=10)
+        expected_filters = {
+            'is_public': 'none'
+        }
+        client.call.assert_called_once_with(ctx, 1, 'list',
+                                            filters=expected_filters,
+                                            page_size=5,
+                                            limit=10)
 
     @mock.patch('nova.image.glance._reraise_translated_exception')
     @mock.patch('nova.image.glance._extract_query_params')
