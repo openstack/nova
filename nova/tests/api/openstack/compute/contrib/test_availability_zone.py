@@ -26,18 +26,20 @@ from nova import servicegroup
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import matchers
+from nova.tests.objects import test_service
 
 
 def fake_service_get_all(context, disabled=None):
     def __fake_service(binary, availability_zone,
                        created_at, updated_at, host, disabled):
-        return {'binary': binary,
-                'availability_zone': availability_zone,
-                'available_zones': availability_zone,
-                'created_at': created_at,
-                'updated_at': updated_at,
-                'host': host,
-                'disabled': disabled}
+        return dict(test_service.fake_service,
+                    binary=binary,
+                    availability_zone=availability_zone,
+                    available_zones=availability_zone,
+                    created_at=created_at,
+                    updated_at=updated_at,
+                    host=host,
+                    disabled=disabled)
 
     if disabled:
         return [__fake_service("nova-compute", "zone-2",

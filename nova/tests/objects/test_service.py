@@ -16,6 +16,7 @@ import mock
 
 from nova import db
 from nova import exception
+from nova.objects import aggregate
 from nova.objects import service
 from nova.openstack.common import timeutils
 from nova.tests.objects import test_compute_node
@@ -164,12 +165,17 @@ class _TestServiceObject(object):
 
     def test_get_all_with_az(self):
         self.mox.StubOutWithMock(db, 'service_get_all')
-        self.mox.StubOutWithMock(db, 'aggregate_host_get_by_metadata_key')
+        self.mox.StubOutWithMock(aggregate.AggregateList,
+                                 'get_by_metadata_key')
         db.service_get_all(self.context, disabled=None).AndReturn(
             [dict(fake_service, topic='compute')])
-        db.aggregate_host_get_by_metadata_key(
-            self.context, key='availability_zone').AndReturn(
-                {fake_service['host']: ['test-az']})
+        agg = aggregate.Aggregate()
+        agg.name = 'foo'
+        agg.metadata = {'availability_zone': 'test-az'}
+        agg.create(self.context)
+        agg.hosts = [fake_service['host']]
+        aggregate.AggregateList.get_by_metadata_key(self.context,
+            'availability_zone', hosts=set(agg.hosts)).AndReturn([agg])
         self.mox.ReplayAll()
         services = service.ServiceList.get_all(self.context, set_zones=True)
         self.assertEqual(1, len(services))
