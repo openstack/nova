@@ -2427,13 +2427,7 @@ class LibvirtConnTestCase(test.TestCase,
                                       {}, disk_info)
         self.assertIsNone(conf.cpu)
 
-    def test_get_guest_cpu_config_host_passthrough_new(self):
-        def get_lib_version_stub():
-            return (0 * 1000 * 1000) + (9 * 1000) + 11
-
-        self.stubs.Set(self.conn,
-                       "getLibVersion",
-                       get_lib_version_stub)
+    def test_get_guest_cpu_config_host_passthrough(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = db.instance_create(self.context, self.test_instance)
 
@@ -2451,13 +2445,7 @@ class LibvirtConnTestCase(test.TestCase,
         self.assertEqual(conf.cpu.cores, 1)
         self.assertEqual(conf.cpu.threads, 1)
 
-    def test_get_guest_cpu_config_host_model_new(self):
-        def get_lib_version_stub():
-            return (0 * 1000 * 1000) + (9 * 1000) + 11
-
-        self.stubs.Set(self.conn,
-                       "getLibVersion",
-                       get_lib_version_stub)
+    def test_get_guest_cpu_config_host_model(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = db.instance_create(self.context, self.test_instance)
 
@@ -2475,13 +2463,7 @@ class LibvirtConnTestCase(test.TestCase,
         self.assertEqual(conf.cpu.cores, 1)
         self.assertEqual(conf.cpu.threads, 1)
 
-    def test_get_guest_cpu_config_custom_new(self):
-        def get_lib_version_stub():
-            return (0 * 1000 * 1000) + (9 * 1000) + 11
-
-        self.stubs.Set(self.conn,
-                       "getLibVersion",
-                       get_lib_version_stub)
+    def test_get_guest_cpu_config_custom(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = db.instance_create(self.context, self.test_instance)
 
@@ -2496,97 +2478,6 @@ class LibvirtConnTestCase(test.TestCase,
         self.assertIsInstance(conf.cpu,
                               vconfig.LibvirtConfigGuestCPU)
         self.assertEqual(conf.cpu.mode, "custom")
-        self.assertEqual(conf.cpu.model, "Penryn")
-        self.assertEqual(conf.cpu.sockets, 1)
-        self.assertEqual(conf.cpu.cores, 1)
-        self.assertEqual(conf.cpu.threads, 1)
-
-    def test_get_guest_cpu_config_host_passthrough_old(self):
-        def get_lib_version_stub():
-            return (0 * 1000 * 1000) + (9 * 1000) + 7
-
-        self.stubs.Set(self.conn,
-                       "getLibVersion",
-                       get_lib_version_stub)
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = db.instance_create(self.context, self.test_instance)
-
-        self.flags(cpu_mode="host-passthrough", group='libvirt')
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref)
-        self.assertRaises(exception.NovaException,
-                          conn._get_guest_config,
-                          instance_ref,
-                          _fake_network_info(self.stubs, 1),
-                          {},
-                          disk_info)
-
-    def test_get_guest_cpu_config_host_model_old(self):
-        def get_lib_version_stub():
-            return (0 * 1000 * 1000) + (9 * 1000) + 7
-
-        # Ensure we have a predictable host CPU
-        def get_host_capabilities_stub(self):
-            cpu = vconfig.LibvirtConfigGuestCPU()
-            cpu.model = "Opteron_G4"
-            cpu.vendor = "AMD"
-
-            cpu.add_feature(vconfig.LibvirtConfigGuestCPUFeature("tm2"))
-            cpu.add_feature(vconfig.LibvirtConfigGuestCPUFeature("ht"))
-
-            caps = vconfig.LibvirtConfigCaps()
-            caps.host = vconfig.LibvirtConfigCapsHost()
-            caps.host.cpu = cpu
-            return caps
-
-        self.stubs.Set(self.conn,
-                       "getLibVersion",
-                       get_lib_version_stub)
-        self.stubs.Set(libvirt_driver.LibvirtDriver,
-                       "_get_host_capabilities",
-                       get_host_capabilities_stub)
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = db.instance_create(self.context, self.test_instance)
-
-        self.flags(cpu_mode="host-model", group='libvirt')
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref)
-        conf = conn._get_guest_config(instance_ref,
-                                      _fake_network_info(self.stubs, 1),
-                                      {}, disk_info)
-        self.assertIsInstance(conf.cpu,
-                              vconfig.LibvirtConfigGuestCPU)
-        self.assertIsNone(conf.cpu.mode)
-        self.assertEqual(conf.cpu.model, "Opteron_G4")
-        self.assertEqual(conf.cpu.vendor, "AMD")
-        self.assertEqual(len(conf.cpu.features), 2)
-        self.assertEqual(conf.cpu.features.pop().name, "tm2")
-        self.assertEqual(conf.cpu.features.pop().name, "ht")
-        self.assertEqual(conf.cpu.sockets, 1)
-        self.assertEqual(conf.cpu.cores, 1)
-        self.assertEqual(conf.cpu.threads, 1)
-
-    def test_get_guest_cpu_config_custom_old(self):
-        def get_lib_version_stub():
-            return (0 * 1000 * 1000) + (9 * 1000) + 7
-
-        self.stubs.Set(self.conn,
-                       "getLibVersion",
-                       get_lib_version_stub)
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = db.instance_create(self.context, self.test_instance)
-
-        self.flags(cpu_mode="custom",
-                   cpu_model="Penryn",
-                   group='libvirt')
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref)
-        conf = conn._get_guest_config(instance_ref,
-                                      _fake_network_info(self.stubs, 1),
-                                      {}, disk_info)
-        self.assertIsInstance(conf.cpu,
-                              vconfig.LibvirtConfigGuestCPU)
-        self.assertIsNone(conf.cpu.mode)
         self.assertEqual(conf.cpu.model, "Penryn")
         self.assertEqual(conf.cpu.sockets, 1)
         self.assertEqual(conf.cpu.cores, 1)
@@ -5070,7 +4961,7 @@ class LibvirtConnTestCase(test.TestCase,
             return
 
         def fake_getLibVersion():
-            return 9007
+            return 9011
 
         def fake_getCapabilities():
             return """
@@ -7776,7 +7667,7 @@ Active:          8381604 kB
             return
 
         def fake_getLibVersion():
-            return 9007
+            return 9011
 
         def fake_getCapabilities():
             return """

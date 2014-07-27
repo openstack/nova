@@ -290,10 +290,9 @@ LIBVIRT_POWER_STATE = {
     VIR_DOMAIN_PMSUSPENDED: power_state.SUSPENDED,
 }
 
-MIN_LIBVIRT_VERSION = (0, 9, 6)
+MIN_LIBVIRT_VERSION = (0, 9, 11)
 # When the above version matches/exceeds this version
 # delete it & corresponding code using it
-MIN_LIBVIRT_HOST_CPU_VERSION = (0, 9, 10)
 MIN_LIBVIRT_DEVICE_CALLBACK_VERSION = (1, 1, 1)
 # Live snapshot requirements
 REQ_HYPERVISOR_LIVESNAPSHOT = "QEMU"
@@ -2955,29 +2954,6 @@ class LibvirtDriver(driver.ComputeDriver):
         caps = self._get_host_capabilities()
         return caps.host.uuid
 
-    def _get_host_cpu_for_guest(self):
-        """Returns an instance of config.LibvirtConfigGuestCPU
-           representing the host's CPU model & topology with
-           policy for configuring a guest to match
-        """
-
-        caps = self._get_host_capabilities()
-        hostcpu = caps.host.cpu
-        guestcpu = vconfig.LibvirtConfigGuestCPU()
-
-        guestcpu.model = hostcpu.model
-        guestcpu.vendor = hostcpu.vendor
-        guestcpu.arch = hostcpu.arch
-
-        guestcpu.match = "exact"
-
-        for hostfeat in hostcpu.features:
-            guestfeat = vconfig.LibvirtConfigGuestCPUFeature(hostfeat.name)
-            guestfeat.policy = "require"
-            guestcpu.add_feature(guestfeat)
-
-        return guestcpu
-
     def _get_guest_cpu_model_config(self):
         mode = CONF.libvirt.cpu_mode
         model = CONF.libvirt.cpu_model
@@ -3011,22 +2987,9 @@ class LibvirtDriver(driver.ComputeDriver):
         LOG.debug("CPU mode '%(mode)s' model '%(model)s' was chosen",
                   {'mode': mode, 'model': (model or "")})
 
-        # TODO(berrange): in the future, when MIN_LIBVIRT_VERSION is
-        # updated to be at least this new, we can kill off the elif
-        # blocks here
-        if self._has_min_version(MIN_LIBVIRT_HOST_CPU_VERSION):
-            cpu = vconfig.LibvirtConfigGuestCPU()
-            cpu.mode = mode
-            cpu.model = model
-        elif mode == "custom":
-            cpu = vconfig.LibvirtConfigGuestCPU()
-            cpu.model = model
-        elif mode == "host-model":
-            cpu = self._get_host_cpu_for_guest()
-        elif mode == "host-passthrough":
-            msg = _("Passthrough of the host CPU was requested but "
-                    "this libvirt version does not support this feature")
-            raise exception.NovaException(msg)
+        cpu = vconfig.LibvirtConfigGuestCPU()
+        cpu.mode = mode
+        cpu.model = model
 
         return cpu
 
