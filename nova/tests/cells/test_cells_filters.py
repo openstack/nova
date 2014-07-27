@@ -163,8 +163,7 @@ class TestTargetCellFilter(_FilterTestClass):
                         'routing_path': current_cell,
                         'scheduler': self.scheduler,
                         'context': self.context,
-                        'host_sched_kwargs': 'meow',
-                        'cell_scheduler_method': 'build_instances'}
+                        'host_sched_kwargs': 'meow'}
         # None is returned to bypass further scheduling.
         self.assertIsNone(self._filter_cells(cells, filter_props))
         # The filter should have re-scheduled to the child cell itself.
