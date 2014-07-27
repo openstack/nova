@@ -211,10 +211,13 @@ class VMwareVMOps(object):
             nova_context.get_admin_context(read_deleted='yes'),
             instance_type_id)
         allocations = {}
-        for key in ('cpu_limit', 'cpu_reservation'):
+        for (key, type) in (('cpu_limit', int),
+                            ('cpu_reservation', int),
+                            ('cpu_shares_level', str),
+                            ('cpu_shares_share', int)):
             value = flavor.extra_specs.get('quota:' + key)
             if value:
-                allocations[key] = int(value)
+                allocations[key] = type(value)
         return allocations
 
     def spawn(self, context, instance, image_meta, injected_files,
