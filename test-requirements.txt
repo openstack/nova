@@ -3,6 +3,7 @@ coverage>=3.6
 discover
 feedparser
 fixtures>=0.3.14
+libvirt-python>=1.2.5
 mock>=1.0
 mox>=0.5.3
 MySQL-python
