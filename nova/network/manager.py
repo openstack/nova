@@ -22,23 +22,6 @@ There are multiple backend drivers that handle specific types of networking
 topologies.  All of the network commands are issued to a subclass of
 :class:`NetworkManager`.
 
-**Related Flags**
-
-:network_driver:  Driver to use for network creation
-:flat_network_bridge:  Bridge device for simple network instances
-:flat_interface:  FlatDhcp will bridge into this interface if set
-:flat_network_dns:  Dns for simple network
-:vlan_start:  First VLAN for private networks
-:vpn_ip:  Public IP for the cloudpipe VPN servers
-:vpn_start:  First Vpn port for private networks
-:cnt_vpn_clients:  Number of addresses reserved for vpn clients
-:network_size:  Number of addresses in each private subnet
-:fixed_range:  Fixed IP address block
-:fixed_ip_disassociate_timeout:  Seconds after which a deallocated ip
-                                 is disassociated
-:create_unique_mac_address_attempts:  Number of times to attempt creating
-                                      a unique mac address
-
 """
 
 import datetime
