@@ -604,7 +604,6 @@ class VMwareVMOps(object):
     def _attach_cdrom_to_vm(self, vm_ref, instance,
                             datastore, file_path):
         """Attach cdrom to VM by reconfiguration."""
-        instance_name = instance.name
         client_factory = self._session._get_vim().client.factory
         devices = self._session._call_method(vim_util,
                                     "get_dynamic_property", vm_ref,
@@ -620,13 +619,11 @@ class VMwareVMOps(object):
         if controller_spec:
             cdrom_attach_config_spec.deviceChange.append(controller_spec)
 
-        LOG.debug("Reconfiguring VM instance %(instance_name)s to attach "
-                  "cdrom %(file_path)s",
-                  {'instance_name': instance_name, 'file_path': file_path})
+        LOG.debug("Reconfiguring VM instance to attach cdrom %s",
+                  file_path, instance=instance)
         vm_util.reconfigure_vm(self._session, vm_ref, cdrom_attach_config_spec)
-        LOG.debug("Reconfigured VM instance %(instance_name)s to attach "
-                  "cdrom %(file_path)s",
-                  {'instance_name': instance_name, 'file_path': file_path})
+        LOG.debug("Reconfigured VM instance to attach cdrom %s",
+                  file_path, instance=instance)
 
     @staticmethod
     def decide_linked_clone(image_linked_clone, global_linked_clone):
