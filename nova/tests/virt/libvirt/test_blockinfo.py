@@ -205,6 +205,7 @@ class LibvirtBlockInfoTest(test.TestCase):
         # A simple disk mapping setup, but for lxc
 
         user_context = context.RequestContext(self.user_id, self.project_id)
+        self.test_instance['ephemeral_gb'] = 0
         instance_ref = db.instance_create(user_context, self.test_instance)
 
         mapping = blockinfo.get_disk_mapping("lxc", instance_ref,
