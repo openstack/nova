@@ -262,6 +262,9 @@ class LibvirtBlockInfoTest(test.TestCase):
 
     def test_get_disk_mapping_simple_configdrive(self):
         # A simple disk mapping setup, but with configdrive added
+        # It's necessary to check if the architecture is power, because
+        # power doesn't have support to ide, and so libvirt translate
+        # all ide calls to scsi
 
         self.flags(force_config_drive=True)
 
@@ -271,18 +274,32 @@ class LibvirtBlockInfoTest(test.TestCase):
         mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
                                              "virtio", "ide")
 
+        # The last device is selected for this. on x86 is the last ide
+        # device (hdd). Since power only support scsi, the last device
+        # is sdz
+
+        bus_ppc = ("scsi", "sdz")
+        expect_bus = {"ppc": bus_ppc, "ppc64": bus_ppc}
+
+        bus, dev = expect_bus.get(blockinfo.libvirt_utils.get_arch({}),
+                                  ("ide", "hdd"))
+
         expect = {
             'disk': {'bus': 'virtio', 'dev': 'vda',
                      'type': 'disk', 'boot_index': '1'},
             'disk.local': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
-            'disk.config': {'bus': 'ide', 'dev': 'hdd', 'type': 'cdrom'},
+            'disk.config': {'bus': bus, 'dev': dev, 'type': 'cdrom'},
             'root': {'bus': 'virtio', 'dev': 'vda',
                      'type': 'disk', 'boot_index': '1'}
             }
+
         self.assertEqual(expect, mapping)
 
     def test_get_disk_mapping_cdrom_configdrive(self):
         # A simple disk mapping setup, with configdrive added as cdrom
+        # It's necessary to check if the architecture is power, because
+        # power doesn't have support to ide, and so libvirt translate
+        # all ide calls to scsi
 
         self.flags(force_config_drive=True)
         self.flags(config_drive_format='iso9660')
@@ -293,14 +310,21 @@ class LibvirtBlockInfoTest(test.TestCase):
         mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
                                              "virtio", "ide")
 
+        bus_ppc = ("scsi", "sdz")
+        expect_bus = {"ppc": bus_ppc, "ppc64": bus_ppc}
+
+        bus, dev = expect_bus.get(blockinfo.libvirt_utils.get_arch({}),
+                                  ("ide", "hdd"))
+
         expect = {
             'disk': {'bus': 'virtio', 'dev': 'vda',
                      'type': 'disk', 'boot_index': '1'},
             'disk.local': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
-            'disk.config': {'bus': 'ide', 'dev': 'hdd', 'type': 'cdrom'},
+            'disk.config': {'bus': bus, 'dev': dev, 'type': 'cdrom'},
             'root': {'bus': 'virtio', 'dev': 'vda',
                      'type': 'disk', 'boot_index': '1'}
             }
+
         self.assertEqual(expect, mapping)
 
     def test_get_disk_mapping_disk_configdrive(self):
