@@ -180,17 +180,6 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
         return conf
 
-    def get_config_ovs_ethernet(self, instance, vif,
-                                image_meta, inst_type):
-        conf = super(LibvirtGenericVIFDriver,
-                     self).get_config(instance, vif,
-                                      image_meta, inst_type)
-
-        dev = self.get_vif_devname(vif)
-        designer.set_vif_host_backend_ethernet_config(conf, dev)
-
-        return conf
-
     def get_config_ovs_bridge(self, instance, vif, image_meta,
                                  inst_type):
         conf = super(LibvirtGenericVIFDriver,
@@ -370,17 +359,6 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
                 linux_net.LinuxBridgeInterfaceDriver.ensure_bridge(
                                         self.get_bridge_name(vif),
                                         iface)
-
-    def plug_ovs_ethernet(self, instance, vif):
-        super(LibvirtGenericVIFDriver,
-              self).plug(instance, vif)
-
-        iface_id = self.get_ovs_interfaceid(vif)
-        dev = self.get_vif_devname(vif)
-        linux_net.create_tap_dev(dev)
-        linux_net.create_ovs_vif_port(self.get_bridge_name(vif),
-                                      dev, iface_id, vif['address'],
-                                      instance['uuid'])
 
     def plug_ovs_bridge(self, instance, vif):
         """No manual plugging required."""
@@ -565,18 +543,6 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         """No manual unplugging required."""
         super(LibvirtGenericVIFDriver,
               self).unplug(instance, vif)
-
-    def unplug_ovs_ethernet(self, instance, vif):
-        """Unplug the VIF by deleting the port from the bridge."""
-        super(LibvirtGenericVIFDriver,
-              self).unplug(instance, vif)
-
-        try:
-            linux_net.delete_ovs_vif_port(self.get_bridge_name(vif),
-                                          self.get_vif_devname(vif))
-        except processutils.ProcessExecutionError:
-            LOG.exception(_LE("Failed while unplugging vif"),
-                          instance=instance)
 
     def unplug_ovs_bridge(self, instance, vif):
         """No manual unplugging required."""
