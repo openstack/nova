@@ -86,7 +86,7 @@ class EC2ValidateTestCase(test.TestCase):
         self.volume_id_exception_map.extend([(x, exception.VolumeNotFound)
                 for x in self.EC2_VALID__IDS])
 
-        def fake_show(meh, context, id):
+        def fake_show(meh, context, id, **kwargs):
             return {'id': id,
                     'container_format': 'ami',
                     'properties': {

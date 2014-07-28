@@ -123,7 +123,7 @@ class TestS3ImageService(test.TestCase):
         self.image_service.show(self.context, '1')
 
     def test_show_translates_image_state_correctly(self):
-        def my_fake_show(self, context, image_id):
+        def my_fake_show(self, context, image_id, **kwargs):
             fake_state_map = {
                 '155d900f-4e14-4e4c-a73d-069cbf4541e6': 'downloading',
                 'a2459075-d96c-40d5-893e-577ff92e721c': 'failed_decrypt',

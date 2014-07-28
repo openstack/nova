@@ -1413,7 +1413,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
 
     def test_rebuild_instance_fails_when_min_ram_too_small(self):
         # make min_ram larger than our instance ram size
-        def fake_get_image(self, context, image_href):
+        def fake_get_image(self, context, image_href, **kwargs):
             return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                         name='public image', is_public=True,
                         status='active', properties={'key1': 'value1'},
@@ -1428,7 +1428,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
 
     def test_rebuild_instance_fails_when_min_disk_too_small(self):
         # make min_disk larger than our instance disk size
-        def fake_get_image(self, context, image_href):
+        def fake_get_image(self, context, image_href, **kwargs):
             return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                         name='public image', is_public=True,
                         status='active', properties={'key1': 'value1'},
@@ -1444,7 +1444,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         # make image size larger than our instance disk size
         size = str(1000 * (1024 ** 3))
 
-        def fake_get_image(self, context, image_href):
+        def fake_get_image(self, context, image_href, **kwargs):
             return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                         name='public image', is_public=True,
                         status='active', size=size)
@@ -1456,7 +1456,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                           self.req, FAKE_UUID, body=self.body)
 
     def test_rebuild_instance_name_all_blank(self):
-        def fake_get_image(self, context, image_href):
+        def fake_get_image(self, context, image_href, **kwargs):
             return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                         name='public image', is_public=True, status='active')
 
@@ -1468,7 +1468,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                           self.req, FAKE_UUID, body=self.body)
 
     def test_rebuild_instance_with_deleted_image(self):
-        def fake_get_image(self, context, image_href):
+        def fake_get_image(self, context, image_href, **kwargs):
             return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                         name='public image', is_public=True,
                         status='DELETED')

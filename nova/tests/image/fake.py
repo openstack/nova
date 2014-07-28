@@ -167,7 +167,7 @@ class _FakeImageService(object):
             with open(dst_path, 'wb') as data:
                 data.write(self._imagedata.get(image_id, ''))
 
-    def show(self, context, image_id):
+    def show(self, context, image_id, include_locations=False):
         """Get data about specified image.
 
         Returns a dict containing image data for the given opaque image id.

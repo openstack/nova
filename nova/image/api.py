@@ -67,7 +67,7 @@ class API(object):
         session = self._get_session(context)
         return session.detail(context, **kwargs)
 
-    def get(self, context, id_or_uri):
+    def get(self, context, id_or_uri, include_locations=False):
         """Retrieves the information record for a single disk image. If the
         supplied identifier parameter is a UUID, the default driver will
         be used to return information about the image. If the supplied
@@ -77,9 +77,16 @@ class API(object):
         :param context: The `nova.context.Context` object for the request
         :param id_or_uri: A UUID identifier or an image URI to look up image
                           information for.
+        :param include_locations: (Optional) include locations in the returned
+                                  dict of information if the image service API
+                                  supports it. If the image service API does
+                                  not support the locations attribute, it will
+                                  still be included in the returned dict, as an
+                                  empty list.
         """
         session, image_id = self._get_session_and_image_id(context, id_or_uri)
-        return session.show(context, image_id)
+        return session.show(context, image_id,
+                            include_locations=include_locations)
 
     def create(self, context, image_info, data=None):
         """Creates a new image record, optionally passing the image bits to
