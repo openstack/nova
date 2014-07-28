@@ -16,9 +16,6 @@
 Tests For Filter Scheduler.
 """
 
-import contextlib
-import uuid
-
 import mock
 import mox
 
@@ -27,13 +24,11 @@ from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
-from nova import objects
 from nova.scheduler import driver
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
 from nova.scheduler import utils as scheduler_utils
 from nova.scheduler import weights
-from nova.tests import fake_instance
 from nova.tests.scheduler import fakes
 from nova.tests.scheduler import test_scheduler
 
@@ -368,86 +363,6 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                          filter_properties['retry']['hosts'][0])
 
         self.assertEqual({'vcpus': 5}, host_state.limits)
-
-    def _create_server_group(self, policy='anti-affinity'):
-        instance = fake_instance.fake_instance_obj(self.context,
-                params={'host': 'hostA'})
-
-        group = objects.InstanceGroup()
-        group.name = 'pele'
-        group.uuid = str(uuid.uuid4())
-        group.members = [instance.uuid]
-        group.policies = [policy]
-        return group
-
-    def _group_details_in_filter_properties(self, group, func='get_by_uuid',
-                                            hint=None, policy=None):
-        sched = fakes.FakeFilterScheduler()
-
-        filter_properties = {
-            'scheduler_hints': {
-                'group': hint,
-            },
-            'group_hosts': ['hostB'],
-        }
-
-        with contextlib.nested(
-            mock.patch.object(objects.InstanceGroup, func, return_value=group),
-            mock.patch.object(objects.InstanceGroup, 'get_hosts',
-                              return_value=['hostA']),
-        ) as (get_group, get_hosts):
-            sched._supports_anti_affinity = True
-            update_group_hosts = sched._setup_instance_group(self.context,
-                    filter_properties)
-            self.assertTrue(update_group_hosts)
-            self.assertEqual(set(['hostA', 'hostB']),
-                             filter_properties['group_hosts'])
-            self.assertEqual([policy], filter_properties['group_policies'])
-
-    def test_group_details_in_filter_properties(self):
-        for policy in ['affinity', 'anti-affinity']:
-            group = self._create_server_group(policy)
-            self._group_details_in_filter_properties(group, func='get_by_uuid',
-                                                     hint=group.uuid,
-                                                     policy=policy)
-
-    def _group_filter_with_filter_not_configured(self, policy):
-        self.flags(scheduler_default_filters=['f1', 'f2'])
-        sched = fakes.FakeFilterScheduler()
-
-        instance = fake_instance.fake_instance_obj(self.context,
-                params={'host': 'hostA'})
-
-        group = objects.InstanceGroup()
-        group.uuid = str(uuid.uuid4())
-        group.members = [instance.uuid]
-        group.policies = [policy]
-
-        filter_properties = {
-            'scheduler_hints': {
-                'group': group.uuid,
-            },
-        }
-
-        with contextlib.nested(
-            mock.patch.object(objects.InstanceGroup, 'get_by_uuid',
-                              return_value=group),
-            mock.patch.object(objects.InstanceGroup, 'get_hosts',
-                              return_value=['hostA']),
-        ) as (get_group, get_hosts):
-            self.assertRaises(exception.NoValidHost,
-                              sched._setup_instance_group, self.context,
-                              filter_properties)
-
-    def test_group_filter_with_filter_not_configured(self):
-        policies = ['anti-affinity', 'affinity']
-        for policy in policies:
-            self._group_filter_with_filter_not_configured(policy)
-
-    def test_group_name_details_in_filter_properties(self):
-        group = self._create_server_group()
-        self._group_details_in_filter_properties(group, 'get_by_name',
-                                                 group.name, 'anti-affinity')
 
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
                 return_value={'numa_topology': None,

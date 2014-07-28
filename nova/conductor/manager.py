@@ -596,6 +596,16 @@ class ComputeTaskManager(base.Base):
         #                 2.0 of the RPC API.
         request_spec = scheduler_utils.build_request_spec(context, image,
                                                           instances)
+        # NOTE(sbauza): filter_properties['hints'] can be None
+        hints = filter_properties.get('scheduler_hints', {}) or {}
+        group_hint = hints.get('group')
+        group_hosts = filter_properties.get('group_hosts')
+        group_info = scheduler_utils.setup_instance_group(context, group_hint,
+                                                          group_hosts)
+        if isinstance(group_info, tuple):
+            filter_properties['group_updated'] = True
+            (filter_properties['group_hosts'],
+             filter_properties['group_policies']) = group_info
         # TODO(danms): Remove this in version 2.0 of the RPC API
         if (requested_networks and
                 not isinstance(requested_networks,

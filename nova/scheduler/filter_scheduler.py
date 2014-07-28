@@ -26,7 +26,6 @@ from oslo.config import cfg
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
 from nova.i18n import _, _LW
-from nova import objects
 from nova.openstack.common import log as logging
 from nova import rpc
 from nova.scheduler import driver
@@ -60,10 +59,6 @@ class FilterScheduler(driver.Scheduler):
         self.options = scheduler_options.SchedulerOptions()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.notifier = rpc.get_notifier('scheduler')
-        self._supports_affinity = scheduler_utils.validate_filter(
-            'ServerGroupAffinityFilter')
-        self._supports_anti_affinity = scheduler_utils.validate_filter(
-            'ServerGroupAntiAffinityFilter')
 
     # NOTE(alaski): Remove this method when the scheduler rpc interface is
     # bumped to 4.x as it is no longer used.
@@ -216,40 +211,6 @@ class FilterScheduler(driver.Scheduler):
         filter_properties['project_id'] = project_id
         filter_properties['os_type'] = os_type
 
-    def _setup_instance_group(self, context, filter_properties):
-        """Update filter_properties with server group info.
-
-        :returns: True if filter_properties has been updated, False if not.
-        """
-        scheduler_hints = filter_properties.get('scheduler_hints') or {}
-        group_hint = scheduler_hints.get('group', None)
-        if not group_hint:
-            return False
-
-        group = objects.InstanceGroup.get_by_hint(context, group_hint)
-        policies = set(('anti-affinity', 'affinity'))
-        if not any((policy in policies) for policy in group.policies):
-            return False
-
-        if ('affinity' in group.policies and
-                not self._supports_affinity):
-            msg = _("ServerGroupAffinityFilter not configured")
-            LOG.error(msg)
-            raise exception.NoValidHost(reason=msg)
-        if ('anti-affinity' in group.policies and
-                not self._supports_anti_affinity):
-            msg = _("ServerGroupAntiAffinityFilter not configured")
-            LOG.error(msg)
-            raise exception.NoValidHost(reason=msg)
-
-        filter_properties.setdefault('group_hosts', set())
-        user_hosts = set(filter_properties['group_hosts'])
-        group_hosts = set(group.get_hosts(context))
-        filter_properties['group_hosts'] = user_hosts | group_hosts
-        filter_properties['group_policies'] = group.policies
-
-        return True
-
     def _schedule(self, context, request_spec, filter_properties):
         """Returns a list of hosts that meet the required specs,
         ordered by their fitness.
@@ -259,8 +220,7 @@ class FilterScheduler(driver.Scheduler):
         instance_type = request_spec.get("instance_type", None)
         instance_uuids = request_spec.get("instance_uuids", None)
 
-        update_group_hosts = self._setup_instance_group(context,
-                filter_properties)
+        update_group_hosts = filter_properties.get('group_updated', False)
 
         config_options = self._get_configuration_options()
 
@@ -326,6 +286,12 @@ class FilterScheduler(driver.Scheduler):
             if pci_requests:
                 del instance_properties['pci_requests']
             if update_group_hosts is True:
+                # NOTE(sbauza): Group details are serialized into a list now
+                # that they are populated by the conductor, we need to
+                # deserialize them
+                if isinstance(filter_properties['group_hosts'], list):
+                    filter_properties['group_hosts'] = set(
+                        filter_properties['group_hosts'])
                 filter_properties['group_hosts'].add(chosen_host.obj.host)
         return selected_hosts
 

@@ -1246,6 +1246,7 @@ class _BaseTaskTestCase(object):
         instance_properties = jsonutils.to_primitive(instances[0])
 
         self.mox.StubOutWithMock(db, 'flavor_extra_specs_get')
+        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.conductor_manager.scheduler_client,
                                  'select_destinations')
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
@@ -1257,6 +1258,7 @@ class _BaseTaskTestCase(object):
         db.flavor_extra_specs_get(
                 self.context,
                 instance_type['flavorid']).AndReturn('fake-specs')
+        scheduler_utils.setup_instance_group(self.context, None, None)
         self.conductor_manager.scheduler_client.select_destinations(
                 self.context, {'image': {'fake_data': 'should_pass_silently'},
                     'instance_properties': jsonutils.to_primitive(
@@ -1343,12 +1345,14 @@ class _BaseTaskTestCase(object):
                 'instance_properties': instances[0]}
         exception = exc.NoValidHost(reason='fake-reason')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
+        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(scheduler_driver, 'handle_schedule_error')
         self.mox.StubOutWithMock(self.conductor_manager.scheduler_client,
                 'select_destinations')
 
         scheduler_utils.build_request_spec(self.context, image,
                 mox.IgnoreArg()).AndReturn(spec)
+        scheduler_utils.setup_instance_group(self.context, None, None)
         self.conductor_manager.scheduler_client.select_destinations(
                 self.context, spec,
                 {'retry': {'num_attempts': 1,
@@ -1995,6 +1999,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         spec = {'fake': 'specs',
                 'instance_properties': instances[0]}
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
+        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(scheduler_driver, 'handle_schedule_error')
         self.mox.StubOutWithMock(self.conductor_manager.scheduler_client,
                 'select_destinations')
@@ -2003,6 +2008,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         scheduler_utils.build_request_spec(self.context, image,
                 mox.IgnoreArg()).AndReturn(spec)
+        scheduler_utils.setup_instance_group(self.context, None, None)
         self.conductor_manager.scheduler_client.select_destinations(
                 self.context, spec,
                 {'retry': {'num_attempts': 1, 'hosts': []}}).AndReturn(
@@ -2040,8 +2046,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 block_device_mapping='block_device_mapping',
                 legacy_bdm=False)
 
+    @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(scheduler_utils, 'build_request_spec')
-    def test_build_instances_info_cache_not_found(self, build_request_spec):
+    def test_build_instances_info_cache_not_found(self, build_request_spec,
+                                                  setup_instance_group):
         instances = [fake_instance.fake_instance_obj(self.context)
                 for i in xrange(2)]
         image = {'fake-data': 'should_pass_silently'}
@@ -2076,6 +2084,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                     block_device_mapping='block_device_mapping',
                     legacy_bdm=False)
 
+            setup_instance_group.assert_called_once_with(
+                self.context, None, None)
             build_and_run_instance.assert_called_once_with(self.context,
                     instance=instances[1], host='host2', image={'fake-data':
                         'should_pass_silently'}, request_spec=spec,
