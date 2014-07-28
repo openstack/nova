@@ -46,39 +46,41 @@ class NetworkAPI(object):
 
     API version history:
 
-        1.0 - Initial version.
-        1.1 - Adds migrate_instance_[start|finish]
-        1.2 - Make migrate_instance_[start|finish] a little more flexible
-        1.3 - Adds fanout cast update_dns for multi_host networks
-        1.4 - Add get_backdoor_port()
-        1.5 - Adds associate
-        1.6 - Adds instance_uuid to _{dis,}associate_floating_ip
-        1.7 - Adds method get_floating_ip_pools to replace get_floating_pools
-        1.8 - Adds macs to allocate_for_instance
-        1.9 - Adds rxtx_factor to [add|remove]_fixed_ip, removes instance_uuid
-              from allocate_for_instance and instance_get_nw_info
+        * 1.0 - Initial version.
+        * 1.1 - Adds migrate_instance_[start|finish]
+        * 1.2 - Make migrate_instance_[start|finish] a little more flexible
+        * 1.3 - Adds fanout cast update_dns for multi_host networks
+        * 1.4 - Add get_backdoor_port()
+        * 1.5 - Adds associate
+        * 1.6 - Adds instance_uuid to _{dis,}associate_floating_ip
+        * 1.7 - Adds method get_floating_ip_pools to replace get_floating_pools
+        * 1.8 - Adds macs to allocate_for_instance
+        * 1.9 - Adds rxtx_factor to [add|remove]_fixed_ip, removes
+                instance_uuid from allocate_for_instance and
+                instance_get_nw_info
 
         ... Grizzly supports message version 1.9.  So, any changes to existing
         methods in 1.x after that point should be done such that they can
         handle the version_cap being set to 1.9.
 
-        1.10- Adds (optional) requested_networks to deallocate_for_instance
+        * 1.10- Adds (optional) requested_networks to deallocate_for_instance
 
         ... Havana supports message version 1.10.  So, any changes to existing
         methods in 1.x after that point should be done such that they can
         handle the version_cap being set to 1.10.
 
-        NOTE: remove unused method get_vifs_by_instance()
-        NOTE: remove unused method get_vif_by_mac_address()
-        NOTE: remove unused method get_network()
-        NOTE: remove unused method get_all_networks()
-        1.11 - Add instance to deallocate_for_instance().  Remove instance_id,
-               project_id, and host.
-        1.12 - Add instance to deallocate_fixed_ip()
+        * NOTE: remove unused method get_vifs_by_instance()
+        * NOTE: remove unused method get_vif_by_mac_address()
+        * NOTE: remove unused method get_network()
+        * NOTE: remove unused method get_all_networks()
+        * 1.11 - Add instance to deallocate_for_instance().
+                 Remove instance_id, project_id, and host.
+        * 1.12 - Add instance to deallocate_fixed_ip()
 
         ... Icehouse supports message version 1.12.  So, any changes to
         existing methods in 1.x after that point should be done such that they
         can handle the version_cap being set to 1.12.
+
     '''
 
     VERSION_ALIASES = {

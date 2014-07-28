@@ -33,16 +33,16 @@ class ConsoleAuthAPI(object):
 
     API version history:
 
-        1.0 - Initial version.
-        1.1 - Added get_backdoor_port()
-        1.2 - Added instance_uuid to authorize_console, and
-              delete_tokens_for_instance
+        * 1.0 - Initial version.
+        * 1.1 - Added get_backdoor_port()
+        * 1.2 - Added instance_uuid to authorize_console, and
+                delete_tokens_for_instance
 
         ... Grizzly and Havana support message version 1.2.  So, any changes
         to existing methods in 2.x after that point should be done such that
         they can handle the version_cap being set to 1.2.
 
-        2.0 - Major API rev for Icehouse
+        * 2.0 - Major API rev for Icehouse
 
         ... Icehouse supports message version 2.0.  So, any changes to
         existing methods in 2.x after that point should be done such that they

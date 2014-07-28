@@ -67,199 +67,207 @@ class ComputeAPI(object):
 
     API version history:
 
-        1.0 - Initial version.
-        1.1 - Adds get_host_uptime()
-        1.2 - Adds check_can_live_migrate_[destination|source]
-        1.3 - Adds change_instance_metadata()
-        1.4 - Remove instance_uuid, add instance argument to reboot_instance()
-        1.5 - Remove instance_uuid, add instance argument to pause_instance(),
-              unpause_instance()
-        1.6 - Remove instance_uuid, add instance argument to suspend_instance()
-        1.7 - Remove instance_uuid, add instance argument to
-              get_console_output()
-        1.8 - Remove instance_uuid, add instance argument to
-              add_fixed_ip_to_instance()
-        1.9 - Remove instance_uuid, add instance argument to attach_volume()
-        1.10 - Remove instance_id, add instance argument to
-               check_can_live_migrate_destination()
-        1.11 - Remove instance_id, add instance argument to
-               check_can_live_migrate_source()
-        1.12 - Remove instance_uuid, add instance argument to confirm_resize()
-        1.13 - Remove instance_uuid, add instance argument to detach_volume()
-        1.14 - Remove instance_uuid, add instance argument to finish_resize()
-        1.15 - Remove instance_uuid, add instance argument to
-               finish_revert_resize()
-        1.16 - Remove instance_uuid, add instance argument to get_diagnostics()
-        1.17 - Remove instance_uuid, add instance argument to get_vnc_console()
-        1.18 - Remove instance_uuid, add instance argument to inject_file()
-        1.19 - Remove instance_uuid, add instance argument to
-               inject_network_info()
-        1.20 - Remove instance_id, add instance argument to
-               post_live_migration_at_destination()
-        1.21 - Remove instance_uuid, add instance argument to
-               power_off_instance() and stop_instance()
-        1.22 - Remove instance_uuid, add instance argument to
-               power_on_instance() and start_instance()
-        1.23 - Remove instance_id, add instance argument to
-               pre_live_migration()
-        1.24 - Remove instance_uuid, add instance argument to
-               rebuild_instance()
-        1.25 - Remove instance_uuid, add instance argument to
-               remove_fixed_ip_from_instance()
-        1.26 - Remove instance_id, add instance argument to
-               remove_volume_connection()
-        1.27 - Remove instance_uuid, add instance argument to
-               rescue_instance()
-        1.28 - Remove instance_uuid, add instance argument to reset_network()
-        1.29 - Remove instance_uuid, add instance argument to resize_instance()
-        1.30 - Remove instance_uuid, add instance argument to resume_instance()
-        1.31 - Remove instance_uuid, add instance argument to revert_resize()
-        1.32 - Remove instance_id, add instance argument to
-               rollback_live_migration_at_destination()
-        1.33 - Remove instance_uuid, add instance argument to
-               set_admin_password()
-        1.34 - Remove instance_uuid, add instance argument to
-               snapshot_instance()
-        1.35 - Remove instance_uuid, add instance argument to
-               unrescue_instance()
-        1.36 - Remove instance_uuid, add instance argument to
-               change_instance_metadata()
-        1.37 - Remove instance_uuid, add instance argument to
-               terminate_instance()
-        1.38 - Changes to prep_resize():
-                - remove instance_uuid, add instance
-                - remove instance_type_id, add instance_type
-                - remove topic, it was unused
-        1.39 - Remove instance_uuid, add instance argument to run_instance()
-        1.40 - Remove instance_id, add instance argument to live_migration()
-        1.41 - Adds refresh_instance_security_rules()
-        1.42 - Add reservations arg to prep_resize(), resize_instance(),
-               finish_resize(), confirm_resize(), revert_resize() and
-               finish_revert_resize()
-        1.43 - Add migrate_data to live_migration()
-        1.44 - Adds reserve_block_device_name()
+        * 1.0 - Initial version.
+        * 1.1 - Adds get_host_uptime()
+        * 1.2 - Adds check_can_live_migrate_[destination|source]
+        * 1.3 - Adds change_instance_metadata()
+        * 1.4 - Remove instance_uuid, add instance argument to
+                reboot_instance()
+        * 1.5 - Remove instance_uuid, add instance argument to
+                pause_instance(), unpause_instance()
+        * 1.6 - Remove instance_uuid, add instance argument to
+                suspend_instance()
+        * 1.7 - Remove instance_uuid, add instance argument to
+                get_console_output()
+        * 1.8 - Remove instance_uuid, add instance argument to
+                add_fixed_ip_to_instance()
+        * 1.9 - Remove instance_uuid, add instance argument to attach_volume()
+        * 1.10 - Remove instance_id, add instance argument to
+                 check_can_live_migrate_destination()
+        * 1.11 - Remove instance_id, add instance argument to
+                 check_can_live_migrate_source()
+        * 1.12 - Remove instance_uuid, add instance argument to
+                 confirm_resize()
+        * 1.13 - Remove instance_uuid, add instance argument to detach_volume()
+        * 1.14 - Remove instance_uuid, add instance argument to finish_resize()
+        * 1.15 - Remove instance_uuid, add instance argument to
+                 finish_revert_resize()
+        * 1.16 - Remove instance_uuid, add instance argument to
+                 get_diagnostics()
+        * 1.17 - Remove instance_uuid, add instance argument to
+                 get_vnc_console()
+        * 1.18 - Remove instance_uuid, add instance argument to inject_file()
+        * 1.19 - Remove instance_uuid, add instance argument to
+                 inject_network_info()
+        * 1.20 - Remove instance_id, add instance argument to
+                 post_live_migration_at_destination()
+        * 1.21 - Remove instance_uuid, add instance argument to
+                 power_off_instance() and stop_instance()
+        * 1.22 - Remove instance_uuid, add instance argument to
+                 power_on_instance() and start_instance()
+        * 1.23 - Remove instance_id, add instance argument to
+                 pre_live_migration()
+        * 1.24 - Remove instance_uuid, add instance argument to
+                 rebuild_instance()
+        * 1.25 - Remove instance_uuid, add instance argument to
+                 remove_fixed_ip_from_instance()
+        * 1.26 - Remove instance_id, add instance argument to
+                 remove_volume_connection()
+        * 1.27 - Remove instance_uuid, add instance argument to
+                 rescue_instance()
+        * 1.28 - Remove instance_uuid, add instance argument to reset_network()
+        * 1.29 - Remove instance_uuid, add instance argument to
+                 resize_instance()
+        * 1.30 - Remove instance_uuid, add instance argument to
+                 resume_instance()
+        * 1.31 - Remove instance_uuid, add instance argument to revert_resize()
+        * 1.32 - Remove instance_id, add instance argument to
+                 rollback_live_migration_at_destination()
+        * 1.33 - Remove instance_uuid, add instance argument to
+                 set_admin_password()
+        * 1.34 - Remove instance_uuid, add instance argument to
+                 snapshot_instance()
+        * 1.35 - Remove instance_uuid, add instance argument to
+                 unrescue_instance()
+        * 1.36 - Remove instance_uuid, add instance argument to
+                 change_instance_metadata()
+        * 1.37 - Remove instance_uuid, add instance argument to
+                 terminate_instance()
+        * 1.38 - Changes to prep_resize():
+            * remove instance_uuid, add instance
+            * remove instance_type_id, add instance_type
+            * remove topic, it was unused
+        * 1.39 - Remove instance_uuid, add instance argument to run_instance()
+        * 1.40 - Remove instance_id, add instance argument to live_migration()
+        * 1.41 - Adds refresh_instance_security_rules()
+        * 1.42 - Add reservations arg to prep_resize(), resize_instance(),
+                 finish_resize(), confirm_resize(), revert_resize() and
+                 finish_revert_resize()
+        * 1.43 - Add migrate_data to live_migration()
+        * 1.44 - Adds reserve_block_device_name()
 
-        2.0 - Remove 1.x backwards compat
-        2.1 - Adds orig_sys_metadata to rebuild_instance()
-        2.2 - Adds slave_info parameter to add_aggregate_host() and
-              remove_aggregate_host()
-        2.3 - Adds volume_id to reserve_block_device_name()
-        2.4 - Add bdms to terminate_instance
-        2.5 - Add block device and network info to reboot_instance
-        2.6 - Remove migration_id, add migration to resize_instance
-        2.7 - Remove migration_id, add migration to confirm_resize
-        2.8 - Remove migration_id, add migration to finish_resize
-        2.9 - Add publish_service_capabilities()
-        2.10 - Adds filter_properties and request_spec to prep_resize()
-        2.11 - Adds soft_delete_instance() and restore_instance()
-        2.12 - Remove migration_id, add migration to revert_resize
-        2.13 - Remove migration_id, add migration to finish_revert_resize
-        2.14 - Remove aggregate_id, add aggregate to add_aggregate_host
-        2.15 - Remove aggregate_id, add aggregate to remove_aggregate_host
-        2.16 - Add instance_type to resize_instance
-        2.17 - Add get_backdoor_port()
-        2.18 - Add bdms to rebuild_instance
-        2.19 - Add node to run_instance
-        2.20 - Add node to prep_resize
-        2.21 - Add migrate_data dict param to pre_live_migration()
-        2.22 - Add recreate, on_shared_storage and host arguments to
-               rebuild_instance()
-        2.23 - Remove network_info from reboot_instance
-        2.24 - Added get_spice_console method
-        2.25 - Add attach_interface() and detach_interface()
-        2.26 - Add validate_console_port to ensure the service connects to
-               vnc on the correct port
-        2.27 - Adds 'reservations' to terminate_instance() and
-               soft_delete_instance()
+        * 2.0 - Remove 1.x backwards compat
+        * 2.1 - Adds orig_sys_metadata to rebuild_instance()
+        * 2.2 - Adds slave_info parameter to add_aggregate_host() and
+                remove_aggregate_host()
+        * 2.3 - Adds volume_id to reserve_block_device_name()
+        * 2.4 - Add bdms to terminate_instance
+        * 2.5 - Add block device and network info to reboot_instance
+        * 2.6 - Remove migration_id, add migration to resize_instance
+        * 2.7 - Remove migration_id, add migration to confirm_resize
+        * 2.8 - Remove migration_id, add migration to finish_resize
+        * 2.9 - Add publish_service_capabilities()
+        * 2.10 - Adds filter_properties and request_spec to prep_resize()
+        * 2.11 - Adds soft_delete_instance() and restore_instance()
+        * 2.12 - Remove migration_id, add migration to revert_resize
+        * 2.13 - Remove migration_id, add migration to finish_revert_resize
+        * 2.14 - Remove aggregate_id, add aggregate to add_aggregate_host
+        * 2.15 - Remove aggregate_id, add aggregate to remove_aggregate_host
+        * 2.16 - Add instance_type to resize_instance
+        * 2.17 - Add get_backdoor_port()
+        * 2.18 - Add bdms to rebuild_instance
+        * 2.19 - Add node to run_instance
+        * 2.20 - Add node to prep_resize
+        * 2.21 - Add migrate_data dict param to pre_live_migration()
+        * 2.22 - Add recreate, on_shared_storage and host arguments to
+                 rebuild_instance()
+        * 2.23 - Remove network_info from reboot_instance
+        * 2.24 - Added get_spice_console method
+        * 2.25 - Add attach_interface() and detach_interface()
+        * 2.26 - Add validate_console_port to ensure the service connects to
+                 vnc on the correct port
+        * 2.27 - Adds 'reservations' to terminate_instance() and
+                 soft_delete_instance()
 
         ... Grizzly supports message version 2.27.  So, any changes to existing
         methods in 2.x after that point should be done such that they can
         handle the version_cap being set to 2.27.
 
-        2.28 - Adds check_instance_shared_storage()
-        2.29 - Made start_instance() and stop_instance() take new-world
-               instance objects
-        2.30 - Adds live_snapshot_instance()
-        2.31 - Adds shelve_instance(), shelve_offload_instance, and
-               unshelve_instance()
-        2.32 - Make reboot_instance take a new world instance object
-        2.33 - Made suspend_instance() and resume_instance() take new-world
-               instance objects
-        2.34 - Added swap_volume()
-        2.35 - Made terminate_instance() and soft_delete_instance() take
-               new-world instance objects
-        2.36 - Made pause_instance() and unpause_instance() take new-world
-               instance objects
-        2.37 - Added the legacy_bdm_in_spec parameter to run_instance
-        2.38 - Made check_can_live_migrate_[destination|source] take
-               new-world instance objects
-        2.39 - Made revert_resize() and confirm_resize() take new-world
-               instance objects
-        2.40 - Made reset_network() take new-world instance object
-        2.41 - Make inject_network_info take new-world instance object
-        2.42 - Splits snapshot_instance() into snapshot_instance() and
-               backup_instance() and makes them take new-world instance
-               objects.
-        2.43 - Made prep_resize() take new-world instance object
-        2.44 - Add volume_snapshot_create(), volume_snapshot_delete()
-        2.45 - Made resize_instance() take new-world objects
-        2.46 - Made finish_resize() take new-world objects
-        2.47 - Made finish_revert_resize() take new-world objects
+        * 2.28 - Adds check_instance_shared_storage()
+        * 2.29 - Made start_instance() and stop_instance() take new-world
+                 instance objects
+        * 2.30 - Adds live_snapshot_instance()
+        * 2.31 - Adds shelve_instance(), shelve_offload_instance, and
+                 unshelve_instance()
+        * 2.32 - Make reboot_instance take a new world instance object
+        * 2.33 - Made suspend_instance() and resume_instance() take new-world
+                 instance objects
+        * 2.34 - Added swap_volume()
+        * 2.35 - Made terminate_instance() and soft_delete_instance() take
+                 new-world instance objects
+        * 2.36 - Made pause_instance() and unpause_instance() take new-world
+                 instance objects
+        * 2.37 - Added the legacy_bdm_in_spec parameter to run_instance
+        * 2.38 - Made check_can_live_migrate_[destination|source] take
+                 new-world instance objects
+        * 2.39 - Made revert_resize() and confirm_resize() take new-world
+                 instance objects
+        * 2.40 - Made reset_network() take new-world instance object
+        * 2.41 - Make inject_network_info take new-world instance object
+        * 2.42 - Splits snapshot_instance() into snapshot_instance() and
+                 backup_instance() and makes them take new-world instance
+                 objects.
+        * 2.43 - Made prep_resize() take new-world instance object
+        * 2.44 - Add volume_snapshot_create(), volume_snapshot_delete()
+        * 2.45 - Made resize_instance() take new-world objects
+        * 2.46 - Made finish_resize() take new-world objects
+        * 2.47 - Made finish_revert_resize() take new-world objects
 
         ... Havana supports message version 2.47.  So, any changes to existing
         methods in 2.x after that point should be done such that they can
         handle the version_cap being set to 2.47.
 
-        2.48 - Make add_aggregate_host() and remove_aggregate_host() take
-               new-world objects
-        ...  - Remove live_snapshot() that was never actually used
+        * 2.48 - Make add_aggregate_host() and remove_aggregate_host() take
+          new-world objects
+        * ... - Remove live_snapshot() that was never actually used
 
-        3.0 - Remove 2.x compatibility
-        3.1 - Update get_spice_console() to take an instance object
-        3.2 - Update get_vnc_console() to take an instance object
-        3.3 - Update validate_console_port() to take an instance object
-        3.4 - Update rebuild_instance() to take an instance object
-        3.5 - Pass preserve_ephemeral flag to rebuild_instance()
-        3.6 - Make volume_snapshot_{create,delete} use new-world objects
-        3.7 - Update change_instance_metadata() to take an instance object
-        3.8 - Update set_admin_password() to take an instance object
-        3.9 - Update rescue_instance() to take an instance object
-        3.10 - Added get_rdp_console method
-        3.11 - Update unrescue_instance() to take an object
-        3.12 - Update add_fixed_ip_to_instance() to take an object
-        3.13 - Update remove_fixed_ip_from_instance() to take an object
-        3.14 - Update post_live_migration_at_destination() to take an object
-        3.15 - Adds filter_properties and node to unshelve_instance()
-        3.16 - Make reserve_block_device_name and attach_volume use new-world
-              objects, and add disk_bus and device_type params to
-              reserve_block_device_name, and bdm param to attach_volume
-        3.17 - Update attach_interface and detach_interface to take an object
-        3.18 - Update get_diagnostics() to take an instance object
-        ...  - Removed inject_file(), as it was unused.
-        3.19 - Update pre_live_migration to take instance object
-        3.20 - Make restore_instance take an instance object
-        3.21 - Made rebuild take new-world BDM objects
-        3.22 - Made terminate_instance take new-world BDM objects
-        3.23 - Added external_instance_event()
-             - build_and_run_instance was added in Havana and not used or
-               documented.
+        * 3.0 - Remove 2.x compatibility
+        * 3.1 - Update get_spice_console() to take an instance object
+        * 3.2 - Update get_vnc_console() to take an instance object
+        * 3.3 - Update validate_console_port() to take an instance object
+        * 3.4 - Update rebuild_instance() to take an instance object
+        * 3.5 - Pass preserve_ephemeral flag to rebuild_instance()
+        * 3.6 - Make volume_snapshot_{create,delete} use new-world objects
+        * 3.7 - Update change_instance_metadata() to take an instance object
+        * 3.8 - Update set_admin_password() to take an instance object
+        * 3.9 - Update rescue_instance() to take an instance object
+        * 3.10 - Added get_rdp_console method
+        * 3.11 - Update unrescue_instance() to take an object
+        * 3.12 - Update add_fixed_ip_to_instance() to take an object
+        * 3.13 - Update remove_fixed_ip_from_instance() to take an object
+        * 3.14 - Update post_live_migration_at_destination() to take an object
+        * 3.15 - Adds filter_properties and node to unshelve_instance()
+        * 3.16 - Make reserve_block_device_name and attach_volume use new-world
+                 objects, and add disk_bus and device_type params to
+                 reserve_block_device_name, and bdm param to attach_volume
+        * 3.17 - Update attach_interface and detach_interface to take an object
+        * 3.18 - Update get_diagnostics() to take an instance object
+            * Removed inject_file(), as it was unused.
+        * 3.19 - Update pre_live_migration to take instance object
+        * 3.20 - Make restore_instance take an instance object
+        * 3.21 - Made rebuild take new-world BDM objects
+        * 3.22 - Made terminate_instance take new-world BDM objects
+        * 3.23 - Added external_instance_event()
+            * build_and_run_instance was added in Havana and not used or
+              documented.
 
         ... Icehouse supports message version 3.23.  So, any changes to
         existing methods in 3.x after that point should be done such that they
         can handle the version_cap being set to 3.23.
 
-        3.24 - Update rescue_instance() to take optional rescue_image_ref
-        3.25 - Make detach_volume take an object
-        3.26 - Make live_migration() and
-               rollback_live_migration_at_destination() take an object
-        ...  - Removed run_instance()
-        3.27 - Make run_instance() accept a new-world object
-        3.28 - Update get_console_output() to accept a new-world object
-        3.29 - Make check_instance_shared_storage accept a new-world object
-        3.30 - Make remove_volume_connection() accept a new-world object
-        3.31 - Add get_instance_diagnostics
-        3.32 - Add destroy_disks and migrate_data optional parameters to
-               rollback_live_migration_at_destination()
+        * 3.24 - Update rescue_instance() to take optional rescue_image_ref
+        * 3.25 - Make detach_volume take an object
+        * 3.26 - Make live_migration() and
+          rollback_live_migration_at_destination() take an object
+        * ... Removed run_instance()
+        * 3.27 - Make run_instance() accept a new-world object
+        * 3.28 - Update get_console_output() to accept a new-world object
+        * 3.29 - Make check_instance_shared_storage accept a new-world object
+        * 3.30 - Make remove_volume_connection() accept a new-world object
+        * 3.31 - Add get_instance_diagnostics
+        * 3.32 - Add destroy_disks and migrate_data optional parameters to
+                 rollback_live_migration_at_destination()
+
     '''
 
     VERSION_ALIASES = {

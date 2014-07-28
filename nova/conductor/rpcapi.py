@@ -34,121 +34,123 @@ class ConductorAPI(object):
 
     API version history:
 
-    1.0 - Initial version.
-    1.1 - Added migration_update
-    1.2 - Added instance_get_by_uuid and instance_get_all_by_host
-    1.3 - Added aggregate_host_add and aggregate_host_delete
-    1.4 - Added migration_get
-    1.5 - Added bw_usage_update
-    1.6 - Added get_backdoor_port()
-    1.7 - Added aggregate_get_by_host, aggregate_metadata_add,
-          and aggregate_metadata_delete
-    1.8 - Added security_group_get_by_instance and
-          security_group_rule_get_by_security_group
-    1.9 - Added provider_fw_rule_get_all
-    1.10 - Added agent_build_get_by_triple
-    1.11 - Added aggregate_get
-    1.12 - Added block_device_mapping_update_or_create
-    1.13 - Added block_device_mapping_get_all_by_instance
-    1.14 - Added block_device_mapping_destroy
-    1.15 - Added instance_get_all_by_filters and
-           instance_get_all_hung_in_rebooting and
-           instance_get_active_by_window
-           Deprecated instance_get_all_by_host
-    1.16 - Added instance_destroy
-    1.17 - Added instance_info_cache_delete
-    1.18 - Added instance_type_get
-    1.19 - Added vol_get_usage_by_time and vol_usage_update
-    1.20 - Added migration_get_unconfirmed_by_dest_compute
-    1.21 - Added service_get_all_by
-    1.22 - Added ping
-    1.23 - Added instance_get_all
-           Un-Deprecate instance_get_all_by_host
-    1.24 - Added instance_get
-    1.25 - Added action_event_start and action_event_finish
-    1.26 - Added instance_info_cache_update
-    1.27 - Added service_create
-    1.28 - Added binary arg to service_get_all_by
-    1.29 - Added service_destroy
-    1.30 - Added migration_create
-    1.31 - Added migration_get_in_progress_by_host_and_node
-    1.32 - Added optional node to instance_get_all_by_host
-    1.33 - Added compute_node_create and compute_node_update
-    1.34 - Added service_update
-    1.35 - Added instance_get_active_by_window_joined
-    1.36 - Added instance_fault_create
-    1.37 - Added task_log_get, task_log_begin_task, task_log_end_task
-    1.38 - Added service name to instance_update
-    1.39 - Added notify_usage_exists
-    1.40 - Added security_groups_trigger_handler and
-                 security_groups_trigger_members_refresh
-           Remove instance_get_active_by_window
-    1.41 - Added fixed_ip_get_by_instance, network_get,
-                 instance_floating_address_get_all, quota_commit,
-                 quota_rollback
-    1.42 - Added get_ec2_ids, aggregate_metadata_get_by_host
-    1.43 - Added compute_stop
-    1.44 - Added compute_node_delete
-    1.45 - Added project_id to quota_commit and quota_rollback
-    1.46 - Added compute_confirm_resize
-    1.47 - Added columns_to_join to instance_get_all_by_host and
-                 instance_get_all_by_filters
-    1.48 - Added compute_unrescue
+    * 1.0 - Initial version.
+    * 1.1 - Added migration_update
+    * 1.2 - Added instance_get_by_uuid and instance_get_all_by_host
+    * 1.3 - Added aggregate_host_add and aggregate_host_delete
+    * 1.4 - Added migration_get
+    * 1.5 - Added bw_usage_update
+    * 1.6 - Added get_backdoor_port()
+    * 1.7 - Added aggregate_get_by_host, aggregate_metadata_add,
+      and aggregate_metadata_delete
+    * 1.8 - Added security_group_get_by_instance and
+      security_group_rule_get_by_security_group
+    * 1.9 - Added provider_fw_rule_get_all
+    * 1.10 - Added agent_build_get_by_triple
+    * 1.11 - Added aggregate_get
+    * 1.12 - Added block_device_mapping_update_or_create
+    * 1.13 - Added block_device_mapping_get_all_by_instance
+    * 1.14 - Added block_device_mapping_destroy
+    * 1.15 - Added instance_get_all_by_filters and
+      instance_get_all_hung_in_rebooting and
+      instance_get_active_by_window
+      Deprecated instance_get_all_by_host
+    * 1.16 - Added instance_destroy
+    * 1.17 - Added instance_info_cache_delete
+    * 1.18 - Added instance_type_get
+    * 1.19 - Added vol_get_usage_by_time and vol_usage_update
+    * 1.20 - Added migration_get_unconfirmed_by_dest_compute
+    * 1.21 - Added service_get_all_by
+    * 1.22 - Added ping
+    * 1.23 - Added instance_get_all
+             Un-Deprecate instance_get_all_by_host
+    * 1.24 - Added instance_get
+    * 1.25 - Added action_event_start and action_event_finish
+    * 1.26 - Added instance_info_cache_update
+    * 1.27 - Added service_create
+    * 1.28 - Added binary arg to service_get_all_by
+    * 1.29 - Added service_destroy
+    * 1.30 - Added migration_create
+    * 1.31 - Added migration_get_in_progress_by_host_and_node
+    * 1.32 - Added optional node to instance_get_all_by_host
+    * 1.33 - Added compute_node_create and compute_node_update
+    * 1.34 - Added service_update
+    * 1.35 - Added instance_get_active_by_window_joined
+    * 1.36 - Added instance_fault_create
+    * 1.37 - Added task_log_get, task_log_begin_task, task_log_end_task
+    * 1.38 - Added service name to instance_update
+    * 1.39 - Added notify_usage_exists
+    * 1.40 - Added security_groups_trigger_handler and
+      security_groups_trigger_members_refresh
+      Remove instance_get_active_by_window
+    * 1.41 - Added fixed_ip_get_by_instance, network_get,
+      instance_floating_address_get_all, quota_commit,
+      quota_rollback
+    * 1.42 - Added get_ec2_ids, aggregate_metadata_get_by_host
+    * 1.43 - Added compute_stop
+    * 1.44 - Added compute_node_delete
+    * 1.45 - Added project_id to quota_commit and quota_rollback
+    * 1.46 - Added compute_confirm_resize
+    * 1.47 - Added columns_to_join to instance_get_all_by_host and
+      instance_get_all_by_filters
+    * 1.48 - Added compute_unrescue
 
-        ... Grizzly supports message version 1.48.  So, any changes to existing
-        methods in 2.x after that point should be done such that they can
-        handle the version_cap being set to 1.48.
+    ... Grizzly supports message version 1.48.  So, any changes to existing
+    methods in 2.x after that point should be done such that they can
+    handle the version_cap being set to 1.48.
 
-    1.49 - Added columns_to_join to instance_get_by_uuid
-    1.50 - Added object_action() and object_class_action()
-    1.51 - Added the 'legacy' argument to
-           block_device_mapping_get_all_by_instance
-    1.52 - Pass instance objects for compute_confirm_resize
-    1.53 - Added compute_reboot
-    1.54 - Added 'update_cells' argument to bw_usage_update
-    1.55 - Pass instance objects for compute_stop
-    1.56 - Remove compute_confirm_resize and
-                  migration_get_unconfirmed_by_dest_compute
-    1.57 - Remove migration_create()
-    1.58 - Remove migration_get()
+    * 1.49 - Added columns_to_join to instance_get_by_uuid
+    * 1.50 - Added object_action() and object_class_action()
+    * 1.51 - Added the 'legacy' argument to
+             block_device_mapping_get_all_by_instance
+    * 1.52 - Pass instance objects for compute_confirm_resize
+    * 1.53 - Added compute_reboot
+    * 1.54 - Added 'update_cells' argument to bw_usage_update
+    * 1.55 - Pass instance objects for compute_stop
+    * 1.56 - Remove compute_confirm_resize and
+             migration_get_unconfirmed_by_dest_compute
+    * 1.57 - Remove migration_create()
+    * 1.58 - Remove migration_get()
 
-        ... Havana supports message version 1.58.  So, any changes to existing
-        methods in 1.x after that point should be done such that they can
-        handle the version_cap being set to 1.58.
+    ... Havana supports message version 1.58.  So, any changes to existing
+    methods in 1.x after that point should be done such that they can
+    handle the version_cap being set to 1.58.
 
-    1.59 - Remove instance_info_cache_update()
-    1.60 - Remove aggregate_metadata_add() and aggregate_metadata_delete()
-    ...  - Remove security_group_get_by_instance() and
-           security_group_rule_get_by_security_group()
-    1.61 - Return deleted instance from instance_destroy()
-    1.62 - Added object_backport()
-    1.63 - Changed the format of values['stats'] from a dict to a JSON string
-           in compute_node_update()
-    1.64 - Added use_slave to instance_get_all_filters()
-    ...  - Remove instance_type_get()
-    ...  - Remove aggregate_get()
-    ...  - Remove aggregate_get_by_host()
-    ...  - Remove instance_get()
-    ...  - Remove migration_update()
-    ...  - Remove block_device_mapping_destroy()
+    * 1.59 - Remove instance_info_cache_update()
+    * 1.60 - Remove aggregate_metadata_add() and aggregate_metadata_delete()
+    * ...  - Remove security_group_get_by_instance() and
+             security_group_rule_get_by_security_group()
+    * 1.61 - Return deleted instance from instance_destroy()
+    * 1.62 - Added object_backport()
+    * 1.63 - Changed the format of values['stats'] from a dict to a JSON string
+             in compute_node_update()
+    * 1.64 - Added use_slave to instance_get_all_filters()
+           - Remove instance_type_get()
+           - Remove aggregate_get()
+           - Remove aggregate_get_by_host()
+           - Remove instance_get()
+           - Remove migration_update()
+           - Remove block_device_mapping_destroy()
 
-    2.0  - Drop backwards compatibility
-    ...  - Remove quota_rollback() and quota_commit()
-    ...  - Remove aggregate_host_add() and aggregate_host_delete()
-    ...  - Remove network_migrate_instance_start() and
-           network_migrate_instance_finish()
+    * 2.0  - Drop backwards compatibility
+           - Remove quota_rollback() and quota_commit()
+           - Remove aggregate_host_add() and aggregate_host_delete()
+           - Remove network_migrate_instance_start() and
+             network_migrate_instance_finish()
 
-        ... Icehouse supports message version 2.0.  So, any changes to
-        existing methods in 2.x after that point should be done such that they
-        can handle the version_cap being set to 2.0.
-    ...  - Remove instance_destroy()
-    ...  - Remove compute_unrescue()
-    ...  - Remove instance_get_all_by_filters()
-    ...  - Remove instance_get_active_by_window_joined()
-    ...  - Remove instance_fault_create()
-    ...  - Remove action_event_start() and action_event_finish()
-    ...  - Remove instance_get_by_uuid()
-    ...  - Remove agent_build_get_by_triple()
+    ... Icehouse supports message version 2.0.  So, any changes to
+    existing methods in 2.x after that point should be done such
+    that they can handle the version_cap being set to 2.0.
+
+    * Remove instance_destroy()
+    * Remove compute_unrescue()
+    * Remove instance_get_all_by_filters()
+    * Remove instance_get_active_by_window_joined()
+    * Remove instance_fault_create()
+    * Remove action_event_start() and action_event_finish()
+    * Remove instance_get_by_uuid()
+    * Remove agent_build_get_by_triple()
+
     """
 
     VERSION_ALIASES = {
@@ -368,6 +370,7 @@ class ComputeTaskAPI(object):
     1.6 - Made migrate_server use instance objects
     1.7 - Do not send block_device_mapping and legacy_bdm to build_instances
     1.8 - Add rebuild_instance
+
     """
 
     def __init__(self):
