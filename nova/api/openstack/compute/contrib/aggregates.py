@@ -228,7 +228,8 @@ class AggregateController(object):
         try:
             for key, value in metadata.items():
                 utils.check_string_length(key, "metadata.key", 1, 255)
-                utils.check_string_length(value, "metadata.value", 0, 255)
+                if value is not None:
+                    utils.check_string_length(value, "metadata.value", 0, 255)
         except exception.InvalidInput as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         try:
