@@ -218,6 +218,12 @@ libvirt_opts = [
                     'the "virsh capabilities"command. The format of the '
                     'value for this config option is host-arch=machine-type. '
                     'For example: x86_64=machinetype1,armv7l=machinetype2'),
+    cfg.StrOpt('sysinfo_serial',
+               default='auto',
+               help='The data source used to the populate the host "serial" '
+                    'UUID exposed to guest in the virtual BIOS. Permitted '
+                    'options are "hardware", "os", "none" or "auto" '
+                    '(default).'),
     ]
 
 CONF = cfg.CONF
@@ -381,6 +387,23 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._volume_api = volume.API()
         self._image_api = image.API()
+
+        sysinfo_serial_funcs = {
+            'none': lambda: None,
+            'hardware': self._get_host_sysinfo_serial_hardware,
+            'os': self._get_host_sysinfo_serial_os,
+            'auto': self._get_host_sysinfo_serial_auto,
+        }
+
+        self._sysinfo_serial_func = sysinfo_serial_funcs.get(
+            CONF.libvirt.sysinfo_serial)
+        if not self._sysinfo_serial_func:
+            raise exception.NovaException(
+                _("Unexpected sysinfo_serial setting '%(actual)s'. "
+                  "Permitted values are %(expect)s'") %
+                  {'actual': CONF.libvirt.sysinfo_serial,
+                   'expect': ', '.join("'%s'" % k for k in
+                                       sysinfo_serial_funcs.keys())})
 
     @property
     def disk_cachemode(self):
@@ -3214,6 +3237,35 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return devices
 
+    def _get_host_sysinfo_serial_hardware(self):
+        """Get a UUID from the host hardware
+
+        Get a UUID for the host hardware reported by libvirt.
+        This is typically from the SMBIOS data, unless it has
+        been overridden in /etc/libvirt/libvirtd.conf
+        """
+        return self._get_host_uuid()
+
+    def _get_host_sysinfo_serial_os(self):
+        """Get a UUID from the host operating system
+
+        Get a UUID for the host operating system. Modern Linux
+        distros based on systemd provide a /etc/machine-id
+        file containing a UUID. This is also provided inside
+        systemd based containers and can be provided by other
+        init systems too, since it is just a plain text file.
+        """
+        with open("/etc/machine-id") as f:
+            # We want to have '-' in the right place
+            # so we parse & reformat the value
+            return str(uuid.UUID(f.read().split()[0]))
+
+    def _get_host_sysinfo_serial_auto(self):
+        if os.path.exists("/etc/machine-id"):
+            return self._get_host_sysinfo_serial_os()
+        else:
+            return self._get_host_sysinfo_serial_hardware()
+
     def _get_guest_config_sysinfo(self, instance):
         sysinfo = vconfig.LibvirtConfigGuestSysinfo()
 
@@ -3221,7 +3273,7 @@ class LibvirtDriver(driver.ComputeDriver):
         sysinfo.system_product = version.product_string()
         sysinfo.system_version = version.version_string_with_package()
 
-        sysinfo.system_serial = self._get_host_uuid()
+        sysinfo.system_serial = self._sysinfo_serial_func()
         sysinfo.system_uuid = instance['uuid']
 
         return sysinfo

@@ -419,6 +419,11 @@ class LibvirtConnTestCase(test.TestCase,
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.driver.LibvirtDriver._get_host_uuid',
             lambda _: 'cef19ce0-0ca2-11df-855d-b19fbce37686'))
+        # Prevent test suite trying to find /etc/machine-id
+        # which isn't guaranteed to exist. Instead it will use
+        # the host UUID from libvirt which we mock above
+        self.flags(sysinfo_serial="hardware", group="libvirt")
+
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.imagebackend.libvirt_utils',
             fake_libvirt_utils))
@@ -2141,6 +2146,117 @@ class LibvirtConnTestCase(test.TestCase,
             self.assertRaises(ValueError,
                               conn._get_guest_config,
                               instance_ref, [], {}, disk_info)
+
+    def _test_get_guest_config_sysinfo_serial(self, expected_serial):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        cfg = drvr._get_guest_config_sysinfo(instance_ref)
+
+        self.assertIsInstance(cfg, vconfig.LibvirtConfigGuestSysinfo)
+        self.assertEqual(version.vendor_string(),
+                         cfg.system_manufacturer)
+        self.assertEqual(version.product_string(),
+                         cfg.system_product)
+        self.assertEqual(version.version_string_with_package(),
+                         cfg.system_version)
+        self.assertEqual(expected_serial,
+                         cfg.system_serial)
+        self.assertEqual(instance_ref['uuid'],
+                         cfg.system_uuid)
+
+    def test_get_guest_config_sysinfo_serial_none(self):
+        self.flags(sysinfo_serial="none", group="libvirt")
+        self._test_get_guest_config_sysinfo_serial(None)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver, "_get_host_uuid")
+    def test_get_guest_config_sysinfo_serial_hardware(self, mock_uuid):
+        self.flags(sysinfo_serial="hardware", group="libvirt")
+
+        theuuid = "56b40135-a973-4eb3-87bb-a2382a3e6dbc"
+        mock_uuid.return_value = theuuid
+
+        self._test_get_guest_config_sysinfo_serial(theuuid)
+
+    def test_get_guest_config_sysinfo_serial_os(self):
+        self.flags(sysinfo_serial="os", group="libvirt")
+
+        real_open = __builtin__.open
+        with contextlib.nested(
+                mock.patch.object(__builtin__, "open"),
+        ) as (mock_open, ):
+            theuuid = "56b40135-a973-4eb3-87bb-a2382a3e6dbc"
+
+            def fake_open(filename, *args, **kwargs):
+                if filename == "/etc/machine-id":
+                    h = mock.MagicMock()
+                    h.read.return_value = theuuid
+                    h.__enter__.return_value = h
+                    return h
+                return real_open(filename, *args, **kwargs)
+
+            mock_open.side_effect = fake_open
+
+            self._test_get_guest_config_sysinfo_serial(theuuid)
+
+    def test_get_guest_config_sysinfo_serial_auto_hardware(self):
+        self.flags(sysinfo_serial="auto", group="libvirt")
+
+        real_exists = os.path.exists
+        with contextlib.nested(
+                mock.patch.object(os.path, "exists"),
+                mock.patch.object(libvirt_driver.LibvirtDriver,
+                                  "_get_host_uuid")
+        ) as (mock_exists, mock_uuid):
+            def fake_exists(filename):
+                if filename == "/etc/machine-id":
+                    return False
+                return real_exists(filename)
+
+            mock_exists.side_effect = fake_exists
+
+            theuuid = "56b40135-a973-4eb3-87bb-a2382a3e6dbc"
+            mock_uuid.return_value = theuuid
+
+            self._test_get_guest_config_sysinfo_serial(theuuid)
+
+    def test_get_guest_config_sysinfo_serial_auto_os(self):
+        self.flags(sysinfo_serial="auto", group="libvirt")
+
+        real_exists = os.path.exists
+        real_open = __builtin__.open
+        with contextlib.nested(
+                mock.patch.object(os.path, "exists"),
+                mock.patch.object(__builtin__, "open"),
+        ) as (mock_exists, mock_open):
+            def fake_exists(filename):
+                if filename == "/etc/machine-id":
+                    return True
+                return real_exists(filename)
+
+            mock_exists.side_effect = fake_exists
+
+            theuuid = "56b40135-a973-4eb3-87bb-a2382a3e6dbc"
+
+            def fake_open(filename, *args, **kwargs):
+                if filename == "/etc/machine-id":
+                    h = mock.MagicMock()
+                    h.read.return_value = theuuid
+                    h.__enter__.return_value = h
+                    return h
+                return real_open(filename, *args, **kwargs)
+
+            mock_open.side_effect = fake_open
+
+            self._test_get_guest_config_sysinfo_serial(theuuid)
+
+    def test_get_guest_config_sysinfo_serial_invalid(self):
+        self.flags(sysinfo_serial="invalid", group="libvirt")
+
+        self.assertRaises(exception.NovaException,
+                          libvirt_driver.LibvirtDriver,
+                          fake.FakeVirtAPI(),
+                          True)
 
     def _create_fake_service_compute(self):
         service_info = {
