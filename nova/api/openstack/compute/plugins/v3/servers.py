@@ -358,8 +358,8 @@ class ServersController(wsgi.Controller):
             msg = _('marker [%s] not found') % marker
             raise exc.HTTPBadRequest(explanation=msg)
         except exception.FlavorNotFound:
-            log_msg = _("Flavor '%s' could not be found ")
-            LOG.debug(log_msg, search_opts['flavor'])
+            LOG.debug("Flavor '%s' could not be found ",
+                      search_opts['flavor'])
             instance_list = objects.InstanceList()
 
         if is_detail:

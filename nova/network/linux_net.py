@@ -1557,8 +1557,8 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             _execute('ip', 'link', 'set', bridge, 'up', run_as_root=True)
 
         if interface:
-            msg = _('Adding interface %(interface)s to bridge %(bridge)s')
-            LOG.debug(msg, {'interface': interface, 'bridge': bridge})
+            LOG.debug('Adding interface %(interface)s to bridge %(bridge)s',
+                      {'interface': interface, 'bridge': bridge})
             out, err = _execute('brctl', 'addif', bridge, interface,
                                 check_exit_code=False, run_as_root=True)
             if (err and err != "device %s is already a member of a bridge; "

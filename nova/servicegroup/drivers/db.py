@@ -40,10 +40,10 @@ class DbDriver(api.ServiceGroupDriver):
     def join(self, member_id, group_id, service=None):
         """Join the given service with its group."""
 
-        msg = _('DB_Driver: join new ServiceGroup member %(member_id)s to '
-                    'the %(group_id)s group, service = %(service)s')
-        LOG.debug(msg, {'member_id': member_id, 'group_id': group_id,
-                        'service': service})
+        LOG.debug('DB_Driver: join new ServiceGroup member %(member_id)s to '
+                  'the %(group_id)s group, service = %(service)s',
+                  {'member_id': member_id, 'group_id': group_id,
+                   'service': service})
         if service is None:
             raise RuntimeError(_('service is a mandatory argument for DB based'
                                  ' ServiceGroup driver'))
@@ -70,9 +70,9 @@ class DbDriver(api.ServiceGroupDriver):
         elapsed = timeutils.delta_seconds(last_heartbeat, timeutils.utcnow())
         is_up = abs(elapsed) <= self.service_down_time
         if not is_up:
-            msg = _('Seems service is down. Last heartbeat was %(lhb)s. '
-                    'Elapsed time is %(el)s')
-            LOG.debug(msg, {'lhb': str(last_heartbeat), 'el': str(elapsed)})
+            LOG.debug('Seems service is down. Last heartbeat was %(lhb)s. '
+                      'Elapsed time is %(el)s',
+                      {'lhb': str(last_heartbeat), 'el': str(elapsed)})
         return is_up
 
     def get_all(self, group_id):

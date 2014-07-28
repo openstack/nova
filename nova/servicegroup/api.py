@@ -103,10 +103,12 @@ class API(object):
         @param service: the parameter can be used for notifications about
         disconnect mode and update some internals
         """
-        msg = _('Join new ServiceGroup member %(member_id)s to the '
-                '%(group_id)s group, service = %(service)s')
-        LOG.debug(msg, {'member_id': member_id, 'group_id': group_id,
-                        'service': service})
+
+        LOG.debug('Join new ServiceGroup member %(member_id)s to the '
+                  '%(group_id)s group, service = %(service)s',
+                  {'member_id': member_id,
+                   'group_id': group_id,
+                   'service': service})
         return self._driver.join(member_id, group_id, service)
 
     def service_is_up(self, member):
@@ -119,9 +121,9 @@ class API(object):
         """Explicitly remove the given member from the ServiceGroup
         monitoring.
         """
-        msg = _('Explicitly remove the given member %(member_id)s from the'
-                '%(group_id)s group monitoring')
-        LOG.debug(msg, {'member_id': member_id, 'group_id': group_id})
+        LOG.debug('Explicitly remove the given member %(member_id)s from the'
+                  '%(group_id)s group monitoring',
+                  {'member_id': member_id, 'group_id': group_id})
         return self._driver.leave(member_id, group_id)
 
     def get_all(self, group_id):

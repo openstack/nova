@@ -83,8 +83,7 @@ class FloatingIP(object):
                 try:
                     fixed_ip = floating_ip.fixed_ip
                 except exception.FixedIpNotFound:
-                    msg = _('Fixed ip %s not found') % floating_ip.fixed_ip_id
-                    LOG.debug(msg)
+                    LOG.debug('Fixed ip %s not found', floating_ip.fixed_ip_id)
                     continue
                 interface = CONF.public_interface or floating_ip.interface
                 try:

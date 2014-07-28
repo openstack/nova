@@ -33,7 +33,7 @@ from nova import config
 from nova import context
 import nova.db.api
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _LE
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.objects import base as objects_base
@@ -128,11 +128,10 @@ def main():
             conductor_rpcapi.ConductorAPI()
 
     if CONF.action.name in ['add', 'del', 'old']:
-        msg = (_("Called '%(action)s' for mac '%(mac)s' with ip '%(ip)s'") %
-               {"action": CONF.action.name,
-                "mac": CONF.action.mac,
-                "ip": CONF.action.ip})
-        LOG.debug(msg)
+        LOG.debug("Called '%(action)s' for mac '%(mac)s' with ip '%(ip)s'",
+                  {"action": CONF.action.name,
+                   "mac": CONF.action.mac,
+                   "ip": CONF.action.ip})
         CONF.action.func(CONF.action.mac, CONF.action.ip)
     else:
         try:

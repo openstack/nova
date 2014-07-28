@@ -49,11 +49,12 @@ class MemcachedDriver(api.ServiceGroupDriver):
     def join(self, member_id, group_id, service=None):
         """Join the given service with its group."""
 
-        msg = _('Memcached_Driver: join new ServiceGroup member '
-                '%(member_id)s to the %(group_id)s group, '
-                'service = %(service)s')
-        LOG.debug(msg, {'member_id': member_id, 'group_id': group_id,
-                        'service': service})
+        LOG.debug('Memcached_Driver: join new ServiceGroup member '
+                  '%(member_id)s to the %(group_id)s group, '
+                  'service = %(service)s',
+                  {'member_id': member_id,
+                   'group_id': group_id,
+                   'service': service})
         if service is None:
             raise RuntimeError(_('service is a mandatory argument for '
                                  'Memcached based ServiceGroup driver'))
