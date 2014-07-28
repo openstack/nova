@@ -19,7 +19,7 @@ import sqlalchemy
 from sqlalchemy import Integer, String
 from sqlalchemy import MetaData, Table, Column
 from sqlalchemy.exc import NoSuchTableError
-from sqlalchemy.sql import select
+from sqlalchemy import sql
 from sqlalchemy.types import UserDefinedType
 
 from nova.db.sqlalchemy import api as db
@@ -62,7 +62,7 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
 
             # Delete 4 rows in one chunk
             column = test_table.c.id
-            query_delete = select([column],
+            query_delete = sql.select([column],
                                   test_table.c.id < 5).order_by(column)
             delete_statement = utils.DeleteFromSelect(test_table,
                                                       query_delete, column)
@@ -70,7 +70,7 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
             # Verify we delete 4 rows
             self.assertEqual(result_delete.rowcount, 4)
 
-            query_all = select([test_table]).\
+            query_all = sql.select([test_table]).\
                         where(test_table.c.uuid.in_(uuidstrs))
             rows = conn.execute(query_all).fetchall()
             # Verify we still have 6 rows in table
