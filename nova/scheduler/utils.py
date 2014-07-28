@@ -235,3 +235,8 @@ def parse_options(opts, sep='=', converter=str, name=""):
                 {'name': name,
                  'options': ", ".join(bad)})
     return good
+
+
+def validate_filter(filter):
+    """Validates that the filter is configured in the default filters."""
+    return filter in CONF.scheduler_default_filters
