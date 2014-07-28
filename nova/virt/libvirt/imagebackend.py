@@ -23,6 +23,7 @@ import six
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
+from nova import image
 from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
 from nova.openstack.common import jsonutils
@@ -72,10 +73,13 @@ CONF.import_opt('rbd_user', 'nova.virt.libvirt.volume', group='libvirt')
 CONF.import_opt('rbd_secret_uuid', 'nova.virt.libvirt.volume', group='libvirt')
 
 LOG = logging.getLogger(__name__)
+IMAGE_API = image.API()
 
 
 @six.add_metaclass(abc.ABCMeta)
 class Image(object):
+
+    SUPPORTS_CLONE = False
 
     def __init__(self, source_type, driver_format, is_block_dev=False):
         """Image initialization.
@@ -197,8 +201,7 @@ class Image(object):
                                             'path': self.path})
         return can_fallocate
 
-    @staticmethod
-    def verify_base_size(base, size, base_size=0):
+    def verify_base_size(self, base, size, base_size=0):
         """Check that the base image is not larger than size.
            Since images can't be generally shrunk, enforce this
            constraint taking account of virtual image size.
@@ -217,7 +220,7 @@ class Image(object):
             return
 
         if size and not base_size:
-            base_size = disk.get_disk_size(base)
+            base_size = self.get_disk_size(base)
 
         if size < base_size:
             msg = _LE('%(base)s virtual size %(base_size)s '
@@ -226,6 +229,9 @@ class Image(object):
                               'base_size': base_size,
                               'size': size})
             raise exception.FlavorDiskTooSmall()
+
+    def get_disk_size(self, name):
+        disk.get_disk_size(name)
 
     def snapshot_extract(self, target, out_format):
         raise NotImplementedError()
@@ -294,6 +300,21 @@ class Image(object):
     def is_shared_block_storage():
         """True if the backend puts images on a shared block storage."""
         return False
+
+    def clone(self, context, image_id_or_uri):
+        """Clone an image.
+
+        Note that clone operation is backend-dependent. The backend may ask
+        the image API for a list of image "locations" and select one or more
+        of those locations to clone an image from.
+
+        :param image_id_or_uri: The ID or URI of an image to clone.
+
+        :raises: exception.ImageUnacceptable if it cannot be cloned
+        """
+        reason = _('clone() is not implemented')
+        raise exception.ImageUnacceptable(image_id=image_id_or_uri,
+                                          reason=reason)
 
 
 class Raw(Image):
@@ -483,6 +504,9 @@ class Lvm(Image):
 
 
 class Rbd(Image):
+
+    SUPPORTS_CLONE = True
+
     def __init__(self, instance=None, disk_name=None, path=None, **kwargs):
         super(Rbd, self).__init__("block", "rbd", is_block_dev=True)
         if path:
@@ -525,7 +549,7 @@ class Rbd(Image):
         info = vconfig.LibvirtConfigGuestDisk()
 
         hosts, ports = self.driver.get_mon_addrs()
-        info.device_type = device_type
+        info.source_device = device_type
         info.driver_format = 'raw'
         info.driver_cache = cache_mode
         info.target_bus = disk_bus
@@ -552,16 +576,27 @@ class Rbd(Image):
     def check_image_exists(self):
         return self.driver.exists(self.rbd_name)
 
+    def get_disk_size(self, name):
+        """Returns the size of the virtual disk in bytes.
+
+        The name argument is ignored since this backend already knows
+        its name, and callers may pass a non-existent local file path.
+        """
+        return self.driver.size(self.rbd_name)
+
     def create_image(self, prepare_template, base, size, *args, **kwargs):
-        if not os.path.exists(base):
+
+        if not self.check_image_exists():
             prepare_template(target=base, max_size=size, *args, **kwargs)
         else:
             self.verify_base_size(base, size)
 
-        self.driver.import_image(base, self.rbd_name)
+        # prepare_template() may have cloned the image into a new rbd
+        # image already instead of downloading it locally
+        if not self.check_image_exists():
+            self.driver.import_image(base, self.rbd_name)
 
-        base_size = disk.get_disk_size(base)
-        if size and size > base_size:
+        if size and size > self.get_disk_size(self.rbd_name):
             self.driver.resize(self.rbd_name, size)
 
     def snapshot_extract(self, target, out_format):
@@ -570,6 +605,31 @@ class Rbd(Image):
     @staticmethod
     def is_shared_block_storage():
         return True
+
+    def clone(self, context, image_id_or_uri):
+        if not self.driver.supports_layering():
+            reason = _('installed version of librbd does not support cloning')
+            raise exception.ImageUnacceptable(image_id=image_id_or_uri,
+                                              reason=reason)
+
+        image_meta = IMAGE_API.get(context, image_id_or_uri,
+                                   include_locations=True)
+        locations = image_meta['locations']
+
+        LOG.debug('Image locations are: %(locs)s' % {'locs': locations})
+
+        if image_meta.get('disk_format') not in ['raw', 'iso']:
+            reason = _('Image is not raw format')
+            raise exception.ImageUnacceptable(image_id=image_id_or_uri,
+                                              reason=reason)
+
+        for location in locations:
+            if self.driver.is_cloneable(location, image_meta):
+                return self.driver.clone(location, self.rbd_name)
+
+        reason = _('No image locations are accessible')
+        raise exception.ImageUnacceptable(image_id=image_id_or_uri,
+                                          reason=reason)
 
 
 class Backend(object):

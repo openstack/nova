@@ -13,6 +13,7 @@
 
 import mock
 
+from nova import exception
 from nova.openstack.common import log as logging
 from nova import test
 from nova import utils
@@ -81,12 +82,107 @@ class RbdTestCase(test.NoDBTestCase):
     def tearDown(self):
         super(RbdTestCase, self).tearDown()
 
+    def test_good_locations(self):
+        locations = ['rbd://fsid/pool/image/snap',
+                     'rbd://%2F/%2F/%2F/%2F', ]
+        map(self.driver.parse_url, locations)
+
+    def test_bad_locations(self):
+        locations = ['rbd://image',
+                     'http://path/to/somewhere/else',
+                     'rbd://image/extra',
+                     'rbd://image/',
+                     'rbd://fsid/pool/image/',
+                     'rbd://fsid/pool/image/snap/',
+                     'rbd://///', ]
+        for loc in locations:
+            self.assertRaises(exception.ImageUnacceptable,
+                              self.driver.parse_url, loc)
+            self.assertFalse(self.driver.is_cloneable({'url': loc},
+                                                      {'disk_format': 'raw'}))
+
+    @mock.patch.object(rbd.RBDDriver, '_get_fsid')
+    @mock.patch.object(rbd, 'rbd')
+    @mock.patch.object(rbd, 'rados')
+    def test_cloneable(self, mock_rados, mock_rbd, mock_get_fsid):
+        mock_get_fsid.return_value = 'abc'
+        location = {'url': 'rbd://abc/pool/image/snap'}
+        info = {'disk_format': 'raw'}
+        self.assertTrue(self.driver.is_cloneable(location, info))
+        self.assertTrue(mock_get_fsid.called)
+
+    @mock.patch.object(rbd.RBDDriver, '_get_fsid')
+    def test_uncloneable_different_fsid(self, mock_get_fsid):
+        mock_get_fsid.return_value = 'abc'
+        location = {'url': 'rbd://def/pool/image/snap'}
+        self.assertFalse(
+            self.driver.is_cloneable(location, {'disk_format': 'raw'}))
+        self.assertTrue(mock_get_fsid.called)
+
+    @mock.patch.object(rbd.RBDDriver, '_get_fsid')
+    @mock.patch.object(rbd, 'RBDVolumeProxy')
+    @mock.patch.object(rbd, 'rbd')
+    @mock.patch.object(rbd, 'rados')
+    def test_uncloneable_unreadable(self, mock_rados, mock_rbd, mock_proxy,
+                                    mock_get_fsid):
+        mock_get_fsid.return_value = 'abc'
+        location = {'url': 'rbd://abc/pool/image/snap'}
+
+        mock_proxy.side_effect = mock_rbd.Error
+
+        self.assertFalse(
+            self.driver.is_cloneable(location, {'disk_format': 'raw'}))
+        mock_proxy.assert_called_once_with(self.driver, 'image', pool='pool',
+                                           snapshot='snap', read_only=True)
+        self.assertTrue(mock_get_fsid.called)
+
+    @mock.patch.object(rbd.RBDDriver, '_get_fsid')
+    def test_uncloneable_bad_format(self, mock_get_fsid):
+        mock_get_fsid.return_value = 'abc'
+        location = {'url': 'rbd://abc/pool/image/snap'}
+        formats = ['qcow2', 'vmdk', 'vdi']
+        for f in formats:
+            self.assertFalse(
+                self.driver.is_cloneable(location, {'disk_format': f}))
+        self.assertTrue(mock_get_fsid.called)
+
     @mock.patch.object(utils, 'execute')
     def test_get_mon_addrs(self, mock_execute):
         mock_execute.return_value = (CEPH_MON_DUMP, '')
         hosts = ['::1', '::1', '::1', '127.0.0.1', 'example.com']
         ports = ['6789', '6790', '6791', '6792', '6791']
         self.assertEqual((hosts, ports), self.driver.get_mon_addrs())
+
+    @mock.patch.object(rbd, 'RADOSClient')
+    @mock.patch.object(rbd, 'rbd')
+    @mock.patch.object(rbd, 'rados')
+    def test_clone(self, mock_rados, mock_rbd, mock_client):
+        pool = u'images'
+        image = u'image-name'
+        snap = u'snapshot-name'
+        location = {'url': u'rbd://fsid/%s/%s/%s' % (pool, image, snap)}
+
+        client_stack = []
+
+        def mock__enter__(inst):
+            def _inner():
+                client_stack.append(inst)
+                return inst
+            return _inner
+
+        client = mock_client.return_value
+        # capture both rados client used to perform the clone
+        client.__enter__.side_effect = mock__enter__(client)
+
+        rbd = mock_rbd.RBD.return_value
+
+        self.driver.clone(location, self.volume_name)
+
+        args = [client_stack[0].ioctx, str(image), str(snap),
+                client_stack[1].ioctx, str(self.volume_name)]
+        kwargs = {'features': mock_rbd.RBD_FEATURE_LAYERING}
+        rbd.clone.assert_called_once_with(*args, **kwargs)
+        self.assertEqual(client.__enter__.call_count, 2)
 
     @mock.patch.object(rbd, 'RBDVolumeProxy')
     def test_resize(self, mock_proxy):
@@ -163,8 +259,11 @@ class RbdTestCase(test.NoDBTestCase):
 
     @mock.patch.object(rbd, 'RBDVolumeProxy')
     def test_exists(self, mock_proxy):
+        snapshot = 'snap'
         proxy = mock_proxy.return_value
-        self.assertTrue(self.driver.exists(self.volume_name))
+        self.assertTrue(self.driver.exists(self.volume_name,
+                                           self.rbd_pool,
+                                           snapshot))
         proxy.__enter__.assert_called_once_with()
         proxy.__exit__.assert_called_once_with(None, None, None)
 

@@ -2684,13 +2684,23 @@ class LibvirtDriver(driver.ComputeDriver):
             if size == 0 or suffix == '.rescue':
                 size = None
 
-            image('disk').cache(fetch_func=libvirt_utils.fetch_image,
-                                context=context,
-                                filename=root_fname,
-                                size=size,
-                                image_id=disk_images['image_id'],
-                                user_id=instance['user_id'],
-                                project_id=instance['project_id'])
+            backend = image('disk')
+            if backend.SUPPORTS_CLONE:
+                def clone_fallback_to_fetch(*args, **kwargs):
+                    try:
+                        backend.clone(context, disk_images['image_id'])
+                    except exception.ImageUnacceptable:
+                        libvirt_utils.fetch_image(*args, **kwargs)
+                fetch_func = clone_fallback_to_fetch
+            else:
+                fetch_func = libvirt_utils.fetch_image
+            backend.cache(fetch_func=fetch_func,
+                          context=context,
+                          filename=root_fname,
+                          size=size,
+                          image_id=disk_images['image_id'],
+                          user_id=instance['user_id'],
+                          project_id=instance['project_id'])
 
         # Lookup the filesystem type if required
         os_type_with_default = disk.get_fs_type_for_os_type(

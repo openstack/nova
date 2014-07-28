@@ -380,14 +380,14 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
     def test_create_image_too_small(self):
         fn = self.prepare_mocks()
         self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(imagebackend.disk, 'get_disk_size')
+        self.mox.StubOutWithMock(imagebackend.Qcow2, 'get_disk_size')
         if self.OLD_STYLE_INSTANCE_PATH:
             os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
         os.path.exists(self.DISK_INFO_PATH).AndReturn(False)
         os.path.exists(self.INSTANCES_PATH).AndReturn(True)
         os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
-        imagebackend.disk.get_disk_size(self.TEMPLATE_PATH
-                                       ).AndReturn(self.SIZE)
+        imagebackend.Qcow2.get_disk_size(self.TEMPLATE_PATH
+                                         ).AndReturn(self.SIZE)
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -693,6 +693,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         self.mox.VerifyAll()
 
     def test_cache_base_dir_exists(self):
+        fn = self.mox.CreateMockAnything()
         image = self.image_class(self.INSTANCE, self.NAME)
 
         self.mox.StubOutWithMock(os.path, 'exists')
@@ -748,20 +749,70 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         fake_processutils.fake_execute_clear_log()
         fake_processutils.stub_out_processutils_execute(self.stubs)
 
-        self.mox.StubOutWithMock(imagebackend.disk, 'get_disk_size')
-        imagebackend.disk.get_disk_size(self.TEMPLATE_PATH
-                                       ).AndReturn(self.SIZE)
+        image = self.image_class(self.INSTANCE, self.NAME)
+        self.mox.StubOutWithMock(image, 'check_image_exists')
+        image.check_image_exists().AndReturn(False)
+        image.check_image_exists().AndReturn(False)
+        self.mox.ReplayAll()
+
+        image.create_image(fn, self.TEMPLATE_PATH, None)
+
         rbd_name = "%s_%s" % (self.INSTANCE['uuid'], self.NAME)
         cmd = ('rbd', 'import', '--pool', self.POOL, self.TEMPLATE_PATH,
                rbd_name, '--new-format', '--id', self.USER,
                '--conf', self.CONF)
-        self.mox.ReplayAll()
+        self.assertEqual(fake_processutils.fake_execute_get_log(),
+            [' '.join(cmd)])
+        self.mox.VerifyAll()
+
+    def test_create_image_resize(self):
+        fn = self.mox.CreateMockAnything()
+        full_size = self.SIZE * 2
+        fn(max_size=full_size, target=self.TEMPLATE_PATH)
+
+        rbd.rbd.RBD_FEATURE_LAYERING = 1
+
+        fake_processutils.fake_execute_clear_log()
+        fake_processutils.stub_out_processutils_execute(self.stubs)
 
         image = self.image_class(self.INSTANCE, self.NAME)
-        image.create_image(fn, self.TEMPLATE_PATH, None)
+        self.mox.StubOutWithMock(image, 'check_image_exists')
+        image.check_image_exists().AndReturn(False)
+        image.check_image_exists().AndReturn(False)
+        rbd_name = "%s_%s" % (self.INSTANCE['uuid'], self.NAME)
+        cmd = ('rbd', 'import', '--pool', self.POOL, self.TEMPLATE_PATH,
+               rbd_name, '--new-format', '--id', self.USER,
+               '--conf', self.CONF)
+        self.mox.StubOutWithMock(image, 'get_disk_size')
+        image.get_disk_size(rbd_name).AndReturn(self.SIZE)
+        self.mox.StubOutWithMock(image.driver, 'resize')
+        image.driver.resize(rbd_name, full_size)
+
+        self.mox.ReplayAll()
+
+        image.create_image(fn, self.TEMPLATE_PATH, full_size)
 
         self.assertEqual(fake_processutils.fake_execute_get_log(),
             [' '.join(cmd)])
+        self.mox.VerifyAll()
+
+    def test_create_image_already_exists(self):
+        rbd.rbd.RBD_FEATURE_LAYERING = 1
+
+        image = self.image_class(self.INSTANCE, self.NAME)
+        self.mox.StubOutWithMock(image, 'check_image_exists')
+        image.check_image_exists().AndReturn(True)
+        self.mox.StubOutWithMock(image, 'get_disk_size')
+        image.get_disk_size(self.TEMPLATE_PATH).AndReturn(self.SIZE)
+        image.check_image_exists().AndReturn(True)
+        rbd_name = "%s_%s" % (self.INSTANCE['uuid'], self.NAME)
+        image.get_disk_size(rbd_name).AndReturn(self.SIZE)
+
+        self.mox.ReplayAll()
+
+        fn = self.mox.CreateMockAnything()
+        image.create_image(fn, self.TEMPLATE_PATH, self.SIZE)
+
         self.mox.VerifyAll()
 
     def test_prealloc_image(self):
