@@ -203,52 +203,6 @@ def create_cow_image(backing_file, path, size=None):
     execute(*cmd)
 
 
-def import_rbd_image(*args):
-    execute('rbd', 'import', *args)
-
-
-def _run_rbd(*args, **kwargs):
-    total = list(args)
-
-    if CONF.libvirt.rbd_user:
-        total.extend(['--id', str(CONF.libvirt.rbd_user)])
-    if CONF.libvirt.images_rbd_ceph_conf:
-        total.extend(['--conf', str(CONF.libvirt.images_rbd_ceph_conf)])
-
-    return utils.execute(*total, **kwargs)
-
-
-def list_rbd_volumes(pool):
-    """List volumes names for given ceph pool.
-
-    :param pool: ceph pool name
-    """
-    try:
-        out, err = _run_rbd('rbd', '-p', pool, 'ls')
-    except processutils.ProcessExecutionError:
-        # No problem when no volume in rbd pool
-        return []
-
-    return [line.strip() for line in out.splitlines()]
-
-
-def remove_rbd_volumes(pool, *names):
-    """Remove one or more rbd volume."""
-    for name in names:
-        # NOTE(nic): the rbd command supports two methods for
-        # specifying a pool name: the "-p" flag, and using the volume
-        # name notation "pool_name/volume_name"
-        # The latter method supercedes the former, so to guard
-        # against slashes in the volume name confusing things, always
-        # use the path notation
-        rbd_remove = ('rbd', 'rm', os.path.join(pool, name))
-        try:
-            _run_rbd(*rbd_remove, attempts=3, run_as_root=True)
-        except processutils.ProcessExecutionError:
-            LOG.warn(_LW("rbd remove %(name)s in pool %(pool)s failed"),
-                     {'name': name, 'pool': pool})
-
-
 def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
     """Pick the libvirt primary backend driver name
 

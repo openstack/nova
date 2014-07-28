@@ -80,6 +80,7 @@ from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import firewall
 from nova.virt.libvirt import imagebackend
+from nova.virt.libvirt import rbd
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt import netutils
 
@@ -6118,38 +6119,16 @@ class LibvirtConnTestCase(test.TestCase,
                     "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
         conn.destroy(self.context, instance, [])
 
-    def test_cleanup_rbd(self):
-        mock = self.mox.CreateMock(libvirt.virDomain)
+    @mock.patch.object(rbd, 'RBDDriver')
+    def test_cleanup_rbd(self, mock_driver):
+        driver = mock_driver.return_value
+        driver.cleanup_volumes = mock.Mock()
+        fake_instance = {'uuid': '875a8070-d0b9-4949-8b31-104d125c9a64'}
 
-        def fake_lookup_by_name(instance_name):
-            return mock
-
-        def fake_get_info(instance_name):
-            return {'state': power_state.SHUTDOWN, 'id': -1}
-
-        fake_volumes = ['875a8070-d0b9-4949-8b31-104d125c9a64.local',
-                        '875a8070-d0b9-4949-8b31-104d125c9a64.swap',
-                        '875a8070-d0b9-4949-8b31-104d125c9a64',
-                        'wrong875a8070-d0b9-4949-8b31-104d125c9a64']
-        fake_pool = 'fake_pool'
-        fake_instance = {'name': 'fakeinstancename', 'id': 'instanceid',
-                         'uuid': '875a8070-d0b9-4949-8b31-104d125c9a64'}
-
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
-        self.stubs.Set(conn, 'get_info', fake_get_info)
-
-        self.flags(images_rbd_pool=fake_pool, group='libvirt')
-        self.mox.StubOutWithMock(libvirt_driver.libvirt_utils,
-                                 'remove_rbd_volumes')
-        libvirt_driver.libvirt_utils.remove_rbd_volumes(fake_pool,
-                                                        *fake_volumes[:3])
-
-        self.mox.ReplayAll()
-
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         conn._cleanup_rbd(fake_instance)
 
-        self.mox.VerifyAll()
+        driver.cleanup_volumes.assert_called_once_with(fake_instance)
 
     def test_destroy_undefines_no_undefine_flags(self):
         mock = self.mox.CreateMock(libvirt.virDomain)

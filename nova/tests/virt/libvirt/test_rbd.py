@@ -167,3 +167,18 @@ class RbdTestCase(test.NoDBTestCase):
         self.assertTrue(self.driver.exists(self.volume_name))
         proxy.__enter__.assert_called_once_with()
         proxy.__exit__.assert_called_once_with(None, None, None)
+
+    @mock.patch.object(rbd, 'rbd')
+    @mock.patch.object(rbd, 'rados')
+    @mock.patch.object(rbd, 'RADOSClient')
+    def test_cleanup_volumes(self, mock_client, mock_rados, mock_rbd):
+        instance = {'uuid': '12345'}
+
+        rbd = mock_rbd.RBD.return_value
+        rbd.list.return_value = ['12345_test', '111_test']
+
+        client = mock_client.return_value
+        self.driver.cleanup_volumes(instance)
+        rbd.remove.assert_called_once_with(client.ioctx, '12345_test')
+        client.__enter__.assert_called_once_with()
+        client.__exit__.assert_called_once_with(None, None, None)

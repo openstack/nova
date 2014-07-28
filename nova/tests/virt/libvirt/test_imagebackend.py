@@ -745,19 +745,23 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
         rbd.rbd.RBD_FEATURE_LAYERING = 1
 
+        fake_processutils.fake_execute_clear_log()
+        fake_processutils.stub_out_processutils_execute(self.stubs)
+
         self.mox.StubOutWithMock(imagebackend.disk, 'get_disk_size')
         imagebackend.disk.get_disk_size(self.TEMPLATE_PATH
                                        ).AndReturn(self.SIZE)
-        rbd_name = "%s/%s" % (self.INSTANCE['name'], self.NAME)
-        cmd = ('--pool', self.POOL, self.TEMPLATE_PATH,
+        rbd_name = "%s_%s" % (self.INSTANCE['uuid'], self.NAME)
+        cmd = ('rbd', 'import', '--pool', self.POOL, self.TEMPLATE_PATH,
                rbd_name, '--new-format', '--id', self.USER,
                '--conf', self.CONF)
-        self.libvirt_utils.import_rbd_image(self.TEMPLATE_PATH, *cmd)
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
         image.create_image(fn, self.TEMPLATE_PATH, None)
 
+        self.assertEqual(fake_processutils.fake_execute_get_log(),
+            [' '.join(cmd)])
         self.mox.VerifyAll()
 
     def test_prealloc_image(self):
