@@ -1551,15 +1551,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self._do_test_set_admin_password_driver_error(
             exc, vm_states.ACTIVE, None, expected_exception)
 
-    def test_init_host_with_partial_migration(self):
+    def _test_init_host_with_partial_migration(self, task_state=None,
+                                               vm_state=vm_states.ACTIVE):
         our_host = self.compute.host
         instance_1 = objects.Instance(self.context)
         instance_1.uuid = 'foo'
-        instance_1.task_state = task_states.MIGRATING
+        instance_1.task_state = task_state
+        instance_1.vm_state = vm_state
         instance_1.host = 'not-' + our_host
         instance_2 = objects.Instance(self.context)
         instance_2.uuid = 'bar'
         instance_2.task_state = None
+        instance_2.vm_state = vm_states.ACTIVE
         instance_2.host = 'not-' + our_host
 
         with contextlib.nested(
@@ -1579,6 +1582,26 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.compute._destroy_evacuated_instances(self.context)
             destroy.assert_called_once_with(self.context, instance_2, None,
                                             {}, True)
+
+    def test_init_host_with_partial_migration_migrating(self):
+        self._test_init_host_with_partial_migration(
+            task_state=task_states.MIGRATING)
+
+    def test_init_host_with_partial_migration_resize_migrating(self):
+        self._test_init_host_with_partial_migration(
+            task_state=task_states.RESIZE_MIGRATING)
+
+    def test_init_host_with_partial_migration_resize_migrated(self):
+        self._test_init_host_with_partial_migration(
+            task_state=task_states.RESIZE_MIGRATED)
+
+    def test_init_host_with_partial_migration_finish_resize(self):
+        self._test_init_host_with_partial_migration(
+            task_state=task_states.RESIZE_FINISH)
+
+    def test_init_host_with_partial_migration_resized(self):
+        self._test_init_host_with_partial_migration(
+            vm_state=vm_states.RESIZED)
 
     @mock.patch('nova.compute.manager.ComputeManager._instance_update')
     def test_error_out_instance_on_exception_not_implemented_err(self,

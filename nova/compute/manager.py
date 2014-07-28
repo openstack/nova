@@ -684,21 +684,28 @@ class ComputeManager(manager.Manager):
         evacuated to another host. Check that the instances reported
         by the driver are still associated with this host.  If they are
         not, destroy them, with the exception of instances which are in
-        the MIGRATING state.
+        the MIGRATING, RESIZE_MIGRATING, RESIZE_MIGRATED, RESIZE_FINISH
+        task state or RESIZED vm state.
         """
         our_host = self.host
         filters = {'deleted': False}
         local_instances = self._get_instances_on_driver(context, filters)
         for instance in local_instances:
             if instance.host != our_host:
-                if instance.task_state in [task_states.MIGRATING]:
+                if (instance.task_state in [task_states.MIGRATING,
+                                            task_states.RESIZE_MIGRATING,
+                                            task_states.RESIZE_MIGRATED,
+                                            task_states.RESIZE_FINISH]
+                    or instance.vm_state in [vm_states.RESIZED]):
                     LOG.debug('Will not delete instance as its host ('
                               '%(instance_host)s) is not equal to our '
-                              'host (%(our_host)s) but its state is '
-                              '(%(task_state)s)',
+                              'host (%(our_host)s) but its task state is '
+                              '(%(task_state)s) and vm state is '
+                              '(%(vm_state)s)',
                               {'instance_host': instance.host,
                                'our_host': our_host,
-                               'task_state': instance.task_state},
+                               'task_state': instance.task_state,
+                               'vm_state': instance.vm_state},
                               instance=instance)
                     continue
                 LOG.info(_('Deleting instance as its host ('
