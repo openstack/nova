@@ -15,11 +15,8 @@
 
 
 import datetime
-import filecmp
-import os
 import random
 import sys
-import tempfile
 import time
 
 import glanceclient.exc
@@ -31,10 +28,8 @@ from nova import context
 from nova import exception
 from nova.image import glance
 from nova import test
-from nova.tests.api.openstack import fakes
 from nova.tests.glance import stubs as glance_stubs
 from nova import utils
-import nova.virt.libvirt.utils as lv_utils
 
 CONF = cfg.CONF
 NOW_GLANCE_FORMAT = "2010-10-11T10:30:22.000000"
@@ -193,265 +188,237 @@ class TestGetImageService(test.NoDBTestCase):
                                             use_ssl=False)
 
 
-class NullWriter(object):
-    """Used to test ImageService.get which takes a writer object."""
+class TestDownloadNoDirectUri(test.NoDBTestCase):
 
-    def write(self, *arg, **kwargs):
-        pass
-
-
-class TestGlanceImageService(test.NoDBTestCase):
-    """Tests the Glance image service.
-
-    At a high level, the translations involved are:
-
-        1. Glance -> ImageService - This is needed so we can support
-           multple ImageServices (Glance, Local, etc)
-
-        2. ImageService -> API - This is needed so we can support multple
-           APIs (OpenStack, EC2)
-
+    """Tests the download method of the GlanceImageService when the
+    default of not allowing direct URI transfers is set.
     """
 
-    def setUp(self):
-        super(TestGlanceImageService, self).setUp()
-        fakes.stub_out_compute_api_snapshot(self.stubs)
+    @mock.patch('__builtin__.open')
+    @mock.patch('nova.image.glance.GlanceImageService.show')
+    def test_download_no_data_no_dest_path(self, show_mock, open_mock):
+        client = mock.MagicMock()
+        client.call.return_value = mock.sentinel.image_chunks
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageService(client)
+        res = service.download(ctx, mock.sentinel.image_id)
 
-        self.client = glance_stubs.StubGlanceClient()
-        self.service = self._create_image_service(self.client)
-        self.context = context.RequestContext('fake', 'fake', auth_token=True)
-        self.files_to_clean = []
+        self.assertFalse(show_mock.called)
+        self.assertFalse(open_mock.called)
+        client.call.assert_called_once_with(ctx, 1, 'data',
+                                            mock.sentinel.image_id)
+        self.assertEqual(mock.sentinel.image_chunks, res)
 
-    def tearDown(self):
-        super(TestGlanceImageService, self).tearDown()
-        for f in self.files_to_clean:
-            try:
-                os.unlink(f)
-            except os.error:
-                pass
+    @mock.patch('__builtin__.open')
+    @mock.patch('nova.image.glance.GlanceImageService.show')
+    def test_download_data_no_dest_path(self, show_mock, open_mock):
+        client = mock.MagicMock()
+        client.call.return_value = [1, 2, 3]
+        ctx = mock.sentinel.ctx
+        data = mock.MagicMock()
+        service = glance.GlanceImageService(client)
+        res = service.download(ctx, mock.sentinel.image_id, data=data)
 
-    def _get_tempfile(self):
-        (outfd, config_filename) = tempfile.mkstemp(prefix='nova_glance_tests')
-        self.files_to_clean.append(config_filename)
-        return (outfd, config_filename)
+        self.assertFalse(show_mock.called)
+        self.assertFalse(open_mock.called)
+        client.call.assert_called_once_with(ctx, 1, 'data',
+                                            mock.sentinel.image_id)
+        self.assertIsNone(res)
+        data.write.assert_has_calls(
+                [
+                    mock.call(1),
+                    mock.call(2),
+                    mock.call(3)
+                ]
+        )
+        self.assertFalse(data.close.called)
 
-    def _create_image_service(self, client):
-        def _fake_create_glance_client(context, host, port, use_ssl, version):
-            return client
+    @mock.patch('__builtin__.open')
+    @mock.patch('nova.image.glance.GlanceImageService.show')
+    def test_download_no_data_dest_path(self, show_mock, open_mock):
+        client = mock.MagicMock()
+        client.call.return_value = [1, 2, 3]
+        ctx = mock.sentinel.ctx
+        writer = mock.MagicMock()
+        open_mock.return_value = writer
+        service = glance.GlanceImageService(client)
+        res = service.download(ctx, mock.sentinel.image_id,
+                               dst_path=mock.sentinel.dst_path)
 
-        self.stubs.Set(glance, '_create_glance_client',
-                _fake_create_glance_client)
+        self.assertFalse(show_mock.called)
+        client.call.assert_called_once_with(ctx, 1, 'data',
+                                            mock.sentinel.image_id)
+        open_mock.assert_called_once_with(mock.sentinel.dst_path, 'wb')
+        self.assertIsNone(res)
+        writer.write.assert_has_calls(
+                [
+                    mock.call(1),
+                    mock.call(2),
+                    mock.call(3)
+                ]
+        )
+        writer.close.assert_called_once_with()
 
-        client_wrapper = glance.GlanceClientWrapper(
-                'fake', 'fake_host', 9292)
-        return glance.GlanceImageService(client=client_wrapper)
+    @mock.patch('__builtin__.open')
+    @mock.patch('nova.image.glance.GlanceImageService.show')
+    def test_download_data_dest_path(self, show_mock, open_mock):
+        # NOTE(jaypipes): This really shouldn't be allowed, but because of the
+        # horrible design of the download() method in GlanceImageService, no
+        # error is raised, and the dst_path is ignored...
+        # #TODO(jaypipes): Fix the aforementioned horrible design of
+        # the download() method.
+        client = mock.MagicMock()
+        client.call.return_value = [1, 2, 3]
+        ctx = mock.sentinel.ctx
+        data = mock.MagicMock()
+        service = glance.GlanceImageService(client)
+        res = service.download(ctx, mock.sentinel.image_id, data=data)
 
-    def test_download_with_retries(self):
-        tries = [0]
+        self.assertFalse(show_mock.called)
+        self.assertFalse(open_mock.called)
+        client.call.assert_called_once_with(ctx, 1, 'data',
+                                            mock.sentinel.image_id)
+        self.assertIsNone(res)
+        data.write.assert_has_calls(
+                [
+                    mock.call(1),
+                    mock.call(2),
+                    mock.call(3)
+                ]
+        )
+        self.assertFalse(data.close.called)
 
-        class MyGlanceStubClient(glance_stubs.StubGlanceClient):
-            """A client that fails the first time, then succeeds."""
-            def get(self, image_id):
-                if tries[0] == 0:
-                    tries[0] = 1
-                    raise glanceclient.exc.ServiceUnavailable('')
-                else:
-                    return {}
-
-        client = MyGlanceStubClient()
-        service = self._create_image_service(client)
-        image_id = 1  # doesn't matter
-        writer = NullWriter()
-
-        # When retries are disabled, we should get an exception
-        self.flags(num_retries=0, group='glance')
-        self.assertRaises(exception.GlanceConnectionFailed,
-                service.download, self.context, image_id, data=writer)
-
-        # Now lets enable retries. No exception should happen now.
-        tries = [0]
-        self.flags(num_retries=1, group='glance')
-        service.download(self.context, image_id, data=writer)
-
-    def test_download_file_url(self):
+    @mock.patch('nova.image.glance.GlanceImageService._get_transfer_module')
+    @mock.patch('nova.image.glance.GlanceImageService.show')
+    def test_download_direct_file_uri(self, show_mock, get_tran_mock):
         self.flags(allowed_direct_url_schemes=['file'], group='glance')
+        show_mock.return_value = {
+            'locations': [
+                {
+                    'url': 'file:///files/image',
+                    'metadata': mock.sentinel.loc_meta
+                }
+            ]
+        }
+        tran_mod = mock.MagicMock()
+        get_tran_mock.return_value = tran_mod
+        client = mock.MagicMock()
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageService(client)
+        res = service.download(ctx, mock.sentinel.image_id,
+                               dst_path=mock.sentinel.dst_path)
 
-        class MyGlanceStubClient(glance_stubs.StubGlanceClient):
-            """A client that returns a file url."""
+        self.assertIsNone(res)
+        self.assertFalse(client.call.called)
+        show_mock.assert_called_once_with(ctx,
+                                          mock.sentinel.image_id,
+                                          include_locations=True)
+        get_tran_mock.assert_called_once_with('file')
+        tran_mod.download.assert_called_once_with(ctx, mock.ANY,
+                                                  mock.sentinel.dst_path,
+                                                  mock.sentinel.loc_meta)
 
-            (outfd, s_tmpfname) = tempfile.mkstemp(prefix='directURLsrc')
-            outf = os.fdopen(outfd, 'w')
-            inf = open('/dev/urandom', 'r')
-            for i in range(10):
-                _data = inf.read(1024)
-                outf.write(_data)
-            outf.close()
-
-            def get(self, image_id):
-                return type('GlanceTestDirectUrlMeta', (object,),
-                            {'status': 'active',
-                             'direct_url': 'file://%s' + self.s_tmpfname})
-
-        client = MyGlanceStubClient()
-        (outfd, tmpfname) = tempfile.mkstemp(prefix='directURLdst')
-        os.close(outfd)
-
-        service = self._create_image_service(client)
-        image_id = 1  # doesn't matter
-
-        service.download(self.context, image_id, dst_path=tmpfname)
-
-        # compare the two files
-        rc = filecmp.cmp(tmpfname, client.s_tmpfname)
-        self.assertTrue(rc, "The file %s and %s should be the same" %
-                        (tmpfname, client.s_tmpfname))
-        os.remove(client.s_tmpfname)
-        os.remove(tmpfname)
-
-    @mock.patch('nova.virt.libvirt.utils.copy_image')
-    def test_download_module_filesystem_match(self, mock_copy_image):
-
-        mountpoint = '/'
-        fs_id = 'someid'
-        desc = {'id': fs_id, 'mountpoint': mountpoint}
-
-        class MyGlanceStubClient(glance_stubs.StubGlanceClient):
-            outer_test = self
-
-            def get(self, image_id):
-                return type('GlanceLocations', (object,),
-                            {'status': 'active',
-                             'locations': [
-                                {'url': 'file:///' + os.devnull,
-                                 'metadata': desc}]})
-
-            def data(self, image_id):
-                self.outer_test.fail('This should not be called because the '
-                                     'transfer module should have intercepted '
-                                     'it.')
-
-        image_id = 1  # doesn't matter
-        client = MyGlanceStubClient()
+    @mock.patch('__builtin__.open')
+    @mock.patch('nova.image.glance.GlanceImageService._get_transfer_module')
+    @mock.patch('nova.image.glance.GlanceImageService.show')
+    def test_download_direct_exception_fallback(self, show_mock,
+                                                get_tran_mock,
+                                                open_mock):
+        # Test that we fall back to downloading to the dst_path
+        # if the download method of the transfer module raised
+        # an exception.
         self.flags(allowed_direct_url_schemes=['file'], group='glance')
-        self.flags(group='image_file_url', filesystems=['gluster'])
-        service = self._create_image_service(client)
-        # NOTE(Jbresnah) The following options must be added after the module
-        # has added the specific groups.
-        self.flags(group='image_file_url:gluster', id=fs_id)
-        self.flags(group='image_file_url:gluster', mountpoint=mountpoint)
+        show_mock.return_value = {
+            'locations': [
+                {
+                    'url': 'file:///files/image',
+                    'metadata': mock.sentinel.loc_meta
+                }
+            ]
+        }
+        tran_mod = mock.MagicMock()
+        tran_mod.download.side_effect = Exception
+        get_tran_mock.return_value = tran_mod
+        client = mock.MagicMock()
+        client.call.return_value = [1, 2, 3]
+        ctx = mock.sentinel.ctx
+        writer = mock.MagicMock()
+        open_mock.return_value = writer
+        service = glance.GlanceImageService(client)
+        res = service.download(ctx, mock.sentinel.image_id,
+                               dst_path=mock.sentinel.dst_path)
 
-        dest_file = os.devnull
-        service.download(self.context, image_id, dst_path=dest_file)
-        mock_copy_image.assert_called_once_with('/' + os.devnull, os.devnull)
+        self.assertIsNone(res)
+        show_mock.assert_called_once_with(ctx,
+                                          mock.sentinel.image_id,
+                                          include_locations=True)
+        get_tran_mock.assert_called_once_with('file')
+        tran_mod.download.assert_called_once_with(ctx, mock.ANY,
+                                                  mock.sentinel.dst_path,
+                                                  mock.sentinel.loc_meta)
+        client.call.assert_called_once_with(ctx, 1, 'data',
+                                            mock.sentinel.image_id)
+        # NOTE(jaypipes): log messages call open() in part of the
+        # download path, so here, we just check that the last open()
+        # call was done for the dst_path file descriptor.
+        open_mock.assert_called_with(mock.sentinel.dst_path, 'wb')
+        self.assertIsNone(res)
+        writer.write.assert_has_calls(
+                [
+                    mock.call(1),
+                    mock.call(2),
+                    mock.call(3)
+                ]
+        )
 
-    def test_download_module_no_filesystem_match(self):
-        mountpoint = '/'
-        fs_id = 'someid'
-        desc = {'id': fs_id, 'mountpoint': mountpoint}
-        some_data = "sfxvdwjer"
+    @mock.patch('__builtin__.open')
+    @mock.patch('nova.image.glance.GlanceImageService._get_transfer_module')
+    @mock.patch('nova.image.glance.GlanceImageService.show')
+    def test_download_direct_no_mod_fallback(self, show_mock,
+                                              get_tran_mock,
+                                              open_mock):
+        # Test that we fall back to downloading to the dst_path
+        # if no appropriate transfer module is found...
+        # an exception.
+        self.flags(allowed_direct_url_schemes=['funky'], group='glance')
+        show_mock.return_value = {
+            'locations': [
+                {
+                    'url': 'file:///files/image',
+                    'metadata': mock.sentinel.loc_meta
+                }
+            ]
+        }
+        get_tran_mock.return_value = None
+        client = mock.MagicMock()
+        client.call.return_value = [1, 2, 3]
+        ctx = mock.sentinel.ctx
+        writer = mock.MagicMock()
+        open_mock.return_value = writer
+        service = glance.GlanceImageService(client)
+        res = service.download(ctx, mock.sentinel.image_id,
+                               dst_path=mock.sentinel.dst_path)
 
-        class MyGlanceStubClient(glance_stubs.StubGlanceClient):
-            outer_test = self
-
-            def get(self, image_id):
-                return type('GlanceLocations', (object,),
-                            {'status': 'active',
-                             'locations': [
-                                {'url': 'file:///' + os.devnull,
-                                 'metadata': desc}]})
-
-            def data(self, image_id):
-                return some_data
-
-        def _fake_copyfile(source, dest):
-            self.fail('This should not be called because a match should not '
-                      'have been found.')
-        self.stubs.Set(lv_utils, 'copy_image', _fake_copyfile)
-
-        image_id = 1  # doesn't matter
-        client = MyGlanceStubClient()
-        self.flags(allowed_direct_url_schemes=['file'], group='glance')
-        self.flags(group='image_file_url', filesystems=['gluster'])
-        service = self._create_image_service(client)
-        # NOTE(Jbresnah) The following options must be added after the module
-        # has added the specific groups.
-        self.flags(group='image_file_url:gluster', id='someotherid')
-        self.flags(group='image_file_url:gluster', mountpoint=mountpoint)
-
-        service.download(self.context, image_id,
-                         dst_path=os.devnull,
-                         data=None)
-
-    def test_download_module_mountpoints(self):
-        glance_mount = '/glance/mount/point'
-        _, data_filename = self._get_tempfile()
-        nova_mount = os.path.dirname(data_filename)
-        source_path = os.path.basename(data_filename)
-        file_url = 'file://%s' % os.path.join(glance_mount, source_path)
-        file_system_id = 'test_FS_ID'
-        file_system_desc = {'id': file_system_id, 'mountpoint': glance_mount}
-
-        class MyGlanceStubClient(glance_stubs.StubGlanceClient):
-            outer_test = self
-
-            def get(self, image_id):
-                return type('GlanceLocations', (object,),
-                            {'status': 'active',
-                             'locations': [{'url': file_url,
-                                            'metadata': file_system_desc}]})
-
-            def data(self, image_id):
-                self.outer_test.fail('This should not be called because the '
-                                     'transfer module should have intercepted '
-                                     'it.')
-
-        self.copy_called = False
-
-        def _fake_copyfile(source, dest):
-            self.assertEqual(source, data_filename)
-            self.copy_called = True
-        self.stubs.Set(lv_utils, 'copy_image', _fake_copyfile)
-
-        self.flags(allowed_direct_url_schemes=['file'], group='glance')
-        self.flags(group='image_file_url', filesystems=['gluster'])
-        image_id = 1  # doesn't matter
-        client = MyGlanceStubClient()
-        service = self._create_image_service(client)
-        self.flags(group='image_file_url:gluster', id=file_system_id)
-        self.flags(group='image_file_url:gluster', mountpoint=nova_mount)
-
-        service.download(self.context, image_id, dst_path=os.devnull)
-        self.assertTrue(self.copy_called)
-
-    @mock.patch('nova.virt.libvirt.utils.copy_image')
-    def test_download_module_file_bad_module(self, mock_copy_image):
-        _, data_filename = self._get_tempfile()
-        file_url = 'applesauce://%s' % data_filename
-
-        class MyGlanceStubClient(glance_stubs.StubGlanceClient):
-            data_called = False
-
-            def get(self, image_id):
-                return type('GlanceLocations', (object,),
-                            {'status': 'active',
-                             'locations': [{'url': file_url,
-                                            'metadata': {}}]})
-
-            def data(self, image_id):
-                self.data_called = True
-                return "someData"
-
-        self.flags(allowed_direct_url_schemes=['applesauce'], group='glance')
-        self.flags(allowed_direct_url_schemes=['file'], group='glance')
-        image_id = 1  # doesn't matter
-        client = MyGlanceStubClient()
-        service = self._create_image_service(client)
-
-        # by not calling copyfileobj in the file download module we verify
-        # that the requirements were not met for its use
-        service.download(self.context, image_id, dst_path=os.devnull)
-        self.assertTrue(client.data_called)
-        self.assertFalse(mock_copy_image.called)
+        self.assertIsNone(res)
+        show_mock.assert_called_once_with(ctx,
+                                          mock.sentinel.image_id,
+                                          include_locations=True)
+        get_tran_mock.assert_called_once_with('file')
+        client.call.assert_called_once_with(ctx, 1, 'data',
+                                            mock.sentinel.image_id)
+        # NOTE(jaypipes): log messages call open() in part of the
+        # download path, so here, we just check that the last open()
+        # call was done for the dst_path file descriptor.
+        open_mock.assert_called_with(mock.sentinel.dst_path, 'wb')
+        self.assertIsNone(res)
+        writer.write.assert_has_calls(
+                [
+                    mock.call(1),
+                    mock.call(2),
+                    mock.call(3)
+                ]
+        )
+        writer.close.assert_called_once_with()
 
 
 def _create_failing_glance_client(info):
