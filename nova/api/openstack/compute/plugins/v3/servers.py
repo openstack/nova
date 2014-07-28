@@ -167,6 +167,7 @@ class ServersController(wsgi.Controller):
         if not list(self.update_extension_manager):
             LOG.debug("Did not find any server update extensions")
 
+    @extensions.expected_errors((400, 403))
     def index(self, req):
         """Returns a list of server names and ids for a given user."""
         try:
@@ -175,6 +176,7 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=err.format_message())
         return servers
 
+    @extensions.expected_errors((400, 403))
     def detail(self, req):
         """Returns a list of server details for a given user."""
         try:
@@ -397,6 +399,7 @@ class ServersController(wsgi.Controller):
         except TypeError:
             return None
 
+    @extensions.expected_errors(404)
     def show(self, req, id):
         """Returns server details by server id."""
         context = req.environ['nova.context']
@@ -406,6 +409,7 @@ class ServersController(wsgi.Controller):
         req.cache_db_instance(instance)
         return self._view_builder.show(req, instance)
 
+    @extensions.expected_errors((400, 409, 413))
     @wsgi.response(202)
     def create(self, req, body):
         """Creates a new server for a given user."""
@@ -582,6 +586,7 @@ class ServersController(wsgi.Controller):
         else:
             self.compute_api.delete(context, instance)
 
+    @extensions.expected_errors((400, 404))
     def update(self, req, id, body):
         """Update server then pass on to version-specific controller."""
         if not self.is_valid_body(body, 'server'):
@@ -618,6 +623,7 @@ class ServersController(wsgi.Controller):
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
 
+    @extensions.expected_errors((400, 404, 409))
     @wsgi.response(202)
     @wsgi.action('confirm_resize')
     def _action_confirm_resize(self, req, id, body):
@@ -634,6 +640,7 @@ class ServersController(wsgi.Controller):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'confirm_resize')
 
+    @extensions.expected_errors((400, 404, 409))
     @wsgi.response(202)
     @wsgi.action('revert_resize')
     def _action_revert_resize(self, req, id, body):
@@ -654,6 +661,7 @@ class ServersController(wsgi.Controller):
                     'revert_resize')
         return webob.Response(status_int=202)
 
+    @extensions.expected_errors((400, 404, 409))
     @wsgi.response(202)
     @wsgi.action('reboot')
     def _action_reboot(self, req, id, body):
@@ -723,6 +731,7 @@ class ServersController(wsgi.Controller):
 
         return webob.Response(status_int=202)
 
+    @extensions.expected_errors((404, 409))
     @wsgi.response(204)
     def delete(self, req, id):
         """Destroys a server."""
@@ -774,6 +783,7 @@ class ServersController(wsgi.Controller):
 
         return common.get_id_from_href(flavor_ref)
 
+    @extensions.expected_errors((400, 401, 404, 409, 413))
     @wsgi.response(202)
     @wsgi.action('resize')
     def _action_resize(self, req, id, body):
@@ -792,6 +802,7 @@ class ServersController(wsgi.Controller):
 
         return self._resize(req, id, flavor_ref, **resize_kwargs)
 
+    @extensions.expected_errors((400, 404, 409, 413))
     @wsgi.response(202)
     @wsgi.action('rebuild')
     def _action_rebuild(self, req, id, body):
@@ -874,6 +885,7 @@ class ServersController(wsgi.Controller):
         robj = wsgi.ResponseObject(view)
         return self._add_location(robj)
 
+    @extensions.expected_errors((400, 404, 409, 413))
     @wsgi.response(202)
     @wsgi.action('create_image')
     @common.check_snapshots_enabled

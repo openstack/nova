@@ -2243,7 +2243,8 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        self.assertRaises(KeyError, self.controller.create, req, body=body)
+        self.assertRaises(webob.exc.HTTPInternalServerError,
+                          self.controller.create, req, body=body)
 
     def test_create_instance_pass_disabled(self):
         self.flags(enable_instance_password=False)
