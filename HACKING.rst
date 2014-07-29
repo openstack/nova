@@ -35,6 +35,7 @@ Nova Specific Commandments
   self.flags(option=value) instead.
 - [N321] Validate that LOG messages, except debug ones, have translations
 - [N322] Method's default argument shouldn't be mutable
+- [N323] Ensure that the _() function is explicitly imported to ensure proper translations.
 
 Creating Unit Tests
 -------------------
