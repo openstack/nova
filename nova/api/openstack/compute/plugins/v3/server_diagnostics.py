@@ -19,6 +19,7 @@ from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova import compute
 from nova import exception
+from nova.i18n import _
 
 
 ALIAS = "os-server-diagnostics"
@@ -26,7 +27,7 @@ authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 class ServerDiagnosticsController(object):
-    @extensions.expected_errors((404, 409))
+    @extensions.expected_errors((404, 409, 501))
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         authorize(context)
@@ -41,6 +42,9 @@ class ServerDiagnosticsController(object):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'get_diagnostics')
+        except NotImplementedError:
+            msg = _("Unable to get diagnostics, functionality not implemented")
+            raise webob.exc.HTTPNotImplemented(explanation=msg)
 
 
 class ServerDiagnostics(extensions.V3APIExtensionBase):
