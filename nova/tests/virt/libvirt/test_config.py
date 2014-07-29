@@ -1139,6 +1139,12 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.membacking = config.LibvirtConfigGuestMemoryBacking()
         obj.membacking.hugepages = True
 
+        obj.memtune = config.LibvirtConfigGuestMemoryTune()
+        obj.memtune.hard_limit = 496
+        obj.memtune.soft_limit = 672
+        obj.memtune.swap_hard_limit = 1638
+        obj.memtune.min_guarantee = 2970
+
         obj.name = "demo"
         obj.uuid = "b38a3f43-4be2-4046-897f-b67c2f5e0147"
         obj.os_type = "linux"
@@ -1168,6 +1174,12 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <memoryBacking>
                 <hugepages/>
               </memoryBacking>
+              <memtune>
+                <hard_limit units="K">496</hard_limit>
+                <soft_limit units="K">672</soft_limit>
+                <swap_hard_limit units="K">1638</swap_hard_limit>
+                <min_guarantee units="K">2970</min_guarantee>
+              </memtune>
               <vcpu cpuset="0-1,3-5">2</vcpu>
               <sysinfo type='smbios'>
                  <bios>
@@ -1811,6 +1823,30 @@ class LibvirtConfigGuestMemoryBackingTest(LibvirtConfigBaseTest):
             <nosharedpages/>
             <locked/>
           </memoryBacking>""")
+
+
+class LibvirtConfigGuestMemoryTuneTest(LibvirtConfigBaseTest):
+    def test_config_memory_backing_none(self):
+        obj = config.LibvirtConfigGuestMemoryTune()
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, "<memtune/>")
+
+    def test_config_memory_backing_all(self):
+        obj = config.LibvirtConfigGuestMemoryTune()
+        obj.soft_limit = 6
+        obj.hard_limit = 28
+        obj.swap_hard_limit = 140
+        obj.min_guarantee = 270
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+          <memtune>
+            <hard_limit units="K">28</hard_limit>
+            <soft_limit units="K">6</soft_limit>
+            <swap_hard_limit units="K">140</swap_hard_limit>
+            <min_guarantee units="K">270</min_guarantee>
+          </memtune>""")
 
 
 class LibvirtConfigGuestMetadataNovaTest(LibvirtConfigBaseTest):

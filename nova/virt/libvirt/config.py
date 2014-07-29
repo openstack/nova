@@ -48,15 +48,16 @@ class LibvirtConfigObject(object):
         self.ns_prefix = kwargs.get('ns_prefix')
         self.ns_uri = kwargs.get('ns_uri')
 
-    def _new_node(self, name):
+    def _new_node(self, name, **kwargs):
         if self.ns_uri is None:
-            return etree.Element(name)
+            return etree.Element(name, **kwargs)
         else:
             return etree.Element("{" + self.ns_uri + "}" + name,
-                                 nsmap={self.ns_prefix: self.ns_uri})
+                                 nsmap={self.ns_prefix: self.ns_uri},
+                                 **kwargs)
 
-    def _text_node(self, name, value):
-        child = self._new_node(name)
+    def _text_node(self, name, value, **kwargs):
+        child = self._new_node(name, **kwargs)
         child.text = str(value)
         return child
 
@@ -1330,6 +1331,40 @@ class LibvirtConfigGuestMemoryBacking(LibvirtConfigObject):
         return root
 
 
+class LibvirtConfigGuestMemoryTune(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestMemoryTune, self).__init__(
+            root_name="memtune", **kwargs)
+
+        self.hard_limit = None
+        self.soft_limit = None
+        self.swap_hard_limit = None
+        self.min_guarantee = None
+
+    def format_dom(self):
+        root = super(LibvirtConfigGuestMemoryTune, self).format_dom()
+
+        if self.hard_limit is not None:
+            root.append(self._text_node("hard_limit",
+                                        str(self.hard_limit),
+                                        units="K"))
+        if self.soft_limit is not None:
+            root.append(self._text_node("soft_limit",
+                                        str(self.soft_limit),
+                                        units="K"))
+        if self.swap_hard_limit is not None:
+            root.append(self._text_node("swap_hard_limit",
+                                        str(self.swap_hard_limit),
+                                        units="K"))
+        if self.min_guarantee is not None:
+            root.append(self._text_node("min_guarantee",
+                                        str(self.min_guarantee),
+                                        units="K"))
+
+        return root
+
+
 class LibvirtConfigGuest(LibvirtConfigObject):
 
     def __init__(self, **kwargs):
@@ -1341,6 +1376,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.name = None
         self.memory = 500 * units.Mi
         self.membacking = None
+        self.memtune = None
         self.vcpus = 1
         self.cpuset = None
         self.cpu = None
@@ -1368,6 +1404,8 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         root.append(self._text_node("memory", self.memory))
         if self.membacking is not None:
             root.append(self.membacking.format_dom())
+        if self.memtune is not None:
+            root.append(self.memtune.format_dom())
         if self.cpuset is not None:
             vcpu = self._text_node("vcpu", self.vcpus)
             vcpu.set("cpuset", hardware.format_cpu_spec(self.cpuset))
