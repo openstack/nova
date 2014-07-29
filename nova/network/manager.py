@@ -1400,6 +1400,11 @@ class NetworkManager(manager.Manager):
         network = objects.Network.get_by_id(context, network_id)
         call_func(context, network)
 
+    def _initialize_network(self, network):
+        if network.enable_dhcp:
+            self.l3driver.initialize_network(network.cidr)
+        self.l3driver.initialize_gateway(network)
+
     def _setup_network_on_host(self, context, network):
         """Sets up network on this host."""
         raise NotImplementedError()
@@ -1730,12 +1735,12 @@ class FlatDHCPManager(RPCAllocateFixedIP, floating_ips.FloatingIP,
 
     def _setup_network_on_host(self, context, network):
         """Sets up network on this host."""
-        network['dhcp_server'] = self._get_dhcp_ip(context, network)
+        network.dhcp_server = self._get_dhcp_ip(context, network)
 
-        self.l3driver.initialize_network(network.get('cidr'))
-        self.l3driver.initialize_gateway(network)
+        self._initialize_network(network)
 
-        if not CONF.fake_network:
+        # NOTE(vish): if dhcp server is not set then don't dhcp
+        if not CONF.fake_network and network.enable_dhcp:
             dev = self.driver.get_dev(network)
             # NOTE(dprince): dhcp DB queries require elevated context
             elevated = context.elevated()
@@ -1747,7 +1752,8 @@ class FlatDHCPManager(RPCAllocateFixedIP, floating_ips.FloatingIP,
                 network.save()
 
     def _teardown_network_on_host(self, context, network):
-        if not CONF.fake_network:
+        # NOTE(vish): if dhcp server is not set then don't dhcp
+        if not CONF.fake_network and network.enable_dhcp:
             network['dhcp_server'] = self._get_dhcp_ip(context, network)
             dev = self.driver.get_dev(network)
             # NOTE(dprince): dhcp DB queries require elevated context
@@ -1964,8 +1970,7 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
             address = network.vpn_public_address
         network.dhcp_server = self._get_dhcp_ip(context, network)
 
-        self.l3driver.initialize_network(network.get('cidr'))
-        self.l3driver.initialize_gateway(network)
+        self._initialize_network(network)
 
         # NOTE(vish): only ensure this forward if the address hasn't been set
         #             manually.
@@ -1977,8 +1982,9 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
         if not CONF.fake_network:
             dev = self.driver.get_dev(network)
             # NOTE(dprince): dhcp DB queries require elevated context
-            elevated = context.elevated()
-            self.driver.update_dhcp(elevated, dev, network)
+            if network.enable_dhcp:
+                elevated = context.elevated()
+                self.driver.update_dhcp(elevated, dev, network)
             if CONF.use_ipv6:
                 self.driver.update_ra(context, dev, network)
                 gateway = utils.get_my_linklocal(dev)
@@ -1990,9 +1996,6 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
         if not CONF.fake_network:
             network['dhcp_server'] = self._get_dhcp_ip(context, network)
             dev = self.driver.get_dev(network)
-            # NOTE(dprince): dhcp DB queries require elevated context
-            elevated = context.elevated()
-            self.driver.update_dhcp(elevated, dev, network)
 
             # NOTE(ethuleau): For multi hosted networks, if the network is no
             # more used on this host and if VPN forwarding rule aren't handed
@@ -2003,7 +2006,8 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
                 not objects.Network.in_use_on_host(context, network['id'],
                                                    self.host)):
                 LOG.debug("Remove unused gateway %s", network['bridge'])
-                self.driver.kill_dhcp(dev)
+                if network.enable_dhcp:
+                    self.driver.kill_dhcp(dev)
                 self.l3driver.remove_gateway(network)
                 if not self._uses_shared_ip(network):
                     fip = objects.FixedIP.get_by_address(context,
@@ -2011,7 +2015,10 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
                     fip.allocated = False
                     fip.host = None
                     fip.save()
-            else:
+            # NOTE(vish): if dhcp server is not set then don't dhcp
+            elif network.enable_dhcp:
+                # NOTE(dprince): dhcp DB queries require elevated context
+                elevated = context.elevated()
                 self.driver.update_dhcp(elevated, dev, network)
 
     def _get_network_dict(self, network):
