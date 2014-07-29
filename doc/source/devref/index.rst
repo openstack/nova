@@ -63,13 +63,6 @@ Other Resources
    gerrit
    jenkins
 
-API Reference
--------------
-.. toctree::
-   :maxdepth: 3
-
-   ../api/autoindex
-
 Module Reference
 ----------------
 .. toctree::
