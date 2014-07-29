@@ -76,15 +76,6 @@ Module Reference
    :maxdepth: 3
 
    services
-   database
-   compute
-   network
-   api
-   scheduler
-   fakes
-   nova
-   objectstore
-   glance
 
 
 Indices and tables
