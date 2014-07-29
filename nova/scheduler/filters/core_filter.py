@@ -61,7 +61,17 @@ class BaseCoreFilter(filters.BaseHostFilter):
         if vcpus_total > 0:
             host_state.limits['vcpu'] = vcpus_total
 
-        return (vcpus_total - host_state.vcpus_used) >= instance_vcpus
+        free_vcpus = vcpus_total - host_state.vcpus_used
+        if free_vcpus < instance_vcpus:
+            LOG.debug("%(host_state)s does not have %(instance_vcpus)d "
+                      "usable vcpus, it only has %(free_vcpus)d usable "
+                      "vcpus",
+                      {'host_state': host_state,
+                       'instance_vcpus': instance_vcpus,
+                       'free_vcpus': free_vcpus})
+            return False
+
+        return True
 
 
 class CoreFilter(BaseCoreFilter):
