@@ -2507,9 +2507,9 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase,
         def fake_get_host_ref_from_name(dest):
             return None
 
-        self._create_vm()
+        self._create_vm(instance_type='m1.large')
         vm_ref_orig = vm_util.get_vm_ref(self.conn._session, self.instance)
-        flavor = {'name': 'fake', 'flavorid': 'fake_id'}
+        flavor = self._get_instance_type_by_name('m1.large')
         self.stubs.Set(self.conn._vmops, "_update_instance_progress",
                        fake_update_instance_progress)
         self.stubs.Set(self.conn._vmops, "_get_host_ref_from_name",
@@ -2579,6 +2579,13 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase,
     def test_confirm_migration(self):
         self._create_vm()
         self.conn.confirm_migration(self.context, self.instance, None)
+
+    def test_resize_to_smaller_disk(self):
+        self._create_vm(instance_type='m1.large')
+        flavor = self._get_instance_type_by_name('m1.small')
+        self.assertRaises(exception.InstanceFaultRollback,
+                          self.conn.migrate_disk_and_power_off, self.context,
+                          self.instance, 'fake_dest', flavor, None)
 
     def test_spawn_attach_volume_vmdk(self):
         self._spawn_attach_volume_vmdk(vc_support=True)
@@ -2665,8 +2672,12 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase,
         """Tests the finish_migration method on VC Driver."""
         # setup the test instance in the database
         self._create_vm()
-        vm_ref = vm_util.get_vm_ref(self.conn._session,
-                                    self.instance)
+        if resize_instance:
+            self.instance.system_metadata = {'old_instance_type_root_gb': '0'}
+        vm_ref = vm_util.get_vm_ref(self.conn._session, self.instance)
+        datastore = ds_util.Datastore(ref='fake-ref', name='fake')
+        dc_info = vmops.DcInfo(ref='fake_ref', name='fake',
+                               vmFolder='fake_folder')
         with contextlib.nested(
                 mock.patch.object(self.conn._session, "_call_method",
                                   return_value='fake-task'),
@@ -2675,9 +2686,17 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase,
                 mock.patch.object(self.conn._session, "_wait_for_task"),
                 mock.patch.object(vm_util, "get_vm_resize_spec",
                                   return_value='fake-spec'),
+                mock.patch.object(ds_util, "get_datastore",
+                                  return_value=datastore),
+                mock.patch.object(self.conn._vmops,
+                                  'get_datacenter_ref_and_name',
+                                  return_value=dc_info),
+                mock.patch.object(self.conn._vmops, '_extend_virtual_disk'),
                 mock.patch.object(vm_util, "power_on_instance")
         ) as (fake_call_method, fake_update_instance_progress,
-              fake_wait_for_task, fake_vm_resize_spec, fake_power_on):
+              fake_wait_for_task, fake_vm_resize_spec,
+              fake_get_datastore, fake_get_datacenter_ref_and_name,
+              fake_extend_virtual_disk, fake_power_on):
             self.conn.finish_migration(context=self.context,
                                        migration=None,
                                        instance=self.instance,
@@ -2691,16 +2710,20 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase,
                 fake_vm_resize_spec.assert_called_once_with(
                     self.conn._session._get_vim().client.factory,
                     self.instance)
-                fake_call_method.assert_called_once_with(
+                fake_call_method.assert_any_call(
                     self.conn._session._get_vim(),
                     "ReconfigVM_Task",
                     vm_ref,
                     spec='fake-spec')
                 fake_wait_for_task.assert_called_once_with('fake-task')
+                fake_extend_virtual_disk.assert_called_once_with(
+                    self.instance, self.instance['root_gb'] * units.Mi,
+                    None, dc_info.ref)
             else:
                 self.assertFalse(fake_vm_resize_spec.called)
                 self.assertFalse(fake_call_method.called)
                 self.assertFalse(fake_wait_for_task.called)
+                self.assertFalse(fake_extend_virtual_disk.called)
 
             if power_on:
                 fake_power_on.assert_called_once_with(self.conn._session,

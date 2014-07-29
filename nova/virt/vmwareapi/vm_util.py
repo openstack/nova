@@ -371,6 +371,16 @@ def get_vm_extra_config_spec(client_factory, extra_opts):
     return config_spec
 
 
+def get_vmdk_path(session, vm_ref, instance):
+    """Gets the vmdk file path for specified instance."""
+    hardware_devices = session._call_method(vim_util,
+            "get_dynamic_property", vm_ref, "VirtualMachine",
+            "config.hardware.device")
+    (vmdk_path, adapter_type, disk_type) = get_vmdk_path_and_adapter_type(
+            hardware_devices, uuid=instance['uuid'])
+    return vmdk_path
+
+
 def get_vmdk_path_and_adapter_type(hardware_devices, uuid=None):
     """Gets the vmdk file path and the storage adapter type."""
     if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
@@ -1325,7 +1335,8 @@ def clone_vmref_for_instance(session, instance, vm_ref, host_ref, ds_ref,
         raise error_util.MissingParameter(param="vm_ref")
     # Get the clone vm spec
     client_factory = session._get_vim().client.factory
-    rel_spec = relocate_vm_spec(client_factory, ds_ref, host_ref)
+    rel_spec = relocate_vm_spec(client_factory, ds_ref, host_ref,
+                    disk_move_type='moveAllDiskBackingsAndDisallowSharing')
     extra_opts = {'nvp.vm-uuid': instance['uuid']}
     config_spec = get_vm_extra_config_spec(client_factory, extra_opts)
     config_spec.instanceUuid = instance['uuid']

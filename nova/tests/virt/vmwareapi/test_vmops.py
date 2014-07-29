@@ -434,6 +434,11 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     def _test_finish_migration(self, power_on=True, resize_instance=False):
         """Tests the finish_migration method on vmops."""
+        if resize_instance:
+            self._instance.system_metadata = {'old_instance_type_root_gb': '0'}
+        datastore = ds_util.Datastore(ref='fake-ref', name='fake')
+        dc_info = vmops.DcInfo(ref='fake_ref', name='fake',
+                               vmFolder='fake_folder')
         with contextlib.nested(
                 mock.patch.object(self._session, "_call_method",
                                   return_value='fake-task'),
@@ -441,9 +446,16 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 mock.patch.object(self._session, "_wait_for_task"),
                 mock.patch.object(vm_util, "get_vm_resize_spec",
                                   return_value='fake-spec'),
+                mock.patch.object(ds_util, "get_datastore",
+                                  return_value=datastore),
+                mock.patch.object(self._vmops, 'get_datacenter_ref_and_name',
+                                  return_value=dc_info),
+                mock.patch.object(self._vmops, '_extend_virtual_disk'),
                 mock.patch.object(vm_util, "power_on_instance")
         ) as (fake_call_method, fake_update_instance_progress,
-              fake_wait_for_task, fake_vm_resize_spec, fake_power_on):
+              fake_wait_for_task, fake_vm_resize_spec,
+              fake_get_datastore, fake_get_datacenter_ref_and_name,
+              fake_extend_virtual_disk, fake_power_on):
             self._vmops.finish_migration(context=self._context,
                                          migration=None,
                                          instance=self._instance,
@@ -463,9 +475,13 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                     'f',
                     spec='fake-spec'))
                 fake_wait_for_task.assert_called_once_with('fake-task')
+                fake_extend_virtual_disk.assert_called_once_with(
+                    self._instance, self._instance['root_gb'] * units.Mi,
+                    None, dc_info.ref)
             else:
                 self.assertFalse(fake_vm_resize_spec.called)
                 self.assertFalse(fake_wait_for_task.called)
+                self.assertFalse(fake_extend_virtual_disk.called)
 
             if power_on:
                 fake_power_on.assert_called_once_with(self._session,

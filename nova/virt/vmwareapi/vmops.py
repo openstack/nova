@@ -1104,6 +1104,12 @@ class VMwareVMOps(object):
         """Transfers the disk of a running instance in multiple phases, turning
         off the instance before the end.
         """
+        # Checks if the migration needs a disk resize down.
+        if flavor['root_gb'] < instance['root_gb']:
+            reason = _("Unable to shrink disk.")
+            raise exception.InstanceFaultRollback(
+                exception.ResizeError(reason=reason))
+
         # 0. Zero out the progress to begin
         self._update_instance_progress(context, instance,
                                        step=0,
@@ -1181,6 +1187,20 @@ class VMwareVMOps(object):
             vm_resize_spec = vm_util.get_vm_resize_spec(client_factory,
                                                         instance)
             vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
+
+            # Resize the disk (if larger)
+            old_root_gb = instance.system_metadata['old_instance_type_root_gb']
+            if instance['root_gb'] > int(old_root_gb):
+                root_disk_in_kb = instance['root_gb'] * units.Mi
+                vmdk_path = vm_util.get_vmdk_path(self._session, vm_ref,
+                                                  instance)
+                data_store_ref = ds_util.get_datastore(self._session,
+                    self._cluster, datastore_regex=self._datastore_regex).ref
+                dc_info = self.get_datacenter_ref_and_name(data_store_ref)
+                self._extend_virtual_disk(instance, root_disk_in_kb, vmdk_path,
+                                          dc_info.ref)
+
+            # TODO(ericwb): add extend for ephemeral disk
 
         # 4. Start VM
         if power_on:
