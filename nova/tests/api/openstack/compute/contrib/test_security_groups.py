@@ -983,11 +983,19 @@ class TestSecurityGroupRules(test.TestCase):
                           req, {'security_group_rule': rule})
 
     def test_create_with_non_existing_parent_group_id(self):
-        rule = security_group_rule_template(group_id='invalid',
+        rule = security_group_rule_template(group_id=None,
                                             parent_group_id=self.invalid_id)
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.create,
+                          req, {'security_group_rule': rule})
+
+    def test_create_with_non_existing_group_id(self):
+        rule = security_group_rule_template(group_id='invalid',
+                                            parent_group_id=self.sg2['id'])
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'security_group_rule': rule})
 
     def test_create_with_invalid_protocol(self):
