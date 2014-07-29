@@ -19,6 +19,7 @@ from oslo.config import cfg
 
 from nova import exception
 from nova.i18n import _
+from nova.network import model
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import network_util
@@ -120,7 +121,7 @@ def _get_network_ref_from_opaque(opaque_networks, integration_bridge, bridge):
                  'integration_bridge': integration_bridge})
 
 
-def get_neutron_network(session, network_name, cluster, vif):
+def _get_opaque_network(session, cluster):
     host = vm_util.get_host_ref(session, cluster)
     try:
         opaque = session._call_method(vim_util, "get_dynamic_property", host,
@@ -128,6 +129,13 @@ def get_neutron_network(session, network_name, cluster, vif):
                                       "config.network.opaqueNetwork")
     except error_util.InvalidPropertyException:
         opaque = None
+    return opaque
+
+
+def get_neutron_network(session, network_name, cluster, vif):
+    opaque = None
+    if vif['type'] != model.VIF_TYPE_DVS:
+        opaque = _get_opaque_network(session, cluster)
     if opaque:
         bridge = vif['network']['id']
         opaque_networks = opaque.HostOpaqueNetworkInfo

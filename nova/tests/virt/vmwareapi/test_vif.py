@@ -321,7 +321,7 @@ class VMwareVifTestCase(test.NoDBTestCase):
             mock.patch.object(network_util, 'get_network_with_the_name')
         ) as (_get_host, _call_method, _get_name):
             vif.get_neutron_network(self.session, 'network_name',
-                                    'cluster', 'vif')
+                                    'cluster', self.vif)
 
     def test_get_vif_info_none(self):
         vif_info = vif.get_vif_info('fake_session', 'fake_cluster',
