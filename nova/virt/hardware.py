@@ -596,6 +596,9 @@ class VirtNUMATopology(object):
         """Defined so that boolean testing works the same as for lists."""
         return len(self.cells)
 
+    def __repr__(self):
+        return "<%s: %s>" % (self.__class__.__name__, str(self._to_dict()))
+
     def _to_dict(self):
         return {'cells': [cell._to_dict() for cell in self.cells]}
 
@@ -742,11 +745,12 @@ class VirtNUMAHostTopology(VirtNUMATopology):
     cell_class = VirtNUMATopologyCellUsage
 
     @classmethod
-    def usage_from_instances(cls, host, instances):
+    def usage_from_instances(cls, host, instances, free=False):
         """Get host topology usage
 
-        :param host: VirtNUMAHostTopology without usage information
+        :param host: VirtNUMAHostTopology with usage information
         :param instances: list of VirtNUMAInstanceTopology
+        :param free: If True usage of the host will be decreased
 
         Sum the usage from all @instances to report the overall
         host topology usage
@@ -754,19 +758,25 @@ class VirtNUMAHostTopology(VirtNUMATopology):
         :returns: VirtNUMAHostTopology including usage information
         """
 
+        if host is None:
+            return
+
+        instances = instances or []
         cells = []
+        sign = -1 if free else 1
         for hostcell in host.cells:
-            memory_usage = 0
-            cpu_usage = 0
+            memory_usage = hostcell.memory_usage
+            cpu_usage = hostcell.cpu_usage
             for instance in instances:
                 for instancecell in instance.cells:
                     if instancecell.id == hostcell.id:
-                        memory_usage = memory_usage + instancecell.memory
-                        cpu_usage = cpu_usage + len(instancecell.cpuset)
+                        memory_usage = (
+                                memory_usage + sign * instancecell.memory)
+                        cpu_usage = cpu_usage + sign * len(instancecell.cpuset)
 
             cell = cls.cell_class(
                 hostcell.id, hostcell.cpuset, hostcell.memory,
-                cpu_usage, memory_usage)
+                max(0, cpu_usage), max(0, memory_usage))
 
             cells.append(cell)
 
