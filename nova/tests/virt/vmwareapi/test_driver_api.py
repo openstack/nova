@@ -785,6 +785,120 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertFalse(vmwareapi_fake.get_file(cached_image))
         self.assertFalse(vmwareapi_fake.get_file(tmp_file))
 
+    def test_spawn_disk_extend_failed_copy(self):
+        # Spawn instance
+        # copy for extend fails without creating a file
+        #
+        # Expect the copy error to be raised
+        self.flags(use_linked_clone=True, group='vmware')
+        self.wait_task = self.conn._session._wait_for_task
+        self.call_method = self.conn._session._call_method
+
+        CopyError = error_util.FileFaultException
+
+        def fake_wait_for_task(task_ref):
+            if task_ref == 'fake-copy-task':
+                raise CopyError('Copy failed!')
+            return self.wait_task(task_ref)
+
+        def fake_call_method(module, method, *args, **kwargs):
+            if method == "CopyVirtualDisk_Task":
+                return 'fake-copy-task'
+
+            return self.call_method(module, method, *args, **kwargs)
+
+        with contextlib.nested(
+            mock.patch.object(self.conn._session, '_call_method',
+                              new=fake_call_method),
+            mock.patch.object(self.conn._session, '_wait_for_task',
+                              new=fake_wait_for_task)):
+            self.assertRaises(CopyError, self._create_vm)
+
+    def test_spawn_disk_extend_failed_partial_copy(self):
+        # Spawn instance
+        # Copy for extend fails, leaving a file behind
+        #
+        # Expect the file to be cleaned up
+        # Expect the copy error to be raised
+        self.flags(use_linked_clone=True, group='vmware')
+        self.wait_task = self.conn._session._wait_for_task
+        self.call_method = self.conn._session._call_method
+        self.task_ref = None
+        uuid = 'fake_image_uuid'
+        cached_image = '[%s] vmware_base/%s/%s.80.vmdk' % (self.ds,
+                                                           uuid, uuid)
+
+        CopyError = error_util.FileFaultException
+
+        def fake_wait_for_task(task_ref):
+            if task_ref == self.task_ref:
+                self.task_ref = None
+                self.assertTrue(vmwareapi_fake.get_file(cached_image))
+                # N.B. We don't test for -flat here because real
+                # CopyVirtualDisk_Task doesn't actually create it
+                raise CopyError('Copy failed!')
+            return self.wait_task(task_ref)
+
+        def fake_call_method(module, method, *args, **kwargs):
+            task_ref = self.call_method(module, method, *args, **kwargs)
+            if method == "CopyVirtualDisk_Task":
+                self.task_ref = task_ref
+            return task_ref
+
+        with contextlib.nested(
+            mock.patch.object(self.conn._session, '_call_method',
+                              new=fake_call_method),
+            mock.patch.object(self.conn._session, '_wait_for_task',
+                              new=fake_wait_for_task)):
+            self.assertRaises(CopyError, self._create_vm)
+        self.assertFalse(vmwareapi_fake.get_file(cached_image))
+
+    def test_spawn_disk_extend_failed_partial_copy_failed_cleanup(self):
+        # Spawn instance
+        # Copy for extend fails, leaves file behind
+        # File cleanup fails
+        #
+        # Expect file to be left behind
+        # Expect file cleanup error to be raised
+        self.flags(use_linked_clone=True, group='vmware')
+        self.wait_task = self.conn._session._wait_for_task
+        self.call_method = self.conn._session._call_method
+        self.task_ref = None
+        uuid = 'fake_image_uuid'
+        cached_image = '[%s] vmware_base/%s/%s.80.vmdk' % (self.ds,
+                                                           uuid, uuid)
+
+        CopyError = error_util.FileFaultException
+        DeleteError = error_util.CannotDeleteFileException
+
+        def fake_wait_for_task(task_ref):
+            if task_ref == self.task_ref:
+                self.task_ref = None
+                self.assertTrue(vmwareapi_fake.get_file(cached_image))
+                # N.B. We don't test for -flat here because real
+                # CopyVirtualDisk_Task doesn't actually create it
+                raise CopyError('Copy failed!')
+            elif task_ref == 'fake-delete-task':
+                raise DeleteError('Delete failed!')
+            return self.wait_task(task_ref)
+
+        def fake_call_method(module, method, *args, **kwargs):
+            if method == "DeleteDatastoreFile_Task":
+                return 'fake-delete-task'
+
+            task_ref = self.call_method(module, method, *args, **kwargs)
+            if method == "CopyVirtualDisk_Task":
+                self.task_ref = task_ref
+            return task_ref
+
+        with contextlib.nested(
+            mock.patch.object(self.conn._session, '_wait_for_task',
+                              new=fake_wait_for_task),
+            mock.patch.object(self.conn._session, '_call_method',
+                              new=fake_call_method)):
+            self.assertRaises(DeleteError, self._create_vm)
+        self.assertTrue(vmwareapi_fake.get_file(cached_image))
+
     def test_spawn_disk_invalid_disk_size(self):
         self.mox.StubOutWithMock(vmware_images, 'get_vmdk_size_and_properties')
         result = [82 * units.Gi,
