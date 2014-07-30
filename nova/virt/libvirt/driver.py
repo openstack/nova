@@ -106,11 +106,6 @@ libvirt = None
 LOG = logging.getLogger(__name__)
 
 libvirt_opts = [
-    cfg.StrOpt('version_cap',
-               default='1.2.2',  # Must always match the version in the gate
-               help='Limit use of features from newer libvirt versions. '
-                    'Defaults to the version that is used for automated '
-                    'testing of OpenStack.'),
     cfg.StrOpt('rescue_image_id',
                help='Rescue ami image. This will not be used if an image id '
                     'is provided by the user.'),
@@ -418,14 +413,6 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             if lv_ver is not None:
                 libvirt_version = conn.getLibVersion()
-
-                if CONF.libvirt.version_cap:
-                    libvirt_version_cap = utils.convert_version_to_int(
-                        utils.convert_version_to_tuple(
-                            CONF.libvirt.version_cap))
-                    if libvirt_version > libvirt_version_cap:
-                        libvirt_version = libvirt_version_cap
-
                 if libvirt_version < utils.convert_version_to_int(lv_ver):
                     return False
 
