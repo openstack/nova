@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from nova.i18n import _LW
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 
@@ -40,7 +41,8 @@ class VFS(object):
                 "nova.virt.disk.vfs.guestfs.VFSGuestFS",
                 imgfile, imgfmt, partition)
         else:
-            LOG.debug("Falling back to VFSLocalFS")
+            LOG.warn(_LW("Unable to import guestfs, "
+                         "falling back to VFSLocalFS"))
             return importutils.import_object(
                 "nova.virt.disk.vfs.localfs.VFSLocalFS",
                 imgfile, imgfmt, partition)
