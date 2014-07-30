@@ -14,6 +14,7 @@
 
 
 from oslo.config import cfg
+from oslo.utils import strutils
 from webob import exc
 
 from nova.api.openstack import common
@@ -24,7 +25,6 @@ from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import strutils
 from nova import utils
 
 CONF = cfg.CONF

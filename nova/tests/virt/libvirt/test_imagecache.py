@@ -21,10 +21,10 @@ import os
 import time
 
 from oslo.config import cfg
+from oslo.utils import importutils
 
 from nova import conductor
 from nova import db
-from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils

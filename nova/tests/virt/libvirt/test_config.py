@@ -13,9 +13,9 @@
 #    under the License.
 
 from lxml import etree
+from oslo.utils import units
 
 from nova.compute import arch
-from nova.openstack.common import units
 from nova import test
 from nova.tests import matchers
 from nova.virt.libvirt import config

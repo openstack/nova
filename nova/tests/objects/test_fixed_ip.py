@@ -17,10 +17,10 @@ import datetime
 import iso8601
 import mock
 import netaddr
+from oslo.utils import timeutils
 
 from nova import exception
 from nova.objects import fixed_ip
-from nova.openstack.common import timeutils
 from nova.tests import fake_instance
 from nova.tests.objects import test_network
 from nova.tests.objects import test_objects

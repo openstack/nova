@@ -18,8 +18,9 @@
 
 import copy
 
+from oslo.utils import timeutils
+
 from nova.api.ec2 import apirequest
-from nova.openstack.common import timeutils
 from nova import test
 
 

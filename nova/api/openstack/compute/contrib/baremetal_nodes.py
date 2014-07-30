@@ -17,6 +17,7 @@
 
 import netaddr
 from oslo.config import cfg
+from oslo.utils import importutils
 import webob
 
 from nova.api.openstack import extensions
@@ -24,7 +25,6 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.virt.baremetal import db
 

@@ -20,6 +20,8 @@ Starting point for routing EC2 requests.
 
 from eventlet.green import httplib
 from oslo.config import cfg
+from oslo.utils import importutils
+from oslo.utils import timeutils
 import six
 import six.moves.urllib.parse as urlparse
 import webob
@@ -36,11 +38,9 @@ from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
 from nova.openstack.common import context as common_context
-from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import memorycache
-from nova.openstack.common import timeutils
 from nova import utils
 from nova import wsgi
 

@@ -18,6 +18,7 @@ import abc
 import functools
 import os
 
+from oslo.utils import importutils
 import six
 import webob.dec
 import webob.exc
@@ -28,7 +29,6 @@ from nova.api.openstack import xmlutil
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LW
-from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 import nova.policy
 

@@ -15,9 +15,10 @@
 #
 # iBoot Power Driver
 
+from oslo.utils import importutils
+
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import base

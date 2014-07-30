@@ -18,6 +18,8 @@ import copy
 import itertools
 
 from oslo import messaging
+from oslo.utils import excutils
+from oslo.utils import timeutils
 import six
 
 from nova.api.ec2 import ec2utils
@@ -39,10 +41,8 @@ from nova.network.security_group import openstack_driver
 from nova import notifications
 from nova import objects
 from nova.objects import base as nova_object
-from nova.openstack.common import excutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
 from nova import quota
 from nova.scheduler import client as scheduler_client
 from nova.scheduler import driver as scheduler_driver

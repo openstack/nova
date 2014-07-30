@@ -16,6 +16,7 @@
 import datetime
 import uuid
 
+from oslo.utils import timeutils
 import routes
 import six
 import webob
@@ -39,7 +40,6 @@ from nova import exception as exc
 import nova.netconf
 from nova.network import api as network_api
 from nova.openstack.common import jsonutils
-from nova.openstack.common import timeutils
 from nova import quota
 from nova.tests import fake_block_device
 from nova.tests import fake_network

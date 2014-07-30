@@ -18,12 +18,12 @@ Image caching and management.
 import os
 
 from oslo.config import cfg
+from oslo.utils import excutils
+from oslo.utils import units
 
 from nova.compute import flavors
 from nova.i18n import _
-from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import units
 from nova import utils
 from nova.virt.hyperv import utilsfactory
 from nova.virt.hyperv import vmutils

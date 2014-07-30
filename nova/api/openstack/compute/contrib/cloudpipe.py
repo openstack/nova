@@ -15,6 +15,7 @@
 """Connect your vlan to the world."""
 
 from oslo.config import cfg
+from oslo.utils import timeutils
 from webob import exc
 
 from nova.api.openstack import extensions
@@ -28,7 +29,6 @@ from nova import exception
 from nova.i18n import _
 from nova import network
 from nova.openstack.common import fileutils
-from nova.openstack.common import timeutils
 from nova import utils
 
 CONF = cfg.CONF

@@ -13,12 +13,12 @@
 #    under the License.
 
 import mock
+from oslo.utils import timeutils
 
 from nova import db
 from nova import exception
 from nova.objects import aggregate
 from nova.objects import service
-from nova.openstack.common import timeutils
 from nova.tests.objects import test_compute_node
 from nova.tests.objects import test_objects
 

@@ -22,12 +22,12 @@ import tempfile
 import fixtures
 import mock
 from oslo.config import cfg
+from oslo.utils import units
 
 from nova import context
 from nova import exception
 from nova import keymgr
 from nova.openstack.common import imageutils
-from nova.openstack.common import units
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests import fake_processutils

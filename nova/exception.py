@@ -26,10 +26,10 @@ import functools
 import sys
 
 from oslo.config import cfg
+from oslo.utils import excutils
 import webob.exc
 
 from nova.i18n import _
-from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova import safe_utils
 

@@ -16,6 +16,7 @@
 import datetime
 
 from lxml import etree
+from oslo.utils import timeutils
 
 from nova.api.openstack.compute.contrib import server_usage
 from nova import compute
@@ -24,7 +25,6 @@ from nova import exception
 from nova import objects
 from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
-from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance

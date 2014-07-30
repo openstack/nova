@@ -17,6 +17,8 @@
 
 from oslo.config import cfg
 from oslo import messaging
+from oslo.utils import excutils
+from oslo.utils import importutils
 import six
 
 from nova import context
@@ -25,8 +27,6 @@ from nova import exception
 from nova.i18n import _
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
-from nova.openstack.common import excutils
-from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova.openstack.common import uuidutils

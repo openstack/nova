@@ -20,10 +20,10 @@ Management class for Storage-related functions (attach, detach, etc).
 import time
 
 from oslo.config import cfg
+from oslo.utils import excutils
 
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova.virt import driver
 from nova.virt.hyperv import constants

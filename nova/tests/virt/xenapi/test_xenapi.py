@@ -25,6 +25,7 @@ import re
 import mock
 import mox
 from oslo.config import cfg
+from oslo.utils import importutils
 
 from nova.compute import api as compute_api
 from nova.compute import arch
@@ -41,7 +42,6 @@ from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import instance as instance_obj
-from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import test

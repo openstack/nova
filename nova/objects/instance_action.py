@@ -12,11 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.utils import timeutils
+
 from nova import db
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova.openstack.common import timeutils
 
 
 class InstanceAction(base.NovaPersistentObject, base.NovaObject):

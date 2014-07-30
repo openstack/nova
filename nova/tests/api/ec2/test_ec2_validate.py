@@ -17,6 +17,7 @@
 import datetime
 
 from oslo.config import cfg
+from oslo.utils import timeutils
 
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
@@ -24,7 +25,6 @@ from nova.compute import utils as compute_utils
 from nova import context
 from nova import db
 from nova import exception
-from nova.openstack.common import timeutils
 from nova import test
 from nova.tests import cast_as_call
 from nova.tests import fake_network

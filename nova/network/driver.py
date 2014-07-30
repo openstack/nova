@@ -15,9 +15,9 @@
 import sys
 
 from oslo.config import cfg
+from oslo.utils import importutils
 
 from nova.i18n import _
-from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 
 driver_opts = [

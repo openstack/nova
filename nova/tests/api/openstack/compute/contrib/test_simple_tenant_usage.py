@@ -17,6 +17,7 @@ import datetime
 
 from lxml import etree
 import mock
+from oslo.utils import timeutils
 import webob
 
 from nova.api.openstack.compute.contrib import simple_tenant_usage as \
@@ -31,7 +32,6 @@ from nova import exception
 from nova import objects
 from nova.openstack.common import jsonutils
 from nova.openstack.common import policy as common_policy
-from nova.openstack.common import timeutils
 from nova import policy
 from nova import test
 from nova.tests.api.openstack import fakes

@@ -20,13 +20,13 @@ import shutil
 import tempfile
 
 from oslo.config import cfg
+from oslo.utils import strutils
+from oslo.utils import units
 
 from nova import exception
 from nova.i18n import _LW
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import strutils
-from nova.openstack.common import units
 from nova import utils
 from nova import version
 

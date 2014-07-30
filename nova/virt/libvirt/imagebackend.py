@@ -18,6 +18,8 @@ import contextlib
 import os
 
 from oslo.config import cfg
+from oslo.utils import excutils
+from oslo.utils import units
 import six
 
 from nova import exception
@@ -25,11 +27,9 @@ from nova.i18n import _
 from nova.i18n import _LE, _LI
 from nova import image
 from nova import keymgr
-from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import units
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import images

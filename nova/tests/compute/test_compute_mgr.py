@@ -21,6 +21,7 @@ import mock
 import mox
 from oslo.config import cfg
 from oslo import messaging
+from oslo.utils import importutils
 
 from nova.compute import power_state
 from nova.compute import task_states
@@ -33,7 +34,6 @@ from nova import exception
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import block_device as block_device_obj
-from nova.openstack.common import importutils
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.compute import fake_resource_tracker

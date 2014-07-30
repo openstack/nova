@@ -14,6 +14,7 @@
 #    under the License.
 
 
+from oslo.utils import timeutils
 from sqlalchemy import Column
 from sqlalchemy import DateTime
 from sqlalchemy import ForeignKey
@@ -23,8 +24,6 @@ from sqlalchemy import MetaData
 from sqlalchemy import String
 from sqlalchemy import Table
 from sqlalchemy import Text
-
-from nova.openstack.common import timeutils
 
 
 def upgrade(engine):

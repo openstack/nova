@@ -24,6 +24,7 @@ import os
 import jinja2
 from oslo.config import cfg
 from oslo.db import exception as db_exc
+from oslo.utils import timeutils
 
 from nova.compute import flavors
 from nova import exception
@@ -32,7 +33,6 @@ from nova import objects
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
-from nova.openstack.common import timeutils
 from nova import utils
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import base

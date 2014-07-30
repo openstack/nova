@@ -15,11 +15,11 @@
 """Tests for compute service with multiple compute nodes."""
 
 from oslo.config import cfg
+from oslo.utils import importutils
 
 from nova import context
 from nova import db
 from nova import objects
-from nova.openstack.common import importutils
 from nova import test
 from nova.virt import fake
 

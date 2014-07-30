@@ -19,11 +19,11 @@ downgrade its likelihood of being chosen for scheduling requests.
 """
 
 from oslo.config import cfg
+from oslo.utils import timeutils
 
 from nova.cells import weights
 from nova.i18n import _
 from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
 
 LOG = logging.getLogger(__name__)
 

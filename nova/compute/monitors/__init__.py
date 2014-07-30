@@ -24,12 +24,12 @@ import functools
 import types
 
 from oslo.config import cfg
+from oslo.utils import timeutils
 import six
 
 from nova.i18n import _
 from nova import loadables
 from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
 
 compute_monitors_opts = [
     cfg.MultiStrOpt('compute_available_monitors',

@@ -12,10 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.utils import timeutils
+
 from nova import db
 from nova import exception
 from nova.objects import keypair
-from nova.openstack.common import timeutils
 from nova.tests.objects import test_objects
 
 NOW = timeutils.utcnow().replace(microsecond=0)

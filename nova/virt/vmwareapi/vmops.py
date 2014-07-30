@@ -26,6 +26,8 @@ import time
 
 import decorator
 from oslo.config import cfg
+from oslo.utils import excutils
+from oslo.utils import units
 from oslo.vmware import exceptions as vexc
 
 from nova.api.metadata import base as instance_metadata
@@ -38,10 +40,8 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _, _LE, _LW
 from nova import objects
-from nova.openstack.common import excutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import units
 from nova.openstack.common import uuidutils
 from nova import utils
 from nova.virt import configdrive

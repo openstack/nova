@@ -20,6 +20,7 @@ import os
 import pprint
 
 import mock
+from oslo.utils import timeutils
 import six
 from testtools import matchers
 
@@ -31,7 +32,6 @@ from nova.objects import base
 from nova.objects import fields
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log
-from nova.openstack.common import timeutils
 from nova import rpc
 from nova import test
 from nova.tests import fake_notifier

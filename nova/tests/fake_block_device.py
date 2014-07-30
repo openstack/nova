@@ -15,8 +15,9 @@
 
 import uuid
 
+from oslo.utils import timeutils
+
 from nova import block_device
-from nova.openstack.common import timeutils
 
 
 class FakeDbBlockDeviceDict(block_device.BlockDeviceDict):

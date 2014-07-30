@@ -19,11 +19,11 @@ Tests for Consoleauth Code.
 """
 
 import mox
+from oslo.utils import timeutils
 
 from nova.consoleauth import manager
 from nova import context
 from nova import db
-from nova.openstack.common import timeutils
 from nova import test
 
 

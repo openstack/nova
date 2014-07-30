@@ -14,11 +14,11 @@ import datetime
 
 import iso8601
 import mock
+from oslo.utils import timeutils
 
 from nova import context
 from nova import db
 from nova.objects import bandwidth_usage
-from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.objects import test_objects
 

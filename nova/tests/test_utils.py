@@ -25,11 +25,11 @@ import tempfile
 import mox
 import netaddr
 from oslo.config import cfg
+from oslo.utils import timeutils
 
 import nova
 from nova import exception
 from nova.openstack.common import processutils
-from nova.openstack.common import timeutils
 from nova import test
 from nova import utils
 

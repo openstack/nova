@@ -15,10 +15,11 @@
 
 import datetime
 
+from oslo.utils import timeutils
+
 from nova.api.openstack.compute.contrib import instance_usage_audit_log as ial
 from nova import context
 from nova import db
-from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests.objects import test_service

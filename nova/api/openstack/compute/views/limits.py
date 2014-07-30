@@ -15,7 +15,7 @@
 
 import datetime
 
-from nova.openstack.common import timeutils
+from oslo.utils import timeutils
 
 
 class ViewBuilder(object):

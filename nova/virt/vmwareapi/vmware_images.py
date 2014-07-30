@@ -20,12 +20,12 @@ Utility functions for Image transfer and manipulation.
 import os
 
 from oslo.config import cfg
+from oslo.utils import strutils
+from oslo.utils import units
 
 from nova import exception
 from nova import image
 from nova.openstack.common import log as logging
-from nova.openstack.common import strutils
-from nova.openstack.common import units
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import io_util
 from nova.virt.vmwareapi import read_write_util

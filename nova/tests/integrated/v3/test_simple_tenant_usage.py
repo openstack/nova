@@ -15,7 +15,8 @@
 import datetime
 import urllib
 
-from nova.openstack.common import timeutils
+from oslo.utils import timeutils
+
 from nova.tests.integrated.v3 import test_servers
 
 

@@ -18,6 +18,7 @@ import datetime
 import uuid as stdlib_uuid
 
 from lxml import etree
+from oslo.utils import timeutils
 import webob
 
 from nova.api.openstack.compute import consoles
@@ -25,7 +26,6 @@ from nova.compute import vm_states
 from nova import console
 from nova import db
 from nova import exception
-from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import matchers

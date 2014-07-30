@@ -14,8 +14,7 @@
 #    under the License.
 
 from oslo.config import cfg
-
-from nova.openstack.common import importutils
+from oslo.utils import importutils
 
 security_group_opts = [
     cfg.StrOpt('security_group_api',

@@ -16,12 +16,12 @@ import contextlib
 import re
 
 import mock
+from oslo.utils import units
 from oslo.vmware import exceptions as vexc
 from testtools import matchers
 
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import units
 from nova import test
 from nova.tests.virt.vmwareapi import fake
 from nova.virt.vmwareapi import ds_util

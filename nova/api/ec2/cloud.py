@@ -24,6 +24,7 @@ import base64
 import time
 
 from oslo.config import cfg
+from oslo.utils import timeutils
 
 from nova.api.ec2 import ec2utils
 from nova.api.ec2 import inst_state
@@ -45,7 +46,6 @@ from nova.network.security_group import neutron_driver
 from nova import objects
 from nova.objects import base as obj_base
 from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
 from nova import quota
 from nova import servicegroup
 from nova import utils

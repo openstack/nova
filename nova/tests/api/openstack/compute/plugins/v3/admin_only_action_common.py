@@ -12,13 +12,13 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
+from oslo.utils import timeutils
 import webob
 
 from nova.compute import vm_states
 import nova.context
 from nova import exception
 from nova.openstack.common import jsonutils
-from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests import fake_instance

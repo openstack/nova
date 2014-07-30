@@ -21,6 +21,8 @@ A driver for Bare-metal platform.
 """
 
 from oslo.config import cfg
+from oslo.utils import excutils
+from oslo.utils import importutils
 
 from nova.compute import arch
 from nova.compute import flavors
@@ -32,8 +34,6 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LW
-from nova.openstack.common import excutils
-from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging

@@ -24,12 +24,12 @@ import datetime
 import os
 
 from oslo.config import cfg
+from oslo.utils import excutils
+from oslo.utils import timeutils
 
 from nova.i18n import _
-from nova.openstack.common import excutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
 
 
 scheduler_json_config_location_opt = cfg.StrOpt(

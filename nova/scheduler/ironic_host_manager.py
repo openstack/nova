@@ -22,10 +22,10 @@ ram from a host / node as it is supporting Baremetal hosts, which can not be
 subdivided into multiple instances.
 """
 from oslo.config import cfg
+from oslo.utils import timeutils
 
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
 import nova.scheduler.base_baremetal_host_manager as bbhm
 from nova.scheduler import host_manager
 

@@ -12,11 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.utils import timeutils
+
 from nova import context
 from nova import db
 from nova import exception
 from nova.objects import migration
-from nova.openstack.common import timeutils
 from nova.tests import fake_instance
 from nova.tests.objects import test_objects
 

@@ -16,11 +16,11 @@
 import re
 
 from oslo.config import cfg
+from oslo.utils import strutils
 
 from nova import exception
 from nova.i18n import _
 from nova.openstack.common import log as logging
-from nova.openstack.common import strutils
 from nova import utils
 from nova.virt import driver
 

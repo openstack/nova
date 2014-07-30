@@ -21,6 +21,8 @@ import fixtures
 import mock
 import mox
 from oslo.config import cfg
+from oslo.utils import timeutils
+from oslo.utils import units
 import six
 
 from nova.compute import flavors
@@ -30,8 +32,6 @@ from nova import context
 from nova import exception
 from nova.i18n import _
 from nova.openstack.common import processutils
-from nova.openstack.common import timeutils
-from nova.openstack.common import units
 from nova import test
 from nova.tests.virt.xenapi import stubs
 from nova.tests.virt.xenapi import test_xenapi

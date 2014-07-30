@@ -12,6 +12,7 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
+from oslo.utils import timeutils
 import webob
 
 from nova.api.openstack import common
@@ -24,7 +25,6 @@ import nova.context
 from nova import exception
 from nova import objects
 from nova.openstack.common import jsonutils
-from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.api.openstack import fakes

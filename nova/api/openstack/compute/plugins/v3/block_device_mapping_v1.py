@@ -15,13 +15,13 @@
 
 """The legacy block device mappings extension."""
 
+from oslo.utils import strutils
 from webob import exc
 
 from nova.api.openstack import extensions
 from nova import block_device
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import strutils
 
 ALIAS = "os-block-device-mapping-v1"
 ATTRIBUTE_NAME = "block_device_mapping"

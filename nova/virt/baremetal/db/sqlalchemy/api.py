@@ -21,6 +21,7 @@
 import uuid
 
 from oslo.db import exception as db_exc
+from oslo.utils import timeutils
 import six
 from sqlalchemy.sql.expression import asc
 from sqlalchemy.sql.expression import literal_column
@@ -30,7 +31,6 @@ import nova.context
 from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova.virt.baremetal.db.sqlalchemy import models
 from nova.virt.baremetal.db.sqlalchemy import session as db_session

@@ -19,15 +19,15 @@
 import datetime
 
 from oslo.config import cfg
+from oslo.utils import importutils
+from oslo.utils import timeutils
 import six
 
 from nova import db
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
 
 LOG = logging.getLogger(__name__)
 

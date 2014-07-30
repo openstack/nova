@@ -18,6 +18,7 @@ import iso8601
 import mock
 import mox
 import netaddr
+from oslo.utils import timeutils
 
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import flavors
@@ -30,7 +31,6 @@ from nova.objects import instance_info_cache
 from nova.objects import instance_numa_topology
 from nova.objects import pci_device
 from nova.objects import security_group
-from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance

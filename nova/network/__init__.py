@@ -15,10 +15,7 @@
 #    under the License.
 
 import oslo.config.cfg
-
-# Importing full names to not pollute the namespace and cause possible
-# collisions with use of 'from nova.network import <foo>' elsewhere.
-import nova.openstack.common.importutils
+from oslo.utils import importutils
 
 _network_opts = [
     oslo.config.cfg.StrOpt('network_api_class',
@@ -31,7 +28,6 @@ oslo.config.cfg.CONF.register_opts(_network_opts)
 
 
 def API():
-    importutils = nova.openstack.common.importutils
     network_api_class = oslo.config.cfg.CONF.network_api_class
     if 'quantumv2' in network_api_class:
         network_api_class = network_api_class.replace('quantumv2', 'neutronv2')

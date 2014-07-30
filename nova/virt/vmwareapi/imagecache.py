@@ -36,12 +36,12 @@ This will ensure that a image is not deleted during the spawn.
 """
 
 from oslo.config import cfg
+from oslo.utils import timeutils
 from oslo.vmware import exceptions as vexc
 
 from nova.i18n import _
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
 from nova.virt import imagecache
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import vim_util

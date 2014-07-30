@@ -17,6 +17,7 @@
 import datetime
 
 from oslo.config import cfg
+from oslo.utils import timeutils
 
 from nova import compute
 from nova.compute import flavors
@@ -25,7 +26,6 @@ from nova import db
 from nova.db.sqlalchemy import api as sqa_api
 from nova.db.sqlalchemy import models as sqa_models
 from nova import exception
-from nova.openstack.common import timeutils
 from nova import quota
 from nova import test
 import nova.tests.image.fake

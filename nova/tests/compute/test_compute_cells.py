@@ -20,6 +20,7 @@ import inspect
 
 import mock
 from oslo.config import cfg
+from oslo.utils import timeutils
 
 from nova.cells import manager
 from nova.compute import api as compute_api
@@ -29,7 +30,6 @@ from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import objects
-from nova.openstack.common import timeutils
 from nova import quota
 from nova import test
 from nova.tests.compute import test_compute

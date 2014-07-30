@@ -13,12 +13,12 @@
 """Tests for expectations of behaviour from the Xen driver."""
 
 from oslo.config import cfg
+from oslo.utils import importutils
 
 from nova.compute import power_state
 from nova import context
 from nova import objects
 from nova.objects import instance as instance_obj
-from nova.openstack.common import importutils
 from nova.tests.compute import eventlet_utils
 from nova.tests import fake_instance
 from nova.tests.virt.xenapi import stubs

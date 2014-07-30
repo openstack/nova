@@ -13,6 +13,7 @@
 #   under the License.
 
 
+from oslo.utils import strutils
 from webob import exc
 
 from nova.api.openstack import common
@@ -21,7 +22,6 @@ from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import strutils
 from nova import utils
 
 authorize = extensions.extension_authorizer('compute', 'evacuate')

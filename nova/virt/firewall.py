@@ -16,6 +16,7 @@
 #    under the License.
 
 from oslo.config import cfg
+from oslo.utils import importutils
 
 from nova.compute import utils as compute_utils
 from nova import context
@@ -23,7 +24,6 @@ from nova.i18n import _
 from nova.i18n import _LI
 from nova.network import linux_net
 from nova import objects
-from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import netutils

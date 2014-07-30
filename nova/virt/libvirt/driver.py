@@ -49,6 +49,10 @@ from eventlet import tpool
 from eventlet import util as eventlet_util
 from lxml import etree
 from oslo.config import cfg
+from oslo.utils import excutils
+from oslo.utils import importutils
+from oslo.utils import timeutils
+from oslo.utils import units
 import six
 
 from nova.api.metadata import base as instance_metadata
@@ -71,15 +75,11 @@ from nova.i18n import _LW
 from nova import image
 from nova.network import model as network_model
 from nova import objects
-from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
-from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.openstack.common import processutils
-from nova.openstack.common import timeutils
-from nova.openstack.common import units
 from nova.pci import pci_manager
 from nova.pci import pci_utils
 from nova.pci import pci_whitelist

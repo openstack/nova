@@ -22,6 +22,7 @@
 import functools
 
 from oslo.config import cfg
+from oslo.utils import units
 import six
 
 from nova import exception
@@ -30,7 +31,6 @@ from nova.i18n import _LE
 from nova.i18n import _LW
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
-from nova.openstack.common import units
 from nova import utils as nova_utils
 from nova.virt.libvirt import utils
 

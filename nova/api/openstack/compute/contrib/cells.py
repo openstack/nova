@@ -18,6 +18,8 @@
 
 from oslo.config import cfg
 from oslo import messaging
+from oslo.utils import strutils
+from oslo.utils import timeutils
 import six
 from webob import exc
 
@@ -29,8 +31,6 @@ from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import api as compute
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import strutils
-from nova.openstack.common import timeutils
 from nova import rpc
 
 

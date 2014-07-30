@@ -21,6 +21,7 @@ import collections
 import UserDict
 
 from oslo.config import cfg
+from oslo.utils import timeutils
 
 from nova.compute import task_states
 from nova.compute import vm_states
@@ -29,7 +30,6 @@ from nova import exception
 from nova.i18n import _, _LW
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
 from nova.pci import pci_stats
 from nova.scheduler import filters
 from nova.scheduler import weights

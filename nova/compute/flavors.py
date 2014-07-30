@@ -23,6 +23,7 @@ import uuid
 
 from oslo.config import cfg
 from oslo.db import exception as db_exc
+from oslo.utils import strutils
 import six
 
 from nova import context
@@ -31,7 +32,6 @@ from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.openstack.common import log as logging
-from nova.openstack.common import strutils
 from nova import utils
 
 flavor_opts = [
