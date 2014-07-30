@@ -60,7 +60,7 @@ Install the prerequisite packages.
 
 On Ubuntu::
 
-  sudo apt-get install python-dev libssl-dev python-pip git-core libxml2-dev libxslt-dev pkg-config libffi-dev libpq-dev libmysqlclient-dev
+  sudo apt-get install python-dev libssl-dev python-pip git-core libxml2-dev libxslt-dev pkg-config libffi-dev libpq-dev libmysqlclient-dev libvirt-dev
 
 On Ubuntu Precise (12.04) you may also need to add the following packages::
 
@@ -68,7 +68,7 @@ On Ubuntu Precise (12.04) you may also need to add the following packages::
 
 On Fedora-based distributions (e.g., Fedora/RHEL/CentOS/Scientific Linux)::
 
-  sudo yum install python-devel openssl-devel python-pip git gcc libxslt-devel mysql-devel postgresql-devel libffi-devel
+  sudo yum install python-devel openssl-devel python-pip git gcc libxslt-devel mysql-devel postgresql-devel libffi-devel libvirt-devel
   sudo pip-python install tox
 
 
