@@ -914,7 +914,7 @@ def _remove_file(file_path):
     # Check if the remove is for a single file object or for a folder
     if file_path.find(".vmdk") != -1:
         if file_path not in _db_content.get("files"):
-            raise exception.FileNotFound(file_path=file_path)
+            raise error_util.FileNotFoundException(file_path)
         _db_content.get("files").remove(file_path)
     else:
         # Removes the files in the folder and the folder too from the db
