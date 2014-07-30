@@ -13,6 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
+
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
 from nova.scheduler.filters import extra_specs_ops
@@ -45,6 +48,11 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
             cap = host_state
             for index in range(0, len(scope)):
                 try:
+                    if isinstance(cap, six.string_types):
+                        try:
+                            cap = jsonutils.loads(cap)
+                        except ValueError:
+                            return False
                     if not isinstance(cap, dict):
                         if getattr(cap, scope[index], None) is None:
                             # If can't find, check stats dict
