@@ -131,15 +131,20 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
                 "periods, dashes, underscores and spaces.")
         raise exception.InvalidInput(reason=msg)
 
-    # Some attributes are positive ( > 0) integers
-    for option in ['memory_mb', 'vcpus']:
-        kwargs[option] = utils.validate_integer(kwargs[option], option, 1,
-                                                db.MAX_INT)
+    # NOTE(wangbo): validate attributes of the creating flavor.
+    # ram and vcpus should be positive ( > 0) integers.
+    # disk, ephemeral and swap should be non-negative ( >= 0) integers.
+    flavor_attributes = {
+        'memory_mb': ('ram', 1),
+        'vcpus': ('vcpus', 1),
+        'root_gb': ('disk', 0),
+        'ephemeral_gb': ('ephemeral', 0),
+        'swap': ('swap', 0)
+    }
 
-    # Some attributes are non-negative ( >= 0) integers
-    for option in ['root_gb', 'ephemeral_gb', 'swap']:
-        kwargs[option] = utils.validate_integer(kwargs[option], option, 0,
-                                                db.MAX_INT)
+    for key, value in flavor_attributes.items():
+        kwargs[key] = utils.validate_integer(kwargs[key], value[0], value[1],
+                                             db.MAX_INT)
 
     # rxtx_factor should be a positive float
     try:
