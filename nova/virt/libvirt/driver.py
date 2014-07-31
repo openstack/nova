@@ -70,6 +70,7 @@ from nova.compute import vm_mode
 from nova import context as nova_context
 from nova import exception
 from nova.image import glance
+from nova.objects import block_device as block_device_obj
 from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.objects import service as service_obj
@@ -89,6 +90,7 @@ from nova.pci import pci_whitelist
 from nova import rpc
 from nova import utils
 from nova import version
+from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
 from nova.virt import cpu
 from nova.virt.disk import api as disk
@@ -1794,6 +1796,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
             raise
 
+    def _volume_refresh_connection_info(self, context, instance, volume_id):
+        bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(context,
+                                                                   volume_id)
+        driver_bdm = driver_block_device.DriverVolumeBlockDevice(bdm)
+        driver_bdm.refresh_connection_info(context, instance,
+                                           self._volume_api, self)
+
     def volume_snapshot_create(self, context, instance, volume_id,
                                create_info):
         """Create snapshots of a Cinder volume via libvirt.
@@ -1839,6 +1848,17 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._volume_snapshot_update_status(
             context, snapshot_id, 'creating')
+
+        def _wait_for_snapshot():
+            snapshot = self._volume_api.get_snapshot(context, snapshot_id)
+
+            if snapshot.get('status') != 'creating':
+                self._volume_refresh_connection_info(context, instance,
+                                                     volume_id)
+                raise loopingcall.LoopingCallDone()
+
+        timer = loopingcall.FixedIntervalLoopingCall(_wait_for_snapshot)
+        timer.start(interval=0.5).wait()
 
     def _volume_snapshot_delete(self, context, instance, volume_id,
                                 snapshot_id, delete_info=None):
@@ -1974,6 +1994,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     context, snapshot_id, 'error_deleting')
 
         self._volume_snapshot_update_status(context, snapshot_id, 'deleting')
+        self._volume_refresh_connection_info(context, instance, volume_id)
 
     def reboot(self, context, instance, network_info, reboot_type='SOFT',
                block_device_info=None, bad_volumes_callback=None):
