@@ -3192,8 +3192,8 @@ class AggregateAPI(base.Base):
             # if it is none then that is just a regular aggregate and
             # it is valid to have a host in multiple aggregates.
             if aggregate_az and aggregate_az != host_az:
-                msg = _("Host already in availability zone"
-                        "%s.") % host_az
+                msg = _("Host already in availability zone "
+                        "%s") % host_az
                 action_name = "add_host_to_aggregate"
                 raise exception.InvalidAggregateAction(
                     action=action_name, aggregate_id=aggregate_id,
