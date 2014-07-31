@@ -21,7 +21,18 @@ import six
 
 from nova import exception
 from nova.i18n import _
+from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
+
+
+@jsonschema.FormatChecker.cls_checks('date-time')
+def _validate_datetime_format(instance):
+    try:
+        timeutils.parse_isotime(instance)
+    except ValueError:
+        return False
+    else:
+        return True
 
 
 @jsonschema.FormatChecker.cls_checks('uuid')
