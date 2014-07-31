@@ -27,7 +27,7 @@ from nova.virt.hyperv import vmutils
 class VMOpsTestCase(test.NoDBTestCase):
     """Unit tests for the Hyper-V VMOps class."""
 
-    _FAKE_TIMEOUT = 0
+    _FAKE_TIMEOUT = 2
 
     def __init__(self, test_case_name):
         super(VMOpsTestCase, self).__init__(test_case_name)
@@ -100,8 +100,9 @@ class VMOpsTestCase(test.NoDBTestCase):
 
         self.assertTrue(result)
 
+    @mock.patch("time.sleep")
     @mock.patch("nova.virt.hyperv.vmutils.VMUtils.soft_shutdown_vm")
-    def test_soft_shutdown_failed(self, mock_shutdown_vm):
+    def test_soft_shutdown_failed(self, mock_shutdown_vm, mock_sleep):
         instance = fake_instance.fake_instance_obj(self.context)
 
         mock_shutdown_vm.side_effect = vmutils.HyperVException(
@@ -111,6 +112,66 @@ class VMOpsTestCase(test.NoDBTestCase):
 
         mock_shutdown_vm.assert_called_once_with(instance.name)
         self.assertFalse(result)
+
+    @mock.patch("nova.virt.hyperv.vmutils.VMUtils.soft_shutdown_vm")
+    @mock.patch("nova.virt.hyperv.vmops.VMOps._wait_for_power_off")
+    def test_soft_shutdown_wait(self, mock_wait_for_power_off,
+                                mock_shutdown_vm):
+        instance = fake_instance.fake_instance_obj(self.context)
+        mock_wait_for_power_off.side_effect = [False, True]
+
+        result = self._vmops._soft_shutdown(instance, self._FAKE_TIMEOUT, 1)
+
+        calls = [mock.call(instance.name, 1),
+                 mock.call(instance.name, self._FAKE_TIMEOUT - 1)]
+        mock_shutdown_vm.assert_called_with(instance.name)
+        mock_wait_for_power_off.assert_has_calls(calls)
+
+        self.assertTrue(result)
+
+    @mock.patch("nova.virt.hyperv.vmutils.VMUtils.soft_shutdown_vm")
+    @mock.patch("nova.virt.hyperv.vmops.VMOps._wait_for_power_off")
+    def test_soft_shutdown_wait_timeout(self, mock_wait_for_power_off,
+                                        mock_shutdown_vm):
+        instance = fake_instance.fake_instance_obj(self.context)
+        mock_wait_for_power_off.return_value = False
+
+        result = self._vmops._soft_shutdown(instance, self._FAKE_TIMEOUT, 1.5)
+
+        calls = [mock.call(instance.name, 1.5),
+                 mock.call(instance.name, self._FAKE_TIMEOUT - 1.5)]
+        mock_shutdown_vm.assert_called_with(instance.name)
+        mock_wait_for_power_off.assert_has_calls(calls)
+
+        self.assertFalse(result)
+
+    def _test_power_off(self, timeout):
+        instance = fake_instance.fake_instance_obj(self.context)
+        with mock.patch.object(self._vmops, '_set_vm_state') as mock_set_state:
+            self._vmops.power_off(instance, timeout)
+
+            mock_set_state.assert_called_once_with(
+                instance, constants.HYPERV_VM_STATE_DISABLED)
+
+    def test_power_off_hard(self):
+        self._test_power_off(timeout=0)
+
+    @mock.patch("nova.virt.hyperv.vmops.VMOps._soft_shutdown")
+    def test_power_off_exception(self, mock_soft_shutdown):
+        mock_soft_shutdown.return_value = False
+        self._test_power_off(timeout=1)
+
+    @mock.patch("nova.virt.hyperv.vmops.VMOps._set_vm_state")
+    @mock.patch("nova.virt.hyperv.vmops.VMOps._soft_shutdown")
+    def test_power_off_soft(self, mock_soft_shutdown, mock_set_state):
+        instance = fake_instance.fake_instance_obj(self.context)
+        mock_soft_shutdown.return_value = True
+
+        self._vmops.power_off(instance, 1, 0)
+
+        mock_soft_shutdown.assert_called_once_with(
+            instance, 1, vmops.SHUTDOWN_TIME_INCREMENT)
+        self.assertFalse(mock_set_state.called)
 
     def test_get_vm_state(self):
         summary_info = {'EnabledState': constants.HYPERV_VM_STATE_DISABLED}

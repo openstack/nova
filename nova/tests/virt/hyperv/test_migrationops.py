@@ -23,6 +23,9 @@ from nova.virt.hyperv import vmutils
 class MigrationOpsTestCase(test.NoDBTestCase):
     """Unit tests for the Hyper-V MigrationOps class."""
 
+    _FAKE_TIMEOUT = 10
+    _FAKE_RETRY_INTERVAL = 5
+
     def setUp(self):
         super(MigrationOpsTestCase, self).setUp()
         self.context = 'fake-context'
@@ -35,6 +38,8 @@ class MigrationOpsTestCase(test.NoDBTestCase):
         self.addCleanup(patched_func.stop)
 
         self._migrationops = migrationops.MigrationOps()
+        self._migrationops._vmops = mock.MagicMock()
+        self._migrationops._vmutils = mock.MagicMock()
 
     def test_check_and_attach_config_drive_unknown_path(self):
         instance = fake_instance.fake_instance_obj(self.context)
@@ -44,3 +49,30 @@ class MigrationOpsTestCase(test.NoDBTestCase):
         self.assertRaises(vmutils.HyperVException,
                           self._migrationops._check_and_attach_config_drive,
                           instance)
+
+    @mock.patch.object(migrationops.MigrationOps, '_migrate_disk_files')
+    @mock.patch.object(migrationops.MigrationOps, '_check_target_flavor')
+    def test_migrate_disk_and_power_off(self, mock_check_flavor,
+                                        mock_migrate_disk_files):
+        instance = fake_instance.fake_instance_obj(self.context)
+        flavor = mock.MagicMock()
+        network_info = mock.MagicMock()
+
+        disk_files = [mock.MagicMock()]
+        volume_drives = [mock.MagicMock()]
+
+        mock_get_vm_st_path = self._migrationops._vmutils.get_vm_storage_paths
+        mock_get_vm_st_path.return_value = (disk_files, volume_drives)
+
+        self._migrationops.migrate_disk_and_power_off(
+            self.context, instance, mock.sentinel.FAKE_DEST, flavor,
+            network_info, None, self._FAKE_TIMEOUT, self._FAKE_RETRY_INTERVAL)
+
+        mock_check_flavor.assert_called_once_with(instance, flavor)
+        self._migrationops._vmops.power_off.assert_called_once_with(
+            instance, self._FAKE_TIMEOUT, self._FAKE_RETRY_INTERVAL)
+        mock_get_vm_st_path.assert_called_once_with(instance.name)
+        mock_migrate_disk_files.assert_called_once_with(
+            instance.name, disk_files, mock.sentinel.FAKE_DEST)
+        self._migrationops._vmops.destroy.assert_called_once_with(
+            instance, destroy_disks=False)

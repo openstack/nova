@@ -147,6 +147,7 @@ def stub_out_db_instance_api(stubs):
             'vcpus': flavor['vcpus'],
             'mac_addresses': [{'address': values['mac_address']}],
             'root_gb': flavor['root_gb'],
+            'system_metadata': {'image_shutdown_timeout': 0},
         }
         return FakeModel(base_options)
 
