@@ -385,6 +385,7 @@ class VMwareVCDriver(driver.ComputeDriver):
                'cpu_info': jsonutils.dumps(host_stats['cpu_info']),
                'supported_instances': jsonutils.dumps(
                    host_stats['supported_instances']),
+               'numa_topology': None,
                }
 
     def get_available_resource(self, nodename):
