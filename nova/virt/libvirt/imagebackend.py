@@ -328,6 +328,11 @@ class Image(object):
         """True if the backend puts images on a shared block storage."""
         return False
 
+    @staticmethod
+    def is_file_in_instance_path():
+        """True if the backend stores images in files under instance path."""
+        return False
+
     def clone(self, context, image_id_or_uri):
         """Clone an image.
 
@@ -412,6 +417,10 @@ class Raw(Image):
     def snapshot_extract(self, target, out_format):
         images.convert_image(self.path, target, out_format)
 
+    @staticmethod
+    def is_file_in_instance_path():
+        return True
+
 
 class Qcow2(Image):
     def __init__(self, instance=None, disk_name=None, path=None):
@@ -475,6 +484,10 @@ class Qcow2(Image):
         libvirt_utils.extract_snapshot(self.path, 'qcow2',
                                        target,
                                        out_format)
+
+    @staticmethod
+    def is_file_in_instance_path():
+        return True
 
 
 class Lvm(Image):

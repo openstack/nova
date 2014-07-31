@@ -5015,10 +5015,12 @@ class LibvirtDriver(driver.ComputeDriver):
         # if block migration, instances_paths should not be on shared storage.
         source = CONF.host
 
+        dest_check_data.update({'is_shared_instance_path':
+                self._check_shared_storage_test_file(
+                    dest_check_data['filename'])})
+
         dest_check_data.update({'is_shared_block_storage':
                 self._is_shared_block_storage(instance, dest_check_data)})
-        dest_check_data.update({'is_shared_instance_path':
-                self._is_shared_instance_path(dest_check_data)})
 
         if dest_check_data['block_migration']:
             if (dest_check_data['is_shared_block_storage'] or
@@ -5052,9 +5054,19 @@ class LibvirtDriver(driver.ComputeDriver):
         Returns true if the instance is volume backed and has no local disks,
         or if the image backend is the same on source and destination and the
         backend shares block storage between compute nodes.
+
+        :param instance: nova.objects.instance.Instance object
+        :param dest_check_data: dict with boolean fields image_type,
+                                is_shared_instance_path, and is_volume_backed
         """
         if (CONF.libvirt.images_type == dest_check_data.get('image_type') and
                 self.image_backend.backend().is_shared_block_storage()):
+            return True
+
+        if (dest_check_data.get('is_shared_instance_path') and
+                self.image_backend.backend().is_file_in_instance_path()):
+            # NOTE(angdraug): file based image backends (Raw, Qcow2)
+            # place block device files under the instance path
             return True
 
         if (dest_check_data.get('is_volume_backed') and
@@ -5064,13 +5076,6 @@ class LibvirtDriver(driver.ComputeDriver):
             return True
 
         return False
-
-    def _is_shared_instance_path(self, dest_check_data):
-        """Check if instance path is shared between source and
-        destination of a live migration.
-        """
-        return self._check_shared_storage_test_file(
-                    dest_check_data["filename"])
 
     def _assert_dest_node_has_enough_disk(self, context, instance,
                                              available_mb, disk_over_commit):
