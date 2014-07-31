@@ -1292,8 +1292,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _swap_volume(self, domain, disk_path, new_path):
         """Swap existing disk with a new block device."""
-        # Save a copy of the domain's running XML file
-        xml = domain.XMLDesc(0)
+        # Save a copy of the domain's persistent XML file
+        xml = domain.XMLDesc(
+            libvirt.VIR_DOMAIN_XML_INACTIVE |
+            libvirt.VIR_DOMAIN_XML_SECURE)
 
         # Abort is an idempotent operation, so make sure any block
         # jobs which may have failed are ended.
@@ -1639,8 +1641,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _live_snapshot(self, domain, disk_path, out_path, image_format):
         """Snapshot an instance without downtime."""
-        # Save a copy of the domain's running XML file
-        xml = domain.XMLDesc(0)
+        # Save a copy of the domain's persistent XML file
+        xml = domain.XMLDesc(
+            libvirt.VIR_DOMAIN_XML_INACTIVE |
+            libvirt.VIR_DOMAIN_XML_SECURE)
 
         # Abort is an idempotent operation, so make sure any block
         # jobs which may have failed are ended.

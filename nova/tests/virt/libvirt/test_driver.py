@@ -8037,7 +8037,9 @@ Active:          8381604 kB
 
             drvr._swap_volume(mock_dom, srcfile, dstfile)
 
-            mock_dom.XMLDesc.assert_called_once_with(0)
+            mock_dom.XMLDesc.assert_called_once_with(
+                fakelibvirt.VIR_DOMAIN_XML_INACTIVE |
+                fakelibvirt.VIR_DOMAIN_XML_SECURE)
             mock_dom.blockRebase.assert_called_once_with(
                 srcfile, dstfile, 0,
                 libvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
@@ -8073,7 +8075,9 @@ Active:          8381604 kB
 
             drvr._live_snapshot(mock_dom, srcfile, dstfile, "qcow2")
 
-            mock_dom.XMLDesc.assert_called_once_with(0)
+            mock_dom.XMLDesc.assert_called_once_with(
+                fakelibvirt.VIR_DOMAIN_XML_INACTIVE |
+                fakelibvirt.VIR_DOMAIN_XML_SECURE)
             mock_dom.blockRebase.assert_called_once_with(
                 srcfile, dltfile, 0,
                 libvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
