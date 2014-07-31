@@ -1720,9 +1720,11 @@ class VolumeOpsTestCase(HyperVAPIBaseTestCase):
             self.assertEqual(disk, 'disk_path')
 
     def test_get_mounted_disk_from_lun_failure(self):
+        self.flags(mounted_disk_query_retry_count=1, group='hyperv')
+
         with mock.patch.object(self.volumeops._volutils,
                                'get_device_number_for_target') as m_device_num:
-            m_device_num.return_value = None
+            m_device_num.side_effect = [None, -1]
 
             block_device_info = db_fakes.get_fake_block_device_info(
                 self._volume_target_portal, self._volume_id)
@@ -1732,6 +1734,7 @@ class VolumeOpsTestCase(HyperVAPIBaseTestCase):
             target_lun = data['target_lun']
             target_iqn = data['target_iqn']
 
-            self.assertRaises(exception.NotFound,
-                              self.volumeops._get_mounted_disk_from_lun,
-                              target_iqn, target_lun)
+            for attempt in xrange(1):
+                self.assertRaises(exception.NotFound,
+                                  self.volumeops._get_mounted_disk_from_lun,
+                                  target_iqn, target_lun)

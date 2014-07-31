@@ -201,8 +201,8 @@ class VolumeOps(object):
         # be avoided by adding a retry.
         for i in xrange(CONF.hyperv.mounted_disk_query_retry_count):
             device_number = self._volutils.get_device_number_for_target(
-                            target_iqn, target_lun)
-            if device_number is None:
+                target_iqn, target_lun)
+            if device_number in (None, -1):
                 attempt = i + 1
                 LOG.debug(_('Attempt %d to get device_number '
                           'from get_device_number_for_target failed. '
@@ -211,7 +211,7 @@ class VolumeOps(object):
             else:
                 break
 
-        if device_number is None:
+        if device_number in (None, -1):
             raise exception.NotFound(_('Unable to find a mounted disk for '
                                        'target_iqn: %s') % target_iqn)
         LOG.debug(_('Device number: %(device_number)s, '
