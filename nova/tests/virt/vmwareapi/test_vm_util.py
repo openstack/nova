@@ -83,7 +83,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             fake_session(fake_objects), None, None, datastore_valid_regex)
         self.assertEqual("openstack-ds0", result[1])
 
-    def test_get_stats_from_cluster(self):
+    def _test_get_stats_from_cluster(self, connection_state="connected",
+                                     maintenance_mode=False):
         ManagedObjectRefs = [fake.ManagedObjectReference("host1",
                                                          "HostSystem"),
                              fake.ManagedObjectReference("host2",
@@ -100,8 +101,11 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
         runtime_host_1 = fake.DataObject()
         runtime_host_1.connectionState = "connected"
+        runtime_host_1.inMaintenanceMode = False
+
         runtime_host_2 = fake.DataObject()
-        runtime_host_2.connectionState = "disconnected"
+        runtime_host_2.connectionState = connection_state
+        runtime_host_2.inMaintenanceMode = maintenance_mode
 
         prop_list_host_1 = [fake.Prop(name="hardware_summary", val=hardware),
                             fake.Prop(name="runtime_summary",
@@ -109,6 +113,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         prop_list_host_2 = [fake.Prop(name="hardware_summary", val=hardware),
                             fake.Prop(name="runtime_summary",
                                       val=runtime_host_2)]
+
         fake_objects = fake.FakeRetrieveResult()
         fake_objects.add_object(fake.ObjectContent("prop_list_host1",
                                                    prop_list_host_1))
@@ -132,14 +137,30 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             result = vm_util.get_stats_from_cluster(session, "cluster1")
             cpu_info = {}
             mem_info = {}
-            cpu_info['vcpus'] = 16
-            cpu_info['cores'] = 8
-            cpu_info['vendor'] = ["Intel"]
-            cpu_info['model'] = ["Intel(R) Xeon(R)"]
+            if connection_state == "connected" and not maintenance_mode:
+                cpu_info['vcpus'] = 32
+                cpu_info['cores'] = 16
+                cpu_info['vendor'] = ["Intel", "Intel"]
+                cpu_info['model'] = ["Intel(R) Xeon(R)",
+                                     "Intel(R) Xeon(R)"]
+            else:
+                cpu_info['vcpus'] = 16
+                cpu_info['cores'] = 8
+                cpu_info['vendor'] = ["Intel"]
+                cpu_info['model'] = ["Intel(R) Xeon(R)"]
             mem_info['total'] = 5120
             mem_info['free'] = 3072
             expected_stats = {'cpu': cpu_info, 'mem': mem_info}
             self.assertEqual(expected_stats, result)
+
+    def test_get_stats_from_cluster_hosts_connected_and_active(self):
+        self._test_get_stats_from_cluster()
+
+    def test_get_stats_from_cluster_hosts_disconnected_and_active(self):
+        self._test_get_stats_from_cluster(connection_state="disconnected")
+
+    def test_get_stats_from_cluster_hosts_connected_and_maintenance(self):
+        self._test_get_stats_from_cluster(maintenance_mode=True)
 
     def test_get_datastore_ref_and_name_with_token(self):
         regex = re.compile("^ds.*\d$")
