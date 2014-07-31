@@ -19,7 +19,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import availability_zones
-from nova import db
+from nova import objects
 from nova import servicegroup
 
 CONF = cfg.CONF
@@ -103,7 +103,7 @@ class AvailabilityZoneController(wsgi.Controller):
             availability_zones.get_availability_zones(ctxt)
 
         # Available services
-        enabled_services = db.service_get_all(context, False)
+        enabled_services = objects.ServiceList.get_all(context, disabled=False)
         enabled_services = availability_zones.set_availability_zones(context,
                 enabled_services)
         zone_hosts = {}
