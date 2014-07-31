@@ -12,6 +12,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import six
+
 from nova import exception
 from nova import test
 from nova.tests import matchers
@@ -1008,11 +1010,8 @@ class NUMATopologyTest(test.NoDBTestCase):
         got_cell = cell_class._from_dict(data_dict)
         self.assertNUMACellMatches(expected_cell, got_cell)
 
-    def _test_topo_from_dict(self, data_dict, expected_topo, with_usage=False):
-        topology_class = (
-                hw.VirtNUMAHostTopology
-                if with_usage else hw.VirtNUMAInstanceTopology)
-        got_topo = topology_class._from_dict(
+    def _test_topo_from_dict(self, data_dict, expected_topo):
+        got_topo = expected_topo.__class__._from_dict(
                 data_dict)
         for got_cell, expected_cell in zip(
                 got_topo.cells, expected_topo.cells):
@@ -1022,6 +1021,14 @@ class NUMATopologyTest(test.NoDBTestCase):
         cell = hw.VirtNUMATopologyCell(1, set([1, 2]), 512)
         cell_dict = {'cpus': '1,2',
                      'mem': {'total': 512},
+                     'id': 1}
+        self._test_to_dict(cell, cell_dict)
+        self._test_cell_from_dict(cell_dict, cell)
+
+    def test_numa_limit_cell_dict(self):
+        cell = hw.VirtNUMATopologyCellLimit(1, set([1, 2]), 512, 4, 2048)
+        cell_dict = {'cpus': '1,2', 'cpu_limit': 4,
+                     'mem': {'total': 512, 'limit': 2048},
                      'id': 1}
         self._test_to_dict(cell, cell_dict)
         self._test_cell_from_dict(cell_dict, cell)
@@ -1047,7 +1054,24 @@ class NUMATopologyTest(test.NoDBTestCase):
                           'mem': {'total': 1024},
                           'id': 2}]}
         self._test_to_dict(topo, topo_dict)
-        self._test_topo_from_dict(topo_dict, topo, with_usage=False)
+        self._test_topo_from_dict(topo_dict, topo)
+
+    def test_numa_limits_topo_dict(self):
+        topo = hw.VirtNUMALimitTopology(
+                cells=[
+                    hw.VirtNUMATopologyCellLimit(
+                        1, set([1, 2]), 1024, 4, 2048),
+                    hw.VirtNUMATopologyCellLimit(
+                        2, set([3, 4]), 1024, 4, 2048)])
+        topo_dict = {'cells': [
+                        {'cpus': '1,2', 'cpu_limit': 4,
+                          'mem': {'total': 1024, 'limit': 2048},
+                          'id': 1},
+                        {'cpus': '3,4', 'cpu_limit': 4,
+                          'mem': {'total': 1024, 'limit': 2048},
+                          'id': 2}]}
+        self._test_to_dict(topo, topo_dict)
+        self._test_topo_from_dict(topo_dict, topo)
 
     def test_numa_topo_dict_with_usage(self):
         topo = hw.VirtNUMAHostTopology(
@@ -1064,7 +1088,7 @@ class NUMATopologyTest(test.NoDBTestCase):
                           'mem': {'total': 1024, 'used': 0},
                           'id': 2}]}
         self._test_to_dict(topo, topo_dict)
-        self._test_topo_from_dict(topo_dict, topo, with_usage=True)
+        self._test_topo_from_dict(topo_dict, topo)
 
     def test_json(self):
         expected = hw.VirtNUMAHostTopology(
@@ -1117,3 +1141,73 @@ class NumberOfSerialPortsTest(test.NoDBTestCase):
         self.assertRaises(exception.ImageSerialPortNumberExceedFlavorValue,
                           hw.get_number_of_serial_ports,
                           flavor, image_meta)
+
+
+class NUMATopologyClaimsTest(test.NoDBTestCase):
+    def setUp(self):
+        super(NUMATopologyClaimsTest, self).setUp()
+
+        self.host = hw.VirtNUMAHostTopology(
+                cells=[
+                    hw.VirtNUMATopologyCellUsage(
+                        1, set([1, 2, 3, 4]), 2048,
+                        cpu_usage=1, memory_usage=512),
+                    hw.VirtNUMATopologyCellUsage(
+                        2, set([5, 6]), 1024)])
+
+        self.limits = hw.VirtNUMALimitTopology(
+                cells=[
+                    hw.VirtNUMATopologyCellLimit(
+                        1, set([1, 2, 3, 4]), 2048,
+                        cpu_limit=8, memory_limit=4096),
+                    hw.VirtNUMATopologyCellLimit(
+                        2, set([5, 6]), 1024,
+                        cpu_limit=4, memory_limit=2048)])
+
+        self.large_instance = hw.VirtNUMAInstanceTopology(
+                cells=[
+                    hw.VirtNUMATopologyCell(1, set([1, 2, 3, 4, 5, 6]), 8192),
+                    hw.VirtNUMATopologyCell(2, set([7, 8]), 4096)])
+        self.medium_instance = hw.VirtNUMAInstanceTopology(
+                cells=[
+                    hw.VirtNUMATopologyCell(1, set([1, 2, 3, 4]), 1024),
+                    hw.VirtNUMATopologyCell(2, set([7, 8]), 2048)])
+        self.small_instance = hw.VirtNUMAInstanceTopology(
+                cells=[
+                    hw.VirtNUMATopologyCell(1, set([1]), 256),
+                    hw.VirtNUMATopologyCell(2, set([5]), 1024)])
+
+    def test_claim_not_enough_info(self):
+
+        # No limits supplied
+        self.assertIsNone(
+                hw.VirtNUMAHostTopology.claim_test(
+                    self.host, [self.large_instance]))
+        # Empty topology
+        self.assertIsNone(
+                hw.VirtNUMAHostTopology.claim_test(
+                    hw.VirtNUMAHostTopology(), [self.large_instance],
+                    limits=self.limits))
+        # No instances to claim
+        self.assertIsNone(
+                hw.VirtNUMAHostTopology.claim_test(self.host, [], self.limits))
+
+    def test_claim_succeeds(self):
+        self.assertIsNone(
+                hw.VirtNUMAHostTopology.claim_test(
+                    self.host, [self.small_instance], self.limits))
+        self.assertIsNone(
+                hw.VirtNUMAHostTopology.claim_test(
+                    self.host, [self.medium_instance], self.limits))
+
+    def test_claim_fails(self):
+        self.assertIsInstance(
+                hw.VirtNUMAHostTopology.claim_test(
+                    self.host, [self.large_instance], self.limits),
+                six.text_type)
+
+        self.assertIsInstance(
+                hw.VirtNUMAHostTopology.claim_test(
+                     self.host, [self.medium_instance, self.small_instance],
+                     self.limits),
+                six.text_type)

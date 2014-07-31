@@ -568,6 +568,49 @@ class VirtNUMATopologyCell(object):
         return cls(cell_id, cpuset, memory)
 
 
+class VirtNUMATopologyCellLimit(VirtNUMATopologyCell):
+    def __init__(self, id, cpuset, memory, cpu_limit, memory_limit):
+        """Create a new NUMA Cell with usage
+
+        :param id: integer identifier of cell
+        :param cpuset: set containing list of CPU indexes
+        :param memory: RAM measured in KiB
+        :param cpu_limit: maximum number of  CPUs allocated
+        :param memory_usage: maxumum RAM allocated in KiB
+
+        Creates a new NUMA cell object to represent the max hardware
+        resources and utilization. The number of CPUs specified
+        by the @cpu_usage parameter may be larger than the number
+        of bits set in @cpuset if CPU overcommit is used. Likewise
+        the amount of RAM specified by the @memory_usage parameter
+        may be larger than the available RAM in @memory if RAM
+        overcommit is used.
+
+        :returns: a new NUMA cell object
+        """
+
+        super(VirtNUMATopologyCellLimit, self).__init__(
+            id, cpuset, memory)
+
+        self.cpu_limit = cpu_limit
+        self.memory_limit = memory_limit
+
+    def _to_dict(self):
+        data_dict = super(VirtNUMATopologyCellLimit, self)._to_dict()
+        data_dict['mem']['limit'] = self.memory_limit
+        data_dict['cpu_limit'] = self.cpu_limit
+        return data_dict
+
+    @classmethod
+    def _from_dict(cls, data_dict):
+        cpuset = parse_cpu_spec(data_dict.get('cpus', ''))
+        memory = data_dict.get('mem', {}).get('total', 0)
+        cpu_limit = data_dict.get('cpu_limit', len(cpuset))
+        memory_limit = data_dict.get('mem', {}).get('limit', memory)
+        cell_id = data_dict.get('id')
+        return cls(cell_id, cpuset, memory, cpu_limit, memory_limit)
+
+
 class VirtNUMATopologyCellUsage(VirtNUMATopologyCell):
     """Class for reporting NUMA resources and usage in a cell
 
@@ -781,6 +824,14 @@ class VirtNUMAInstanceTopology(VirtNUMATopology):
                 nodes, flavor, image_meta)
 
 
+class VirtNUMALimitTopology(VirtNUMATopology):
+    """Class to represent the max resources of a compute node used
+    for checking oversubscription limits.
+    """
+
+    cell_class = VirtNUMATopologyCellLimit
+
+
 class VirtNUMAHostTopology(VirtNUMATopology):
 
     """Class represents the NUMA configuration and utilization
@@ -827,3 +878,25 @@ class VirtNUMAHostTopology(VirtNUMATopology):
             cells.append(cell)
 
         return cls(cells)
+
+    @classmethod
+    def claim_test(cls, host, instances, limits=None):
+        """Test if we can claim an instance on the host with given limits.
+
+        :param host: VirtNUMAHostTopology with usage information
+        :param instances: list of VirtNUMAInstanceTopology
+        :param limits: VirtNUMALimitTopology with max values set. Should
+                       match the host topology otherwise
+
+        :returns: None if the claim succeeds or text explaining the error.
+        """
+        if not all((host, limits, instances)):
+            return
+
+        claimed_host = cls.usage_from_instances(host, instances)
+
+        for claimed_cell, limit_cell in zip(claimed_host.cells, limits.cells):
+            if (claimed_cell.memory_usage > limit_cell.memory_limit or
+                    claimed_cell.cpu_usage > limit_cell.cpu_limit):
+                return (_("Requested instance NUMA topology cannot fit "
+                          "the given host NUMA topology."))
