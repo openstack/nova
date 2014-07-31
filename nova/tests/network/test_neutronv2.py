@@ -1122,6 +1122,22 @@ class TestNeutronv2(TestNeutronv2Base):
         api = neutronapi.API()
         api.validate_networks(self.context, requested_networks, 1)
 
+    def test_validate_networks_without_port_quota_on_network_side(self):
+        requested_networks = [('my_netid1', None, None),
+                              ('my_netid2', None, None)]
+        ids = ['my_netid1', 'my_netid2']
+        self.moxed_client.list_networks(
+            id=mox.SameElementsAs(ids)).AndReturn(
+                {'networks': self.nets2})
+        self.moxed_client.list_ports(tenant_id='my_tenantid').AndReturn(
+                    {'ports': []})
+        self.moxed_client.show_quota(
+            tenant_id='my_tenantid').AndReturn(
+                    {'quota': {}})
+        self.mox.ReplayAll()
+        api = neutronapi.API()
+        api.validate_networks(self.context, requested_networks, 1)
+
     def test_validate_networks_ex_1(self):
         requested_networks = [('my_netid1', 'test', None)]
         self.moxed_client.list_networks(
