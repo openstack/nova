@@ -13,9 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 import webob
 
 from nova import compute
+from nova import exception
 from nova import objects
 from nova.openstack.common import jsonutils
 from nova import test
@@ -92,6 +94,19 @@ class FixedIpTest(test.NoDBTestCase):
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 422)
         self.assertEqual(last_add_fixed_ip, (None, None))
+
+    @mock.patch.object(compute.api.API, 'add_fixed_ip')
+    def test_add_fixed_ip_no_more_ips_available(self, mock_add_fixed_ip):
+        mock_add_fixed_ip.side_effect = exception.NoMoreFixedIps
+
+        body = dict(addFixedIp=dict(networkId='test_net'))
+        req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID)
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers['content-type'] = 'application/json'
+
+        resp = req.get_response(self.app)
+        self.assertEqual(resp.status_int, 400)
 
     def test_remove_fixed_ip(self):
         global last_remove_fixed_ip
