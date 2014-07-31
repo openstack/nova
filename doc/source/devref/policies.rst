@@ -34,3 +34,13 @@ this wrong.
 
 This policy is in place to prevent us from making backwards incompatible
 changes to APIs.
+
+Patches and Reviews
+===================
+
+Merging a patch requires a non-trivial amount of reviewer resources.
+As a patch author, you should try to offset the reviewer resources
+spent on your patch by reviewing other patches. If no one does this, the review
+team (cores and otherwise) become spread too thin.
+
+For review guidelines see: https://wiki.openstack.org/wiki/ReviewChecklist
