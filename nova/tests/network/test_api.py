@@ -454,11 +454,15 @@ class ApiTestCase(test.TestCase):
             mock.patch.object(self.network_api.network_rpcapi, method),
             mock.patch.object(self.network_api.network_rpcapi,
                               'get_instance_nw_info'),
+            mock.patch.object(network_model.NetworkInfo, 'hydrate'),
         ) as (
-            method_mock, nwinfo_mock
+            method_mock, nwinfo_mock, hydrate_mock
         ):
-            method_mock.return_value = network_model.NetworkInfo([])
+            nw_info = network_model.NetworkInfo([])
+            method_mock.return_value = nw_info
+            hydrate_mock.return_value = nw_info
             getattr(self.network_api, method)(*args, **kwargs)
+            hydrate_mock.assert_called_once_with(nw_info)
             self.assertFalse(nwinfo_mock.called)
 
     def test_allocate_for_instance_refresh_cache(self):
