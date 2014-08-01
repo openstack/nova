@@ -1048,9 +1048,9 @@ def propset_dict(propset):
     that are returned by the VMware API.
 
     You can read more about these at:
-    http://pubs.vmware.com/vsphere-51/index.jsp
-        #com.vmware.wssdk.apiref.doc/
-            vmodl.query.PropertyCollector.ObjectContent.html
+    | http://pubs.vmware.com/vsphere-51/index.jsp
+    |    #com.vmware.wssdk.apiref.doc/
+    |        vmodl.query.PropertyCollector.ObjectContent.html
 
     :param propset: a property "set" from ObjectContent
     :return: dictionary representing property set
@@ -1186,14 +1186,15 @@ def get_dict_mor(session, list_obj):
     { value = "domain-1002", _type = "ClusterComputeResource" }
 
     Output data format:
-    dict_mors = {
-                  'respool-1001': { 'cluster_mor': clusterMor,
-                                    'res_pool_mor': resourcePoolMor,
-                                    'name': display_name },
-                  'domain-1002': { 'cluster_mor': clusterMor,
-                                    'res_pool_mor': resourcePoolMor,
-                                    'name': display_name },
-                }
+    | dict_mors = {
+    |              'respool-1001': { 'cluster_mor': clusterMor,
+    |                                'res_pool_mor': resourcePoolMor,
+    |                                'name': display_name },
+    |              'domain-1002': { 'cluster_mor': clusterMor,
+    |                                'res_pool_mor': resourcePoolMor,
+    |                                'name': display_name },
+    |            }
+
     """
     dict_mors = {}
     for obj_ref, path in list_obj:

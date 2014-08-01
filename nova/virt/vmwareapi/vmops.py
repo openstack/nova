@@ -168,20 +168,25 @@ class VMwareVMOps(object):
 
         Steps followed are:
 
-        1. Create a VM with no disk and the specifics in the instance object
+        #. Create a VM with no disk and the specifics in the instance object
            like RAM size.
-        2. For flat disk
-          2.1. Create a dummy vmdk of the size of the disk file that is to be
-               uploaded. This is required just to create the metadata file.
-          2.2. Delete the -flat.vmdk file created in the above step and retain
-               the metadata .vmdk file.
-          2.3. Upload the disk file.
-        3. For sparse disk
-          3.1. Upload the disk file to a -sparse.vmdk file.
-          3.2. Copy/Clone the -sparse.vmdk file to a thin vmdk.
-          3.3. Delete the -sparse.vmdk file.
-        4. Attach the disk to the VM by reconfiguring the same.
-        5. Power on the VM.
+        #. For flat disk
+
+          #. Create a dummy vmdk of the size of the disk file that is to be
+             uploaded. This is required just to create the metadata file.
+          #. Delete the -flat.vmdk file created in the above step and retain
+             the metadata .vmdk file.
+          #. Upload the disk file.
+
+        #. For sparse disk
+
+          #. Upload the disk file to a -sparse.vmdk file.
+          #. Copy/Clone the -sparse.vmdk file to a thin vmdk.
+          #. Delete the -sparse.vmdk file.
+
+        #. Attach the disk to the VM by reconfiguring the same.
+        #. Power on the VM.
+
         """
         ebs_root = False
         if block_device_info:

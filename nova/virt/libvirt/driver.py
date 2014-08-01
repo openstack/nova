@@ -1851,8 +1851,8 @@ class LibvirtDriver(driver.ComputeDriver):
                      - snapshot_id : ID of snapshot
                      - type : qcow2 / <other>
                      - new_file : qcow2 file created by Cinder which
-                                  becomes the VM's active image after
-                                  the snapshot is complete
+                     becomes the VM's active image after
+                     the snapshot is complete
         """
 
         LOG.debug("volume_snapshot_create: create_info: %(c_info)s",

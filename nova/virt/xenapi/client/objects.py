@@ -46,7 +46,7 @@ class XenAPISessionObject(object):
     to use get_all(), but this often leads to races as objects
     get deleted under your feet. It is preferable to use the undocumented:
     * vms = session.VM.get_all_records_where(
-              'field "is_control_domain"="true"')
+    'field "is_control_domain"="true"')
 
     """
 

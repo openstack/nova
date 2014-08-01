@@ -1035,11 +1035,13 @@ class ComputeDriver(object):
         """Get the currently known host CPU stats.
 
         :returns: a dict containing the CPU stat info, eg:
-                  {'kernel': kern,
-                   'idle': idle,
-                   'user': user,
-                   'iowait': wait,
-                   'frequency': freq},
+
+            | {'kernel': kern,
+            |  'idle': idle,
+            |  'user': user,
+            |  'iowait': wait,
+            |   'frequency': freq},
+
                   where kern and user indicate the cumulative CPU time
                   (nanoseconds) spent by kernel and user processes
                   respectively, idle indicates the cumulative idle CPU time
@@ -1047,6 +1049,7 @@ class ComputeDriver(object):
                   time (nanoseconds), since the host is booting up; freq
                   indicates the current CPU frequency (MHz). All values are
                   long integers.
+
         """
         raise NotImplementedError()
 
@@ -1135,13 +1138,15 @@ class ComputeDriver(object):
         client API.
 
         :return: None, or a set of DHCP options, eg:
-                 [{'opt_name': 'bootfile-name',
-                   'opt_value': '/tftpboot/path/to/config'},
-                  {'opt_name': 'server-ip-address',
-                   'opt_value': '1.2.3.4'},
-                  {'opt_name': 'tftp-server',
-                   'opt_value': '1.2.3.4'}
-                 ]
+
+             |    [{'opt_name': 'bootfile-name',
+             |      'opt_value': '/tftpboot/path/to/config'},
+             |     {'opt_name': 'server-ip-address',
+             |      'opt_value': '1.2.3.4'},
+             |     {'opt_name': 'tftp-server',
+             |      'opt_value': '1.2.3.4'}
+             |    ]
+
         """
         pass
 

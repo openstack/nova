@@ -233,12 +233,13 @@ class Tilera(base.NodeDriver):
         This method writes the instances config file, and then creates
         symlinks for each MAC address in the instance.
 
-        By default, the complete layout looks like this:
+        By default, the complete layout looks like this::
 
-        /tftpboot/
-            ./{uuid}/
-                 kernel
-            ./fs_node_id/
+            /tftpboot/
+                ./{uuid}/
+                     kernel
+                ./fs_node_id/
+
         """
         get_tftp_image_info(instance)
         (root_mb, swap_mb) = get_partition_sizes(instance)
