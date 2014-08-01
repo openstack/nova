@@ -232,8 +232,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         not_our_host = 'not-' + our_host
         fake_context = 'fake-context'
 
-        deleted_instance = fake_instance.fake_instance_obj(
-                self.context, host=not_our_host, uuid='fake-uuid')
+        deleted_instance = instance_obj.Instance(host=not_our_host,
+                                                 uuid='fake-uuid',
+                                                 task_state=None)
 
         self.mox.StubOutWithMock(self.compute.driver, 'init_host')
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
@@ -1141,6 +1142,36 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                              context, instance)
             self.assertFalse(allow_reboot)
             self.assertEqual(reboot_type, 'HARD')
+
+    def test_init_host_with_partial_migration(self):
+        our_host = self.compute.host
+        instance_1 = instance_obj.Instance(self.context)
+        instance_1.uuid = 'foo'
+        instance_1.task_state = task_states.MIGRATING
+        instance_1.host = 'not-' + our_host
+        instance_2 = instance_obj.Instance(self.context)
+        instance_2.uuid = 'bar'
+        instance_2.task_state = None
+        instance_2.host = 'not-' + our_host
+
+        with contextlib.nested(
+            mock.patch.object(self.compute, '_get_instances_on_driver',
+                               return_value=[instance_1,
+                                             instance_2]),
+            mock.patch.object(self.compute, '_get_instance_nw_info',
+                               return_value=None),
+            mock.patch.object(self.compute,
+                              '_get_instance_volume_block_device_info',
+                               return_value={}),
+            mock.patch.object(self.compute, '_is_instance_storage_shared',
+                               return_value=False),
+            mock.patch.object(self.compute.driver, 'destroy')
+        ) as (_get_instances_on_driver, _get_instance_nw_info,
+              _get_instance_volume_block_device_info,
+              _is_instance_storage_shared, destroy):
+            self.compute._destroy_evacuated_instances(self.context)
+            destroy.assert_called_once_with(self.context, instance_2, None,
+                                            {}, True)
 
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
