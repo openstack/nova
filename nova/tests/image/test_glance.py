@@ -454,7 +454,7 @@ class TestGlanceImageService(test.NoDBTestCase):
         self.assertEqual(same_id, image_id)
         self.assertEqual(service._client.host, 'something-less-likely')
 
-    def test_extracting_missing_attributes(self):
+    def _test_extracting_missing_attributes(self, include_locations):
         """Verify behavior from glance objects that are missing attributes
 
         This fakes the image class and is missing attribute as the client can
@@ -475,7 +475,8 @@ class TestGlanceImageService(test.NoDBTestCase):
             'updated_at': self.NOW_DATETIME,
         }
         image = MyFakeGlanceImage(metadata)
-        observed = glance._extract_attributes(image)
+        observed = glance._extract_attributes(
+            image, include_locations=include_locations)
         expected = {
             'id': 1,
             'name': None,
@@ -492,11 +493,18 @@ class TestGlanceImageService(test.NoDBTestCase):
             'deleted': None,
             'status': None,
             'properties': {},
-            'owner': None,
-            'locations': None,
-            'direct_url': None
+            'owner': None
         }
+        if include_locations:
+            expected['locations'] = None
+            expected['direct_url'] = None
         self.assertEqual(expected, observed)
+
+    def test_extracting_missing_attributes_include_locations(self):
+        self._test_extracting_missing_attributes(include_locations=True)
+
+    def test_extracting_missing_attributes_exclude_locations(self):
+        self._test_extracting_missing_attributes(include_locations=False)
 
 
 def _create_failing_glance_client(info):
@@ -652,7 +660,7 @@ class TestShow(test.NoDBTestCase):
         client.call.assert_called_once_with(ctx, 1, 'get',
                                             mock.sentinel.image_id)
         is_avail_mock.assert_called_once_with(ctx, {})
-        trans_from_mock.assert_called_once_with({})
+        trans_from_mock.assert_called_once_with({}, include_locations=False)
         self.assertIn('mock', info)
         self.assertEqual(mock.sentinel.trans_from, info['mock'])
 
@@ -743,7 +751,8 @@ class TestShow(test.NoDBTestCase):
 
         client.call.assert_called_once_with(ctx, 2, 'get', image_id)
         avail_mock.assert_called_once_with(ctx, mock.sentinel.image)
-        trans_from_mock.assert_called_once_with(mock.sentinel.image)
+        trans_from_mock.assert_called_once_with(mock.sentinel.image,
+                                                include_locations=True)
         self.assertIn('locations', info)
         self.assertEqual(locations, info['locations'])
 

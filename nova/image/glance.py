@@ -307,16 +307,14 @@ class GlanceImageService(object):
         if not _is_image_available(context, image):
             raise exception.ImageNotFound(image_id=image_id)
 
-        image = _translate_from_glance(image)
+        image = _translate_from_glance(image,
+                                       include_locations=include_locations)
         if include_locations:
             locations = image.get('locations', None) or []
             du = image.get('direct_url', None)
             if du:
                 locations.append({'url': du, 'metadata': {}})
             image['locations'] = locations
-        else:
-            image.pop('locations', None)
-            image.pop('direct_url', None)
 
         return image
 
@@ -482,8 +480,9 @@ def _translate_to_glance(image_meta):
     return image_meta
 
 
-def _translate_from_glance(image):
-    image_meta = _extract_attributes(image)
+def _translate_from_glance(image, include_locations=False):
+    image_meta = _extract_attributes(image,
+                                     include_locations=include_locations)
     image_meta = _convert_timestamps_to_datetimes(image_meta)
     image_meta = _convert_from_string(image_meta)
     return image_meta
@@ -532,7 +531,7 @@ def _convert_to_string(metadata):
     return _convert(_json_dumps, metadata)
 
 
-def _extract_attributes(image):
+def _extract_attributes(image, include_locations=False):
     # NOTE(hdd): If a key is not found, base.Resource.__getattr__() may perform
     # a get(), resulting in a useless request back to glance. This list is
     # therefore sorted, with dependent attributes as the end
@@ -547,6 +546,7 @@ def _extract_attributes(image):
 
     queued = getattr(image, 'status') == 'queued'
     queued_exclude_attrs = ['disk_format', 'container_format']
+    include_locations_attrs = ['direct_url', 'locations']
     output = {}
 
     for attr in IMAGE_ATTRIBUTES:
@@ -560,6 +560,10 @@ def _extract_attributes(image):
         # NOTE(liusheng): queued image may not have these attributes and 'name'
         elif queued and attr in queued_exclude_attrs:
             output[attr] = getattr(image, attr, None)
+        # NOTE(mriedem): Only get location attrs if including locations.
+        elif attr in include_locations_attrs:
+            if include_locations:
+                output[attr] = getattr(image, attr, None)
         else:
             # NOTE(xarses): Anything that is caught with the default value
             # will result in a additional lookup to glance for said attr.
