@@ -666,29 +666,37 @@ def metadata_accept():
     iptables_manager.apply()
 
 
-def add_snat_rule(ip_range):
+def add_snat_rule(ip_range, is_external=False):
     if CONF.routing_source_ip:
-        for dest_range in CONF.force_snat_range or ['0.0.0.0/0']:
+        if is_external:
+            if CONF.force_snat_range:
+                snat_range = CONF.force_snat_range
+            else:
+                snat_range = []
+        else:
+            snat_range = ['0.0.0.0/0']
+        for dest_range in snat_range:
             rule = ('-s %s -d %s -j SNAT --to-source %s'
                     % (ip_range, dest_range, CONF.routing_source_ip))
-            if CONF.public_interface:
+            if not is_external and CONF.public_interface:
                 rule += ' -o %s' % CONF.public_interface
             iptables_manager.ipv4['nat'].add_rule('snat', rule)
         iptables_manager.apply()
 
 
-def init_host(ip_range):
+def init_host(ip_range, is_external=False):
     """Basic networking setup goes here."""
     # NOTE(devcamcar): Cloud public SNAT entries and the default
     # SNAT rule for outbound traffic.
 
-    add_snat_rule(ip_range)
+    add_snat_rule(ip_range, is_external)
 
     rules = []
-    for snat_range in CONF.force_snat_range:
-        rules.append('PREROUTING -p ipv4 --ip-src %s --ip-dst %s '
-                     '-j redirect --redirect-target ACCEPT' %
-                     (ip_range, snat_range))
+    if is_external:
+        for snat_range in CONF.force_snat_range:
+            rules.append('PREROUTING -p ipv4 --ip-src %s --ip-dst %s '
+                         '-j redirect --redirect-target ACCEPT' %
+                         (ip_range, snat_range))
     if rules:
         ensure_ebtables_rules(rules, 'nat')
 
