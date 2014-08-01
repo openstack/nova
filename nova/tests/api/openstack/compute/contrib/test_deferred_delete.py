@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 import webob
 
 from nova.api.openstack.compute.contrib import deferred_delete
@@ -21,6 +22,7 @@ from nova.compute import api as compute_api
 from nova import context
 from nova import exception
 from nova import test
+from nova.tests.api.openstack import fakes
 
 
 class FakeRequest(object):
@@ -70,27 +72,16 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
                           self.fake_uuid,
                           self.fake_input_dict)
 
-    def test_force_delete_raises_conflict_on_invalid_state(self):
-        self.mox.StubOutWithMock(compute_api.API, 'get')
-        self.mox.StubOutWithMock(compute_api.API, 'force_delete')
-
-        fake_instance = 'fake_instance'
-
-        compute_api.API.get(self.fake_context, self.fake_uuid,
-                            expected_attrs=None,
-                            want_objects=True).AndReturn(fake_instance)
-
-        exc = exception.InstanceInvalidState(attr='fake_attr',
-                state='fake_state', method='fake_method',
-                instance_uuid='fake')
-
-        compute_api.API.force_delete(self.fake_context, fake_instance)\
-            .AndRaise(exc)
-
-        self.mox.ReplayAll()
-        self.assertRaises(webob.exc.HTTPConflict,
-                self.extension._force_delete, self.fake_req, self.fake_uuid,
-                self.fake_input_dict)
+    @mock.patch.object(compute_api.API, 'get')
+    @mock.patch.object(compute_api.API, 'force_delete',
+                side_effect=exception.InstanceIsLocked(
+                    instance_uuid='fake_uuid'))
+    def test_force_delete_instance_locked(self, mock_force_delete, mock_get):
+        req = fakes.HTTPRequestV3.blank('/servers/fake_uuid/action')
+        ex = self.assertRaises(webob.exc.HTTPConflict,
+                            self.extension._force_delete,
+                            req, 'fake_uuid', '')
+        self.assertIn('Instance fake_uuid is locked', ex.explanation)
 
     def test_restore(self):
         self.mox.StubOutWithMock(compute_api.API, 'get')

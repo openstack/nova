@@ -698,6 +698,8 @@ class _ComputeAPIUnitTestMixIn(object):
         for k, v in updates.items():
             self.assertEqual(inst[k], v)
 
+        self.mox.UnsetStubs()
+
     def test_delete(self):
         self._test_delete('delete')
 
@@ -750,7 +752,8 @@ class _ComputeAPIUnitTestMixIn(object):
         self._test_delete('soft_delete')
 
     def test_delete_forced(self):
-        self._test_delete('force_delete', vm_state=vm_states.SOFT_DELETED)
+        for vm_state in self._get_vm_states():
+            self._test_delete('force_delete', vm_state=vm_state)
 
     def test_delete_fast_if_host_not_set(self):
         inst = self._create_instance_obj()

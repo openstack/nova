@@ -60,9 +60,8 @@ class DeferredDeleteController(wsgi.Controller):
                                        want_objects=True)
         try:
             self.compute_api.force_delete(context, instance)
-        except exception.InstanceInvalidState as state_error:
-            common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'forceDelete')
+        except exception.InstanceIsLocked as e:
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
         return webob.Response(status_int=202)
 
 
