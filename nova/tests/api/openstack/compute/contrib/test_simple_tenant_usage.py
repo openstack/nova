@@ -271,6 +271,25 @@ class SimpleTenantUsageTest(test.TestCase):
                                init_only=('os-simple-tenant-usage',)))
         self.assertEqual(res.status_int, 400)
 
+    def _test_get_tenants_usage_with_one_date(self, date_url_param):
+        req = webob.Request.blank(
+                  '/v2/faketenant_0/os-simple-tenant-usage/'
+                  'faketenant_0?%s' % date_url_param)
+        req.method = "GET"
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app(
+                               fake_auth_context=self.user_context,
+                               init_only=('os-simple-tenant-usage',)))
+        self.assertEqual(200, res.status_int)
+
+    def test_get_tenants_usage_with_no_start_date(self):
+        self._test_get_tenants_usage_with_one_date(
+            'end=%s' % (NOW + datetime.timedelta(5)).isoformat())
+
+    def test_get_tenants_usage_with_no_end_date(self):
+        self._test_get_tenants_usage_with_one_date(
+            'start=%s' % (NOW - datetime.timedelta(5)).isoformat())
+
 
 class SimpleTenantUsageSerializerTest(test.TestCase):
     def _verify_server_usage(self, raw_usage, tree):
