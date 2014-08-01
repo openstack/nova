@@ -89,9 +89,9 @@ class ReportSection(object):
            :func:`BasicReport.add_section`
 
     :param view: the top-level view for this section
-    :param generator: the generator for this section
-                      (any callable object which takes
-                       no parameters and returns a data model)
+    :param generator: the generator for this section which could be
+                      any callable object which takes
+                      no parameters and returns a data model
     """
 
     def __init__(self, view, generator):

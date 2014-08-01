@@ -319,10 +319,15 @@ def info_from_instance(context, instance_ref, network_info,
     """Get detailed instance information for an instance which is common to all
     notifications.
 
-    :param network_info: network_info provided if not None
-    :param system_metadata: system_metadata DB entries for the instance,
-    if not None.  *NOTE*: Currently unused here in trunk, but needed for
-    potential custom modifications.
+    :param:network_info: network_info provided if not None
+    :param:system_metadata: system_metadata DB entries for the instance,
+    if not None
+
+    .. note::
+
+        Currently unused here in trunk, but needed for potential custom
+        modifications.
+
     """
 
     def null_safe_str(s):

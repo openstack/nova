@@ -113,16 +113,15 @@ def set_tcp_keepalive(sock, tcp_keepalive=True,
 
     This function configures tcp keepalive parameters if users wish to do
     so.
-    :param tcp_keepalive: Boolean, turn on or off tcp_keepalive. If users are
-      not sure, this should be True, and default values will be used.
 
-    :param tcp_keepidle: time to wait before starting to send keepalive probes
+    :param:tcp_keepalive: Boolean, turn on or off tcp_keepalive. If users are
+    not sure, this should be True, and default values will be used
+    :param:tcp_keepidle: time to wait before starting to send keepalive probes
+    :param:tcp_keepalive_interval: time between successive probes, once the
+    initial wait time is over
+    :param:tcp_keepalive_count: number of probes to send before the connection
+    is killed
 
-    :param tcp_keepalive_interval: time between successive probes, once the
-      initial wait time is over
-
-    :param tcp_keepalive_count: number of probes to send before the connection
-      is killed
     """
 
     # NOTE(praneshp): Despite keepalive being a tcp concept, the level is

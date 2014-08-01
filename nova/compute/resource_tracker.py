@@ -145,10 +145,10 @@ class ResourceTracker(object):
         :param instance: instance object to reserve resources for
         :param instance_type: new instance_type being resized to
         :param limits: Dict of oversubscription limits for memory, disk,
-                       and CPUs.
+        and CPUs
         :returns: A Claim ticket representing the reserved resources.  This
-                  should be turned into finalize  a resource claim or free
-                  resources after the compute operation is finished.
+        should be turned into finalize  a resource claim or free
+        resources after the compute operation is finished.
         """
         if self.disabled:
             # compute_driver doesn't support resource tracking, just

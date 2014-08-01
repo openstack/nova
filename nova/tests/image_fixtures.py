@@ -26,16 +26,17 @@ def get_image_fixtures():
     start at 123 and go to 131, with the following brief summary of image
     attributes:
 
-        ID          Type            Status          Notes
-        -----------------------------------------------------------------
-        123         Public image    active
-        124         Snapshot        queued
-        125         Snapshot        saving
-        126         Snapshot        active
-        127         Snapshot        killed
-        128         Snapshot        deleted
-        129         Snapshot        pending_delete
-        130         Public image    active          Has no name
+    |      ID          Type            Status          Notes
+    |      ----------------------------------------------------------
+    |      123         Public image    active
+    |      124         Snapshot        queued
+    |      125         Snapshot        saving
+    |      126         Snapshot        active
+    |      127         Snapshot        killed
+    |      128         Snapshot        deleted
+    |      129         Snapshot        pending_delete
+    |      130         Public image    active          Has no name
+
     """
 
     image_id = 123

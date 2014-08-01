@@ -93,10 +93,8 @@ def create_shadow_table(migrate_engine, table_name=None, table=None,
     :param table_name: Autoload table with this name and create shadow table
     :param table: Autoloaded table, so just create corresponding shadow table.
     :param col_name_col_instance:   contains pair column_name=column_instance.
-                            column_instance is instance of Column. These params
-                            are required only for columns that have unsupported
-                            types by sqlite. For example BigInteger.
-
+    column_instance is instance of Column. These params are required only for
+    columns that have unsupported types by sqlite. For example BigInteger.
     :returns: The created shadow_table object.
     """
     meta = MetaData(bind=migrate_engine)

@@ -339,9 +339,9 @@ class NovaObject(object):
 
         :param:primitive: The result of self.obj_to_primitive()
         :param:target_version: The version string requested by the recipient
-                               of the object.
-        :param:raises: nova.exception.UnsupportedObjectError if conversion
-                       is not possible for some reason.
+        of the object
+        :raises: nova.exception.UnsupportedObjectError if conversion
+        is not possible for some reason
         """
         pass
 

@@ -1077,9 +1077,10 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
 
 class NoInstanceTypesInSysMetadata(ResizeClaimTestCase):
     """Make sure we handle the case where the following are true:
-    1) Compute node C gets upgraded to code that looks for instance types in
+
+    #) Compute node C gets upgraded to code that looks for instance types in
        system metadata. AND
-    2) C already has instances in the process of migrating that do not have
+    #) C already has instances in the process of migrating that do not have
        stashed instance types.
 
     bug 1164110

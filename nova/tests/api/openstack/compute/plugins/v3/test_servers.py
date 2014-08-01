@@ -3024,15 +3024,15 @@ class ServersAllExtensionsTestCase(test.TestCase):
     an exception because of a malformed request before the core API
     gets a chance to validate the request and return a 422 response.
 
-    For example, AccessIPsController extends servers.Controller:
+    For example, AccessIPsController extends servers.Controller::
 
-        @wsgi.extends
-        def create(self, req, resp_obj, body):
-            context = req.environ['nova.context']
-            if authorize(context) and 'server' in resp_obj.obj:
-                resp_obj.attach(xml=AccessIPTemplate())
-                server = resp_obj.obj['server']
-                self._extend_server(req, server)
+        |   @wsgi.extends
+        |   def create(self, req, resp_obj, body):
+        |       context = req.environ['nova.context']
+        |       if authorize(context) and 'server' in resp_obj.obj:
+        |           resp_obj.attach(xml=AccessIPTemplate())
+        |           server = resp_obj.obj['server']
+        |           self._extend_server(req, server)
 
     we want to ensure that the extension isn't barfing on an invalid
     body.
