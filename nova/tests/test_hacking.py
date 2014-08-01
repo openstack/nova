@@ -217,3 +217,24 @@ class HackingTestCase(test.NoDBTestCase):
         self.assertEqual(len(list(checks.check_explicit_underscore_import(
             "msg = _('My message')",
             "cinder/tests/other_files3.py"))), 0)
+
+    def test_use_jsonutils(self):
+        def __get_msg(fun):
+            msg = ("N323: jsonutils.%(fun)s must be used instead of "
+                   "json.%(fun)s" % {'fun': fun})
+            return (0, msg)
+
+        for method in ('dump', 'dumps', 'load', 'loads'):
+            self.assertEqual(
+                __get_msg(method),
+                checks.use_jsonutils("json.%s" % method,
+                                     "./nova/virt/xenapi/driver.py"))
+            self.assertIsNone(
+                checks.use_jsonutils("json.%s" % method,
+                                     "./plugins/xenserver/script.py"))
+            self.assertIsNone(
+                checks.use_jsonutils("jsonx.%s" % method,
+                                     "./nova/virt/xenapi/driver.py"))
+        self.assertIsNone(
+            checks.use_jsonutils("json.dumb",
+                                 "./nova/virt/xenapi/driver.py"))
