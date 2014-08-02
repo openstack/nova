@@ -65,6 +65,10 @@ On Ubuntu::
 On Ubuntu Precise (12.04) you may also need to add the following packages::
 
   sudo apt-get build-dep python-mysqldb
+  # enable cloud-archive to get the latest libvirt
+  sudo apt-get install python-software-properties
+  sudo add-apt-repository cloud-archive:icehouse
+  sudo apt-get install libvirt-dev
 
 On Fedora-based distributions (e.g., Fedora/RHEL/CentOS/Scientific Linux)::
 
