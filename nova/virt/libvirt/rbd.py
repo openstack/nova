@@ -30,6 +30,7 @@ from nova.i18n import _LW
 from nova.openstack.common import excutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import units
 from nova import utils
 
 LOG = logging.getLogger(__name__)
@@ -267,3 +268,10 @@ class RBDDriver(object):
                     LOG.warn(_LW('rbd remove %(volume)s in pool %(pool)s '
                                  'failed'),
                              {'volume': volume, 'pool': self.pool})
+
+    def get_pool_info(self):
+        with RADOSClient(self) as client:
+            stats = client.cluster.get_cluster_stats()
+            return {'total': stats['kb'] * units.Ki,
+                    'free': stats['kb_avail'] * units.Ki,
+                    'used': stats['kb_used'] * units.Ki}
