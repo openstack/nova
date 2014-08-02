@@ -48,7 +48,7 @@ def log_db_contents(msg=None):
               {'text': msg or "", 'content': pprint.pformat(_db_content)})
 
 
-def reset(vc=False):
+def reset():
     """Resets the db contents."""
     cleanup()
     create_network()
@@ -56,16 +56,13 @@ def reset(vc=False):
     create_host_storage_system()
     ds_ref1 = create_datastore('ds1', 1024, 500)
     create_host(ds_ref=ds_ref1)
-    if vc:
-        ds_ref2 = create_datastore('ds2', 1024, 500)
-        create_host(ds_ref=ds_ref2)
+    ds_ref2 = create_datastore('ds2', 1024, 500)
+    create_host(ds_ref=ds_ref2)
     create_datacenter('dc1', ds_ref1)
-    if vc:
-        create_datacenter('dc2', ds_ref2)
+    create_datacenter('dc2', ds_ref2)
     create_res_pool()
-    if vc:
-        create_cluster('test_cluster', ds_ref1)
-        create_cluster('test_cluster2', ds_ref2)
+    create_cluster('test_cluster', ds_ref1)
+    create_cluster('test_cluster2', ds_ref2)
 
 
 def cleanup():
