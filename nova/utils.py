@@ -574,7 +574,7 @@ def monkey_patch():
     using CONF.monkey_patch_modules.
     The format is "Module path:Decorator function".
     Example:
-      'nova.api.ec2.cloud:nova.notifications.notify_decorator'
+    'nova.api.ec2.cloud:nova.notifications.notify_decorator'
 
     Parameters of the decorator is as follows.
     (See nova.notifications.notify_decorator)

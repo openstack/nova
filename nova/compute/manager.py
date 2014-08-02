@@ -529,13 +529,14 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         waiting for the rest of the events, False to stop processing,
         or raise an exception which will bubble up to the waiter.
 
-        :param:instance: The instance for which an event is expected
-        :param:event_names: A list of event names. Each element can be a
+        :param instance: The instance for which an event is expected
+        :param event_names: A list of event names. Each element can be a
                             string event name or tuple of strings to
                             indicate (name, tag).
-        :param:deadline: Maximum number of seconds we should wait for all
+        :param deadline: Maximum number of seconds we should wait for all
                          of the specified events to arrive.
-        :param:error_callback: A function to be called if an event arrives
+        :param error_callback: A function to be called if an event arrives
+
         """
 
         if error_callback is None:
@@ -4631,8 +4632,9 @@ class ComputeManager(manager.Manager):
         :param context: security context
         :param instance: dict of instance data
         :param block_migration: if true, prepare for block migration
-        :param migrate_data : if not None, it is a dict which holds data
-        required for live migration without shared storage.
+        :param migrate_data: if not None, it is a dict which holds data
+                             required for live migration without shared
+                             storage.
 
         """
         block_device_info = self._get_instance_block_device_info(
