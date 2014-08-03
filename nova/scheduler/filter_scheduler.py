@@ -25,7 +25,7 @@ from oslo.config import cfg
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LW
 from nova import objects
 from nova.openstack.common import log as logging
 from nova import rpc
@@ -175,7 +175,7 @@ class FilterScheduler(driver.Scheduler):
             updated_instance = driver.instance_update_db(context,
                                                          instance_uuid)
         except exception.InstanceNotFound:
-            LOG.warning(_("Instance disappeared during scheduling"),
+            LOG.warning(_LW("Instance disappeared during scheduling"),
                         context=context, instance_uuid=instance_uuid)
 
         else:

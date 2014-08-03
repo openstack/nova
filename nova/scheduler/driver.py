@@ -59,7 +59,7 @@ def handle_schedule_error(context, ex, instance_uuid, request_spec):
     else:
         LOG.exception(_("Exception during scheduler.run_instance"))
     state = vm_states.ERROR.upper()
-    LOG.warning(_('Setting instance to %s state.'), state,
+    LOG.warning(_LW('Setting instance to %s state.'), state,
                 instance_uuid=instance_uuid)
 
     (old_ref, new_ref) = db.instance_update_and_get_original(context,
