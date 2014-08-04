@@ -239,8 +239,7 @@ class VMwareVMOps(object):
             return (vmdk_file_size_in_kb, os_type, adapter_type, disk_type,
                 vif_model, image_linked_clone)
 
-        root_gb = instance.root_gb
-        root_gb_in_kb = root_gb * units.Mi
+        root_gb_in_kb = instance.root_gb * units.Mi
 
         (vmdk_file_size_in_kb, os_type, adapter_type, disk_type, vif_model,
             image_linked_clone) = _get_image_properties(root_gb_in_kb)
@@ -459,7 +458,7 @@ class VMwareVMOps(object):
                                                   root_vmdk_path, dc_info.ref)
                 else:
                     upload_folder = '%s/%s' % (self._base_folder, upload_name)
-                    if root_gb:
+                    if instance.root_gb:
                         root_vmdk_name = "%s.%s.vmdk" % (upload_name,
                                                          instance.root_gb)
                     else:
