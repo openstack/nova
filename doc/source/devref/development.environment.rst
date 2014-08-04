@@ -40,7 +40,7 @@ environments with venv are also available with the source code.
 The easiest way to build a fully functional development environment is
 with DevStack. Create a machine (such as a VM or Vagrant box) running a
 distribution supported by DevStack and install DevStack there. For
-example, there is a Vagrant script for DevStack at https://github.com/jogo/DevstackUp.
+example, there is a Vagrant script for DevStack at http://git.openstack.org/cgit/openstack-dev/devstack-vagrant/.
 
  .. note::
 
