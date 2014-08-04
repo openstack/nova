@@ -27,7 +27,7 @@ from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import db
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LW
 from nova import notifications
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
@@ -52,7 +52,11 @@ def handle_schedule_error(context, ex, instance_uuid, request_spec):
     send notifications.
     """
 
-    if not isinstance(ex, exception.NoValidHost):
+    if isinstance(ex, exception.NoValidHost):
+        LOG.warning(_LW("NoValidHost exception with message: \'%s\'"),
+                    ex.format_message().strip(),
+                    instance_uuid=instance_uuid)
+    else:
         LOG.exception(_("Exception during scheduler.run_instance"))
     state = vm_states.ERROR.upper()
     LOG.warning(_('Setting instance to %s state.'), state,
