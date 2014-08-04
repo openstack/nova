@@ -23,6 +23,7 @@ from oslo.config import cfg
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
+from nova.objects import block_device as objects_block_dev
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests import fake_block_device
@@ -90,7 +91,13 @@ class ComputeRpcAPITestCase(test.TestCase):
             rpc_mock, prepare_mock, csv_mock
         ):
             prepare_mock.return_value = rpcapi.client
-            rpc_mock.return_value = 'foo' if rpc_method == 'call' else None
+            if 'return_bdm_object' in kwargs:
+                del kwargs['return_bdm_object']
+                rpc_mock.return_value = objects_block_dev.BlockDeviceMapping()
+            elif rpc_method == 'call':
+                rpc_mock.return_value = 'foo'
+            else:
+                rpc_mock.return_value = None
             csv_mock.side_effect = (
                 lambda v: orig_prepare(version=v).can_send_version())
 
@@ -291,7 +298,7 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('reserve_block_device_name', 'call',
                 instance=self.fake_instance_obj, device='device',
                 volume_id='id', disk_bus='ide', device_type='cdrom',
-                version='3.16')
+                version='3.35', return_bdm_object=True)
 
     def refresh_provider_fw_rules(self):
         self._test_compute_api('refresh_provider_fw_rules', 'cast',

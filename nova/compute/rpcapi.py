@@ -21,6 +21,7 @@ from oslo import messaging
 
 from nova import exception
 from nova.i18n import _
+from nova import objects
 from nova.objects import base as objects_base
 from nova.openstack.common import jsonutils
 from nova import rpc
@@ -268,6 +269,8 @@ class ComputeAPI(object):
                  rollback_live_migration_at_destination()
         * 3.33 - Make build_and_run_instance() take a NetworkRequestList object
         * 3.34 - Add get_serial_console method
+        * 3.35 - Make reserve_block_device_name return a BDM object
+
     '''
 
     VERSION_ALIASES = {
@@ -732,13 +735,22 @@ class ComputeAPI(object):
 
     def reserve_block_device_name(self, ctxt, instance, device, volume_id,
                                   disk_bus=None, device_type=None):
-        version = '3.16'
         kw = {'instance': instance, 'device': device,
               'volume_id': volume_id, 'disk_bus': disk_bus,
-              'device_type': device_type}
+              'device_type': device_type, 'return_bdm_object': True}
+        if self.client.can_send_version('3.35'):
+            version = '3.35'
+        else:
+            del kw['return_bdm_object']
+            version = '3.16'
+
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
-        return cctxt.call(ctxt, 'reserve_block_device_name', **kw)
+        volume_bdm = cctxt.call(ctxt, 'reserve_block_device_name', **kw)
+        if not isinstance(volume_bdm, objects.BlockDeviceMapping):
+            volume_bdm = objects.BlockDeviceMapping.get_by_volume_id(
+                ctxt, volume_id)
+        return volume_bdm
 
     def backup_instance(self, ctxt, instance, image_id, backup_type,
                         rotation):

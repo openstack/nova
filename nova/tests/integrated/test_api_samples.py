@@ -4092,13 +4092,15 @@ class VolumeAttachmentsSampleJsonTest(VolumeAttachmentsSampleBase):
     extension_name = ("nova.api.openstack.compute.contrib.volumes.Volumes")
 
     def test_attach_volume_to_server(self):
-        device_name = '/dev/vdd'
         self.stubs.Set(cinder.API, 'get', fakes.stub_volume_get)
         self.stubs.Set(cinder.API, 'check_attach', lambda *a, **k: None)
         self.stubs.Set(cinder.API, 'reserve_volume', lambda *a, **k: None)
+        device_name = '/dev/vdd'
+        bdm = objects.BlockDeviceMapping()
+        bdm['device_name'] = device_name
         self.stubs.Set(compute_manager.ComputeManager,
                        "reserve_block_device_name",
-                       lambda *a, **k: device_name)
+                       lambda *a, **k: bdm)
         self.stubs.Set(compute_manager.ComputeManager,
                        'attach_volume',
                        lambda *a, **k: None)
