@@ -479,7 +479,7 @@ class NetworkManager(manager.Manager):
         admin_context = context.elevated()
         LOG.debug("Allocate network for instance", instance_uuid=instance_uuid,
                   context=context)
-        networks = self._get_networks_for_instance(admin_context,
+        networks = self._get_networks_for_instance(context,
                                         instance_uuid, project_id,
                                         requested_networks=requested_networks)
         networks_list = [self._get_network_dict(network)
@@ -488,8 +488,8 @@ class NetworkManager(manager.Manager):
                   networks_list, context=context, instance_uuid=instance_uuid)
 
         try:
-            self._allocate_mac_addresses(context, instance_uuid, networks,
-                                         macs)
+            self._allocate_mac_addresses(admin_context, instance_uuid,
+                                         networks, macs)
         except Exception:
             with excutils.save_and_reraise_exception():
                 # If we fail to allocate any one mac address, clean up all
@@ -505,8 +505,8 @@ class NetworkManager(manager.Manager):
             network_ids = [network['id'] for network in networks]
             self.network_rpcapi.update_dns(context, network_ids)
 
-        return self.get_instance_nw_info(context, instance_uuid, rxtx_factor,
-                                         host)
+        return self.get_instance_nw_info(admin_context, instance_uuid,
+                                         rxtx_factor, host)
 
     def deallocate_for_instance(self, context, **kwargs):
         """Handles deallocating various network resources for an instance.
@@ -1936,8 +1936,9 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
             network_uuids = [uuid for (uuid, fixed_ip) in requested_networks]
             networks = self._get_networks_by_uuids(context, network_uuids)
         else:
-            networks = objects.NetworkList.get_by_project(context,
-                                                          project_id)
+            # NOTE(vish): Allocates network on demand so requires admin.
+            networks = objects.NetworkList.get_by_project(
+                    context.elevated(), project_id)
         return networks
 
     def create_networks(self, context, **kwargs):

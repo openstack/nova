@@ -1291,6 +1291,7 @@ class ComputeManager(manager.Manager):
     def _build_instance(self, context, request_spec, filter_properties,
             requested_networks, injected_files, admin_password, is_first_time,
             node, instance, image_meta, legacy_bdm_in_spec):
+        original_context = context
         context = context.elevated()
 
         # If neutron security groups pass requested security
@@ -1324,8 +1325,8 @@ class ComputeManager(manager.Manager):
                 macs = self.driver.macs_for_instance(instance)
                 dhcp_options = self.driver.dhcp_options_for_instance(instance)
 
-                network_info = self._allocate_network(context, instance,
-                        requested_networks, macs, security_groups,
+                network_info = self._allocate_network(original_context,
+                        instance, requested_networks, macs, security_groups,
                         dhcp_options)
 
                 self._instance_update(

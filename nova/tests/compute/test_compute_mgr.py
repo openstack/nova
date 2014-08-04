@@ -98,6 +98,53 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                    dhcp_options)
         self.assertEqual(final_result, res)
 
+    def test_allocate_network_maintains_context(self):
+        # override tracker with a version that doesn't need the database:
+        class FakeResourceTracker(object):
+            def instance_claim(self, context, instance, limits):
+                return mox.MockAnything()
+
+        self.mox.StubOutWithMock(self.compute, '_get_resource_tracker')
+        self.mox.StubOutWithMock(self.compute, '_allocate_network')
+        self.mox.StubOutWithMock(self.compute, '_instance_update')
+        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
+                                 'get_by_instance_uuid')
+
+        instance = fake_instance.fake_db_instance(system_metadata={})
+
+        objects.BlockDeviceMappingList.get_by_instance_uuid(
+                mox.IgnoreArg(), instance['uuid']).AndReturn([])
+
+        node = 'fake_node'
+        self.compute._get_resource_tracker(node).AndReturn(
+            FakeResourceTracker())
+
+        self.admin_context = False
+
+        def fake_allocate(context, *args, **kwargs):
+            if context.is_admin:
+                self.admin_context = True
+
+        # NOTE(vish): The nice mox parameter matchers here don't work well
+        #             because they raise an exception that gets wrapped by
+        #             the retry exception handling, so use a side effect
+        #             to keep track of whether allocate was called with admin
+        #             context.
+        self.compute._allocate_network(mox.IgnoreArg(), instance,
+                mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg()).WithSideEffects(fake_allocate)
+        self.compute._instance_update(self.context, instance['uuid'],
+                system_metadata={'network_allocated': 'True'})
+
+        self.mox.ReplayAll()
+
+        self.compute._build_instance(self.context, {}, {},
+                                     None, None, None, True,
+                                     node, instance,
+                                     {}, False)
+        self.assertFalse(self.admin_context,
+                         "_allocate_network called with admin context")
+
     def test_allocate_network_fails(self):
         self.flags(network_allocate_retries=0)
 

@@ -2393,6 +2393,8 @@ class TestFloatingIPManager(floating_ips.FloatingIP,
 class AllocateTestCase(test.TestCase):
     def setUp(self):
         super(AllocateTestCase, self).setUp()
+        dns = 'nova.network.noop_dns_driver.NoopDNSDriver'
+        self.flags(instance_dns_manager=dns)
         self.useFixture(test.SampleNetworks())
         self.conductor = self.start_service(
             'conductor', manager=CONF.conductor.manager)
@@ -2404,6 +2406,8 @@ class AllocateTestCase(test.TestCase):
         self.context = context.RequestContext(self.user_id,
                                               self.project_id,
                                               is_admin=True)
+        self.user_context = context.RequestContext('testuser',
+                                                   'testproject')
 
     def test_allocate_for_instance(self):
         address = "10.10.10.10"
@@ -2422,8 +2426,8 @@ class AllocateTestCase(test.TestCase):
         for network in networks:
             db.network_update(self.context, network['id'],
                               {'host': self.network.host})
-        project_id = self.context.project_id
-        nw_info = self.network.allocate_for_instance(self.context,
+        project_id = self.user_context.project_id
+        nw_info = self.network.allocate_for_instance(self.user_context,
             instance_id=inst['id'], instance_uuid=inst['uuid'],
             host=inst['host'], vpn=None, rxtx_factor=3,
             project_id=project_id, macs=None)
@@ -2432,6 +2436,32 @@ class AllocateTestCase(test.TestCase):
         self.assertTrue(utils.is_valid_ipv4(fixed_ip))
         self.network.deallocate_for_instance(self.context,
                 instance=inst)
+
+    def test_allocate_for_instance_illegal_network(self):
+        networks = db.network_get_all(self.context)
+        requested_networks = []
+        for network in networks:
+            # set all networks to other projects
+            db.network_update(self.context, network['id'],
+                              {'host': self.network.host,
+                               'project_id': 'otherid'})
+            requested_networks.append((network['uuid'], None))
+        # set the first network to our project
+        db.network_update(self.context, networks[0]['id'],
+                          {'project_id': self.user_context.project_id})
+
+        inst = objects.Instance()
+        inst.host = self.compute.host
+        inst.display_name = HOST
+        inst.instance_type_id = 1
+        inst.uuid = FAKEUUID
+        inst.create(self.context)
+        self.assertRaises(exception.NetworkNotFoundForProject,
+            self.network.allocate_for_instance, self.user_context,
+            instance_id=inst['id'], instance_uuid=inst['uuid'],
+            host=inst['host'], vpn=None, rxtx_factor=3,
+            project_id=self.context.project_id, macs=None,
+            requested_networks=requested_networks)
 
     def test_allocate_for_instance_with_mac(self):
         available_macs = set(['ca:fe:de:ad:be:ef'])
@@ -2443,7 +2473,7 @@ class AllocateTestCase(test.TestCase):
             db.network_update(self.context, network['id'],
                               {'host': self.network.host})
         project_id = self.context.project_id
-        nw_info = self.network.allocate_for_instance(self.context,
+        nw_info = self.network.allocate_for_instance(self.user_context,
             instance_id=inst['id'], instance_uuid=inst['uuid'],
             host=inst['host'], vpn=None, rxtx_factor=3,
             project_id=project_id, macs=available_macs)
@@ -2466,7 +2496,8 @@ class AllocateTestCase(test.TestCase):
                               {'host': self.network.host})
         project_id = self.context.project_id
         self.assertRaises(exception.VirtualInterfaceCreateException,
-                          self.network.allocate_for_instance, self.context,
+                          self.network.allocate_for_instance,
+                          self.user_context,
                           instance_id=inst['id'], instance_uuid=inst['uuid'],
                           host=inst['host'], vpn=None, rxtx_factor=3,
                           project_id=project_id, macs=available_macs)

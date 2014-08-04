@@ -112,6 +112,7 @@ class FloatingIP(object):
         nw_info = super(FloatingIP, self).allocate_for_instance(context,
                                                                 **kwargs)
         if CONF.auto_assign_floating_ip:
+            context = context.elevated()
             # allocate a floating ip
             floating_address = self.allocate_floating_ip(context, project_id,
                 True)
