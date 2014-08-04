@@ -23,6 +23,14 @@ def stub_out_utils_spawn_n(stubs):
     This aids testing async processes by blocking until they're done.
     """
     def no_spawn(func, *args, **kwargs):
-        return func(*args, **kwargs)
+        try:
+            return func(*args, **kwargs)
+        except Exception:
+            # NOTE(danms): This is supposed to simulate spawning
+            # of a thread, which would run separate from the parent,
+            # and die silently on error. If we don't catch and discard
+            # any exceptions here, we're not honoring the usual
+            # behavior.
+            pass
 
     stubs.Set(utils, 'spawn_n', no_spawn)
