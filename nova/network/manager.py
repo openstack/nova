@@ -856,8 +856,8 @@ class NetworkManager(manager.Manager):
                            user_id=quota_user)
             cleanup.append(functools.partial(quotas.rollback, context))
         except exception.OverQuota:
-            LOG.warn(_("Quota exceeded for %s, tried to allocate "
-                       "fixed IP"), context.project_id)
+            LOG.debug("Quota exceeded for %s, tried to allocate "
+                      "fixed IP", context.project_id)
             raise exception.FixedIpLimitExceeded()
 
         try:
