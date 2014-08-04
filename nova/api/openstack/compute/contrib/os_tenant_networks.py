@@ -66,7 +66,7 @@ authorize = extensions.extension_authorizer('compute', 'os-tenant-networks')
 
 def network_dict(network):
     return {"id": network.get("uuid") or network.get("id"),
-                        "cidr": network.get("cidr"),
+                        "cidr": str(network.get("cidr")),
                         "label": network.get("label")}
 
 
@@ -95,7 +95,7 @@ class NetworkController(object):
     def index(self, req):
         context = req.environ['nova.context']
         authorize(context)
-        networks = self.network_api.get_all(context)
+        networks = list(self.network_api.get_all(context))
         if not self._default_networks:
             self._refresh_default_networks()
         networks.extend(self._default_networks)
