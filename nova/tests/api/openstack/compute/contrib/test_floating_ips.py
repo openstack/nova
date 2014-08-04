@@ -344,6 +344,15 @@ class FloatingIpTest(test.TestCase):
         self.assertIn('IP allocation over quota in pool non_existent_pool.',
                       ex.explanation)
 
+    @mock.patch('nova.network.api.API.allocate_floating_ip',
+                side_effect=exception.FloatingIpPoolNotFound())
+    def test_floating_ip_create_with_unknown_pool(self, allocate_mock):
+        req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips')
+        ex = self.assertRaises(webob.exc.HTTPBadRequest,
+            self.controller.create, req, {'pool': 'non_existent_pool'})
+
+        self.assertIn('Floating ip pool not found.', ex.explanation)
+
     def test_floating_ip_allocate(self):
         def fake1(*args, **kwargs):
             pass
