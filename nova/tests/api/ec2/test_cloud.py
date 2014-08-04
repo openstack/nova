@@ -2228,14 +2228,26 @@ class CloudTestCase(test.TestCase):
                           self.cloud.start_instances,
                           self.context, [instance_id])
 
+        expected = {'instancesSet': [
+                        {'instanceId': 'i-00000001',
+                         'previousState': {'code': 16,
+                                           'name': 'running'},
+                         'currentState': {'code': 80,
+                                           'name': 'stopped'}}]}
         result = self.cloud.stop_instances(self.context, [instance_id])
-        self.assertTrue(result)
+        self.assertEqual(result, expected)
 
         result = self.cloud.start_instances(self.context, [instance_id])
         self.assertTrue(result)
 
+        expected = {'instancesSet': [
+                        {'instanceId': 'i-00000001',
+                         'previousState': {'code': 16,
+                                           'name': 'running'},
+                         'currentState': {'code': 80,
+                                           'name': 'stopped'}}]}
         result = self.cloud.stop_instances(self.context, [instance_id])
-        self.assertTrue(result)
+        self.assertEqual(result, expected)
 
         expected = {'instancesSet': [
                         {'instanceId': 'i-00000001',
@@ -2290,8 +2302,14 @@ class CloudTestCase(test.TestCase):
                   'max_count': 1, }
         instance_id = self._run_instance(**kwargs)
 
+        expected = {'instancesSet': [
+                        {'instanceId': 'i-00000001',
+                         'previousState': {'code': 16,
+                                           'name': 'running'},
+                         'currentState': {'code': 80,
+                                           'name': 'stopped'}}]}
         result = self.cloud.stop_instances(self.context, [instance_id])
-        self.assertTrue(result)
+        self.assertEqual(result, expected)
 
         expected = {'instancesSet': [
                         {'instanceId': 'i-00000001',
@@ -2391,8 +2409,14 @@ class CloudTestCase(test.TestCase):
         inst1 = self._run_instance(**kwargs)
         inst2 = self._run_instance(**kwargs)
 
+        expected = {'instancesSet': [
+                        {'instanceId': 'i-00000001',
+                         'previousState': {'code': 16,
+                                           'name': 'running'},
+                         'currentState': {'code': 80,
+                                           'name': 'stopped'}}]}
         result = self.cloud.stop_instances(self.context, [inst1])
-        self.assertTrue(result)
+        self.assertEqual(result, expected)
 
         expected = {'instancesSet': [
                         {'instanceId': 'i-00000001',

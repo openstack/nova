@@ -1049,6 +1049,17 @@ class CloudController(object):
             instances_set.append(i)
         return {'instancesSet': instances_set}
 
+    def _format_stop_instances(self, context, instance_ids, previous_states):
+        instances_set = []
+        for (ec2_id, previous_state) in zip(instance_ids, previous_states):
+            i = {}
+            i['instanceId'] = ec2_id
+            i['previousState'] = _state_description(previous_state['vm_state'],
+                                        previous_state['shutdown_terminate'])
+            i['currentState'] = _state_description(vm_states.STOPPED, True)
+            instances_set.append(i)
+        return {'instancesSet': instances_set}
+
     def _format_instance_bdm(self, context, instance_uuid, root_device_name,
                              result):
         """Format InstanceBlockDeviceMappingResponseItemType."""
@@ -1436,7 +1447,8 @@ class CloudController(object):
         for instance in instances:
             extensions.check_compute_policy(context, 'stop', instance)
             self.compute_api.stop(context, instance)
-        return True
+        return self._format_stop_instances(context, instance_id,
+                                           instances)
 
     def start_instances(self, context, instance_id, **kwargs):
         """Start each instances in instance_id.
