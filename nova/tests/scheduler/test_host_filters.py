@@ -18,6 +18,7 @@ Tests For Scheduler Host Filters.
 import httplib
 
 from oslo.config import cfg
+import six
 import stubout
 
 from nova import context
@@ -821,6 +822,28 @@ class HostFiltersTestCase(test.NoDBTestCase):
         host = fakes.FakeHostState('host1', 'node1', host_state)
         assertion = self.assertTrue if passes else self.assertFalse
         assertion(filt_cls.host_passes(host, filter_properties))
+
+    def test_compute_filter_pass_cpu_info_as_text_type(self):
+        cpu_info = """ { "vendor": "Intel", "model": "core2duo",
+        "arch": "i686","features": ["lahf_lm", "rdtscp"], "topology":
+        {"cores": 1, "threads":1, "sockets": 1}} """
+
+        cpu_info = six.text_type(cpu_info)
+
+        self._do_test_compute_filter_extra_specs(
+                ecaps={'cpu_info': cpu_info},
+            especs={'capabilities:cpu_info:vendor': 'Intel'},
+            passes=True)
+
+    def test_compute_filter_fail_cpu_info_as_text_type_not_valid(self):
+        cpu_info = "cpu_info"
+
+        cpu_info = six.text_type(cpu_info)
+
+        self._do_test_compute_filter_extra_specs(
+                ecaps={'cpu_info': cpu_info},
+            especs={'capabilities:cpu_info:vendor': 'Intel'},
+            passes=False)
 
     def test_compute_filter_passes_extra_specs_simple(self):
         self._do_test_compute_filter_extra_specs(
