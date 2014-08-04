@@ -28,6 +28,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LE
 from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
@@ -163,7 +164,7 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
     try:
         return db.flavor_create(context.get_admin_context(), kwargs)
     except db_exc.DBError as e:
-        LOG.exception(_('DB error: %s') % e)
+        LOG.exception(_LE('DB error: %s'), e)
         raise exception.FlavorCreateFailed()
 
 
@@ -174,7 +175,7 @@ def destroy(name):
             raise ValueError()
         db.flavor_destroy(context.get_admin_context(), name)
     except (ValueError, exception.NotFound):
-        LOG.exception(_('Instance type %s not found for deletion') % name)
+        LOG.exception(_LE('Instance type %s not found for deletion'), name)
         raise exception.FlavorNotFoundByName(flavor_name=name)
 
 
