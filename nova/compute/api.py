@@ -44,6 +44,7 @@ from nova.db import base
 from nova import exception
 from nova import hooks
 from nova.i18n import _
+from nova.i18n import _LE
 from nova import image
 from nova import network
 from nova.network import model as network_model
@@ -558,8 +559,8 @@ class API(base.Base):
             new_name = (CONF.multi_instance_display_name_template %
                         params)
         except (KeyError, TypeError):
-            LOG.exception(_('Failed to set instance name using '
-                            'multi_instance_display_name_template.'))
+            LOG.exception(_LE('Failed to set instance name using '
+                              'multi_instance_display_name_template.'))
             new_name = instance['display_name']
         instance.display_name = new_name
         if not instance.get('hostname', None):
@@ -1434,8 +1435,8 @@ class API(base.Base):
                               "from shelved instance (%s)."),
                             exc.format_message(), instance=instance)
             except Exception as exc:
-                LOG.exception(_("Something wrong happened when trying to "
-                                "delete snapshot from shelved instance."),
+                LOG.exception(_LE("Something wrong happened when trying to "
+                                  "delete snapshot from shelved instance."),
                               instance=instance)
 
         original_task_state = instance.task_state
@@ -3758,8 +3759,8 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             quotas.reserve(context, project_id=quota_project,
                            user_id=quota_user, security_groups=-1)
         except Exception:
-            LOG.exception(_("Failed to update usages deallocating "
-                            "security group"))
+            LOG.exception(_LE("Failed to update usages deallocating "
+                              "security group"))
 
         LOG.audit(_("Delete security group %s"), security_group['name'],
                   context=context)
