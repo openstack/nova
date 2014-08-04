@@ -2345,6 +2345,30 @@ class TestNeutronv2WithMock(test.TestCase):
                               instance, net['id'], port_req_body)
             create_port_mock.assert_called_once_with(port_req_body)
 
+    @mock.patch.object(client.Client, 'create_port',
+                       side_effect=exceptions.MacAddressInUseClient())
+    def test_create_port_for_instance_mac_address_in_use(self,
+                                                         create_port_mock):
+        # Create fake data.
+        instance = fake_instance.fake_instance_obj(self.context)
+        net = {'id': 'my_netid1',
+               'name': 'my_netname1',
+               'subnets': ['mysubnid1'],
+               'tenant_id': instance['project_id']}
+        zone = 'compute:%s' % instance['availability_zone']
+        port_req_body = {'port': {'device_id': instance['uuid'],
+                                  'device_owner': zone,
+                                  'mac_address': 'XX:XX:XX:XX:XX:XX'}}
+        available_macs = set(['XX:XX:XX:XX:XX:XX'])
+        # Run the code.
+        self.assertRaises(exception.PortInUse,
+                          self.api._create_port,
+                          neutronv2.get_client(self.context),
+                          instance, net['id'], port_req_body,
+                          available_macs=available_macs)
+        # Assert the calls.
+        create_port_mock.assert_called_once_with(port_req_body)
+
 
 class TestNeutronv2ModuleMethods(test.TestCase):
 
