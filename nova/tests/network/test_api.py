@@ -404,6 +404,33 @@ class ApiTestCase(test.TestCase):
                                                        'fake-addr')
         self.assertIsInstance(fip, objects.FixedIP)
 
+    @mock.patch('nova.objects.FixedIP.get_by_id')
+    def test_get_fixed_ip(self, mock_get_by_id):
+        mock_get_by_id.return_value = mock.sentinel.fixed_ip
+        self.assertEqual(mock.sentinel.fixed_ip,
+                         self.network_api.get_fixed_ip(self.context,
+                                                       mock.sentinel.id))
+        mock_get_by_id.assert_called_once_with(self.context, mock.sentinel.id)
+
+    @mock.patch('nova.objects.FixedIP.get_by_floating_address')
+    def test_get_instance_by_floating_address(self, mock_get_by_floating):
+        mock_get_by_floating.return_value = objects.FixedIP(
+            instance_uuid = mock.sentinel.instance_uuid)
+        self.assertEqual(str(mock.sentinel.instance_uuid),
+                         self.network_api.get_instance_id_by_floating_address(
+                             self.context, mock.sentinel.floating))
+        mock_get_by_floating.assert_called_once_with(self.context,
+                                                     mock.sentinel.floating)
+
+    @mock.patch('nova.objects.FixedIP.get_by_floating_address')
+    def test_get_instance_by_floating_address_none(self, mock_get_by_floating):
+        mock_get_by_floating.return_value = None
+        self.assertEqual(None,
+                         self.network_api.get_instance_id_by_floating_address(
+                             self.context, mock.sentinel.floating))
+        mock_get_by_floating.assert_called_once_with(self.context,
+                                                     mock.sentinel.floating)
+
 
 @mock.patch('nova.network.api.API')
 @mock.patch('nova.db.instance_info_cache_update')
