@@ -15,10 +15,15 @@
 
 class GuestFS(object):
     SUPPORT_CLOSE_ON_EXIT = True
+    SUPPORT_RETURN_DICT = True
 
     def __init__(self, **kwargs):
         if not self.SUPPORT_CLOSE_ON_EXIT and 'close_on_exit' in kwargs:
             raise TypeError('close_on_exit')
+        if not self.SUPPORT_RETURN_DICT and 'python_return_dict' in kwargs:
+            raise TypeError('python_return_dict')
+
+        self._python_return_dict = kwargs.get('python_return_dict', False)
         self.kwargs = kwargs
         self.drives = []
         self.running = False
@@ -53,9 +58,14 @@ class GuestFS(object):
         return ["/dev/guestvgf/lv_root"]
 
     def inspect_get_mountpoints(self, dev):
-        return [["/home", "/dev/mapper/guestvgf-lv_home"],
-                ["/", "/dev/mapper/guestvgf-lv_root"],
-                ["/boot", "/dev/vda1"]]
+        mountpoints = [("/home", "/dev/mapper/guestvgf-lv_home"),
+                       ("/", "/dev/mapper/guestvgf-lv_root"),
+                       ("/boot", "/dev/vda1")]
+
+        if self.SUPPORT_RETURN_DICT and self._python_return_dict:
+            return dict(mountpoints)
+        else:
+            return mountpoints
 
     def mount_options(self, options, device, mntpoint):
         if mntpoint == "/":

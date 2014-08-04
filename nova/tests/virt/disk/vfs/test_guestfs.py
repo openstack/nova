@@ -236,3 +236,14 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         vfs.setup()
         self.assertNotIn('close_on_exit', vfs.handle.kwargs)
         vfs.teardown()
+
+    def test_python_return_dict(self):
+        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs.setup()
+        self.assertFalse(vfs.handle.kwargs['python_return_dict'])
+        vfs.teardown()
+        self.stubs.Set(fakeguestfs.GuestFS, 'SUPPORT_RETURN_DICT', False)
+        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs.setup()
+        self.assertNotIn('python_return_dict', vfs.handle.kwargs)
+        vfs.teardown()
