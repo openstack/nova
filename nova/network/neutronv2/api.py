@@ -417,8 +417,8 @@ class API(base_api.NetworkAPI):
                                 port_req_body['port']['binding:host_id'] = None
                             port_client.update_port(port_id, port_req_body)
                         except Exception:
-                            msg = _LE("Failed to update port %s")
-                            LOG.exception(msg, port_id)
+                            LOG.exception(_LE("Failed to update port %s"),
+                                          port_id)
 
                     self._delete_ports(neutron, instance, created_port_ids)
 
@@ -1236,8 +1236,8 @@ class API(base_api.NetworkAPI):
                 neutron.update_port(p['id'], port_req_body)
             except Exception:
                 with excutils.save_and_reraise_exception():
-                    msg = _LE("Unable to update host of port %s")
-                    LOG.exception(msg, p['id'])
+                    LOG.exception(_LE("Unable to update host of port %s"),
+                                  p['id'])
 
     def add_network_to_project(self, context, project_id, network_uuid=None):
         """Force add a network to the project."""
