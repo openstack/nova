@@ -15,6 +15,7 @@
 import contextlib
 import time
 
+from cinderclient import exceptions as cinder_exception
 from eventlet import event as eventlet_event
 import mock
 import mox
@@ -550,6 +551,26 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         self.compute._init_instance(self.context, instance)
         self.mox.VerifyAll()
+
+    @mock.patch('nova.context.RequestContext.elevated')
+    @mock.patch('nova.compute.utils.get_nw_info_for_instance')
+    @mock.patch(
+        'nova.compute.manager.ComputeManager._get_instance_block_device_info')
+    @mock.patch('nova.virt.driver.ComputeDriver.destroy')
+    @mock.patch('nova.virt.driver.ComputeDriver.get_volume_connector')
+    def test_shutdown_instance_endpoint_not_found(self, mock_connector,
+            mock_destroy, mock_blk_device_info, mock_nw_info, mock_elevated):
+        mock_connector.side_effect = cinder_exception.EndpointNotFound
+        mock_elevated.return_value = self.context
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid='fake',
+                vm_state=vm_states.ERROR,
+                task_state=task_states.DELETING)
+        bdms = [mock.Mock(id=1, is_volume=True)]
+
+        self.compute._shutdown_instance(self.context, instance, bdms,
+                notify=False, try_deallocate_networks=False)
 
     def _test_init_instance_retries_reboot(self, instance, reboot_type,
                                            return_power_state):

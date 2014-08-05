@@ -34,6 +34,7 @@ import time
 import traceback
 import uuid
 
+from cinderclient import exceptions as cinder_exception
 import eventlet.event
 from eventlet import greenthread
 import eventlet.timeout
@@ -2248,6 +2249,9 @@ class ComputeManager(manager.Manager):
             except exception.VolumeNotFound as exc:
                 LOG.warn(_('Ignoring VolumeNotFound: %s') % exc,
                          instance=instance)
+            except cinder_exception.EndpointNotFound as exc:
+                LOG.warn(_LW('Ignoring EndpointNotFound: %s'), exc,
+                             instance=instance)
 
         if notify:
             self._notify_about_instance_usage(context, instance,
