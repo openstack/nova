@@ -4807,6 +4807,66 @@ class LibvirtConnTestCase(test.TestCase,
         conn.pre_live_migration(self.context, instance, block_device_info=None,
                                 network_info=[], disk_info={})
 
+    def test_pre_live_migration_image_not_created_with_shared_storage(self):
+        migrate_data_set = [{'is_shared_block_storage': False,
+                             'block_migration': False},
+                            {'is_shared_block_storage': True,
+                             'block_migration': False},
+                            {'is_shared_block_storage': False,
+                             'block_migration': True}]
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = db.instance_create(self.context, self.test_instance)
+        # creating mocks
+        with contextlib.nested(
+            mock.patch.object(conn,
+                              '_create_images_and_backing'),
+            mock.patch.object(conn,
+                              'ensure_filtering_rules_for_instance'),
+            mock.patch.object(conn, 'plug_vifs'),
+        ) as (
+            create_image_mock,
+            rules_mock,
+            plug_mock,
+        ):
+            for migrate_data in migrate_data_set:
+                res = conn.pre_live_migration(self.context, instance,
+                                        block_device_info=None,
+                                        network_info=[], disk_info={},
+                                        migrate_data=migrate_data)
+                self.assertFalse(create_image_mock.called)
+                self.assertIsInstance(res, dict)
+
+    def test_pre_live_migration_with_not_shared_instance_path(self):
+        migrate_data = {'is_shared_block_storage': False,
+                        'is_shared_instance_path': False}
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = db.instance_create(self.context, self.test_instance)
+
+        def check_instance_dir(context, instance,
+                               instance_dir, disk_info):
+            self.assertTrue(instance_dir)
+        # creating mocks
+        with contextlib.nested(
+            mock.patch.object(conn,
+                              '_create_images_and_backing',
+                              side_effect=check_instance_dir),
+            mock.patch.object(conn,
+                              'ensure_filtering_rules_for_instance'),
+            mock.patch.object(conn, 'plug_vifs'),
+        ) as (
+            create_image_mock,
+            rules_mock,
+            plug_mock,
+        ):
+            res = conn.pre_live_migration(self.context, instance,
+                                    block_device_info=None,
+                                    network_info=[], disk_info={},
+                                    migrate_data=migrate_data)
+            self.assertTrue(create_image_mock.called)
+            self.assertIsInstance(res, dict)
+
     def test_get_instance_disk_info_works_correctly(self):
         # Test data
         instance_ref = db.instance_create(self.context, self.test_instance)
