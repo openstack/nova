@@ -13,8 +13,9 @@
 #    under the License.
 
 from nova.openstack.common import log as logging
-from sqlalchemy import and_, MetaData, select, Table, exists
+from sqlalchemy import MetaData, Table, exists
 from sqlalchemy import exc
+from sqlalchemy import sql
 
 LOG = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ def upgrade(migrate_engine):
     nodes = Table('bm_nodes', meta, autoload=True)
     ifs = Table('bm_interfaces', meta, autoload=True)
 
-    q = select([nodes.c.id, nodes.c.prov_mac_address],
+    q = sql.select([nodes.c.id, nodes.c.prov_mac_address],
                from_obj=nodes)
 
     # Iterate all elements before starting insert since IntegrityError
@@ -52,8 +53,9 @@ def downgrade(migrate_engine):
     nodes = Table('bm_nodes', meta, autoload=True)
     ifs = Table('bm_interfaces', meta, autoload=True)
 
-    subq = exists().where(and_(ifs.c.bm_node_id == nodes.c.id,
-                               ifs.c.address == nodes.c.prov_mac_address))
+    subq = exists().where(sql.and_(
+        ifs.c.bm_node_id == nodes.c.id,
+        ifs.c.address == nodes.c.prov_mac_address))
 
     ifs.delete().where(subq).execute()
 

@@ -29,7 +29,6 @@ from sqlalchemy import func
 from sqlalchemy import Index
 from sqlalchemy import Integer
 from sqlalchemy import MetaData
-from sqlalchemy import or_
 from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.sql.expression import UpdateBase
 from sqlalchemy import String
@@ -184,8 +183,9 @@ def _project_filter(query, db_model, context, project_only):
     if request_context.is_user_context(context) and project_only:
         if project_only == 'allow_none':
             is_none = None
-            query = query.filter(or_(db_model.project_id == context.project_id,
-                                     db_model.project_id == is_none))
+            query = query.filter(sqlalchemy.sql.or_(
+                db_model.project_id == context.project_id,
+                db_model.project_id == is_none))
         else:
             query = query.filter(db_model.project_id == context.project_id)
 

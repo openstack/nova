@@ -37,7 +37,7 @@ from sqlalchemy import Integer
 from sqlalchemy import MetaData
 from sqlalchemy.orm import exc as sqlalchemy_orm_exc
 from sqlalchemy.orm import query
-from sqlalchemy.sql.expression import select
+from sqlalchemy import sql
 from sqlalchemy import Table
 
 from nova import block_device
@@ -6422,12 +6422,12 @@ class ArchiveTestCase(test.TestCase):
                 where(self.instance_id_mappings.c.uuid.in_(self.uuidstrs[:4]))\
                 .values(deleted=1)
         self.conn.execute(update_statement)
-        qiim = select([self.instance_id_mappings]).where(self.
+        qiim = sql.select([self.instance_id_mappings]).where(self.
                                 instance_id_mappings.c.uuid.in_(self.uuidstrs))
         rows = self.conn.execute(qiim).fetchall()
         # Verify we have 6 in main
         self.assertEqual(len(rows), 6)
-        qsiim = select([self.shadow_instance_id_mappings]).\
+        qsiim = sql.select([self.shadow_instance_id_mappings]).\
                 where(self.shadow_instance_id_mappings.c.uuid.in_(
                                                                 self.uuidstrs))
         rows = self.conn.execute(qsiim).fetchall()
@@ -6491,12 +6491,12 @@ class ArchiveTestCase(test.TestCase):
                 where(main_table.c.uuid.in_(self.uuidstrs[:4]))\
                 .values(deleted=1)
         self.conn.execute(update_statement)
-        qmt = select([main_table]).where(main_table.c.uuid.in_(
+        qmt = sql.select([main_table]).where(main_table.c.uuid.in_(
                                              self.uuidstrs))
         rows = self.conn.execute(qmt).fetchall()
         # Verify we have 6 in main
         self.assertEqual(len(rows), 6)
-        qst = select([shadow_table]).\
+        qst = sql.select([shadow_table]).\
                 where(shadow_table.c.uuid.in_(self.uuidstrs))
         rows = self.conn.execute(qst).fetchall()
         # Verify we have 0 in shadow
@@ -6535,11 +6535,11 @@ class ArchiveTestCase(test.TestCase):
                            where(self.dns_domains.c.domain == uuidstr0).\
                            values(deleted=True)
         self.conn.execute(update_statement)
-        qdd = select([self.dns_domains], self.dns_domains.c.domain ==
+        qdd = sql.select([self.dns_domains], self.dns_domains.c.domain ==
                                             uuidstr0)
         rows = self.conn.execute(qdd).fetchall()
         self.assertEqual(len(rows), 1)
-        qsdd = select([self.shadow_dns_domains],
+        qsdd = sql.select([self.shadow_dns_domains],
                         self.shadow_dns_domains.c.domain == uuidstr0)
         rows = self.conn.execute(qsdd).fetchall()
         self.assertEqual(len(rows), 0)
@@ -6600,21 +6600,21 @@ class ArchiveTestCase(test.TestCase):
                 .values(deleted=1)
         self.conn.execute(update_statement2)
         # Verify we have 6 in each main table
-        qiim = select([self.instance_id_mappings]).where(
+        qiim = sql.select([self.instance_id_mappings]).where(
                          self.instance_id_mappings.c.uuid.in_(self.uuidstrs))
         rows = self.conn.execute(qiim).fetchall()
         self.assertEqual(len(rows), 6)
-        qi = select([self.instances]).where(self.instances.c.uuid.in_(
+        qi = sql.select([self.instances]).where(self.instances.c.uuid.in_(
                                              self.uuidstrs))
         rows = self.conn.execute(qi).fetchall()
         self.assertEqual(len(rows), 6)
         # Verify we have 0 in each shadow table
-        qsiim = select([self.shadow_instance_id_mappings]).\
+        qsiim = sql.select([self.shadow_instance_id_mappings]).\
                 where(self.shadow_instance_id_mappings.c.uuid.in_(
                                                             self.uuidstrs))
         rows = self.conn.execute(qsiim).fetchall()
         self.assertEqual(len(rows), 0)
-        qsi = select([self.shadow_instances]).\
+        qsi = sql.select([self.shadow_instances]).\
                 where(self.shadow_instances.c.uuid.in_(self.uuidstrs))
         rows = self.conn.execute(qsi).fetchall()
         self.assertEqual(len(rows), 0)

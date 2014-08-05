@@ -40,9 +40,9 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
 from sqlalchemy.orm import noload
 from sqlalchemy.schema import Table
+from sqlalchemy import sql
 from sqlalchemy.sql.expression import asc
 from sqlalchemy.sql.expression import desc
-from sqlalchemy.sql.expression import select
 from sqlalchemy.sql import false
 from sqlalchemy.sql import func
 from sqlalchemy.sql import null
@@ -589,12 +589,12 @@ def compute_node_get_all(context, no_date_fields):
         def filter_columns(table):
             return [c for c in table.c if c.name not in redundant_columns]
 
-        compute_node_query = select(filter_columns(compute_node)).\
+        compute_node_query = sql.select(filter_columns(compute_node)).\
                                 where(compute_node.c.deleted == 0).\
                                 order_by(compute_node.c.service_id)
         compute_node_rows = conn.execute(compute_node_query).fetchall()
 
-        service_query = select(filter_columns(service)).\
+        service_query = sql.select(filter_columns(service)).\
                             where((service.c.deleted == 0) &
                                   (service.c.binary == 'nova-compute')).\
                             order_by(service.c.id)
@@ -5636,10 +5636,10 @@ def archive_deleted_rows_for_table(context, tablename, max_rows):
         column = table.c.id
     # NOTE(guochbo): Use InsertFromSelect and DeleteFromSelect to avoid
     # database's limit of maximum parameter in one SQL statement.
-    query_insert = select([table],
+    query_insert = sql.select([table],
                           table.c.deleted != default_deleted_value).\
                           order_by(column).limit(max_rows)
-    query_delete = select([column],
+    query_delete = sql.select([column],
                           table.c.deleted != default_deleted_value).\
                           order_by(column).limit(max_rows)
 
