@@ -4801,26 +4801,6 @@ class LibvirtConnTestCase(test.TestCase,
                                                 'vnc': '127.0.0.1'}}
         self.assertEqual(result, target_res)
 
-    def test_pre_live_migration_block_with_config_drive_mocked(self):
-        # Creating testdata
-        vol = {'block_device_mapping': [
-                  {'connection_info': 'dummy', 'mount_device': '/dev/sda'},
-                  {'connection_info': 'dummy', 'mount_device': '/dev/sdb'}]}
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-        def fake_true(*args, **kwargs):
-            return True
-
-        self.stubs.Set(configdrive, 'required_by', fake_true)
-
-        inst_ref = {'id': 'foo'}
-        c = context.get_admin_context()
-
-        self.assertRaises(exception.NoLiveMigrationForConfigDriveInLibVirt,
-                          conn.pre_live_migration, c, inst_ref, vol, None,
-                          None, {'is_shared_instance_path': False,
-                                 'is_shared_block_storage': False})
-
     def test_pre_live_migration_vol_backed_works_correctly_mocked(self):
         # Creating testdata, using temp dir.
         with utils.tempdir() as tmpdir:
@@ -10470,6 +10450,13 @@ class LibvirtDriverTestCase(test.TestCase):
         cdb.make_drive(mox.Regex(configdrive_path))
         cdb.__exit__(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg()
                         ).AndReturn(None)
+
+        imagebackend.Backend.image(instance, 'disk.config.rescue', 'raw'
+                                   ).AndReturn(fake_imagebackend.Raw())
+        imagebackend.Image.cache(fetch_func=mox.IgnoreArg(),
+                                 context=mox.IgnoreArg(),
+                                 filename='disk.config.rescue')
+
         image_meta = {'id': 'fake', 'name': 'fake'}
         self.libvirtconnection._get_guest_xml(mox.IgnoreArg(), instance,
                                 network_info, mox.IgnoreArg(),
