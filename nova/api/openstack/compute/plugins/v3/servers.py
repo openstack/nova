@@ -532,6 +532,7 @@ class ServersController(wsgi.Controller):
                 exception.NetworkNotFound) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except (exception.PortInUse,
+                exception.NetworkAmbiguous,
                 exception.NoUniqueMatch) as error:
             raise exc.HTTPConflict(explanation=error.format_message())
 

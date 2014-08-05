@@ -2516,6 +2516,12 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra, params)
 
+    @mock.patch.object(compute_api.API, 'create')
+    def test_create_instance_with_network_ambiguous(self, mock_create):
+        mock_create.side_effect = exception.NetworkAmbiguous()
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self._test_create_extra, {})
+
 
 class ServersControllerCreateTestWithMock(test.TestCase):
     image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
