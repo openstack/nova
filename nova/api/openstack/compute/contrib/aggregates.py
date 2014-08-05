@@ -94,7 +94,15 @@ class AggregateController(object):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InvalidAggregateAction as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
-        return self._marshall_aggregate(aggregate)
+
+        agg = self._marshall_aggregate(aggregate)
+
+        # To maintain the same API result as before the changes for returning
+        # nova objects were made.
+        del agg['aggregate']['hosts']
+        del agg['aggregate']['metadata']
+
+        return agg
 
     def show(self, req, id):
         """Shows the details of an aggregate, hosts and metadata included."""

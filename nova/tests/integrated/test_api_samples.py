@@ -1571,31 +1571,36 @@ class FixedIpXmlTest(FixedIpJsonTest):
 class AggregatesSampleJsonTest(ServersSampleBase):
     extension_name = "nova.api.openstack.compute.contrib" + \
                                      ".aggregates.Aggregates"
+    create_subs = {
+            "aggregate_id": '(?P<id>\d+)'
+    }
+
+    def _create_aggregate(self):
+        return self._do_post('os-aggregates', 'aggregate-post-req',
+                             self.create_subs)
 
     def test_aggregate_create(self):
-        subs = {
-            "aggregate_id": '(?P<id>\d+)'
-        }
-        response = self._do_post('os-aggregates', 'aggregate-post-req', subs)
+        response = self._create_aggregate()
+        subs = self.create_subs
         subs.update(self._get_regexes())
         return self._verify_response('aggregate-post-resp',
                                      subs, response, 200)
 
     def test_list_aggregates(self):
-        self.test_aggregate_create()
+        self._create_aggregate()
         response = self._do_get('os-aggregates')
         subs = self._get_regexes()
         self._verify_response('aggregates-list-get-resp', subs, response, 200)
 
     def test_aggregate_get(self):
-        agg_id = self.test_aggregate_create()
-        response = self._do_get('os-aggregates/%s' % agg_id)
+        self._create_aggregate()
+        response = self._do_get('os-aggregates/%s' % 1)
         subs = self._get_regexes()
         self._verify_response('aggregates-get-resp', subs, response, 200)
 
     def test_add_metadata(self):
-        agg_id = self.test_aggregate_create()
-        response = self._do_post('os-aggregates/%s/action' % agg_id,
+        self._create_aggregate()
+        response = self._do_post('os-aggregates/%s/action' % 1,
                                  'aggregate-metadata-post-req',
                                  {'action': 'set_metadata'})
         subs = self._get_regexes()
@@ -1603,11 +1608,11 @@ class AggregatesSampleJsonTest(ServersSampleBase):
                               response, 200)
 
     def test_add_host(self):
-        aggregate_id = self.test_aggregate_create()
+        self._create_aggregate()
         subs = {
             "host_name": self.compute.host,
         }
-        response = self._do_post('os-aggregates/%s/action' % aggregate_id,
+        response = self._do_post('os-aggregates/%s/action' % 1,
                                  'aggregate-add-host-post-req', subs)
         subs.update(self._get_regexes())
         self._verify_response('aggregates-add-host-post-resp', subs,
@@ -1625,8 +1630,8 @@ class AggregatesSampleJsonTest(ServersSampleBase):
                               subs, response, 200)
 
     def test_update_aggregate(self):
-        aggregate_id = self.test_aggregate_create()
-        response = self._do_put('os-aggregates/%s' % aggregate_id,
+        self._create_aggregate()
+        response = self._do_put('os-aggregates/%s' % 1,
                                   'aggregate-update-post-req', {})
         subs = self._get_regexes()
         self._verify_response('aggregate-update-post-resp',

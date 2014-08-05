@@ -37,6 +37,10 @@ AGGREGATE = {"name": "aggregate1",
                   "metadata": {"foo": "bar"},
                   "hosts": ["host1, host2"]}
 
+FORMATTED_AGGREGATE = {"name": "aggregate1",
+                  "id": "1",
+                  "availability_zone": "nova1"}
+
 
 class FakeRequest(object):
     environ = {"nova.context": context.get_admin_context()}
@@ -90,7 +94,7 @@ class AggregateTestCaseV21(test.NoDBTestCase):
         result = self.controller.create(self.req, body={"aggregate":
                                           {"name": "test",
                                            "availability_zone": "nova1"}})
-        self.assertEqual(AGGREGATE, result["aggregate"])
+        self.assertEqual(FORMATTED_AGGREGATE, result["aggregate"])
 
     def test_create_no_admin(self):
         self.assertRaises(exception.PolicyNotAuthorized,
@@ -148,7 +152,7 @@ class AggregateTestCaseV21(test.NoDBTestCase):
 
         result = self.controller.create(self.req,
                                         body={"aggregate": {"name": "test"}})
-        self.assertEqual(AGGREGATE, result["aggregate"])
+        self.assertEqual(FORMATTED_AGGREGATE, result["aggregate"])
 
     def test_create_with_null_name(self):
         self.assertRaises(self.bad_request, self.controller.create,
@@ -171,6 +175,12 @@ class AggregateTestCaseV21(test.NoDBTestCase):
     def test_create_with_null_availability_zone(self):
         aggregate = {"name": "aggregate1",
                      "id": "1",
+                     "availability_zone": None,
+                     "metadata": {},
+                     "hosts": []}
+
+        formatted_aggregate = {"name": "aggregate1",
+                     "id": "1",
                      "availability_zone": None}
 
         def stub_create_aggregate(context, name, az_name):
@@ -185,7 +195,7 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                                         body={"aggregate":
                                          {"name": "aggregate1",
                                           "availability_zone": None}})
-        self.assertEqual(aggregate, result["aggregate"])
+        self.assertEqual(formatted_aggregate, result["aggregate"])
 
     def test_create_with_empty_availability_zone(self):
         self.assertRaises(self.bad_request, self.controller.create,
