@@ -609,20 +609,25 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         self.stubs.Set(os.path, 'isfile', lambda x: isfile(x))
 
         # Fake the database call which lists running instances
-        all_instances = [{'image_ref': '1',
-                          'host': CONF.host,
-                          'name': 'instance-1',
-                          'uuid': '123',
-                          'vm_state': '',
-                          'task_state': ''},
-                         {'image_ref': '1',
-                          'kernel_id': '21',
-                          'ramdisk_id': '22',
-                          'host': CONF.host,
-                          'name': 'instance-2',
-                          'uuid': '456',
-                          'vm_state': '',
-                          'task_state': ''}]
+        instances = [{'image_ref': '1',
+                      'host': CONF.host,
+                      'name': 'instance-1',
+                      'uuid': '123',
+                      'vm_state': '',
+                      'task_state': ''},
+                     {'image_ref': '1',
+                      'kernel_id': '21',
+                      'ramdisk_id': '22',
+                      'host': CONF.host,
+                      'name': 'instance-2',
+                      'uuid': '456',
+                      'vm_state': '',
+                      'task_state': ''}]
+
+        all_instances = []
+        for instance in instances:
+            all_instances.append(fake_instance.fake_instance_obj(
+                None, **instance))
 
         image_cache_manager = imagecache.ImageCacheManager()
 
@@ -717,18 +722,23 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             os.mkdir(os.path.join(tmpdir, '_base'))
 
             # Fake the database call which lists running instances
-            all_instances = [{'image_ref': '1',
-                              'host': CONF.host,
-                              'name': 'instance-1',
-                              'uuid': '123',
-                              'vm_state': '',
-                              'task_state': ''},
-                             {'image_ref': '1',
-                              'host': CONF.host,
-                              'name': 'instance-2',
-                              'uuid': '456',
-                              'vm_state': '',
-                              'task_state': ''}]
+            instances = [{'image_ref': '1',
+                          'host': CONF.host,
+                          'name': 'instance-1',
+                          'uuid': '123',
+                          'vm_state': '',
+                          'task_state': ''},
+                         {'image_ref': '1',
+                          'host': CONF.host,
+                          'name': 'instance-2',
+                          'uuid': '456',
+                          'vm_state': '',
+                          'task_state': ''}]
+
+            all_instances = []
+            for instance in instances:
+                all_instances.append(fake_instance.fake_instance_obj(
+                    None, **instance))
 
             def touch(filename):
                 f = open(filename, 'w')

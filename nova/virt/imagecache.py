@@ -78,26 +78,24 @@ class ImageCacheManager(object):
             # NOTE(mikal): "instance name" here means "the name of a directory
             # which might contain an instance" and therefore needs to include
             # historical permutations as well as the current one.
-            instance_names.add(instance['name'])
-            instance_names.add(instance['uuid'])
-
-            if (instance['task_state'] in self.resize_states or
-                    instance['vm_state'] == vm_states.RESIZED):
-                instance_names.add(instance['name'] + '_resize')
-                instance_names.add(instance['uuid'] + '_resize')
+            instance_names.add(instance.name)
+            instance_names.add(instance.uuid)
+            if (instance.task_state in self.resize_states or
+                    instance.vm_state == vm_states.RESIZED):
+                instance_names.add(instance.name + '_resize')
+                instance_names.add(instance.uuid + '_resize')
 
             for image_key in ['image_ref', 'kernel_id', 'ramdisk_id']:
-                try:
-                    image_ref_str = str(instance[image_key])
-                except KeyError:
+                image_ref_str = getattr(instance, image_key)
+                if image_ref_str is None:
                     continue
                 local, remote, insts = used_images.get(image_ref_str,
                                                             (0, 0, []))
-                if instance['host'] == CONF.host:
+                if instance.host == CONF.host:
                     local += 1
                 else:
                     remote += 1
-                insts.append(instance['name'])
+                insts.append(instance.name)
                 used_images[image_ref_str] = (local, remote, insts)
 
                 image_popularity.setdefault(image_ref_str, 0)
