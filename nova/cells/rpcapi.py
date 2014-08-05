@@ -48,54 +48,54 @@ class CellsAPI(object):
 
     API version history:
 
-        1.0 - Initial version.
-        1.1 - Adds get_cell_info_for_neighbors() and sync_instances()
-        1.2 - Adds service_get_all(), service_get_by_compute_host(),
-              and proxy_rpc_to_compute_manager()
-        1.3 - Adds task_log_get_all()
-        1.4 - Adds compute_node_get(), compute_node_get_all(), and
-              compute_node_stats()
-        1.5 - Adds actions_get(), action_get_by_request_id(), and
-              action_events_get()
-        1.6 - Adds consoleauth_delete_tokens() and validate_console_port()
+        * 1.0 - Initial version.
+        * 1.1 - Adds get_cell_info_for_neighbors() and sync_instances()
+        * 1.2 - Adds service_get_all(), service_get_by_compute_host(),
+                and proxy_rpc_to_compute_manager()
+        * 1.3 - Adds task_log_get_all()
+        * 1.4 - Adds compute_node_get(), compute_node_get_all(), and
+                compute_node_stats()
+        * 1.5 - Adds actions_get(), action_get_by_request_id(), and
+                action_events_get()
+        * 1.6 - Adds consoleauth_delete_tokens() and validate_console_port()
 
         ... Grizzly supports message version 1.6.  So, any changes to existing
         methods in 2.x after that point should be done such that they can
         handle the version_cap being set to 1.6.
 
-        1.7 - Adds service_update()
-        1.8 - Adds build_instances(), deprecates schedule_run_instance()
-        1.9 - Adds get_capacities()
-        1.10 - Adds bdm_update_or_create_at_top(), and bdm_destroy_at_top()
-        1.11 - Adds get_migrations()
-        1.12 - Adds instance_start() and instance_stop()
-        1.13 - Adds cell_create(), cell_update(), cell_delete(), and
-               cell_get()
-        1.14 - Adds reboot_instance()
-        1.15 - Adds suspend_instance() and resume_instance()
-        1.16 - Adds instance_update_from_api()
-        1.17 - Adds get_host_uptime()
-        1.18 - Adds terminate_instance() and soft_delete_instance()
-        1.19 - Adds pause_instance() and unpause_instance()
-        1.20 - Adds resize_instance() and live_migrate_instance()
-        1.21 - Adds revert_resize() and confirm_resize()
-        1.22 - Adds reset_network()
-        1.23 - Adds inject_network_info()
-        1.24 - Adds backup_instance() and snapshot_instance()
+        * 1.7 - Adds service_update()
+        * 1.8 - Adds build_instances(), deprecates schedule_run_instance()
+        * 1.9 - Adds get_capacities()
+        * 1.10 - Adds bdm_update_or_create_at_top(), and bdm_destroy_at_top()
+        * 1.11 - Adds get_migrations()
+        * 1.12 - Adds instance_start() and instance_stop()
+        * 1.13 - Adds cell_create(), cell_update(), cell_delete(), and
+                 cell_get()
+        * 1.14 - Adds reboot_instance()
+        * 1.15 - Adds suspend_instance() and resume_instance()
+        * 1.16 - Adds instance_update_from_api()
+        * 1.17 - Adds get_host_uptime()
+        * 1.18 - Adds terminate_instance() and soft_delete_instance()
+        * 1.19 - Adds pause_instance() and unpause_instance()
+        * 1.20 - Adds resize_instance() and live_migrate_instance()
+        * 1.21 - Adds revert_resize() and confirm_resize()
+        * 1.22 - Adds reset_network()
+        * 1.23 - Adds inject_network_info()
+        * 1.24 - Adds backup_instance() and snapshot_instance()
 
         ... Havana supports message version 1.24.  So, any changes to existing
         methods in 1.x after that point should be done such that they can
         handle the version_cap being set to 1.24.
 
-        1.25 - Adds rebuild_instance()
-        1.26 - Adds service_delete()
-        1.27 - Updates instance_delete_everywhere() for instance objects
+        * 1.25 - Adds rebuild_instance()
+        * 1.26 - Adds service_delete()
+        * 1.27 - Updates instance_delete_everywhere() for instance objects
 
         ... Icehouse supports message version 1.27.  So, any changes to
         existing methods in 1.x after that point should be done such that they
         can handle the version_cap being set to 1.27.
 
-        1.28 - Make bdm_update_or_create_at_top and use bdm objects
+        * 1.28 - Make bdm_update_or_create_at_top and use bdm objects
     '''
 
     VERSION_ALIASES = {
