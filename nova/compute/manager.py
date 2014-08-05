@@ -3092,7 +3092,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event
     @wrap_instance_fault
     def rescue_instance(self, context, instance, rescue_password,
-                        rescue_image_ref=None):
+                        rescue_image_ref=None, clean_shutdown=True):
         context = context.elevated()
         LOG.audit(_('Rescuing'), context=context, instance=instance)
 
@@ -3111,6 +3111,8 @@ class ComputeManager(manager.Manager):
                 network_info=network_info)
 
         try:
+            self._power_off_instance(context, instance, clean_shutdown)
+
             self.driver.rescue(context, instance,
                                network_info,
                                rescue_image_meta, admin_password)

@@ -1392,7 +1392,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                   inst_obj)
         detach.assert_called_once_with(self.context, inst_obj, bdm)
 
-    def test_rescue(self):
+    def _test_rescue(self, clean_shutdown=True):
         instance = fake_instance.fake_instance_obj(
             self.context, vm_state=vm_states.ACTIVE)
         fake_nw_info = network_model.NetworkInfo()
@@ -1408,6 +1408,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.patch.object(self.compute, '_get_rescue_image',
                               return_value=rescue_image_meta),
             mock.patch.object(self.compute, '_notify_about_instance_usage'),
+            mock.patch.object(self.compute, '_power_off_instance'),
             mock.patch.object(self.compute.driver, 'rescue'),
             mock.patch.object(self.compute.conductor_api,
                               'notify_usage_exists'),
@@ -1416,12 +1417,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.patch.object(instance, 'save')
         ) as (
             event_start, event_finish, elevated_context, get_nw_info,
-            get_rescue_image, notify_instance_usage, driver_rescue,
-            notify_usage_exists, get_power_state, instance_save
+            get_rescue_image, notify_instance_usage, power_off_instance,
+            driver_rescue, notify_usage_exists, get_power_state, instance_save
         ):
             self.compute.rescue_instance(
                 self.context, instance, rescue_password='verybadpass',
-                rescue_image_ref=None)
+                rescue_image_ref=None, clean_shutdown=clean_shutdown)
 
             # assert the field values on the instance object
             self.assertEqual(vm_states.RESCUED, instance.vm_state)
@@ -1445,6 +1446,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             ]
             notify_instance_usage.assert_has_calls(notify_calls)
 
+            power_off_instance.assert_called_once_with(self.context, instance,
+                                                       clean_shutdown)
+
             driver_rescue.assert_called_once_with(
                 self.context, instance, fake_nw_info, rescue_image_meta,
                 'verybadpass')
@@ -1454,6 +1458,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
             instance_save.assert_called_once_with(
                 expected_task_state=task_states.RESCUING)
+
+    def test_rescue(self):
+        self._test_rescue()
+
+    def test_rescue_forced_shutdown(self):
+        self._test_rescue(clean_shutdown=False)
 
     def test_unrescue(self):
         instance = fake_instance.fake_instance_obj(
