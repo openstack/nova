@@ -47,6 +47,7 @@ Developer Docs
    :maxdepth: 1
 
    devref/index
+   man/index
 
 API Extensions
 ==============
