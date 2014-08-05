@@ -250,8 +250,9 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         mode = 'rw'
         if 'data' in connection_info:
             mode = connection_info['data'].get('access_mode', 'rw')
-        volume_api.attach(context, volume_id, instance['uuid'],
-                          self['mount_device'], mode=mode)
+        if volume['attach_status'] == "detached":
+            volume_api.attach(context, volume_id, instance['uuid'],
+                              self['mount_device'], mode=mode)
 
     @update_db
     def refresh_connection_info(self, context, instance,
@@ -285,7 +286,7 @@ class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
     _proxy_as_attr = set(['volume_size', 'volume_id', 'snapshot_id'])
 
     def attach(self, context, instance, volume_api,
-               virt_driver, wait_func=None):
+               virt_driver, wait_func=None, do_check_attach=True):
 
         if not self.volume_id:
             snapshot = volume_api.get_snapshot(context,
@@ -298,8 +299,9 @@ class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
             self.volume_id = vol['id']
 
         # Call the volume attach now
-        super(DriverSnapshotBlockDevice, self).attach(context, instance,
-                                                      volume_api, virt_driver)
+        super(DriverSnapshotBlockDevice, self).attach(
+            context, instance, volume_api, virt_driver,
+            do_check_attach=do_check_attach)
 
 
 class DriverImageBlockDevice(DriverVolumeBlockDevice):
@@ -308,7 +310,7 @@ class DriverImageBlockDevice(DriverVolumeBlockDevice):
     _proxy_as_attr = set(['volume_size', 'volume_id', 'image_id'])
 
     def attach(self, context, instance, volume_api,
-               virt_driver, wait_func=None):
+               virt_driver, wait_func=None, do_check_attach=True):
         if not self.volume_id:
             vol = volume_api.create(context, self.volume_size,
                                     '', '', image_id=self.image_id)
@@ -317,8 +319,9 @@ class DriverImageBlockDevice(DriverVolumeBlockDevice):
 
             self.volume_id = vol['id']
 
-        super(DriverImageBlockDevice, self).attach(context, instance,
-                                                   volume_api, virt_driver)
+        super(DriverImageBlockDevice, self).attach(
+            context, instance, volume_api, virt_driver,
+            do_check_attach=do_check_attach)
 
 
 def _convert_block_devices(device_type, block_device_mapping):

@@ -385,7 +385,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                 self.context, objects.Instance(),
                 fake_instance.fake_db_instance())
         self.stubs.Set(self.compute.volume_api, 'get', lambda *a, **kw:
-                       {'id': self.volume_id})
+                       {'id': self.volume_id,
+                        'attach_status': 'detached'})
         self.stubs.Set(self.compute.driver, 'get_volume_connector',
                        lambda *a, **kw: None)
         self.stubs.Set(self.compute.volume_api, 'initialize_connection',
@@ -4278,7 +4279,8 @@ class ComputeTestCase(BaseTestCase):
         volume_id = 'fake'
         volume = {'instance_uuid': None,
                   'device_name': None,
-                  'id': volume_id}
+                  'id': volume_id,
+                  'attach_status': 'detached'}
         bdm = objects.BlockDeviceMapping(
                         **{'source_type': 'volume',
                            'destination_type': 'volume',
