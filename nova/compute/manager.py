@@ -1922,10 +1922,9 @@ class ComputeManager(manager.Manager):
                     self._set_instance_error_state(context, instance.uuid)
                     return
                 retry['exc'] = traceback.format_exception(*sys.exc_info())
-                # The MAC address for this instance is tied to the host so if
-                # we're going to reschedule we have to free the network details
-                # and reallocate on the next host.
-                if self.driver.macs_for_instance(instance):
+                # dhcp_options are per host, so if they're set we need to
+                # deallocate the networks and reallocate on the next host.
+                if self.driver.dhcp_options_for_instance(instance):
                     self._cleanup_allocated_networks(context, instance,
                             requested_networks)
 
