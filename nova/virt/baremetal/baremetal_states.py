@@ -24,8 +24,6 @@ health.
 
 """
 
-NULL = None
-INIT = 'initializing'
 ACTIVE = 'active'
 BUILDING = 'building'
 DEPLOYING = 'deploying'
