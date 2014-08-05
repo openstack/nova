@@ -2317,6 +2317,7 @@ class ComputeManager(manager.Manager):
             instance.task_state = None
             instance.terminated_at = timeutils.utcnow()
             instance.save()
+            self._update_resource_tracker(context, instance)
             system_meta = instance.system_metadata
             instance.destroy()
         except Exception:
