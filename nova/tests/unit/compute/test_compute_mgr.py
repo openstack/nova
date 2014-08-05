@@ -24,6 +24,7 @@ from oslo import messaging
 from oslo.utils import importutils
 from oslo.utils import timeutils
 
+from nova.compute import build_results
 from nova.compute import manager
 from nova.compute import power_state
 from nova.compute import task_states
@@ -2192,8 +2193,19 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 exc_val=mox.IgnoreArg(), exc_tb=mox.IgnoreArg(),
                 want_result=False)
 
+    @staticmethod
+    def _assert_build_instance_hook_called(mock_hooks, result):
+        # NOTE(coreywright): we want to test the return value of
+        # _do_build_and_run_instance, but it doesn't bubble all the way up, so
+        # mock the hooking, which allows us to test that too, though a little
+        # too intimately
+        mock_hooks.setdefault().run_post.assert_called_once_with(
+            'build_instance', result, mock.ANY, mock.ANY, f=None)
+
+    @mock.patch('nova.hooks._HOOKS')
     @mock.patch('nova.utils.spawn_n')
-    def test_build_and_run_instance_called_with_proper_args(self, mock_spawn):
+    def test_build_and_run_instance_called_with_proper_args(self, mock_spawn,
+                                                            mock_hooks):
         mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self._do_build_instance_update()
@@ -2214,6 +2226,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
+        self._assert_build_instance_hook_called(mock_hooks,
+                                                build_results.ACTIVE)
 
     # This test when sending an icehouse compatible rpc call to juno compute
     # node, NetworkRequest object can load from three items tuple.
@@ -2242,8 +2256,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.assertEqual('10.0.0.1', str(requested_network.address))
         self.assertEqual('fake_port_id', requested_network.port_id)
 
+    @mock.patch('nova.hooks._HOOKS')
     @mock.patch('nova.utils.spawn_n')
-    def test_build_abort_exception(self, mock_spawn):
+    def test_build_abort_exception(self, mock_spawn, mock_hooks):
         def fake_spawn(f, *args, **kwargs):
             # NOTE(danms): Simulate the detached nature of spawn so that
             # we confirm that the inner task has the fault logic
@@ -2288,9 +2303,12 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
+        self._assert_build_instance_hook_called(mock_hooks,
+                                                build_results.FAILED)
 
+    @mock.patch('nova.hooks._HOOKS')
     @mock.patch('nova.utils.spawn_n')
-    def test_rescheduled_exception(self, mock_spawn):
+    def test_rescheduled_exception(self, mock_spawn, mock_hooks):
         mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
@@ -2320,6 +2338,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
+        self._assert_build_instance_hook_called(mock_hooks,
+                                                build_results.RESCHEDULED)
 
     def test_rescheduled_exception_with_non_ascii_exception(self):
         exc = exception.NovaException(u's\xe9quence')
@@ -2355,8 +2375,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.block_device_mapping, self.node,
                 self.limits, self.filter_properties)
 
+    @mock.patch('nova.hooks._HOOKS')
     @mock.patch('nova.utils.spawn_n')
-    def test_rescheduled_exception_without_retry(self, mock_spawn):
+    def test_rescheduled_exception_without_retry(self, mock_spawn, mock_hooks):
         mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
@@ -2389,9 +2410,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
+        self._assert_build_instance_hook_called(mock_hooks,
+                                                build_results.FAILED)
 
+    @mock.patch('nova.hooks._HOOKS')
     @mock.patch('nova.utils.spawn_n')
-    def test_rescheduled_exception_do_not_deallocate_network(self, mock_spawn):
+    def test_rescheduled_exception_do_not_deallocate_network(self, mock_spawn,
+                                                             mock_hooks):
         mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(self.compute.driver,
@@ -2425,9 +2450,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
+        self._assert_build_instance_hook_called(mock_hooks,
+                                                build_results.RESCHEDULED)
 
+    @mock.patch('nova.hooks._HOOKS')
     @mock.patch('nova.utils.spawn_n')
-    def test_rescheduled_exception_deallocate_network(self, mock_spawn):
+    def test_rescheduled_exception_deallocate_network(self, mock_spawn,
+                                                      mock_hooks):
         mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(self.compute.driver,
@@ -2463,6 +2492,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
+        self._assert_build_instance_hook_called(mock_hooks,
+                                                build_results.RESCHEDULED)
 
     def _test_build_and_run_exceptions(self, exc, set_error=False,
             cleanup_volumes=False):
@@ -2492,7 +2523,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self._instance_action_events()
         self.mox.ReplayAll()
 
-        with mock.patch('nova.utils.spawn_n') as mock_spawn:
+        with contextlib.nested(
+            mock.patch('nova.utils.spawn_n'),
+            mock.patch('nova.hooks._HOOKS')
+        ) as (
+            mock_spawn,
+            mock_hooks
+        ):
             mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
             self.compute.build_and_run_instance(self.context, self.instance,
                 self.image, request_spec={},
@@ -2503,6 +2540,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
+            self._assert_build_instance_hook_called(mock_hooks,
+                                                    build_results.FAILED)
 
     def test_build_and_run_notfound_exception(self):
         self._test_build_and_run_exceptions(exception.InstanceNotFound(

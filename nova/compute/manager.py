@@ -51,6 +51,7 @@ from nova import block_device
 from nova.cells import rpcapi as cells_rpcapi
 from nova.cloudpipe import pipelib
 from nova import compute
+from nova.compute import build_results
 from nova.compute import power_state
 from nova.compute import resource_tracker
 from nova.compute import rpcapi as compute_rpcapi
@@ -2008,6 +2009,7 @@ class ComputeManager(manager.Manager):
                       requested_networks, security_groups,
                       block_device_mapping, node, limits)
 
+    @hooks.add_hook('build_instance')
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
@@ -2027,10 +2029,10 @@ class ComputeManager(manager.Manager):
         except exception.InstanceNotFound:
             msg = 'Instance disappeared before build.'
             LOG.debug(msg, instance=instance)
-            return
+            return build_results.FAILED
         except exception.UnexpectedTaskStateError as e:
             LOG.debug(e.format_message(), instance=instance)
-            return
+            return build_results.FAILED
 
         # b64 decode the files to inject:
         decoded_files = self._decode_files(injected_files)
@@ -2048,6 +2050,7 @@ class ComputeManager(manager.Manager):
                     decoded_files, admin_password, requested_networks,
                     security_groups, block_device_mapping, node, limits,
                     filter_properties)
+            return build_results.ACTIVE
         except exception.RescheduledException as e:
             LOG.debug(e.format_message(), instance=instance)
             retry = filter_properties.get('retry', None)
@@ -2060,7 +2063,7 @@ class ComputeManager(manager.Manager):
                 compute_utils.add_instance_fault_from_exc(context,
                         instance, e, sys.exc_info())
                 self._set_instance_error_state(context, instance)
-                return
+                return build_results.FAILED
             retry['exc'] = traceback.format_exception(*sys.exc_info())
             # NOTE(comstud): Deallocate networks if the driver wants
             # us to do so.
@@ -2075,12 +2078,14 @@ class ComputeManager(manager.Manager):
                     image, filter_properties, admin_password,
                     injected_files, requested_networks, security_groups,
                     block_device_mapping)
+            return build_results.RESCHEDULED
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError):
             msg = 'Instance disappeared during build.'
             LOG.debug(msg, instance=instance)
             self._cleanup_allocated_networks(context, instance,
                     requested_networks)
+            return build_results.FAILED
         except exception.BuildAbortException as e:
             LOG.exception(e.format_message(), instance=instance)
             self._cleanup_allocated_networks(context, instance,
@@ -2090,6 +2095,7 @@ class ComputeManager(manager.Manager):
             compute_utils.add_instance_fault_from_exc(context, instance,
                     e, sys.exc_info())
             self._set_instance_error_state(context, instance)
+            return build_results.FAILED
         except Exception as e:
             # Should not reach here.
             msg = _LE('Unexpected build failure, not rescheduling build.')
@@ -2101,6 +2107,7 @@ class ComputeManager(manager.Manager):
             compute_utils.add_instance_fault_from_exc(context, instance,
                     e, sys.exc_info())
             self._set_instance_error_state(context, instance)
+            return build_results.FAILED
 
     def _build_and_run_instance(self, context, instance, image, injected_files,
             admin_password, requested_networks, security_groups,
