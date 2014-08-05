@@ -16,13 +16,18 @@
 # TODO(mikal): move eventlet imports to nova.__init__ once we move to PBR
 import os
 import sys
+import traceback
 
 # NOTE(mikal): All of this is because if dnspython is present in your
 # environment then eventlet monkeypatches socket.getaddrinfo() with an
 # implementation which doesn't work for IPv6. What we're checking here is
 # that the magic environment variable was set when the import happened.
+# NOTE(dims): Prevent this code from kicking in under docs generation
+# as it leads to spurious errors/warning.
+stack = traceback.extract_stack()
 if ('eventlet' in sys.modules and
-        os.environ.get('EVENTLET_NO_GREENDNS', '').lower() != 'yes'):
+    os.environ.get('EVENTLET_NO_GREENDNS', '').lower() != 'yes' and
+    (len(stack) < 2 or 'sphinx' not in stack[-2][0])):
     raise ImportError('eventlet imported before nova/cmd/__init__ '
                       '(env var set to %s)'
                       % os.environ.get('EVENTLET_NO_GREENDNS'))
