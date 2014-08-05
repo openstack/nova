@@ -34,7 +34,7 @@ from nova.virt.disk import api as disk
 from nova.virt import images
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import lvm
-from nova.virt.libvirt import rbd
+from nova.virt.libvirt import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 
 __imagebackend_opts = [
@@ -525,7 +525,7 @@ class Rbd(Image):
         self.rbd_user = CONF.libvirt.rbd_user
         self.ceph_conf = CONF.libvirt.images_rbd_ceph_conf
 
-        self.driver = rbd.RBDDriver(
+        self.driver = rbd_utils.RBDDriver(
             pool=self.pool,
             ceph_conf=self.ceph_conf,
             rbd_user=self.rbd_user)

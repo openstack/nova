@@ -17,7 +17,7 @@ from nova import exception
 from nova.openstack.common import log as logging
 from nova import test
 from nova import utils
-from nova.virt.libvirt import rbd
+from nova.virt.libvirt import rbd_utils
 
 
 LOG = logging.getLogger(__name__)
@@ -53,8 +53,8 @@ CEPH_MON_DUMP = """dumped monmap epoch 1
 
 class RbdTestCase(test.NoDBTestCase):
 
-    @mock.patch.object(rbd, 'rbd')
-    @mock.patch.object(rbd, 'rados')
+    @mock.patch.object(rbd_utils, 'rbd')
+    @mock.patch.object(rbd_utils, 'rados')
     def setUp(self, mock_rados, mock_rbd):
         super(RbdTestCase, self).setUp()
 
@@ -75,7 +75,7 @@ class RbdTestCase(test.NoDBTestCase):
         self.mock_rbd.RBD.Error = Exception
 
         self.rbd_pool = 'rbd'
-        self.driver = rbd.RBDDriver(self.rbd_pool, None, None)
+        self.driver = rbd_utils.RBDDriver(self.rbd_pool, None, None)
 
         self.volume_name = u'volume-00000001'
 
@@ -101,9 +101,9 @@ class RbdTestCase(test.NoDBTestCase):
             self.assertFalse(self.driver.is_cloneable({'url': loc},
                                                       {'disk_format': 'raw'}))
 
-    @mock.patch.object(rbd.RBDDriver, '_get_fsid')
-    @mock.patch.object(rbd, 'rbd')
-    @mock.patch.object(rbd, 'rados')
+    @mock.patch.object(rbd_utils.RBDDriver, '_get_fsid')
+    @mock.patch.object(rbd_utils, 'rbd')
+    @mock.patch.object(rbd_utils, 'rados')
     def test_cloneable(self, mock_rados, mock_rbd, mock_get_fsid):
         mock_get_fsid.return_value = 'abc'
         location = {'url': 'rbd://abc/pool/image/snap'}
@@ -111,7 +111,7 @@ class RbdTestCase(test.NoDBTestCase):
         self.assertTrue(self.driver.is_cloneable(location, info))
         self.assertTrue(mock_get_fsid.called)
 
-    @mock.patch.object(rbd.RBDDriver, '_get_fsid')
+    @mock.patch.object(rbd_utils.RBDDriver, '_get_fsid')
     def test_uncloneable_different_fsid(self, mock_get_fsid):
         mock_get_fsid.return_value = 'abc'
         location = {'url': 'rbd://def/pool/image/snap'}
@@ -119,10 +119,10 @@ class RbdTestCase(test.NoDBTestCase):
             self.driver.is_cloneable(location, {'disk_format': 'raw'}))
         self.assertTrue(mock_get_fsid.called)
 
-    @mock.patch.object(rbd.RBDDriver, '_get_fsid')
-    @mock.patch.object(rbd, 'RBDVolumeProxy')
-    @mock.patch.object(rbd, 'rbd')
-    @mock.patch.object(rbd, 'rados')
+    @mock.patch.object(rbd_utils.RBDDriver, '_get_fsid')
+    @mock.patch.object(rbd_utils, 'RBDVolumeProxy')
+    @mock.patch.object(rbd_utils, 'rbd')
+    @mock.patch.object(rbd_utils, 'rados')
     def test_uncloneable_unreadable(self, mock_rados, mock_rbd, mock_proxy,
                                     mock_get_fsid):
         mock_get_fsid.return_value = 'abc'
@@ -136,7 +136,7 @@ class RbdTestCase(test.NoDBTestCase):
                                            snapshot='snap', read_only=True)
         self.assertTrue(mock_get_fsid.called)
 
-    @mock.patch.object(rbd.RBDDriver, '_get_fsid')
+    @mock.patch.object(rbd_utils.RBDDriver, '_get_fsid')
     def test_uncloneable_bad_format(self, mock_get_fsid):
         mock_get_fsid.return_value = 'abc'
         location = {'url': 'rbd://abc/pool/image/snap'}
@@ -153,9 +153,9 @@ class RbdTestCase(test.NoDBTestCase):
         ports = ['6789', '6790', '6791', '6792', '6791']
         self.assertEqual((hosts, ports), self.driver.get_mon_addrs())
 
-    @mock.patch.object(rbd, 'RADOSClient')
-    @mock.patch.object(rbd, 'rbd')
-    @mock.patch.object(rbd, 'rados')
+    @mock.patch.object(rbd_utils, 'RADOSClient')
+    @mock.patch.object(rbd_utils, 'rbd')
+    @mock.patch.object(rbd_utils, 'rados')
     def test_clone(self, mock_rados, mock_rbd, mock_client):
         pool = u'images'
         image = u'image-name'
@@ -184,7 +184,7 @@ class RbdTestCase(test.NoDBTestCase):
         rbd.clone.assert_called_once_with(*args, **kwargs)
         self.assertEqual(client.__enter__.call_count, 2)
 
-    @mock.patch.object(rbd, 'RBDVolumeProxy')
+    @mock.patch.object(rbd_utils, 'RBDVolumeProxy')
     def test_resize(self, mock_proxy):
         size = 1024
         proxy = mock_proxy.return_value
@@ -192,24 +192,24 @@ class RbdTestCase(test.NoDBTestCase):
         self.driver.resize(self.volume_name, size)
         proxy.resize.assert_called_once_with(size)
 
-    @mock.patch.object(rbd.RBDDriver, '_disconnect_from_rados')
-    @mock.patch.object(rbd.RBDDriver, '_connect_to_rados')
-    @mock.patch.object(rbd, 'rbd')
-    @mock.patch.object(rbd, 'rados')
+    @mock.patch.object(rbd_utils.RBDDriver, '_disconnect_from_rados')
+    @mock.patch.object(rbd_utils.RBDDriver, '_connect_to_rados')
+    @mock.patch.object(rbd_utils, 'rbd')
+    @mock.patch.object(rbd_utils, 'rados')
     def test_rbd_volume_proxy_init(self, mock_rados, mock_rbd,
                                    mock_connect_from_rados,
                                    mock_disconnect_from_rados):
         mock_connect_from_rados.return_value = (None, None)
         mock_disconnect_from_rados.return_value = (None, None)
 
-        with rbd.RBDVolumeProxy(self.driver, self.volume_name):
+        with rbd_utils.RBDVolumeProxy(self.driver, self.volume_name):
             mock_connect_from_rados.assert_called_once_with(None)
             self.assertFalse(mock_disconnect_from_rados.called)
 
         mock_disconnect_from_rados.assert_called_once_with(None, None)
 
-    @mock.patch.object(rbd, 'rbd')
-    @mock.patch.object(rbd, 'rados')
+    @mock.patch.object(rbd_utils, 'rbd')
+    @mock.patch.object(rbd_utils, 'rados')
     def test_connect_to_rados_default(self, mock_rados, mock_rbd):
         ret = self.driver._connect_to_rados()
         self.assertTrue(self.mock_rados.Rados.connect.called)
@@ -218,8 +218,8 @@ class RbdTestCase(test.NoDBTestCase):
         self.assertEqual(ret[1], self.mock_rados.Rados.ioctx)
         self.mock_rados.Rados.open_ioctx.assert_called_with(self.rbd_pool)
 
-    @mock.patch.object(rbd, 'rbd')
-    @mock.patch.object(rbd, 'rados')
+    @mock.patch.object(rbd_utils, 'rbd')
+    @mock.patch.object(rbd_utils, 'rados')
     def test_connect_to_rados_different_pool(self, mock_rados, mock_rbd):
         ret = self.driver._connect_to_rados('alt_pool')
         self.assertTrue(self.mock_rados.Rados.connect.called)
@@ -228,7 +228,7 @@ class RbdTestCase(test.NoDBTestCase):
         self.assertEqual(ret[1], self.mock_rados.Rados.ioctx)
         self.mock_rados.Rados.open_ioctx.assert_called_with('alt_pool')
 
-    @mock.patch.object(rbd, 'rados')
+    @mock.patch.object(rbd_utils, 'rados')
     def test_connect_to_rados_error(self, mock_rados):
         mock_rados.Rados.open_ioctx.side_effect = mock_rados.Error
         self.assertRaises(mock_rados.Error, self.driver._connect_to_rados)
@@ -257,7 +257,7 @@ class RbdTestCase(test.NoDBTestCase):
         self.assertEqual(['--id', 'foo', '--conf', '/path/bar.conf'],
                          self.driver.ceph_args())
 
-    @mock.patch.object(rbd, 'RBDVolumeProxy')
+    @mock.patch.object(rbd_utils, 'RBDVolumeProxy')
     def test_exists(self, mock_proxy):
         snapshot = 'snap'
         proxy = mock_proxy.return_value
@@ -267,9 +267,9 @@ class RbdTestCase(test.NoDBTestCase):
         proxy.__enter__.assert_called_once_with()
         proxy.__exit__.assert_called_once_with(None, None, None)
 
-    @mock.patch.object(rbd, 'rbd')
-    @mock.patch.object(rbd, 'rados')
-    @mock.patch.object(rbd, 'RADOSClient')
+    @mock.patch.object(rbd_utils, 'rbd')
+    @mock.patch.object(rbd_utils, 'rados')
+    @mock.patch.object(rbd_utils, 'RADOSClient')
     def test_cleanup_volumes(self, mock_client, mock_rados, mock_rbd):
         instance = {'uuid': '12345'}
 
