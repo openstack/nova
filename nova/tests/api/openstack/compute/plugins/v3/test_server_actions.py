@@ -934,12 +934,15 @@ class ServerActionsControllerTest(test.TestCase):
         self._do_test_create_volume_backed_image(dict(ImageType='Gold',
                                                       ImageVersion='2.0'))
 
-    def test_create_volume_backed_image_with_metadata_from_volume(self):
+    def _test_create_volume_backed_image_with_metadata_from_volume(
+            self, extra_metadata=None):
 
         def _fake_id(x):
             return '%s-%s-%s-%s' % (x * 8, x * 4, x * 4, x * 12)
 
         body = dict(create_image=dict(name='snapshot_of_volume_backed'))
+        if extra_metadata:
+            body['create_image']['metadata'] = extra_metadata
 
         image_service = glance.get_default_image_service()
 
@@ -990,6 +993,16 @@ class ServerActionsControllerTest(test.TestCase):
         properties = image['properties']
         self.assertEqual(properties['test_key1'], 'test_value1')
         self.assertEqual(properties['test_key2'], 'test_value2')
+        if extra_metadata:
+            for key, val in extra_metadata.items():
+                self.assertEqual(properties[key], val)
+
+    def test_create_vol_backed_img_with_meta_from_vol_without_extra_meta(self):
+        self._test_create_volume_backed_image_with_metadata_from_volume()
+
+    def test_create_vol_backed_img_with_meta_from_vol_with_extra_meta(self):
+        self._test_create_volume_backed_image_with_metadata_from_volume(
+            extra_metadata={'a': 'b'})
 
     def test_create_image_snapshots_disabled(self):
         """Don't permit a snapshot if the allow_instance_snapshots flag is
