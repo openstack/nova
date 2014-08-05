@@ -1495,6 +1495,17 @@ class PciDeviceWrongAddressFormat(NovaException):
     msg_fmt = _("The PCI address %(address)s has an incorrect format.")
 
 
+class PciDeviceInvalidAddressField(NovaException):
+    msg_fmt = _("Invalid PCI Whitelist: "
+                "The PCI address %(address)s has an invalid %(field)s.")
+
+
+class PciDeviceInvalidDeviceName(NovaException):
+    msg_fmt = _("Invalid PCI Whitelist: "
+                "The PCI whitelist can specify devname or address,"
+                " but not both")
+
+
 class PciDeviceNotFoundById(NotFound):
     msg_fmt = _("PCI device %(id)s not found")
 
