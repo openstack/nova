@@ -49,7 +49,10 @@ def _get_client(token=None, admin=False):
     }
 
     if admin:
-        params['username'] = CONF.neutron.admin_username
+        if CONF.neutron.admin_user_id:
+            params['user_id'] = CONF.neutron.admin_user_id
+        else:
+            params['username'] = CONF.neutron.admin_username
         if CONF.neutron.admin_tenant_id:
             params['tenant_id'] = CONF.neutron.admin_tenant_id
         else:
