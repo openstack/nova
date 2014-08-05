@@ -221,11 +221,6 @@ class ConductorAPI(object):
         return cctxt.call(context, 'block_device_mapping_get_all_by_instance',
                           instance=instance_p, legacy=legacy)
 
-    def instance_info_cache_delete(self, context, instance):
-        instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare()
-        cctxt.call(context, 'instance_info_cache_delete', instance=instance_p)
-
     def vol_get_usage_by_time(self, context, start_time):
         start_time_p = jsonutils.to_primitive(start_time)
         cctxt = self.client.prepare()

@@ -241,9 +241,6 @@ class ConductorManager(manager.Manager):
         result = self.db.instance_destroy(context, instance['uuid'])
         return jsonutils.to_primitive(result)
 
-    def instance_info_cache_delete(self, context, instance):
-        self.db.instance_info_cache_delete(context, instance['uuid'])
-
     def instance_fault_create(self, context, values):
         result = self.db.instance_fault_create(context, values)
         return jsonutils.to_primitive(result)
