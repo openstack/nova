@@ -24,7 +24,6 @@ import time
 
 import glanceclient.exc
 import mock
-import mox
 from oslo.config import cfg
 import testtools
 
@@ -112,12 +111,10 @@ class TestGlanceImageService(test.NoDBTestCase):
         self.client = glance_stubs.StubGlanceClient()
         self.service = self._create_image_service(self.client)
         self.context = context.RequestContext('fake', 'fake', auth_token=True)
-        self.mox = mox.Mox()
         self.files_to_clean = []
 
     def tearDown(self):
         super(TestGlanceImageService, self).tearDown()
-        self.mox.UnsetStubs()
         for f in self.files_to_clean:
             try:
                 os.unlink(f)
@@ -238,7 +235,8 @@ class TestGlanceImageService(test.NoDBTestCase):
         os.remove(client.s_tmpfname)
         os.remove(tmpfname)
 
-    def test_download_module_filesystem_match(self):
+    @mock.patch('nova.virt.libvirt.utils.copy_image')
+    def test_download_module_filesystem_match(self, mock_copy_image):
 
         mountpoint = '/'
         fs_id = 'someid'
@@ -259,8 +257,6 @@ class TestGlanceImageService(test.NoDBTestCase):
                                      'transfer module should have intercepted '
                                      'it.')
 
-        self.mox.StubOutWithMock(lv_utils, 'copy_image')
-
         image_id = 1  # doesn't matter
         client = MyGlanceStubClient()
         self.flags(allowed_direct_url_schemes=['file'], group='glance')
@@ -272,11 +268,8 @@ class TestGlanceImageService(test.NoDBTestCase):
         self.flags(group='image_file_url:gluster', mountpoint=mountpoint)
 
         dest_file = os.devnull
-        lv_utils.copy_image(mox.IgnoreArg(), dest_file)
-
-        self.mox.ReplayAll()
         service.download(self.context, image_id, dst_path=dest_file)
-        self.mox.VerifyAll()
+        mock_copy_image.assert_called_once_with('/' + os.devnull, os.devnull)
 
     def test_download_module_no_filesystem_match(self):
         mountpoint = '/'
@@ -357,7 +350,8 @@ class TestGlanceImageService(test.NoDBTestCase):
         service.download(self.context, image_id, dst_path=os.devnull)
         self.assertTrue(self.copy_called)
 
-    def test_download_module_file_bad_module(self):
+    @mock.patch('nova.virt.libvirt.utils.copy_image')
+    def test_download_module_file_bad_module(self, mock_copy_image):
         _, data_filename = self._get_tempfile()
         file_url = 'applesauce://%s' % data_filename
 
@@ -375,8 +369,6 @@ class TestGlanceImageService(test.NoDBTestCase):
                 return "someData"
 
         self.flags(allowed_direct_url_schemes=['applesauce'], group='glance')
-
-        self.mox.StubOutWithMock(lv_utils, 'copy_image')
         self.flags(allowed_direct_url_schemes=['file'], group='glance')
         image_id = 1  # doesn't matter
         client = MyGlanceStubClient()
@@ -384,11 +376,9 @@ class TestGlanceImageService(test.NoDBTestCase):
 
         # by not calling copyfileobj in the file download module we verify
         # that the requirements were not met for its use
-        self.mox.ReplayAll()
         service.download(self.context, image_id, dst_path=os.devnull)
-        self.mox.VerifyAll()
-
         self.assertTrue(client.data_called)
+        self.assertFalse(mock_copy_image.called)
 
     def test_client_forbidden_converts_to_imagenotauthed(self):
         class MyGlanceStubClient(glance_stubs.StubGlanceClient):
@@ -1253,18 +1243,14 @@ class TestGlanceApiServers(test.NoDBTestCase):
 
 
 class TestUpdateGlanceImage(test.NoDBTestCase):
-    def test_start(self):
+    @mock.patch('nova.image.glance.GlanceImageService')
+    def test_start(self, mock_glance_image_service):
         consumer = glance.UpdateGlanceImage(
             'context', 'id', 'metadata', 'stream')
-        image_service = self.mox.CreateMock(glance.GlanceImageService)
 
-        self.mox.StubOutWithMock(glance, 'get_remote_image_service')
+        with mock.patch.object(glance, 'get_remote_image_service') as a_mock:
+            a_mock.return_value = (mock_glance_image_service, 'image_id')
 
-        glance.get_remote_image_service(
-            'context', 'id').AndReturn((image_service, 'image_id'))
-        image_service.update(
-            'context', 'image_id', 'metadata', 'stream', purge_props=False)
-
-        self.mox.ReplayAll()
-
-        consumer.start()
+            consumer.start()
+            mock_glance_image_service.update.assert_called_with(
+                'context', 'image_id', 'metadata', 'stream', purge_props=False)
