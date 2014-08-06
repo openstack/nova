@@ -421,6 +421,7 @@ class DbQuotaDriver(object):
                         is admin and admin wants to impact on
                         common user.
         """
+        _valid_method_call_check_resources(values, 'check')
 
         # Ensure no value is less than zero
         unders = [key for key, val in values.items() if val < 0]
@@ -502,6 +503,7 @@ class DbQuotaDriver(object):
                         is admin and admin wants to impact on
                         common user.
         """
+        _valid_method_call_check_resources(deltas, 'reserve')
 
         # Set up the reservation expiration
         if expire is None:
@@ -994,6 +996,7 @@ class BaseResource(object):
 
 class ReservableResource(BaseResource):
     """Describe a reservable resource."""
+    valid_method = 'reserve'
 
     def __init__(self, name, sync, flag=None):
         """Initializes a ReservableResource.
@@ -1031,8 +1034,7 @@ class ReservableResource(BaseResource):
 
 class AbsoluteResource(BaseResource):
     """Describe a non-reservable resource."""
-
-    pass
+    valid_method = 'check'
 
 
 class CountableResource(AbsoluteResource):
@@ -1095,6 +1097,10 @@ class QuotaEngine(object):
 
     def __contains__(self, resource):
         return resource in self._resources
+
+    def __getitem__(self, key):
+        if key in self._resources:
+            return self._resources[key]
 
     def register_resource(self, resource):
         """Register a resource."""
@@ -1437,3 +1443,19 @@ resources = [
 
 
 QUOTAS.register_resources(resources)
+
+
+def _valid_method_call_check_resource(name, method):
+    if name not in QUOTAS:
+        raise exception.InvalidQuotaMethodUsage(method=method, res=name)
+    res = QUOTAS[name]
+
+    if res.valid_method != method:
+        raise exception.InvalidQuotaMethodUsage(method=method, res=name)
+
+
+def _valid_method_call_check_resources(resource, method):
+    """A method to check whether the resource can use the quota method."""
+
+    for name in resource.keys():
+        _valid_method_call_check_resource(name, method)
