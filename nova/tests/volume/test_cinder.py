@@ -145,11 +145,11 @@ class CinderApiTestCase(test.NoDBTestCase):
             volume['availability_zone'] = 'zone1'
             self.assertIsNone(self.api.check_attach(
                 self.ctx, volume, instance))
-            mock_get_instance_az.assert_not_called()
+            self.assertFalse(mock_get_instance_az.called)
             volume['availability_zone'] = 'zone2'
             self.assertRaises(exception.InvalidVolume,
                             self.api.check_attach, self.ctx, volume, instance)
-            mock_get_instance_az.assert_not_called()
+            self.assertFalse(mock_get_instance_az.called)
             cinder.CONF.reset()
 
     def test_check_attach(self):
