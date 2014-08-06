@@ -49,7 +49,11 @@ class MultinicController(wsgi.Controller):
         instance = common.get_instance(self.compute_api, context, id,
                                        want_objects=True)
         network_id = body['add_fixed_ip']['network_id']
-        self.compute_api.add_fixed_ip(context, instance, network_id)
+        try:
+            self.compute_api.add_fixed_ip(context, instance, network_id)
+        except exception.NoMoreFixedIps as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
+
         return webob.Response(status_int=202)
 
     @wsgi.action('remove_fixed_ip')
