@@ -15,6 +15,7 @@
 #    under the License.
 
 import base64
+import copy
 import datetime
 import uuid
 
@@ -32,6 +33,8 @@ from nova.api.openstack.compute.plugins.v3 import access_ips
 from nova.api.openstack.compute.plugins.v3 import ips
 from nova.api.openstack.compute.plugins.v3 import keypairs
 from nova.api.openstack.compute.plugins.v3 import servers
+from nova.api.openstack.compute.schemas.v3 import keypairs as keypairs_schema
+from nova.api.openstack.compute.schemas.v3 import servers as servers_schema
 from nova.api.openstack.compute import views
 from nova.api.openstack import extensions
 from nova.compute import api as compute_api
@@ -2101,7 +2104,7 @@ class ServersControllerCreateTest(test.TestCase):
 
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create,
-                          self.req, self.body)
+                          self.req, body=self.body)
 
     def test_create_instance_with_network_with_no_subnet(self):
         network = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
@@ -3086,7 +3089,7 @@ class ServersInvalidRequestTestCase(test.TestCase):
         req = fakes.HTTPRequestV3.blank('/servers')
         req.method = 'POST'
 
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.controller.create, req, body=body)
 
     def test_create_server_no_body(self):
@@ -3160,3 +3163,29 @@ class TestServersExtensionPoint(test.NoDBTestCase):
 
     def test_load_create_extension_point(self):
         self._test_load_extension_point('create')
+
+
+class TestServersExtensionSchema(test.NoDBTestCase):
+    def setUp(self):
+        super(TestServersExtensionSchema, self).setUp()
+        CONF.set_override('extensions_whitelist', ['keypairs'], 'osapi_v3')
+
+    def _test_load_extension_schema(self, name):
+        setattr(FakeExt, 'get_server_%s_schema' % name,
+                FakeExt.fake_extension_point)
+        ext_info = plugins.LoadedExtensionInfo()
+        controller = servers.ServersController(extension_info=ext_info)
+        self.assertTrue(hasattr(controller, '%s_schema_manager' % name))
+
+        delattr(FakeExt, 'get_server_%s_schema' % name)
+        return getattr(controller, 'schema_server_%s' % name)
+
+    def test_load_create_extension_point(self):
+        # The expected is the schema combination of base and keypairs
+        # because of the above extensions_whitelist.
+        expected_schema = copy.deepcopy(servers_schema.base_create)
+        expected_schema['properties']['server']['properties'].update(
+            keypairs_schema.server_create)
+
+        actual_schema = self._test_load_extension_schema('create')
+        self.assertEqual(expected_schema, actual_schema)

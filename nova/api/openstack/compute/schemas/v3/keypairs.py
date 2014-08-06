@@ -31,3 +31,7 @@ create = {
     'required': ['keypair'],
     'additionalProperties': False,
 }
+
+server_create = {
+    'key_name': parameter_types.name,
+}

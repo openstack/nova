@@ -180,3 +180,6 @@ class Keypairs(extensions.V3APIExtensionBase):
     # server create kwargs
     def server_create(self, server_dict, create_kwargs):
         create_kwargs['key_name'] = server_dict.get('key_name')
+
+    def get_server_create_schema(self):
+        return keypairs.server_create
