@@ -1088,6 +1088,10 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def deallocate_networks_on_reschedule(self, instance):
+        """Does the driver want networks deallocated on reschedule?"""
+        return False
+
     def macs_for_instance(self, instance):
         """What MAC addresses must this instance have?
 

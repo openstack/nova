@@ -1926,9 +1926,9 @@ class ComputeManager(manager.Manager):
                     self._set_instance_error_state(context, instance.uuid)
                     return
                 retry['exc'] = traceback.format_exception(*sys.exc_info())
-                # dhcp_options are per host, so if they're set we need to
-                # deallocate the networks and reallocate on the next host.
-                if self.driver.dhcp_options_for_instance(instance):
+                # NOTE(comstud): Deallocate networks if the driver wants
+                # us to do so.
+                if self.driver.deallocate_networks_on_reschedule(instance):
                     self._cleanup_allocated_networks(context, instance,
                             requested_networks)
 

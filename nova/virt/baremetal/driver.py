@@ -218,6 +218,9 @@ class BareMetalDriver(driver.ComputeDriver):
         self.firewall_driver.unfilter_instance(
                 instance, network_info)
 
+    def deallocate_networks_on_reschedule(self, instance):
+        return True
+
     def macs_for_instance(self, instance):
         context = nova_context.get_admin_context()
         node_uuid = self._require_node(instance)
