@@ -1190,8 +1190,7 @@ class TestNeutronv2(TestNeutronv2Base):
             device_id=self.instance.uuid).AndReturn(
                 {'ports': port_data})
 
-        NeutronNotFound = neutronv2.exceptions.NeutronClientException(
-                                                            status_code=404)
+        NeutronNotFound = exceptions.NeutronClientException(status_code=404)
         for port in reversed(port_data):
             self.moxed_client.delete_port(port['id']).AndRaise(
                                                         NeutronNotFound)
@@ -1417,8 +1416,7 @@ class TestNeutronv2(TestNeutronv2Base):
                 network_id='my_netid1',
                 port_id='3123-ad34-bc43-32332ca33e')])
 
-        NeutronNotFound = neutronv2.exceptions.NeutronClientException(
-                                                            status_code=404)
+        NeutronNotFound = exceptions.NeutronClientException(status_code=404)
         self.moxed_client.show_port(requested_networks[0].port_id).AndRaise(
             NeutronNotFound)
         self.mox.ReplayAll()
@@ -1438,15 +1436,14 @@ class TestNeutronv2(TestNeutronv2Base):
                 network_id='my_netid1',
                 port_id='3123-ad34-bc43-32332ca33e')])
 
-        NeutronNotFound = neutronv2.exceptions.NeutronClientException(
-                                                            status_code=0)
+        NeutronNotFound = exceptions.NeutronClientException(status_code=0)
         self.moxed_client.show_port(requested_networks[0].port_id).AndRaise(
                                                         NeutronNotFound)
         self.mox.ReplayAll()
         # Expected call from setUp.
         neutronv2.get_client(None)
         api = neutronapi.API()
-        self.assertRaises(neutronv2.exceptions.NeutronClientException,
+        self.assertRaises(exceptions.NeutronClientException,
                           api.validate_networks,
                           self.context, requested_networks, 1)
 
@@ -1873,8 +1870,7 @@ class TestNeutronv2(TestNeutronv2Base):
 
     def test_get_floating_ip_by_id_not_found(self):
         api = neutronapi.API()
-        NeutronNotFound = neutronv2.exceptions.NeutronClientException(
-            status_code=404)
+        NeutronNotFound = exceptions.NeutronClientException(status_code=404)
         floating_ip_id = self.fip_unassociated['id']
         self.moxed_client.show_floatingip(floating_ip_id).\
             AndRaise(NeutronNotFound)
@@ -1885,13 +1881,12 @@ class TestNeutronv2(TestNeutronv2Base):
 
     def test_get_floating_ip_raises_non404(self):
         api = neutronapi.API()
-        NeutronNotFound = neutronv2.exceptions.NeutronClientException(
-            status_code=0)
+        NeutronNotFound = exceptions.NeutronClientException(status_code=0)
         floating_ip_id = self.fip_unassociated['id']
         self.moxed_client.show_floatingip(floating_ip_id).\
             AndRaise(NeutronNotFound)
         self.mox.ReplayAll()
-        self.assertRaises(neutronv2.exceptions.NeutronClientException,
+        self.assertRaises(exceptions.NeutronClientException,
                           api.get_floating_ip,
                           self.context, floating_ip_id)
 
@@ -2566,7 +2561,7 @@ class TestNeutronv2WithMock(test.TestCase):
             mock.patch.object(api,
                 '_get_floating_ip_pool_id_by_name_or_id')) as (
             create_mock, get_mock):
-            create_mock.side_effect = neutronv2.exceptions.OverQuotaClient()
+            create_mock.side_effect = exceptions.OverQuotaClient()
 
             self.assertRaises(exception.FloatingIpLimitExceeded,
                           api.allocate_floating_ip,

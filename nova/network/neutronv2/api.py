@@ -502,7 +502,7 @@ class API(base_api.NetworkAPI):
         for port in ports:
             try:
                 neutron.delete_port(port)
-            except neutronv2.exceptions.NeutronClientException as e:
+            except neutron_client_exc.NeutronClientException as e:
                 if e.status_code == 404:
                     LOG.warning(_LW("Port %s does not exist"), port)
                 else:
@@ -709,7 +709,7 @@ class API(base_api.NetworkAPI):
                 if request.port_id:
                     try:
                         port = neutron.show_port(request.port_id).get('port')
-                    except neutronv2.exceptions.NeutronClientException as e:
+                    except neutron_client_exc.NeutronClientException as e:
                         if e.status_code == 404:
                             port = None
                         else:
@@ -946,7 +946,7 @@ class API(base_api.NetworkAPI):
         client = neutronv2.get_client(context)
         try:
             fip = client.show_floatingip(id)['floatingip']
-        except neutronv2.exceptions.NeutronClientException as e:
+        except neutron_client_exc.NeutronClientException as e:
             if e.status_code == 404:
                 raise exception.FloatingIpNotFound(id=id)
             else:
@@ -1081,7 +1081,7 @@ class API(base_api.NetworkAPI):
                                            port_id=port)
         # If a neutron plugin does not implement the L3 API a 404 from
         # list_floatingips will be raised.
-        except neutronv2.exceptions.NeutronClientException as e:
+        except neutron_client_exc.NeutronClientException as e:
             if e.status_code == 404:
                 return []
             with excutils.save_and_reraise_exception():
