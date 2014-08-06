@@ -170,6 +170,8 @@ class FloatingIPController(object):
             else:
                 msg = _("IP allocation over quota.")
             raise webob.exc.HTTPForbidden(explanation=msg)
+        except exception.FloatingIpPoolNotFound as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
 
         return _translate_floating_ip_view(ip)
 
