@@ -15,6 +15,9 @@
 
 import six
 
+from nova import exception
+from nova.i18n import _
+
 
 class CpuDiagnostics(object):
 
@@ -119,18 +122,30 @@ class Diagnostics(object):
         self.uptime = uptime
         self.config_drive = config_drive
         if cpu_details:
+            self._validate_type(cpu_details, CpuDiagnostics, 'cpu_details')
             self.cpu_details = cpu_details
         else:
             self.cpu_details = []
         if nic_details:
+            self._validate_type(nic_details, NicDiagnostics, 'nic_details')
             self.nic_details = nic_details
         else:
             self.nic_details = []
         if disk_details:
+            self._validate_type(disk_details, DiskDiagnostics, 'disk_details')
             self.disk_details = disk_details
         else:
             self.disk_details = []
         self.memory_details = MemoryDiagnostics()
+
+    def _validate_type(self, input, type, str_input):
+        if not isinstance(input, list):
+            reason = _("Invalid type for %s") % str_input
+            raise exception.InvalidInput(reason=reason)
+        for i in input:
+            if not isinstance(i, type):
+                reason = _("Invalid type for %s entry") % str_input
+                raise exception.InvalidInput(reason=reason)
 
     def add_cpu(self, time=0):
         self.cpu_details.append(CpuDiagnostics(time=time))
