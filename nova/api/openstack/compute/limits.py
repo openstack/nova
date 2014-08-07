@@ -91,7 +91,8 @@ class LimitsController(object):
     def index(self, req):
         """Return all global and rate limit information."""
         context = req.environ['nova.context']
-        quotas = QUOTAS.get_project_quotas(context, context.project_id,
+        project_id = req.params.get('tenant_id', context.project_id)
+        quotas = QUOTAS.get_project_quotas(context, project_id,
                                            usages=False)
         abs_limits = dict((k, v['limit']) for k, v in quotas.items())
         rate_limits = req.environ.get("nova.limits", [])
