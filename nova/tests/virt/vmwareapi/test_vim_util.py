@@ -43,7 +43,7 @@ class VMwareVIMUtilTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(VMwareVIMUtilTestCase, self).setUp()
-        fake.reset(vc=True)
+        fake.reset()
         self.vim = fake.FakeVim()
         self.vim._login()
 

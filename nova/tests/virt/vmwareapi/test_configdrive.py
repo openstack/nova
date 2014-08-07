@@ -47,7 +47,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
                    host_password='test_pass',
                    use_linked_clone=False, group='vmware')
         self.flags(vnc_enabled=False)
-        vmwareapi_fake.reset(vc=True)
+        vmwareapi_fake.reset()
         stubs.set_stubs(self.stubs)
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.conn = driver.VMwareVCDriver(fake.FakeVirtAPI)
