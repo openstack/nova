@@ -2247,11 +2247,11 @@ class ComputeManager(manager.Manager):
                                                      connector)
                 self.volume_api.detach(context, bdm.volume_id)
             except exception.DiskNotFound as exc:
-                LOG.warn(_('Ignoring DiskNotFound: %s') % exc,
-                         instance=instance)
+                LOG.debug('Ignoring DiskNotFound: %s', exc,
+                          instance=instance)
             except exception.VolumeNotFound as exc:
-                LOG.warn(_('Ignoring VolumeNotFound: %s') % exc,
-                         instance=instance)
+                LOG.debug('Ignoring VolumeNotFound: %s', exc,
+                          instance=instance)
             except cinder_exception.EndpointNotFound as exc:
                 LOG.warn(_LW('Ignoring EndpointNotFound: %s'), exc,
                              instance=instance)
