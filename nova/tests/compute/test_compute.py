@@ -8877,6 +8877,48 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, instance['uuid'])
 
+    def test_serial_console(self):
+        # Make sure we can  get a serial proxy url for an instance.
+
+        fake_instance = {'uuid': 'fake_uuid',
+                         'host': 'fake_compute_host'}
+        fake_console_type = 'serial'
+        fake_connect_info = {'token': 'fake_token',
+                             'console_type': fake_console_type,
+                             'host': 'fake_serial_host',
+                             'port': 'fake_tcp_port',
+                             'internal_access_path': 'fake_access_path',
+                             'instance_uuid': fake_instance['uuid'],
+                             'access_url': 'fake_access_url'}
+
+        rpcapi = compute_rpcapi.ComputeAPI
+
+        with contextlib.nested(
+            mock.patch.object(rpcapi, 'get_serial_console',
+                              return_value=fake_connect_info),
+            mock.patch.object(self.compute_api.consoleauth_rpcapi,
+                              'authorize_console')
+        ) as (mock_get_serial_console, mock_authorize_console):
+            self.compute_api.consoleauth_rpcapi.authorize_console(
+                    self.context, 'fake_token', fake_console_type,
+                    'fake_serial_host', 'fake_tcp_port',
+                    'fake_access_path', 'fake_uuid')
+
+            console = self.compute_api.get_serial_console(self.context,
+                                                          fake_instance,
+                                                          fake_console_type)
+            self.assertEqual(console, {'url': 'fake_access_url'})
+
+    def test_get_serial_console_no_host(self):
+        # Make sure an exception is raised when instance is not Active.
+        instance = self._create_fake_instance(params={'host': ''})
+
+        self.assertRaises(exception.InstanceNotReady,
+                          self.compute_api.get_serial_console,
+                          self.context, instance, 'serial')
+
+        db.instance_destroy(self.context, instance['uuid'])
+
     def test_console_output(self):
         fake_instance = {'uuid': 'fake_uuid',
                          'host': 'fake_compute_host'}
