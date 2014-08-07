@@ -153,7 +153,8 @@ class BlockDeviceMappingTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
-        self.assertRaises(exc.HTTPBadRequest, self._test_create, params)
+        self.assertRaises(exc.HTTPBadRequest,
+                          self._test_create, params, no_image=True)
 
     def test_create_instance_with_device_name_empty(self):
         self.bdm[0]['device_name'] = ''
@@ -167,7 +168,8 @@ class BlockDeviceMappingTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
-        self.assertRaises(exc.HTTPBadRequest, self._test_create, params)
+        self.assertRaises(exc.HTTPBadRequest,
+                          self._test_create, params, no_image=True)
 
     def test_create_instance_with_device_name_too_long(self):
         self.bdm[0]['device_name'] = 'a' * 256
@@ -181,7 +183,8 @@ class BlockDeviceMappingTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
-        self.assertRaises(exc.HTTPBadRequest, self._test_create, params)
+        self.assertRaises(exc.HTTPBadRequest,
+                          self._test_create, params, no_image=True)
 
     def test_create_instance_with_space_in_device_name(self):
         self.bdm[0]['device_name'] = 'v da'
@@ -196,7 +199,8 @@ class BlockDeviceMappingTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
-        self.assertRaises(exc.HTTPBadRequest, self._test_create, params)
+        self.assertRaises(exc.HTTPBadRequest,
+                          self._test_create, params, no_image=True)
 
     def test_create_instance_with_invalid_size(self):
         self.bdm[0]['volume_size'] = 'hello world'
@@ -210,7 +214,8 @@ class BlockDeviceMappingTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
-        self.assertRaises(exc.HTTPBadRequest, self._test_create, params)
+        self.assertRaises(exc.HTTPBadRequest,
+                          self._test_create, params, no_image=True)
 
     def test_create_instance_bdm(self):
         bdm = [{
@@ -241,7 +246,7 @@ class BlockDeviceMappingTest(test.TestCase):
         self.stubs.Set(compute_api.API, '_validate_bdm', _validate_bdm)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: bdm}
-        self._test_create(params)
+        self._test_create(params, no_image=True)
 
     def test_create_instance_bdm_missing_device_name(self):
         del self.bdm[0]['device_name']
@@ -261,7 +266,7 @@ class BlockDeviceMappingTest(test.TestCase):
         self.stubs.Set(compute_api.API, '_validate_bdm', _validate_bdm)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
-        self._test_create(params)
+        self._test_create(params, no_image=True)
 
     def test_create_instance_bdm_validation_error(self):
         def _validate(*args, **kwargs):
@@ -271,7 +276,8 @@ class BlockDeviceMappingTest(test.TestCase):
                       '_validate', _validate)
 
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
-        self.assertRaises(exc.HTTPBadRequest, self._test_create, params)
+        self.assertRaises(exc.HTTPBadRequest,
+                          self._test_create, params, no_image=True)
 
     @mock.patch('nova.compute.api.API._get_bdm_image_metadata')
     def test_create_instance_non_bootable_volume_fails(self, fake_bdm_meta):
