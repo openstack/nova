@@ -42,12 +42,14 @@ class IPsController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
         return instance
 
+    @extensions.expected_errors(404)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         instance = self._get_instance(context, server_id)
         networks = common.get_networks_for_instance(context, instance)
         return self._view_builder.index(networks)
 
+    @extensions.expected_errors(404)
     def show(self, req, server_id, id):
         context = req.environ["nova.context"]
         instance = self._get_instance(context, server_id)
