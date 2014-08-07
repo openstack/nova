@@ -141,7 +141,8 @@ class ResourceTracker(object):
         return claim
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
-    def resize_claim(self, context, instance, instance_type, limits=None):
+    def resize_claim(self, context, instance, instance_type,
+                     image_meta=None, limits=None):
         """Indicate that resources are needed for a resize operation to this
         compute host.
         :param context: security context
@@ -153,6 +154,8 @@ class ResourceTracker(object):
         should be turned into finalize  a resource claim or free
         resources after the compute operation is finished.
         """
+        image_meta = image_meta or {}
+
         if self.disabled:
             # compute_driver doesn't support resource tracking, just
             # generate the migration record and continue the resize:
@@ -167,9 +170,9 @@ class ResourceTracker(object):
                           'overhead': overhead['memory_mb']})
 
         instance_ref = obj_base.obj_to_primitive(instance)
-        claim = claims.ResizeClaim(context, instance_ref, instance_type, self,
-                                   self.compute_node, overhead=overhead,
-                                   limits=limits)
+        claim = claims.ResizeClaim(context, instance_ref, instance_type,
+                                   image_meta, self, self.compute_node,
+                                   overhead=overhead, limits=limits)
 
         migration = self._create_migration(context, instance_ref,
                                            instance_type)
@@ -228,7 +231,7 @@ class ResourceTracker(object):
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def drop_resize_claim(self, context, instance, instance_type=None,
-                          prefix='new_'):
+                          image_meta=None, prefix='new_'):
         """Remove usage for an incoming/outgoing migration."""
         if instance['uuid'] in self.tracked_migrations:
             migration, itype = self.tracked_migrations.pop(instance['uuid'])

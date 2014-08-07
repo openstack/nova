@@ -3559,7 +3559,7 @@ class ComputeManager(manager.Manager):
         limits = filter_properties.get('limits', {})
         rt = self._get_resource_tracker(node)
         with rt.resize_claim(context, instance, instance_type,
-                             limits=limits) as claim:
+                             image_meta=image, limits=limits) as claim:
             LOG.audit(_('Migrating'), context=context, instance=instance)
             self.compute_rpcapi.resize_instance(
                     context, instance, claim.migration, image,
