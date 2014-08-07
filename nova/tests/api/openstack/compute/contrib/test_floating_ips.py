@@ -348,7 +348,7 @@ class FloatingIpTest(test.TestCase):
                 side_effect=exception.FloatingIpPoolNotFound())
     def test_floating_ip_create_with_unknown_pool(self, allocate_mock):
         req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips')
-        ex = self.assertRaises(webob.exc.HTTPBadRequest,
+        ex = self.assertRaises(webob.exc.HTTPNotFound,
             self.controller.create, req, {'pool': 'non_existent_pool'})
 
         self.assertIn('Floating ip pool not found.', ex.explanation)
