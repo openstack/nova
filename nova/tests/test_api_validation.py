@@ -540,7 +540,7 @@ class NameTestCase(APIValidationTestCase):
                          self.post(body={'foo': 'a'}))
 
     def test_validate_name_fails(self):
-        pattern = "'^(?! )[a-zA-Z0-9. _-]+(?<! )$'"
+        pattern = "'^(?! )[a-zA-Z0-9. _-]*(?<! )$'"
         detail = ("Invalid input for field/attribute foo. Value:  ."
                   " ' ' does not match %s") % pattern
         self.check_validation_error(self.post, body={'foo': ' '},
