@@ -20,7 +20,6 @@ from oslo.config import cfg
 from oslo import messaging
 
 from nova.objects import base as objects_base
-from nova.openstack.common import jsonutils
 from nova import rpc
 
 rpcapi_opts = [
@@ -106,16 +105,3 @@ class SchedulerAPI(object):
         cctxt = self.client.prepare()
         return cctxt.call(ctxt, 'select_destinations',
             request_spec=request_spec, filter_properties=filter_properties)
-
-    def prep_resize(self, ctxt, instance, instance_type, image,
-            request_spec, filter_properties, reservations):
-        instance_p = jsonutils.to_primitive(instance)
-        instance_type_p = jsonutils.to_primitive(instance_type)
-        reservations_p = jsonutils.to_primitive(reservations)
-        image_p = jsonutils.to_primitive(image)
-        cctxt = self.client.prepare()
-        cctxt.cast(ctxt, 'prep_resize',
-                   instance=instance_p, instance_type=instance_type_p,
-                   image=image_p, request_spec=request_spec,
-                   filter_properties=filter_properties,
-                   reservations=reservations_p)
