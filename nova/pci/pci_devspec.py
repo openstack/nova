@@ -49,9 +49,11 @@ class PciAddress(object):
     This class checks the address fields of the pci_passthrough_whitelist
     configuration option, validating the address fields.
     Example config are:
-    pci_passthrough_whitelist = {"address":"*:0a:00.*",
-                                 "physical_network":"physnet1"}
-    pci_passthrough_whitelist = {"address":":0a:00.",
+
+        | pci_passthrough_whitelist = {"address":"*:0a:00.*",
+        |                         "physical_network":"physnet1"}
+        | pci_passthrough_whitelist = {"address":":0a:00.",
+
     This function class will validate the address fields, check for wildcards,
     and insert wildcards where the field is left blank.
     """
