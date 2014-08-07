@@ -17,6 +17,7 @@
 import copy
 
 from nova import exception
+from nova.i18n import _LE
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.pci import pci_utils
@@ -70,8 +71,10 @@ class PciDeviceStats(object):
         if not pool:
             pool = dict((k, dev.get(k)) for k in self.pool_keys)
             pool['count'] = 0
+            pool['devices'] = []
             self.pools.append(pool)
         pool['count'] += 1
+        pool['devices'].append(dev)
 
     @staticmethod
     def _decrease_pool_count(pool_list, pool, count=1):
@@ -87,13 +90,55 @@ class PciDeviceStats(object):
             pool_list.remove(pool)
         return count
 
-    def consume_device(self, dev):
+    def remove_device(self, dev):
         """Remove one device from the first pool that it matches."""
         pool = self._get_first_pool(dev)
         if not pool:
             raise exception.PciDevicePoolEmpty(
                 compute_node_id=dev.compute_node_id, address=dev.address)
+        pool['devices'].remove(dev)
         self._decrease_pool_count(self.pools, pool)
+
+    def get_free_devs(self):
+        free_devs = []
+        for pool in self.pools:
+            free_devs.extend(pool['devices'])
+        return free_devs
+
+    def consume_requests(self, pci_requests):
+        alloc_devices = []
+        for request in pci_requests:
+            count = request.get('count', 1)
+            spec = request.get('spec', [])
+            # For now, keep the same algorithm as during scheduling:
+            # a spec may be able to match multiple pools.
+            pools = self._filter_pools_for_spec(self.pools, spec)
+            # Failed to allocate the required number of devices
+            # Return the devices already allocated back to their pools
+            if sum([pool['count'] for pool in pools]) < count:
+                LOG.error(_LE("Failed to allocate PCI devices for instance."
+                          " Unassigning devices back to pools."
+                          " This should not happen, since the scheduler"
+                          " should have accurate information, and allocation"
+                          " during claims is controlled via a hold"
+                          " on the compute node semaphore"))
+                for d in range(len(alloc_devices)):
+                    self.add_device(alloc_devices.pop())
+                raise exception.PciDeviceRequestFailed(requests=pci_requests)
+
+            for pool in pools:
+                if pool['count'] >= count:
+                    num_alloc = count
+                else:
+                    num_alloc = pool['count']
+                count -= num_alloc
+                pool['count'] -= num_alloc
+                for d in range(num_alloc):
+                    pci_dev = pool['devices'].pop()
+                    alloc_devices.append(pci_dev)
+                if count == 0:
+                    break
+        return alloc_devices
 
     @staticmethod
     def _filter_pools_for_spec(pools, request_specs):
@@ -134,7 +179,12 @@ class PciDeviceStats(object):
             raise exception.PciDeviceRequestFailed(requests=requests)
 
     def __iter__(self):
-        return iter(self.pools)
+        # 'devices' shouldn't be part of stats
+        pools = []
+        for pool in self.pools:
+            tmp = dict((k, v) for k, v in pool.iteritems() if k != 'devices')
+            pools.append(tmp)
+        return iter(pools)
 
     def clear(self):
         """Clear all the stats maintained."""

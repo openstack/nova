@@ -71,15 +71,15 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
                          set([1, 2]))
 
     def test_remove_device(self):
-        self.pci_stats.consume_device(self.fake_dev_2)
+        self.pci_stats.remove_device(self.fake_dev_2)
         self.assertEqual(len(self.pci_stats.pools), 1)
         self.assertEqual(self.pci_stats.pools[0]['count'], 2)
         self.assertEqual(self.pci_stats.pools[0]['vendor_id'], 'v1')
 
     def test_remove_device_exception(self):
-        self.pci_stats.consume_device(self.fake_dev_2)
+        self.pci_stats.remove_device(self.fake_dev_2)
         self.assertRaises(exception.PciDevicePoolEmpty,
-                          self.pci_stats.consume_device,
+                          self.pci_stats.remove_device,
                           self.fake_dev_2)
 
     def test_json_creat(self):
@@ -115,4 +115,19 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
     def test_apply_requests_failed(self):
         self.assertRaises(exception.PciDeviceRequestFailed,
             self.pci_stats.apply_requests,
+            pci_requests_multiple)
+
+    def test_consume_requests(self):
+        devs = self.pci_stats.consume_requests(pci_requests)
+        self.assertEqual(2, len(devs))
+        self.assertEqual(set(['v1', 'v2']),
+                         set([dev['vendor_id'] for dev in devs]))
+
+    def test_consume_requests_empty(self):
+        devs = self.pci_stats.consume_requests([])
+        self.assertEqual(0, len(devs))
+
+    def test_consume_requests_failed(self):
+        self.assertRaises(exception.PciDeviceRequestFailed,
+            self.pci_stats.consume_requests,
             pci_requests_multiple)
