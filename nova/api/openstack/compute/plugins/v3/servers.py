@@ -215,9 +215,11 @@ class ServersController(wsgi.Controller):
 
         # Verify search by 'status' contains a valid status.
         # Convert it to filter by vm_state or task_state for compute_api.
-        status = search_opts.pop('status', None)
-        if status is not None:
-            vm_state, task_state = common.task_and_vm_state_from_status(status)
+        search_opts.pop('status', None)
+        if 'status' in req.GET.keys():
+            statuses = req.GET.getall('status')
+            states = common.task_and_vm_state_from_status(statuses)
+            vm_state, task_state = states
             if not vm_state and not task_state:
                 return {'servers': []}
             search_opts['vm_state'] = vm_state

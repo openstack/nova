@@ -361,17 +361,29 @@ class MiscFunctionsTest(test.TestCase):
                 self.assertEqual(expected, actual)
 
     def test_task_and_vm_state_from_status(self):
-        fixture1 = 'reboot'
+        fixture1 = ['reboot']
         actual = common.task_and_vm_state_from_status(fixture1)
         expected = [vm_states.ACTIVE], [task_states.REBOOT_PENDING,
                                         task_states.REBOOT_STARTED,
                                         task_states.REBOOTING]
         self.assertEqual(expected, actual)
 
-        fixture2 = 'resize'
+        fixture2 = ['resize']
         actual = common.task_and_vm_state_from_status(fixture2)
         expected = ([vm_states.ACTIVE, vm_states.STOPPED],
                     [task_states.RESIZE_FINISH,
+                     task_states.RESIZE_MIGRATED,
+                     task_states.RESIZE_MIGRATING,
+                     task_states.RESIZE_PREP])
+        self.assertEqual(expected, actual)
+
+        fixture3 = ['resize', 'reboot']
+        actual = common.task_and_vm_state_from_status(fixture3)
+        expected = ([vm_states.ACTIVE, vm_states.STOPPED],
+                    [task_states.REBOOT_PENDING,
+                     task_states.REBOOT_STARTED,
+                     task_states.REBOOTING,
+                     task_states.RESIZE_FINISH,
                      task_states.RESIZE_MIGRATED,
                      task_states.RESIZE_MIGRATING,
                      task_states.RESIZE_PREP])

@@ -553,6 +553,14 @@
             "updated": "%(isotime)s"
         },
         {
+            "alias": "os-server-list-multi-status",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ServerListMultiStatus",
+            "namespace": "http://docs.openstack.org/compute/ext/os-server-list-multi-status/api/v2",
+            "updated": "%(isotime)s"
+        },
+        {
             "alias": "os-server-password",
             "description": "%(text)s",
             "links": [],

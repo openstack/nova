@@ -236,6 +236,23 @@ class ServersSampleHideAddressesXMLTest(ServersSampleHideAddressesJsonTest):
     ctype = 'xml'
 
 
+class ServersSampleMultiStatusJsonTest(ServersSampleBase):
+    extension_name = '.'.join(('nova.api.openstack.compute.contrib',
+                               'server_list_multi_status',
+                               'Server_list_multi_status'))
+
+    def test_servers_list(self):
+        uuid = self._post_server()
+        response = self._do_get('servers?status=active&status=error')
+        subs = self._get_regexes()
+        subs['id'] = uuid
+        self._verify_response('servers-list-resp', subs, response, 200)
+
+
+class ServersSampleMultiStatusXMLTest(ServersSampleMultiStatusJsonTest):
+    ctype = 'xml'
+
+
 class ServersMetadataJsonTest(ServersSampleBase):
     def _create_and_set(self, subs):
         uuid = self._post_server()

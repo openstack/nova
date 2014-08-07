@@ -138,16 +138,17 @@ def status_from_state(vm_state, task_state='default'):
     return status
 
 
-def task_and_vm_state_from_status(status):
-    """Map the server status string to list of vm states and
+def task_and_vm_state_from_status(statuses):
+    """Map the server's multiple status strings to list of vm states and
     list of task states.
     """
     vm_states = set()
     task_states = set()
+    lower_statuses = [status.lower() for status in statuses]
     for state, task_map in _STATE_MAP.iteritems():
         for task_state, mapped_state in task_map.iteritems():
             status_string = mapped_state
-            if status.lower() == status_string.lower():
+            if status_string.lower() in lower_statuses:
                 vm_states.add(state)
                 task_states.add(task_state)
     # Add sort to avoid different order on set in Python 3
