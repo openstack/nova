@@ -65,6 +65,7 @@ from nova.i18n import _LE
 from nova.i18n import _LI
 from nova.i18n import _LW
 from nova import image
+from nova.network import model as network_model
 from nova import objects
 from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
@@ -1671,6 +1672,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if state == power_state.RUNNING or state == power_state.PAUSED:
                 self._detach_pci_devices(virt_dom,
                     pci_manager.get_instance_pci_devs(instance))
+                self._detach_sriov_ports(instance, virt_dom)
                 virt_dom.managedSave(0)
 
         snapshot_backend = self.image_backend.snapshot(instance,
@@ -1710,6 +1712,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     if new_dom is not None:
                         self._attach_pci_devices(new_dom,
                             pci_manager.get_instance_pci_devs(instance))
+                        self._attach_sriov_ports(context, instance, new_dom)
                 LOG.info(_LI("Snapshot extracted, beginning image upload"),
                          instance=instance)
 
@@ -2266,7 +2269,7 @@ class LibvirtDriver(driver.ComputeDriver):
         #             FLAG defines depending on how long the get_info
         #             call takes to return.
         self._prepare_pci_devices_for_use(
-            pci_manager.get_instance_pci_devs(instance))
+            pci_manager.get_instance_pci_devs(instance, 'all'))
         for x in xrange(CONF.libvirt.wait_soft_reboot_seconds):
             dom = self._lookup_by_name(instance["name"])
             state = LIBVIRT_POWER_STATE[dom.info()[0]]
@@ -2347,7 +2350,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                         block_device_info, reboot=True,
                                         vifs_already_plugged=True)
         self._prepare_pci_devices_for_use(
-            pci_manager.get_instance_pci_devs(instance))
+            pci_manager.get_instance_pci_devs(instance, 'all'))
 
         def _wait_for_reboot():
             """Called at an interval until the VM is running again."""
@@ -2465,6 +2468,7 @@ class LibvirtDriver(driver.ComputeDriver):
         dom = self._lookup_by_name(instance['name'])
         self._detach_pci_devices(dom,
             pci_manager.get_instance_pci_devs(instance))
+        self._detach_sriov_ports(instance, dom)
         dom.managedSave(0)
 
     def resume(self, context, instance, network_info, block_device_info=None):
@@ -2476,6 +2480,7 @@ class LibvirtDriver(driver.ComputeDriver):
                            vifs_already_plugged=True)
         self._attach_pci_devices(dom,
             pci_manager.get_instance_pci_devs(instance))
+        self._attach_sriov_ports(context, instance, dom, network_info)
 
     def resume_state_on_host_boot(self, context, instance, network_info,
                                   block_device_info=None):
@@ -3167,6 +3172,70 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.error(_LE('Attaching PCI devices %(dev)s to %(dom)s failed.'),
                       {'dev': pci_devs, 'dom': dom.ID()})
             raise
+
+    def _prepare_args_for_get_config(self, context, instance):
+        flavor = objects.Flavor.get_by_id(context,
+                                          instance['instance_type_id'])
+        image_ref = instance['image_ref']
+        image_meta = compute_utils.get_image_metadata(
+                            context, self._image_api, image_ref, instance)
+        return flavor, image_meta
+
+    @staticmethod
+    def _has_sriov_port(network_info):
+        for vif in network_info:
+            if vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
+                return True
+        return False
+
+    def _attach_sriov_ports(self, context, instance, dom, network_info=None):
+        if network_info is None:
+            network_info = instance.info_cache.network_info
+        if network_info is None:
+            return
+
+        if self._has_sriov_port(network_info):
+            flavor, image_meta = self._prepare_args_for_get_config(context,
+                                                                   instance)
+            for vif in network_info:
+                if vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
+                    cfg = self.vif_driver.get_config(instance,
+                                                     vif,
+                                                     image_meta,
+                                                     flavor,
+                                                     CONF.libvirt.virt_type)
+                    LOG.debug('Attaching SR-IOV port %(port)s to %(dom)s',
+                          {'port': vif, 'dom': dom.ID()})
+                    dom.attachDevice(cfg.to_xml())
+
+    def _detach_sriov_ports(self, instance, dom):
+        network_info = instance.info_cache.network_info
+        if network_info is None:
+            return
+
+        context = nova_context.get_admin_context()
+        if self._has_sriov_port(network_info):
+            # for libvirt version < 1.1.1, this is race condition
+            # so forbid detach if it's an older version
+            if not self._has_min_version(
+                            MIN_LIBVIRT_DEVICE_CALLBACK_VERSION):
+                reason = (_("Detaching SR-IOV ports with"
+                           " libvirt < %(ver)s is not permitted") %
+                           {'ver': MIN_LIBVIRT_DEVICE_CALLBACK_VERSION})
+                raise exception.PciDeviceDetachFailed(reason=reason,
+                                                      dev=network_info)
+
+            flavor, image_meta = self._prepare_args_for_get_config(context,
+                                                                   instance)
+            for vif in network_info:
+                if vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
+                    cfg = self.vif_driver.get_config(instance,
+                                                     vif,
+                                                     image_meta,
+                                                     flavor,
+                                                     CONF.libvirt.virt_type)
+                    dom.detachDeviceFlags(cfg.to_xml(),
+                                          libvirt.VIR_DOMAIN_AFFECT_LIVE)
 
     def _set_host_enabled(self, enabled,
                           disable_reason=DISABLE_REASON_UNDEFINED):
