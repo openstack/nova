@@ -51,6 +51,7 @@ Development policies
 .. toctree::
    :maxdepth: 3
 
+   kilo.blueprints
    policies
 
 
