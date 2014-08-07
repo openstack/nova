@@ -178,7 +178,7 @@ class AgentController(object):
             agent_obj.create()
             agent['agent_id'] = agent_obj.id
         except exception.AgentBuildExists as ex:
-            raise webob.exc.HTTPServerError(explanation=ex.format_message())
+            raise webob.exc.HTTPConflict(explanation=ex.format_message())
         return {'agent': agent}
 
 
