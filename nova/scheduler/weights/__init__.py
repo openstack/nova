@@ -31,8 +31,8 @@ class WeighedHost(weights.WeighedObject):
         return x
 
     def __repr__(self):
-        return "WeighedHost [host: %s, weight: %s]" % (
-                self.obj.host, self.weight)
+        return "WeighedHost [host: %r, weight: %s]" % (
+                self.obj, self.weight)
 
 
 class BaseHostWeigher(weights.BaseWeigher):
