@@ -111,10 +111,6 @@ class Controller(object):
             raise exc.HTTPNotFound()
         return _translate_detail_keys(console)
 
-    def update(self, req, server_id, id, body):
-        """You can't update a console."""
-        raise exc.HTTPNotImplemented()
-
     def delete(self, req, server_id, id):
         """Deletes a console."""
         try:

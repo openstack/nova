@@ -68,12 +68,6 @@ class Controller(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
         return instance
 
-    def create(self, req, server_id, body):
-        raise exc.HTTPNotImplemented()
-
-    def delete(self, req, server_id, id):
-        raise exc.HTTPNotImplemented()
-
     @wsgi.serializers(xml=AddressesTemplate)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
