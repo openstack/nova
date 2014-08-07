@@ -329,23 +329,6 @@ class VersionsTest(test.NoDBTestCase):
         expected = {
         "choices": [
             {
-                "id": "v3.0",
-                "status": "EXPERIMENTAL",
-                "links": [
-                    {
-                        "href": "http://localhost/v3/images/1",
-                        "rel": "self",
-                    },
-                ],
-                "media-types": [
-                    {
-                        "base": "application/json",
-                        "type":
-                        "application/vnd.openstack.compute+json;version=3",
-                    }
-                ],
-            },
-            {
                 "id": "v2.0",
                 "status": "CURRENT",
                 "links": [
@@ -367,6 +350,23 @@ class VersionsTest(test.NoDBTestCase):
                     },
                 ],
             },
+            {
+                "id": "v3.0",
+                "status": "EXPERIMENTAL",
+                "links": [
+                    {
+                        "href": "http://localhost/v3/images/1",
+                        "rel": "self",
+                    },
+                ],
+                "media-types": [
+                    {
+                        "base": "application/json",
+                        "type":
+                        "application/vnd.openstack.compute+json;version=3",
+                    }
+                ],
+            },
         ], }
 
         self.assertThat(jsonutils.loads(res.body),
@@ -384,7 +384,7 @@ class VersionsTest(test.NoDBTestCase):
         versions = root.xpath('ns:version', namespaces=NS)
         self.assertEqual(len(versions), 2)
 
-        version = versions[1]
+        version = versions[0]
         self.assertEqual(version.get('id'), 'v2.0')
         self.assertEqual(version.get('status'), 'CURRENT')
         media_types = version.xpath('ns:media-types/ns:media-type',
@@ -398,7 +398,7 @@ class VersionsTest(test.NoDBTestCase):
         self.assertTrue(common.compare_links(links,
             [{'rel': 'self', 'href': 'http://localhost/v2/images/1'}]))
 
-        version = versions[0]
+        version = versions[1]
         self.assertEqual(version.get('id'), 'v3.0')
         self.assertEqual(version.get('status'), 'EXPERIMENTAL')
         media_types = version.xpath('ns:media-types/ns:media-type',
@@ -433,23 +433,6 @@ class VersionsTest(test.NoDBTestCase):
         expected = {
         "choices": [
             {
-                "id": "v3.0",
-                "status": "EXPERIMENTAL",
-                "links": [
-                    {
-                        "href": "http://localhost/v3/servers/" + uuid,
-                        "rel": "self",
-                    },
-                ],
-                "media-types": [
-                    {
-                        "base": "application/json",
-                        "type":
-                        "application/vnd.openstack.compute+json;version=3",
-                    }
-                ],
-            },
-            {
                 "id": "v2.0",
                 "status": "CURRENT",
                 "links": [
@@ -469,6 +452,23 @@ class VersionsTest(test.NoDBTestCase):
                         "type": "application/vnd.openstack.compute+json"
                                 ";version=2"
                     },
+                ],
+            },
+            {
+                "id": "v3.0",
+                "status": "EXPERIMENTAL",
+                "links": [
+                    {
+                        "href": "http://localhost/v3/servers/" + uuid,
+                        "rel": "self",
+                    },
+                ],
+                "media-types": [
+                    {
+                        "base": "application/json",
+                        "type":
+                        "application/vnd.openstack.compute+json;version=3",
+                    }
                 ],
             },
         ], }
