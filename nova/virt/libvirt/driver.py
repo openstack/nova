@@ -3156,8 +3156,41 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return dev
 
+    def _get_guest_config_meta(self, context, instance, flavor):
+        """Get metadata config for guest."""
+
+        meta = vconfig.LibvirtConfigGuestMetaNovaInstance()
+        meta.package = version.version_string_with_package()
+        meta.name = instance["display_name"]
+        meta.creationTime = time.time()
+
+        if instance["image_ref"] not in ("", None):
+            meta.roottype = "image"
+            meta.rootid = instance["image_ref"]
+
+        if context is not None:
+            ometa = vconfig.LibvirtConfigGuestMetaNovaOwner()
+            ometa.userid = context.user_id
+            ometa.username = context.user_name
+            ometa.projectid = context.project_id
+            ometa.projectname = context.project_name
+            meta.owner = ometa
+
+        fmeta = vconfig.LibvirtConfigGuestMetaNovaFlavor()
+        fmeta.name = flavor.name
+        fmeta.memory = flavor.memory_mb
+        fmeta.vcpus = flavor.vcpus
+        fmeta.ephemeral = flavor.ephemeral_gb
+        fmeta.disk = flavor.root_gb
+        fmeta.swap = flavor.swap
+
+        meta.flavor = fmeta
+
+        return meta
+
     def _get_guest_config(self, instance, network_info, image_meta,
-                          disk_info, rescue=None, block_device_info=None):
+                          disk_info, rescue=None, block_device_info=None,
+                          context=None):
         """Get config data for parameters.
 
         :param rescue: optional dictionary that should contain the key
@@ -3182,6 +3215,10 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.memory = flavor.memory_mb * units.Ki
         guest.vcpus = flavor.vcpus
         guest.cpuset = hardware.get_vcpu_pin_set()
+
+        guest.metadata.append(self._get_guest_config_meta(context,
+                                                          instance,
+                                                          flavor))
 
         cputuning = ['shares', 'period', 'quota']
         for name in cputuning:
@@ -3521,7 +3558,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # need to sanitize the password in the message.
         LOG.debug(logging.mask_password(msg), instance=instance)
         conf = self._get_guest_config(instance, network_info, image_meta,
-                                      disk_info, rescue, block_device_info)
+                                      disk_info, rescue, block_device_info,
+                                      context)
         xml = conf.to_xml()
 
         if write_to_disk:

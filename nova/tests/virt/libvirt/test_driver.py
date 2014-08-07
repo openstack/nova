@@ -22,6 +22,7 @@ import os
 import re
 import shutil
 import tempfile
+import time
 import uuid
 from xml.dom import minidom
 
@@ -1027,20 +1028,46 @@ class LibvirtConnTestCase(test.TestCase,
             self.assertEqual(vconfig.LibvirtConfigCaps, type(caps))
             self.assertNotIn('aes', [x.name for x in caps.host.cpu.features])
 
-    def test_get_guest_config(self):
+    @mock.patch.object(time, "time")
+    def test_get_guest_config(self, time_mock):
+        time_mock.return_value = 1234567.89
+
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        test_instance = copy.deepcopy(self.test_instance)
+        test_instance["display_name"] = "purple tomatoes"
+
+        ctxt = context.RequestContext(project_id=123,
+                                      project_name="aubergine",
+                                      user_id=456,
+                                      user_name="pie")
+
+        flavor = objects.Flavor.get_by_id(
+            ctxt, test_instance["instance_type_id"])
+        flavor.memory_mb = 6
+        flavor.vcpus = 28
+        flavor.root_gb = 496
+        flavor.ephemeral_gb = 8128
+        flavor.swap = 33550336
+        instance_ref = db.instance_create(ctxt, test_instance)
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref)
-        cfg = conn._get_guest_config(instance_ref,
-                                     _fake_network_info(self.stubs, 1),
-                                     {}, disk_info)
+
+        with mock.patch.object(objects.Flavor,
+                               "get_by_id") as flavor_mock:
+            flavor_mock.return_value = flavor
+
+            cfg = conn._get_guest_config(instance_ref,
+                                         _fake_network_info(self.stubs, 1),
+                                         {}, disk_info,
+                                         context=ctxt)
+
         self.assertEqual(cfg.uuid, instance_ref["uuid"])
         self.assertEqual(cfg.acpi, True)
         self.assertEqual(cfg.apic, True)
-        self.assertEqual(cfg.memory, 2 * units.Mi)
-        self.assertEqual(cfg.vcpus, 1)
+        self.assertEqual(cfg.memory, 6 * units.Ki)
+        self.assertEqual(cfg.vcpus, 28)
         self.assertEqual(cfg.os_type, vm_mode.HVM)
         self.assertEqual(cfg.os_boot_dev, ["hd"])
         self.assertIsNone(cfg.os_root)
@@ -1061,6 +1088,46 @@ class LibvirtConnTestCase(test.TestCase,
                               vconfig.LibvirtConfigGuestGraphics)
         self.assertIsInstance(cfg.devices[7],
                               vconfig.LibvirtConfigGuestVideo)
+
+        self.assertEqual(len(cfg.metadata), 1)
+        self.assertIsInstance(cfg.metadata[0],
+                              vconfig.LibvirtConfigGuestMetaNovaInstance)
+        self.assertEqual(version.version_string_with_package(),
+                         cfg.metadata[0].package)
+        self.assertEqual("purple tomatoes",
+                         cfg.metadata[0].name)
+        self.assertEqual(1234567.89,
+                         cfg.metadata[0].creationTime)
+        self.assertEqual("image",
+                         cfg.metadata[0].roottype)
+        self.assertEqual(str(instance_ref["image_ref"]),
+                         cfg.metadata[0].rootid)
+
+        self.assertIsInstance(cfg.metadata[0].owner,
+                              vconfig.LibvirtConfigGuestMetaNovaOwner)
+        self.assertEqual(456,
+                         cfg.metadata[0].owner.userid)
+        self.assertEqual("pie",
+                         cfg.metadata[0].owner.username)
+        self.assertEqual(123,
+                         cfg.metadata[0].owner.projectid)
+        self.assertEqual("aubergine",
+                         cfg.metadata[0].owner.projectname)
+
+        self.assertIsInstance(cfg.metadata[0].flavor,
+                              vconfig.LibvirtConfigGuestMetaNovaFlavor)
+        self.assertEqual("m1.small",
+                         cfg.metadata[0].flavor.name)
+        self.assertEqual(6,
+                         cfg.metadata[0].flavor.memory)
+        self.assertEqual(28,
+                         cfg.metadata[0].flavor.vcpus)
+        self.assertEqual(496,
+                         cfg.metadata[0].flavor.disk)
+        self.assertEqual(8128,
+                         cfg.metadata[0].flavor.ephemeral)
+        self.assertEqual(33550336,
+                         cfg.metadata[0].flavor.swap)
 
     def test_get_guest_config_clock(self):
         self.flags(virt_type='kvm', group='libvirt')
