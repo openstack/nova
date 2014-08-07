@@ -2463,6 +2463,16 @@ class ServersControllerCreateTest(test.TestCase):
                           self._test_create_extra, params)
 
     @mock.patch.object(compute_api.API, 'create')
+    def test_create_instance_public_network_non_admin(self, mock_create):
+        public_network_uuid = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+        params = {'networks': [{'uuid': public_network_uuid}]}
+        self.req.body = jsonutils.dumps(self.body)
+        mock_create.side_effect = exception.ExternalNetworkAttachForbidden(
+                                             network_uuid=public_network_uuid)
+        self.assertRaises(webob.exc.HTTPForbidden,
+                          self._test_create_extra, params)
+
+    @mock.patch.object(compute_api.API, 'create')
     def test_create_multiple_instance_with_specified_ip_neutronv2(self,
                                                                   _api_mock):
         _api_mock.side_effect = exception.InvalidFixedIpAndMaxCountRequest(

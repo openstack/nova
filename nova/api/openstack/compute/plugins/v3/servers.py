@@ -427,7 +427,7 @@ class ServersController(wsgi.Controller):
         req.cache_db_instance(instance)
         return self._view_builder.show(req, instance)
 
-    @extensions.expected_errors((400, 409, 413))
+    @extensions.expected_errors((400, 403, 409, 413))
     @wsgi.response(202)
     @validation.schema(schema_server_create)
     def create(self, req, body):
@@ -525,6 +525,8 @@ class ServersController(wsgi.Controller):
         except exception.ConfigDriveInvalidValue:
             msg = _("Invalid config_drive provided.")
             raise exc.HTTPBadRequest(explanation=msg)
+        except exception.ExternalNetworkAttachForbidden as error:
+            raise exc.HTTPForbidden(explanation=error.format_message())
         except messaging.RemoteError as err:
             msg = "%(err_type)s: %(err_msg)s" % {'err_type': err.exc_type,
                                                  'err_msg': err.value}
