@@ -829,7 +829,10 @@ class API(base_api.NetworkAPI):
     def get(self, context, network_uuid):
         """Get specific network for client."""
         client = neutronv2.get_client(context)
-        network = client.show_network(network_uuid).get('network') or {}
+        try:
+            network = client.show_network(network_uuid).get('network') or {}
+        except neutron_client_exc.NetworkNotFoundClient:
+            raise exception.NetworkNotFound(network_id=network_uuid)
         network['label'] = network['name']
         return network
 
