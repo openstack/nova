@@ -7914,6 +7914,29 @@ Active:          8381604 kB
             self.assertEqual(0, create.call_args_list[0][1]['launch_flags'])
             self.assertEqual(0, domain.resume.call_count)
 
+    def test_lxc_create_and_rootfs_saved(self):
+        self.flags(virt_type='lxc', group='libvirt')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = db.instance_create(self.context, self.test_instance)
+        inst_obj = objects.Instance.get_by_uuid(self.context, instance['uuid'])
+
+        with contextlib.nested(
+              mock.patch('nova.virt.disk.api.setup_container',
+                         return_value='/dev/nbd1'),
+              mock.patch('nova.virt.disk.api.clean_lxc_namespace'),
+              mock.patch('nova.openstack.common.fileutils.ensure_tree'),
+              mock.patch.object(conn.image_backend, 'image'),
+              mock.patch.object(conn, '_enable_hairpin'),
+              mock.patch.object(conn, 'get_info',
+                                return_value={'state': power_state.RUNNING})
+              ):
+            conn._conn.defineXML = mock.Mock()
+            conn._create_domain('xml', instance=inst_obj)
+            self.assertEqual('/dev/nbd1',
+                             inst_obj.system_metadata.get(
+                             'rootfs_device_name'))
+
     def _test_create_with_network_events(self, neutron_failure=None,
                                          power_on=True):
         self.flags(vif_driver="nova.tests.fake_network.FakeVIFDriver",
