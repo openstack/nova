@@ -801,7 +801,7 @@ class API(base.Base):
 
     def _provision_instances(self, context, instance_type, min_count,
             max_count, base_options, boot_meta, security_groups,
-            block_device_mapping):
+            block_device_mapping, shutdown_terminate):
         # Reserve quotas
         num_instances, quotas = self._check_num_instances_quota(
                 context, instance_type, min_count, max_count)
@@ -814,7 +814,7 @@ class API(base.Base):
                 instance = self.create_db_entry_for_new_instance(
                         context, instance_type, boot_meta, instance,
                         security_groups, block_device_mapping,
-                        num_instances, i)
+                        num_instances, i, shutdown_terminate)
 
                 instances.append(instance)
                 # send a state update notification for the initial create to
@@ -925,7 +925,7 @@ class API(base.Base):
                requested_networks, config_drive,
                block_device_mapping, auto_disk_config,
                reservation_id=None, scheduler_hints=None,
-               legacy_bdm=True):
+               legacy_bdm=True, shutdown_terminate=False):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed and schedule the instance(s) for
         creation.
@@ -985,7 +985,7 @@ class API(base.Base):
 
         instances = self._provision_instances(context, instance_type,
                 min_count, max_count, base_options, boot_meta, security_groups,
-                block_device_mapping)
+                block_device_mapping, shutdown_terminate)
 
         filter_properties = self._build_filter_properties(context,
                 scheduler_hints, forced_host, forced_node, instance_type)
@@ -1151,15 +1151,6 @@ class API(base.Base):
             if num_local > max_local:
                 raise exception.InvalidBDMLocalsLimit()
 
-    def _populate_instance_shutdown_terminate(self, instance, image,
-                                              block_device_mapping):
-        """Populate instance shutdown_terminate information."""
-        image_properties = image.get('properties', {})
-        if (block_device_mapping or
-            image_properties.get('mappings') or
-                image_properties.get('block_device_mapping')):
-            instance.shutdown_terminate = False
-
     def _populate_instance_names(self, instance, num_instances):
         """Populate instance display_name and hostname."""
         display_name = instance.get('display_name')
@@ -1226,7 +1217,7 @@ class API(base.Base):
     # the compute api. That should probably be cleaned up, though.
     def create_db_entry_for_new_instance(self, context, instance_type, image,
             instance, security_group, block_device_mapping, num_instances,
-            index):
+            index, shutdown_terminate=False):
         """Create an entry in the DB for this new instance,
         including any related table updates (such as security group,
         etc).
@@ -1239,8 +1230,7 @@ class API(base.Base):
 
         self._populate_instance_names(instance, num_instances)
 
-        self._populate_instance_shutdown_terminate(instance, image,
-                                                   block_device_mapping)
+        instance.shutdown_terminate = shutdown_terminate
 
         self.security_group_api.ensure_default(context)
         instance.create(context)
@@ -1320,7 +1310,8 @@ class API(base.Base):
                injected_files=None, admin_password=None,
                block_device_mapping=None, access_ip_v4=None,
                access_ip_v6=None, requested_networks=None, config_drive=None,
-               auto_disk_config=None, scheduler_hints=None, legacy_bdm=True):
+               auto_disk_config=None, scheduler_hints=None, legacy_bdm=True,
+               shutdown_terminate=False):
         """Provision instances, sending instance information to the
         scheduler.  The scheduler will determine where the instance(s)
         go and will handle creating the DB entries.
@@ -1349,7 +1340,8 @@ class API(base.Base):
                                requested_networks, config_drive,
                                block_device_mapping, auto_disk_config,
                                scheduler_hints=scheduler_hints,
-                               legacy_bdm=legacy_bdm)
+                               legacy_bdm=legacy_bdm,
+                               shutdown_terminate=shutdown_terminate)
 
     def trigger_provider_fw_rules_refresh(self, context):
         """Called when a rule is added/removed from a provider firewall."""

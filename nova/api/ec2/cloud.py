@@ -1351,6 +1351,9 @@ class CloudController(object):
             msg = _('Image must be available')
             raise exception.ImageNotActive(message=msg)
 
+        iisb = kwargs.get('instance_initiated_shutdown_behavior', 'stop')
+        shutdown_terminate = (iisb == 'terminate')
+
         flavor = objects.Flavor.get_by_name(context,
                                             kwargs.get('instance_type', None))
 
@@ -1366,7 +1369,8 @@ class CloudController(object):
             security_group=kwargs.get('security_group'),
             availability_zone=kwargs.get('placement', {}).get(
                                   'availability_zone'),
-            block_device_mapping=kwargs.get('block_device_mapping', {}))
+            block_device_mapping=kwargs.get('block_device_mapping', {}),
+            shutdown_terminate=shutdown_terminate)
 
         instances = self._format_run_instances(context, resv_id)
         if instances:

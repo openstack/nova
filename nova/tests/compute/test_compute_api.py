@@ -2084,8 +2084,6 @@ class _ComputeAPIUnitTestMixIn(object):
 
     @mock.patch.object(objects.Instance, 'create')
     @mock.patch.object(compute_api.SecurityGroupAPI, 'ensure_default')
-    @mock.patch.object(compute_api.API,
-                       '_populate_instance_shutdown_terminate')
     @mock.patch.object(compute_api.API, '_populate_instance_names')
     @mock.patch.object(compute_api.API, '_populate_instance_for_create')
     @mock.patch.object(cinder.API, 'get',
@@ -2093,7 +2091,6 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_create_db_entry_for_new_instancewith_cinder_down(self, mock_get,
                                                             mock_create,
                                                             mock_names,
-                                                            mock_terminate,
                                                             mock_ensure,
                                                             mock_inst_create):
         instance = self._create_instance_obj()

@@ -2844,9 +2844,9 @@ class CloudTestCase(test.TestCase):
                 'container_format': 'ami',
                 'status': 'active'}
 
-        # NOTE(yamahata): create ami-3 ... ami-6
+        # NOTE(yamahata): create ami-3 ... ami-7
         # ami-1 and ami-2 is already created by setUp()
-        for i in range(3, 7):
+        for i in range(3, 8):
             db.s3_image_create(self.context, 'ami-%d' % i)
 
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
@@ -2855,6 +2855,8 @@ class CloudTestCase(test.TestCase):
         test_dia_iisb('stop', image_id='ami-4')
         test_dia_iisb('stop', image_id='ami-5')
         test_dia_iisb('stop', image_id='ami-6')
+        test_dia_iisb('terminate', image_id='ami-7',
+                      instance_initiated_shutdown_behavior='terminate')
 
     def test_create_delete_tags(self):
 
