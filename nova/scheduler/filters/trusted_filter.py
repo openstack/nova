@@ -50,7 +50,6 @@ from oslo.config import cfg
 
 from nova import context
 from nova import db
-from nova.i18n import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -203,11 +202,7 @@ class ComputeAttestationCache(object):
         # host in the first round that scheduler invokes us.
         computes = db.compute_node_get_all(admin)
         for compute in computes:
-            service = compute['service']
-            if not service:
-                LOG.warn(_("No service for compute ID %s") % compute['id'])
-                continue
-            host = service['host']
+            host = compute['hypervisor_hostname']
             self._init_cache_entry(host)
 
     def _cache_valid(self, host):
@@ -284,7 +279,7 @@ class TrustedFilter(filters.BaseHostFilter):
         instance_type = filter_properties.get('instance_type', {})
         extra = instance_type.get('extra_specs', {})
         trust = extra.get('trust:trusted_host')
-        host = host_state.host
+        host = host_state.nodename
         if trust:
             return self.compute_attestation.is_trusted(host, trust)
         return True
