@@ -2560,7 +2560,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 or 'disk' not in disk_mapping)
 
     def _inject_data(self, instance, network_info, admin_pass, files, suffix):
-        """Injects data in an disk image
+        """Injects data in a disk image
 
         Helper used for injecting data in a disk image file system.
 
@@ -2569,7 +2569,7 @@ class LibvirtDriver(driver.ComputeDriver):
           network_info -- a dict that refers network speficications
           admin_pass -- a string used to set an admin password
           files -- a list of files needs to be injected
-          suffix -- a string used as a image name suffix
+          suffix -- a string used as an image name suffix
         """
         # Handles the partition need to be used.
         target_partition = None
@@ -2605,17 +2605,17 @@ class LibvirtDriver(driver.ComputeDriver):
                 image_type)
             img_id = instance['image_ref']
 
+            if not injection_image.check_image_exists():
+                LOG.warn(_LW('Image %s not found on disk storage. '
+                         'Continue without injecting data'),
+                         injection_image.path, instance=instance)
+                return
             try:
-                if injection_image.check_image_exists():
-                    disk.inject_data(injection_image.path,
-                                     key, net, metadata, admin_pass, files,
-                                     partition=target_partition,
-                                     use_cow=CONF.use_cow_images,
-                                     mandatory=('files',))
-                else:
-                    LOG.warn(_LW('Image %s not found on disk storage. '
-                                 'Continue without injecting data'),
-                                injection_image.path, instance=instance)
+                disk.inject_data(injection_image.path,
+                                 key, net, metadata, admin_pass, files,
+                                 partition=target_partition,
+                                 use_cow=CONF.use_cow_images,
+                                 mandatory=('files',))
             except Exception as e:
                 with excutils.save_and_reraise_exception():
                     LOG.error(_LE('Error injecting data into image '
