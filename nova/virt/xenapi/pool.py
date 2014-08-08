@@ -78,7 +78,7 @@ class ResourcePool(object):
             raise exception.InvalidAggregateAction(
                     action='add host',
                     aggregate_id=aggregate['id'],
-                    reason=aggregate['metadata'][pool_states.KEY])
+                    reason=invalid[aggregate['metadata'][pool_states.KEY]])
 
         if (aggregate['metadata'][pool_states.KEY] == pool_states.CREATED):
             aggregate.update_metadata({pool_states.KEY: pool_states.CHANGING})
