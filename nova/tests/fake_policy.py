@@ -385,6 +385,7 @@ policy_data = """
     "network:get_dns_entries_by_name": "",
     "network:create_private_dns_domain": "",
     "network:create_public_dns_domain": "",
-    "network:delete_dns_domain": ""
+    "network:delete_dns_domain": "",
+    "network:attach_external_network": "rule:admin_api"
 }
 """

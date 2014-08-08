@@ -395,8 +395,8 @@ def extension_authorizer(api_name, extension_name):
     return core_authorizer('%s_extension' % api_name, extension_name)
 
 
-def soft_extension_authorizer(api_name, extension_name):
-    hard_authorize = extension_authorizer(api_name, extension_name)
+def soft_authorizer(hard_authorizer, api_name, extension_name):
+    hard_authorize = hard_authorizer(api_name, extension_name)
 
     def authorize(context, action=None):
         try:
@@ -405,6 +405,14 @@ def soft_extension_authorizer(api_name, extension_name):
         except exception.Forbidden:
             return False
     return authorize
+
+
+def soft_extension_authorizer(api_name, extension_name):
+    return soft_authorizer(extension_authorizer, api_name, extension_name)
+
+
+def soft_core_authorizer(api_name, extension_name):
+    return soft_authorizer(core_authorizer, api_name, extension_name)
 
 
 def check_compute_policy(context, action, target, scope='compute'):
