@@ -15,16 +15,22 @@
 #    under the License.
 
 
+import os
 import re
 
 from nova import exception
+from nova.i18n import _LE
+from nova.openstack.common import log as logging
 
+LOG = logging.getLogger(__name__)
 
 PCI_VENDOR_PATTERN = "^(hex{4})$".replace("hex", "[\da-fA-F]")
 _PCI_ADDRESS_PATTERN = ("^(hex{4}):(hex{2}):(hex{2}).(oct{1})$".
                                              replace("hex", "[\da-fA-F]").
                                              replace("oct", "[0-7]"))
 _PCI_ADDRESS_REGEX = re.compile(_PCI_ADDRESS_PATTERN)
+
+_VIRTFN_RE = re.compile("virtfn\d+")
 
 
 def pci_device_prop_match(pci_dev, specs):
@@ -53,3 +59,52 @@ def parse_address(address):
     if not m:
         raise exception.PciDeviceWrongAddressFormat(address=address)
     return m.groups()
+
+
+def get_pci_address_fields(pci_addr):
+    dbs, sep, func = pci_addr.partition('.')
+    domain, bus, slot = dbs.split(':')
+    return (domain, bus, slot, func)
+
+
+def get_function_by_ifname(ifname):
+    """Given the device name, returns the PCI address of a an device
+    and returns True if the address in a physical function.
+    """
+    try:
+        dev_path = "/sys/class/net/%s/device" % ifname
+        dev_info = os.listdir(dev_path)
+        for dev_file in dev_info:
+            if _VIRTFN_RE.match(dev_file):
+                return os.readlink(dev_path).strip("./"), True
+        else:
+            return os.readlink(dev_path).strip("./"), False
+    except Exception:
+        LOG.error(_LE("PCI device %s not found") % ifname)
+        return None, False
+
+
+def is_physical_function(PciAddress):
+    dev_path = "/sys/bus/pci/devices/%(d)s:%(b)s:%(s)s.%(f)s/" % {
+        "d": PciAddress.domain, "b": PciAddress.bus,
+        "s": PciAddress.slot, "f": PciAddress.func}
+    try:
+        dev_info = os.listdir(dev_path)
+        for dev_file in dev_info:
+            if _VIRTFN_RE.match(dev_file):
+                return True
+        else:
+            return False
+    except Exception:
+        LOG.error(_LE("PCI device %s not found") % dev_path)
+        return False
+
+
+def get_ifname_by_pci_address(pci_addr):
+    dev_path = "/sys/bus/pci/devices/%s/net" % (pci_addr)
+    try:
+        dev_info = os.listdir(dev_path)
+        return dev_info.pop()
+    except Exception:
+        LOG.error(_LE("PCI device %s not found") % pci_addr)
+        return None
