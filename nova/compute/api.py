@@ -743,8 +743,9 @@ class API(base.Base):
                                                    key_name)
             key_data = key_pair.public_key
 
-        root_device_name = block_device.properties_root_device_name(
-            boot_meta.get('properties', {}))
+        root_device_name = block_device.prepend_dev(
+                block_device.properties_root_device_name(
+                    boot_meta.get('properties', {})))
 
         system_metadata = flavors.save_flavor_info(
             dict(), instance_type)
