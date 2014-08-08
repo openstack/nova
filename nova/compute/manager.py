@@ -3928,7 +3928,8 @@ class ComputeManager(manager.Manager):
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
-    def shelve_instance(self, context, instance, image_id):
+    def shelve_instance(self, context, instance, image_id,
+                        clean_shutdown=True):
         """Shelve an instance.
 
         This should be used when you want to take a snapshot of the instance.
@@ -3956,7 +3957,7 @@ class ComputeManager(manager.Manager):
             instance.task_state = task_state
             instance.save(expected_task_state=expected_state)
 
-        self.driver.power_off(instance)
+        self._power_off_instance(context, instance, clean_shutdown)
         current_power_state = self._get_power_state(context, instance)
         self.driver.snapshot(context, instance, image_id, update_task_state)
 
