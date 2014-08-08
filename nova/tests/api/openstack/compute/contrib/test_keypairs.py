@@ -111,7 +111,8 @@ class KeypairsTest(test.TestCase):
         res_dict = jsonutils.loads(res.body)
         self.assertEqual(
             'Keypair data is invalid: '
-            'Keypair name must be between 1 and 255 characters long',
+            'Keypair name must be string and between 1 '
+            'and 255 characters long',
             res_dict['badRequest']['message'])
 
     def test_keypair_create_with_name_too_long(self):
@@ -129,7 +130,8 @@ class KeypairsTest(test.TestCase):
         res_dict = jsonutils.loads(res.body)
         self.assertEqual(
             'Keypair data is invalid: '
-            'Keypair name must be between 1 and 255 characters long',
+            'Keypair name must be string and between 1 '
+            'and 255 characters long',
             res_dict['badRequest']['message'])
 
     def test_keypair_create_with_non_alphanumeric_name(self):

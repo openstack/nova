@@ -952,7 +952,7 @@ class ExceptionHelper(object):
         return wrapper
 
 
-def check_string_length(value, name, min_length=0, max_length=None):
+def check_string_length(value, name=None, min_length=0, max_length=None):
     """Check the length of specified string
     :param value: the value of the string
     :param name: the name of the string
@@ -960,8 +960,14 @@ def check_string_length(value, name, min_length=0, max_length=None):
     :param max_length: the max_length of the string
     """
     if not isinstance(value, six.string_types):
-        msg = _("%s is not a string or unicode") % name
+        if name is None:
+            msg = _("The input is not a string or unicode")
+        else:
+            msg = _("%s is not a string or unicode") % name
         raise exception.InvalidInput(message=msg)
+
+    if name is None:
+        name = value
 
     if len(value) < min_length:
         msg = _("%(name)s has a minimum character requirement of "
