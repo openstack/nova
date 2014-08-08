@@ -65,6 +65,11 @@ __imagebackend_opts = [
     cfg.StrOpt('images_rbd_ceph_conf',
                default='',  # default determined by librados
                help='Path to the ceph configuration file to use'),
+    cfg.StrOpt('hw_disk_discard',
+               default=None,
+               help='Discard option for nova managed disks (valid options '
+                    'are: ignore, unmap). Need Libvirt(1.0.6) Qemu1.5 '
+                    '(raw format) Qemu1.6(qcow2 format)'),
         ]
 
 CONF = cfg.CONF
@@ -104,6 +109,7 @@ class Image(object):
 
         self.source_type = source_type
         self.driver_format = driver_format
+        self.discard_mode = get_hw_disk_discard(CONF.libvirt.hw_disk_discard)
         self.is_block_dev = is_block_dev
         self.preallocate = False
 
@@ -153,6 +159,7 @@ class Image(object):
         info.target_bus = disk_bus
         info.target_dev = disk_dev
         info.driver_cache = cache_mode
+        info.driver_discard = self.discard_mode
         info.driver_format = self.driver_format
         driver_name = libvirt_utils.pick_disk_driver_name(hypervisor_version,
                                                           self.is_block_dev)
@@ -597,6 +604,8 @@ class Rbd(Image):
                                  ' images_rbd_pool'
                                  ' flag to use rbd images.'))
         self.pool = CONF.libvirt.images_rbd_pool
+        self.discard_mode = get_hw_disk_discard(
+                CONF.libvirt.hw_disk_discard)
         self.rbd_user = CONF.libvirt.rbd_user
         self.ceph_conf = CONF.libvirt.images_rbd_ceph_conf
 
@@ -627,6 +636,7 @@ class Rbd(Image):
         info.source_device = device_type
         info.driver_format = 'raw'
         info.driver_cache = cache_mode
+        info.driver_discard = self.discard_mode
         info.target_bus = disk_bus
         info.target_dev = disk_dev
         info.source_type = 'network'
@@ -744,3 +754,11 @@ class Backend(object):
         """
         backend = self.backend(image_type)
         return backend(instance=instance, path=disk_path)
+
+
+def get_hw_disk_discard(hw_disk_discard):
+    """Check valid and get hw_disk_discard value from Conf.
+    """
+    if hw_disk_discard and hw_disk_discard not in ('unmap', 'ignore'):
+        raise RuntimeError(_('Unknown hw_disk_discard=%s') % hw_disk_discard)
+    return hw_disk_discard
