@@ -5236,14 +5236,17 @@ def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False,
                     meta_ref.update({"value": metadata[key]})
                     already_existing_keys.add(key)
 
+                new_entries = []
                 for key, value in metadata.iteritems():
                     if key in already_existing_keys:
                         continue
-                    meta_ref = models.AggregateMetadata()
-                    meta_ref.update({"key": key,
-                                     "value": value,
-                                     "aggregate_id": aggregate_id})
-                    session.add(meta_ref)
+                    new_entries.append({"key": key,
+                                        "value": value,
+                                        "aggregate_id": aggregate_id})
+                if new_entries:
+                    session.execute(
+                        models.AggregateMetadata.__table__.insert(),
+                        new_entries)
 
             return metadata
         except db_exc.DBDuplicateEntry:
