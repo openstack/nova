@@ -31,6 +31,8 @@ Guidelines for writing new hacking checks
 
 """
 
+UNDERSCORE_IMPORT_FILES = []
+
 session_check = re.compile(r"\w*def [a-zA-Z0-9].*[(].*session.*[)]")
 cfg_re = re.compile(r".*\scfg\.")
 vi_header_re = re.compile(r"^#\s+vim?:.+")
@@ -54,7 +56,14 @@ asse_equal_start_with_none_re = re.compile(
 conf_attribute_set_re = re.compile(r"CONF\.[a-z0-9_.]+\s*=\s*\w")
 log_translation = re.compile(
     r"(.)*LOG\.(audit|error|info|warn|warning|critical|exception)\(\s*('|\")")
+translated_log = re.compile(
+    r"(.)*LOG\.(audit|error|info|warn|warning|critical|exception)"
+    "\(\s*_\(\s*('|\")")
 mutable_default_args = re.compile(r"^\s*def .+\((.+=\{\}|.+=\[\])")
+string_translation = re.compile(r"[^_]*_\(\s*('|\")")
+underscore_import_check = re.compile(r"(.)*import _(.)*")
+# We need this for cases where they have created their own _ function.
+custom_underscore_check = re.compile(r"(.)*_\s*=\s*(.)*")
 
 
 def import_no_db_in_virt(logical_line, filename):
@@ -256,6 +265,27 @@ def no_mutable_default_args(logical_line):
         yield (0, msg)
 
 
+def check_explicit_underscore_import(logical_line, filename):
+    """Check for explicit import of the _ function
+
+    We need to ensure that any files that are using the _() function
+    to translate logs are explicitly importing the _ function.  We
+    can't trust unit test to catch whether the import has been
+    added so we need to check for it here.
+    """
+
+    # Build a list of the files that have _ imported.  No further
+    # checking needed once it is found.
+    if filename in UNDERSCORE_IMPORT_FILES:
+        pass
+    elif (underscore_import_check.match(logical_line) or
+          custom_underscore_check.match(logical_line)):
+        UNDERSCORE_IMPORT_FILES.append(filename)
+    elif (translated_log.match(logical_line) or
+         string_translation.match(logical_line)):
+        yield(0, "N323: Found use of _() without explicit import of _ !")
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -272,3 +302,4 @@ def factory(register):
     register(no_setting_conf_directly_in_tests)
     register(validate_log_translations)
     register(no_mutable_default_args)
+    register(check_explicit_underscore_import)

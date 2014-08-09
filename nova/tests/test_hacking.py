@@ -188,3 +188,32 @@ class HackingTestCase(test.NoDBTestCase):
 
         self.assertEqual(0, len(list(checks.no_mutable_default_args(
             "defined, undefined = [], {}"))))
+
+    def test_check_explicit_underscore_import(self):
+        self.assertEqual(len(list(checks.check_explicit_underscore_import(
+            "LOG.info(_('My info message'))",
+            "cinder/tests/other_files.py"))), 1)
+        self.assertEqual(len(list(checks.check_explicit_underscore_import(
+            "msg = _('My message')",
+            "cinder/tests/other_files.py"))), 1)
+        self.assertEqual(len(list(checks.check_explicit_underscore_import(
+            "from cinder.i18n import _",
+            "cinder/tests/other_files.py"))), 0)
+        self.assertEqual(len(list(checks.check_explicit_underscore_import(
+            "LOG.info(_('My info message'))",
+            "cinder/tests/other_files.py"))), 0)
+        self.assertEqual(len(list(checks.check_explicit_underscore_import(
+            "msg = _('My message')",
+            "cinder/tests/other_files.py"))), 0)
+        self.assertEqual(len(list(checks.check_explicit_underscore_import(
+            "from cinder.i18n import _, _LW",
+            "cinder/tests/other_files2.py"))), 0)
+        self.assertEqual(len(list(checks.check_explicit_underscore_import(
+            "msg = _('My message')",
+            "cinder/tests/other_files2.py"))), 0)
+        self.assertEqual(len(list(checks.check_explicit_underscore_import(
+            "_ = translations.ugettext",
+            "cinder/tests/other_files3.py"))), 0)
+        self.assertEqual(len(list(checks.check_explicit_underscore_import(
+            "msg = _('My message')",
+            "cinder/tests/other_files3.py"))), 0)
