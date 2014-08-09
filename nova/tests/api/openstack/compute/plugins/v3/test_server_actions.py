@@ -690,7 +690,8 @@ class ServerActionsControllerTest(test.TestCase):
                           req, FAKE_UUID, body)
 
     @mock.patch('nova.compute.api.API.resize',
-                side_effect=exception.FlavorNotFound(reason=''))
+                side_effect=exception.FlavorNotFound(reason='',
+                                                     flavor_id='fake_id'))
     def test_resize_raises_flavor_not_found(self, mock_resize):
         body = dict(resize=dict(flavor_ref="http://localhost/3"))
         req = fakes.HTTPRequestV3.blank(self.url)
