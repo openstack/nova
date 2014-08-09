@@ -1844,32 +1844,33 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
 
     Depending on the name of a filter, matching for that filter is
     performed using either exact matching or as regular expression
-    matching. Exact matching is applied for the following filters:
+    matching. Exact matching is applied for the following filters::
 
-        ['project_id', 'user_id', 'image_ref',
-         'vm_state', 'instance_type_id', 'uuid',
-         'metadata', 'host', 'system_metadata']
+    |   ['project_id', 'user_id', 'image_ref',
+    |    'vm_state', 'instance_type_id', 'uuid',
+    |    'metadata', 'host', 'system_metadata']
 
 
     A third type of filter (also using exact matching), filters
     based on instance metadata tags when supplied under a special
-    key named 'filter'.
+    key named 'filter'::
 
-        filters = {
-            'filter': [
-                {'name': 'tag-key', 'value': '<metakey>'},
-                {'name': 'tag-value', 'value': '<metaval>'},
-                {'name': 'tag:<metakey>', 'value': '<metaval>'}
-            ]
-        }
+    |   filters = {
+    |       'filter': [
+    |           {'name': 'tag-key', 'value': '<metakey>'},
+    |           {'name': 'tag-value', 'value': '<metaval>'},
+    |           {'name': 'tag:<metakey>', 'value': '<metaval>'}
+    |       ]
+    |   }
 
-    Special keys are used to tweek the query further:
+    Special keys are used to tweek the query further::
 
-        'changes-since' - only return instances updated after
-        'deleted' - only return (or exclude) deleted instances
-        'soft_deleted' - modify behavior of 'deleted' to either
-                         include or exclude instances whose
-                         vm_state is SOFT_DELETED.
+    |   'changes-since' - only return instances updated after
+    |   'deleted' - only return (or exclude) deleted instances
+    |   'soft_deleted' - modify behavior of 'deleted' to either
+    |                    include or exclude instances whose
+    |                    vm_state is SOFT_DELETED.
+
     """
     # NOTE(mriedem): If the limit is 0 there is no point in even going
     # to the database since nothing is going to be returned anyway.

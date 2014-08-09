@@ -389,13 +389,15 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         self.what_changed(). If expected_task_state is provided,
         it will be checked against the in-database copy of the
         instance before updates are made.
-        :param context: Security context
-        :param expected_task_state: Optional tuple of valid task states
-                                    for the instance to be in.
-        :param expected_vm_state: Optional tuple of valid vm states
-                                  for the instance to be in.
+
+        :param:context: Security context
+        :param:expected_task_state: Optional tuple of valid task states
+        for the instance to be in
+        :param:expected_vm_state: Optional tuple of valid vm states
+        for the instance to be in
         :param admin_state_reset: True if admin API is forcing setting
-                                  of task_state/vm_state.
+        of task_state/vm_state
+
         """
 
         cell_type = cells_opts.get_cell_type()
@@ -680,14 +682,15 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
                                     expected_attrs=None):
         """Get instances and joins active during a certain time window.
 
-        :param context: nova request context
-        :param begin: datetime for the start of the time window
-        :param end: datetime for the end of the time window
-        :param project_id: used to filter instances by project
-        :param host: used to filter instances on a given compute host
-        :param expected_attrs: list of related fields that can be joined
+        :param:context: nova request context
+        :param:begin: datetime for the start of the time window
+        :param:end: datetime for the end of the time window
+        :param:project_id: used to filter instances by project
+        :param:host: used to filter instances on a given compute host
+        :param:expected_attrs: list of related fields that can be joined
         in the database layer when querying for instances
         :returns: InstanceList
+
         """
         # NOTE(mriedem): We have to convert the datetime objects to string
         # primitives for the remote call.

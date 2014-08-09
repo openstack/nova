@@ -4838,14 +4838,14 @@ class ServersAllExtensionsTestCase(test.TestCase):
     an exception because of a malformed request before the core API
     gets a chance to validate the request and return a 422 response.
 
-    For example, ServerDiskConfigController extends servers.Controller:
+    For example, ServerDiskConfigController extends servers.Controller::
 
-      @wsgi.extends
-      def create(self, req, body):
-          if 'server' in body:
-                self._set_disk_config(body['server'])
-          resp_obj = (yield)
-          self._show(req, resp_obj)
+        |  @wsgi.extends
+        |  def create(self, req, body):
+        |      if 'server' in body:
+        |           self._set_disk_config(body['server'])
+        |     resp_obj = (yield)
+        |     self._show(req, resp_obj)
 
     we want to ensure that the extension isn't barfing on an invalid
     body.

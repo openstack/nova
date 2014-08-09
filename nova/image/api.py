@@ -61,8 +61,8 @@ class API(object):
         are owned by the requesting user in the ACTIVE status are returned.
 
         :param context: The `nova.context.Context` object for the request
-        :param **kwargs: A dictionary of filter and pagination values that
-                         may be passed to the underlying image info driver.
+        :param kwargs: A dictionary of filter and pagination values that
+                       may be passed to the underlying image info driver.
         """
         session = self._get_session(context)
         return session.detail(context, **kwargs)

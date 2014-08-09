@@ -54,12 +54,14 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
     the device object is changed to deleted state and no longer synced with
     the DB.
 
-    Filed notes:
-    'dev_id':
-        Hypervisor's identification for the device, the string format
-        is hypervisor specific
-    'extra_info':
-        Device-specific properties like PF address, switch ip address etc.
+    Filed notes::
+
+        | 'dev_id':
+        |   Hypervisor's identification for the device, the string format
+        |   is hypervisor specific
+        | 'extra_info':
+        |   Device-specific properties like PF address, switch ip address etc.
+
     """
 
     # Version 1.0: Initial version

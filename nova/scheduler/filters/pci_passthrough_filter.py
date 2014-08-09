@@ -26,13 +26,17 @@ class PciPassthroughFilter(filters.BaseHostFilter):
     to meet the device requests in the 'extra_specs' for the flavor.
 
     PCI resource tracker provides updated summary information about the
-    PCI devices for each host, like:
-    [{"count": 5, "vendor_id": "8086", "product_id": "1520",
-        "extra_info":'{}'}],
-    and VM requests PCI devices via PCI requests, like:
-    [{"count": 1, "vendor_id": "8086", "product_id": "1520",}].
+    PCI devices for each host, like::
+
+        | [{"count": 5, "vendor_id": "8086", "product_id": "1520",
+        |   "extra_info":'{}'}],
+
+    and VM requests PCI devices via PCI requests, like::
+
+        | [{"count": 1, "vendor_id": "8086", "product_id": "1520",}].
 
     The filter checks if the host passes or not based on this information.
+
     """
 
     def host_passes(self, host_state, filter_properties):
