@@ -15,9 +15,7 @@
 
 
 import datetime
-import random
 import sys
-import time
 
 import glanceclient.exc
 import mock
@@ -186,6 +184,210 @@ class TestGetImageService(test.NoDBTestCase):
                                             host='127.0.0.1',
                                             port=80,
                                             use_ssl=False)
+
+
+class TestCreateGlanceClient(test.NoDBTestCase):
+    @mock.patch('nova.utils.is_valid_ipv6')
+    @mock.patch('glanceclient.Client')
+    def test_headers_passed_glanceclient(self, init_mock, ipv6_mock):
+        self.flags(auth_strategy='keystone')
+        ipv6_mock.return_value = False
+        auth_token = 'token'
+        ctx = context.RequestContext('fake', 'fake', auth_token=auth_token)
+        host = 'host4'
+        port = 9295
+        use_ssl = False
+
+        expected_endpoint = 'http://host4:9295'
+        expected_params = {
+            'identity_headers': {
+                'X-Auth-Token': 'token',
+                'X-User-Id': 'fake',
+                'X-Roles': '',
+                'X-Tenant-Id': 'fake',
+                'X-Service-Catalog': '[]',
+                'X-Identity-Status': 'Confirmed'
+            },
+            'token': 'token'
+        }
+        glance._create_glance_client(ctx, host, port, use_ssl)
+        init_mock.assert_called_once_with('1', expected_endpoint,
+                                          **expected_params)
+
+        # Test the version is properly passed to glanceclient.
+        ipv6_mock.reset_mock()
+        init_mock.reset_mock()
+
+        expected_endpoint = 'http://host4:9295'
+        expected_params = {
+            'identity_headers': {
+                'X-Auth-Token': 'token',
+                'X-User-Id': 'fake',
+                'X-Roles': '',
+                'X-Tenant-Id': 'fake',
+                'X-Service-Catalog': '[]',
+                'X-Identity-Status': 'Confirmed'
+            },
+            'token': 'token'
+        }
+        glance._create_glance_client(ctx, host, port, use_ssl, version=2)
+        init_mock.assert_called_once_with('2', expected_endpoint,
+                                          **expected_params)
+
+        # Test that non-keystone auth strategy doesn't bother to pass
+        # glanceclient all the Keystone-related headers.
+        ipv6_mock.reset_mock()
+        init_mock.reset_mock()
+
+        self.flags(auth_strategy='non-keystone')
+
+        expected_endpoint = 'http://host4:9295'
+        expected_params = {
+        }
+        glance._create_glance_client(ctx, host, port, use_ssl)
+        init_mock.assert_called_once_with('1', expected_endpoint,
+                                          **expected_params)
+
+        # Test that the IPv6 bracketization adapts the endpoint properly.
+        ipv6_mock.reset_mock()
+        init_mock.reset_mock()
+
+        ipv6_mock.return_value = True
+
+        expected_endpoint = 'http://[host4]:9295'
+        expected_params = {
+        }
+        glance._create_glance_client(ctx, host, port, use_ssl)
+        init_mock.assert_called_once_with('1', expected_endpoint,
+                                          **expected_params)
+
+
+class TestGlanceClientWrapper(test.NoDBTestCase):
+    @mock.patch('time.sleep')
+    @mock.patch('nova.image.glance._create_glance_client')
+    def test_static_client_without_retries(self, create_client_mock,
+                                           sleep_mock):
+        client_mock = mock.MagicMock()
+        images_mock = mock.MagicMock()
+        images_mock.get.side_effect = glanceclient.exc.ServiceUnavailable
+        type(client_mock).images = mock.PropertyMock(return_value=images_mock)
+        create_client_mock.return_value = client_mock
+        self.flags(num_retries=0, group='glance')
+
+        ctx = context.RequestContext('fake', 'fake')
+        host = 'host4'
+        port = 9295
+        use_ssl = False
+
+        client = glance.GlanceClientWrapper(context=ctx, host=host, port=port,
+                                            use_ssl=use_ssl)
+        create_client_mock.assert_called_once_with(ctx, host, port, use_ssl, 1)
+        self.assertRaises(exception.GlanceConnectionFailed,
+                client.call, ctx, 1, 'get', 'meow')
+        self.assertFalse(sleep_mock.called)
+
+    @mock.patch('time.sleep')
+    @mock.patch('nova.image.glance._create_glance_client')
+    def test_static_client_with_retries(self, create_client_mock,
+                                        sleep_mock):
+        self.flags(num_retries=1, group='glance')
+        client_mock = mock.MagicMock()
+        images_mock = mock.MagicMock()
+        images_mock.get.side_effect = [
+            glanceclient.exc.ServiceUnavailable,
+            None
+        ]
+        type(client_mock).images = mock.PropertyMock(return_value=images_mock)
+        create_client_mock.return_value = client_mock
+
+        ctx = context.RequestContext('fake', 'fake')
+        host = 'host4'
+        port = 9295
+        use_ssl = False
+
+        client = glance.GlanceClientWrapper(context=ctx,
+                host=host, port=port, use_ssl=use_ssl)
+        client.call(ctx, 1, 'get', 'meow')
+        sleep_mock.assert_called_once_with(1)
+
+    @mock.patch('random.shuffle')
+    @mock.patch('time.sleep')
+    @mock.patch('nova.image.glance._create_glance_client')
+    def test_default_client_without_retries(self, create_client_mock,
+                                            sleep_mock, shuffle_mock):
+        api_servers = [
+            'host1:9292',
+            'https://host2:9293',
+            'http://host3:9294'
+        ]
+        client_mock = mock.MagicMock()
+        images_mock = mock.MagicMock()
+        images_mock.get.side_effect = glanceclient.exc.ServiceUnavailable
+        type(client_mock).images = mock.PropertyMock(return_value=images_mock)
+        create_client_mock.return_value = client_mock
+
+        shuffle_mock.return_value = api_servers
+        self.flags(num_retries=0, group='glance')
+        self.flags(api_servers=api_servers, group='glance')
+
+        # Here we are testing the behaviour that calling client.call() twice
+        # when there are no retries will cycle through the api_servers and not
+        # sleep (which would be an indication of a retry)
+        ctx = context.RequestContext('fake', 'fake')
+
+        client = glance.GlanceClientWrapper()
+        self.assertRaises(exception.GlanceConnectionFailed,
+                client.call, ctx, 1, 'get', 'meow')
+        self.assertFalse(sleep_mock.called)
+
+        self.assertRaises(exception.GlanceConnectionFailed,
+                client.call, ctx, 1, 'get', 'meow')
+        self.assertFalse(sleep_mock.called)
+
+        create_client_mock.assert_has_calls(
+            [
+                mock.call(ctx, 'host1', 9292, False, 1),
+                mock.call(ctx, 'host2', 9293, True, 1),
+            ]
+        )
+
+    @mock.patch('random.shuffle')
+    @mock.patch('time.sleep')
+    @mock.patch('nova.image.glance._create_glance_client')
+    def test_default_client_with_retries(self, create_client_mock,
+                                         sleep_mock, shuffle_mock):
+        api_servers = [
+            'host1:9292',
+            'https://host2:9293',
+            'http://host3:9294'
+        ]
+        client_mock = mock.MagicMock()
+        images_mock = mock.MagicMock()
+        images_mock.get.side_effect = [
+            glanceclient.exc.ServiceUnavailable,
+            None
+        ]
+        type(client_mock).images = mock.PropertyMock(return_value=images_mock)
+        create_client_mock.return_value = client_mock
+
+        self.flags(num_retries=1, group='glance')
+        self.flags(api_servers=api_servers, group='glance')
+
+        ctx = context.RequestContext('fake', 'fake')
+
+        # And here we're testing that if num_retries is not 0, then we attempt
+        # to retry the same connection action against the next client.
+
+        client = glance.GlanceClientWrapper()
+        client.call(ctx, 1, 'get', 'meow')
+
+        create_client_mock.assert_has_calls(
+            [
+                mock.call(ctx, 'host1', 9292, False, 1),
+                mock.call(ctx, 'host2', 9293, True, 1),
+            ]
+        )
+        sleep_mock.assert_called_once_with(1)
 
 
 class TestDownloadNoDirectUri(test.NoDBTestCase):
@@ -419,18 +621,6 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
                 ]
         )
         writer.close.assert_called_once_with()
-
-
-def _create_failing_glance_client(info):
-    class MyGlanceStubClient(glance_stubs.StubGlanceClient):
-        """A client that fails the first time, then succeeds."""
-        def get(self, image_id):
-            info['num_calls'] += 1
-            if info['num_calls'] == 1:
-                raise glanceclient.exc.ServiceUnavailable('')
-            return {}
-
-    return MyGlanceStubClient()
 
 
 class TestIsImageAvailable(test.NoDBTestCase):
@@ -925,191 +1115,6 @@ class TestDelete(test.NoDBTestCase):
         service = glance.GlanceImageService(client)
         self.assertRaises(exception.ImageNotFound, service.delete, ctx,
                           mock.sentinel.image_id)
-
-
-class TestGlanceClientWrapper(test.NoDBTestCase):
-
-    def setUp(self):
-        super(TestGlanceClientWrapper, self).setUp()
-        # host1 has no scheme, which is http by default
-        self.flags(api_servers=['host1:9292', 'https://host2:9293',
-            'http://host3:9294'], group='glance')
-
-        # Make the test run fast
-        def _fake_sleep(secs):
-            pass
-        self.stubs.Set(time, 'sleep', _fake_sleep)
-
-    def test_headers_passed_glanceclient(self):
-        auth_token = 'auth_token'
-        ctxt = context.RequestContext('fake', 'fake', auth_token=auth_token)
-        fake_host = 'host4'
-        fake_port = 9295
-        fake_use_ssl = False
-
-        def _get_fake_glanceclient(version, endpoint, **params):
-            fake_client = glance_stubs.StubGlanceClient(version,
-                                       endpoint, **params)
-            self.assertIsNotNone(fake_client.auth_token)
-            self.assertIsNotNone(fake_client.identity_headers)
-            self.assertEqual(fake_client.identity_header['X-Auth_Token'],
-                             auth_token)
-            self.assertEqual(fake_client.identity_header['X-User-Id'], 'fake')
-            self.assertIsNone(fake_client.identity_header['X-Roles'])
-            self.assertIsNone(fake_client.identity_header['X-Tenant-Id'])
-            self.assertIsNone(fake_client.identity_header['X-Service-Catalog'])
-            self.assertEqual(fake_client.
-                             identity_header['X-Identity-Status'],
-                             'Confirmed')
-
-        self.stubs.Set(glanceclient.Client, '__init__',
-                       _get_fake_glanceclient)
-
-        glance._create_glance_client(ctxt, fake_host, fake_port, fake_use_ssl)
-
-    def test_static_client_without_retries(self):
-        self.flags(num_retries=0, group='glance')
-
-        ctxt = context.RequestContext('fake', 'fake')
-        fake_host = 'host4'
-        fake_port = 9295
-        fake_use_ssl = False
-
-        info = {'num_calls': 0}
-
-        def _fake_create_glance_client(context, host, port, use_ssl, version):
-            self.assertEqual(host, fake_host)
-            self.assertEqual(port, fake_port)
-            self.assertEqual(use_ssl, fake_use_ssl)
-            return _create_failing_glance_client(info)
-
-        self.stubs.Set(glance, '_create_glance_client',
-                _fake_create_glance_client)
-
-        client = glance.GlanceClientWrapper(context=ctxt,
-                host=fake_host, port=fake_port, use_ssl=fake_use_ssl)
-        self.assertRaises(exception.GlanceConnectionFailed,
-                client.call, ctxt, 1, 'get', 'meow')
-        self.assertEqual(info['num_calls'], 1)
-
-    def test_default_client_without_retries(self):
-        self.flags(num_retries=0, group='glance')
-
-        ctxt = context.RequestContext('fake', 'fake')
-
-        info = {'num_calls': 0,
-                'host': 'host1',
-                'port': 9292,
-                'use_ssl': False}
-
-        # Leave the list in a known-order
-        def _fake_shuffle(servers):
-            pass
-
-        def _fake_create_glance_client(context, host, port, use_ssl, version):
-            self.assertEqual(host, info['host'])
-            self.assertEqual(port, info['port'])
-            self.assertEqual(use_ssl, info['use_ssl'])
-            return _create_failing_glance_client(info)
-
-        self.stubs.Set(random, 'shuffle', _fake_shuffle)
-        self.stubs.Set(glance, '_create_glance_client',
-                _fake_create_glance_client)
-
-        client = glance.GlanceClientWrapper()
-        client2 = glance.GlanceClientWrapper()
-        self.assertRaises(exception.GlanceConnectionFailed,
-                client.call, ctxt, 1, 'get', 'meow')
-        self.assertEqual(info['num_calls'], 1)
-
-        info = {'num_calls': 0,
-                'host': 'host2',
-                'port': 9293,
-                'use_ssl': True}
-
-        def _fake_shuffle2(servers):
-            # fake shuffle in a known manner
-            servers.append(servers.pop(0))
-
-        self.stubs.Set(random, 'shuffle', _fake_shuffle2)
-
-        self.assertRaises(exception.GlanceConnectionFailed,
-                client2.call, ctxt, 1, 'get', 'meow')
-        self.assertEqual(info['num_calls'], 1)
-
-    def test_static_client_with_retries(self):
-        self.flags(num_retries=1, group='glance')
-
-        ctxt = context.RequestContext('fake', 'fake')
-        fake_host = 'host4'
-        fake_port = 9295
-        fake_use_ssl = False
-
-        info = {'num_calls': 0}
-
-        def _fake_create_glance_client(context, host, port, use_ssl, version):
-            self.assertEqual(host, fake_host)
-            self.assertEqual(port, fake_port)
-            self.assertEqual(use_ssl, fake_use_ssl)
-            return _create_failing_glance_client(info)
-
-        self.stubs.Set(glance, '_create_glance_client',
-                _fake_create_glance_client)
-
-        client = glance.GlanceClientWrapper(context=ctxt,
-                host=fake_host, port=fake_port, use_ssl=fake_use_ssl)
-        client.call(ctxt, 1, 'get', 'meow')
-        self.assertEqual(info['num_calls'], 2)
-
-    def test_default_client_with_retries(self):
-        self.flags(num_retries=1, group='glance')
-
-        ctxt = context.RequestContext('fake', 'fake')
-
-        info = {'num_calls': 0,
-                'host0': 'host1',
-                'port0': 9292,
-                'use_ssl0': False,
-                'host1': 'host2',
-                'port1': 9293,
-                'use_ssl1': True}
-
-        # Leave the list in a known-order
-        def _fake_shuffle(servers):
-            pass
-
-        def _fake_create_glance_client(context, host, port, use_ssl, version):
-            attempt = info['num_calls']
-            self.assertEqual(host, info['host%s' % attempt])
-            self.assertEqual(port, info['port%s' % attempt])
-            self.assertEqual(use_ssl, info['use_ssl%s' % attempt])
-            return _create_failing_glance_client(info)
-
-        self.stubs.Set(random, 'shuffle', _fake_shuffle)
-        self.stubs.Set(glance, '_create_glance_client',
-                _fake_create_glance_client)
-
-        client = glance.GlanceClientWrapper()
-        client2 = glance.GlanceClientWrapper()
-        client.call(ctxt, 1, 'get', 'meow')
-        self.assertEqual(info['num_calls'], 2)
-
-        def _fake_shuffle2(servers):
-            # fake shuffle in a known manner
-            servers.append(servers.pop(0))
-
-        self.stubs.Set(random, 'shuffle', _fake_shuffle2)
-
-        info = {'num_calls': 0,
-                'host0': 'host2',
-                'port0': 9293,
-                'use_ssl0': True,
-                'host1': 'host3',
-                'port1': 9294,
-                'use_ssl1': False}
-
-        client2.call(ctxt, 1, 'get', 'meow')
-        self.assertEqual(info['num_calls'], 2)
 
 
 class TestGlanceUrl(test.NoDBTestCase):
