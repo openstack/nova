@@ -37,13 +37,101 @@ from nova import utils
 import nova.virt.libvirt.utils as lv_utils
 
 CONF = cfg.CONF
+NOW_GLANCE_FORMAT = "2010-10-11T10:30:22.000000"
 
 
-class NullWriter(object):
-    """Used to test ImageService.get which takes a writer object."""
+class tzinfo(datetime.tzinfo):
+    @staticmethod
+    def utcoffset(*args, **kwargs):
+        return datetime.timedelta()
 
-    def write(self, *arg, **kwargs):
-        pass
+NOW_DATETIME = datetime.datetime(2010, 10, 11, 10, 30, 22, tzinfo=tzinfo())
+
+
+class TestConversions(test.NoDBTestCase):
+    def test_convert_timestamps_to_datetimes(self):
+        fixture = {'name': None,
+                   'properties': {},
+                   'status': None,
+                   'is_public': None,
+                   'created_at': NOW_GLANCE_FORMAT,
+                   'updated_at': NOW_GLANCE_FORMAT,
+                   'deleted_at': NOW_GLANCE_FORMAT}
+        result = glance._convert_timestamps_to_datetimes(fixture)
+        self.assertEqual(result['created_at'], NOW_DATETIME)
+        self.assertEqual(result['updated_at'], NOW_DATETIME)
+        self.assertEqual(result['deleted_at'], NOW_DATETIME)
+
+    def _test_extracting_missing_attributes(self, include_locations):
+        # Verify behavior from glance objects that are missing attributes
+        class MyFakeGlanceImage(glance_stubs.FakeImage):
+            def __init__(self, metadata):
+                IMAGE_ATTRIBUTES = ['size', 'owner', 'id', 'created_at',
+                                    'updated_at', 'status', 'min_disk',
+                                    'min_ram', 'is_public']
+                raw = dict.fromkeys(IMAGE_ATTRIBUTES)
+                raw.update(metadata)
+                self.__dict__['raw'] = raw
+
+        metadata = {
+            'id': 1,
+            'created_at': NOW_DATETIME,
+            'updated_at': NOW_DATETIME,
+        }
+        image = MyFakeGlanceImage(metadata)
+        observed = glance._extract_attributes(
+            image, include_locations=include_locations)
+        expected = {
+            'id': 1,
+            'name': None,
+            'is_public': None,
+            'size': None,
+            'min_disk': None,
+            'min_ram': None,
+            'disk_format': None,
+            'container_format': None,
+            'checksum': None,
+            'created_at': NOW_DATETIME,
+            'updated_at': NOW_DATETIME,
+            'deleted_at': None,
+            'deleted': None,
+            'status': None,
+            'properties': {},
+            'owner': None
+        }
+        if include_locations:
+            expected['locations'] = None
+            expected['direct_url'] = None
+        self.assertEqual(expected, observed)
+
+    def test_extracting_missing_attributes_include_locations(self):
+        self._test_extracting_missing_attributes(include_locations=True)
+
+    def test_extracting_missing_attributes_exclude_locations(self):
+        self._test_extracting_missing_attributes(include_locations=False)
+
+
+class TestExceptionTranslations(test.NoDBTestCase):
+
+    def test_client_forbidden_to_imagenotauthed(self):
+        in_exc = glanceclient.exc.Forbidden('123')
+        out_exc = glance._translate_image_exception('123', in_exc)
+        self.assertIsInstance(out_exc, exception.ImageNotAuthorized)
+
+    def test_client_httpforbidden_converts_to_imagenotauthed(self):
+        in_exc = glanceclient.exc.HTTPForbidden('123')
+        out_exc = glance._translate_image_exception('123', in_exc)
+        self.assertIsInstance(out_exc, exception.ImageNotAuthorized)
+
+    def test_client_notfound_converts_to_imagenotfound(self):
+        in_exc = glanceclient.exc.NotFound('123')
+        out_exc = glance._translate_image_exception('123', in_exc)
+        self.assertIsInstance(out_exc, exception.ImageNotFound)
+
+    def test_client_httpnotfound_converts_to_imagenotfound(self):
+        in_exc = glanceclient.exc.HTTPNotFound('123')
+        out_exc = glance._translate_image_exception('123', in_exc)
+        self.assertIsInstance(out_exc, exception.ImageNotFound)
 
 
 class TestGlanceSerializer(test.NoDBTestCase):
@@ -82,6 +170,36 @@ class TestGlanceSerializer(test.NoDBTestCase):
         self.assertEqual(glance._convert_from_string(converted), metadata)
 
 
+class TestGetImageService(test.NoDBTestCase):
+    @mock.patch.object(glance.GlanceClientWrapper, '__init__',
+                       return_value=None)
+    def test_get_remote_service_from_id(self, gcwi_mocked):
+        id_or_uri = '123'
+        _ignored, image_id = glance.get_remote_image_service(
+                mock.sentinel.ctx, id_or_uri)
+        self.assertEqual(id_or_uri, image_id)
+        gcwi_mocked.assert_called_once_with()
+
+    @mock.patch.object(glance.GlanceClientWrapper, '__init__',
+                       return_value=None)
+    def test_get_remote_service_from_href(self, gcwi_mocked):
+        id_or_uri = 'http://127.0.0.1/123'
+        _ignored, image_id = glance.get_remote_image_service(
+                mock.sentinel.ctx, id_or_uri)
+        self.assertEqual('123', image_id)
+        gcwi_mocked.assert_called_once_with(context=mock.sentinel.ctx,
+                                            host='127.0.0.1',
+                                            port=80,
+                                            use_ssl=False)
+
+
+class NullWriter(object):
+    """Used to test ImageService.get which takes a writer object."""
+
+    def write(self, *arg, **kwargs):
+        pass
+
+
 class TestGlanceImageService(test.NoDBTestCase):
     """Tests the Glance image service.
 
@@ -94,15 +212,6 @@ class TestGlanceImageService(test.NoDBTestCase):
            APIs (OpenStack, EC2)
 
     """
-    NOW_GLANCE_OLD_FORMAT = "2010-10-11T10:30:22"
-    NOW_GLANCE_FORMAT = "2010-10-11T10:30:22.000000"
-
-    class tzinfo(datetime.tzinfo):
-        @staticmethod
-        def utcoffset(*args, **kwargs):
-            return datetime.timedelta()
-
-    NOW_DATETIME = datetime.datetime(2010, 10, 11, 10, 30, 22, tzinfo=tzinfo())
 
     def setUp(self):
         super(TestGlanceImageService, self).setUp()
@@ -136,34 +245,6 @@ class TestGlanceImageService(test.NoDBTestCase):
         client_wrapper = glance.GlanceClientWrapper(
                 'fake', 'fake_host', 9292)
         return glance.GlanceImageService(client=client_wrapper)
-
-    @staticmethod
-    def _make_fixture(**kwargs):
-        fixture = {'name': None,
-                   'properties': {},
-                   'status': None,
-                   'is_public': None}
-        fixture.update(kwargs)
-        return fixture
-
-    def _make_datetime_fixture(self):
-        return self._make_fixture(created_at=self.NOW_GLANCE_FORMAT,
-                                  updated_at=self.NOW_GLANCE_FORMAT,
-                                  deleted_at=self.NOW_GLANCE_FORMAT)
-
-    def test_show_makes_datetimes(self):
-        fixture = self._make_datetime_fixture()
-        image_id = self.service.create(self.context, fixture)['id']
-        image_meta = self.service.show(self.context, image_id)
-        self.assertEqual(image_meta['created_at'], self.NOW_DATETIME)
-        self.assertEqual(image_meta['updated_at'], self.NOW_DATETIME)
-
-    def test_detail_makes_datetimes(self):
-        fixture = self._make_datetime_fixture()
-        self.service.create(self.context, fixture)
-        image_meta = self.service.detail(self.context)[0]
-        self.assertEqual(image_meta['created_at'], self.NOW_DATETIME)
-        self.assertEqual(image_meta['updated_at'], self.NOW_DATETIME)
 
     def test_page_size(self):
         with mock.patch.object(glance.GlanceClientWrapper, 'call') as a_mock:
@@ -379,122 +460,6 @@ class TestGlanceImageService(test.NoDBTestCase):
         service.download(self.context, image_id, dst_path=os.devnull)
         self.assertTrue(client.data_called)
         self.assertFalse(mock_copy_image.called)
-
-    def test_client_forbidden_converts_to_imagenotauthed(self):
-        class MyGlanceStubClient(glance_stubs.StubGlanceClient):
-            """A client that raises a Forbidden exception."""
-            def get(self, image_id):
-                raise glanceclient.exc.Forbidden(image_id)
-
-        client = MyGlanceStubClient()
-        service = self._create_image_service(client)
-        image_id = 1  # doesn't matter
-        self.assertRaises(exception.ImageNotAuthorized, service.download,
-                          self.context, image_id, dst_path=os.devnull)
-
-    def test_client_httpforbidden_converts_to_imagenotauthed(self):
-        class MyGlanceStubClient(glance_stubs.StubGlanceClient):
-            """A client that raises a HTTPForbidden exception."""
-            def get(self, image_id):
-                raise glanceclient.exc.HTTPForbidden(image_id)
-
-        client = MyGlanceStubClient()
-        service = self._create_image_service(client)
-        image_id = 1  # doesn't matter
-        self.assertRaises(exception.ImageNotAuthorized, service.download,
-                          self.context, image_id, dst_path=os.devnull)
-
-    def test_client_notfound_converts_to_imagenotfound(self):
-        class MyGlanceStubClient(glance_stubs.StubGlanceClient):
-            """A client that raises a NotFound exception."""
-            def get(self, image_id):
-                raise glanceclient.exc.NotFound(image_id)
-
-        client = MyGlanceStubClient()
-        service = self._create_image_service(client)
-        image_id = 1  # doesn't matter
-        self.assertRaises(exception.ImageNotFound, service.download,
-                          self.context, image_id, dst_path=os.devnull)
-
-    def test_client_httpnotfound_converts_to_imagenotfound(self):
-        class MyGlanceStubClient(glance_stubs.StubGlanceClient):
-            """A client that raises a HTTPNotFound exception."""
-            def get(self, image_id):
-                raise glanceclient.exc.HTTPNotFound(image_id)
-
-        client = MyGlanceStubClient()
-        service = self._create_image_service(client)
-        image_id = 1  # doesn't matter
-        self.assertRaises(exception.ImageNotFound, service.download,
-                          self.context, image_id, dst_path=os.devnull)
-
-    def test_glance_client_image_id(self):
-        fixture = self._make_fixture(name='test image')
-        image_id = self.service.create(self.context, fixture)['id']
-        (service, same_id) = glance.get_remote_image_service(
-                self.context, image_id)
-        self.assertEqual(same_id, image_id)
-
-    def test_glance_client_image_ref(self):
-        fixture = self._make_fixture(name='test image')
-        image_id = self.service.create(self.context, fixture)['id']
-        image_url = 'http://something-less-likely/%s' % image_id
-        (service, same_id) = glance.get_remote_image_service(
-                self.context, image_url)
-        self.assertEqual(same_id, image_id)
-        self.assertEqual(service._client.host, 'something-less-likely')
-
-    def _test_extracting_missing_attributes(self, include_locations):
-        """Verify behavior from glance objects that are missing attributes
-
-        This fakes the image class and is missing attribute as the client can
-        return if they're not set in the database.
-        """
-        class MyFakeGlanceImage(glance_stubs.FakeImage):
-            def __init__(self, metadata):
-                IMAGE_ATTRIBUTES = ['size', 'owner', 'id', 'created_at',
-                                    'updated_at', 'status', 'min_disk',
-                                    'min_ram', 'is_public']
-                raw = dict.fromkeys(IMAGE_ATTRIBUTES)
-                raw.update(metadata)
-                self.__dict__['raw'] = raw
-
-        metadata = {
-            'id': 1,
-            'created_at': self.NOW_DATETIME,
-            'updated_at': self.NOW_DATETIME,
-        }
-        image = MyFakeGlanceImage(metadata)
-        observed = glance._extract_attributes(
-            image, include_locations=include_locations)
-        expected = {
-            'id': 1,
-            'name': None,
-            'is_public': None,
-            'size': None,
-            'min_disk': None,
-            'min_ram': None,
-            'disk_format': None,
-            'container_format': None,
-            'checksum': None,
-            'created_at': self.NOW_DATETIME,
-            'updated_at': self.NOW_DATETIME,
-            'deleted_at': None,
-            'deleted': None,
-            'status': None,
-            'properties': {},
-            'owner': None
-        }
-        if include_locations:
-            expected['locations'] = None
-            expected['direct_url'] = None
-        self.assertEqual(expected, observed)
-
-    def test_extracting_missing_attributes_include_locations(self):
-        self._test_extracting_missing_attributes(include_locations=True)
-
-    def test_extracting_missing_attributes_exclude_locations(self):
-        self._test_extracting_missing_attributes(include_locations=False)
 
 
 def _create_failing_glance_client(info):
