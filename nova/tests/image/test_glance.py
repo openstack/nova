@@ -26,7 +26,6 @@ from nova import context
 from nova import exception
 from nova.image import glance
 from nova import test
-from nova.tests.glance import stubs as glance_stubs
 from nova import utils
 
 CONF = cfg.CONF
@@ -57,7 +56,9 @@ class TestConversions(test.NoDBTestCase):
 
     def _test_extracting_missing_attributes(self, include_locations):
         # Verify behavior from glance objects that are missing attributes
-        class MyFakeGlanceImage(glance_stubs.FakeImage):
+        # TODO(jaypipes): Find a better way of testing this crappy
+        #                 glanceclient magic object stuff.
+        class MyFakeGlanceImage(object):
             def __init__(self, metadata):
                 IMAGE_ATTRIBUTES = ['size', 'owner', 'id', 'created_at',
                                     'updated_at', 'status', 'min_disk',
@@ -65,6 +66,18 @@ class TestConversions(test.NoDBTestCase):
                 raw = dict.fromkeys(IMAGE_ATTRIBUTES)
                 raw.update(metadata)
                 self.__dict__['raw'] = raw
+
+            def __getattr__(self, key):
+                try:
+                    return self.__dict__['raw'][key]
+                except KeyError:
+                    raise AttributeError(key)
+
+            def __setattr__(self, key, value):
+                try:
+                    self.__dict__['raw'][key] = value
+                except KeyError:
+                    raise AttributeError(key)
 
         metadata = {
             'id': 1,
