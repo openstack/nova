@@ -195,7 +195,7 @@ def get_tftp_image_info(instance, flavor):
     Raises NovaException if
     - instance does not contain kernel_id or ramdisk_id
     - deploy_kernel_id or deploy_ramdisk_id can not be read from
-      flavor['extra_specs'] and defaults are not set
+    flavor['extra_specs'] and defaults are not set
 
     """
     image_info = {

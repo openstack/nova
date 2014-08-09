@@ -1718,8 +1718,8 @@ def lookup_vm_vdis(session, vm_ref):
 
 def lookup(session, name_label, check_rescue=False):
     """Look the instance up and return it if available.
-    :param check_rescue: if True will return the 'name'-rescue vm if it
-                         exists, instead of just 'name'
+    :param:check_rescue: if True will return the 'name'-rescue vm if it
+    exists, instead of just 'name'
     """
     if check_rescue:
         result = lookup(session, name_label + '-rescue', False)

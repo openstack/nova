@@ -118,21 +118,21 @@ class VHDUtils(object):
 
     def get_internal_vhd_size_by_file_size(self, vhd_path, new_vhd_file_size):
         """Fixed VHD size = Data Block size + 512 bytes
-           Dynamic_VHD_size = Dynamic Disk Header
-                             + Copy of hard disk footer
-                             + Hard Disk Footer
-                             + Data Block
-                             + BAT
-           Dynamic Disk header fields
-                Copy of hard disk footer (512 bytes)
-                Dynamic Disk Header (1024 bytes)
-                BAT (Block Allocation table)
-                Data Block 1
-                Data Block 2
-                Data Block n
-                Hard Disk Footer (512 bytes)
-           Default block size is 2M
-           BAT entry size is 4byte
+           | Dynamic_VHD_size = Dynamic Disk Header
+           |                  + Copy of hard disk footer
+           |                  + Hard Disk Footer
+           |                  + Data Block
+           |                  + BAT
+           | Dynamic Disk header fields
+           |     Copy of hard disk footer (512 bytes)
+           |     Dynamic Disk Header (1024 bytes)
+           |     BAT (Block Allocation table)
+           |     Data Block 1
+           |     Data Block 2
+           |     Data Block n
+           |     Hard Disk Footer (512 bytes)
+           | Default block size is 2M
+           | BAT entry size is 4byte
         """
         base_vhd_info = self.get_vhd_info(vhd_path)
         vhd_type = base_vhd_info['Type']

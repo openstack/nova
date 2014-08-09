@@ -584,7 +584,8 @@ class XenAPIDriver(driver.ComputeDriver):
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
         :param network_info: instance network information
-        :param : block_migration: if true, post operation of block_migration.
+        :param block_migration: if true, post operation of block_migration.
+
         """
         self._vmops.post_live_migration_at_destination(context, instance,
                 network_info, block_device_info, block_device_info)
@@ -677,7 +678,6 @@ class XenAPIDriver(driver.ComputeDriver):
     def get_per_instance_usage(self):
         """Get information about instance resource usage.
 
-        :returns: dict of  nova uuid => dict of usage
-        info
+        :returns: dict of  nova uuid => dict of usage info
         """
         return self._vmops.get_per_instance_usage()

@@ -13,7 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from sqlalchemy import Column, MetaData, Boolean, Table, text
+from sqlalchemy import Column, MetaData, Boolean, Table
+from sqlalchemy.sql import expression
 
 
 COLUMN_NAME = 'preserve_ephemeral'
@@ -25,7 +26,8 @@ def upgrade(migrate_engine):
     meta.bind = migrate_engine
 
     t = Table(TABLE_NAME, meta, autoload=True)
-    default = text('0') if migrate_engine.name == 'sqlite' else text('false')
+    default = (expression.text('0') if migrate_engine.name == 'sqlite'
+               else expression.text('false'))
     preserve_ephemeral_col = Column(COLUMN_NAME, Boolean,
                                     server_default=default)
     t.create_column(preserve_ephemeral_col)

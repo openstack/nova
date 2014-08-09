@@ -110,9 +110,10 @@ class Image(object):
         Contains specific behavior for each image type.
 
         :prepare_template: function, that creates template.
-        Should accept `target` argument.
+                           Should accept `target` argument.
         :base: Template name
         :size: Size of created image in bytes
+
         """
         pass
 
@@ -656,7 +657,8 @@ class Backend(object):
         :instance: Instance name.
         :name: Image name.
         :image_type: Image type.
-        Optional, is CONF.libvirt.images_type by default.
+                     Optional, is CONF.libvirt.images_type by default.
+
         """
         backend = self.backend(image_type)
         return backend(instance=instance, disk_name=disk_name)

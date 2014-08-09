@@ -94,12 +94,14 @@ class DatastorePath(object):
     file path to a virtual disk.
 
     Note:
-    - Datastore path representations always uses forward slash as separator
+
+    * Datastore path representations always uses forward slash as separator
       (hence the use of the posixpath module).
-    - Datastore names are enclosed in square brackets.
-    - Path part of datastore path is relative to the root directory
+    * Datastore names are enclosed in square brackets.
+    * Path part of datastore path is relative to the root directory
       of the datastore, and is always separated from the [ds_name] part with
       a single space.
+
     """
 
     VMDK_EXTENSION = "vmdk"
@@ -338,22 +340,24 @@ def file_move(session, dc_ref, src_file, dst_file):
 
     The list of possible faults that the server can return on error
     include:
-    - CannotAccessFile: Thrown if the source file or folder cannot be
-                        moved because of insufficient permissions.
-    - FileAlreadyExists: Thrown if a file with the given name already
-                         exists at the destination.
-    - FileFault: Thrown if there is a generic file error
-    - FileLocked: Thrown if the source file or folder is currently
-                  locked or in use.
-    - FileNotFound: Thrown if the file or folder specified by sourceName
-                    is not found.
-    - InvalidDatastore: Thrown if the operation cannot be performed on
-                        the source or destination datastores.
-    - NoDiskSpace: Thrown if there is not enough space available on the
-                   destination datastore.
-    - RuntimeFault: Thrown if any type of runtime fault is thrown that
-                    is not covered by the other faults; for example,
-                    a communication error.
+
+    * CannotAccessFile: Thrown if the source file or folder cannot be
+      moved because of insufficient permissions.
+    * FileAlreadyExists: Thrown if a file with the given name already
+      exists at the destination.
+    * FileFault: Thrown if there is a generic file error
+    * FileLocked: Thrown if the source file or folder is currently
+      locked or in use.
+    * FileNotFound: Thrown if the file or folder specified by sourceName
+      is not found.
+    * InvalidDatastore: Thrown if the operation cannot be performed on
+      the source or destination datastores.
+    * NoDiskSpace: Thrown if there is not enough space available on the
+      destination datastore.
+    * RuntimeFault: Thrown if any type of runtime fault is thrown that
+      is not covered by the other faults; for example,
+      a communication error.
+
     """
     LOG.debug("Moving file from %(src)s to %(dst)s.",
               {'src': src_file, 'dst': dst_file})
