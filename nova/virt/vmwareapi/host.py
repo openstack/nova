@@ -28,57 +28,6 @@ from nova.virt.vmwareapi import vm_util
 LOG = logging.getLogger(__name__)
 
 
-class Host(object):
-    """Implements host related operations."""
-    def __init__(self, session):
-        self._session = session
-
-    def host_power_action(self, host, action):
-        """Reboots or shuts down the host."""
-        host_mor = vm_util.get_host_ref(self._session)
-        LOG.debug("%(action)s %(host)s", {'action': action, 'host': host})
-        if action == "reboot":
-            host_task = self._session._call_method(
-                                    self._session._get_vim(),
-                                    "RebootHost_Task", host_mor,
-                                    force=False)
-        elif action == "shutdown":
-            host_task = self._session._call_method(
-                                    self._session._get_vim(),
-                                    "ShutdownHost_Task", host_mor,
-                                    force=False)
-        elif action == "startup":
-            host_task = self._session._call_method(
-                                    self._session._get_vim(),
-                                    "PowerUpHostFromStandBy_Task", host_mor,
-                                    timeoutSec=60)
-        self._session._wait_for_task(host_task)
-
-    def host_maintenance_mode(self, host, mode):
-        """Start/Stop host maintenance window. On start, it triggers
-        guest VMs evacuation.
-        """
-        host_mor = vm_util.get_host_ref(self._session)
-        LOG.debug("Set maintenance mod on %(host)s to %(mode)s",
-                  {'host': host, 'mode': mode})
-        if mode:
-            host_task = self._session._call_method(
-                                    self._session._get_vim(),
-                                    "EnterMaintenanceMode_Task",
-                                    host_mor, timeout=0,
-                                    evacuatePoweredOffVms=True)
-        else:
-            host_task = self._session._call_method(
-                                    self._session._get_vim(),
-                                    "ExitMaintenanceMode_Task",
-                                    host_mor, timeout=0)
-        self._session._wait_for_task(host_task)
-
-    def set_host_enabled(self, _host, enabled):
-        """Sets the specified host's ability to accept new instances."""
-        pass
-
-
 def _get_ds_capacity_and_freespace(session, cluster=None):
     try:
         ds = ds_util.get_datastore(session, cluster)
