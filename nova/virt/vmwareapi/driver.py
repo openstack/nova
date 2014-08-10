@@ -301,8 +301,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         added_nodes = set(self.dict_mors.keys()) - set(self._resource_keys)
         for node in added_nodes:
             _volumeops = volumeops.VMwareVolumeOps(self._session,
-                                        self.dict_mors[node]['cluster_mor'],
-                                        vc_support=True)
+                                        self.dict_mors[node]['cluster_mor'])
             _vmops = vmops.VMwareVCVMOps(self._session, self._virtapi,
                                        _volumeops,
                                        self.dict_mors[node]['cluster_mor'],
