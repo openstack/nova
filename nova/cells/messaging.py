@@ -842,6 +842,10 @@ class _TargetedMessageMethods(_BaseMessageMethods):
                 instance = {'uuid': instance.uuid}
                 self.msg_runner.instance_destroy_at_top(ctxt,
                                                         instance)
+        except exception.InstanceInfoCacheNotFound:
+            if method != 'delete':
+                raise
+
         fn = getattr(self.compute_api, method, None)
         return fn(ctxt, instance, *args, **kwargs)
 

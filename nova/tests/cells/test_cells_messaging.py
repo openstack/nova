@@ -17,6 +17,8 @@
 Tests For Cells Messaging module
 """
 
+import contextlib
+
 import mock
 import mox
 from oslo.config import cfg
@@ -1120,6 +1122,31 @@ class CellsTargetedMethodsTestCase(test.TestCase):
                 self.ctxt, instance, 'snapshot', 'name',
                 extra_properties='props')
         self.assertEqual('foo', result)
+
+    def test_call_compute_api_with_obj_no_cache(self):
+        instance = objects.Instance()
+        instance.uuid = uuidutils.generate_uuid()
+        error = exception.InstanceInfoCacheNotFound(
+                                            instance_uuid=instance.uuid)
+        with mock.patch.object(instance, 'refresh', side_effect=error):
+            self.assertRaises(exception.InstanceInfoCacheNotFound,
+                              self.tgt_methods_cls._call_compute_api_with_obj,
+                              self.ctxt, instance, 'snapshot')
+
+    def test_call_delete_compute_api_with_obj_no_cache(self):
+        instance = objects.Instance()
+        instance.uuid = uuidutils.generate_uuid()
+        error = exception.InstanceInfoCacheNotFound(
+                                            instance_uuid=instance.uuid)
+        with contextlib.nested(
+            mock.patch.object(instance, 'refresh',
+                              side_effect=error),
+            mock.patch.object(self.tgt_compute_api, 'delete')) as (inst,
+                                                                   delete):
+            self.tgt_methods_cls._call_compute_api_with_obj(self.ctxt,
+                                                            instance,
+                                                            'delete')
+            delete.assert_called_once_with(self.ctxt, instance)
 
     def test_call_compute_with_obj_unknown_instance(self):
         instance = objects.Instance()
