@@ -100,20 +100,17 @@ class KeypairsTest(test.TestCase):
         self.assertTrue(len(res_dict['keypair']['fingerprint']) > 0)
         self.assertTrue(len(res_dict['keypair']['private_key']) > 0)
 
-    def test_keypair_create_with_empty_name(self):
-        body = {'keypair': {'name': ''}}
+    def _test_keypair_create_bad_request_case(self, body):
         req = webob.Request.blank('/v2/fake/os-keypairs')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
-        res_dict = jsonutils.loads(res.body)
-        self.assertEqual(
-            'Keypair data is invalid: '
-            'Keypair name must be string and between 1 '
-            'and 255 characters long',
-            res_dict['badRequest']['message'])
+
+    def test_keypair_create_with_empty_name(self):
+        body = {'keypair': {'name': ''}}
+        self._test_keypair_create_bad_request_case(body)
 
     def test_keypair_create_with_name_too_long(self):
         body = {
@@ -121,18 +118,7 @@ class KeypairsTest(test.TestCase):
                 'name': 'a' * 256
             }
         }
-        req = webob.Request.blank('/v2/fake/os-keypairs')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 400)
-        res_dict = jsonutils.loads(res.body)
-        self.assertEqual(
-            'Keypair data is invalid: '
-            'Keypair name must be string and between 1 '
-            'and 255 characters long',
-            res_dict['badRequest']['message'])
+        self._test_keypair_create_bad_request_case(body)
 
     def test_keypair_create_with_non_alphanumeric_name(self):
         body = {
@@ -140,18 +126,20 @@ class KeypairsTest(test.TestCase):
                 'name': 'test/keypair'
             }
         }
-        req = webob.Request.blank('/v2/fake/os-keypairs')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(self.app)
-        res_dict = jsonutils.loads(res.body)
-        self.assertEqual(res.status_int, 400)
-        res_dict = jsonutils.loads(res.body)
-        self.assertEqual(
-            "Keypair data is invalid: "
-            "Keypair name contains unsafe characters",
-            res_dict['badRequest']['message'])
+        self._test_keypair_create_bad_request_case(body)
+
+    def test_keypair_import_bad_key(self):
+        body = {
+            'keypair': {
+                'name': 'create_test',
+                'public_key': 'ssh-what negative',
+            },
+        }
+        self._test_keypair_create_bad_request_case(body)
+
+    def test_keypair_create_with_invalid_keypair_body(self):
+        body = {'alpha': {'name': 'create_test'}}
+        self._test_keypair_create_bad_request_case(body)
 
     def test_keypair_import(self):
         body = {
@@ -251,26 +239,6 @@ class KeypairsTest(test.TestCase):
             "Key pair 'create_duplicate' already exists.",
             res_dict['conflictingRequest']['message'])
 
-    def test_keypair_import_bad_key(self):
-        body = {
-            'keypair': {
-                'name': 'create_test',
-                'public_key': 'ssh-what negative',
-            },
-        }
-
-        req = webob.Request.blank('/v2/fake/os-keypairs')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 400)
-
-        res_dict = jsonutils.loads(res.body)
-        self.assertEqual(
-            'Keypair data is invalid: failed to generate fingerprint',
-            res_dict['badRequest']['message'])
-
     def test_keypair_delete(self):
         req = webob.Request.blank('/v2/fake/os-keypairs/FAKE')
         req.method = 'DELETE'
@@ -349,18 +317,6 @@ class KeypairsTest(test.TestCase):
         for server_dict in server_dicts:
             self.assertIn('key_name', server_dict)
             self.assertEqual(server_dict['key_name'], '')
-
-    def test_keypair_create_with_invalid_keypair_body(self):
-        body = {'alpha': {'name': 'create_test'}}
-        req = webob.Request.blank('/v1.1/fake/os-keypairs')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers['Content-Type'] = 'application/json'
-        res = req.get_response(self.app)
-        res_dict = jsonutils.loads(res.body)
-        self.assertEqual(res.status_int, 400)
-        self.assertEqual(res_dict['badRequest']['message'],
-                         "Invalid request body")
 
 
 class KeypairPolicyTest(test.TestCase):
