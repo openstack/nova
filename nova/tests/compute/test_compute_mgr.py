@@ -962,7 +962,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         f_instance = objects.Instance._from_db_object(self.context,
                                                       objects.Instance(),
                                                       db_instance)
-        e = exception.InterfaceAttachFailed(instance=f_instance)
+        e = exception.InterfaceAttachFailed(instance_uuid=f_instance.uuid)
 
         @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
         @mock.patch.object(self.compute.network_api,

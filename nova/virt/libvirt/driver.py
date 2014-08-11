@@ -1442,7 +1442,8 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.error(_LE('attaching network adapter failed.'),
                      instance=instance)
             self.vif_driver.unplug(instance, vif)
-            raise exception.InterfaceAttachFailed(instance)
+            raise exception.InterfaceAttachFailed(
+                    instance_uuid=instance['uuid'])
 
     def detach_interface(self, instance, vif):
         virt_dom = self._lookup_by_name(instance['name'])
@@ -1466,7 +1467,8 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 LOG.error(_LE('detaching network adapter failed.'),
                          instance=instance)
-                raise exception.InterfaceDetachFailed(instance)
+                raise exception.InterfaceDetachFailed(
+                        instance_uuid=instance['uuid'])
 
     def _create_snapshot_metadata(self, base, instance, img_fmt, snp_name):
         metadata = {'is_public': False,
