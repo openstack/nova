@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 import webob
 
 from nova.compute import api as compute_api
@@ -31,6 +32,10 @@ def fake_get_spice_console(self, _context, _instance, _console_type):
 
 
 def fake_get_rdp_console(self, _context, _instance, _console_type):
+    return {'url': 'http://fake'}
+
+
+def fake_get_serial_console(self, _context, _instance, _console_type):
     return {'url': 'http://fake'}
 
 
@@ -113,6 +118,8 @@ class ConsolesExtensionTestV21(test.NoDBTestCase):
                        fake_get_spice_console)
         self.stubs.Set(compute_api.API, 'get_rdp_console',
                        fake_get_rdp_console)
+        self.stubs.Set(compute_api.API, 'get_serial_console',
+                       fake_get_serial_console)
         self.stubs.Set(compute_api.API, 'get', fake_get)
         self._setup_wsgi()
 
@@ -443,3 +450,139 @@ class ConsolesExtensionTestV2(ConsolesExtensionTestV21):
 
     def test_get_rdp_console_with_undefined_param(self):
         pass
+
+    def test_get_serial_console(self):
+        body = {'os-getSerialConsole': {'type': 'serial'}}
+        req = webob.Request.blank(self.url)
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(self.app)
+        output = jsonutils.loads(res.body)
+        self.assertEqual(200, res.status_int)
+        self.assertEqual({u'console': {u'url': u'http://fake',
+                                       u'type': u'serial'}},
+                         output)
+
+    @mock.patch.object(compute_api.API, 'get_serial_console')
+    def test_get_serial_console_not_enable(self, get_serial_console):
+        get_serial_console.side_effect = exception.ConsoleTypeUnavailable(
+            console_type="serial")
+
+        body = {'os-getSerialConsole': {'type': 'serial'}}
+        req = webob.Request.blank(self.url)
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue(get_serial_console.called)
+
+    @mock.patch.object(compute_api.API, 'get_serial_console')
+    def test_get_serial_console_invalid_type(self, get_serial_console):
+        get_serial_console.side_effect = (
+            exception.ConsoleTypeInvalid(console_type='invalid'))
+
+        body = {'os-getSerialConsole': {'type': 'invalid'}}
+        req = webob.Request.blank(self.url)
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue(get_serial_console.called)
+
+    @mock.patch.object(compute_api.API, 'get_serial_console')
+    def test_get_serial_console_no_type(self, get_serial_console):
+        get_serial_console.side_effect = (
+            exception.ConsoleTypeInvalid(console_type=''))
+
+        body = {'os-getSerialConsole': {}}
+        req = webob.Request.blank(self.url)
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue(get_serial_console.called)
+
+    @mock.patch.object(compute_api.API, 'get_serial_console')
+    def test_get_serial_console_no_instance(self, get_serial_console):
+        get_serial_console.side_effect = (
+            exception.InstanceNotFound(instance_id='xxx'))
+
+        body = {'os-getSerialConsole': {'type': 'serial'}}
+        req = webob.Request.blank(self.url)
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 404)
+        self.assertTrue(get_serial_console.called)
+
+    @mock.patch.object(compute_api.API, 'get_serial_console')
+    def test_get_serial_console_instance_not_ready(self, get_serial_console):
+        get_serial_console.side_effect = (
+            exception.InstanceNotReady(instance_id='xxx'))
+
+        body = {'os-getSerialConsole': {'type': 'serial'}}
+        req = webob.Request.blank(self.url)
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 409)
+        self.assertTrue(get_serial_console.called)
+
+    @mock.patch.object(compute_api.API, 'get_serial_console')
+    def test_get_serial_console_socket_exhausted(self, get_serial_console):
+        get_serial_console.side_effect = (
+            exception.SocketPortRangeExhaustedException(
+                host='127.0.0.1'))
+
+        body = {'os-getSerialConsole': {'type': 'serial'}}
+        req = webob.Request.blank(self.url)
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 500)
+        self.assertTrue(get_serial_console.called)
+
+    @mock.patch.object(compute_api.API, 'get_serial_console')
+    def test_get_serial_console_image_nport_invalid(self, get_serial_console):
+        get_serial_console.side_effect = (
+            exception.ImageSerialPortNumberInvalid(
+                num_ports='x', property="hw_serial_port_count"))
+
+        body = {'os-getSerialConsole': {'type': 'serial'}}
+        req = webob.Request.blank(self.url)
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue(get_serial_console.called)
+
+    @mock.patch.object(compute_api.API, 'get_serial_console')
+    def test_get_serial_console_image_nport_exceed(self, get_serial_console):
+        get_serial_console.side_effect = (
+            exception.ImageSerialPortNumberExceedFlavorValue())
+
+        body = {'os-getSerialConsole': {'type': 'serial'}}
+        req = webob.Request.blank(self.url)
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue(get_serial_console.called)
