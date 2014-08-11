@@ -48,7 +48,6 @@ def server_group_resp_template(**kwargs):
     sgroup.setdefault('name', 'test')
     sgroup.setdefault('policies', [])
     sgroup.setdefault('members', [])
-    sgroup.setdefault('metadata', {})
     return sgroup
 
 
@@ -66,10 +65,6 @@ def server_group_db(sg):
         attrs['members'] = members
     else:
         attrs['members'] = []
-    if 'metadata' in attrs:
-        attrs['metadetails'] = attrs.pop('metadata')
-    else:
-        attrs['metadetails'] = {}
     attrs['deleted'] = 0
     attrs['deleted_at'] = None
     attrs['created_at'] = None
@@ -257,7 +252,7 @@ class ServerGroupTest(test.TestCase):
         groups = []
         policies = ['anti-affinity']
         members = []
-        metadata = {'key1': 'value1'}
+        metadata = {}  # always empty
         names = ['default-x', 'test']
         sg1 = server_group_resp_template(id=str(1345),
                                            name=names[0],
@@ -287,7 +282,7 @@ class ServerGroupTest(test.TestCase):
         tenant_groups = []
         policies = ['anti-affinity']
         members = []
-        metadata = {'key1': 'value1'}
+        metadata = {}  # always empty
         names = ['default-x', 'test']
         sg1 = server_group_resp_template(id=str(1345),
                                            name=names[0],
@@ -428,7 +423,6 @@ class TestServerGroupXMLSerializer(test.TestCase):
     def _verify_server_group(self, raw_group, tree):
         policies = raw_group['policies']
         members = raw_group['members']
-        metadata = raw_group['metadata']
         self.assertEqual('server_group', self._tag(tree))
         self.assertEqual(raw_group['id'], tree.get('id'))
         self.assertEqual(raw_group['name'], tree.get('name'))
@@ -448,16 +442,7 @@ class TestServerGroupXMLSerializer(test.TestCase):
                     self.assertEqual(members[idx],
                                      gr_child.text)
             elif child_tag == 'metadata':
-                self.assertEqual(len(metadata), len(child))
-                metas = {}
-                for idx, gr_child in enumerate(child):
-                    self.assertEqual(self._tag(gr_child), 'meta')
-                    key = gr_child.get('key')
-                    self.assertIn(key, ['key1', 'key2'])
-                    metas[key] = gr_child.text
-                self.assertEqual(len(metas), len(metadata))
-                for k in metadata:
-                    self.assertEqual(metadata[k], metas[k])
+                self.assertEqual(0, len(child))
 
     def _verify_server_group_brief(self, raw_group, tree):
         self.assertEqual('server_group', self._tag(tree))
@@ -467,13 +452,11 @@ class TestServerGroupXMLSerializer(test.TestCase):
     def test_group_serializer(self):
         policies = ["policy-1", "policy-2"]
         members = ["1", "2"]
-        metadata = dict(key1="value1", key2="value2")
         raw_group = dict(
             id='890',
             name='name',
             policies=policies,
-            members=members,
-            metadata=metadata)
+            members=members)
         sg_group = dict(server_group=raw_group)
         text = self.default_serializer.serialize(sg_group)
 
@@ -485,19 +468,16 @@ class TestServerGroupXMLSerializer(test.TestCase):
         policies = ["policy-1", "policy-2",
                     "policy-3"]
         members = ["1", "2", "3"]
-        metadata = dict(key1="value1", key2="value2")
         groups = [dict(
                  id='890',
                  name='test',
                  policies=policies[0:2],
-                 members=members[0:2],
-                 metadata=metadata),
+                 members=members[0:2]),
                  dict(
                  id='123',
                  name='default',
                  policies=policies[2:],
-                 members=members[2:],
-                 metadata=metadata)]
+                 members=members[2:])]
         sg_groups = dict(server_groups=groups)
         text = self.index_serializer.serialize(sg_groups)
 

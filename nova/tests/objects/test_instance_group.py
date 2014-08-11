@@ -38,23 +38,19 @@ class _TestInstanceGroupObjects(test.TestCase):
                 'project_id': self.project_id}
 
     def _create_instance_group(self, context, values, policies=None,
-                               metadata=None, members=None):
+                               members=None):
         return db.instance_group_create(context, values, policies=policies,
-                                        metadata=metadata, members=members)
+                                        members=members)
 
     def test_get_by_uuid(self):
         values = self._get_default_values()
-        metadata = {'key11': 'value1',
-                    'key12': 'value2'}
         policies = ['policy1', 'policy2']
         members = ['instance_id1', 'instance_id2']
         db_result = self._create_instance_group(self.context, values,
-                                                metadata=metadata,
                                                 policies=policies,
                                                 members=members)
         obj_result = instance_group.InstanceGroup.get_by_uuid(self.context,
                                                               db_result.uuid)
-        self.assertEqual(obj_result.metadetails, metadata)
         self.assertEqual(obj_result.members, members)
         self.assertEqual(obj_result.policies, policies)
 
@@ -105,18 +101,6 @@ class _TestInstanceGroupObjects(test.TestCase):
         result = db.instance_group_get(self.context, db_result['uuid'])
         self.assertEqual(result['members'], members)
 
-    def test_save_metadata(self):
-        values = self._get_default_values()
-        db_result = self._create_instance_group(self.context, values)
-        obj_result = instance_group.InstanceGroup.get_by_uuid(self.context,
-                                                              db_result.uuid)
-        metadata = {'foo': 'bar'}
-        obj_result.metadetails = metadata
-        obj_result.save()
-        db.instance_group_metadata_get(self.context, db_result['uuid'])
-        for key, value in metadata.iteritems():
-            self.assertEqual(value, metadata[key])
-
     def test_create(self):
         group1 = instance_group.InstanceGroup()
         group1.uuid = 'fake-uuid'
@@ -149,17 +133,6 @@ class _TestInstanceGroupObjects(test.TestCase):
                                                           group1.uuid)
         self.assertEqual(group1.id, group2.id)
         self.assertEqual(group1.members, group2.members)
-
-    def test_create_with_metadata(self):
-        group1 = instance_group.InstanceGroup()
-        metadata = {'foo': 'bar'}
-        group1.metadetails = metadata
-        group1.create(self.context)
-        group2 = instance_group.InstanceGroup.get_by_uuid(self.context,
-                                                          group1.uuid)
-        self.assertEqual(group1.id, group2.id)
-        for key, value in metadata.iteritems():
-            self.assertEqual(value, group2.metadetails[key])
 
     def test_recreate_fails(self):
         group = instance_group.InstanceGroup()

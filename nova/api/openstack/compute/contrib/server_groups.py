@@ -137,7 +137,9 @@ class ServerGroupController(wsgi.Controller):
         server_group['id'] = group.uuid
         server_group['name'] = group.name
         server_group['policies'] = group.policies or []
-        server_group['metadata'] = group.metadetails or {}
+        # NOTE(danms): This has been exposed to the user, but never used.
+        # Since we can't remove it, just make sure it's always empty.
+        server_group['metadata'] = {}
         members = []
         if group.members:
             # Display the instances that are not deleted.

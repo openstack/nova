@@ -1305,19 +1305,6 @@ class InstanceGroupPolicy(BASE, NovaBase):
                       nullable=False)
 
 
-class InstanceGroupMetadata(BASE, NovaBase):
-    """Represents a key/value pair for an instance group."""
-    __tablename__ = 'instance_group_metadata'
-    __table_args__ = (
-        Index('instance_group_metadata_key_idx', 'key'),
-    )
-    id = Column(Integer, primary_key=True, nullable=False)
-    key = Column(String(255))
-    value = Column(String(255))
-    group_id = Column(Integer, ForeignKey('instance_groups.id'),
-                      nullable=False)
-
-
 class InstanceGroup(BASE, NovaBase):
     """Represents an instance group.
 
@@ -1340,10 +1327,6 @@ class InstanceGroup(BASE, NovaBase):
         'InstanceGroup.id == InstanceGroupPolicy.group_id,'
         'InstanceGroupPolicy.deleted == 0,'
         'InstanceGroup.deleted == 0)')
-    _metadata = orm.relationship(InstanceGroupMetadata, primaryjoin='and_('
-        'InstanceGroup.id == InstanceGroupMetadata.group_id,'
-        'InstanceGroupMetadata.deleted == 0,'
-        'InstanceGroup.deleted == 0)')
     _members = orm.relationship(InstanceGroupMember, primaryjoin='and_('
         'InstanceGroup.id == InstanceGroupMember.group_id,'
         'InstanceGroupMember.deleted == 0,'
@@ -1352,10 +1335,6 @@ class InstanceGroup(BASE, NovaBase):
     @property
     def policies(self):
         return [p.policy for p in self._policies]
-
-    @property
-    def metadetails(self):
-        return dict((m.key, m.value) for m in self._metadata)
 
     @property
     def members(self):
