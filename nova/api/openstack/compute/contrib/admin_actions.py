@@ -25,6 +25,7 @@ from nova import compute
 from nova.compute import vm_states
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LE
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 
@@ -64,7 +65,7 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
         except Exception:
             readable = traceback.format_exc()
-            LOG.exception(_("Compute.api::pause %s"), readable)
+            LOG.exception(_LE("Compute.api::pause %s"), readable)
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
@@ -86,7 +87,7 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
         except Exception:
             readable = traceback.format_exc()
-            LOG.exception(_("Compute.api::unpause %s"), readable)
+            LOG.exception(_LE("Compute.api::unpause %s"), readable)
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
@@ -108,7 +109,7 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
         except Exception:
             readable = traceback.format_exc()
-            LOG.exception(_("compute.api::suspend %s"), readable)
+            LOG.exception(_LE("compute.api::suspend %s"), readable)
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
@@ -130,7 +131,7 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
         except Exception:
             readable = traceback.format_exc()
-            LOG.exception(_("compute.api::resume %s"), readable)
+            LOG.exception(_LE("compute.api::resume %s"), readable)
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
@@ -156,7 +157,7 @@ class AdminActionsController(wsgi.Controller):
         except exception.NoValidHost as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except Exception as e:
-            LOG.exception(_("Error in migrate %s"), e)
+            LOG.exception(_LE("Error in migrate %s"), e)
             raise exc.HTTPBadRequest()
         return webob.Response(status_int=202)
 
@@ -175,7 +176,7 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except Exception:
             readable = traceback.format_exc()
-            LOG.exception(_("Compute.api::reset_network %s"), readable)
+            LOG.exception(_LE("Compute.api::reset_network %s"), readable)
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
@@ -194,7 +195,7 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except Exception:
             readable = traceback.format_exc()
-            LOG.exception(_("Compute.api::inject_network_info %s"), readable)
+            LOG.exception(_LE("Compute.api::inject_network_info %s"), readable)
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
@@ -211,7 +212,7 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
         except Exception:
             readable = traceback.format_exc()
-            LOG.exception(_("Compute.api::lock %s"), readable)
+            LOG.exception(_LE("Compute.api::lock %s"), readable)
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
@@ -230,7 +231,7 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
         except Exception:
             readable = traceback.format_exc()
-            LOG.exception(_("Compute.api::unlock %s"), readable)
+            LOG.exception(_LE("Compute.api::unlock %s"), readable)
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 
@@ -388,7 +389,7 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
         except Exception:
             readable = traceback.format_exc()
-            LOG.exception(_("Compute.api::resetState %s"), readable)
+            LOG.exception(_LE("Compute.api::resetState %s"), readable)
             raise exc.HTTPUnprocessableEntity()
         return webob.Response(status_int=202)
 

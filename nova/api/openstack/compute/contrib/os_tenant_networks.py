@@ -23,6 +23,7 @@ from nova.api.openstack import extensions
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LE
 from nova.i18n import _LI
 import nova.network
 from nova.openstack.common import log as logging
@@ -81,7 +82,7 @@ class NetworkController(object):
             try:
                 self._default_networks = self._get_default_networks()
             except Exception:
-                LOG.exception(_("Failed to get default networks"))
+                LOG.exception(_LE("Failed to get default networks"))
 
     def _get_default_networks(self):
         project_id = CONF.neutron_default_tenant_id
@@ -120,8 +121,8 @@ class NetworkController(object):
                 reservation = QUOTAS.reserve(context, networks=-1)
         except Exception:
             reservation = None
-            LOG.exception(_("Failed to update usages deallocating "
-                            "network."))
+            LOG.exception(_LE("Failed to update usages deallocating "
+                              "network."))
 
         LOG.info(_LI("Deleting network with id %s"), id)
 
