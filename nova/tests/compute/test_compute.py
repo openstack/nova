@@ -4336,9 +4336,8 @@ class ComputeTestCase(BaseTestCase):
                        fake_attach_volume)
 
         # attach volume to instance
-        instance_p = obj_base.obj_to_primitive(instance)
         self.compute.attach_volume(self.context, volume['id'],
-                                   '/dev/vdc', instance_p, bdm=bdm)
+                                   '/dev/vdc', instance, bdm=bdm)
 
         # assert volume attached correctly
         self.assertEqual(volume['device_name'], '/dev/vdc')
