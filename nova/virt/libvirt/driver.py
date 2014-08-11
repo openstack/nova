@@ -94,6 +94,7 @@ from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import lvm
 from nova.virt.libvirt import rbd
 from nova.virt.libvirt import utils as libvirt_utils
+from nova.virt.libvirt import vif as libvirt_vif
 from nova.virt import netutils
 from nova.virt import watchdog_actions
 from nova import volume
@@ -161,11 +162,6 @@ libvirt_opts = [
                help='Snapshot image format (valid options are : '
                     'raw, qcow2, vmdk, vdi). '
                     'Defaults to same as source image'),
-    cfg.StrOpt('vif_driver',
-               default='nova.virt.libvirt.vif.LibvirtGenericVIFDriver',
-               help='DEPRECATED. The libvirt VIF driver to configure the VIFs.'
-                    'This option is deprecated and will be removed in the '
-                    'Juno release.'),
     cfg.ListOpt('volume_drivers',
                 default=[
                   'iscsi=nova.virt.libvirt.volume.LibvirtISCSIVolumeDriver',
@@ -342,8 +338,8 @@ class LibvirtDriver(driver.ComputeDriver):
             self.virtapi,
             get_connection=self._get_connection)
 
-        vif_class = importutils.import_class(CONF.libvirt.vif_driver)
-        self.vif_driver = vif_class(self._get_connection)
+        self.vif_driver = libvirt_vif.LibvirtGenericVIFDriver(
+            self._get_connection)
 
         self.volume_drivers = driver.driver_dict_from_config(
             CONF.libvirt.volume_drivers, self)

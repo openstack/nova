@@ -542,9 +542,6 @@ class LibvirtConnTestCase(test.TestCase,
         for key, val in kwargs.items():
             fake.__setattr__(key, val)
 
-        self.flags(vif_driver="nova.tests.fake_network.FakeVIFDriver",
-                   group='libvirt')
-
         self.stubs.Set(libvirt_driver.LibvirtDriver, '_conn', fake)
 
     def fake_lookup(self, instance_name):
@@ -7941,8 +7938,6 @@ Active:          8381604 kB
 
     def _test_create_with_network_events(self, neutron_failure=None,
                                          power_on=True):
-        self.flags(vif_driver="nova.tests.fake_network.FakeVIFDriver",
-                   group='libvirt')
         generated_events = []
 
         def wait_timeout():
