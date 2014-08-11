@@ -18,6 +18,7 @@ from nova.api.openstack.compute.contrib import agents
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
+from nova import exception
 from nova import test
 
 fake_agents_list = [{'hypervisor': 'kvm', 'os': 'win',
@@ -127,6 +128,22 @@ class AgentsTest(test.NoDBTestCase):
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, body)
+
+    def test_agents_create_with_existed_agent(self):
+        def fake_agent_build_create_with_exited_agent(context, values):
+            raise exception.AgentBuildExists(**values)
+
+        self.stubs.Set(db, 'agent_build_create',
+                       fake_agent_build_create_with_exited_agent)
+        req = FakeRequest()
+        body = {'agent': {'hypervisor': 'kvm',
+                'os': 'win',
+                'architecture': 'x86',
+                'version': '7.0',
+                'url': 'xxx://xxxx/xxx/xxx',
+                'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
+        self.assertRaises(webob.exc.HTTPConflict, self.controller.create, req,
+                          body=body)
 
     def _test_agents_create_with_invalid_length(self, key):
         req = FakeRequest()
