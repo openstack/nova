@@ -2627,9 +2627,6 @@ class LibvirtDriver(driver.ComputeDriver):
                       disk_images=None, network_info=None,
                       block_device_info=None, files=None,
                       admin_pass=None, inject_files=True):
-        if not suffix:
-            suffix = ''
-
         booted_from_volume = self._is_booted_from_volume(
             instance, disk_mapping)
 
