@@ -44,7 +44,7 @@ class Resource(object):
         :param limits: limits to apply
 
         :returns: None if the test passes or a string describing the reason
-        why the test failed
+                  why the test failed
         """
         pass
 
