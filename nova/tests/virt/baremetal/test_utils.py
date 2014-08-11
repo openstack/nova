@@ -23,7 +23,7 @@ import tempfile
 
 from nova import test
 from nova.virt.baremetal import utils
-from nova.virt.libvirt import utils as libvirt_utils
+from nova.virt import images
 
 
 class BareMetalUtilsTestCase(test.NoDBTestCase):
@@ -68,9 +68,9 @@ class BareMetalUtilsTestCase(test.NoDBTestCase):
         self.mox.VerifyAll()
 
     def test_cache_image_with_clean(self):
-        self.mox.StubOutWithMock(libvirt_utils, "fetch_image")
+        self.mox.StubOutWithMock(images, "fetch_to_raw")
         temp_f, temp_file = tempfile.mkstemp()
-        libvirt_utils.fetch_image(None, temp_file, None, None, None)
+        images.fetch_to_raw(None, None, temp_file, None, None)
         self.mox.ReplayAll()
         utils.cache_image(None, temp_file, None, None, None, clean=True)
         self.mox.VerifyAll()
