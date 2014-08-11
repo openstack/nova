@@ -82,7 +82,7 @@ class ServerVirtualInterfaceTest(test.NoDBTestCase):
 
         compute_api.API.get(fake_context, 'fake_uuid',
                             expected_attrs=None,
-                            want_objects=False).AndRaise(
+                            want_objects=True).AndRaise(
             exception.InstanceNotFound(instance_id='instance-0000'))
 
         self.mox.ReplayAll()

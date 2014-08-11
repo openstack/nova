@@ -37,6 +37,7 @@ from nova import test
 from nova.tests import fake_instance
 from nova.tests.objects import test_fixed_ip
 from nova.tests.objects import test_flavor
+from nova.tests.objects import test_virtual_interface
 from nova import utils
 
 FAKE_UUID = 'a47ae74e-ab08-547f-9eee-ffd23fc46c16'
@@ -103,39 +104,36 @@ class ApiTestCase(test.TestCase):
     def test_get_vifs_by_instance(self, mock_get_by_instance,
                                   mock_get_by_id):
         mock_get_by_instance.return_value = [
-            {'network_id': mock.sentinel.network_id}]
+            dict(test_virtual_interface.fake_vif,
+                 network_id=123)]
         mock_get_by_id.return_value = objects.Network()
         mock_get_by_id.return_value.uuid = mock.sentinel.network_uuid
         instance = objects.Instance(uuid=mock.sentinel.inst_uuid)
         vifs = self.network_api.get_vifs_by_instance(self.context,
                                                      instance)
         self.assertEqual(1, len(vifs))
-        self.assertEqual({'network_id': mock.sentinel.network_id,
-                          'net_uuid': str(mock.sentinel.network_uuid)},
-                         vifs[0])
+        self.assertEqual(123, vifs[0].network_id)
+        self.assertEqual(str(mock.sentinel.network_uuid), vifs[0].net_uuid)
         mock_get_by_instance.assert_called_once_with(
-            self.context, str(mock.sentinel.inst_uuid))
-        mock_get_by_id.assert_called_once_with(self.context,
-                                               mock.sentinel.network_id,
+            self.context, str(mock.sentinel.inst_uuid), use_slave=False)
+        mock_get_by_id.assert_called_once_with(self.context, 123,
                                                project_only='allow_none')
 
     @mock.patch('nova.objects.Network.get_by_id')
     @mock.patch('nova.db.virtual_interface_get_by_address')
     def test_get_vif_by_mac_address(self, mock_get_by_address,
                                     mock_get_by_id):
-        mock_get_by_address.return_value = {
-            'network_id': mock.sentinel.network_id}
+        mock_get_by_address.return_value = dict(
+            test_virtual_interface.fake_vif, network_id=123)
         mock_get_by_id.return_value = objects.Network(
             uuid=mock.sentinel.network_uuid)
         vif = self.network_api.get_vif_by_mac_address(self.context,
                                                       mock.sentinel.mac)
-        self.assertEqual({'network_id': mock.sentinel.network_id,
-                          'net_uuid': str(mock.sentinel.network_uuid)},
-                         vif)
+        self.assertEqual(123, vif.network_id)
+        self.assertEqual(str(mock.sentinel.network_uuid), vif.net_uuid)
         mock_get_by_address.assert_called_once_with(self.context,
                                                     mock.sentinel.mac)
-        mock_get_by_id.assert_called_once_with(self.context,
-                                               mock.sentinel.network_id,
+        mock_get_by_id.assert_called_once_with(self.context, 123,
                                                project_only='allow_none')
 
     def test_allocate_for_instance_handles_macs_passed(self):
