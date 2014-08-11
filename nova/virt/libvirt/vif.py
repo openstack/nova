@@ -42,7 +42,6 @@ libvirt_vif_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(libvirt_vif_opts, 'libvirt')
-CONF.import_opt('virt_type', 'nova.virt.libvirt.driver', group='libvirt')
 CONF.import_opt('use_ipv6', 'nova.netconf')
 
 DEV_PREFIX_ETH = 'eth'
@@ -97,7 +96,7 @@ class LibvirtBaseVIFDriver(object):
         devname = self.get_vif_devname(vif)
         return prefix + devname[3:]
 
-    def get_config(self, instance, vif, image_meta, inst_type):
+    def get_config(self, instance, vif, image_meta, inst_type, virt_type):
         conf = vconfig.LibvirtConfigGuestInterface()
         # Default to letting libvirt / the hypervisor choose the model
         model = None
@@ -114,20 +113,20 @@ class LibvirtBaseVIFDriver(object):
         # Else if the virt type is KVM/QEMU, use virtio according
         # to the global config parameter
         if (model is None and
-            CONF.libvirt.virt_type in ('kvm', 'qemu') and
+            virt_type in ('kvm', 'qemu') and
                     CONF.libvirt.use_virtio_for_bridges):
             model = network_model.VIF_MODEL_VIRTIO
 
         # Workaround libvirt bug, where it mistakenly
         # enables vhost mode, even for non-KVM guests
         if (model == network_model.VIF_MODEL_VIRTIO and
-                CONF.libvirt.virt_type == "qemu"):
+            virt_type == "qemu"):
             driver = "qemu"
 
-        if not is_vif_model_valid_for_virt(CONF.libvirt.virt_type,
+        if not is_vif_model_valid_for_virt(virt_type,
                                            model):
             raise exception.UnsupportedHardware(model=model,
-                                                virt=CONF.libvirt.virt_type)
+                                                virt=virt_type)
 
         designer.set_vif_guest_frontend_config(
             conf, vif['address'], model, driver)
@@ -164,11 +163,12 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             return True
         return False
 
-    def get_config_bridge(self, instance, vif, image_meta, inst_type):
+    def get_config_bridge(self, instance, vif, image_meta,
+                          inst_type, virt_type):
         """Get VIF configurations for bridge type."""
         conf = super(LibvirtGenericVIFDriver,
-                     self).get_config(instance, vif,
-                                      image_meta, inst_type)
+                     self).get_config(instance, vif, image_meta,
+                                      inst_type, virt_type)
 
         designer.set_vif_host_backend_bridge_config(
             conf, self.get_bridge_name(vif),
@@ -183,10 +183,10 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         return conf
 
     def get_config_ovs_bridge(self, instance, vif, image_meta,
-                                 inst_type):
+                              inst_type, virt_type):
         conf = super(LibvirtGenericVIFDriver,
-                     self).get_config(instance, vif,
-                                      image_meta, inst_type)
+                     self).get_config(instance, vif, image_meta,
+                                      inst_type, virt_type)
 
         designer.set_vif_host_backend_ovs_config(
             conf, self.get_bridge_name(vif),
@@ -198,59 +198,67 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         return conf
 
     def get_config_ovs_hybrid(self, instance, vif, image_meta,
-                              inst_type):
+                              inst_type, virt_type):
         newvif = copy.deepcopy(vif)
         newvif['network']['bridge'] = self.get_br_name(vif['id'])
-        return self.get_config_bridge(instance, newvif,
-                                      image_meta, inst_type)
+        return self.get_config_bridge(instance, newvif, image_meta,
+                                      inst_type, virt_type)
 
-    def get_config_ovs(self, instance, vif, image_meta, inst_type):
+    def get_config_ovs(self, instance, vif, image_meta,
+                       inst_type, virt_type):
         if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
             return self.get_config_ovs_hybrid(instance, vif,
                                               image_meta,
-                                              inst_type)
+                                              inst_type,
+                                              virt_type)
         else:
             return self.get_config_ovs_bridge(instance, vif,
                                               image_meta,
-                                              inst_type)
+                                              inst_type,
+                                              virt_type)
 
     def get_config_ivs_hybrid(self, instance, vif, image_meta,
-                              inst_type):
+                              inst_type, virt_type):
         newvif = copy.deepcopy(vif)
         newvif['network']['bridge'] = self.get_br_name(vif['id'])
         return self.get_config_bridge(instance,
                                       newvif,
                                       image_meta,
-                                      inst_type)
+                                      inst_type,
+                                      virt_type)
 
     def get_config_ivs_ethernet(self, instance, vif, image_meta,
-                                inst_type):
+                                inst_type, virt_type):
         conf = super(LibvirtGenericVIFDriver,
                      self).get_config(instance,
                                       vif,
                                       image_meta,
-                                      inst_type)
+                                      inst_type,
+                                      virt_type)
 
         dev = self.get_vif_devname(vif)
         designer.set_vif_host_backend_ethernet_config(conf, dev)
 
         return conf
 
-    def get_config_ivs(self, instance, vif, image_meta, inst_type):
+    def get_config_ivs(self, instance, vif, image_meta,
+                       inst_type, virt_type):
         if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
             return self.get_config_ivs_hybrid(instance, vif,
                                               image_meta,
-                                              inst_type)
+                                              inst_type,
+                                              virt_type)
         else:
             return self.get_config_ivs_ethernet(instance, vif,
                                                 image_meta,
-                                                inst_type)
+                                                inst_type,
+                                                virt_type)
 
     def get_config_802qbg(self, instance, vif, image_meta,
-                            inst_type):
+                          inst_type, virt_type):
         conf = super(LibvirtGenericVIFDriver,
-                     self).get_config(instance, vif,
-                                      image_meta, inst_type)
+                     self).get_config(instance, vif, image_meta,
+                                      inst_type, virt_type)
 
         params = vif["qbg_params"]
         designer.set_vif_host_backend_802qbg_config(
@@ -265,10 +273,10 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         return conf
 
     def get_config_802qbh(self, instance, vif, image_meta,
-                            inst_type):
+                          inst_type, virt_type):
         conf = super(LibvirtGenericVIFDriver,
-                     self).get_config(instance, vif,
-                                      image_meta, inst_type)
+                     self).get_config(instance, vif, image_meta,
+                                      inst_type, virt_type)
 
         params = vif["qbh_params"]
         designer.set_vif_host_backend_802qbh_config(
@@ -280,10 +288,10 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         return conf
 
     def get_config_iovisor(self, instance, vif, image_meta,
-                             inst_type):
+                           inst_type, virt_type):
         conf = super(LibvirtGenericVIFDriver,
-                     self).get_config(instance, vif,
-                                      image_meta, inst_type)
+                     self).get_config(instance, vif, image_meta,
+                                      inst_type, virt_type)
 
         dev = self.get_vif_devname(vif)
         designer.set_vif_host_backend_ethernet_config(conf, dev)
@@ -293,10 +301,10 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         return conf
 
     def get_config_midonet(self, instance, vif, image_meta,
-                           inst_type):
+                           inst_type, virt_type):
         conf = super(LibvirtGenericVIFDriver,
-                     self).get_config(instance, vif,
-                                      image_meta, inst_type)
+                     self).get_config(instance, vif, image_meta,
+                                      inst_type, virt_type)
 
         dev = self.get_vif_devname(vif)
         designer.set_vif_host_backend_ethernet_config(conf, dev)
@@ -304,10 +312,10 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         return conf
 
     def get_config_mlnx_direct(self, instance, vif, image_meta,
-                               inst_type):
+                               inst_type, virt_type):
         conf = super(LibvirtGenericVIFDriver,
-                     self).get_config(instance, vif,
-                                      image_meta, inst_type)
+                     self).get_config(instance, vif, image_meta,
+                                      inst_type, virt_type)
 
         devname = self.get_vif_devname_with_prefix(vif, DEV_PREFIX_ETH)
         designer.set_vif_host_backend_direct_config(conf, devname)
@@ -316,13 +324,14 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
         return conf
 
-    def get_config(self, instance, vif, image_meta, inst_type):
+    def get_config(self, instance, vif, image_meta,
+                   inst_type, virt_type):
         vif_type = vif['type']
 
         LOG.debug('vif_type=%(vif_type)s instance=%(instance)s '
-                  'vif=%(vif)s',
+                  'vif=%(vif)s virt_type%(virt_type)s',
                   {'vif_type': vif_type, 'instance': instance,
-                   'vif': vif})
+                   'vif': vif, 'virt_type': virt_type})
 
         if vif_type is None:
             raise exception.NovaException(
@@ -333,7 +342,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         if not func:
             raise exception.NovaException(
                 _("Unexpected vif_type=%s") % vif_type)
-        return func(instance, vif, image_meta, inst_type)
+        return func(instance, vif, image_meta,
+                    inst_type, virt_type)
 
     def plug_bridge(self, instance, vif):
         """Ensure that the bridge exists, and add VIF to it."""

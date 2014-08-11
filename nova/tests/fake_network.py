@@ -60,7 +60,8 @@ class FakeVIFDriver(object):
     def setattr(self, key, val):
         self.__setattr__(key, val)
 
-    def get_config(self, instance, vif, image_meta, inst_type):
+    def get_config(self, instance, vif, image_meta,
+                   inst_type, virt_type):
         conf = libvirt_config.LibvirtConfigGuestInterface()
 
         for attr, val in conf.__dict__.iteritems():
