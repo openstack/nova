@@ -64,16 +64,16 @@ class MigrateServerController(wsgi.Controller):
         return webob.Response(status_int=202)
 
     @extensions.expected_errors((400, 404, 409))
-    @wsgi.action('migrate_live')
+    @wsgi.action('os-migrateLive')
     @validation.schema(migrate_server.migrate_live)
     def _migrate_live(self, req, id, body):
         """Permit admins to (live) migrate a server to a new host."""
         context = req.environ["nova.context"]
         authorize(context, 'migrate_live')
 
-        block_migration = body["migrate_live"]["block_migration"]
-        disk_over_commit = body["migrate_live"]["disk_over_commit"]
-        host = body["migrate_live"]["host"]
+        block_migration = body["os-migrateLive"]["block_migration"]
+        disk_over_commit = body["os-migrateLive"]["disk_over_commit"]
+        host = body["os-migrateLive"]["host"]
 
         block_migration = strutils.bool_from_string(block_migration,
                                                     strict=True)
@@ -101,7 +101,7 @@ class MigrateServerController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'migrate_live')
+                    'os-migrateLive')
         return webob.Response(status_int=202)
 
 
