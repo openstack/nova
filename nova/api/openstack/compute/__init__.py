@@ -128,13 +128,31 @@ class APIRouter(nova.api.openstack.APIRouter):
                            conditions={"method": ['PUT']})
 
 
-class APIRouterV3(nova.api.openstack.APIRouterV3):
+class APIRouterV21(nova.api.openstack.APIRouterV21):
     """Routes requests on the OpenStack API to the appropriate controller
     and method.
     """
     def __init__(self, init_only=None):
         self._loaded_extension_info = plugins.LoadedExtensionInfo()
-        super(APIRouterV3, self).__init__(init_only)
+        super(APIRouterV21, self).__init__(init_only)
+
+    def _register_extension(self, ext):
+        return self.loaded_extension_info.register_extension(ext.obj)
+
+    @property
+    def loaded_extension_info(self):
+        return self._loaded_extension_info
+
+
+# NOTE(oomichi): Now v3 API tests use APIRouterV3. After moving all v3
+# API extensions to v2.1 API, we can remove this class.
+class APIRouterV3(nova.api.openstack.APIRouterV21):
+    """Routes requests on the OpenStack API to the appropriate controller
+    and method.
+    """
+    def __init__(self, init_only=None):
+        self._loaded_extension_info = plugins.LoadedExtensionInfo()
+        super(APIRouterV3, self).__init__(init_only, v3mode=True)
 
     def _register_extension(self, ext):
         return self.loaded_extension_info.register_extension(ext.obj)

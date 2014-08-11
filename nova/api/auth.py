@@ -75,9 +75,13 @@ def pipeline_factory(loader, global_conf, **local_conf):
     return _load_pipeline(loader, pipeline)
 
 
-def pipeline_factory_v3(loader, global_conf, **local_conf):
+def pipeline_factory_v21(loader, global_conf, **local_conf):
     """A paste pipeline replica that keys off of auth_strategy."""
     return _load_pipeline(loader, local_conf[CONF.auth_strategy].split())
+
+
+# NOTE(oomichi): This pipeline_factory_v3 is for passing check-grenade-dsvm.
+pipeline_factory_v3 = pipeline_factory_v21
 
 
 class InjectContext(wsgi.Middleware):
