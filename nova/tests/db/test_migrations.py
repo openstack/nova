@@ -764,6 +764,14 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
                                  if [c.name for c in i.columns] ==
                                     ['instance_uuid', 'device_name']]))
 
+    def _check_250(self, engine, data):
+        self.assertTableNotExists(engine, 'instance_group_metadata')
+        self.assertTableNotExists(engine, 'shadow_instance_group_metadata')
+
+    def _post_downgrade_250(self, engine):
+        oslodbutils.get_table(engine, 'instance_group_metadata')
+        oslodbutils.get_table(engine, 'shadow_instance_group_metadata')
+
 
 class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
