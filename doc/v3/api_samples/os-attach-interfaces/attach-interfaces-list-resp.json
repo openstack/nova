@@ -1,5 +1,5 @@
 {
-    "interface_attachments": [
+    "interfaceAttachments": [
         {
             "fixed_ips": [
                 {
