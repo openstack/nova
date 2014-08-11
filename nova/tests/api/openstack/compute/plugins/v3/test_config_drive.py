@@ -25,6 +25,7 @@ from nova.api.openstack.compute.plugins.v3 import servers
 from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova import db
+from nova import exception
 from nova.network import manager
 from nova.openstack.common import jsonutils
 from nova import test
@@ -202,7 +203,7 @@ class ServersControllerCreateTest(test.TestCase):
         self._test_create_extra(params,
             override_controller=self.no_config_drive_controller)
 
-    def test_create_instance_with_config_drive(self):
+    def _create_instance_body_of_config_drive(self, param):
         def create(*args, **kwargs):
             self.assertIn('config_drive', kwargs)
             return old_create(*args, **kwargs)
@@ -220,7 +221,7 @@ class ServersControllerCreateTest(test.TestCase):
                     'hello': 'world',
                     'open': 'stack',
                 },
-                config_drive.ATTRIBUTE_NAME: "true",
+                config_drive.ATTRIBUTE_NAME: param,
             },
         }
 
@@ -228,55 +229,39 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body=body).obj
 
+        return req, body
+
+    def test_create_instance_with_config_drive(self):
+        param = True
+        req, body = self._create_instance_body_of_config_drive(param)
+        res = self.controller.create(req, body=body).obj
+        server = res['server']
+        self.assertEqual(FAKE_UUID, server['id'])
+
+    def test_create_instance_with_config_drive_as_boolean_string(self):
+        param = 'false'
+        req, body = self._create_instance_body_of_config_drive(param)
+        res = self.controller.create(req, body=body).obj
         server = res['server']
         self.assertEqual(FAKE_UUID, server['id'])
 
     def test_create_instance_with_bad_config_drive(self):
-        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/v3/flavors/3'
-        body = {
-            'server': {
-                'name': 'config_drive_test',
-                'image_ref': image_href,
-                'flavor_ref': flavor_ref,
-                'metadata': {
-                    'hello': 'world',
-                    'open': 'stack',
-                },
-                config_drive.ATTRIBUTE_NAME: image_href,
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        param = 12345
+        req, body = self._create_instance_body_of_config_drive(param)
+        self.assertRaises(exception.ValidationError,
                           self.controller.create, req, body=body)
 
     def test_create_instance_without_config_drive(self):
-        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/v3/flavors/3'
-        body = {
-            'server': {
-                'name': 'config_drive_test',
-                'image_ref': image_href,
-                'flavor_ref': flavor_ref,
-                'metadata': {
-                    'hello': 'world',
-                    'open': 'stack',
-                },
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank('/servers')
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
+        param = True
+        req, body = self._create_instance_body_of_config_drive(param)
+        del body['server'][config_drive.ATTRIBUTE_NAME]
         res = self.controller.create(req, body=body).obj
-
         server = res['server']
         self.assertEqual(FAKE_UUID, server['id'])
+
+    def test_create_instance_with_empty_config_drive(self):
+        param = ''
+        req, body = self._create_instance_body_of_config_drive(param)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create, req, body=body)
