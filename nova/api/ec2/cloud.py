@@ -36,7 +36,6 @@ from nova.cloudpipe import pipelib
 from nova import compute
 from nova.compute import api as compute_api
 from nova.compute import vm_states
-from nova import db
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LW
@@ -399,7 +398,9 @@ class CloudController(object):
         else:
             snapshot = self.volume_api.create_snapshot(*args)
 
-        db.ec2_snapshot_create(context, snapshot['id'])
+        smap = objects.EC2SnapshotMapping(context, uuid=snapshot['id'])
+        smap.create()
+
         return self._format_snapshot(context, snapshot)
 
     def delete_snapshot(self, context, snapshot_id, **kwargs):
