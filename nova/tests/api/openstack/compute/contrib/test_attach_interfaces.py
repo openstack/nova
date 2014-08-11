@@ -136,6 +136,39 @@ class InterfaceAttachTests(test.NoDBTestCase):
              'fixed_ips': port_data1['fixed_ips'],
             }}
 
+    @mock.patch.object(compute_api.API, 'get',
+                       side_effect=exception.InstanceNotFound(instance_id=''))
+    def _test_instance_not_found(self, url, func, params, mock_get,
+                                 method='GET'):
+        req = webob.Request.blank(url)
+        req.method = method
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+        self.assertRaises(exc.HTTPNotFound, func, req, *params)
+
+    def test_show_instance_not_found(self):
+        attachments = attach_interfaces.InterfaceAttachmentController()
+        self._test_instance_not_found('/v2/fake/os-interfaces/fake',
+                                      attachments.show, ('fake', 'fake'))
+
+    def test_index_instance_not_found(self):
+        attachments = attach_interfaces.InterfaceAttachmentController()
+        self._test_instance_not_found('/v2/fake/os-interfaces',
+                                      attachments.index, ('fake', ))
+
+    def test_delete_instance_not_found(self):
+        attachments = attach_interfaces.InterfaceAttachmentController()
+        self._test_instance_not_found('/v2/fake/os-interfaces/fake',
+                                      attachments.delete, ('fake', 'fake'),
+                                      method='DELETE')
+
+    def test_create_instance_not_found(self):
+        attachments = attach_interfaces.InterfaceAttachmentController()
+        self._test_instance_not_found('/v2/fake/os-interfaces',
+                                      attachments.create,
+                                      ('fake', {'interfaceAttachment': {}}),
+                                      'POST')
+
     def test_show(self):
         attachments = attach_interfaces.InterfaceAttachmentController()
         req = webob.Request.blank('/v2/fake/os-interfaces/show')
@@ -320,15 +353,6 @@ class InterfaceAttachTests(test.NoDBTestCase):
                           req,
                           FAKE_UUID1,
                           FAKE_NET_ID1)
-
-
-class InterfaceAttachTestsWithMock(test.NoDBTestCase):
-    def setUp(self):
-        super(InterfaceAttachTestsWithMock, self).setUp()
-        self.flags(auth_strategy=None, group='neutron')
-        self.flags(url='http://anyhost/', group='neutron')
-        self.flags(url_timeout=30, group='neutron')
-        self.context = context.get_admin_context()
 
     @mock.patch.object(compute_api.API, 'get')
     @mock.patch.object(compute_api.API, 'attach_interface')
