@@ -195,7 +195,7 @@ class API(base_api.NetworkAPI):
                             instance_id=orig_instance_uuid)
             LOG.info(_('re-assign floating IP %(address)s from '
                        'instance %(instance_id)s') % msg_dict)
-            orig_instance = self.db.instance_get_by_uuid(context,
+            orig_instance = objects.Instance.get_by_uuid(context,
                                                          orig_instance_uuid)
 
             # purge cached nw info for the original instance

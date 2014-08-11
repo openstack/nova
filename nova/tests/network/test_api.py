@@ -172,8 +172,10 @@ class ApiTestCase(test.TestCase):
         self.stubs.Set(floating_ips.FloatingIP, 'associate_floating_ip',
                        fake_associate)
 
-        def fake_instance_get_by_uuid(context, instance_uuid):
-            return {'uuid': instance_uuid}
+        def fake_instance_get_by_uuid(context, instance_uuid,
+                                      columns_to_join=None,
+                                      use_slave=None):
+            return fake_instance.fake_db_instance(uuid=instance_uuid)
 
         self.stubs.Set(self.network_api.db, 'instance_get_by_uuid',
                        fake_instance_get_by_uuid)
