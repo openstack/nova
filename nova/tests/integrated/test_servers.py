@@ -510,7 +510,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
 
 class ServersTestV3(client.TestOpenStackClientV3Mixin, ServersTest):
-    _force_delete_parameter = 'force_delete'
+    _force_delete_parameter = 'forceDelete'
     _api_version = 'v3'
     _image_ref_parameter = 'image_ref'
     _flavor_ref_parameter = 'flavor_ref'

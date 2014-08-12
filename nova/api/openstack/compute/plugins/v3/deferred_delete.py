@@ -53,7 +53,7 @@ class DeferredDeleteController(wsgi.Controller):
         return webob.Response(status_int=202)
 
     @extensions.expected_errors((404, 409))
-    @wsgi.action('force_delete')
+    @wsgi.action('forceDelete')
     def _force_delete(self, req, id, body):
         """Force delete of instance before deferred cleanup."""
         context = req.environ["nova.context"]
@@ -64,7 +64,7 @@ class DeferredDeleteController(wsgi.Controller):
             self.compute_api.force_delete(context, instance)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'force_delete')
+                    'forceDelete')
         return webob.Response(status_int=202)
 
 
