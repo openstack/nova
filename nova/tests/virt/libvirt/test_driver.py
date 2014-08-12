@@ -9605,11 +9605,34 @@ disk size: 4.4M''', ''))
         finally:
             os.unlink(dst_path)
 
-    def test_chown(self):
-        self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('chown', 'soren', '/some/path', run_as_root=True)
-        self.mox.ReplayAll()
+    @mock.patch.object(utils, 'execute')
+    def test_chown(self, mock_execute):
         libvirt_utils.chown('/some/path', 'soren')
+        mock_execute.assert_called_once_with('chown', 'soren', '/some/path',
+                                             run_as_root=True)
+
+    @mock.patch.object(utils, 'execute')
+    def test_chown_for_id_maps(self, mock_execute):
+        id_maps = [vconfig.LibvirtConfigGuestUIDMap(),
+                   vconfig.LibvirtConfigGuestUIDMap(),
+                   vconfig.LibvirtConfigGuestGIDMap(),
+                   vconfig.LibvirtConfigGuestGIDMap()]
+        id_maps[0].target = 10000
+        id_maps[0].count = 2000
+        id_maps[1].start = 2000
+        id_maps[1].target = 40000
+        id_maps[1].count = 2000
+        id_maps[2].target = 10000
+        id_maps[2].count = 2000
+        id_maps[3].start = 2000
+        id_maps[3].target = 40000
+        id_maps[3].count = 2000
+        libvirt_utils.chown_for_id_maps('/some/path', id_maps)
+        execute_args = ('nova-idmapshift', '-i',
+                        '-u', '0:10000:2000,2000:40000:2000',
+                        '-g', '0:10000:2000,2000:40000:2000',
+                        '/some/path')
+        mock_execute.assert_called_once_with(*execute_args, run_as_root=True)
 
     def _do_test_extract_snapshot(self, dest_format='raw', out_format='raw'):
         self.mox.StubOutWithMock(utils, 'execute')
