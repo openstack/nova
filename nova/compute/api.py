@@ -1587,7 +1587,8 @@ class API(base.Base):
                     vram_mb = int(old_inst_type.get('extra_specs',
                                                     {}).get(VIDEO_RAM, 0))
                     instance_memory_mb = (old_inst_type['memory_mb'] + vram_mb)
-                    LOG.debug("going to delete a resizing instance")
+                    LOG.debug("going to delete a resizing instance",
+                              instance=instance)
 
         quotas = objects.Quotas(context)
         quotas.reserve(context,
@@ -3034,7 +3035,7 @@ class API(base.Base):
         :param admin_password: password to set on rebuilt instance
 
         """
-        LOG.debug('vm evacuation scheduled')
+        LOG.debug('vm evacuation scheduled', instance=instance)
         inst_host = instance.host
         service = objects.Service.get_by_compute_host(context, inst_host)
         if self.servicegroup_api.service_is_up(service):
