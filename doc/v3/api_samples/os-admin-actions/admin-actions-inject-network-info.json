@@ -1,3 +1,3 @@
 {
-    "inject_network_info": null
+    "injectNetworkInfo": null
 }
