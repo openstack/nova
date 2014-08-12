@@ -9501,6 +9501,46 @@ class LibvirtDriverTestCase(test.TestCase):
         self.assertFalse(self.copy_or_move_swap_called)
         self.assertEqual(disk_info_text, out)
 
+    def test_migrate_disk_and_power_off_lvm(self):
+        """Test for nova.virt.libvirt.libvirt_driver.LibvirtConnection
+        .migrate_disk_and_power_off.
+        """
+
+        self.flags(images_type='lvm', group='libvirt')
+        disk_info = [{'type': 'raw', 'path': '/dev/vg/disk',
+                      'disk_size': '83886080'},
+                     {'type': 'raw', 'path': '/dev/disk.local',
+                      'disk_size': '83886080'}]
+        disk_info_text = jsonutils.dumps(disk_info)
+
+        def fake_get_instance_disk_info(instance, xml=None,
+                                        block_device_info=None):
+            return disk_info_text
+
+        def fake_destroy(instance):
+            pass
+
+        def fake_get_host_ip_addr():
+            return '10.0.0.1'
+
+        def fake_execute(*args, **kwargs):
+            pass
+
+        self.stubs.Set(self.libvirtconnection, 'get_instance_disk_info',
+                       fake_get_instance_disk_info)
+        self.stubs.Set(self.libvirtconnection, '_destroy', fake_destroy)
+        self.stubs.Set(self.libvirtconnection, 'get_host_ip_addr',
+                       fake_get_host_ip_addr)
+        self.stubs.Set(utils, 'execute', fake_execute)
+
+        ins_ref = self._create_instance()
+        flavor = {'root_gb': 10, 'ephemeral_gb': 20}
+
+        # Migration is not implemented for LVM backed instances
+        self.assertRaises(exception.MigrationPreCheckError,
+              self.libvirtconnection.migrate_disk_and_power_off,
+              None, ins_ref, '10.0.0.1', flavor, None)
+
     def test_migrate_disk_and_power_off_resize_error(self):
         instance = self._create_instance()
         flavor = {'root_gb': 5}

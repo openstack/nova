@@ -5128,6 +5128,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 block_device_info=block_device_info)
         disk_info = jsonutils.loads(disk_info_text)
 
+        # NOTE(dgenin): Migration is not implemented for LVM backed instances.
+        if (CONF.libvirt.images_type == 'lvm' and
+                not self._is_booted_from_volume(instance, disk_info_text)):
+            reason = "Migration is not supported for LVM backed instances"
+            raise exception.MigrationPreCheckError(reason)
+
         # copy disks to destination
         # rename instance dir to +_resize at first for using
         # shared storage for instance dir (eg. NFS).

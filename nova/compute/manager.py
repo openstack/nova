@@ -3477,6 +3477,11 @@ class ComputeManager(manager.Manager):
                                   instance_type, quotas,
                                   request_spec, filter_properties,
                                   node)
+            # NOTE(dgenin): This is thrown in LibvirtDriver when the
+            #               instance to be migrated is backed by LVM.
+            #               Remove when LVM migration is implemented.
+            except exception.MigrationPreCheckError:
+                raise
             except Exception:
                 # try to re-schedule the resize elsewhere:
                 exc_info = sys.exc_info()
