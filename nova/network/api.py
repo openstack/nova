@@ -143,23 +143,23 @@ class API(base_api.NetworkAPI):
 
     @wrap_check_policy
     def get_vifs_by_instance(self, context, instance):
-        vifs = self.db.virtual_interface_get_by_instance(context,
-                                                         instance['uuid'])
+        vifs = objects.VirtualInterfaceList.get_by_instance_uuid(context,
+                                                                 instance.uuid)
         for vif in vifs:
-            if vif.get('network_id') is not None:
-                network = objects.Network.get_by_id(context, vif['network_id'],
+            if vif.network_id is not None:
+                network = objects.Network.get_by_id(context, vif.network_id,
                                                     project_only='allow_none')
-                vif['net_uuid'] = network.uuid
+                vif.net_uuid = network.uuid
         return vifs
 
     @wrap_check_policy
     def get_vif_by_mac_address(self, context, mac_address):
-        vif = self.db.virtual_interface_get_by_address(context,
-                                                       mac_address)
-        if vif.get('network_id') is not None:
-            network = objects.Network.get_by_id(context, vif['network_id'],
+        vif = objects.VirtualInterface.get_by_address(context,
+                                                      mac_address)
+        if vif.network_id is not None:
+            network = objects.Network.get_by_id(context, vif.network_id,
                                                 project_only='allow_none')
-            vif['net_uuid'] = network.uuid
+            vif.net_uuid = network.uuid
         return vif
 
     @wrap_check_policy
