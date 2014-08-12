@@ -1010,6 +1010,21 @@ class FakeFactory(object):
         return DataObject(obj_name)
 
 
+class FakeService(DataObject):
+    """Fake service class."""
+
+    def Logout(self, session_manager):
+        pass
+
+
+class FakeClient(DataObject):
+    """Fake client class."""
+
+    def __init__(self):
+        """Creates a namespace object."""
+        self.service = FakeService()
+
+
 class FakeSession(object):
     """Fake Session Class."""
 
@@ -1052,7 +1067,7 @@ class FakeVim(object):
         contents and the cookies for the session.
         """
         self._session = None
-        self.client = DataObject()
+        self.client = FakeClient()
         self.client.factory = FakeFactory()
 
         transport = DataObject()
