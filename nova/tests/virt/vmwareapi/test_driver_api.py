@@ -417,6 +417,18 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_get_host_ip_addr(self):
         self.assertEqual('test_url', self.conn.get_host_ip_addr())
 
+    def test_init_host_with_no_session(self):
+        self.conn._session = mock.Mock()
+        self.conn._session.vim = None
+        self.conn.init_host('fake_host')
+        self.conn._session._create_session.assert_called_once_with()
+
+    def test_init_host(self):
+        try:
+            self.conn.init_host("fake_host")
+        except Exception as ex:
+            self.fail("init_host raised: %s" % ex)
+
     def _set_exception_vars(self):
         self.wait_task = self.conn._session._wait_for_task
         self.call_method = self.conn._session._call_method
