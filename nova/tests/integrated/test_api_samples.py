@@ -3022,8 +3022,7 @@ class FloatingIPPoolsSampleJsonTests(ApiSampleTestBaseV2):
         pool_list = ["pool1", "pool2"]
 
         def fake_get_floating_ip_pools(self, context):
-            return [{'name': pool_list[0]},
-                    {'name': pool_list[1]}]
+            return pool_list
 
         self.stubs.Set(network_api.API, "get_floating_ip_pools",
                        fake_get_floating_ip_pools)
