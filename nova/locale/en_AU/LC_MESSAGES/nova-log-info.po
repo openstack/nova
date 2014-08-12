@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-07-21 06:03+0000\n"
+"POT-Creation-Date: 2014-08-12 06:05+0000\n"
 "PO-Revision-Date: 2014-06-14 19:30+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: English (Australia) (http://www.transifex.com/projects/p/nova/"
@@ -19,10 +19,49 @@ msgstr ""
 "Generated-By: Babel 1.3\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: nova/compute/manager.py:5422
+#: nova/api/openstack/__init__.py:101
+#, python-format
+msgid "%(url)s returned with HTTP %(status)d"
+msgstr ""
+
+#: nova/api/openstack/__init__.py:294
+msgid "V3 API has been disabled by configuration"
+msgstr ""
+
+#: nova/api/openstack/wsgi.py:688
+#, python-format
+msgid "Fault thrown: %s"
+msgstr ""
+
+#: nova/api/openstack/wsgi.py:691
+#, python-format
+msgid "HTTP exception thrown: %s"
+msgstr ""
+
+#: nova/api/openstack/compute/contrib/os_networks.py:101
+#: nova/api/openstack/compute/contrib/os_tenant_networks.py:128
+#, python-format
+msgid "Deleting network with id %s"
+msgstr ""
+
+#: nova/compute/manager.py:5452
 #, python-format
 msgid ""
 "During sync_power_state the instance has a pending task (%(task)s). Skip."
+msgstr ""
+
+#: nova/db/sqlalchemy/migrate_repo/versions/234_add_expire_reservations_index.py:36
+#: nova/db/sqlalchemy/migrate_repo/versions/248_add_expire_reservations_index.py:36
+msgid ""
+"Skipped adding reservations_deleted_expire_idx because an equivalent index "
+"already exists."
+msgstr ""
+
+#: nova/db/sqlalchemy/migrate_repo/versions/234_add_expire_reservations_index.py:58
+#: nova/db/sqlalchemy/migrate_repo/versions/248_add_expire_reservations_index.py:58
+msgid ""
+"Skipped removing reservations_deleted_expire_idx because index does not "
+"exist."
 msgstr ""
 
 #: nova/openstack/common/eventlet_backdoor.py:141
@@ -107,139 +146,143 @@ msgstr "Deleting duplicated row with id: %(id)s from table: %(table)s"
 msgid "%(num_values)d values found, of which the minimum value will be used."
 msgstr ""
 
-#: nova/virt/firewall.py:446
+#: nova/virt/firewall.py:444
 #, python-format
 msgid "instance chain %s disappeared during refresh, skipping"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:839
+#: nova/virt/disk/vfs/guestfs.py:137
+msgid "Unable to force TCG mode, libguestfs too old?"
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:837
 #, python-format
 msgid ""
 "Unable to use bulk domain list APIs, falling back to slow code path: %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:958
+#: nova/virt/libvirt/driver.py:950
 msgid "Instance destroyed successfully."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:968
+#: nova/virt/libvirt/driver.py:960
 msgid "Instance may be started again."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:978
+#: nova/virt/libvirt/driver.py:970
 msgid "Going to destroy instance again."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1574
+#: nova/virt/libvirt/driver.py:1570
 msgid "Beginning live snapshot process"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1577
+#: nova/virt/libvirt/driver.py:1573
 msgid "Beginning cold snapshot process"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1606
+#: nova/virt/libvirt/driver.py:1602
 msgid "Snapshot extracted, beginning image upload"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1618
+#: nova/virt/libvirt/driver.py:1614
 msgid "Snapshot image upload complete"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2049
+#: nova/virt/libvirt/driver.py:2047
 msgid "Instance soft rebooted successfully."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2092
+#: nova/virt/libvirt/driver.py:2090
 msgid "Instance shutdown successfully."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2100
+#: nova/virt/libvirt/driver.py:2098
 msgid "Instance may have been rebooted during soft reboot, so return now."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2168
+#: nova/virt/libvirt/driver.py:2167
 msgid "Instance rebooted successfully."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2336
+#: nova/virt/libvirt/driver.py:2335
 msgid "Instance spawned successfully."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2352
+#: nova/virt/libvirt/driver.py:2351
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2391 nova/virt/libvirt/driver.py:2418
+#: nova/virt/libvirt/driver.py:2390 nova/virt/libvirt/driver.py:2417
 #, python-format
 msgid "Truncated console log returned, %d bytes ignored"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2645
+#: nova/virt/libvirt/driver.py:2646
 msgid "Creating image"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2754
+#: nova/virt/libvirt/driver.py:2772
 msgid "Using config drive"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2763
+#: nova/virt/libvirt/driver.py:2781
 #, python-format
 msgid "Creating config drive at %(path)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3315
+#: nova/virt/libvirt/driver.py:3334
 msgid "Configuring timezone for windows instance to localtime"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4193
+#: nova/virt/libvirt/driver.py:4217
 #, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. Instance="
 "%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4199
+#: nova/virt/libvirt/driver.py:4223
 #, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
 "device"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4441
+#: nova/virt/libvirt/driver.py:4465
 #, python-format
 msgid "Instance launched has CPU info: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5174
+#: nova/virt/libvirt/driver.py:5207
 msgid "Instance running successfully."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5414
+#: nova/virt/libvirt/driver.py:5481
 #, python-format
 msgid "Deleting instance files %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5426
+#: nova/virt/libvirt/driver.py:5494
 #, python-format
 msgid "Deletion of %s failed"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5429
+#: nova/virt/libvirt/driver.py:5498
 #, python-format
 msgid "Deletion of %s complete"
 msgstr ""
 
-#: nova/virt/libvirt/firewall.py:105
+#: nova/virt/libvirt/firewall.py:106
 msgid "Called setup_basic_filtering in nwfilter"
 msgstr ""
 
-#: nova/virt/libvirt/firewall.py:113
+#: nova/virt/libvirt/firewall.py:114
 msgid "Ensuring static filters"
 msgstr ""
 
-#: nova/virt/libvirt/firewall.py:304
+#: nova/virt/libvirt/firewall.py:305
 msgid "Attempted to unfilter instance which is not filtered"
 msgstr ""
 
@@ -296,11 +339,11 @@ msgstr ""
 msgid "Removable base files: %s"
 msgstr ""
 
-#: nova/virt/libvirt/utils.py:536
+#: nova/virt/libvirt/utils.py:490
 msgid "findmnt tool is not installed"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:1353
+#: nova/virt/xenapi/vm_utils.py:1355
 #, python-format
 msgid ""
 "Image creation data, cacheable: %(cache)s, downloaded: %(downloaded)s "

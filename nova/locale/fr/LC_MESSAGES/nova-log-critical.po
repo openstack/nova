@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-07-21 06:04+0000\n"
+"POT-Creation-Date: 2014-08-12 06:05+0000\n"
 "PO-Revision-Date: 2014-05-30 06:26+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: French (http://www.transifex.com/projects/p/nova/language/"
@@ -19,16 +19,18 @@ msgstr ""
 "Generated-By: Babel 1.3\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: nova/virt/vmwareapi/driver.py:864
+#: nova/api/openstack/__init__.py:331
+#, python-format
+msgid "Missing core API extensions: %s"
+msgstr ""
+
+#: nova/virt/vmwareapi/driver.py:658
 #, python-format
 msgid ""
 "Unable to connect to server at %(server)s, sleeping for %(seconds)s seconds"
 msgstr ""
 
-#: nova/virt/vmwareapi/driver.py:973
+#: nova/virt/vmwareapi/driver.py:767
 #, python-format
 msgid "In vmwareapi: _call_method (session=%s)"
 msgstr ""
-
-#~ msgid "Dummy message for transifex setup."
-#~ msgstr "message fictif pour la configuration transifex"
