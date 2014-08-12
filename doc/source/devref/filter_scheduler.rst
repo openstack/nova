@@ -94,6 +94,11 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
   ``disk_allocation_ration`` setting. It's virtual disk to physical disk
   allocation ratio and it's 1.0 by default. The total allow allocated disk size will
   be physical disk multiplied this ratio.
+* |AggregateDiskFilter| - filters hosts by disk allocation with per-aggregate
+  ``disk_allocation_ratio`` setting. If no per-aggregate value is found, it will
+  fall back to the global default ``disk_allocation_ratio``. If more than one value
+  is found for a host (meaning the host is in two or more different aggregates with
+  different ratio settings), the minimum value will be used.
 * |NumInstancesFilter| - filters hosts by number of running instances on it.
   hosts with too many instances will be filtered.
   ``max_instances_per_host`` setting. Maximum number of instances allowed to run on
@@ -360,6 +365,7 @@ in :mod:``nova.tests.scheduler``.
 .. |RamFilter| replace:: :class:`RamFilter <nova.scheduler.filters.ram_filter.RamFilter>`
 .. |AggregateRamFilter| replace:: :class:`AggregateRamFilter <nova.scheduler.filters.ram_filter.AggregateRamFilter>`
 .. |DiskFilter| replace:: :class:`DiskFilter <nova.scheduler.filters.disk_filter.DiskFilter>`
+.. |AggregateDiskFilter| replace:: :class:`AggregateDiskFilter <nova.scheduler.filters.disk_filter.AggregateDiskFilter>`
 .. |NumInstancesFilter| replace:: :class:`NumInstancesFilter <nova.scheduler.filters.num_instances_filter.NumInstancesFilter>`
 .. |IoOpsFilter| replace:: :class:`IoOpsFilter <nova.scheduler.filters.io_ops_filter.IoOpsFilter>`
 .. |AggregateIoOpsFilter| replace:: :class:`AggregateIoOpsFilter <nova.scheduler.filters.io_ops_filter.AggregateIoOpsFilter>`
