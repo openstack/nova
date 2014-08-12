@@ -35,7 +35,7 @@ class CreateBackupController(wsgi.Controller):
         self.compute_api = compute.API()
 
     @extensions.expected_errors((400, 403, 404, 409))
-    @wsgi.action('create_backup')
+    @wsgi.action('createBackup')
     @validation.schema(create_backup.create_backup)
     def _create_backup(self, req, id, body):
         """Backup a server instance.
@@ -50,7 +50,7 @@ class CreateBackupController(wsgi.Controller):
         """
         context = req.environ["nova.context"]
         authorize(context)
-        entity = body["create_backup"]
+        entity = body["createBackup"]
 
         image_name = entity["name"]
         backup_type = entity["backup_type"]
@@ -69,7 +69,7 @@ class CreateBackupController(wsgi.Controller):
                     backup_type, rotation, extra_properties=props)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'create_backup')
+                    'createBackup')
 
         resp = webob.Response(status_int=202)
 
