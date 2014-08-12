@@ -1059,6 +1059,46 @@ class GetLogCommands(object):
 class CellCommands(object):
     """Commands for managing cells."""
 
+    def _create_transport_hosts(self, username, password,
+                                broker_hosts=None, hostname=None, port=None):
+        """Returns a list of oslo.messaging.TransportHost objects."""
+        transport_hosts = []
+        # Either broker-hosts or hostname should be set
+        if broker_hosts:
+            hosts = broker_hosts.split(',')
+            for host in hosts:
+                host = host.strip()
+                broker_hostname, broker_port = utils.parse_server_string(host)
+                if not broker_port:
+                    msg = _('Invalid broker_hosts value: %s. It should be'
+                            ' in hostname:port format') % host
+                    raise ValueError(msg)
+                try:
+                    broker_port = int(broker_port)
+                except ValueError:
+                    msg = _('Invalid port value: %s. It should be '
+                             'an integer') % broker_port
+                    raise ValueError(msg)
+                transport_hosts.append(
+                               messaging.TransportHost(
+                                   hostname=broker_hostname,
+                                   port=broker_port,
+                                   username=username,
+                                   password=password))
+        else:
+            try:
+                port = int(port)
+            except ValueError:
+                msg = _("Invalid port value: %s. Should be an integer") % port
+                raise ValueError(msg)
+            transport_hosts.append(
+                           messaging.TransportHost(
+                               hostname=hostname,
+                               port=port,
+                               username=username,
+                               password=password))
+        return transport_hosts
+
     @args('--name', metavar='<name>', help='Name for the new cell')
     @args('--cell_type', metavar='<parent|child>',
          help='Whether the cell is a parent or child')
@@ -1066,6 +1106,11 @@ class CellCommands(object):
          help='Username for the message broker in this cell')
     @args('--password', metavar='<password>',
          help='Password for the message broker in this cell')
+    @args('--broker_hosts', metavar='<broker_hosts>',
+         help='Comma separated list of message brokers in this cell. '
+              'Each Broker is specified as hostname:port with both '
+              'mandatory. This option overrides the --hostname '
+              'and --port options (if provided). ')
     @args('--hostname', metavar='<hostname>',
          help='Address of the message broker in this cell')
     @args('--port', metavar='<number>',
@@ -1074,8 +1119,8 @@ class CellCommands(object):
          help='The virtual host of the message broker in this cell')
     @args('--woffset', metavar='<float>')
     @args('--wscale', metavar='<float>')
-    def create(self, name, cell_type='child', username=None, password=None,
-               hostname=None, port=None, virtual_host=None,
+    def create(self, name, cell_type='child', username=None, broker_hosts=None,
+               password=None, hostname=None, port=None, virtual_host=None,
                woffset=None, wscale=None):
 
         if cell_type not in ['parent', 'child']:
@@ -1083,13 +1128,12 @@ class CellCommands(object):
             return(2)
 
         # Set up the transport URL
-        transport_host = messaging.TransportHost(hostname=hostname,
-                                                 port=int(port),
-                                                 username=username,
-                                                 password=password)
-
+        transport_hosts = self._create_transport_hosts(
+                                                 username, password,
+                                                 broker_hosts, hostname,
+                                                 port)
         transport_url = rpc.get_transport_url()
-        transport_url.hosts.append(transport_host)
+        transport_url.hosts.extend(transport_hosts)
         transport_url.virtual_host = virtual_host
 
         is_parent = cell_type == 'parent'

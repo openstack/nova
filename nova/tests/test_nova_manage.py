@@ -17,6 +17,7 @@ import StringIO
 import sys
 
 import fixtures
+import mock
 
 from nova.cmd import manage
 from nova import context
@@ -346,3 +347,121 @@ class ServiceCommandsTestCase(test.TestCase):
 
     def test_service_disable_invalid_params(self):
         self.assertEqual(2, self.commands.disable('nohost', 'noservice'))
+
+
+class CellCommandsTestCase(test.TestCase):
+    def setUp(self):
+        super(CellCommandsTestCase, self).setUp()
+        self.commands = manage.CellCommands()
+
+    def test_create_transport_hosts_multiple(self):
+        """Test the _create_transport_hosts method
+        when broker_hosts is set.
+        """
+        brokers = "127.0.0.1:5672,127.0.0.2:5671"
+        thosts = self.commands._create_transport_hosts(
+                                           'guest', 'devstack',
+                                           broker_hosts=brokers)
+        self.assertEqual(2, len(thosts))
+        self.assertEqual('127.0.0.1', thosts[0].hostname)
+        self.assertEqual(5672, thosts[0].port)
+        self.assertEqual('127.0.0.2', thosts[1].hostname)
+        self.assertEqual(5671, thosts[1].port)
+
+    def test_create_transport_hosts_single(self):
+        """Test the _create_transport_hosts method when hostname is passed."""
+        thosts = self.commands._create_transport_hosts('guest', 'devstack',
+                                                       hostname='127.0.0.1',
+                                                       port=80)
+        self.assertEqual(1, len(thosts))
+        self.assertEqual('127.0.0.1', thosts[0].hostname)
+        self.assertEqual(80, thosts[0].port)
+
+    def test_create_transport_hosts_single_broker(self):
+        """Test the _create_transport_hosts method for single broker_hosts."""
+        thosts = self.commands._create_transport_hosts(
+                                              'guest', 'devstack',
+                                              broker_hosts='127.0.0.1:5672')
+        self.assertEqual(1, len(thosts))
+        self.assertEqual('127.0.0.1', thosts[0].hostname)
+        self.assertEqual(5672, thosts[0].port)
+
+    def test_create_transport_hosts_both(self):
+        """Test the _create_transport_hosts method when both broker_hosts
+        and hostname/port are passed.
+        """
+        thosts = self.commands._create_transport_hosts(
+                                              'guest', 'devstack',
+                                              broker_hosts='127.0.0.1:5672',
+                                              hostname='127.0.0.2', port=80)
+        self.assertEqual(1, len(thosts))
+        self.assertEqual('127.0.0.1', thosts[0].hostname)
+        self.assertEqual(5672, thosts[0].port)
+
+    def test_create_transport_hosts_wrong_val(self):
+        """Test the _create_transport_hosts method when broker_hosts
+        is wrongly sepcified
+        """
+        self.assertRaises(ValueError,
+                          self.commands._create_transport_hosts,
+                          'guest', 'devstack',
+                          broker_hosts='127.0.0.1:5672,127.0.0.1')
+
+    def test_create_transport_hosts_wrong_port_val(self):
+        """Test the _create_transport_hosts method when port in
+        broker_hosts is wrongly sepcified
+        """
+        self.assertRaises(ValueError,
+                          self.commands._create_transport_hosts,
+                          'guest', 'devstack',
+                          broker_hosts='127.0.0.1:')
+
+    def test_create_transport_hosts_wrong_port_arg(self):
+        """Test the _create_transport_hosts method when port
+        argument is wrongly sepcified
+        """
+        self.assertRaises(ValueError,
+                          self.commands._create_transport_hosts,
+                          'guest', 'devstack',
+                          hostname='127.0.0.1', port='ab')
+
+    @mock.patch.object(context, 'get_admin_context')
+    @mock.patch.object(db, 'cell_create')
+    def test_create_broker_hosts(self, mock_db_cell_create, mock_ctxt):
+        """Test the create function when broker_hosts is
+        passed
+        """
+        cell_tp_url = "fake://guest:devstack@127.0.0.1:5432"
+        cell_tp_url += ",guest:devstack@127.0.0.2:9999/"
+        ctxt = mock.sentinel
+        mock_ctxt.return_value = mock.sentinel
+        self.commands.create("test",
+                             broker_hosts='127.0.0.1:5432,127.0.0.2:9999',
+                             woffset=0, wscale=0,
+                             username="guest", password="devstack")
+        exp_values = {'name': "test",
+                      'is_parent': False,
+                      'transport_url': cell_tp_url,
+                      'weight_offset': 0.0,
+                      'weight_scale': 0.0}
+        mock_db_cell_create.assert_called_once_with(ctxt, exp_values)
+
+    @mock.patch.object(context, 'get_admin_context')
+    @mock.patch.object(db, 'cell_create')
+    def test_create_hostname(self, mock_db_cell_create, mock_ctxt):
+        """Test the create function when hostname and port is
+        passed
+        """
+        cell_tp_url = "fake://guest:devstack@127.0.0.1:9999/"
+        ctxt = mock.sentinel
+        mock_ctxt.return_value = mock.sentinel
+        self.commands.create("test",
+                             hostname='127.0.0.1', port="9999",
+                             woffset=0, wscale=0,
+                             username="guest", password="devstack")
+        exp_values = {'name': "test",
+                      'is_parent': False,
+                      'transport_url': cell_tp_url,
+                      'weight_offset': 0.0,
+                      'weight_scale': 0.0}
+        mock_db_cell_create.assert_called_once_with(ctxt, exp_values)
