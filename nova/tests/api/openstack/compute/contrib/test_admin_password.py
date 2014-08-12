@@ -15,7 +15,8 @@
 #    under the License.
 import webob
 
-from nova.api.openstack.compute.plugins.v3 import admin_password
+from nova.api.openstack.compute.plugins.v3 import admin_password \
+                                           as admin_password_v21
 from nova.compute import api as compute_api
 from nova import exception
 from nova.openstack.common import jsonutils
@@ -45,18 +46,19 @@ def fake_set_admin_password_not_implemented(self, context, instance,
     raise NotImplementedError()
 
 
-class AdminPasswordTest(test.NoDBTestCase):
+class AdminPasswordTestV21(test.NoDBTestCase):
+    plugin = admin_password_v21
 
     def setUp(self):
-        super(AdminPasswordTest, self).setUp()
+        super(AdminPasswordTestV21, self).setUp()
         self.stubs.Set(compute_api.API, 'set_admin_password',
                        fake_set_admin_password)
         self.stubs.Set(compute_api.API, 'get', fake_get)
         self.app = fakes.wsgi_app_v3(init_only=('servers',
-                                                admin_password.ALIAS))
+                                                self.plugin.ALIAS))
 
-    def _make_request(self, url, body):
-        req = webob.Request.blank(url)
+    def _make_request(self, body):
+        req = webob.Request.blank('/v3/servers/1/action')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.content_type = 'application/json'
@@ -64,54 +66,46 @@ class AdminPasswordTest(test.NoDBTestCase):
         return res
 
     def test_change_password(self):
-        url = '/v3/servers/1/action'
-        body = {'change_password': {'admin_password': 'test'}}
-        res = self._make_request(url, body)
-        self.assertEqual(res.status_int, 204)
+        body = {'changePassword': {'adminPass': 'test'}}
+        res = self._make_request(body)
+        self.assertEqual(res.status_int, 202)
 
     def test_change_password_empty_string(self):
-        url = '/v3/servers/1/action'
-        body = {'change_password': {'admin_password': ''}}
-        res = self._make_request(url, body)
-        self.assertEqual(res.status_int, 204)
+        body = {'changePassword': {'adminPass': ''}}
+        res = self._make_request(body)
+        self.assertEqual(res.status_int, 202)
 
     def test_change_password_with_non_implement(self):
-        url = '/v3/servers/1/action'
-        body = {'change_password': {'admin_password': 'test'}}
+        body = {'changePassword': {'adminPass': 'test'}}
         self.stubs.Set(compute_api.API, 'set_admin_password',
                        fake_set_admin_password_not_implemented)
-        res = self._make_request(url, body)
+        res = self._make_request(body)
         self.assertEqual(res.status_int, 501)
 
     def test_change_password_with_non_existed_instance(self):
-        url = '/v3/servers/1/action'
-        body = {'change_password': {'admin_password': 'test'}}
+        body = {'changePassword': {'adminPass': 'test'}}
         self.stubs.Set(compute_api.API, 'get', fake_get_non_existent)
-        res = self._make_request(url, body)
+        res = self._make_request(body)
         self.assertEqual(res.status_int, 404)
 
     def test_change_password_with_non_string_password(self):
-        url = '/v3/servers/1/action'
-        body = {'change_password': {'admin_password': 1234}}
-        res = self._make_request(url, body)
+        body = {'changePassword': {'adminPass': 1234}}
+        res = self._make_request(body)
         self.assertEqual(res.status_int, 400)
 
     def test_change_password_failed(self):
-        url = '/v3/servers/1/action'
-        body = {'change_password': {'admin_password': 'test'}}
+        body = {'changePassword': {'adminPass': 'test'}}
         self.stubs.Set(compute_api.API, 'set_admin_password',
                        fake_set_admin_password_failed)
-        res = self._make_request(url, body)
+        res = self._make_request(body)
         self.assertEqual(res.status_int, 409)
 
     def test_change_password_without_admin_password(self):
-        url = '/v3/servers/1/action'
-        body = {'change_password': {}}
-        res = self._make_request(url, body)
+        body = {'changPassword': {}}
+        res = self._make_request(body)
         self.assertEqual(res.status_int, 400)
 
     def test_change_password_none(self):
-        url = '/v3/servers/1/action'
-        body = {'change_password': None}
-        res = self._make_request(url, body)
+        body = {'changePassword': None}
+        res = self._make_request(body)
         self.assertEqual(res.status_int, 400)
