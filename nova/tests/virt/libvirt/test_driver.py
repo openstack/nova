@@ -9605,7 +9605,7 @@ class LibvirtDriverTestCase(test.TestCase):
                 info['path'], 50, use_cow=False)
             mock_disk_raw_to_qcow2.assert_called_once_with(info['path'])
 
-    def _test_finish_migration(self, power_on):
+    def _test_finish_migration(self, power_on, resize_instance=False):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
         .finish_migration.
         """
@@ -9617,12 +9617,7 @@ class LibvirtDriverTestCase(test.TestCase):
         disk_info_text = jsonutils.dumps(disk_info)
         powered_on = power_on
         self.fake_create_domain_called = False
-
-        def fake_can_resize_image(path, size):
-            return False
-
-        def fake_extend(path, size, use_cow=False):
-            pass
+        self.fake_disk_resize_called = False
 
         def fake_to_xml(context, instance, network_info, disk_info,
                         image_meta=None, rescue=None,
@@ -9656,10 +9651,12 @@ class LibvirtDriverTestCase(test.TestCase):
             else:
                 return {'state': power_state.SHUTDOWN}
 
+        def fake_disk_resize(info, size):
+            self.fake_disk_resize_called = True
+
         self.flags(use_cow_images=True)
-        self.stubs.Set(libvirt_driver.disk, 'extend', fake_extend)
-        self.stubs.Set(libvirt_driver.disk, 'can_resize_image',
-                       fake_can_resize_image)
+        self.stubs.Set(self.libvirtconnection, '_disk_resize',
+                       fake_disk_resize)
         self.stubs.Set(self.libvirtconnection, '_get_guest_xml', fake_to_xml)
         self.stubs.Set(self.libvirtconnection, 'plug_vifs', fake_plug_vifs)
         self.stubs.Set(self.libvirtconnection, '_create_image',
@@ -9678,8 +9675,14 @@ class LibvirtDriverTestCase(test.TestCase):
 
         self.libvirtconnection.finish_migration(
                       context.get_admin_context(), None, ins_ref,
-                      disk_info_text, [], None, None, None, power_on)
+                      disk_info_text, [], None,
+                      resize_instance, None, power_on)
         self.assertTrue(self.fake_create_domain_called)
+        self.assertEqual(
+            resize_instance, self.fake_disk_resize_called)
+
+    def test_finish_migration_resize(self):
+        self._test_finish_migration(True, resize_instance=True)
 
     def test_finish_migration_power_on(self):
         self._test_finish_migration(True)

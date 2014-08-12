@@ -5278,7 +5278,8 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_info = jsonutils.loads(disk_info)
         for info in disk_info:
             size = self._disk_size_from_instance(instance, info)
-            self._disk_resize(info, size)
+            if resize_instance:
+                self._disk_resize(info, size)
             if info['type'] == 'raw' and CONF.use_cow_images:
                 self._disk_raw_to_qcow2(info['path'])
 
