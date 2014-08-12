@@ -116,6 +116,7 @@ class NetworkController(object):
     def delete(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
+        reservation = None
         try:
             if CONF.enable_network_quota:
                 reservation = QUOTAS.reserve(context, networks=-1)
@@ -126,18 +127,26 @@ class NetworkController(object):
 
         LOG.info(_LI("Deleting network with id %s"), id)
 
+        def _rollback_quota(reservation):
+            if CONF.enable_network_quota and reservation:
+                QUOTAS.rollback(context, reservation)
+
         try:
             self.network_api.delete(context, id)
-            if CONF.enable_network_quota and reservation:
-                QUOTAS.commit(context, reservation)
-            response = exc.HTTPAccepted()
         except exception.PolicyNotAuthorized as e:
+            _rollback_quota(reservation)
             raise exc.HTTPForbidden(explanation=str(e))
         except exception.NetworkInUse as e:
+            _rollback_quota(reservation)
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.NetworkNotFound:
+            _rollback_quota(reservation)
             msg = _("Network not found")
             raise exc.HTTPNotFound(explanation=msg)
+
+        if CONF.enable_network_quota and reservation:
+            QUOTAS.commit(context, reservation)
+        response = exc.HTTPAccepted()
 
         return response
 

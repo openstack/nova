@@ -19,12 +19,14 @@ import datetime
 import math
 import uuid
 
+import mock
 import netaddr
 from oslo.config import cfg
 import webob
 
 from nova.api.openstack.compute.contrib import networks_associate
 from nova.api.openstack.compute.contrib import os_networks as networks
+from nova.api.openstack.compute.contrib import os_tenant_networks as tnet
 import nova.context
 from nova import exception
 from nova import test
@@ -394,3 +396,42 @@ class NetworksTest(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPNotImplemented,
                           controller._disassociate_host_and_project,
                           req, uuid, {'disassociate': None})
+
+
+class TenantNetworksTest(test.NoDBTestCase):
+    def setUp(self):
+        super(TenantNetworksTest, self).setUp()
+        self.controller = tnet.NetworkController()
+        self.flags(enable_network_quota=True)
+
+    @mock.patch('nova.quota.QUOTAS.reserve')
+    @mock.patch('nova.quota.QUOTAS.rollback')
+    @mock.patch('nova.network.api.API.delete')
+    def _test_network_delete_exception(self, ex, expex, delete_mock,
+                                       rollback_mock, reserve_mock):
+        req = fakes.HTTPRequest.blank('/v2/1234/os-tenant-networks')
+        ctxt = req.environ['nova.context']
+
+        reserve_mock.return_value = 'rv'
+        delete_mock.side_effect = ex
+
+        self.assertRaises(expex, self.controller.delete, req, 1)
+
+        delete_mock.assert_called_once_with(ctxt, 1)
+        rollback_mock.assert_called_once_with(ctxt, 'rv')
+        reserve_mock.assert_called_once_with(ctxt, networks=-1)
+
+    def test_network_delete_exception_network_not_found(self):
+        ex = exception.NetworkNotFound(network_id=1)
+        expex = webob.exc.HTTPNotFound
+        self._test_network_delete_exception(ex, expex)
+
+    def test_network_delete_exception_policy_failed(self):
+        ex = exception.PolicyNotAuthorized(action='dummy')
+        expex = webob.exc.HTTPForbidden
+        self._test_network_delete_exception(ex, expex)
+
+    def test_network_delete_exception_network_in_use(self):
+        ex = exception.NetworkInUse(network_id=1)
+        expex = webob.exc.HTTPConflict
+        self._test_network_delete_exception(ex, expex)
