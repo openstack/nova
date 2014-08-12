@@ -18,7 +18,8 @@
 import mock
 from webob import exc
 
-from nova.api.openstack.compute.contrib import aggregates
+from nova.api.openstack.compute.contrib import aggregates as aggregates_v2
+from nova.api.openstack.compute.plugins.v3 import aggregates as aggregates_v21
 from nova import context
 from nova import exception
 from nova import test
@@ -41,15 +42,24 @@ class FakeRequest(object):
     environ = {"nova.context": context.get_admin_context()}
 
 
-class AggregateTestCase(test.NoDBTestCase):
+class AggregateTestCaseV21(test.NoDBTestCase):
     """Test Case for aggregates admin api."""
 
-    def setUp(self):
-        super(AggregateTestCase, self).setUp()
-        self.controller = aggregates.AggregateController()
-        self.req = FakeRequest()
-        self.user_req = fakes.HTTPRequest.blank('/v2/os-aggregates')
+    add_host = 'self.controller._add_host'
+    remove_host = 'self.controller._remove_host'
+    set_metadata = 'self.controller._set_metadata'
+    bad_request = exception.ValidationError
+
+    def _set_up(self):
+        self.controller = aggregates_v21.AggregateController()
+        self.req = fakes.HTTPRequest.blank('/v3/os-aggregates',
+                                           use_admin_context=True)
+        self.user_req = fakes.HTTPRequest.blank('/v3/os-aggregates')
         self.context = self.req.environ['nova.context']
+
+    def setUp(self):
+        super(AggregateTestCaseV21, self).setUp()
+        self._set_up()
 
     def test_index(self):
         def stub_list_aggregates(context):
@@ -77,7 +87,7 @@ class AggregateTestCase(test.NoDBTestCase):
         self.stubs.Set(self.controller.api, "create_aggregate",
                        stub_create_aggregate)
 
-        result = self.controller.create(self.req, {"aggregate":
+        result = self.controller.create(self.req, body={"aggregate":
                                           {"name": "test",
                                            "availability_zone": "nova1"}})
         self.assertEqual(AGGREGATE, result["aggregate"])
@@ -85,7 +95,7 @@ class AggregateTestCase(test.NoDBTestCase):
     def test_create_no_admin(self):
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.controller.create, self.user_req,
-                          {"aggregate":
+                          body={"aggregate":
                               {"name": "test",
                                "availability_zone": "nova1"}})
 
@@ -96,7 +106,7 @@ class AggregateTestCase(test.NoDBTestCase):
                        stub_create_aggregate)
 
         self.assertRaises(exc.HTTPConflict, self.controller.create,
-                          self.req, {"aggregate":
+                          self.req, body={"aggregate":
                                      {"name": "test",
                                       "availability_zone": "nova1"}})
 
@@ -111,19 +121,19 @@ class AggregateTestCase(test.NoDBTestCase):
 
         self.assertRaises(exc.HTTPBadRequest,
                           self.controller.create,
-                          self.req, {"aggregate":
+                          self.req, body={"aggregate":
                                      {"name": "test",
                                       "availability_zone": "nova_bad"}})
 
     def test_create_with_no_aggregate(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
-                          self.req, {"foo":
+        self.assertRaises(self.bad_request, self.controller.create,
+                          self.req, body={"foo":
                                      {"name": "test",
                                       "availability_zone": "nova1"}})
 
     def test_create_with_no_name(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
-                          self.req, {"aggregate":
+        self.assertRaises(self.bad_request, self.controller.create,
+                          self.req, body={"aggregate":
                                      {"foo": "test",
                                       "availability_zone": "nova1"}})
 
@@ -137,24 +147,24 @@ class AggregateTestCase(test.NoDBTestCase):
                        stub_create_aggregate)
 
         result = self.controller.create(self.req,
-                                        {"aggregate": {"name": "test"}})
+                                        body={"aggregate": {"name": "test"}})
         self.assertEqual(AGGREGATE, result["aggregate"])
 
     def test_create_with_null_name(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
-                          self.req, {"aggregate":
+        self.assertRaises(self.bad_request, self.controller.create,
+                          self.req, body={"aggregate":
                                      {"name": "",
                                       "availability_zone": "nova1"}})
 
     def test_create_with_name_too_long(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
-                          self.req, {"aggregate":
+        self.assertRaises(self.bad_request, self.controller.create,
+                          self.req, body={"aggregate":
                                      {"name": "x" * 256,
                                       "availability_zone": "nova1"}})
 
     def test_create_with_availability_zone_too_long(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
-                          self.req, {"aggregate":
+        self.assertRaises(self.bad_request, self.controller.create,
+                          self.req, body={"aggregate":
                                      {"name": "test",
                                       "availability_zone": "x" * 256}})
 
@@ -172,22 +182,22 @@ class AggregateTestCase(test.NoDBTestCase):
                        stub_create_aggregate)
 
         result = self.controller.create(self.req,
-                                        {"aggregate":
+                                        body={"aggregate":
                                          {"name": "aggregate1",
                                           "availability_zone": None}})
         self.assertEqual(aggregate, result["aggregate"])
 
     def test_create_with_empty_availability_zone(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
-                          self.req, {"aggregate":
+        self.assertRaises(self.bad_request, self.controller.create,
+                          self.req, body={"aggregate":
                                      {"name": "test",
                                       "availability_zone": ""}})
 
     def test_create_with_extra_invalid_arg(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
-                          self.req, dict(name="test",
-                                         availability_zone="nova1",
-                                         foo='bar'))
+        self.assertRaises(self.bad_request, self.controller.create,
+                          self.req, body={"name": "test",
+                                          "availability_zone": "nova1",
+                                          "foo": 'bar'})
 
     def test_show(self):
         def stub_get_aggregate(context, id):
@@ -233,9 +243,10 @@ class AggregateTestCase(test.NoDBTestCase):
         self.assertEqual(AGGREGATE, result["aggregate"])
 
     def test_update_no_admin(self):
+        body = {"aggregate": {"availability_zone": "nova"}}
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.controller.update,
-                          self.user_req, "1", body={})
+                          self.user_req, "1", body=body)
 
     def test_update_with_only_name(self):
         body = {"aggregate": {"name": "new_name"}}
@@ -261,38 +272,38 @@ class AggregateTestCase(test.NoDBTestCase):
 
     def test_update_with_no_updates(self):
         test_metadata = {"aggregate": {}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.update,
+        self.assertRaises(self.bad_request, self.controller.update,
                           self.req, "2", body=test_metadata)
 
     def test_update_with_no_update_key(self):
         test_metadata = {"asdf": {}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.update,
+        self.assertRaises(self.bad_request, self.controller.update,
                           self.req, "2", body=test_metadata)
 
     def test_update_with_wrong_updates(self):
         test_metadata = {"aggregate": {"status": "disable",
                                      "foo": "bar"}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.update,
+        self.assertRaises(self.bad_request, self.controller.update,
                           self.req, "2", body=test_metadata)
 
     def test_update_with_null_name(self):
         test_metadata = {"aggregate": {"name": ""}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.update,
+        self.assertRaises(self.bad_request, self.controller.update,
                           self.req, "2", body=test_metadata)
 
     def test_update_with_name_too_long(self):
         test_metadata = {"aggregate": {"name": "x" * 256}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.update,
+        self.assertRaises(self.bad_request, self.controller.update,
                           self.req, "2", body=test_metadata)
 
     def test_update_with_availability_zone_too_long(self):
         test_metadata = {"aggregate": {"availability_zone": "x" * 256}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.update,
+        self.assertRaises(self.bad_request, self.controller.update,
                           self.req, "2", body=test_metadata)
 
     def test_update_with_empty_availability_zone(self):
         test_metadata = {"aggregate": {"availability_zone": ""}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.update,
+        self.assertRaises(self.bad_request, self.controller.update,
                           self.req, "2", body=test_metadata)
 
     def test_update_with_null_availability_zone(self):
@@ -337,8 +348,8 @@ class AggregateTestCase(test.NoDBTestCase):
 
     def test_invalid_action(self):
         body = {"append_host": {"host": "host1"}}
-        self.assertRaises(exc.HTTPBadRequest,
-                          self.controller.action, self.req, "1", body=body)
+        self.assertRaises(self.bad_request,
+                          eval(self.add_host), self.req, "1", body=body)
 
     def test_add_host(self):
         def stub_add_host_to_aggregate(context, aggregate, host):
@@ -349,15 +360,15 @@ class AggregateTestCase(test.NoDBTestCase):
         self.stubs.Set(self.controller.api, "add_host_to_aggregate",
                        stub_add_host_to_aggregate)
 
-        aggregate = self.controller.action(self.req, "1",
-                                           body={"add_host": {"host":
-                                                              "host1"}})
+        aggregate = eval(self.add_host)(self.req, "1",
+                                        body={"add_host": {"host":
+                                                           "host1"}})
 
         self.assertEqual(aggregate["aggregate"], AGGREGATE)
 
     def test_add_host_no_admin(self):
         self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.action,
+                          eval(self.add_host),
                           self.user_req, "1",
                           body={"add_host": {"host": "host1"}})
 
@@ -368,7 +379,7 @@ class AggregateTestCase(test.NoDBTestCase):
         self.stubs.Set(self.controller.api, "add_host_to_aggregate",
                        stub_add_host_to_aggregate)
 
-        self.assertRaises(exc.HTTPConflict, self.controller.action,
+        self.assertRaises(exc.HTTPConflict, eval(self.add_host),
                           self.req, "1",
                           body={"add_host": {"host": "host1"}})
 
@@ -378,7 +389,7 @@ class AggregateTestCase(test.NoDBTestCase):
         self.stubs.Set(self.controller.api, "add_host_to_aggregate",
                        stub_add_host_to_aggregate)
 
-        self.assertRaises(exc.HTTPNotFound, self.controller.action,
+        self.assertRaises(exc.HTTPNotFound, eval(self.add_host),
                           self.req, "bogus_aggregate",
                           body={"add_host": {"host": "host1"}})
 
@@ -388,20 +399,20 @@ class AggregateTestCase(test.NoDBTestCase):
         self.stubs.Set(self.controller.api, "add_host_to_aggregate",
                        stub_add_host_to_aggregate)
 
-        self.assertRaises(exc.HTTPNotFound, self.controller.action,
+        self.assertRaises(exc.HTTPNotFound, eval(self.add_host),
                           self.req, "1",
                           body={"add_host": {"host": "bogus_host"}})
 
     def test_add_host_with_missing_host(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+        self.assertRaises(self.bad_request, eval(self.add_host),
                 self.req, "1", body={"add_host": {"asdf": "asdf"}})
 
     def test_add_host_with_invalid_format_host(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+        self.assertRaises(self.bad_request, eval(self.add_host),
                 self.req, "1", body={"add_host": {"host": "a" * 300}})
 
     def test_add_host_with_multiple_hosts(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+        self.assertRaises(self.bad_request, eval(self.add_host),
                 self.req, "1", body={"add_host": {"host": ["host1", "host2"]}})
 
     def test_add_host_raises_key_error(self):
@@ -409,19 +420,16 @@ class AggregateTestCase(test.NoDBTestCase):
             raise KeyError
         self.stubs.Set(self.controller.api, "add_host_to_aggregate",
                        stub_add_host_to_aggregate)
-        # NOTE(mtreinish) The check for a KeyError here is to ensure that
-        # if add_host_to_aggregate() raises a KeyError it propagates. At
-        # one point the api code would mask the error as a HTTPBadRequest.
-        # This test is to ensure that this doesn't occur again.
-        self.assertRaises(KeyError, self.controller.action, self.req, "1",
-                         body={"add_host": {"host": "host1"}})
+        self.assertRaises(exc.HTTPInternalServerError,
+                          eval(self.add_host), self.req, "1",
+                          body={"add_host": {"host": "host1"}})
 
     def test_add_host_with_invalid_request(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+        self.assertRaises(self.bad_request, eval(self.add_host),
                 self.req, "1", body={"add_host": "1"})
 
     def test_add_host_with_non_string(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+        self.assertRaises(self.bad_request, eval(self.add_host),
                 self.req, "1", body={"add_host": {"host": 1}})
 
     def test_remove_host(self):
@@ -434,14 +442,14 @@ class AggregateTestCase(test.NoDBTestCase):
         self.stubs.Set(self.controller.api,
                        "remove_host_from_aggregate",
                        stub_remove_host_from_aggregate)
-        self.controller.action(self.req, "1",
-                               body={"remove_host": {"host": "host1"}})
+        eval(self.remove_host)(self.req, "1",
+                                  body={"remove_host": {"host": "host1"}})
 
         self.assertTrue(stub_remove_host_from_aggregate.called)
 
     def test_remove_host_no_admin(self):
         self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.action,
+                          eval(self.remove_host),
                           self.user_req, "1",
                           body={"remove_host": {"host": "host1"}})
 
@@ -452,7 +460,7 @@ class AggregateTestCase(test.NoDBTestCase):
                        "remove_host_from_aggregate",
                        stub_remove_host_from_aggregate)
 
-        self.assertRaises(exc.HTTPNotFound, self.controller.action,
+        self.assertRaises(exc.HTTPNotFound, eval(self.remove_host),
                           self.req, "bogus_aggregate",
                           body={"remove_host": {"host": "host1"}})
 
@@ -464,7 +472,7 @@ class AggregateTestCase(test.NoDBTestCase):
                        "remove_host_from_aggregate",
                        stub_remove_host_from_aggregate)
 
-        self.assertRaises(exc.HTTPNotFound, self.controller.action,
+        self.assertRaises(exc.HTTPNotFound, eval(self.remove_host),
                           self.req, "1",
                           body={"remove_host": {"host": "host1"}})
 
@@ -475,31 +483,31 @@ class AggregateTestCase(test.NoDBTestCase):
                        "remove_host_from_aggregate",
                        stub_remove_host_from_aggregate)
 
-        self.assertRaises(exc.HTTPNotFound, self.controller.action,
+        self.assertRaises(exc.HTTPNotFound, eval(self.remove_host),
                 self.req, "1", body={"remove_host": {"host": "bogushost"}})
 
     def test_remove_host_with_missing_host(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+        self.assertRaises(self.bad_request, eval(self.remove_host),
                 self.req, "1", body={"asdf": "asdf"})
 
     def test_remove_host_with_multiple_hosts(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+        self.assertRaises(self.bad_request, eval(self.remove_host),
                 self.req, "1", body={"remove_host": {"host":
                                                      ["host1", "host2"]}})
 
     def test_remove_host_with_extra_param(self):
-        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+        self.assertRaises(self.bad_request, eval(self.remove_host),
                 self.req, "1", body={"remove_host": {"asdf": "asdf",
                                                      "host": "asdf"}})
 
     def test_remove_host_with_invalid_request(self):
-        self.assertRaises(exc.HTTPBadRequest,
-                          self.controller.action,
+        self.assertRaises(self.bad_request,
+                          eval(self.remove_host),
                 self.req, "1", body={"remove_host": "1"})
 
     def test_remove_host_with_missing_host_empty(self):
-        self.assertRaises(exc.HTTPBadRequest,
-                          self.controller.action,
+        self.assertRaises(self.bad_request,
+                          eval(self.remove_host),
                 self.req, "1", body={"remove_host": {}})
 
     def test_set_metadata(self):
@@ -515,7 +523,7 @@ class AggregateTestCase(test.NoDBTestCase):
                        "update_aggregate_metadata",
                        stub_update_aggregate)
 
-        result = self.controller.action(self.req, "1", body=body)
+        result = eval(self.set_metadata)(self.req, "1", body=body)
 
         self.assertEqual(AGGREGATE, result["aggregate"])
 
@@ -525,7 +533,7 @@ class AggregateTestCase(test.NoDBTestCase):
         with mock.patch.object(self.controller.api,
                                'update_aggregate_metadata') as mocked:
             mocked.return_value = AGGREGATE
-            result = self.controller.action(self.req, "1", body=body)
+            result = eval(self.set_metadata)(self.req, "1", body=body)
 
         self.assertEqual(AGGREGATE, result["aggregate"])
         mocked.assert_called_once_with(self.context, "1",
@@ -533,7 +541,7 @@ class AggregateTestCase(test.NoDBTestCase):
 
     def test_set_metadata_no_admin(self):
         self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller._set_metadata,
+                          eval(self.set_metadata),
                           self.user_req, "1",
                           body={"set_metadata": {"metadata":
                                                     {"foo": "bar"}}})
@@ -546,43 +554,42 @@ class AggregateTestCase(test.NoDBTestCase):
         self.stubs.Set(self.controller.api,
                        "update_aggregate_metadata",
                        stub_update_aggregate)
-
-        self.assertRaises(exc.HTTPNotFound, self.controller.action,
+        self.assertRaises(exc.HTTPNotFound, eval(self.set_metadata),
                 self.req, "bad_aggregate", body=body)
 
     def test_set_metadata_with_missing_metadata(self):
         body = {"asdf": {"foo": "bar"}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+        self.assertRaises(exc.HTTPBadRequest, eval(self.set_metadata),
                           self.req, "1", body=body)
 
     def test_set_metadata_with_extra_params(self):
         body = {"metadata": {"foo": "bar"}, "asdf": {"foo": "bar"}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+        self.assertRaises(exc.HTTPBadRequest, eval(self.set_metadata),
                           self.req, "1", body=body)
 
     def test_set_metadata_without_dict(self):
         body = {"set_metadata": {'metadata': 1}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+        self.assertRaises(exc.HTTPBadRequest, eval(self.set_metadata),
                           self.req, "1", body=body)
 
     def test_set_metadata_with_empty_key(self):
         body = {"set_metadata": {"metadata": {"": "value"}}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+        self.assertRaises(exc.HTTPBadRequest, eval(self.set_metadata),
                           self.req, "1", body=body)
 
     def test_set_metadata_with_key_too_long(self):
         body = {"set_metadata": {"metadata": {"x" * 256: "value"}}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+        self.assertRaises(exc.HTTPBadRequest, eval(self.set_metadata),
                           self.req, "1", body=body)
 
     def test_set_metadata_with_value_too_long(self):
         body = {"set_metadata": {"metadata": {"key": "x" * 256}}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+        self.assertRaises(exc.HTTPBadRequest, eval(self.set_metadata),
                           self.req, "1", body=body)
 
     def test_set_metadata_with_string(self):
         body = {"set_metadata": {"metadata": "test"}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+        self.assertRaises(exc.HTTPBadRequest, eval(self.set_metadata),
                           self.req, "1", body=body)
 
     def test_delete_aggregate(self):
@@ -618,3 +625,28 @@ class AggregateTestCase(test.NoDBTestCase):
             self.assertRaises(exc.HTTPBadRequest,
                               self.controller.delete,
                               self.req, "agg1")
+
+
+class AggregateTestCaseV2(AggregateTestCaseV21):
+    add_host = 'self.controller.action'
+    remove_host = 'self.controller.action'
+    set_metadata = 'self.controller.action'
+    bad_request = exc.HTTPBadRequest
+
+    def _set_up(self):
+        self.controller = aggregates_v2.AggregateController()
+        self.req = FakeRequest()
+        self.user_req = fakes.HTTPRequest.blank('/v2/os-aggregates')
+        self.context = self.req.environ['nova.context']
+
+    def test_add_host_raises_key_error(self):
+        def stub_add_host_to_aggregate(context, aggregate, host):
+            raise KeyError
+        self.stubs.Set(self.controller.api, "add_host_to_aggregate",
+                       stub_add_host_to_aggregate)
+        # NOTE(mtreinish) The check for a KeyError here is to ensure that
+        # if add_host_to_aggregate() raises a KeyError it propagates. At
+        # one point the api code would mask the error as a HTTPBadRequest.
+        # This test is to ensure that this doesn't occur again.
+        self.assertRaises(KeyError, eval(self.add_host), self.req, "1",
+                          body={"add_host": {"host": "host1"}})

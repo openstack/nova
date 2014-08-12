@@ -12,7 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 from nova.api.validation import parameter_types
+
+availability_zone = copy.deepcopy(parameter_types.name)
+availability_zone['type'] = ['string', 'null']
 
 create = {
     'type': 'object',
@@ -22,7 +27,7 @@ create = {
             'type': 'object',
             'properties': {
                 'name': parameter_types.name,
-                'availability_zone': parameter_types.name,
+                'availability_zone': availability_zone,
             },
             'required': ['name'],
             'additionalProperties': False,
@@ -40,7 +45,7 @@ update = {
             'type': 'object',
             'properties': {
                 'name': parameter_types.name,
-                'availability_zone': parameter_types.name
+                'availability_zone': availability_zone
             },
             'additionalProperties': False,
             'anyOf': [
