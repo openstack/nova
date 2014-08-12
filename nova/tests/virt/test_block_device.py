@@ -245,6 +245,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
             save_mock.assert_called_once_with(self.context)
 
+        # Test the save method with no context passed
+        with mock.patch.object(test_bdm._bdm_obj, 'save') as save_mock:
+            test_bdm.save()
+            save_mock.assert_called_once_with()
+
     def _test_driver_default_size(self, name):
         size = 'swap_size' if name == 'swap' else 'size'
         no_size_bdm = getattr(self, "%s_bdm" % name).copy()
