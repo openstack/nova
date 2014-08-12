@@ -814,8 +814,14 @@ class MockClient(object):
         return {'security_groups': ret}
 
     def list_networks(self, **_params):
-        return {'networks':
-                [network for network in self._fake_networks.values()]}
+        # neutronv2/api.py _get_available_networks calls this assuming
+        # search_opts filter "shared" is implemented and not ignored
+        shared = _params.get("shared", None)
+        if shared:
+            return {'networks': []}
+        else:
+            return {'networks':
+                 [network for network in self._fake_networks.values()]}
 
     def list_ports(self, **_params):
         ret = []
