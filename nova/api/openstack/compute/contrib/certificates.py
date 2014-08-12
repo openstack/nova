@@ -18,6 +18,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 import nova.cert.rpcapi
+from nova import exception
 from nova.i18n import _
 
 authorize = extensions.extension_authorizer('compute', 'certificates')
@@ -58,8 +59,11 @@ class CertificatesController(object):
         if id != 'root':
             msg = _("Only root certificate can be retrieved.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
-        cert = self.cert_rpcapi.fetch_ca(context,
-                project_id=context.project_id)
+        try:
+            cert = self.cert_rpcapi.fetch_ca(context,
+                    project_id=context.project_id)
+        except exception.CryptoCAFileNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
         return {'certificate': _translate_certificate_view(cert)}
 
     @wsgi.serializers(xml=CertificateTemplate)
