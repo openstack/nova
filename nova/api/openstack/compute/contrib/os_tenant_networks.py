@@ -17,6 +17,7 @@
 import netaddr
 import netaddr.core as netexc
 from oslo.config import cfg
+import webob
 from webob import exc
 
 from nova.api.openstack import extensions
@@ -146,7 +147,7 @@ class NetworkController(object):
 
         if CONF.enable_network_quota and reservation:
             QUOTAS.commit(context, reservation)
-        response = exc.HTTPAccepted()
+        response = webob.Response(status_int=202)
 
         return response
 

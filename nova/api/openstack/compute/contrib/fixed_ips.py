@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import webob
 import webob.exc
 
 from nova.api.openstack import extensions
@@ -74,7 +75,7 @@ class FixedIPController(object):
             msg = _("Fixed IP %s not found") % address
             raise webob.exc.HTTPNotFound(explanation=msg)
 
-        return webob.exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
 
 class Fixed_ips(extensions.ExtensionDescriptor):

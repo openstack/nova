@@ -82,7 +82,7 @@ class NetworkController(wsgi.Controller):
             msg = _('Disassociate network is not implemented by the '
                     'configured Network API')
             raise exc.HTTPNotImplemented(explanation=msg)
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     def show(self, req, id):
         context = req.environ['nova.context']
@@ -106,7 +106,7 @@ class NetworkController(wsgi.Controller):
         except exception.NetworkNotFound:
             msg = _("Network not found")
             raise exc.HTTPNotFound(explanation=msg)
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     def create(self, req, body):
         context = req.environ['nova.context']

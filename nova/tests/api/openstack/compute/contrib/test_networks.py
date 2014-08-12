@@ -108,6 +108,8 @@ class FakeNetworkAPI(object):
         self._vlan_is_disabled = True
 
     def delete(self, context, network_id):
+        if network_id == 'always_delete':
+            return True
         if network_id == -1:
             raise exception.NetworkInUse(network_id=network_id)
         for i, network in enumerate(self.networks):
