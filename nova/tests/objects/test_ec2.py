@@ -150,3 +150,43 @@ class TestEC2SnapshotMapping(test_objects._LocalTest, _TestEC2SnapshotMapping):
 class TestRemoteEC2SnapshotMapping(test_objects._RemoteTest,
                                    _TestEC2SnapshotMapping):
     pass
+
+
+class _TestS3ImageMapping(object):
+    @staticmethod
+    def _compare(test, db, obj):
+        for field, value in db.items():
+            test.assertEqual(db[field], obj[field])
+
+    def test_create(self):
+        s3imap = ec2_obj.S3ImageMapping()
+        s3imap.uuid = 'fake-uuid-2'
+
+        with mock.patch.object(db, 's3_image_create') as create:
+            create.return_value = fake_map
+            s3imap.create(self.context)
+
+        self.assertEqual(self.context, s3imap._context)
+        s3imap._context = None
+        self._compare(self, fake_map, s3imap)
+
+    def test_get_by_uuid(self):
+        with mock.patch.object(db, 's3_image_get_by_uuid') as get:
+            get.return_value = fake_map
+            s3imap = ec2_obj.S3ImageMapping.get_by_uuid(self.context,
+                                                        'fake-uuid-2')
+            self._compare(self, fake_map, s3imap)
+
+    def test_get_by_s3_id(self):
+        with mock.patch.object(db, 's3_image_get') as get:
+            get.return_value = fake_map
+            s3imap = ec2_obj.S3ImageMapping.get_by_id(self.context, 1)
+            self._compare(self, fake_map, s3imap)
+
+
+class TestS3ImageMapping(test_objects._LocalTest, _TestS3ImageMapping):
+    pass
+
+
+class TestRemoteS3ImageMapping(test_objects._RemoteTest, _TestS3ImageMapping):
+    pass
