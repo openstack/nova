@@ -324,6 +324,26 @@ class DriverImageBlockDevice(DriverVolumeBlockDevice):
             do_check_attach=do_check_attach)
 
 
+class DriverBlankBlockDevice(DriverVolumeBlockDevice):
+
+    _valid_source = 'blank'
+    _proxy_as_attr = set(['volume_size', 'volume_id', 'image_id'])
+
+    def attach(self, context, instance, volume_api,
+               virt_driver, wait_func=None, do_check_attach=True):
+        if not self.volume_id:
+            vol_name = instance.uuid + '-blank-vol'
+            vol = volume_api.create(context, self.volume_size, vol_name, '')
+            if wait_func:
+                wait_func(context, vol['id'])
+
+            self.volume_id = vol['id']
+
+        super(DriverBlankBlockDevice, self).attach(
+            context, instance, volume_api, virt_driver,
+            do_check_attach=do_check_attach)
+
+
 def _convert_block_devices(device_type, block_device_mapping):
     def _is_transformable(bdm):
         try:
@@ -354,6 +374,9 @@ convert_snapshots = functools.partial(_convert_block_devices,
 
 convert_images = functools.partial(_convert_block_devices,
                                      DriverImageBlockDevice)
+
+convert_blanks = functools.partial(_convert_block_devices,
+                                   DriverBlankBlockDevice)
 
 
 def attach_block_devices(block_device_mapping, *attach_args, **attach_kwargs):
@@ -417,7 +440,7 @@ def get_swap(transformed_list):
 
 _IMPLEMENTED_CLASSES = (DriverSwapBlockDevice, DriverEphemeralBlockDevice,
                         DriverVolumeBlockDevice, DriverSnapshotBlockDevice,
-                        DriverImageBlockDevice)
+                        DriverImageBlockDevice, DriverBlankBlockDevice)
 
 
 def is_implemented(bdm):

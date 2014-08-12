@@ -442,6 +442,8 @@ def default_device_names(virt_type, context, instance, root_device_name,
             driver_block_device.convert_volumes(
                 block_device_mapping) +
             driver_block_device.convert_snapshots(
+                block_device_mapping) +
+            driver_block_device.convert_blanks(
                 block_device_mapping))
     }
 

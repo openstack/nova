@@ -186,6 +186,9 @@ class BlockDeviceDict(dict):
             if source_type not in ('volume', 'image', 'snapshot', 'blank'):
                 raise exception.InvalidBDMFormat(
                     details=_("Invalid source_type field."))
+            elif source_type == 'blank' and device_uuid:
+                raise exception.InvalidBDMFormat(
+                    details=_("Invalid device UUID."))
             elif source_type != 'blank':
                 if not device_uuid:
                     raise exception.InvalidBDMFormat(
@@ -411,8 +414,9 @@ def new_format_is_swap(bdm):
 
 
 def new_format_is_ephemeral(bdm):
-    if (bdm.get('source_type') == 'blank' and not
-            new_format_is_swap(bdm)):
+    if (bdm.get('source_type') == 'blank' and
+            bdm.get('destination_type') == 'local' and
+            bdm.get('guest_format') != 'swap'):
         return True
     return False
 

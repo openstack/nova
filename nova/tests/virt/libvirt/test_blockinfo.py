@@ -893,6 +893,15 @@ class DefaultDeviceNamesTestCase(test.TestCase):
                  'disk_bus': 'virtio',
                  'destination_type': 'volume',
                  'snapshot_id': 'fake-snapshot-id-1',
+                 'boot_index': -1})),
+            objects.BlockDeviceMapping(self.context,
+                **fake_block_device.FakeDbBlockDeviceDict(
+                {'id': 5, 'instance_uuid': 'fake-instance',
+                 'device_name': '/dev/vde',
+                 'source_type': 'blank',
+                 'device_type': 'disk',
+                 'disk_bus': 'virtio',
+                 'destination_type': 'volume',
                  'boot_index': -1}))]
 
     def tearDown(self):
@@ -915,11 +924,14 @@ class DefaultDeviceNamesTestCase(test.TestCase):
                 original_bdm, self.block_device_mapping):
             self.assertEqual(original.device_name, defaulted.device_name)
 
-        # Asser it defaults the missing one as expected
+        # Assert it defaults the missing one as expected
         self.block_device_mapping[1]['device_name'] = None
+        self.block_device_mapping[2]['device_name'] = None
         self._test_default_device_names([], [], self.block_device_mapping)
         self.assertEqual('/dev/vdd',
                          self.block_device_mapping[1]['device_name'])
+        self.assertEqual('/dev/vde',
+                         self.block_device_mapping[2]['device_name'])
 
     def test_with_ephemerals(self):
         # Test ephemeral gets assigned
@@ -929,10 +941,13 @@ class DefaultDeviceNamesTestCase(test.TestCase):
         self.assertEqual('/dev/vdb', self.ephemerals[0]['device_name'])
 
         self.block_device_mapping[1]['device_name'] = None
+        self.block_device_mapping[2]['device_name'] = None
         self._test_default_device_names(self.ephemerals, [],
                                         self.block_device_mapping)
         self.assertEqual('/dev/vdd',
                          self.block_device_mapping[1]['device_name'])
+        self.assertEqual('/dev/vde',
+                         self.block_device_mapping[2]['device_name'])
 
     def test_with_swap(self):
         # Test swap only
@@ -943,11 +958,14 @@ class DefaultDeviceNamesTestCase(test.TestCase):
         # Test swap and block_device_mapping
         self.swap[0]['device_name'] = None
         self.block_device_mapping[1]['device_name'] = None
+        self.block_device_mapping[2]['device_name'] = None
         self._test_default_device_names([], self.swap,
                                         self.block_device_mapping)
         self.assertEqual('/dev/vdc', self.swap[0]['device_name'])
         self.assertEqual('/dev/vdd',
                          self.block_device_mapping[1]['device_name'])
+        self.assertEqual('/dev/vde',
+                         self.block_device_mapping[2]['device_name'])
 
     def test_all_together(self):
         # Test swap missing
@@ -968,9 +986,12 @@ class DefaultDeviceNamesTestCase(test.TestCase):
         self.swap[0]['device_name'] = None
         self.ephemerals[0]['device_name'] = None
         self.block_device_mapping[1]['device_name'] = None
+        self.block_device_mapping[2]['device_name'] = None
         self._test_default_device_names(self.ephemerals,
                                         self.swap, self.block_device_mapping)
         self.assertEqual('/dev/vdb', self.ephemerals[0]['device_name'])
         self.assertEqual('/dev/vdc', self.swap[0]['device_name'])
         self.assertEqual('/dev/vdd',
                          self.block_device_mapping[1]['device_name'])
+        self.assertEqual('/dev/vde',
+                         self.block_device_mapping[2]['device_name'])

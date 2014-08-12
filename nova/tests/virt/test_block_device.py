@@ -12,12 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import contextlib
+
 import mock
 
 from nova import block_device
 from nova import context
 from nova.openstack.common import jsonutils
 from nova import test
+from nova.tests import fake_instance
 from nova.tests import matchers
 from nova.virt import block_device as driver_block_device
 from nova.virt import driver
@@ -31,7 +34,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'ephemeral': driver_block_device.DriverEphemeralBlockDevice,
         'volume': driver_block_device.DriverVolumeBlockDevice,
         'snapshot': driver_block_device.DriverSnapshotBlockDevice,
-        'image': driver_block_device.DriverImageBlockDevice
+        'image': driver_block_device.DriverImageBlockDevice,
+        'blank': driver_block_device.DriverBlankBlockDevice
     }
 
     swap_bdm = block_device.BlockDeviceDict(
@@ -163,6 +167,34 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'connection_info': {"fake": "connection_info"},
         'delete_on_termination': True}
 
+    blank_bdm = block_device.BlockDeviceDict(
+        {'id': 6, 'instance_uuid': 'fake-instance',
+         'device_name': '/dev/sda2',
+         'delete_on_termination': True,
+         'volume_size': 3,
+         'disk_bus': 'scsi',
+         'device_type': 'disk',
+         'source_type': 'blank',
+         'destination_type': 'volume',
+         'connection_info': '{"fake": "connection_info"}',
+         'snapshot_id': 'fake-snapshot-id-1',
+         'volume_id': 'fake-volume-id-2',
+         'boot_index': -1})
+
+    blank_driver_bdm = {
+        'mount_device': '/dev/sda2',
+        'connection_info': {"fake": "connection_info"},
+        'delete_on_termination': True,
+        'disk_bus': 'scsi',
+        'device_type': 'disk',
+        'guest_format': None,
+        'boot_index': -1}
+
+    blank_legacy_driver_bdm = {
+        'mount_device': '/dev/sda2',
+        'connection_info': {"fake": "connection_info"},
+        'delete_on_termination': True}
+
     def setUp(self):
         super(TestDriverBlockDevice, self).setUp()
         self.volume_api = self.mox.CreateMock(cinder.API)
@@ -274,6 +306,15 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         bdm['destination_type'] = 'local'
         self.assertRaises(driver_block_device._InvalidType,
                           self.driver_classes['image'], bdm)
+
+    def test_driver_blank_block_device(self):
+        self._test_driver_device('blank')
+
+        test_bdm = self.driver_classes['blank'](
+            self.blank_bdm)
+        self.assertEqual(6, test_bdm._bdm_obj.id)
+        self.assertEqual('fake-volume-id-2', test_bdm.volume_id)
+        self.assertEqual(3, test_bdm.volume_size)
 
     def _test_volume_attach(self, driver_bdm, bdm_dict,
                             fake_volume, check_attach=True,
@@ -545,6 +586,33 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         test_bdm.attach(self.context, instance, self.volume_api,
                         self.virt_driver)
         self.assertEqual(test_bdm.volume_id, 'fake-volume-id-2')
+
+    def test_blank_attach_volume(self):
+        no_blank_volume = self.blank_bdm.copy()
+        no_blank_volume['volume_id'] = None
+        test_bdm = self.driver_classes['blank'](no_blank_volume)
+        instance = fake_instance.fake_instance_obj(mock.sentinel.ctx,
+                                                   **{'uuid': 'fake-uuid'})
+        volume_class = self.driver_classes['volume']
+        volume = {'id': 'fake-volume-id-2',
+                  'display_name': 'fake-uuid-blank-vol'}
+
+        with contextlib.nested(
+            mock.patch.object(self.volume_api, 'create', return_value=volume),
+            mock.patch.object(volume_class, 'attach')
+        ) as (vol_create, vol_attach):
+            test_bdm.attach(self.context, instance, self.volume_api,
+                            self.virt_driver)
+
+            vol_create.assert_called_once_with(self.context,
+                                               test_bdm.volume_size,
+                                               'fake-uuid-blank-vol',
+                                               '')
+            vol_attach.assert_called_once_with(self.context, instance,
+                                               self.volume_api,
+                                               self.virt_driver,
+                                               do_check_attach=True)
+            self.assertEqual('fake-volume-id-2', test_bdm.volume_id)
 
     def test_convert_block_devices(self):
         converted = driver_block_device._convert_block_devices(
