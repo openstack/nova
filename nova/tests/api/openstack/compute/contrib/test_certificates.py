@@ -19,6 +19,9 @@ import mox
 
 from nova.api.openstack.compute.contrib import certificates
 from nova import context
+from nova import exception
+from nova.openstack.common import policy as common_policy
+from nova import policy
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -49,6 +52,18 @@ class CertificatesTest(test.NoDBTestCase):
         response = {'certificate': {'data': 'fakeroot', 'private_key': None}}
         self.assertEqual(res_dict, response)
 
+    def test_certificates_show_policy_failed(self):
+        rules = {
+            "compute_extension:certificates":
+            common_policy.parse_rule("!")
+        }
+        policy.set_rules(rules)
+        req = fakes.HTTPRequest.blank('/v2/fake/os-certificates/root')
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller.show, req, 'root')
+        self.assertIn("compute_extension:certificates",
+                      exc.format_message())
+
     def test_certificates_create_certificate(self):
         self.mox.StubOutWithMock(self.controller.cert_rpcapi,
                                  'generate_x509_cert')
@@ -68,6 +83,18 @@ class CertificatesTest(test.NoDBTestCase):
                             'private_key': 'fakepk'}
         }
         self.assertEqual(res_dict, response)
+
+    def test_certificates_create_policy_failed(self):
+        rules = {
+            "compute_extension:certificates":
+            common_policy.parse_rule("!")
+        }
+        policy.set_rules(rules)
+        req = fakes.HTTPRequest.blank('/v2/fake/os-certificates/')
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller.create, req)
+        self.assertIn("compute_extension:certificates",
+                      exc.format_message())
 
 
 class CertificatesSerializerTest(test.NoDBTestCase):
