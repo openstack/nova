@@ -14,6 +14,7 @@
 
 import webob
 
+from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
@@ -37,14 +38,13 @@ class ConsolesController(wsgi.Controller):
 
         # If type is not supplied or unknown, get_vnc_console below will cope
         console_type = body['os-getVNCConsole'].get('type')
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
 
         try:
-            instance = self.compute_api.get(context, id, want_objects=True)
             output = self.compute_api.get_vnc_console(context,
                                                       instance,
                                                       console_type)
-        except exception.InstanceNotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(
                     explanation=_('Instance not yet ready'))
@@ -64,16 +64,15 @@ class ConsolesController(wsgi.Controller):
 
         # If type is not supplied or unknown, get_spice_console below will cope
         console_type = body['os-getSPICEConsole'].get('type')
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
 
         try:
-            instance = self.compute_api.get(context, id, want_objects=True)
             output = self.compute_api.get_spice_console(context,
                                                       instance,
                                                       console_type)
         except exception.ConsoleTypeUnavailable as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
-        except exception.InstanceNotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError:
@@ -91,16 +90,15 @@ class ConsolesController(wsgi.Controller):
 
         # If type is not supplied or unknown, get_rdp_console below will cope
         console_type = body['os-getRDPConsole'].get('type')
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
 
         try:
-            instance = self.compute_api.get(context, id, want_objects=True)
             output = self.compute_api.get_rdp_console(context,
                                                       instance,
                                                       console_type)
         except exception.ConsoleTypeUnavailable as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
-        except exception.InstanceNotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError:

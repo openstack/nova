@@ -88,11 +88,13 @@ def fake_get_rdp_console_not_found(self, _context, instance, _console_type):
     raise exception.InstanceNotFound(instance_id=instance["uuid"])
 
 
-def fake_get(self, context, instance_uuid, want_objects=False):
+def fake_get(self, context, instance_uuid, want_objects=False,
+             expected_attrs=None):
     return {'uuid': instance_uuid}
 
 
-def fake_get_not_found(self, context, instance_uuid, want_objects=False):
+def fake_get_not_found(self, context, instance_uuid, want_objects=False,
+                       expected_attrs=None):
     raise exception.InstanceNotFound(instance_id=instance_uuid)
 
 
