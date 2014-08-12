@@ -5684,8 +5684,7 @@ def archive_deleted_rows(context, max_rows=None):
 
 def _instance_group_get_query(context, model_class, id_field=None, id=None,
                               session=None, read_deleted=None):
-    columns_to_join = {models.InstanceGroup: ['_policies', '_metadata',
-                                              '_members']}
+    columns_to_join = {models.InstanceGroup: ['_policies', '_members']}
     query = model_query(context, model_class, session=session,
                         read_deleted=read_deleted)
 
@@ -5698,9 +5697,9 @@ def _instance_group_get_query(context, model_class, id_field=None, id=None,
     return query
 
 
-def instance_group_create(context, values, policies=None, metadata=None,
+def instance_group_create(context, values, policies=None,
                           members=None):
-    """Create a new group with metadata."""
+    """Create a new group."""
     uuid = values.get('uuid', None)
     if uuid is None:
         uuid = uuidutils.generate_uuid()
@@ -5717,13 +5716,9 @@ def instance_group_create(context, values, policies=None, metadata=None,
         # We don't want these to be lazy loaded later. We know there is
         # nothing here since we just created this instance group.
         group._policies = []
-        group._metadata = []
         group._members = []
         if policies:
             _instance_group_policies_add(context, group.id, policies,
-                                         session=session)
-        if metadata:
-            _instance_group_metadata_add(context, group.id, metadata,
                                          session=session)
         if members:
             _instance_group_members_add(context, group.id, members,
@@ -5766,13 +5761,6 @@ def instance_group_update(context, group_uuid, values):
                                          values.pop('policies'),
                                          set_delete=True,
                                          session=session)
-        metadata = values.get('metadata')
-        if metadata is not None:
-            _instance_group_metadata_add(context,
-                                         group.id,
-                                         values.pop('metadata'),
-                                         set_delete=True,
-                                         session=session)
         members = values.get('members')
         if members is not None:
             _instance_group_members_add(context,
@@ -5785,8 +5773,6 @@ def instance_group_update(context, group_uuid, values):
 
         if policies:
             values['policies'] = policies
-        if metadata:
-            values['metadata'] = metadata
         if members:
             values['members'] = members
 
@@ -5807,7 +5793,6 @@ def instance_group_delete(context, group_uuid):
 
         # Delete policies, metadata and members
         instance_models = [models.InstanceGroupPolicy,
-                           models.InstanceGroupMetadata,
                            models.InstanceGroupMember]
         for model in instance_models:
             model_query(context, model, session=session).\
@@ -5848,70 +5833,6 @@ def _instance_group_id(context, group_uuid, session=None):
     if not result:
         raise exception.InstanceGroupNotFound(group_uuid=group_uuid)
     return result.id
-
-
-def _instance_group_metadata_add(context, id, metadata, set_delete=False,
-                                 session=None):
-    if not session:
-        session = get_session()
-
-    with session.begin(subtransactions=True):
-        all_keys = metadata.keys()
-        query = _instance_group_model_get_query(context,
-                                                models.InstanceGroupMetadata,
-                                                id,
-                                                session=session)
-        if set_delete:
-            query.filter(~models.InstanceGroupMetadata.key.in_(all_keys)).\
-                         soft_delete(synchronize_session=False)
-
-        query = query.filter(models.InstanceGroupMetadata.key.in_(all_keys))
-        already_existing_keys = set()
-        for meta_ref in query.all():
-            key = meta_ref.key
-            meta_ref.update({'value': metadata[key]})
-            already_existing_keys.add(key)
-
-        for key, value in metadata.iteritems():
-            if key in already_existing_keys:
-                continue
-            meta_ref = models.InstanceGroupMetadata()
-            meta_ref.update({'key': key,
-                             'value': value,
-                             'group_id': id})
-            session.add(meta_ref)
-
-        return metadata
-
-
-def instance_group_metadata_add(context, group_uuid, metadata,
-                                set_delete=False):
-    id = _instance_group_id(context, group_uuid)
-    return _instance_group_metadata_add(context, id, metadata,
-                                        set_delete=set_delete)
-
-
-def instance_group_metadata_delete(context, group_uuid, key):
-    id = _instance_group_id(context, group_uuid)
-    count = _instance_group_get_query(context,
-                                      models.InstanceGroupMetadata,
-                                      models.InstanceGroupMetadata.group_id,
-                                      id).\
-                            filter_by(key=key).\
-                            soft_delete()
-    if count == 0:
-        raise exception.InstanceGroupMetadataNotFound(group_uuid=group_uuid,
-                                                      metadata_key=key)
-
-
-def instance_group_metadata_get(context, group_uuid):
-    id = _instance_group_id(context, group_uuid)
-    rows = model_query(context,
-                       models.InstanceGroupMetadata.key,
-                       models.InstanceGroupMetadata.value,
-                       base_model=models.InstanceGroupMetadata).\
-                filter_by(group_id=id).all()
-    return dict((r[0], r[1]) for r in rows)
 
 
 def _instance_group_members_add(context, id, members, set_delete=False,

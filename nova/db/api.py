@@ -801,15 +801,13 @@ def instance_remove_security_group(context, instance_id, security_group_id):
 ####################
 
 
-def instance_group_create(context, values, policies=None, metadata=None,
-                          members=None):
-    """Create a new group with metadata.
+def instance_group_create(context, values, policies=None, members=None):
+    """Create a new group.
 
     Each group will receive a unique uuid. This will be used for access to the
     group.
     """
-    return IMPL.instance_group_create(context, values, policies, metadata,
-                                      members)
+    return IMPL.instance_group_create(context, values, policies, members)
 
 
 def instance_group_get(context, group_uuid):

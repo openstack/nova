@@ -6667,9 +6667,9 @@ class InstanceGroupDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 'project_id': self.project_id}
 
     def _create_instance_group(self, context, values, policies=None,
-                               metadata=None, members=None):
+                               members=None):
         return db.instance_group_create(context, values, policies=policies,
-                                        metadata=metadata, members=members)
+                                        members=members)
 
     def test_instance_group_create_no_key(self):
         values = self._get_default_values()
@@ -6781,15 +6781,6 @@ class InstanceGroupDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
         db.instance_group_update(self.context, id, values)
         result = db.instance_group_get(self.context, id)
         self.assertEqual(result['name'], 'new_fake_name')
-        # update metadata
-        values = self._get_default_values()
-        metadataInput = {'key11': 'value1',
-                         'key12': 'value2'}
-        values['metadata'] = metadataInput
-        db.instance_group_update(self.context, id, values)
-        result = db.instance_group_get(self.context, id)
-        metadata = result['metadetails']
-        self._assertEqualObjects(metadata, metadataInput)
         # update update members
         values = self._get_default_values()
         members = ['instance_id1', 'instance_id2']
@@ -6808,86 +6799,6 @@ class InstanceGroupDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertRaises(exception.InstanceGroupNotFound,
                           db.instance_group_update, self.context,
                           'invalid_id', values)
-
-
-class InstanceGroupMetadataDBApiTestCase(InstanceGroupDBApiTestCase):
-    def test_instance_group_metadata_on_create(self):
-        values = self._get_default_values()
-        values['uuid'] = 'fake_id'
-        metadata = {'key11': 'value1',
-                    'key12': 'value2'}
-        result = self._create_instance_group(self.context, values,
-                                             metadata=metadata)
-        ignored_keys = ['id', 'deleted', 'deleted_at', 'updated_at',
-                        'created_at']
-        self._assertEqualObjects(result, values, ignored_keys)
-        self._assertEqualObjects(metadata, result['metadetails'])
-
-    def test_instance_group_metadata_add(self):
-        values = self._get_default_values()
-        values['uuid'] = 'fake_id'
-        result = self._create_instance_group(self.context, values)
-        id = result['uuid']
-        metadata = db.instance_group_metadata_get(self.context, id)
-        self._assertEqualObjects(metadata, {})
-        metadata = {'key1': 'value1',
-                    'key2': 'value2'}
-        db.instance_group_metadata_add(self.context, id, metadata)
-        metadata2 = db.instance_group_metadata_get(self.context, id)
-        self._assertEqualObjects(metadata, metadata2)
-
-    def test_instance_group_update(self):
-        values = self._get_default_values()
-        values['uuid'] = 'fake_id'
-        result = self._create_instance_group(self.context, values)
-        id = result['uuid']
-        metadata = {'key1': 'value1',
-                    'key2': 'value2'}
-        db.instance_group_metadata_add(self.context, id, metadata)
-        metadata2 = db.instance_group_metadata_get(self.context, id)
-        self._assertEqualObjects(metadata, metadata2)
-        # check add with existing keys
-        metadata = {'key1': 'value1',
-                    'key2': 'value2',
-                    'key3': 'value3'}
-        db.instance_group_metadata_add(self.context, id, metadata)
-        metadata3 = db.instance_group_metadata_get(self.context, id)
-        self._assertEqualObjects(metadata, metadata3)
-
-    def test_instance_group_delete(self):
-        values = self._get_default_values()
-        values['uuid'] = 'fake_id'
-        result = self._create_instance_group(self.context, values)
-        id = result['uuid']
-        metadata = {'key1': 'value1',
-                    'key2': 'value2',
-                    'key3': 'value3'}
-        db.instance_group_metadata_add(self.context, id, metadata)
-        metadata3 = db.instance_group_metadata_get(self.context, id)
-        self._assertEqualObjects(metadata, metadata3)
-        db.instance_group_metadata_delete(self.context, id, 'key1')
-        metadata = db.instance_group_metadata_get(self.context, id)
-        self.assertNotIn('key1', metadata)
-        db.instance_group_metadata_delete(self.context, id, 'key2')
-        metadata = db.instance_group_metadata_get(self.context, id)
-        self.assertNotIn('key2', metadata)
-
-    def test_instance_group_metadata_invalid_ids(self):
-        values = self._get_default_values()
-        result = self._create_instance_group(self.context, values)
-        id = result['uuid']
-        self.assertRaises(exception.InstanceGroupNotFound,
-                          db.instance_group_metadata_get,
-                          self.context, 'invalid')
-        self.assertRaises(exception.InstanceGroupNotFound,
-                          db.instance_group_metadata_delete, self.context,
-                          'invalidid', 'key1')
-        metadata = {'key1': 'value1',
-                    'key2': 'value2'}
-        db.instance_group_metadata_add(self.context, id, metadata)
-        self.assertRaises(exception.InstanceGroupMetadataNotFound,
-                          db.instance_group_metadata_delete,
-                          self.context, id, 'invalidkey')
 
 
 class InstanceGroupMembersDBApiTestCase(InstanceGroupDBApiTestCase):

@@ -28,7 +28,8 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
     # Version 1.4: Add add_members()
     # Version 1.5: Add get_hosts()
     # Version 1.6: Add get_by_name()
-    VERSION = '1.6'
+    # Version 1.7: Deprecate metadetails
+    VERSION = '1.7'
 
     fields = {
         'id': fields.IntegerField(),
@@ -40,9 +41,14 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
         'name': fields.StringField(nullable=True),
 
         'policies': fields.ListOfStringsField(nullable=True),
-        'metadetails': fields.DictOfStringsField(nullable=True),
         'members': fields.ListOfStringsField(nullable=True),
         }
+
+    def obj_make_compatible(self, primitive, target_version):
+        if target_version < (1, 7):
+            # NOTE(danms): Before 1.7, we had an always-empty
+            # metadetails property
+            primitive['metadetails'] = {}
 
     @staticmethod
     def _from_db_object(context, instance_group, db_inst):
@@ -95,11 +101,6 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
         if not updates:
             return
 
-        metadata = None
-        if 'metadetails' in updates:
-            metadata = updates.pop('metadetails')
-            updates.update({'metadata': metadata})
-
         db.instance_group_update(context, self.uuid, updates)
         db_inst = db.instance_group_get(context, self.uuid)
         self._from_db_object(context, self, db_inst)
@@ -122,11 +123,9 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
         updates.pop('id', None)
         policies = updates.pop('policies', None)
         members = updates.pop('members', None)
-        metadetails = updates.pop('metadetails', None)
 
         db_inst = db.instance_group_create(context, updates,
                                            policies=policies,
-                                           metadata=metadetails,
                                            members=members)
         self._from_db_object(context, self, db_inst)
 
@@ -165,6 +164,8 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
     #              InstanceGroup <= version 1.3
     # Version 1.1: InstanceGroup <= version 1.4
     # Version 1.2: InstanceGroup <= version 1.5
+    # Version 1.3: InstanceGroup <= version 1.6
+    # Version 1.4: InstanceGroup <= version 1.7
     VERSION = '1.2'
 
     fields = {
@@ -176,6 +177,7 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
         '1.1': '1.4',
         '1.2': '1.5',
         '1.3': '1.6',
+        '1.4': '1.7',
         }
 
     @base.remotable_classmethod
