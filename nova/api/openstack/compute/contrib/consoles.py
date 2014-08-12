@@ -48,6 +48,8 @@ class ConsolesController(wsgi.Controller):
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(
                     explanation=_('Instance not yet ready'))
+        except exception.ConsoleTypeUnavailable as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         except NotImplementedError:
             msg = _("Unable to get vnc console, functionality not implemented")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
@@ -68,6 +70,8 @@ class ConsolesController(wsgi.Controller):
             output = self.compute_api.get_spice_console(context,
                                                       instance,
                                                       console_type)
+        except exception.ConsoleTypeUnavailable as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
@@ -93,6 +97,8 @@ class ConsolesController(wsgi.Controller):
             output = self.compute_api.get_rdp_console(context,
                                                       instance,
                                                       console_type)
+        except exception.ConsoleTypeUnavailable as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
