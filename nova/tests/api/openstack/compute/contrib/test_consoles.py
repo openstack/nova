@@ -98,10 +98,15 @@ def fake_get_not_found(self, context, instance_uuid, want_objects=False,
     raise exception.InstanceNotFound(instance_id=instance_uuid)
 
 
-class ConsolesExtensionTest(test.NoDBTestCase):
+class ConsolesExtensionTestV21(test.NoDBTestCase):
+    url = '/v3/servers/1/action'
+
+    def _setup_wsgi(self):
+        self.app = fakes.wsgi_app_v3(init_only=('servers',
+                                                'os-remote-consoles'))
 
     def setUp(self):
-        super(ConsolesExtensionTest, self).setUp()
+        super(ConsolesExtensionTestV21, self).setUp()
         self.stubs.Set(compute_api.API, 'get_vnc_console',
                        fake_get_vnc_console)
         self.stubs.Set(compute_api.API, 'get_spice_console',
@@ -109,15 +114,11 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         self.stubs.Set(compute_api.API, 'get_rdp_console',
                        fake_get_rdp_console)
         self.stubs.Set(compute_api.API, 'get', fake_get)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Consoles'])
-        self.app = fakes.wsgi_app(init_only=('servers',))
+        self._setup_wsgi()
 
     def test_get_vnc_console(self):
         body = {'os-getVNCConsole': {'type': 'novnc'}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -132,7 +133,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         self.stubs.Set(compute_api.API, 'get_vnc_console',
                        fake_get_vnc_console_not_ready)
         body = {'os-getVNCConsole': {'type': 'novnc'}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -145,7 +146,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         self.stubs.Set(compute_api.API, 'get_vnc_console',
                        fake_get_vnc_console_invalid_type)
         body = {'os-getVNCConsole': {}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -156,7 +157,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
     def test_get_vnc_console_no_instance(self):
         self.stubs.Set(compute_api.API, 'get', fake_get_not_found)
         body = {'os-getVNCConsole': {'type': 'novnc'}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -168,7 +169,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         self.stubs.Set(compute_api.API, 'get_vnc_console',
                        fake_get_vnc_console_not_found)
         body = {'os-getVNCConsole': {'type': 'novnc'}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -180,7 +181,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         body = {'os-getVNCConsole': {'type': 'invalid'}}
         self.stubs.Set(compute_api.API, 'get_vnc_console',
                        fake_get_vnc_console_invalid_type)
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -189,10 +190,10 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 400)
 
     def test_get_vnc_console_type_unavailable(self):
-        body = {'get_vnc_console': {'type': 'unavailable'}}
+        body = {'os-getVNCConsole': {'type': 'unavailable'}}
         self.stubs.Set(compute_api.API, 'get_vnc_console',
                        fake_get_vnc_console_type_unavailable)
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -205,7 +206,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
                        fakes.fake_not_implemented)
 
         body = {'os-getVNCConsole': {'type': 'novnc'}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -215,7 +216,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
 
     def test_get_spice_console(self):
         body = {'os-getSPICEConsole': {'type': 'spice-html5'}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -230,7 +231,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         self.stubs.Set(compute_api.API, 'get_spice_console',
                        fake_get_spice_console_not_ready)
         body = {'os-getSPICEConsole': {'type': 'spice-html5'}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -243,7 +244,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         self.stubs.Set(compute_api.API, 'get_spice_console',
                        fake_get_spice_console_invalid_type)
         body = {'os-getSPICEConsole': {}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -254,7 +255,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
     def test_get_spice_console_no_instance(self):
         self.stubs.Set(compute_api.API, 'get', fake_get_not_found)
         body = {'os-getSPICEConsole': {'type': 'spice-html5'}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -266,7 +267,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         self.stubs.Set(compute_api.API, 'get_spice_console',
                        fake_get_spice_console_not_found)
         body = {'os-getSPICEConsole': {'type': 'spice-html5'}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -278,7 +279,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         body = {'os-getSPICEConsole': {'type': 'invalid'}}
         self.stubs.Set(compute_api.API, 'get_spice_console',
                        fake_get_spice_console_invalid_type)
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -290,7 +291,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         body = {'os-getSPICEConsole': {'type': 'spice-html5'}}
         self.stubs.Set(compute_api.API, 'get_spice_console',
                        fakes.fake_not_implemented)
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -299,10 +300,10 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 501)
 
     def test_get_spice_console_type_unavailable(self):
-        body = {'get_spice_console': {'type': 'unavailable'}}
+        body = {'os-getSPICEConsole': {'type': 'unavailable'}}
         self.stubs.Set(compute_api.API, 'get_spice_console',
                        fake_get_spice_console_type_unavailable)
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -312,7 +313,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
 
     def test_get_rdp_console(self):
         body = {'os-getRDPConsole': {'type': 'rdp-html5'}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -327,7 +328,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         self.stubs.Set(compute_api.API, 'get_rdp_console',
                        fake_get_rdp_console_not_ready)
         body = {'os-getRDPConsole': {'type': 'rdp-html5'}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -340,7 +341,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         self.stubs.Set(compute_api.API, 'get_rdp_console',
                        fake_get_rdp_console_invalid_type)
         body = {'os-getRDPConsole': {}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -351,7 +352,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
     def test_get_rdp_console_no_instance(self):
         self.stubs.Set(compute_api.API, 'get', fake_get_not_found)
         body = {'os-getRDPConsole': {'type': 'rdp-html5'}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -363,7 +364,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         self.stubs.Set(compute_api.API, 'get_rdp_console',
                        fake_get_rdp_console_not_found)
         body = {'os-getRDPConsole': {'type': 'rdp-html5'}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -375,7 +376,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         body = {'os-getRDPConsole': {'type': 'invalid'}}
         self.stubs.Set(compute_api.API, 'get_rdp_console',
                        fake_get_rdp_console_invalid_type)
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -384,13 +385,61 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 400)
 
     def test_get_rdp_console_type_unavailable(self):
-        body = {'get_rdp_console': {'type': 'unavailable'}}
+        body = {'os-getRDPConsole': {'type': 'unavailable'}}
         self.stubs.Set(compute_api.API, 'get_rdp_console',
                        fake_get_rdp_console_type_unavailable)
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
         res = req.get_response(self.app)
         self.assertEqual(400, res.status_int)
+
+    def test_get_vnc_console_with_undefined_param(self):
+        body = {'os-getVNCConsole': {'type': 'novnc', 'undefined': 'foo'}}
+        req = webob.Request.blank(self.url)
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(self.app)
+        self.assertEqual(400, res.status_int)
+
+    def test_get_spice_console_with_undefined_param(self):
+        body = {'os-getSPICEConsole': {'type': 'spice-html5',
+                                      'undefined': 'foo'}}
+        req = webob.Request.blank(self.url)
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(self.app)
+        self.assertEqual(400, res.status_int)
+
+    def test_get_rdp_console_with_undefined_param(self):
+        body = {'os-getRDPConsole': {'type': 'rdp-html5', 'undefined': 'foo'}}
+        req = webob.Request.blank(self.url)
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(self.app)
+        self.assertEqual(400, res.status_int)
+
+
+class ConsolesExtensionTestV2(ConsolesExtensionTestV21):
+    url = '/v2/fake/servers/1/action'
+
+    def _setup_wsgi(self):
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Consoles'])
+        self.app = fakes.wsgi_app(init_only=('servers',))
+
+    def test_get_vnc_console_with_undefined_param(self):
+        pass
+
+    def test_get_spice_console_with_undefined_param(self):
+        pass
+
+    def test_get_rdp_console_with_undefined_param(self):
+        pass

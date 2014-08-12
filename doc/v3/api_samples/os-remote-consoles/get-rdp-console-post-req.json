@@ -1,5 +1,5 @@
 {
-    "get_rdp_console": {
+    "os-getRDPConsole": {
         "type": "rdp-html5"
     }
 }

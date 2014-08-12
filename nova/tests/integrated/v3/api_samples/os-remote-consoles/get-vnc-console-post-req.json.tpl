@@ -1,5 +1,5 @@
 {
-    "get_vnc_console": {
+    "os-getVNCConsole": {
         "type": "novnc"
     }
 }
