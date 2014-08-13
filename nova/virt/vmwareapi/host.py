@@ -21,14 +21,11 @@ from nova.compute import arch
 from nova.compute import hvtype
 from nova.compute import vm_mode
 from nova import exception
-from nova.openstack.common import log as logging
 from nova.openstack.common import units
 from nova import utils
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
-
-LOG = logging.getLogger(__name__)
 
 
 def _get_ds_capacity_and_freespace(session, cluster=None):
@@ -37,67 +34,6 @@ def _get_ds_capacity_and_freespace(session, cluster=None):
         return ds.capacity, ds.freespace
     except exception.DatastoreNotFound:
         return 0, 0
-
-
-class HostState(object):
-    """Manages information about the ESX host this compute
-    node is running on.
-    """
-    def __init__(self, session, host_name):
-        super(HostState, self).__init__()
-        self._session = session
-        self._host_name = host_name
-        self._stats = {}
-        self.update_status()
-
-    def get_host_stats(self, refresh=False):
-        """Return the current state of the host. If 'refresh' is
-        True, run the update first.
-        """
-        if refresh or not self._stats:
-            self.update_status()
-        return self._stats
-
-    def update_status(self):
-        """Update the current state of the host.
-        """
-        host_mor = vm_util.get_host_ref(self._session)
-        summary = self._session._call_method(vim_util,
-                                             "get_dynamic_property",
-                                             host_mor,
-                                             "HostSystem",
-                                             "summary")
-
-        if summary is None:
-            return
-
-        capacity, freespace = _get_ds_capacity_and_freespace(self._session)
-
-        data = {}
-        data["vcpus"] = summary.hardware.numCpuThreads
-        data["cpu_info"] = \
-                {"vendor": summary.hardware.vendor,
-                 "model": summary.hardware.cpuModel,
-                 "topology": {"cores": summary.hardware.numCpuCores,
-                              "sockets": summary.hardware.numCpuPkgs,
-                              "threads": summary.hardware.numCpuThreads}
-                }
-        data["disk_total"] = capacity / units.Gi
-        data["disk_available"] = freespace / units.Gi
-        data["disk_used"] = data["disk_total"] - data["disk_available"]
-        data["host_memory_total"] = summary.hardware.memorySize / units.Mi
-        data["host_memory_free"] = data["host_memory_total"] - \
-                                   summary.quickStats.overallMemoryUsage
-        data["hypervisor_type"] = summary.config.product.name
-        data["hypervisor_version"] = utils.convert_version_to_int(
-                str(summary.config.product.version))
-        data["hypervisor_hostname"] = self._host_name
-        data["supported_instances"] = [
-            (arch.I686, hvtype.VMWARE, vm_mode.HVM),
-            (arch.X86_64, hvtype.VMWARE, vm_mode.HVM)]
-
-        self._stats = data
-        return data
 
 
 class VCState(object):
