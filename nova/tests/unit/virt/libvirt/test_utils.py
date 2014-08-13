@@ -336,13 +336,14 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
     def test_pick_disk_driver_name(self):
         type_map = {'kvm': ([True, 'qemu'], [False, 'qemu'], [None, 'qemu']),
                     'qemu': ([True, 'qemu'], [False, 'qemu'], [None, 'qemu']),
-                    'xen': ([True, 'phy'], [False, 'tap2'], [None, 'tap2']),
+                    'xen': ([True, 'phy'], [False, 'qemu'], [None, 'qemu']),
                     'uml': ([True, None], [False, None], [None, None]),
                     'lxc': ([True, None], [False, None], [None, None])}
 
         for (virt_type, checks) in type_map.iteritems():
             if virt_type == "xen":
-                version = 4001000
+                # NOTE(aloga): Xen is tested in test_pick_disk_driver_name_xen
+                version = 4004000
             else:
                 version = 1005001
 
@@ -352,10 +353,14 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
                                                              is_block_dev)
                 self.assertEqual(result, expected_result)
 
-    def test_pick_disk_driver_name_xen_4_0_0(self):
+    def test_pick_disk_driver_name_xen(self):
+        version_map = ((4000000, "tap"),
+                       (4001000, "tap2"),
+                       (4002000, "qemu"))
         self.flags(virt_type="xen", group='libvirt')
-        result = libvirt_utils.pick_disk_driver_name(4000000, False)
-        self.assertEqual(result, "tap")
+        for ver, drv in version_map:
+            result = libvirt_utils.pick_disk_driver_name(ver, False)
+            self.assertEqual(drv, result)
 
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('nova.utils.execute')

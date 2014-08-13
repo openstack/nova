@@ -208,12 +208,11 @@ def create_cow_image(backing_file, path, size=None):
 def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
     """Pick the libvirt primary backend driver name
 
-    If the hypervisor supports multiple backend drivers, then the name
-    attribute selects the primary backend driver name, while the optional
-    type attribute provides the sub-type.  For example, xen supports a name
-    of "tap", "tap2", "phy", or "file", with a type of "aio" or "qcow2",
-    while qemu only supports a name of "qemu", but multiple types including
-    "raw", "bochs", "qcow2", and "qed".
+    If the hypervisor supports multiple backend drivers we have to tell libvirt
+    which one should be used.
+
+    Xen supports the following drivers: "tap", "tap2", "phy", "file", or
+    "qemu", being "qemu" the preferred one. Qemu only supports "qemu".
 
     :param is_block_dev:
     :returns: driver_name or None
@@ -222,11 +221,14 @@ def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
         if is_block_dev:
             return "phy"
         else:
+            # 4002000 == 4.2.0
+            if hypervisor_version >= 4002000:
+                return 'qemu'
             # 4000000 == 4.0.0
-            if hypervisor_version == 4000000:
-                return "tap"
-            else:
+            elif hypervisor_version > 4000000:
                 return "tap2"
+            else:
+                return "tap"
 
     elif CONF.libvirt.virt_type in ('kvm', 'qemu'):
         return "qemu"
