@@ -1926,7 +1926,8 @@ class ComputeManager(manager.Manager):
                 retry = filter_properties.get('retry', None)
                 if not retry:
                     # no retry information, do not reschedule.
-                    LOG.debug("Retry info not present, will not reschedule")
+                    LOG.debug("Retry info not present, will not reschedule",
+                        instance=instance)
                     self._cleanup_allocated_networks(context, instance,
                         requested_networks)
                     self._set_instance_error_state(context, instance.uuid)
