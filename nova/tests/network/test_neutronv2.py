@@ -1756,6 +1756,19 @@ class TestNeutronv2(TestNeutronv2Base):
         self.mox.ReplayAll()
         api.release_floating_ip(self.context, address)
 
+    def test_disassociate_and_release_floating_ip(self):
+        api = neutronapi.API()
+        address = self.fip_unassociated['floating_ip_address']
+        fip_id = self.fip_unassociated['id']
+        floating_ip = {'address': address}
+
+        self.moxed_client.list_floatingips(floating_ip_address=address).\
+            AndReturn({'floatingips': [self.fip_unassociated]})
+        self.moxed_client.delete_floatingip(fip_id)
+        self.mox.ReplayAll()
+        api.disassociate_and_release_floating_ip(self.context, None,
+                                               floating_ip)
+
     def test_release_floating_ip_associated(self):
         api = neutronapi.API()
         address = self.fip_associated['floating_ip_address']
