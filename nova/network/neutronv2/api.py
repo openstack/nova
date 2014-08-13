@@ -940,10 +940,12 @@ class API(base_api.NetworkAPI):
         return data['networks']
 
     def get_floating_ip_pools(self, context):
-        """Return floating ip pools."""
+        """Return floating ip pool names."""
         client = neutronv2.get_client(context)
         pools = self._get_floating_ip_pools(client)
-        return [{'name': n['name'] or n['id']} for n in pools]
+        # Note(salv-orlando): Return a list of names to be consistent with
+        # nova.network.api.get_floating_ip_pools
+        return [n['name'] or n['id'] for n in pools]
 
     def _format_floating_ip_model(self, fip, pool_dict, port_dict):
         pool = pool_dict[fip['floating_network_id']]

@@ -1732,8 +1732,7 @@ class TestNeutronv2(TestNeutronv2Base):
             AndReturn({'networks': [self.fip_pool, self.fip_pool_nova]})
         self.mox.ReplayAll()
         pools = api.get_floating_ip_pools(self.context)
-        expected = [{'name': self.fip_pool['name']},
-                    {'name': self.fip_pool_nova['name']}]
+        expected = [self.fip_pool['name'], self.fip_pool_nova['name']]
         self.assertEqual(expected, pools)
 
     def _get_expected_fip_model(self, fip_data, idx=0):
