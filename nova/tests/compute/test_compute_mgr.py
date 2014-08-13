@@ -107,7 +107,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         self.mox.StubOutWithMock(self.compute, '_get_resource_tracker')
         self.mox.StubOutWithMock(self.compute, '_allocate_network')
-        self.mox.StubOutWithMock(self.compute, '_instance_update')
         self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
                                  'get_by_instance_uuid')
 
@@ -134,17 +133,17 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.compute._allocate_network(mox.IgnoreArg(), instance,
                 mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
                 mox.IgnoreArg()).WithSideEffects(fake_allocate)
-        self.compute._instance_update(self.context, instance.uuid,
-                system_metadata={'network_allocated': 'True'})
 
         self.mox.ReplayAll()
 
-        self.compute._build_instance(self.context, {}, {},
+        instance, nw_info = self.compute._build_instance(self.context, {}, {},
                                      None, None, None, True,
                                      node, instance,
                                      {}, False)
         self.assertFalse(self.admin_context,
                          "_allocate_network called with admin context")
+        self.assertEqual(vm_states.BUILDING, instance.vm_state)
+        self.assertEqual(task_states.BLOCK_DEVICE_MAPPING, instance.task_state)
 
     def test_allocate_network_fails(self):
         self.flags(network_allocate_retries=0)

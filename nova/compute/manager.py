@@ -1340,10 +1340,9 @@ class ComputeManager(manager.Manager):
                         instance, requested_networks, macs, security_groups,
                         dhcp_options)
 
-                self._instance_update(
-                        context, instance.uuid,
-                        vm_state=vm_states.BUILDING,
-                        task_state=task_states.BLOCK_DEVICE_MAPPING)
+                instance.vm_state = vm_states.BUILDING
+                instance.task_state = task_states.BLOCK_DEVICE_MAPPING
+                instance.save()
 
                 # Verify that all the BDMs have a device_name set and assign a
                 # default to the ones missing it with the help of the driver.
