@@ -41,7 +41,6 @@ from nova import block_device
 from nova.compute import api as compute_api
 from nova.compute import power_state
 from nova.compute import task_states
-from nova.compute import vm_states
 from nova import context
 from nova import exception
 from nova.image import glance
@@ -1441,34 +1440,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                                           self.instance)
                 self.assertFalse(mock_reboot.called)
 
-    def destroy_rescued(self, fake_method):
-        self._rescue()
-        with contextlib.nested(
-            mock.patch.object(self.conn._volumeops, "detach_disk_from_vm",
-                              fake_method),
-            mock.patch.object(vm_util, "power_on_instance"),
-        ) as (fake_detach, fake_power_on):
-            self.instance['vm_state'] = vm_states.RESCUED
-            self.conn.destroy(self.context, self.instance, self.network_info)
-            inst_path = ds_util.DatastorePath(self.ds, self.uuid,
-                                              '%s.vmdk' % self.uuid)
-            self.assertFalse(vmwareapi_fake.get_file(str(inst_path)))
-            rescue_file_path = ds_util.DatastorePath(
-                self.ds, '%s-rescue' % self.uuid, '%s-rescue.vmdk' % self.uuid)
-            self.assertFalse(vmwareapi_fake.get_file(str(rescue_file_path)))
-            # Unrescue does not power on with destroy
-            self.assertFalse(fake_power_on.called)
-
-    def test_destroy_rescued(self):
-        def fake_detach_disk_from_vm(*args, **kwargs):
-            pass
-        self.destroy_rescued(fake_detach_disk_from_vm)
-
-    def test_destroy_rescued_with_exception(self):
-        def fake_detach_disk_from_vm(*args, **kwargs):
-            raise exception.NovaException('Here is my fake exception')
-        self.destroy_rescued(fake_detach_disk_from_vm)
-
     def test_destroy(self):
         self._create_vm()
         info = self._get_info()
@@ -1585,69 +1556,16 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
         self.conn.rescue(self.context, self.instance, self.network_info,
                          self.image, 'fake-password')
-        info = self._get_info(name='1-rescue',
-                              uuid='%s-rescue' % self.uuid)
+        info = self.conn.get_info({'name': '1',
+                                   'uuid': self.uuid,
+                                   'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
-        info = self._get_info()
+        info = self.conn.get_info({'name': '1-orig',
+                                   'uuid': '%s-orig' % self.uuid,
+                                   'node': self.instance_node})
         self._check_vm_info(info, power_state.SHUTDOWN)
-        self.assertIsNotNone(vm_util.vm_ref_cache_get('%s-rescue' % self.uuid))
+        self.assertIsNotNone(vm_util.vm_ref_cache_get(self.uuid))
         self.assertEqual(1, self._power_on_called)
-
-    def test_rescue(self):
-        self._rescue()
-        inst_file_path = ds_util.DatastorePath(self.ds, self.uuid,
-                                               '%s.vmdk' % self.uuid)
-        self.assertTrue(vmwareapi_fake.get_file(str(inst_file_path)))
-        rescue_file_path = ds_util.DatastorePath(self.ds,
-                                                 '%s-rescue' % self.uuid,
-                                                 '%s-rescue.vmdk' % self.uuid)
-        self.assertTrue(vmwareapi_fake.get_file(str(rescue_file_path)))
-
-    def test_rescue_with_config_drive(self):
-        self.flags(force_config_drive=True)
-        self._rescue(config_drive=True)
-
-    def test_unrescue(self):
-        # NOTE(dims): driver unrescue ends up eventually in vmops.unrescue
-        # with power_on=True, the test_destroy_rescued tests the
-        # vmops.unrescue with power_on=False
-        self._rescue()
-        vm_ref = vm_util.get_vm_ref(self.conn._session,
-                                    self.instance)
-        vm_rescue_ref = vm_util.get_vm_ref_from_name(self.conn._session,
-                                                     '%s-rescue' % self.uuid)
-
-        self.poweroff_instance = vm_util.power_off_instance
-
-        def fake_power_off_instance(session, instance, vm_ref):
-            # This is called so that we actually poweroff the simulated vm.
-            # The reason for this is that there is a validation in destroy
-            # that the instance is not powered on.
-            self.poweroff_instance(session, instance, vm_ref)
-
-        def fake_detach_disk_from_vm(vm_ref, instance,
-                                     device_name, destroy_disk=False):
-            self.test_device_name = device_name
-            info = self.conn.get_info(instance)
-            self._check_vm_info(info, power_state.SHUTDOWN)
-
-        with contextlib.nested(
-            mock.patch.object(vm_util, "power_off_instance",
-                              side_effect=fake_power_off_instance),
-            mock.patch.object(self.conn._volumeops, "detach_disk_from_vm",
-                              side_effect=fake_detach_disk_from_vm),
-            mock.patch.object(vm_util, "power_on_instance"),
-        ) as (poweroff, detach, fake_power_on):
-            self.conn.unrescue(self.instance, None)
-            poweroff.assert_called_once_with(self.conn._session, mock.ANY,
-                                             vm_rescue_ref)
-            detach.assert_called_once_with(vm_rescue_ref, mock.ANY,
-                                           self.test_device_name)
-            fake_power_on.assert_called_once_with(self.conn._session,
-                                                  self.instance,
-                                                  vm_ref=vm_ref)
-            self.test_vm_ref = None
-            self.test_device_name = None
 
     def test_get_diagnostics(self):
         self._create_vm()

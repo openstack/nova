@@ -37,7 +37,6 @@ from nova.api.metadata import base as instance_metadata
 from nova import compute
 from nova.compute import power_state
 from nova.compute import task_states
-from nova.compute import vm_states
 from nova.console import type as ctype
 from nova import context as nova_context
 from nova import exception
@@ -163,8 +162,6 @@ class VMwareVMOps(object):
         self._datastore_regex = datastore_regex
         self._base_folder = self._get_base_folder()
         self._tmp_folder = 'vmware_temp'
-        self._rescue_suffix = '-rescue'
-        self._migrate_suffix = '-orig'
         self._datastore_dc_mapping = {}
         self._datastore_browser_mapping = {}
         self._imagecache = imagecache.ImageCacheManager(self._session,
@@ -967,16 +964,6 @@ class VMwareVMOps(object):
 
         # If there is a rescue VM then we need to destroy that one too.
         LOG.debug("Destroying instance", instance=instance)
-        if instance.vm_state == vm_states.RESCUED:
-            LOG.debug("Rescue VM configured", instance=instance)
-            try:
-                self.unrescue(instance, power_on=False)
-                LOG.debug("Rescue VM destroyed", instance=instance)
-            except Exception:
-                rescue_name = instance.uuid + self._rescue_suffix
-                self._destroy_instance(instance,
-                                       destroy_disks=destroy_disks,
-                                       instance_name=rescue_name)
         self._destroy_instance(instance, destroy_disks=destroy_disks)
         LOG.debug("Instance destroyed", instance=instance)
 
@@ -1026,50 +1013,72 @@ class VMwareVMOps(object):
             reason = _("instance is not in a suspended state")
             raise exception.InstanceResumeFailure(reason=reason)
 
+    def _get_rescue_device(self, instance, vm_ref):
+        hardware_devices = self._session._call_method(vim_util,
+                        "get_dynamic_property", vm_ref,
+                        "VirtualMachine", "config.hardware.device")
+        return vm_util.find_rescue_device(hardware_devices,
+                                          instance)
+
     def rescue(self, context, instance, network_info, image_meta):
         """Rescue the specified instance.
 
-            - shutdown the instance VM.
-            - spawn a rescue VM (the vm name-label will be instance-N-rescue).
-
+        Attach the image that the instance was created from and boot from it.
         """
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
-        vm_util.power_off_instance(self._session, instance, vm_ref)
-        instance_name = instance.uuid + self._rescue_suffix
-        self.spawn(context, instance, image_meta,
-                   None, None, network_info,
-                   instance_name=instance_name,
-                   power_on=False)
+        # Get the root disk vmdk object
+        vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
+                                     uuid=instance.uuid)
+        ds_ref = vmdk.device.backing.datastore
+        datastore = ds_util.get_datastore_by_ref(self._session, ds_ref)
+        dc_info = self.get_datacenter_ref_and_name(datastore.ref)
 
-        # Attach vmdk to the rescue VM
-        vmdk = vm_util.get_vmdk_info(self._session, vm_ref, instance.uuid)
-        rescue_vm_ref = vm_util.get_vm_ref_from_name(self._session,
-                                                     instance_name)
-        self._volumeops.attach_disk_to_vm(rescue_vm_ref,
-                                          instance,
-                                          vmdk.adapter_type,
-                                          vmdk.disk_type,
-                                          vmdk.path)
-        vm_util.power_on_instance(self._session, instance,
-                                  vm_ref=rescue_vm_ref)
+        # Get the image details of the instance
+        image_info = images.VMwareImage.from_image(instance.image_ref,
+                                                   image_meta)
+        vi = VirtualMachineInstanceConfigInfo(instance,
+                                              None,
+                                              image_info,
+                                              datastore,
+                                              dc_info,
+                                              self._imagecache)
+        vm_util.power_off_instance(self._session, instance, vm_ref)
+
+        # Get the rescue disk path
+        rescue_disk_path = datastore.build_path(instance.uuid,
+                "%s-rescue.%s" % (image_info.image_id, image_info.file_type))
+
+        # Copy the cached image to the be the rescue disk. This will be used
+        # as the rescue disk for the instance.
+        ds_util.disk_copy(self._session, dc_info.ref,
+                          vi.cache_image_path, rescue_disk_path)
+        # Attach the rescue disk to the instance
+        self._volumeops.attach_disk_to_vm(vm_ref, instance, vmdk.adapter_type,
+                                          vmdk.disk_type, rescue_disk_path)
+        # Get the rescue device and configure the boot order to
+        # boot from this device
+        rescue_device = self._get_rescue_device(instance, vm_ref)
+        factory = self._session.vim.client.factory
+        boot_spec = vm_util.get_vm_boot_spec(factory, rescue_device)
+        # Update the VM with the new boot order and power on
+        vm_util.reconfigure_vm(self._session, vm_ref, boot_spec)
+        vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
 
     def unrescue(self, instance, power_on=True):
         """Unrescue the specified instance."""
-        # Get the original vmdk_path
+
         vm_ref = vm_util.get_vm_ref(self._session, instance)
-        vmdk = vm_util.get_vmdk_info(self._session, vm_ref, instance.uuid)
-        instance_name = instance.uuid + self._rescue_suffix
-        # detach the original instance disk from the rescue disk
-        vm_rescue_ref = vm_util.get_vm_ref_from_name(self._session,
-                                                     instance_name)
-        hardware_devices = self._session._call_method(vim_util,
-                        "get_dynamic_property", vm_rescue_ref,
-                        "VirtualMachine", "config.hardware.device")
-        device = vm_util.get_vmdk_volume_disk(hardware_devices, path=vmdk.path)
-        vm_util.power_off_instance(self._session, instance, vm_rescue_ref)
-        self._volumeops.detach_disk_from_vm(vm_rescue_ref, instance, device)
-        self._destroy_instance(instance, instance_name=instance_name)
+        # Get the rescue device and detach it from the instance.
+        try:
+            rescue_device = self._get_rescue_device(instance, vm_ref)
+        except exception.NotFound:
+            with excutils.save_and_reraise_exception():
+                LOG.error(_LE('Unable to access the rescue disk'),
+                          instance=instance)
+        vm_util.power_off_instance(self._session, instance, vm_ref)
+        self._volumeops.detach_disk_from_vm(vm_ref, instance, rescue_device,
+                                            destroy_disk=True)
         if power_on:
             vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
 

@@ -351,6 +351,67 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_get_datacenter_ref_and_name_with_no_datastore(self):
         self._test_get_datacenter_ref_and_name()
 
+    @mock.patch.object(vm_util, 'power_off_instance')
+    @mock.patch.object(ds_util, 'disk_copy')
+    @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake-ref')
+    @mock.patch.object(vm_util, 'get_values_from_object_properties')
+    @mock.patch.object(vm_util, 'find_rescue_device')
+    @mock.patch.object(vm_util, 'get_vm_boot_spec')
+    @mock.patch.object(vm_util, 'reconfigure_vm')
+    @mock.patch.object(vm_util, 'power_on_instance')
+    @mock.patch.object(ds_util, 'get_datastore_by_ref')
+    def test_rescue(self, mock_get_ds_by_ref, mock_power_on, mock_reconfigure,
+                    mock_get_boot_spec, mock_find_rescue,
+                    mock_get_values, mock_get_vm_ref, mock_disk_copy,
+                    mock_power_off):
+        _volumeops = mock.Mock()
+        self._vmops._volumeops = _volumeops
+
+        ds = ds_util.Datastore('fake-ref', 'ds1')
+        mock_get_ds_by_ref.return_value = ds
+        mock_find_rescue.return_value = 'fake-rescue-device'
+        mock_get_boot_spec.return_value = 'fake-boot-spec'
+
+        device = vmwareapi_fake.DataObject()
+        backing = vmwareapi_fake.DataObject()
+        backing.datastore = ds.ref
+        device.backing = backing
+        vmdk = vm_util.VmdkInfo('[fake] uuid/root.vmdk',
+                                'fake-adapter',
+                                'fake-disk',
+                                'fake-capacity',
+                                device)
+
+        with contextlib.nested(
+            mock.patch.object(self._vmops, 'get_datacenter_ref_and_name'),
+            mock.patch.object(vm_util, 'get_vmdk_info',
+                              return_value=vmdk)
+        ) as (_get_dc_ref_and_name, fake_vmdk_info):
+            dc_info = mock.Mock()
+            _get_dc_ref_and_name.return_value = dc_info
+            self._vmops.rescue(self._context, self._instance, None, None)
+
+            mock_power_off.assert_called_once_with(self._session,
+                                                   self._instance,
+                                                   'fake-ref')
+
+            uuid = self._instance.image_ref
+            cache_path = ds.build_path('vmware_base', uuid, uuid + '.vmdk')
+            rescue_path = ds.build_path('fake_uuid', uuid + '-rescue.vmdk')
+
+            mock_disk_copy.assert_called_once_with(self._session, dc_info.ref,
+                             cache_path, rescue_path)
+            _volumeops.attach_disk_to_vm.assert_called_once_with('fake-ref',
+                             self._instance, mock.ANY, mock.ANY, rescue_path)
+            mock_get_boot_spec.assert_called_once_with(mock.ANY,
+                                                       'fake-rescue-device')
+            mock_reconfigure.assert_called_once_with(self._session,
+                                                     'fake-ref',
+                                                     'fake-boot-spec')
+            mock_power_on.assert_called_once_with(self._session,
+                                                  self._instance,
+                                                  vm_ref='fake-ref')
+
     def test_unrescue_power_on(self):
         self._test_unrescue(True)
 
@@ -358,58 +419,38 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._test_unrescue(False)
 
     def _test_unrescue(self, power_on):
-        self._vmops._volumeops = mock.Mock()
-        vm_rescue_ref = mock.Mock()
+        _volumeops = mock.Mock()
+        self._vmops._volumeops = _volumeops
         vm_ref = mock.Mock()
 
-        args_list = [(vm_rescue_ref, 'VirtualMachine',
-                      'config.hardware.device')]
-
         def fake_call_method(module, method, *args, **kwargs):
-            expected_args = args_list.pop(0)
+            expected_args = (vm_ref, 'VirtualMachine',
+                             'config.hardware.device')
             self.assertEqual('get_dynamic_property', method)
             self.assertEqual(expected_args, args)
 
-        vmdk = vm_util.VmdkInfo(mock.sentinel.PATH,
-                                mock.sentinel.ADAPTER_TYPE,
-                                mock.sentinel.DISK_TYPE,
-                                mock.sentinel.CAPACITY,
-                                mock.sentinel.DEVICE)
         with contextlib.nested(
-                mock.patch.object(vm_util, 'get_vmdk_info',
-                                  return_value=vmdk),
-                mock.patch.object(vm_util, 'get_vmdk_volume_disk'),
                 mock.patch.object(vm_util, 'power_on_instance'),
+                mock.patch.object(vm_util, 'find_rescue_device'),
                 mock.patch.object(vm_util, 'get_vm_ref', return_value=vm_ref),
-                mock.patch.object(vm_util, 'get_vm_ref_from_name',
-                                  return_value=vm_rescue_ref),
                 mock.patch.object(self._session, '_call_method',
                                   fake_call_method),
-                mock.patch.object(vm_util, 'power_off_instance'),
-                mock.patch.object(self._vmops, '_destroy_instance'),
-        ) as (_get_vmdk_info, _get_vmdk_volume_disk,
-              _power_on_instance, _get_vm_ref, _get_vm_ref_from_name,
-              _call_method, _power_off, _destroy_instance):
+                mock.patch.object(vm_util, 'power_off_instance')
+        ) as (_power_on_instance, _find_rescue, _get_vm_ref,
+              _call_method, _power_off):
             self._vmops.unrescue(self._instance, power_on=power_on)
 
-            _get_vmdk_info.assert_called_once_with(self._session,
-                                                   vm_ref, 'fake_uuid')
-            _get_vmdk_volume_disk.assert_called_once_with(
-                None, path=mock.sentinel.PATH)
             if power_on:
                 _power_on_instance.assert_called_once_with(self._session,
-                                                           self._instance,
-                                                           vm_ref=vm_ref)
+                        self._instance, vm_ref=vm_ref)
             else:
                 self.assertFalse(_power_on_instance.called)
             _get_vm_ref.assert_called_once_with(self._session,
                                                 self._instance)
-            _get_vm_ref_from_name.assert_called_once_with(self._session,
-                                                          'fake_uuid-rescue')
             _power_off.assert_called_once_with(self._session, self._instance,
-                                               vm_rescue_ref)
-            _destroy_instance.assert_called_once_with(self._instance,
-                instance_name='fake_uuid-rescue')
+                                               vm_ref)
+            _volumeops.detach_disk_from_vm.assert_called_once_with(
+                vm_ref, self._instance, mock.ANY, destroy_disk=True)
 
     def _test_finish_migration(self, power_on=True, resize_instance=False):
         with contextlib.nested(
