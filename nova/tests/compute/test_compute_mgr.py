@@ -1801,6 +1801,32 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 task_state=None, expected_task_state=(task_states.SCHEDULING,
                                                       None))
 
+    def _test_prebuild_instance_build_abort_exception(self, exc):
+        instance = fake_instance.fake_instance_obj(self.context)
+        with contextlib.nested(
+            mock.patch.object(self.compute, '_check_instance_exists'),
+            mock.patch.object(self.compute, '_start_building',
+                              side_effect=exc)
+        ) as (
+            check, start
+        ):
+            # run the code
+            self.assertRaises(exception.BuildAbortException,
+                              self.compute._prebuild_instance,
+                              self.context, instance)
+        # assert the calls
+        check.assert_called_once_with(self.context, instance)
+        start.assert_called_once_with(self.context, instance)
+
+    def test_prebuild_instance_instance_not_found(self):
+        self._test_prebuild_instance_build_abort_exception(
+            exception.InstanceNotFound(instance_id='fake'))
+
+    def test_prebuild_instance_unexpected_deleting_task_state_err(self):
+        self._test_prebuild_instance_build_abort_exception(
+            exception.UnexpectedDeletingTaskStateError(expected='foo',
+                                                       actual='bar'))
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):
