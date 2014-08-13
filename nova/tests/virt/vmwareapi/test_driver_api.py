@@ -120,6 +120,43 @@ def _fake_create_session(inst):
     inst._session = session
 
 
+class VMwareDriverStartupTestCase(test.NoDBTestCase):
+    def _start_driver_with_flags(self, expected_exception_type, startup_flags):
+        self.flags(**startup_flags)
+        with mock.patch(
+                'nova.virt.vmwareapi.driver.VMwareAPISession.__init__'):
+            e = self.assertRaises(
+                    Exception, driver.VMwareVCDriver, None)  # noqa
+            self.assertIs(type(e), expected_exception_type)
+
+    def test_start_driver_no_user(self):
+        self._start_driver_with_flags(
+                Exception,
+                dict(host_ip='ip', host_password='password',
+                     group='vmware'))
+
+    def test_start_driver_no_host(self):
+        self._start_driver_with_flags(
+                Exception,
+                dict(host_username='username', host_password='password',
+                     group='vmware'))
+
+    def test_start_driver_no_password(self):
+        self._start_driver_with_flags(
+                Exception,
+                dict(host_ip='ip', host_username='username',
+                     group='vmware'))
+
+    def test_start_driver_with_user_host_password(self):
+        # Getting the InvalidInput exception signifies that no exception
+        # is raised regarding missing user/password/host
+        self._start_driver_with_flags(
+                nova.exception.InvalidInput,
+                dict(host_ip='ip', host_password='password',
+                     host_username="user", datastore_regex="bad(regex",
+                     group='vmware'))
+
+
 class VMwareSessionTestCase(test.NoDBTestCase):
 
     def _fake_is_vim_object(self, module):
@@ -376,6 +413,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         super(VMwareAPIVMTestCase, self).tearDown()
         vmwareapi_fake.cleanup()
         nova.tests.image.fake.FakeImageService_reset()
+
+    def test_get_host_ip_addr(self):
+        self.assertEqual('test_url', self.conn.get_host_ip_addr())
 
     def _set_exception_vars(self):
         self.wait_task = self.conn._session._wait_for_task

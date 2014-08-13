@@ -118,6 +118,12 @@ class VMwareVCDriver(driver.ComputeDriver):
     def __init__(self, virtapi, scheme="https"):
         super(VMwareVCDriver, self).__init__(virtapi)
 
+        if (CONF.vmware.host_ip is None or
+            CONF.vmware.host_username is None or
+            CONF.vmware.host_password is None):
+            raise Exception(_("Must specify host_ip, host_username and "
+                              "host_password to use vmwareapi.VMwareVCDriver"))
+
         self._datastore_regex = None
         if CONF.vmware.datastore_regex:
             try:
@@ -443,6 +449,10 @@ class VMwareVCDriver(driver.ComputeDriver):
         """Return volume connector information."""
         _volumeops = self._get_volumeops_for_compute_node(instance['node'])
         return _volumeops.get_volume_connector(instance)
+
+    def get_host_ip_addr(self):
+        """Returns the IP address of the vCenter host."""
+        return CONF.vmware.host_ip
 
     def snapshot(self, context, instance, image_id, update_task_state):
         """Create snapshot from a running VM instance."""
