@@ -555,6 +555,7 @@ class Executor(wsgi.Application):
                 exception.FloatingIpNotFound,
                 exception.ImageNotActive,
                 exception.InvalidInstanceIDMalformed,
+                exception.InvalidVolumeIDMalformed,
                 exception.InvalidKeypair,
                 exception.InvalidParameterValue,
                 exception.InvalidPortRange,

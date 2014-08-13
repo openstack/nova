@@ -81,7 +81,7 @@ class EC2ValidateTestCase(test.TestCase):
         self.ec2_id_exception_map.extend([(x, exception.InstanceNotFound)
                 for x in self.EC2_VALID__IDS])
         self.volume_id_exception_map = [(x,
-                exception.InvalidInstanceIDMalformed)
+                exception.InvalidVolumeIDMalformed)
                 for x in self.EC2_MALFORMED_IDS]
         self.volume_id_exception_map.extend([(x, exception.VolumeNotFound)
                 for x in self.EC2_VALID__IDS])
