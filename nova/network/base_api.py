@@ -171,7 +171,7 @@ class NetworkAPI(base.Base):
         """Allocates all network structures for an instance.
 
         :param context: The request context.
-        :param instance: An Instance dict.
+        :param instance: nova.objects.instance.Instance object.
         :param vpn: A boolean, if True, indicate a vpn to access the instance.
         :param requested_networks: A dictionary of requested_networks,
             Optional value containing network_id, fixed_ip, and port_id.
