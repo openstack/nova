@@ -128,6 +128,7 @@ def get_injected_network_template(network_info, use_ipv6=None, template=None,
         address_v6 = None
         gateway_v6 = ''
         netmask_v6 = None
+        dns_v6 = None
         have_ipv6 = (use_ipv6 and subnet_v6)
         if have_ipv6:
             if subnet_v6.get_meta('dhcp_server') is not None:
@@ -140,6 +141,7 @@ def get_injected_network_template(network_info, use_ipv6=None, template=None,
                 netmask_v6 = model.get_netmask(ip_v6, subnet_v6)
                 if subnet_v6['gateway']:
                     gateway_v6 = subnet_v6['gateway']['address']
+                dns_v6 = ' '.join([i['address'] for i in subnet_v6['dns']])
 
         net_info = {'name': 'eth%d' % ifc_num,
                     'address': address,
@@ -150,6 +152,7 @@ def get_injected_network_template(network_info, use_ipv6=None, template=None,
                     'address_v6': address_v6,
                     'gateway_v6': gateway_v6,
                     'netmask_v6': netmask_v6,
+                    'dns_v6': dns_v6,
                    }
         nets.append(net_info)
 

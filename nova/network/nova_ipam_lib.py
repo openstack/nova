@@ -17,6 +17,7 @@ import netaddr
 
 from nova import ipv6
 from nova import objects
+from nova import utils
 
 
 def get_ipam_lib(net_man):
@@ -49,11 +50,8 @@ class NeutronNovaIPAMLib(object):
             'broadcast': n.broadcast,
             'netmask': n.netmask,
             'version': 4,
-            'dns1': n.dns1,
-            'dns2': n.dns2}
-        # TODO(tr3buchet): I'm noticing we've assumed here that all dns is v4.
-        #                  this is probably bad as there is no way to add v6
-        #                  dns to nova
+            'dns1': n.dns1 if utils.is_valid_ipv4(n.dns1) else None,
+            'dns2': n.dns2 if utils.is_valid_ipv4(n.dns2) else None}
         subnet_v6 = {
             'network_id': n.uuid,
             'cidr': n.cidr_v6,
@@ -62,8 +60,8 @@ class NeutronNovaIPAMLib(object):
             'broadcast': None,
             'netmask': n.netmask_v6,
             'version': 6,
-            'dns1': None,
-            'dns2': None}
+            'dns1': n.dns1 if utils.is_valid_ipv6(n.dns1) else None,
+            'dns2': n.dns2 if utils.is_valid_ipv6(n.dns2) else None}
 
         def ips_to_strs(net):
             for key, value in net.items():
