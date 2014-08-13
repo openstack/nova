@@ -172,7 +172,7 @@ def _format_block_device_mapping(bdm):
                     ('deleteOnTermination', 'delete_on_termination'))
         ebs = {}
         for name, k in ebs_keys:
-            if k in bdm:
+            if bdm.get(k) is not None:
                 if k == 'snapshot_id':
                     ebs[name] = ec2utils.id_to_ec2_snap_id(bdm[k])
                 elif k == 'volume_id':

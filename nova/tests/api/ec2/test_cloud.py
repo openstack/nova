@@ -1491,7 +1491,8 @@ class CloudTestCase(test.TestCase):
 
         mappings2 = [{'device': '/dev/sda1', 'virtual': 'root'}]
         block_device_mapping2 = [{'device_name': '/dev/sdb1',
-                'snapshot_id': 'ccec42a2-c220-4806-b762-6b12fbb592e7'}]
+                'snapshot_id': 'ccec42a2-c220-4806-b762-6b12fbb592e7',
+                'volume_id': None}]
         image2 = {
             'id': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
             'name': 'fake_name',
