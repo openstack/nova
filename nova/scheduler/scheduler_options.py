@@ -21,13 +21,13 @@ dynamic configuration.
 """
 
 import datetime
-import json
 import os
 
 from oslo.config import cfg
 
 from nova.i18n import _
 from nova.openstack.common import excutils
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 
@@ -73,7 +73,7 @@ class SchedulerOptions(object):
     def _load_file(self, handle):
         """Decode the JSON file. Broken out for testing."""
         try:
-            return json.load(handle)
+            return jsonutils.load(handle)
         except ValueError as e:
             LOG.exception(_("Could not decode scheduler options: '%s'"), e)
             return {}

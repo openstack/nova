@@ -17,7 +17,6 @@
 import contextlib
 import cStringIO
 import hashlib
-import json
 import os
 import time
 
@@ -26,6 +25,7 @@ from oslo.config import cfg
 from nova import conductor
 from nova import db
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova import test
@@ -501,7 +501,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
             d = {'sha1': '21323454'}
             with open('%s.info' % fname, 'w') as f:
-                f.write(json.dumps(d))
+                f.write(jsonutils.dumps(d))
 
             image_cache_manager = imagecache.ImageCacheManager()
             image_cache_manager.unexplained_images = [fname]

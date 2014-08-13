@@ -17,7 +17,6 @@
 """The security groups extension."""
 
 import contextlib
-import json
 
 import webob
 from webob import exc
@@ -32,6 +31,7 @@ from nova import exception
 from nova.i18n import _
 from nova.network.security_group import neutron_driver
 from nova.network.security_group import openstack_driver
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import xmlutils
 from nova.virt import netutils
@@ -565,7 +565,7 @@ class SecurityGroupsOutputController(wsgi.Controller):
             else:
                 try:
                     # try converting to json
-                    req_obj = json.loads(req.body)
+                    req_obj = jsonutils.loads(req.body)
                     # Add security group to server, if no security group was in
                     # request add default since that is the group it is part of
                     servers[0][key] = req_obj['server'].get(

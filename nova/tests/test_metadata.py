@@ -19,7 +19,6 @@
 import base64
 import hashlib
 import hmac
-import json
 import re
 
 try:
@@ -43,6 +42,7 @@ from nova.db.sqlalchemy import api
 from nova import exception
 from nova.network import api as network_api
 from nova import objects
+from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests import fake_block_device
 from nova.tests import fake_instance
@@ -417,7 +417,7 @@ class OpenStackMetadataTestCase(test.TestCase):
         mdjson = mdinst.lookup("/openstack/2012-08-10/meta_data.json")
         mdjson = mdinst.lookup("/openstack/latest/meta_data.json")
 
-        mddict = json.loads(mdjson)
+        mddict = jsonutils.loads(mdjson)
 
         self.assertEqual(mddict['uuid'], self.instance['uuid'])
         self.assertIn('files', mddict)
@@ -447,7 +447,7 @@ class OpenStackMetadataTestCase(test.TestCase):
         mdinst = fake_InstanceMetadata(self.stubs, inst, extra_md=extra)
 
         mdjson = mdinst.lookup("/openstack/2012-08-10/meta_data.json")
-        mddict = json.loads(mdjson)
+        mddict = jsonutils.loads(mdjson)
 
         for key, val in extra.iteritems():
             self.assertEqual(mddict[key], val)
@@ -485,20 +485,21 @@ class OpenStackMetadataTestCase(test.TestCase):
 
         # verify that 2013-04-04 has the 'random' field
         mdjson = mdinst.lookup("/openstack/2013-04-04/meta_data.json")
-        mddict = json.loads(mdjson)
+        mddict = jsonutils.loads(mdjson)
 
         self.assertIn("random_seed", mddict)
         self.assertEqual(len(base64.b64decode(mddict["random_seed"])), 512)
 
         # verify that older version do not have it
         mdjson = mdinst.lookup("/openstack/2012-08-10/meta_data.json")
-        self.assertNotIn("random_seed", json.loads(mdjson))
+        self.assertNotIn("random_seed", jsonutils.loads(mdjson))
 
     def test_no_dashes_in_metadata(self):
         # top level entries in meta_data should not contain '-' in their name
         inst = self.instance.obj_clone()
         mdinst = fake_InstanceMetadata(self.stubs, inst)
-        mdjson = json.loads(mdinst.lookup("/openstack/latest/meta_data.json"))
+        mdjson = jsonutils.loads(
+            mdinst.lookup("/openstack/latest/meta_data.json"))
 
         self.assertEqual([], [k for k in mdjson.keys() if k.find("-") != -1])
 
@@ -534,7 +535,7 @@ class OpenStackMetadataTestCase(test.TestCase):
 
         # verify that 2013-10-17 has the vendor_data.json file
         vdpath = "/openstack/2013-10-17/vendor_data.json"
-        vd = json.loads(mdinst.lookup(vdpath))
+        vd = jsonutils.loads(mdinst.lookup(vdpath))
 
         # the instance should be passed through, and our class copies the
         # uuid through to 'inst_uuid'.

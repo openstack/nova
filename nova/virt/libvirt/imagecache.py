@@ -21,7 +21,6 @@ http://wiki.openstack.org/nova-image-cache-management.
 """
 
 import hashlib
-import json
 import os
 import re
 import time
@@ -206,7 +205,7 @@ def write_stored_info(target, field=None, value=None):
         d['%s-timestamp' % field] = time.time()
 
         with open(info_file, 'w') as f:
-            f.write(json.dumps(d))
+            f.write(jsonutils.dumps(d))
 
     write_file(info_file, field, value)
 

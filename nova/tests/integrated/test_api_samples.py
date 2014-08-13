@@ -17,7 +17,6 @@ import base64
 import copy
 import datetime
 import inspect
-import json
 import os
 import re
 import urllib
@@ -2128,7 +2127,7 @@ class ConsoleAuthTokensSampleJsonTests(ServersSampleBase):
                       "Console_auth_tokens")
 
     def _get_console_url(self, data):
-        return json.loads(data)["console"]["url"]
+        return jsonutils.loads(data)["console"]["url"]
 
     def _get_console_token(self, uuid):
         response = self._do_post('servers/%s/action' % uuid,
@@ -2600,7 +2599,7 @@ class OsNetworksJsonTests(ApiSampleTestBaseV2):
 
     def test_delete_network(self):
         response = self._do_post('os-tenant-networks', "networks-post-req", {})
-        net = json.loads(response.read())
+        net = jsonutils.loads(response.read())
         response = self._do_delete('os-tenant-networks/%s' %
                                                 net["network"]["id"])
         self.assertEqual(response.status, 202)

@@ -17,7 +17,6 @@
 """Instance Metadata information."""
 
 import base64
-import json
 import os
 import posixpath
 
@@ -33,6 +32,7 @@ from nova import network
 from nova import objects
 from nova.objects import base as obj_base
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import utils
@@ -327,7 +327,7 @@ class InstanceMetadata():
             metadata['random_seed'] = base64.b64encode(os.urandom(512))
 
         self.set_mimetype(MIME_TYPE_APPLICATION_JSON)
-        return json.dumps(metadata)
+        return jsonutils.dumps(metadata)
 
     def _handle_content(self, path_tokens):
         if len(path_tokens) == 1:
@@ -361,7 +361,7 @@ class InstanceMetadata():
     def _vendor_data(self, version, path):
         if self._check_os_version(HAVANA, version):
             self.set_mimetype(MIME_TYPE_APPLICATION_JSON)
-            return json.dumps(self.vddriver.get())
+            return jsonutils.dumps(self.vddriver.get())
         raise KeyError(path)
 
     def _check_version(self, required, requested, versions=VERSIONS):
@@ -440,7 +440,7 @@ class InstanceMetadata():
                 pass
 
             filepath = os.path.join('ec2', version, 'meta-data.json')
-            yield (filepath, json.dumps(data['meta-data']))
+            yield (filepath, jsonutils.dumps(data['meta-data']))
 
         ALL_OPENSTACK_VERSIONS = OPENSTACK_VERSIONS + ["latest"]
         for version in ALL_OPENSTACK_VERSIONS:

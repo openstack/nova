@@ -13,13 +13,13 @@
 #    under the License.
 
 
-import json
 import os
 import time
 
 from oslo.config import cfg
 
 from nova.i18n import _
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import utils
 
@@ -59,7 +59,7 @@ def register_storage_use(storage_path, hostname):
         if os.path.exists(id_path):
             with open(id_path) as f:
                 try:
-                    d = json.loads(f.read())
+                    d = jsonutils.loads(f.read())
                 except ValueError:
                     LOG.warning(_("Cannot decode JSON from %(id_path)s"),
                                 {"id_path": id_path})
@@ -67,7 +67,7 @@ def register_storage_use(storage_path, hostname):
         d[hostname] = time.time()
 
         with open(id_path, 'w') as f:
-            f.write(json.dumps(d))
+            f.write(jsonutils.dumps(d))
 
     return do_register_storage_use(storage_path, hostname)
 
@@ -97,7 +97,7 @@ def get_storage_users(storage_path):
         if os.path.exists(id_path):
             with open(id_path) as f:
                 try:
-                    d = json.loads(f.read())
+                    d = jsonutils.loads(f.read())
                 except ValueError:
                     LOG.warning(_("Cannot decode JSON from %(id_path)s"),
                                 {"id_path": id_path})
