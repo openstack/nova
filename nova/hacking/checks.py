@@ -286,6 +286,23 @@ def check_explicit_underscore_import(logical_line, filename):
         yield(0, "N323: Found use of _() without explicit import of _ !")
 
 
+def use_jsonutils(logical_line, filename):
+    # the code below that path is not meant to be executed from neutron
+    # tree where jsonutils module is present, so don't enforce its usage
+    # for this subdirectory
+    if "plugins/xenserver" in filename:
+        return
+
+    msg = "N323: jsonutils.%(fun)s must be used instead of json.%(fun)s"
+
+    if "json." in logical_line:
+        json_funcs = ['dumps', 'dump', 'loads', 'load']
+        for f in json_funcs:
+            pos = logical_line.find('json.%s' % f)
+            if pos != -1:
+                return (pos, msg % {'fun': f})
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -303,3 +320,4 @@ def factory(register):
     register(validate_log_translations)
     register(no_mutable_default_args)
     register(check_explicit_underscore_import)
+    register(use_jsonutils)
