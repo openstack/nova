@@ -502,6 +502,23 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                     self[field] = current[field]
         self.obj_reset_changes()
 
+    def _load_generic(self, attrname):
+        instance = self.__class__.get_by_uuid(self._context,
+                                              uuid=self.uuid,
+                                              expected_attrs=[attrname])
+
+        # NOTE(danms): Never allow us to recursively-load
+        if instance.obj_attr_is_set(attrname):
+            self[attrname] = instance[attrname]
+        else:
+            raise exception.ObjectActionError(
+                action='obj_load_attr',
+                reason='loading %s requires recursion' % attrname)
+
+    def _load_fault(self):
+        self.fault = objects.InstanceFault.get_latest_for_instance(
+            self._context, self.uuid)
+
     def obj_load_attr(self, attrname):
         if attrname not in INSTANCE_OPTIONAL_ATTRS:
             raise exception.ObjectActionError(
@@ -517,17 +534,13 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                    'uuid': self.uuid,
                    })
         # FIXME(comstud): This should be optimized to only load the attr.
-        instance = self.__class__.get_by_uuid(self._context,
-                                              uuid=self.uuid,
-                                              expected_attrs=[attrname])
-
-        # NOTE(danms): Never allow us to recursively-load
-        if instance.obj_attr_is_set(attrname):
-            self[attrname] = instance[attrname]
+        if attrname == 'fault':
+            # NOTE(danms): We handle fault differently here so that we
+            # can be more efficient
+            self._load_fault()
         else:
-            raise exception.ObjectActionError(
-                action='obj_load_attr',
-                reason='loading %s requires recursion' % attrname)
+            self._load_generic(attrname)
+        self.obj_reset_changes([attrname])
 
     def get_flavor(self, namespace=None):
         prefix = ('%s_' % namespace) if namespace is not None else ''
