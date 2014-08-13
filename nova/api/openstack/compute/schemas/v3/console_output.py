@@ -15,19 +15,22 @@
 get_console_output = {
     'type': 'object',
     'properties': {
-        'get_console_output': {
+        'os-getConsoleOutput': {
             'type': 'object',
             'properties': {
                 'length': {
-                    'type': ['integer', 'string'],
+                    'type': ['integer', 'string', 'null'],
                     'pattern': '^-?[0-9]+$',
                     # NOTE: -1 means an unlimited length.
+                    # TODO(cyeoh): None also means unlimited length
+                    # and is supported for v2 backwards compatibility
+                    # Should remove in the future with a microversion
                     'minimum': -1,
                 },
             },
             'additionalProperties': False,
         },
     },
-    'required': ['get_console_output'],
+    'required': ['os-getConsoleOutput'],
     'additionalProperties': False,
 }
