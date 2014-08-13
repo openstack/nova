@@ -152,8 +152,7 @@ class VMwareVMOps(object):
                       exc_info=True)
 
     def _get_vmdk_path(self, ds_name, folder, name):
-        path = "%s/%s.vmdk" % (folder, name)
-        return ds_util.build_datastore_path(ds_name, path)
+        return str(ds_util.DatastorePath(ds_name, folder, '%s.vmdk' % name))
 
     def _get_disk_format(self, image_meta):
         disk_format = image_meta.get('disk_format')
@@ -552,13 +551,12 @@ class VMwareVMOps(object):
                                                               dc_info.name,
                                                               instance.uuid,
                                                               cookies)
-                uploaded_iso_path = ds_util.build_datastore_path(
-                    datastore.name,
-                    uploaded_iso_path)
+                uploaded_iso_path = ds_util.DatastorePath(datastore.name,
+                                                          uploaded_iso_path)
                 self._attach_cdrom_to_vm(
                     vm_ref, instance,
                     datastore.ref,
-                    uploaded_iso_path)
+                    str(uploaded_iso_path))
 
         else:
             # Attach the root disk to the VM.

@@ -37,12 +37,6 @@ class DsUtilTestCase(test.NoDBTestCase):
         super(DsUtilTestCase, self).tearDown()
         fake.reset()
 
-    def test_build_datastore_path(self):
-        path = ds_util.build_datastore_path('ds', 'folder')
-        self.assertEqual('[ds] folder', path)
-        path = ds_util.build_datastore_path('ds', 'folder/file')
-        self.assertEqual('[ds] folder/file', path)
-
     def test_file_delete(self):
         def fake_call_method(module, method, *args, **kwargs):
             self.assertEqual('DeleteDatastoreFile_Task', method)

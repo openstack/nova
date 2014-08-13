@@ -170,12 +170,6 @@ class DatastorePath(object):
         return cls(datastore_name, path.strip())
 
 
-# TODO(vui): remove after converting all callers to use Datastore.build_path()
-def build_datastore_path(datastore_name, path):
-    """Build the datastore compliant path."""
-    return str(DatastorePath(datastore_name, path))
-
-
 # NOTE(mdbooth): this convenience function is temporarily duplicated in
 # vm_util. The correct fix is to handle paginated results as they are returned
 # from the relevant vim_util function. However, vim_util is currently
