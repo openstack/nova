@@ -6833,11 +6833,10 @@ class ComputeTestCase(BaseTestCase):
     def test_default_block_device_names_empty_instance_root_dev(self):
         instance, bdms = self._get_instance_and_bdm_for_dev_defaults_tests()
         instance.root_device_name = None
-        self.mox.StubOutWithMock(self.compute, '_instance_update')
+        self.mox.StubOutWithMock(objects.Instance, 'save')
         self.mox.StubOutWithMock(self.compute,
                                  '_default_device_names_for_instance')
-        self.compute._instance_update(self.context, instance.uuid,
-                                      root_device_name='/dev/vda')
+        instance.save().AndReturn(None)
         self.compute._default_device_names_for_instance(instance,
                                                         '/dev/vda', [], [],
                                                         [bdm for bdm in bdms])
@@ -6845,11 +6844,11 @@ class ComputeTestCase(BaseTestCase):
         self.compute._default_block_device_names(self.context,
                                                  instance,
                                                  {}, bdms)
+        self.assertEqual('/dev/vda', instance.root_device_name)
 
     def test_default_block_device_names_empty_root_device(self):
         instance, bdms = self._get_instance_and_bdm_for_dev_defaults_tests()
         bdms[0]['device_name'] = None
-        self.mox.StubOutWithMock(self.compute, '_instance_update')
         self.mox.StubOutWithMock(self.compute,
                                  '_default_device_names_for_instance')
         self.mox.StubOutWithMock(objects.BlockDeviceMapping, 'save')
@@ -6866,7 +6865,7 @@ class ComputeTestCase(BaseTestCase):
         instance, bdms = self._get_instance_and_bdm_for_dev_defaults_tests()
         instance.root_device_name = None
         bdms[0]['device_name'] = None
-        self.mox.StubOutWithMock(self.compute, '_instance_update')
+        self.mox.StubOutWithMock(objects.Instance, 'save')
         self.mox.StubOutWithMock(objects.BlockDeviceMapping, 'save')
         self.mox.StubOutWithMock(self.compute,
                                  '_default_root_device_name')
@@ -6875,8 +6874,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute._default_root_device_name(instance, mox.IgnoreArg(),
                                                bdms[0]).AndReturn('/dev/vda')
-        self.compute._instance_update(self.context, instance.uuid,
-                                      root_device_name='/dev/vda')
+        instance.save().AndReturn(None)
         bdms[0].save().AndReturn(None)
         self.compute._default_device_names_for_instance(instance,
                                                         '/dev/vda', [], [],
@@ -6885,6 +6883,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute._default_block_device_names(self.context,
                                                  instance,
                                                  {}, bdms)
+        self.assertEqual('/dev/vda', instance.root_device_name)
 
     def test_default_block_device_names_with_blank_volumes(self):
         instance = self._create_fake_instance_obj()
@@ -6927,7 +6926,7 @@ class ComputeTestCase(BaseTestCase):
         with contextlib.nested(
             mock.patch.object(self.compute, '_default_root_device_name',
                               return_value='/dev/vda'),
-            mock.patch.object(self.compute, '_instance_update'),
+            mock.patch.object(objects.Instance, 'save'),
             mock.patch.object(objects.BlockDeviceMapping, 'save'),
             mock.patch.object(self.compute,
                               '_default_device_names_for_instance')
@@ -6937,8 +6936,8 @@ class ComputeTestCase(BaseTestCase):
                                                      image_meta, bdms)
             default_root_device.assert_called_once_with(instance, image_meta,
                                                         bdms[0])
-            instance_update.assert_called_once_with(
-                self.context, instance.uuid, root_device_name='/dev/vda')
+            instance_update.assert_called_once_with()
+            self.assertEqual('/dev/vda', instance.root_device_name)
             self.assertTrue(object_save.called)
             default_device_names.assert_called_once_with(instance,
                 '/dev/vda', [bdms[-2]], [bdms[-1]],
