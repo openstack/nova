@@ -71,7 +71,7 @@ def _translate_floating_ip_view(floating_ip):
     except (TypeError, KeyError, AttributeError):
         result['fixed_ip'] = None
     try:
-        result['instance_id'] = floating_ip['instance']['uuid']
+        result['instance_id'] = floating_ip['fixed_ip']['instance_uuid']
     except (TypeError, KeyError, AttributeError):
         result['instance_id'] = None
     return {'floating_ip': result}
@@ -107,17 +107,6 @@ class FloatingIPController(object):
         self.network_api = network.API()
         super(FloatingIPController, self).__init__()
 
-    def _normalize_ip(self, floating_ip):
-        # NOTE(vish): translate expects instance to be in the floating_ip
-        #             dict but it is returned in the fixed_ip dict by
-        #             nova-network
-        fixed_ip = floating_ip.get('fixed_ip')
-        if 'instance' not in floating_ip:
-            if fixed_ip:
-                floating_ip['instance'] = fixed_ip['instance']
-            else:
-                floating_ip['instance'] = None
-
     @wsgi.serializers(xml=FloatingIPTemplate)
     def show(self, req, id):
         """Return data about the given floating ip."""
@@ -130,8 +119,6 @@ class FloatingIPController(object):
             msg = _("Floating ip not found for id %s") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
 
-        self._normalize_ip(floating_ip)
-
         return _translate_floating_ip_view(floating_ip)
 
     @wsgi.serializers(xml=FloatingIPsTemplate)
@@ -141,9 +128,6 @@ class FloatingIPController(object):
         authorize(context)
 
         floating_ips = self.network_api.get_floating_ips_by_project(context)
-
-        for floating_ip in floating_ips:
-            self._normalize_ip(floating_ip)
 
         return _translate_floating_ips_view(floating_ips)
 

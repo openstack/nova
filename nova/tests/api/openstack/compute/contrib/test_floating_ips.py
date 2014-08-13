@@ -52,6 +52,7 @@ def network_api_get_floating_ips_by_project(self, context):
              'address': '10.10.10.10',
              'pool': 'nova',
              'fixed_ip': {'address': '10.0.0.1',
+                          'instance_uuid': FAKE_UUID,
                           'instance': {'uuid': FAKE_UUID}}},
             {'id': 2,
              'pool': 'nova', 'interface': 'eth0',
@@ -171,7 +172,6 @@ class FloatingIpTest(test.TestCase):
                                                     floating_ip_address)
         # NOTE(vish): network_get uses the id not the address
         floating_ip = db.floating_ip_get(self.context, floating_ip['id'])
-        self.controller._normalize_ip(floating_ip)
         view = floating_ips._translate_floating_ip_view(floating_ip)
         self.assertIn('floating_ip', view)
         self.assertTrue(view['floating_ip']['id'])
@@ -182,7 +182,6 @@ class FloatingIpTest(test.TestCase):
     def test_translate_floating_ip_view_dict(self):
         floating_ip = {'id': 0, 'address': '10.0.0.10', 'pool': 'nova',
                        'fixed_ip': None}
-        self.controller._normalize_ip(floating_ip)
         view = floating_ips._translate_floating_ip_view(floating_ip)
         self.assertIn('floating_ip', view)
 
@@ -266,6 +265,7 @@ class FloatingIpTest(test.TestCase):
         def get_floating_ip(self, context, id):
             return {'id': 1, 'address': '10.10.10.10', 'pool': 'nova',
                     'fixed_ip': {'address': '10.0.0.1',
+                                 'instance_uuid': FAKE_UUID,
                                  'instance': {'uuid': FAKE_UUID}}}
 
         self.stubs.Set(network.api.API, "get_floating_ip", get_floating_ip)
