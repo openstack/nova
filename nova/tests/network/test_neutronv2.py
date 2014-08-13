@@ -339,6 +339,13 @@ class TestNeutronv2Base(test.TestCase):
         self.addCleanup(self.stubs.UnsetAll)
 
     def _stub_allocate_for_instance(self, net_idx=1, **kwargs):
+        # TODO(mriedem): Remove this conversion when all neutronv2 APIs are
+        # converted to handling instance objects.
+        self.instance = fake_instance.fake_instance_obj(self.context,
+                                                        **self.instance)
+        self.instance2 = fake_instance.fake_instance_obj(self.context,
+                                                         **self.instance2)
+
         api = neutronapi.API()
         self.mox.StubOutWithMock(api, 'get_instance_nw_info')
         has_portbinding = False
@@ -379,7 +386,7 @@ class TestNeutronv2Base(test.TestCase):
                                       'network_id': 'my_netid1',
                                       'mac_address': 'my_mac1',
                                       'device_id': kwargs.get('_device') and
-                                                   self.instance2['uuid'] or
+                                                   self.instance2.uuid or
                                                    ''}})
                         ports['my_netid1'] = [self.port_data1[0],
                                             self.port_data3[0]]
@@ -393,7 +400,7 @@ class TestNeutronv2Base(test.TestCase):
                                       'network_id': 'my_netid1',
                                       'mac_address': 'my_mac1',
                                       'device_id': kwargs.get('_device') and
-                                                   self.instance2['uuid'] or
+                                                   self.instance2.uuid or
                                                    ''}})
                         ports[port_id] = self.port_data1[0]
                         n_id = 'my_netid1'
@@ -417,7 +424,7 @@ class TestNeutronv2Base(test.TestCase):
             self.moxed_client.list_networks(
                 **mox_list_params).AndReturn({'networks': nets})
         else:
-            mox_list_params = {'tenant_id': self.instance['project_id'],
+            mox_list_params = {'tenant_id': self.instance.project_id,
                                'shared': False}
             self.moxed_client.list_networks(
                 **mox_list_params).AndReturn({'networks': nets})
@@ -436,7 +443,7 @@ class TestNeutronv2Base(test.TestCase):
         for net_id, fixed_ip, port_id in ordered_networks:
             port_req_body = {
                 'port': {
-                    'device_id': self.instance['uuid'],
+                    'device_id': self.instance.uuid,
                     'device_owner': 'compute:nova',
                 },
             }
@@ -478,7 +485,7 @@ class TestNeutronv2Base(test.TestCase):
                 port_req_body['port']['network_id'] = net_id
                 port_req_body['port']['admin_state_up'] = True
                 port_req_body['port']['tenant_id'] = \
-                    self.instance['project_id']
+                    self.instance.project_id
                 if macs:
                     port_req_body['port']['mac_address'] = macs.pop()
                 if has_portbinding:
@@ -948,9 +955,11 @@ class TestNeutronv2(TestNeutronv2Base):
 
     def test_allocate_for_instance_no_networks(self):
         """verify the exception thrown when there are no networks defined."""
+        self.instance = fake_instance.fake_instance_obj(self.context,
+                                                        **self.instance)
         api = neutronapi.API()
         self.moxed_client.list_networks(
-            tenant_id=self.instance['project_id'],
+            tenant_id=self.instance.project_id,
             shared=False).AndReturn(
                 {'networks': model.NetworkInfo([])})
         self.moxed_client.list_networks(shared=True).AndReturn(
@@ -966,6 +975,8 @@ class TestNeutronv2(TestNeutronv2Base):
         Mox to raise exception when creating a second port.
         In this case, the code should delete the first created port.
         """
+        self.instance = fake_instance.fake_instance_obj(self.context,
+                                                        **self.instance)
         api = neutronapi.API()
         self.mox.StubOutWithMock(api, '_populate_neutron_extension_values')
         self.mox.StubOutWithMock(api, '_has_port_binding_extension')
@@ -980,7 +991,7 @@ class TestNeutronv2(TestNeutronv2Base):
         for network in self.nets2:
             binding_port_req_body = {
                 'port': {
-                    'device_id': self.instance['uuid'],
+                    'device_id': self.instance.uuid,
                     'device_owner': 'compute:nova',
                 },
             }
@@ -988,7 +999,7 @@ class TestNeutronv2(TestNeutronv2Base):
                 'port': {
                     'network_id': network['id'],
                     'admin_state_up': True,
-                    'tenant_id': self.instance['project_id'],
+                    'tenant_id': self.instance.project_id,
                 },
             }
             port_req_body['port'].update(binding_port_req_body['port'])
@@ -1018,6 +1029,8 @@ class TestNeutronv2(TestNeutronv2Base):
         Mox to raise exception when creating the first port.
         In this case, the code should not delete any ports.
         """
+        self.instance = fake_instance.fake_instance_obj(self.context,
+                                                        **self.instance)
         api = neutronapi.API()
         self.mox.StubOutWithMock(api, '_populate_neutron_extension_values')
         self.mox.StubOutWithMock(api, '_has_port_binding_extension')
@@ -1030,7 +1043,7 @@ class TestNeutronv2(TestNeutronv2Base):
             id=['my_netid1', 'my_netid2']).AndReturn({'networks': self.nets2})
         binding_port_req_body = {
             'port': {
-                'device_id': self.instance['uuid'],
+                'device_id': self.instance.uuid,
                 'device_owner': 'compute:nova',
             },
         }
@@ -1038,8 +1051,8 @@ class TestNeutronv2(TestNeutronv2Base):
             'port': {
                 'network_id': self.nets2[0]['id'],
                 'admin_state_up': True,
-                'device_id': self.instance['uuid'],
-                'tenant_id': self.instance['project_id'],
+                'device_id': self.instance.uuid,
+                'tenant_id': self.instance.project_id,
             },
         }
         api._populate_neutron_extension_values(self.context,
@@ -1055,11 +1068,13 @@ class TestNeutronv2(TestNeutronv2Base):
     def test_allocate_for_instance_no_port_or_network(self):
         class BailOutEarly(Exception):
             pass
+        self.instance = fake_instance.fake_instance_obj(self.context,
+                                                        **self.instance)
         api = neutronapi.API()
         self.mox.StubOutWithMock(api, '_get_available_networks')
         # Make sure we get an empty list and then bail out of the rest
         # of the function
-        api._get_available_networks(self.context, self.instance['project_id'],
+        api._get_available_networks(self.context, self.instance.project_id,
                                     []).AndRaise(BailOutEarly)
         self.mox.ReplayAll()
         self.assertRaises(BailOutEarly,

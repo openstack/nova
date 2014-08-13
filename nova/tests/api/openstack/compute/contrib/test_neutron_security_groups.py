@@ -30,6 +30,7 @@ from nova import exception
 from nova.network import neutronv2
 from nova.network.neutronv2 import api as neutron_api
 from nova.network.security_group import neutron_driver
+from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack.compute.contrib import test_security_groups
@@ -174,16 +175,16 @@ class TestNeutronSecurityGroups(
     def test_delete_security_group_in_use(self):
         sg = self._create_sg_template().get('security_group')
         self._create_network()
-        fake_instance = {'project_id': 'fake_tenant',
-                         'availability_zone': 'zone_one',
-                         'info_cache': {'network_info': []},
-                         'security_groups': [],
-                         'uuid': str(uuid.uuid4()),
-                         'display_name': 'test_instance'}
+        db_inst = fakes.stub_instance(id=1, nw_cache=[], security_groups=[])
+        _context = context.get_admin_context()
+        instance = instance_obj.Instance._from_db_object(
+            _context, instance_obj.Instance(), db_inst,
+            expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
         neutron = neutron_api.API()
-        neutron.allocate_for_instance(context.get_admin_context(),
-                                      fake_instance,
-                                      security_groups=[sg['id']])
+        with mock.patch.object(nova.db, 'instance_get_by_uuid',
+                               return_value=db_inst):
+            neutron.allocate_for_instance(_context, instance,
+                                          security_groups=[sg['id']])
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups/%s'
                                       % sg['id'])
