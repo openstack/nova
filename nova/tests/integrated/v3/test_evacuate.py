@@ -66,7 +66,7 @@ class EvacuateJsonTest(test_servers.ServersSampleBase):
             "onSharedStorage": 'False'
         }
         self._test_evacuate(req_subs, 'server-evacuate-req',
-                            'server-evacuate-resp', 202)
+                            'server-evacuate-resp', 200)
         rebuild_mock.assert_called_once_with(mock.ANY, instance=mock.ANY,
                 orig_image_ref=mock.ANY, image_ref=mock.ANY,
                 injected_files=mock.ANY, new_pass="MySecretPass",
@@ -81,7 +81,7 @@ class EvacuateJsonTest(test_servers.ServersSampleBase):
             "onSharedStorage": 'False'
         }
         self._test_evacuate(req_subs, 'server-evacuate-find-host-req',
-                            'server-evacuate-find-host-resp', 202)
+                            'server-evacuate-find-host-resp', 200)
 
         rebuild_mock.assert_called_once_with(mock.ANY, instance=mock.ANY,
                 orig_image_ref=mock.ANY, image_ref=mock.ANY,
