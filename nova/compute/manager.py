@@ -1672,10 +1672,10 @@ class ComputeManager(manager.Manager):
 
         if root_bdm.device_name:
             root_device_name = root_bdm.device_name
-            instance['root_device_name'] = root_device_name
+            instance.root_device_name = root_device_name
             update_instance = True
-        elif instance['root_device_name']:
-            root_device_name = instance['root_device_name']
+        elif instance.root_device_name:
+            root_device_name = instance.root_device_name
             root_bdm.device_name = root_device_name
             update_root_bdm = True
         else:
@@ -1683,12 +1683,12 @@ class ComputeManager(manager.Manager):
                                                               image_meta,
                                                               root_bdm)
 
-            instance['root_device_name'] = root_device_name
+            instance.root_device_name = root_device_name
             root_bdm.device_name = root_device_name
             update_instance = update_root_bdm = True
 
         if update_instance:
-            self._instance_update(context, instance['uuid'],
+            self._instance_update(context, instance.uuid,
                                   root_device_name=root_device_name)
         if update_root_bdm:
             root_bdm.save()
