@@ -153,6 +153,11 @@ class NetworkAPI(base.Base):
         """Removes (deallocates) a floating ip with address from a project."""
         raise NotImplementedError()
 
+    def disassociate_and_release_floating_ip(self, context, instance,
+                                           floating_ip):
+        """Removes (deallocates) and deletes the floating ip."""
+        raise NotImplementedError()
+
     def associate_floating_ip(self, context, instance,
                               floating_address, fixed_address,
                               affect_auto_assigned=False):

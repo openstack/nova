@@ -1081,9 +1081,24 @@ class API(base_api.NetworkAPI):
         # since it is not used anywhere in nova code and I could
         # find why this parameter exists.
 
+        self._release_floating_ip(context, address)
+
+    def disassociate_and_release_floating_ip(self, context, instance,
+                                           floating_ip):
+        """Removes (deallocates) and deletes the floating ip.
+
+        This api call was added to allow this to be done in one operation
+        if using neutron.
+        """
+        self._release_floating_ip(context, floating_ip['address'],
+                                  raise_if_associated=False)
+
+    def _release_floating_ip(self, context, address,
+                             raise_if_associated=True):
         client = neutronv2.get_client(context)
         fip = self._get_floating_ip_by_address(client, address)
-        if fip['port_id']:
+
+        if raise_if_associated and fip['port_id']:
             raise exception.FloatingIpAssociated(address=address)
         client.delete_floatingip(fip['id'])
 
