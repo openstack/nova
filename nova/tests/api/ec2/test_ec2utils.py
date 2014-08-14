@@ -42,3 +42,20 @@ class EC2UtilsTestCase(test.TestCase):
         smap.create()
         smap_uuid = ec2utils.get_snapshot_uuid_from_int_id(self.ctxt, smap.id)
         self.assertEqual(smap.uuid, smap_uuid)
+
+    def test_id_to_glance_id(self):
+        s3imap = objects.S3ImageMapping(self.ctxt, uuid='fake-uuid')
+        s3imap.create()
+        uuid = ec2utils.id_to_glance_id(self.ctxt, s3imap.id)
+        self.assertEqual(uuid, s3imap.uuid)
+
+    def test_glance_id_to_id(self):
+        s3imap = objects.S3ImageMapping(self.ctxt, uuid='fake-uuid')
+        s3imap.create()
+        s3imap_id = ec2utils.glance_id_to_id(self.ctxt, s3imap.uuid)
+        self.assertEqual(s3imap_id, s3imap.id)
+
+    def test_glance_id_to_id_creates_mapping(self):
+        s3imap_id = ec2utils.glance_id_to_id(self.ctxt, 'fake-uuid')
+        s3imap = objects.S3ImageMapping.get_by_id(self.ctxt, s3imap_id)
+        self.assertEqual('fake-uuid', s3imap.uuid)
