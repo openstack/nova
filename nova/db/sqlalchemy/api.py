@@ -3476,6 +3476,30 @@ def get_snapshot_uuid_by_ec2_id(context, ec2_id):
     return result['uuid']
 
 
+@require_context
+def ec2_snapshot_get_by_ec2_id(context, ec2_id):
+    result = _ec2_snapshot_get_query(context).\
+                    filter_by(id=ec2_id).\
+                    first()
+
+    if not result:
+        raise exception.SnapshotNotFound(snapshot_id=ec2_id)
+
+    return result
+
+
+@require_context
+def ec2_snapshot_get_by_uuid(context, snapshot_uuid):
+    result = _ec2_snapshot_get_query(context).\
+                    filter_by(uuid=snapshot_uuid).\
+                    first()
+
+    if not result:
+        raise exception.SnapshotNotFound(snapshot_id=snapshot_uuid)
+
+    return result
+
+
 ###################
 
 
