@@ -125,11 +125,6 @@ class InterfaceAttachmentController(object):
 
         return self.show(req, server_id, vif['id'])
 
-    def update(self, req, server_id, id, body):
-        """Update a interface attachment.  We don't currently support this."""
-        msg = _("Attachments update is not supported")
-        raise exc.HTTPNotImplemented(explanation=msg)
-
     def delete(self, req, server_id, id):
         """Detach an interface from an instance."""
         context = req.environ['nova.context']

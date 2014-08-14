@@ -42,12 +42,6 @@ class IPsController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
         return instance
 
-    def create(self, req, server_id, body):
-        raise exc.HTTPNotImplemented()
-
-    def delete(self, req, server_id, id):
-        raise exc.HTTPNotImplemented()
-
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         instance = self._get_instance(context, server_id)
