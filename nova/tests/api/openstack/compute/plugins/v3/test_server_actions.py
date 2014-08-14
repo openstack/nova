@@ -155,7 +155,7 @@ class ServerActionsControllerTest(test.TestCase):
         body_map = {'resize': {'flavor_ref': '2'},
                     'reboot': {'type': 'HARD'},
                     'rebuild': {'image_ref': self.image_uuid,
-                                'admin_password': 'TNc53Dr8s7vw'}}
+                                'adminPass': 'TNc53Dr8s7vw'}}
 
         args_map = {'resize': (('2'), {}),
                     'confirm_resize': ((), {}),
@@ -269,7 +269,7 @@ class ServerActionsControllerTest(test.TestCase):
         body = robj.obj
 
         self.assertEqual(body['server']['image']['id'], '2')
-        self.assertEqual(len(body['server']['admin_password']),
+        self.assertEqual(len(body['server']['adminPass']),
                          CONF.password_length)
 
         self.assertEqual(robj['location'], self_href)
@@ -427,7 +427,7 @@ class ServerActionsControllerTest(test.TestCase):
         body = {
             "rebuild": {
                 "image_ref": self._image_href,
-                "admin_password": "asdf",
+                "adminPass": "asdf",
             },
         }
 
@@ -435,7 +435,7 @@ class ServerActionsControllerTest(test.TestCase):
         body = self.controller._action_rebuild(req, FAKE_UUID, body=body).obj
 
         self.assertEqual(body['server']['image']['id'], '2')
-        self.assertEqual(body['server']['admin_password'], 'asdf')
+        self.assertEqual(body['server']['adminPass'], 'asdf')
 
     def test_rebuild_admin_password_pass_disabled(self):
         # run with enable_instance_password disabled to verify admin_password
@@ -457,7 +457,7 @@ class ServerActionsControllerTest(test.TestCase):
         body = self.controller._action_rebuild(req, FAKE_UUID, body=body).obj
 
         self.assertEqual(body['server']['image']['id'], '2')
-        self.assertNotIn('admin_password', body['server'])
+        self.assertNotIn('adminPass', body['server'])
 
     def test_rebuild_server_not_found(self):
         def server_not_found(self, instance_id,

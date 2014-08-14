@@ -2,7 +2,7 @@
     "rebuild" : {
         "image_ref" : "%(glance_host)s/images/%(uuid)s",
         "name" : "%(name)s",
-        "admin_password" : "%(pass)s",
+        "adminPass" : "%(pass)s",
         "metadata" : {
             "meta_var" : "meta_val"
         },

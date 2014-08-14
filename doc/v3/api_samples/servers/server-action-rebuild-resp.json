@@ -10,7 +10,7 @@
                 }
             ]
         },
-        "admin_password": "seekr3t",
+        "adminPass": "seekr3t",
         "created": "2013-11-14T06:29:00Z",
         "flavor": {
             "id": "1",

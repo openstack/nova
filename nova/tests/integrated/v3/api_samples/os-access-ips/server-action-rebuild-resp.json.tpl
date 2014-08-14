@@ -10,7 +10,7 @@
                 }
             ]
         },
-        "admin_password": "%(password)s",
+        "adminPass": "%(password)s",
         "created": "%(isotime)s",
         "flavor": {
             "id": "1",
