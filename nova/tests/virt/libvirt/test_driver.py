@@ -567,21 +567,6 @@ class LibvirtConnTestCase(test.TestCase,
         inst = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self.assertPublicAPISignatures(inst)
 
-    def test_min_version_cap(self):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-
-        with mock.patch.object(drvr._conn, 'getLibVersion') as mock_ver:
-            mock_ver.return_value = utils.convert_version_to_int((1, 5, 0))
-
-            self.flags(version_cap="2.0.0", group="libvirt")
-            self.assertTrue(drvr._has_min_version((1, 4, 0)))
-
-            self.flags(version_cap="1.3.0", group="libvirt")
-            self.assertFalse(drvr._has_min_version((1, 4, 0)))
-
-            self.flags(version_cap="", group="libvirt")
-            self.assertTrue(drvr._has_min_version((1, 4, 0)))
-
     def test_set_host_enabled_with_disable(self):
         # Tests disabling an enabled host.
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
