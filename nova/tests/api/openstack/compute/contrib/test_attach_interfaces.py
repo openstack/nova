@@ -373,4 +373,5 @@ class InterfaceAttachTests(test.NoDBTestCase):
                           jsonutils.loads(req.body))
         attach_mock.assert_called_once_with(self.context, {}, None, None, None)
         get_mock.assert_called_once_with(self.context, FAKE_UUID1,
-                                         want_objects=True)
+                                         want_objects=True,
+                                         expected_attrs=None)
