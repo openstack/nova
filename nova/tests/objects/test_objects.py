@@ -940,6 +940,7 @@ object_data = {
     'PciDeviceList': '1.0-5da7b4748a5a2594bae2cd0bd211cca2',
     'Quotas': '1.1-7897deef00e6cd3095c8916f68d24418',
     'QuotasNoOp': '1.1-4b06fd721c586b907ddd6543a00d6c2f',
+    'S3ImageMapping': '1.0-9225943a44a91ad0349b9fd8bd3f3ce2',
     'SecurityGroup': '1.1-bba0e72865e0953793e796571692453b',
     'SecurityGroupList': '1.0-9513387aabf08c2a7961ac4da4315ed4',
     'SecurityGroupRule': '1.0-fdd020bdd7eb8bac744ad6f9a4ef8165',

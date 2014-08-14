@@ -130,3 +130,41 @@ class EC2SnapshotMapping(base.NovaPersistentObject, base.NovaObject):
         db_smap = db.ec2_snapshot_get_by_ec2_id(context, ec2_id)
         if db_smap:
             return cls._from_db_object(context, cls(context), db_smap)
+
+
+class S3ImageMapping(base.NovaPersistentObject, base.NovaObject):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'id': fields.IntegerField(read_only=True),
+        'uuid': fields.UUIDField(),
+    }
+
+    @staticmethod
+    def _from_db_object(context, s3imap, db_s3imap):
+        for field in s3imap.fields:
+            s3imap[field] = db_s3imap[field]
+        s3imap._context = context
+        s3imap.obj_reset_changes()
+        return s3imap
+
+    @base.remotable
+    def create(self, context):
+        if self.obj_attr_is_set('id'):
+            raise exception.ObjectActionError(action='create',
+                                              reason='already created')
+        db_s3imap = db.s3_image_create(context, self.uuid)
+        self._from_db_object(context, self, db_s3imap)
+
+    @base.remotable_classmethod
+    def get_by_uuid(cls, context, s3_image_uuid):
+        db_s3imap = db.s3_image_get_by_uuid(context, s3_image_uuid)
+        if db_s3imap:
+            return cls._from_db_object(context, cls(context), db_s3imap)
+
+    @base.remotable_classmethod
+    def get_by_id(cls, context, s3_id):
+        db_s3imap = db.s3_image_get(context, s3_id)
+        if db_s3imap:
+            return cls._from_db_object(context, cls(context), db_s3imap)
