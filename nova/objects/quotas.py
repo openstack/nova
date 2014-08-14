@@ -49,7 +49,8 @@ def ids_from_server_group(context, server_group):
 class Quotas(base.NovaObject):
     # Version 1.0: initial version
     # Version 1.1: Added create_limit() and update_limit()
-    VERSION = '1.1'
+    # Version 1.2: Added limit_check() and count()
+    VERSION = '1.2'
 
     fields = {
         'reservations': fields.ListOfStringsField(nullable=True),
@@ -117,6 +118,18 @@ class Quotas(base.NovaObject):
                               user_id=self.user_id)
         self.reservations = None
         self.obj_reset_changes()
+
+    @base.remotable_classmethod
+    def limit_check(cls, context, project_id=None, user_id=None, **values):
+        """Check quota limits."""
+        return quota.QUOTAS.limit_check(
+            context, project_id=project_id, user_id=user_id, **values)
+
+    @base.remotable_classmethod
+    def count(cls, context, resource, *args, **kwargs):
+        """Count a resource."""
+        return quota.QUOTAS.count(
+            context, resource, *args, **kwargs)
 
     @base.remotable_classmethod
     def create_limit(cls, context, project_id, resource, limit, user_id=None):
