@@ -1,9 +1,9 @@
 {
     "servers": [
         {
-            "os-extended-server-attributes:host": "%(compute_host)s",
-            "os-extended-server-attributes:hypervisor_hostname": "%(hypervisor_hostname)s",
-            "os-extended-server-attributes:instance_name": "%(instance_name)s",
+            "OS-EXT-SRV-ATTR:host": "%(compute_host)s",
+            "OS-EXT-SRV-ATTR:hypervisor_hostname": "%(hypervisor_hostname)s",
+            "OS-EXT-SRV-ATTR:instance_name": "%(instance_name)s",
             "updated": "%(isotime)s",
             "created": "%(isotime)s",
             "addresses": {
