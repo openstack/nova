@@ -293,7 +293,7 @@ def use_jsonutils(logical_line, filename):
     if "plugins/xenserver" in filename:
         return
 
-    msg = "N323: jsonutils.%(fun)s must be used instead of json.%(fun)s"
+    msg = "N324: jsonutils.%(fun)s must be used instead of json.%(fun)s"
 
     if "json." in logical_line:
         json_funcs = ['dumps(', 'dump(', 'loads(', 'load(']

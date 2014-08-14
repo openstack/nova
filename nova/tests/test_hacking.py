@@ -220,7 +220,7 @@ class HackingTestCase(test.NoDBTestCase):
 
     def test_use_jsonutils(self):
         def __get_msg(fun):
-            msg = ("N323: jsonutils.%(fun)s must be used instead of "
+            msg = ("N324: jsonutils.%(fun)s must be used instead of "
                    "json.%(fun)s" % {'fun': fun})
             return [(0, msg)]
 
