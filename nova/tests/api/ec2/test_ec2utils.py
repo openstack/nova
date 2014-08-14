@@ -36,3 +36,9 @@ class EC2UtilsTestCase(test.TestCase):
                                                          'fake-uuid')
         smap = objects.EC2SnapshotMapping.get_by_id(self.ctxt, smap_id)
         self.assertEqual('fake-uuid', smap.uuid)
+
+    def test_get_snapshot_uuid_from_int_id(self):
+        smap = objects.EC2SnapshotMapping(self.ctxt, uuid='fake-uuid')
+        smap.create()
+        smap_uuid = ec2utils.get_snapshot_uuid_from_int_id(self.ctxt, smap.id)
+        self.assertEqual(smap.uuid, smap_uuid)

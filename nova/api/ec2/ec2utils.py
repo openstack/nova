@@ -344,7 +344,8 @@ def get_int_id_from_snapshot_uuid(context, snapshot_uuid):
     if snapshot_uuid is None:
         return
     try:
-        return db.get_ec2_snapshot_id_by_uuid(context, snapshot_uuid)
+        smap = objects.EC2SnapshotMapping.get_by_uuid(context, snapshot_uuid)
+        return smap.id
     except exception.NotFound:
         smap = objects.EC2SnapshotMapping(context, uuid=snapshot_uuid)
         smap.create()
@@ -353,7 +354,8 @@ def get_int_id_from_snapshot_uuid(context, snapshot_uuid):
 
 @memoize
 def get_snapshot_uuid_from_int_id(context, int_id):
-    return db.get_snapshot_uuid_by_ec2_id(context, int_id)
+    smap = objects.EC2SnapshotMapping.get_by_id(context, int_id)
+    return smap.uuid
 
 
 _c2u = re.compile('(((?<=[a-z])[A-Z])|([A-Z](?![A-Z]|$)))')
