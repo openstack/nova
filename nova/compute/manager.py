@@ -4419,6 +4419,7 @@ class ComputeManager(manager.Manager):
         mountpoint = bdm['device_name']
         failed = False
         new_cinfo = None
+        resize_to = 0
         try:
             old_cinfo, new_cinfo = self._init_volume_connection(context,
                                                                 new_volume_id,
@@ -4426,7 +4427,12 @@ class ComputeManager(manager.Manager):
                                                                 connector,
                                                                 instance,
                                                                 bdm)
-            self.driver.swap_volume(old_cinfo, new_cinfo, instance, mountpoint)
+            old_vol_size = self.volume_api.get(context, old_volume_id)['size']
+            new_vol_size = self.volume_api.get(context, new_volume_id)['size']
+            if new_vol_size > old_vol_size:
+                resize_to = new_vol_size
+            self.driver.swap_volume(old_cinfo, new_cinfo, instance, mountpoint,
+                                    resize_to)
         except Exception:  # pylint: disable=W0702
             failed = True
             with excutils.save_and_reraise_exception():

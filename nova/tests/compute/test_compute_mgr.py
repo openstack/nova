@@ -1005,11 +1005,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         old_volume_id = uuidutils.generate_uuid()
         volumes[old_volume_id] = {'id': old_volume_id,
                                   'display_name': 'old_volume',
-                                  'status': 'detaching'}
+                                  'status': 'detaching',
+                                  'size': 1}
         new_volume_id = uuidutils.generate_uuid()
         volumes[new_volume_id] = {'id': new_volume_id,
                                   'display_name': 'new_volume',
-                                  'status': 'available'}
+                                  'status': 'available',
+                                  'size': 2}
 
         def fake_vol_api_begin_detaching(context, volume_id):
             self.assertTrue(uuidutils.is_uuid_like(volume_id))
@@ -1062,6 +1064,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         def fake_func_exc(*args, **kwargs):
             raise AttributeError  # Random exception
 
+        def fake_swap_volume(old_connection_info, new_connection_info,
+                             instance, mountpoint, resize_to):
+            self.assertEqual(resize_to, 2)
+
         self.stubs.Set(self.compute.volume_api, 'begin_detaching',
                        fake_vol_api_begin_detaching)
         self.stubs.Set(self.compute.volume_api, 'roll_detaching',
@@ -1082,7 +1088,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.stubs.Set(self.compute.driver, 'get_volume_connector',
                        lambda x: {})
         self.stubs.Set(self.compute.driver, 'swap_volume',
-                       lambda w, x, y, z: None)
+                       fake_swap_volume)
         self.stubs.Set(self.compute.volume_api, 'migrate_volume_completion',
                       fake_vol_migrate_volume_completion)
         self.stubs.Set(db, 'block_device_mapping_update',

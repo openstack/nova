@@ -239,7 +239,7 @@ class FakeDriver(driver.ComputeDriver):
             pass
 
     def swap_volume(self, old_connection_info, new_connection_info,
-                    instance, mountpoint):
+                    instance, mountpoint, resize_to):
         """Replace the disk attached to the instance."""
         instance_name = instance['name']
         if instance_name not in self._mounts:

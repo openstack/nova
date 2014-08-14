@@ -438,10 +438,13 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def swap_volume(self, old_connection_info, new_connection_info,
-                    instance, mountpoint):
+                    instance, mountpoint, resize_to):
         """Replace the disk attached to the instance.
 
         :param instance: nova.objects.instance.Instance
+        :param resize_to: This parameter is used to indicate the new volume
+                          size when the new volume lager than old volume.
+                          And the units is Gigabyte.
         """
         raise NotImplementedError()
 

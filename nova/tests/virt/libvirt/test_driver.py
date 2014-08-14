@@ -8166,8 +8166,9 @@ Active:          8381604 kB
 
             mock_dom.XMLDesc.return_value = xmldoc
             mock_dom.isPersistent.return_value = True
+            mock_dom.blockJobInfo.return_value = {}
 
-            drvr._swap_volume(mock_dom, srcfile, dstfile)
+            drvr._swap_volume(mock_dom, srcfile, dstfile, 1)
 
             mock_dom.XMLDesc.assert_called_once_with(
                 fakelibvirt.VIR_DOMAIN_XML_INACTIVE |
@@ -8176,7 +8177,8 @@ Active:          8381604 kB
                 srcfile, dstfile, 0,
                 libvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
                 libvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT)
-
+            mock_dom.blockResize.assert_called_once_with(
+                srcfile, 1 * units.Gi / units.Ki)
             mock_define.assert_called_once_with(xmldoc)
 
     def test_live_snapshot(self):
