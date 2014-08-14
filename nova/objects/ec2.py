@@ -92,3 +92,41 @@ class EC2VolumeMapping(base.NovaPersistentObject, base.NovaObject):
         db_vmap = db.ec2_volume_get_by_id(context, ec2_id)
         if db_vmap:
             return cls._from_db_object(context, cls(context), db_vmap)
+
+
+class EC2SnapshotMapping(base.NovaPersistentObject, base.NovaObject):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'id': fields.IntegerField(read_only=True),
+        'uuid': fields.UUIDField(),
+    }
+
+    @staticmethod
+    def _from_db_object(context, smap, db_smap):
+        for field in smap.fields:
+            smap[field] = db_smap[field]
+        smap._context = context
+        smap.obj_reset_changes()
+        return smap
+
+    @base.remotable
+    def create(self, context):
+        if self.obj_attr_is_set('id'):
+            raise exception.ObjectActionError(action='create',
+                                              reason='already created')
+        db_smap = db.ec2_snapshot_create(context, self.uuid)
+        self._from_db_object(context, self, db_smap)
+
+    @base.remotable_classmethod
+    def get_by_uuid(cls, context, snapshot_uuid):
+        db_smap = db.ec2_snapshot_get_by_uuid(context, snapshot_uuid)
+        if db_smap:
+            return cls._from_db_object(context, cls(context), db_smap)
+
+    @base.remotable_classmethod
+    def get_by_id(cls, context, ec2_id):
+        db_smap = db.ec2_snapshot_get_by_ec2_id(context, ec2_id)
+        if db_smap:
+            return cls._from_db_object(context, cls(context), db_smap)

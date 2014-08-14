@@ -909,6 +909,7 @@ object_data = {
     'DNSDomain': '1.0-5bdc288d7c3b723ce86ede998fd5c9ba',
     'DNSDomainList': '1.0-6e3cc498d89dd7e90f9beb021644221c',
     'EC2InstanceMapping': '1.0-627baaf4b12c9067200979bdc4558a99',
+    'EC2SnapshotMapping': '1.0-26cf315be1f8abab4289d4147671c836',
     'EC2VolumeMapping': '1.0-2f8c3bf077c65a425294ec2b361c9143',
     'FixedIP': '1.1-082fb26772ce2db783ce4934edca4652',
     'FixedIPList': '1.1-8ea5cfca611598f1242fd4095e49e58b',
