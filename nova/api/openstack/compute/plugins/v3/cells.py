@@ -24,7 +24,6 @@ from webob import exc
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas.v3 import cells
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import api as compute
@@ -170,9 +169,11 @@ class CellsController(object):
             raise exc.HTTPNotFound(explanation=e.format_message())
         return dict(cell=_scrub_cell(cell))
 
+    # NOTE(gmann): Returns 200 for backwards compatibility but should be 204
+    # as this operation complete the deletion of aggregate resource and return
+    # no response body.
     @extensions.expected_errors((403, 404, 501))
     @common.check_cells_enabled
-    @wsgi.response(204)
     def delete(self, req, id):
         """Delete a child or parent cell entry.  'id' is a cell name."""
         context = req.environ['nova.context']
@@ -231,9 +232,11 @@ class CellsController(object):
         # Now set the transport URL
         cell['transport_url'] = str(transport_url)
 
+    # NOTE(gmann): Returns 200 for backwards compatibility but should be 201
+    # as this operation complete the creation of aggregates resource when
+    # returning a response.
     @extensions.expected_errors((400, 403, 501))
     @common.check_cells_enabled
-    @wsgi.response(201)
     @validation.schema(cells.create)
     def create(self, req, body):
         """Create a child cell entry."""
@@ -282,9 +285,11 @@ class CellsController(object):
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(cell=_scrub_cell(cell))
 
+    # NOTE(gmann): Returns 200 for backwards compatibility but should be 204
+    # as this operation complete the sync instance info and return
+    # no response body.
     @extensions.expected_errors((400, 501))
     @common.check_cells_enabled
-    @wsgi.response(204)
     @validation.schema(cells.sync_instances)
     def sync_instances(self, req, body):
         """Tell all cells to sync instance info."""

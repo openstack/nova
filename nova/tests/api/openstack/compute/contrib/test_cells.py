@@ -18,7 +18,8 @@ import copy
 from lxml import etree
 from webob import exc
 
-from nova.api.openstack.compute.contrib import cells as cells_ext
+from nova.api.openstack.compute.contrib import cells as cells_ext_v2
+from nova.api.openstack.compute.plugins.v3 import cells as cells_ext_v21
 from nova.api.openstack import extensions
 from nova.api.openstack import xmlutil
 from nova.cells import rpcapi as cells_rpcapi
@@ -89,16 +90,22 @@ class BaseCellsTest(test.NoDBTestCase):
         return cells
 
 
-class CellsTest(BaseCellsTest):
-    def setUp(self):
-        super(CellsTest, self).setUp()
-        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
-        self.controller = cells_ext.Controller(self.ext_mgr)
-        self.context = context.get_admin_context()
-        self.flags(enable=True, group='cells')
+class CellsTestV21(BaseCellsTest):
+    cell_extension = 'compute_extension:v3:os-cells'
+    bad_request = exception.ValidationError
+
+    def _get_cell_controller(self, ext_mgr):
+        return cells_ext_v21.CellsController()
 
     def _get_request(self, resource):
-        return fakes.HTTPRequest.blank('/v2/fake/' + resource)
+        return fakes.HTTPRequestV3.blank('/' + resource)
+
+    def setUp(self):
+        super(CellsTestV21, self).setUp()
+        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
+        self.controller = self._get_cell_controller(self.ext_mgr)
+        self.context = context.get_admin_context()
+        self.flags(enable=True, group='cells')
 
     def test_index(self):
         req = self._get_request("cells")
@@ -150,7 +157,7 @@ class CellsTest(BaseCellsTest):
     def test_cell_delete(self):
         # Test cell delete with just cell policy
         rules = {"default": "is_admin:true",
-                 "compute_extension:cells": "is_admin:true"}
+                 self.cell_extension: "is_admin:true"}
         self.policy.set_rules(rules)
         self._cell_delete()
 
@@ -185,13 +192,11 @@ class CellsTest(BaseCellsTest):
                         'username': 'fred',
                         'password': 'fubar',
                         'rpc_host': 'r3.example.org',
-                        'type': 'parent',
-                        # Also test this is ignored/stripped
-                        'is_parent': False}}
+                        'type': 'parent'}}
 
         req = self._get_request("cells")
         req.environ['nova.context'] = self.context
-        res_dict = self.controller.create(req, body)
+        res_dict = self.controller.create(req, body=body)
         cell = res_dict['cell']
 
         self.assertEqual(cell['name'], 'meow')
@@ -204,7 +209,7 @@ class CellsTest(BaseCellsTest):
     def test_cell_create_parent(self):
         # Test create with just cells policy
         rules = {"default": "is_admin:true",
-                 "compute_extension:cells": "is_admin:true"}
+                 self.cell_extension: "is_admin:true"}
         self.policy.set_rules(rules)
         self._cell_create_parent()
 
@@ -220,7 +225,7 @@ class CellsTest(BaseCellsTest):
 
         req = self._get_request("cells")
         req.environ['nova.context'] = self.context
-        res_dict = self.controller.create(req, body)
+        res_dict = self.controller.create(req, body=body)
         cell = res_dict['cell']
 
         self.assertEqual(cell['name'], 'meow')
@@ -233,7 +238,7 @@ class CellsTest(BaseCellsTest):
     def test_cell_create_child(self):
         # Test create with just cells policy
         rules = {"default": "is_admin:true",
-                 "compute_extension:cells": "is_admin:true"}
+                 self.cell_extension: "is_admin:true"}
         self.policy.set_rules(rules)
         self._cell_create_child()
 
@@ -248,8 +253,8 @@ class CellsTest(BaseCellsTest):
 
         req = self._get_request("cells")
         req.environ['nova.context'] = self.context
-        self.assertRaises(exc.HTTPBadRequest,
-            self.controller.create, req, body)
+        self.assertRaises(self.bad_request,
+            self.controller.create, req, body=body)
 
     def test_cell_create_name_empty_string_raises(self):
         body = {'cell': {'name': '',
@@ -260,8 +265,8 @@ class CellsTest(BaseCellsTest):
 
         req = self._get_request("cells")
         req.environ['nova.context'] = self.context
-        self.assertRaises(exc.HTTPBadRequest,
-            self.controller.create, req, body)
+        self.assertRaises(self.bad_request,
+            self.controller.create, req, body=body)
 
     def test_cell_create_name_with_bang_raises(self):
         body = {'cell': {'name': 'moo!cow',
@@ -272,8 +277,8 @@ class CellsTest(BaseCellsTest):
 
         req = self._get_request("cells")
         req.environ['nova.context'] = self.context
-        self.assertRaises(exc.HTTPBadRequest,
-            self.controller.create, req, body)
+        self.assertRaises(self.bad_request,
+            self.controller.create, req, body=body)
 
     def test_cell_create_name_with_dot_raises(self):
         body = {'cell': {'name': 'moo.cow',
@@ -284,8 +289,9 @@ class CellsTest(BaseCellsTest):
 
         req = self._get_request("cells")
         req.environ['nova.context'] = self.context
-        self.assertRaises(exc.HTTPBadRequest,
-            self.controller.create, req, body)
+        res_dict = self.controller.create(req, body=body)
+        cell = res_dict['cell']
+        self.assertEqual(cell['name'], 'moo.cow')
 
     def test_cell_create_name_with_invalid_type_raises(self):
         body = {'cell': {'name': 'moocow',
@@ -296,8 +302,8 @@ class CellsTest(BaseCellsTest):
 
         req = self._get_request("cells")
         req.environ['nova.context'] = self.context
-        self.assertRaises(exc.HTTPBadRequest,
-            self.controller.create, req, body)
+        self.assertRaises(self.bad_request,
+            self.controller.create, req, body=body)
 
     def test_cell_create_fails_for_invalid_policy(self):
         body = {'cell': {'name': 'fake'}}
@@ -305,7 +311,7 @@ class CellsTest(BaseCellsTest):
         req.environ['nova.context'] = self.context
         req.environ['nova.context'].is_admin = False
         self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.create, req, body)
+                          self.controller.create, req, body=body)
 
     def _cell_update(self):
         body = {'cell': {'username': 'zeb',
@@ -313,7 +319,7 @@ class CellsTest(BaseCellsTest):
 
         req = self._get_request("cells/cell1")
         req.environ['nova.context'] = self.context
-        res_dict = self.controller.update(req, 'cell1', body)
+        res_dict = self.controller.update(req, 'cell1', body=body)
         cell = res_dict['cell']
 
         self.assertEqual(cell['name'], 'cell1')
@@ -324,7 +330,7 @@ class CellsTest(BaseCellsTest):
     def test_cell_update(self):
         # Test cell update with just cell policy
         rules = {"default": "is_admin:true",
-                 "compute_extension:cells": "is_admin:true"}
+                 self.cell_extension: "is_admin:true"}
         self.policy.set_rules(rules)
         self._cell_update()
 
@@ -337,7 +343,7 @@ class CellsTest(BaseCellsTest):
         req.environ['nova.context'] = self.context
         req.environ['nova.context'].is_admin = False
         self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.create, req, body)
+                          self.controller.create, req, body=body)
 
     def test_cell_update_empty_name_raises(self):
         body = {'cell': {'name': '',
@@ -346,8 +352,8 @@ class CellsTest(BaseCellsTest):
 
         req = self._get_request("cells/cell1")
         req.environ['nova.context'] = self.context
-        self.assertRaises(exc.HTTPBadRequest,
-            self.controller.update, req, 'cell1', body)
+        self.assertRaises(self.bad_request,
+            self.controller.update, req, 'cell1', body=body)
 
     def test_cell_update_invalid_type_raises(self):
         body = {'cell': {'username': 'zeb',
@@ -356,15 +362,15 @@ class CellsTest(BaseCellsTest):
 
         req = self._get_request("cells/cell1")
         req.environ['nova.context'] = self.context
-        self.assertRaises(exc.HTTPBadRequest,
-            self.controller.update, req, 'cell1', body)
+        self.assertRaises(self.bad_request,
+            self.controller.update, req, 'cell1', body=body)
 
     def test_cell_update_without_type_specified(self):
         body = {'cell': {'username': 'wingwj'}}
 
         req = self._get_request("cells/cell1")
         req.environ['nova.context'] = self.context
-        res_dict = self.controller.update(req, 'cell1', body)
+        res_dict = self.controller.update(req, 'cell1', body=body)
         cell = res_dict['cell']
 
         self.assertEqual(cell['name'], 'cell1')
@@ -378,12 +384,12 @@ class CellsTest(BaseCellsTest):
 
         req1 = self._get_request("cells/cell1")
         req1.environ['nova.context'] = self.context
-        res_dict1 = self.controller.update(req1, 'cell1', body1)
+        res_dict1 = self.controller.update(req1, 'cell1', body=body1)
         cell1 = res_dict1['cell']
 
         req2 = self._get_request("cells/cell2")
         req2.environ['nova.context'] = self.context
-        res_dict2 = self.controller.update(req2, 'cell2', body2)
+        res_dict2 = self.controller.update(req2, 'cell2', body=body2)
         cell2 = res_dict2['cell']
 
         self.assertEqual(cell1['name'], 'cell1')
@@ -410,7 +416,8 @@ class CellsTest(BaseCellsTest):
         self.assertEqual(cell_caps['cap2'], 'c;d')
 
     def test_show_capacities(self):
-        self.ext_mgr.is_loaded('os-cell-capacities').AndReturn(True)
+        if (self.cell_extension == 'compute_extension:cells'):
+            self.ext_mgr.is_loaded('os-cell-capacities').AndReturn(True)
         self.mox.StubOutWithMock(self.controller.cells_rpcapi,
                                  'get_capacities')
         response = {"ram_free":
@@ -431,8 +438,9 @@ class CellsTest(BaseCellsTest):
         self.assertEqual(response, res_dict['cell']['capacities'])
 
     def test_show_capacity_fails_with_non_admin_context(self):
-        self.ext_mgr.is_loaded('os-cell-capacities').AndReturn(True)
-        rules = {"compute_extension:cells": "is_admin:true"}
+        if (self.cell_extension == 'compute_extension:cells'):
+            self.ext_mgr.is_loaded('os-cell-capacities').AndReturn(True)
+        rules = {self.cell_extension: "is_admin:true"}
         self.policy.set_rules(rules)
 
         self.mox.ReplayAll()
@@ -443,7 +451,8 @@ class CellsTest(BaseCellsTest):
                           self.controller.capacities, req)
 
     def test_show_capacities_for_invalid_cell(self):
-        self.ext_mgr.is_loaded('os-cell-capacities').AndReturn(True)
+        if (self.cell_extension == 'compute_extension:cells'):
+            self.ext_mgr.is_loaded('os-cell-capacities').AndReturn(True)
         self.mox.StubOutWithMock(self.controller.cells_rpcapi,
                                  'get_capacities')
         self.controller.cells_rpcapi. \
@@ -456,7 +465,8 @@ class CellsTest(BaseCellsTest):
                           self.controller.capacities, req, "invalid_cell")
 
     def test_show_capacities_for_cell(self):
-        self.ext_mgr.is_loaded('os-cell-capacities').AndReturn(True)
+        if (self.cell_extension == 'compute_extension:cells'):
+            self.ext_mgr.is_loaded('os-cell-capacities').AndReturn(True)
         self.mox.StubOutWithMock(self.controller.cells_rpcapi,
                                  'get_capacities')
         response = {"ram_free":
@@ -509,7 +519,7 @@ class CellsTest(BaseCellsTest):
         self.assertEqual(call_info['updated_since'], expected)
 
         body = {'updated_since': 'skjdfkjsdkf'}
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(self.bad_request,
                 self.controller.sync_instances, req, body=body)
 
         body = {'deleted': False}
@@ -531,11 +541,11 @@ class CellsTest(BaseCellsTest):
         self.assertEqual(call_info['deleted'], True)
 
         body = {'deleted': 'foo'}
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(self.bad_request,
                 self.controller.sync_instances, req, body=body)
 
         body = {'foo': 'meow'}
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(self.bad_request,
                 self.controller.sync_instances, req, body=body)
 
     def test_sync_instances_fails_for_invalid_policy(self):
@@ -550,7 +560,7 @@ class CellsTest(BaseCellsTest):
 
         body = {}
         self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.sync_instances, req, body)
+                          self.controller.sync_instances, req, body=body)
 
     def test_cells_disabled(self):
         self.flags(enable=False, group='cells')
@@ -583,11 +593,34 @@ class CellsTest(BaseCellsTest):
                 self.controller.sync_instances, req, {})
 
 
+class CellsTestV2(CellsTestV21):
+    cell_extension = 'compute_extension:cells'
+    bad_request = exc.HTTPBadRequest
+
+    def _get_cell_controller(self, ext_mgr):
+        return cells_ext_v2.Controller(ext_mgr)
+
+    def _get_request(self, resource):
+        return fakes.HTTPRequest.blank('/v2/fake/' + resource)
+
+    def test_cell_create_name_with_dot_raises(self):
+        body = {'cell': {'name': 'moo.cow',
+                         'username': 'fred',
+                         'password': 'secret',
+                         'rpc_host': 'r3.example.org',
+                         'type': 'parent'}}
+
+        req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
+        self.assertRaises(exc.HTTPBadRequest,
+            self.controller.create, req, body=body)
+
+
 class TestCellsXMLSerializer(BaseCellsTest):
     def test_multiple_cells(self):
         fixture = {'cells': self._get_all_cell_info()}
 
-        serializer = cells_ext.CellsTemplate()
+        serializer = cells_ext_v2.CellsTemplate()
         output = serializer.serialize(fixture)
         res_tree = etree.XML(output)
 
@@ -604,7 +637,7 @@ class TestCellsXMLSerializer(BaseCellsTest):
                                  'cap2': 'c;d'}}
         fixture = {'cell': cell}
 
-        serializer = cells_ext.CellTemplate()
+        serializer = cells_ext_v2.CellTemplate()
         output = serializer.serialize(fixture)
         res_tree = etree.XML(output)
 
@@ -631,7 +664,7 @@ class TestCellsXMLSerializer(BaseCellsTest):
                 'name': 'darksecret'}
         fixture = {'cell': cell}
 
-        serializer = cells_ext.CellTemplate()
+        serializer = cells_ext_v2.CellTemplate()
         output = serializer.serialize(fixture)
         res_tree = etree.XML(output)
 
@@ -656,12 +689,12 @@ class TestCellsXMLDeserializer(test.NoDBTestCase):
                 "<cell><name>testcell1</name><type>child</type>"
                         "<rpc_host>localhost</rpc_host>"
                         "%s</cell>") % caps_xml
-        deserializer = cells_ext.CellDeserializer()
+        deserializer = cells_ext_v2.CellDeserializer()
         result = deserializer.deserialize(intext)
         self.assertEqual(dict(body=expected), result)
 
     def test_with_corrupt_xml(self):
-        deserializer = cells_ext.CellDeserializer()
+        deserializer = cells_ext_v2.CellDeserializer()
         self.assertRaises(
                 exception.MalformedRequestBody,
                 deserializer.deserialize,
