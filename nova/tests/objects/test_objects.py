@@ -983,9 +983,9 @@ object_data = {
 class TestObjectVersions(test.TestCase):
     def setUp(self):
         super(TestObjectVersions, self).setUp()
-        self._fingerprints = {}
 
-    def _get_fingerprint(self, obj_class):
+    def _get_fingerprint(self, obj_name):
+        obj_class = base.NovaObject._obj_classes[obj_name][0]
         fields = obj_class.fields.items()
         fields.sort()
         methods = []
@@ -1003,30 +1003,31 @@ class TestObjectVersions(test.TestCase):
             relevant_data = (fields, methods, obj_class.child_versions)
         else:
             relevant_data = (fields, methods)
-        return '%s-%s' % (obj_class.VERSION,
-                          hashlib.md5(str(relevant_data)).hexdigest())
-
-    def _test_versions_cls(self, obj_name):
-        obj_class = base.NovaObject._obj_classes[obj_name][0]
-        expected_fingerprint = object_data.get(obj_name, 'unknown')
-        actual_fingerprint = self._get_fingerprint(obj_class)
-
-        self._fingerprints[obj_name] = actual_fingerprint
-
-        if os.getenv('GENERATE_HASHES'):
-            return
-
-        self.assertEqual(
-            expected_fingerprint, actual_fingerprint,
-            ('%s object has changed; please make sure the version '
-             'has been bumped, and then update this hash') % obj_name)
+        fingerprint = '%s-%s' % (obj_class.VERSION,
+                                 hashlib.md5(str(relevant_data)).hexdigest())
+        return fingerprint
 
     def test_versions(self):
+        fingerprints = {}
         for obj_name in base.NovaObject._obj_classes:
-            self._test_versions_cls(obj_name)
+            fingerprints[obj_name] = self._get_fingerprint(obj_name)
 
         if os.getenv('GENERATE_HASHES'):
             file('object_hashes.txt', 'w').write(
                 pprint.pformat(self._fingerprints))
             raise test.TestingException(
                 'Generated hashes in object_hashes.txt')
+
+        stored = set(object_data.items())
+        computed = set(fingerprints.items())
+        changed = stored - computed
+        expected = {}
+        actual = {}
+        for name, hash in changed:
+            expected[name] = object_data.get(name)
+            actual[name] = fingerprints.get(name)
+
+        self.assertEqual(expected, actual,
+                         'Some objects have changed; please make sure the '
+                         'versions have been bumped, and then update their '
+                         'hashes here.')
