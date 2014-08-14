@@ -1,6 +1,6 @@
 {
     "server": {
-        "os-access-ips:access_ip_v4": "4.3.2.1",
-        "os-access-ips:access_ip_v6": "80fe::"
+        "accessIPv4": "4.3.2.1",
+        "accessIPv6": "80fe::"
     }
 }

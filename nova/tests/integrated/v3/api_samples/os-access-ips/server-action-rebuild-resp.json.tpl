@@ -51,7 +51,7 @@
         "tenant_id": "openstack",
         "updated": "%(isotime)s",
         "user_id": "fake",
-        "os-access-ips:access_ip_v4": "%(access_ip_v4)s",
-        "os-access-ips:access_ip_v6": "%(access_ip_v6)s"
+        "accessIPv4": "%(access_ip_v4)s",
+        "accessIPv6": "%(access_ip_v6)s"
     }
 }
