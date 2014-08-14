@@ -118,12 +118,14 @@ class VFSGuestFS(vfs.VFS):
         LOG.debug("Setting up appliance for %(imgfile)s %(imgfmt)s",
                   {'imgfile': self.imgfile, 'imgfmt': self.imgfmt})
         try:
-            self.handle = tpool.Proxy(guestfs.GuestFS(close_on_exit=False))
+            self.handle = tpool.Proxy(
+                guestfs.GuestFS(python_return_dict=False,
+                                close_on_exit=False))
         except TypeError as e:
-            if 'close_on_exit' in str(e):
+            if 'close_on_exit' in str(e) or 'python_return_dict' in str(e):
                 # NOTE(russellb) In case we're not using a version of
-                # libguestfs new enough to support the close_on_exit parameter,
-                # which was added in libguestfs 1.20.
+                # libguestfs new enough to support parameters close_on_exit
+                # and python_return_dict which were added in libguestfs 1.20.
                 self.handle = tpool.Proxy(guestfs.GuestFS())
             else:
                 raise
