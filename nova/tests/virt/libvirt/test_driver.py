@@ -10632,6 +10632,40 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
                 </devices>
               </domain>"""
 
+        # alternate domain info with network-backed snapshot chain
+        self.dom_netdisk_xml = """
+              <domain type='kvm'>
+                <devices>
+                  <disk type='file'>
+                    <source file='disk1_file'/>
+                    <target dev='vda' bus='virtio'/>
+                    <serial>0e38683e-f0af-418f-a3f1-6b67eaffffff</serial>
+                  </disk>
+                  <disk type='network' device='disk'>
+                    <driver name='qemu' type='qcow2'/>
+                    <source protocol='gluster' name='vol1/root.img'>
+                      <host name='server1' port='24007'/>
+                    </source>
+                    <backingStore type='network' index='1'>
+                      <driver name='qemu' type='qcow2'/>
+                      <source protocol='gluster' name='vol1/snap.img'>
+                        <host name='server1' port='24007'/>
+                      </source>
+                      <backingStore type='network' index='2'>
+                        <driver name='qemu' type='qcow2'/>
+                        <source protocol='gluster' name='vol1/snap-b.img'>
+                          <host name='server1' port='24007'/>
+                        </source>
+                        <backingStore/>
+                      </backingStore>
+                    </backingStore>
+                    <target dev='vdb' bus='virtio'/>
+                    <serial>0e38683e-f0af-418f-a3f1-6b67ea0f919d</serial>
+                  </disk>
+                </devices>
+              </domain>
+        """
+
         self.create_info = {'type': 'qcow2',
                             'snapshot_id': '1234-5678',
                             'new_file': 'new-file'}
@@ -10646,6 +10680,10 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
         self.delete_info_2 = {'type': 'qcow2',
                               'file_to_merge': 'snap.img',
                               'merge_target_file': 'other-snap.img'}
+
+        self.delete_info_netdisk = {'type': 'qcow2',
+                                    'file_to_merge': 'snap.img',
+                                    'merge_target_file': 'root.img'}
 
         self.delete_info_invalid_type = {'type': 'made_up_type',
                                          'file_to_merge': 'some_file',
@@ -11015,3 +11053,89 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
                           self.volume_uuid,
                           self.snapshot_id,
                           self.delete_info_invalid_type)
+
+    def test_volume_snapshot_delete_netdisk_1(self):
+        """Delete newest snapshot -- blockRebase for libgfapi/network disk."""
+
+        class FakeNetdiskDomain(FakeVirtDomain):
+            def __init__(self, *args, **kwargs):
+                super(FakeNetdiskDomain, self).__init__(*args, **kwargs)
+
+            def XMLDesc(self, *args):
+                return self.dom_netdisk_xml
+
+        # Ensure the libvirt lib has VIR_DOMAIN_BLOCK_COMMIT_RELATIVE
+        self.stubs.Set(libvirt_driver, 'libvirt', fakelibvirt)
+
+        instance = db.instance_create(self.c, self.inst)
+        snapshot_id = 'snapshot-1234'
+
+        domain = FakeNetdiskDomain(fake_xml=self.dom_netdisk_xml)
+        self.mox.StubOutWithMock(domain, 'XMLDesc')
+        domain.XMLDesc(0).AndReturn(self.dom_netdisk_xml)
+
+        self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
+        self.mox.StubOutWithMock(self.conn, '_has_min_version')
+        self.mox.StubOutWithMock(domain, 'blockRebase')
+        self.mox.StubOutWithMock(domain, 'blockCommit')
+        self.mox.StubOutWithMock(domain, 'blockJobInfo')
+
+        self.conn._lookup_by_name('instance-%s' % instance['id']).\
+            AndReturn(domain)
+        self.conn._has_min_version(mox.IgnoreArg()).AndReturn(True)
+
+        domain.blockRebase('vdb', 'vdb[1]', 0, 0)
+
+        domain.blockJobInfo('vdb', 0).AndReturn({'cur': 1, 'end': 1000})
+        domain.blockJobInfo('vdb', 0).AndReturn({'cur': 1000, 'end': 1000})
+
+        self.mox.ReplayAll()
+
+        self.conn._volume_snapshot_delete(self.c, instance, self.volume_uuid,
+                                          snapshot_id, self.delete_info_1)
+
+        self.mox.VerifyAll()
+
+    def test_volume_snapshot_delete_netdisk_2(self):
+        """Delete older snapshot -- blockCommit for libgfapi/network disk."""
+
+        class FakeNetdiskDomain(FakeVirtDomain):
+            def __init__(self, *args, **kwargs):
+                super(FakeNetdiskDomain, self).__init__(*args, **kwargs)
+
+            def XMLDesc(self, *args):
+                return self.dom_netdisk_xml
+
+        # Ensure the libvirt lib has VIR_DOMAIN_BLOCK_COMMIT_RELATIVE
+        self.stubs.Set(libvirt_driver, 'libvirt', fakelibvirt)
+
+        instance = db.instance_create(self.c, self.inst)
+        snapshot_id = 'snapshot-1234'
+
+        domain = FakeNetdiskDomain(fake_xml=self.dom_netdisk_xml)
+        self.mox.StubOutWithMock(domain, 'XMLDesc')
+        domain.XMLDesc(0).AndReturn(self.dom_netdisk_xml)
+
+        self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
+        self.mox.StubOutWithMock(self.conn, '_has_min_version')
+        self.mox.StubOutWithMock(domain, 'blockRebase')
+        self.mox.StubOutWithMock(domain, 'blockCommit')
+        self.mox.StubOutWithMock(domain, 'blockJobInfo')
+
+        self.conn._lookup_by_name('instance-%s' % instance['id']).\
+            AndReturn(domain)
+        self.conn._has_min_version(mox.IgnoreArg()).AndReturn(True)
+
+        domain.blockCommit('vdb', 'vdb[0]', 'vdb[1]', 0,
+                           fakelibvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE)
+
+        domain.blockJobInfo('vdb', 0).AndReturn({'cur': 1, 'end': 1000})
+        domain.blockJobInfo('vdb', 0).AndReturn({'cur': 1000, 'end': 1000})
+
+        self.mox.ReplayAll()
+
+        self.conn._volume_snapshot_delete(self.c, instance, self.volume_uuid,
+                                          snapshot_id,
+                                          self.delete_info_netdisk)
+
+        self.mox.VerifyAll()
