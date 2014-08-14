@@ -42,5 +42,6 @@ pycadf>=0.6.0
 oslo.messaging>=1.4.0.0a3
 oslo.i18n>=0.2.0  # Apache-2.0
 lockfile>=0.8
+simplejson>=2.2.0
 rfc3986>=0.2.0  # Apache-2.0
 oslo.vmware>=0.5.0
