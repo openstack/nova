@@ -383,6 +383,33 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.task_ref = None
         self.exception = False
 
+    def test_cleanup_host(self):
+        self.conn.init_host("fake_host")
+        try:
+            self.conn.cleanup_host("fake_host")
+        except Exception as ex:
+            self.fail("cleanup_host raised: %s" % ex)
+
+    @mock.patch('nova.virt.vmwareapi.driver.VMwareVCDriver.__init__')
+    def test_cleanup_host_direct(self, mock_init):
+        mock_init.return_value = None
+        vcdriver = driver.VMwareVCDriver(None, False)
+        vcdriver._session = mock.Mock()
+        vcdriver.cleanup_host("foo")
+        vcdriver._session.vim.get_service_content.assert_called_once_with()
+        vcdriver._session.vim.client.service.Logout.assert_called_once_with(
+            vcdriver._session.vim.get_service_content().sessionManager
+        )
+
+    @mock.patch('nova.virt.vmwareapi.driver.VMwareVCDriver.__init__')
+    def test_cleanup_host_direct_with_bad_logout(self, mock_init):
+        mock_init.return_value = None
+        vcdriver = driver.VMwareVCDriver(None, False)
+        vcdriver._session = mock.Mock()
+        fault = suds.WebFault(mock.Mock(), mock.Mock())
+        vcdriver._session.vim.client.service.Logout.side_effect = fault
+        vcdriver.cleanup_host("foo")
+
     def test_driver_capabilities(self):
         self.assertTrue(self.conn.capabilities['has_imagecache'])
         self.assertFalse(self.conn.capabilities['supports_recreate'])
