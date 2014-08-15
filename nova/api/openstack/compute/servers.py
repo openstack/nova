@@ -989,6 +989,14 @@ class Controller(wsgi.Controller):
                 exception.InstanceUserDataTooLarge,
                 exception.InstanceUserDataMalformed) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
+        except (exception.ImageNUMATopologyIncomplete,
+                exception.ImageNUMATopologyForbidden,
+                exception.ImageNUMATopologyAsymmetric,
+                exception.ImageNUMATopologyCPUOutOfRange,
+                exception.ImageNUMATopologyCPUDuplicates,
+                exception.ImageNUMATopologyCPUsUnassigned,
+                exception.ImageNUMATopologyMemoryOutOfRange) as error:
+            raise exc.HTTPBadRequest(explanation=error.format_message())
         except (exception.PortInUse,
                 exception.NoUniqueMatch) as error:
             raise exc.HTTPConflict(explanation=error.format_message())
