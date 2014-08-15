@@ -2380,6 +2380,51 @@ class LibvirtConnTestCase(test.TestCase,
                                      image_meta, disk_info)
         self.assertEqual(cfg.os_mach_type, "fake_machine_type")
 
+    def test_get_guest_config_machine_type_from_config(self):
+        self.flags(virt_type='kvm', group='libvirt')
+        self.flags(hw_machine_type=['x86_64=fake_machine_type'],
+                group='libvirt')
+
+        def fake_getCapabilities():
+            return """
+            <capabilities>
+                <host>
+                    <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+                    <cpu>
+                      <arch>x86_64</arch>
+                      <model>Penryn</model>
+                      <vendor>Intel</vendor>
+                      <topology sockets='1' cores='2' threads='1'/>
+                      <feature name='xtpr'/>
+                    </cpu>
+                </host>
+            </capabilities>
+            """
+
+        def fake_baselineCPU(cpu, flag):
+            return """<cpu mode='custom' match='exact'>
+                        <model fallback='allow'>Penryn</model>
+                        <vendor>Intel</vendor>
+                        <feature policy='require' name='xtpr'/>
+                      </cpu>
+                   """
+
+        # Make sure the host arch is mocked as x86_64
+        self.create_fake_libvirt_mock(getCapabilities=fake_getCapabilities,
+                                      baselineCPU=fake_baselineCPU,
+                                      getVersion=lambda: 1005001)
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        cfg = conn._get_guest_config(instance_ref,
+                                    _fake_network_info(self.stubs, 1),
+                                    {}, disk_info)
+        self.assertEqual(cfg.os_mach_type, "fake_machine_type")
+
     def _test_get_guest_config_ppc64(self, device_index):
         """Test for nova.virt.libvirt.driver.LibvirtDriver._get_guest_config.
         """

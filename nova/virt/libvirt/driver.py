@@ -210,6 +210,14 @@ libvirt_opts = [
                 help='A path to a device that will be used as source of '
                      'entropy on the host. Permitted options are: '
                      '/dev/random or /dev/hwrng'),
+    cfg.ListOpt('hw_machine_type',
+               help='For qemu or KVM guests, set this option to specify '
+                    'a default machine type per host architecture. '
+                    'You can find a list of supported machine types '
+                    'in your environment by checking the output of '
+                    'the "virsh capabilities"command. The format of the '
+                    'value for this config option is host-arch=machine-type. '
+                    'For example: x86_64=machinetype1,armv7l=machinetype2'),
     ]
 
 CONF = cfg.CONF
@@ -3264,6 +3272,39 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return meta
 
+    def _machine_type_mappings(self):
+        mappings = {}
+        for mapping in CONF.libvirt.hw_machine_type:
+            host_arch, _, machine_type = mapping.partition('=')
+            mappings[host_arch] = machine_type
+        return mappings
+
+    def _get_machine_type(self, image_meta, caps):
+        # The underlying machine type can be set as an image attribute,
+        # or otherwise based on some architecture specific defaults
+
+        mach_type = None
+
+        if (image_meta is not None and image_meta.get('properties') and
+               image_meta['properties'].get('hw_machine_type')
+               is not None):
+            mach_type = image_meta['properties']['hw_machine_type']
+        else:
+            # For ARM systems we will default to vexpress-a15 for armv7
+            # and virt for aarch64
+            if caps.host.cpu.arch == "armv7l":
+                mach_type = "vexpress-a15"
+
+            if caps.host.cpu.arch == "aarch64":
+                mach_type = "virt"
+
+            # If set in the config, use that as the default.
+            if CONF.libvirt.hw_machine_type:
+                mappings = self._machine_type_mappings()
+                mach_type = mappings.get(caps.host.cpu.arch)
+
+        return mach_type
+
     def _get_guest_config(self, instance, network_info, image_meta,
                           disk_info, rescue=None, block_device_info=None,
                           context=None):
@@ -3339,22 +3380,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if caps.host.cpu.arch in ("i686", "x86_64"):
                 guest.sysinfo = self._get_guest_config_sysinfo(instance)
                 guest.os_smbios = vconfig.LibvirtConfigGuestSMBIOS()
-
-            # The underlying machine type can be set as an image attribute,
-            # or otherwise based on some architecture specific defaults
-            if (image_meta is not None and image_meta.get('properties') and
-                   image_meta['properties'].get('hw_machine_type')
-                   is not None):
-                guest.os_mach_type = \
-                    image_meta['properties']['hw_machine_type']
-            else:
-                # For ARM systems we will default to vexpress-a15 for armv7
-                # and virt for aarch64
-                if caps.host.cpu.arch == "armv7l":
-                    guest.os_mach_type = "vexpress-a15"
-
-                if caps.host.cpu.arch == "aarch64":
-                    guest.os_mach_type = "virt"
+            guest.os_mach_type = self._get_machine_type(image_meta, caps)
 
         if CONF.libvirt.virt_type == "lxc":
             guest.os_init_path = "/sbin/init"
