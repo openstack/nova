@@ -14,6 +14,7 @@
 
 from nova import exception
 from nova import test
+from nova.tests import matchers
 from nova.virt import hardware as hw
 
 
@@ -823,9 +824,9 @@ class NUMATopologyTest(test.NoDBTestCase):
 
     def test_host_usage_contiguous(self):
         hosttopo = hw.VirtNUMAHostTopology([
-            hw.VirtNUMATopologyCell(0, set([0, 1, 2, 3]), 1024),
-            hw.VirtNUMATopologyCell(1, set([4, 6]), 512),
-            hw.VirtNUMATopologyCell(2, set([5, 7]), 512),
+            hw.VirtNUMATopologyCellUsage(0, set([0, 1, 2, 3]), 1024),
+            hw.VirtNUMATopologyCellUsage(1, set([4, 6]), 512),
+            hw.VirtNUMATopologyCellUsage(2, set([5, 7]), 512),
         ])
         instance1 = hw.VirtNUMAInstanceTopology([
             hw.VirtNUMATopologyCell(0, set([0, 1, 2]), 256),
@@ -870,9 +871,9 @@ class NUMATopologyTest(test.NoDBTestCase):
 
     def test_host_usage_sparse(self):
         hosttopo = hw.VirtNUMAHostTopology([
-            hw.VirtNUMATopologyCell(0, set([0, 1, 2, 3]), 1024),
-            hw.VirtNUMATopologyCell(5, set([4, 6]), 512),
-            hw.VirtNUMATopologyCell(6, set([5, 7]), 512),
+            hw.VirtNUMATopologyCellUsage(0, set([0, 1, 2, 3]), 1024),
+            hw.VirtNUMATopologyCellUsage(5, set([4, 6]), 512),
+            hw.VirtNUMATopologyCellUsage(6, set([5, 7]), 512),
         ])
         instance1 = hw.VirtNUMAInstanceTopology([
             hw.VirtNUMATopologyCell(0, set([0, 1, 2]), 256),
@@ -918,3 +919,91 @@ class NUMATopologyTest(test.NoDBTestCase):
                          hostusage.cells[2].memory)
         self.assertEqual(hostusage.cells[2].cpu_usage, 1)
         self.assertEqual(hostusage.cells[2].memory_usage, 256)
+
+    def _test_to_dict(self, cell_or_topo, expected):
+        got = cell_or_topo._to_dict()
+        self.assertThat(expected, matchers.DictMatches(got))
+
+    def assertNUMACellMatches(self, expected_cell, got_cell):
+        attrs = ('cpuset', 'memory', 'id')
+        if isinstance(expected_cell, hw.VirtNUMAHostTopology):
+            attrs += ('cpu_usage', 'memory_usage')
+
+        for attr in attrs:
+            self.assertEqual(getattr(expected_cell, attr),
+                             getattr(got_cell, attr))
+
+    def _test_cell_from_dict(self, data_dict, expected_cell):
+        cell_class = expected_cell.__class__
+        got_cell = cell_class._from_dict(data_dict)
+        self.assertNUMACellMatches(expected_cell, got_cell)
+
+    def _test_topo_from_dict(self, data_dict, expected_topo, with_usage=False):
+        topology_class = (
+                hw.VirtNUMAHostTopology
+                if with_usage else hw.VirtNUMAInstanceTopology)
+        got_topo = topology_class._from_dict(
+                data_dict)
+        for got_cell, expected_cell in zip(
+                got_topo.cells, expected_topo.cells):
+            self.assertNUMACellMatches(expected_cell, got_cell)
+
+    def test_numa_cell_dict(self):
+        cell = hw.VirtNUMATopologyCell(1, set([1, 2]), 512)
+        cell_dict = {'cpus': '1,2',
+                     'mem': {'total': 512},
+                     'id': 1}
+        self._test_to_dict(cell, cell_dict)
+        self._test_cell_from_dict(cell_dict, cell)
+
+    def test_numa_cell_usage_dict(self):
+        cell = hw.VirtNUMATopologyCellUsage(1, set([1, 2]), 512)
+        cell_dict = {'cpus': '1,2', 'cpu_usage': 0,
+                     'mem': {'total': 512, 'used': 0},
+                     'id': 1}
+        self._test_to_dict(cell, cell_dict)
+        self._test_cell_from_dict(cell_dict, cell)
+
+    def test_numa_instance_topo_dict(self):
+        topo = hw.VirtNUMAInstanceTopology(
+                cells=[
+                    hw.VirtNUMATopologyCell(1, set([1, 2]), 1024),
+                    hw.VirtNUMATopologyCell(2, set([3, 4]), 1024)])
+        topo_dict = {'cells': [
+                        {'cpus': '1,2',
+                          'mem': {'total': 1024},
+                          'id': 1},
+                        {'cpus': '3,4',
+                          'mem': {'total': 1024},
+                          'id': 2}]}
+        self._test_to_dict(topo, topo_dict)
+        self._test_topo_from_dict(topo_dict, topo, with_usage=False)
+
+    def test_numa_topo_dict_with_usage(self):
+        topo = hw.VirtNUMAHostTopology(
+                cells=[
+                    hw.VirtNUMATopologyCellUsage(
+                        1, set([1, 2]), 1024),
+                    hw.VirtNUMATopologyCellUsage(
+                        2, set([3, 4]), 1024)])
+        topo_dict = {'cells': [
+                        {'cpus': '1,2', 'cpu_usage': 0,
+                          'mem': {'total': 1024, 'used': 0},
+                          'id': 1},
+                        {'cpus': '3,4', 'cpu_usage': 0,
+                          'mem': {'total': 1024, 'used': 0},
+                          'id': 2}]}
+        self._test_to_dict(topo, topo_dict)
+        self._test_topo_from_dict(topo_dict, topo, with_usage=True)
+
+    def test_json(self):
+        expected = hw.VirtNUMAHostTopology(
+                cells=[
+                    hw.VirtNUMATopologyCellUsage(
+                        1, set([1, 2]), 1024),
+                    hw.VirtNUMATopologyCellUsage(
+                        2, set([3, 4]), 1024)])
+        got = hw.VirtNUMAHostTopology.from_json(expected.to_json())
+
+        for exp_cell, got_cell in zip(expected.cells, got.cells):
+            self.assertNUMACellMatches(exp_cell, got_cell)

@@ -18,6 +18,7 @@ from oslo.config import cfg
 
 from nova import exception
 from nova.i18n import _
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 
 virt_cpu_opts = [
@@ -508,6 +509,18 @@ class VirtNUMATopologyCell(object):
         self.cpuset = cpuset
         self.memory = memory
 
+    def _to_dict(self):
+        return {'cpus': format_cpu_spec(self.cpuset, allow_ranges=False),
+                'mem': {'total': self.memory},
+                'id': self.id}
+
+    @classmethod
+    def _from_dict(cls, data_dict):
+        cpuset = parse_cpu_spec(data_dict.get('cpus', ''))
+        memory = data_dict.get('mem', {}).get('total', 0)
+        cell_id = data_dict.get('id')
+        return cls(cell_id, cpuset, memory)
+
 
 class VirtNUMATopologyCellUsage(VirtNUMATopologyCell):
     """Class for reporting NUMA resources and usage in a cell
@@ -517,7 +530,7 @@ class VirtNUMATopologyCellUsage(VirtNUMATopologyCell):
     utilization of hardware resources in a NUMA cell.
     """
 
-    def __init__(self, id, cpuset, memory, cpu_usage, memory_usage):
+    def __init__(self, id, cpuset, memory, cpu_usage=0, memory_usage=0):
         """Create a new NUMA Cell with usage
 
         :param id: integer identifier of cell
@@ -542,6 +555,21 @@ class VirtNUMATopologyCellUsage(VirtNUMATopologyCell):
 
         self.cpu_usage = cpu_usage
         self.memory_usage = memory_usage
+
+    def _to_dict(self):
+        data_dict = super(VirtNUMATopologyCellUsage, self)._to_dict()
+        data_dict['mem']['used'] = self.memory_usage
+        data_dict['cpu_usage'] = self.cpu_usage
+        return data_dict
+
+    @classmethod
+    def _from_dict(cls, data_dict):
+        cpuset = parse_cpu_spec(data_dict.get('cpus', ''))
+        cpu_usage = data_dict.get('cpu_usage', 0)
+        memory = data_dict.get('mem', {}).get('total', 0)
+        memory_usage = data_dict.get('mem', {}).get('used', 0)
+        cell_id = data_dict.get('id')
+        return cls(cell_id, cpuset, memory, cpu_usage, memory_usage)
 
 
 class VirtNUMATopology(object):
@@ -568,6 +596,21 @@ class VirtNUMATopology(object):
         """Defined so that boolean testing works the same as for lists."""
         return len(self.cells)
 
+    def _to_dict(self):
+        return {'cells': [cell._to_dict() for cell in self.cells]}
+
+    @classmethod
+    def _from_dict(cls, data_dict):
+        return cls(cells=[cls.cell_class._from_dict(cell_dict)
+                          for cell_dict in data_dict.get('cells', [])])
+
+    def to_json(self):
+        return jsonutils.dumps(self._to_dict())
+
+    @classmethod
+    def from_json(cls, json_string):
+        return cls._from_dict(jsonutils.loads(json_string))
+
 
 class VirtNUMAInstanceTopology(VirtNUMATopology):
     """Class to represent the topology configured for a guest
@@ -575,6 +618,8 @@ class VirtNUMAInstanceTopology(VirtNUMATopology):
     from the metadata specified against the flavour and or
     disk image
     """
+
+    cell_class = VirtNUMATopologyCell
 
     @staticmethod
     def _get_flavor_or_image_prop(flavor, image_meta, propname):
@@ -694,6 +739,8 @@ class VirtNUMAHostTopology(VirtNUMATopology):
     it tracks the utilization of the resources by guest instances
     """
 
+    cell_class = VirtNUMATopologyCellUsage
+
     @classmethod
     def usage_from_instances(cls, host, instances):
         """Get host topology usage
@@ -717,7 +764,7 @@ class VirtNUMAHostTopology(VirtNUMATopology):
                         memory_usage = memory_usage + instancecell.memory
                         cpu_usage = cpu_usage + len(instancecell.cpuset)
 
-            cell = VirtNUMATopologyCellUsage(
+            cell = cls.cell_class(
                 hostcell.id, hostcell.cpuset, hostcell.memory,
                 cpu_usage, memory_usage)
 
