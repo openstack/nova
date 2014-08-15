@@ -398,26 +398,30 @@ class LibvirtDriver(driver.ComputeDriver):
                                               driver_cache)
         conf.driver_cache = cache_mode
 
-    def has_min_version(self, lv_ver=None, hv_ver=None, hv_type=None):
+    @staticmethod
+    def _has_min_version(conn, lv_ver=None, hv_ver=None, hv_type=None):
         try:
             if lv_ver is not None:
-                libvirt_version = self._conn.getLibVersion()
+                libvirt_version = conn.getLibVersion()
                 if libvirt_version < utils.convert_version_to_int(lv_ver):
                     return False
 
             if hv_ver is not None:
-                hypervisor_version = self._conn.getVersion()
+                hypervisor_version = conn.getVersion()
                 if hypervisor_version < utils.convert_version_to_int(hv_ver):
                     return False
 
             if hv_type is not None:
-                hypervisor_type = self._conn.getType()
+                hypervisor_type = conn.getType()
                 if hypervisor_type != hv_type:
                     return False
 
             return True
         except Exception:
             return False
+
+    def has_min_version(self, lv_ver=None, hv_ver=None, hv_type=None):
+        return self._has_min_version(self._conn, lv_ver, hv_ver, hv_type)
 
     def _native_thread(self):
         """Receives async events coming in from libvirtd.
@@ -577,18 +581,18 @@ class LibvirtDriver(driver.ComputeDriver):
         self._init_events()
 
     def _get_connection(self):
+        # multiple concurrent connections are protected by _wrapped_conn_lock
         with self._wrapped_conn_lock:
             wrapped_conn = self._wrapped_conn
 
-        if not wrapped_conn or not self._test_connection(wrapped_conn):
-            LOG.debug(_('Connecting to libvirt: %s'), self.uri())
-            if not CONF.libvirt_nonblocking:
-                wrapped_conn = self._connect(self.uri(), self.read_only)
-            else:
-                wrapped_conn = tpool.proxy_call(
-                    (libvirt.virDomain, libvirt.virConnect),
-                    self._connect, self.uri(), self.read_only)
-            with self._wrapped_conn_lock:
+            if not wrapped_conn or not self._test_connection(wrapped_conn):
+                LOG.debug(_('Connecting to libvirt: %s'), self.uri())
+                if not CONF.libvirt_nonblocking:
+                    wrapped_conn = self._connect(self.uri(), self.read_only)
+                else:
+                    wrapped_conn = tpool.proxy_call(
+                        (libvirt.virDomain, libvirt.virConnect),
+                        self._connect, self.uri(), self.read_only)
                 self._wrapped_conn = wrapped_conn
 
             try:
@@ -599,19 +603,21 @@ class LibvirtDriver(driver.ComputeDriver):
                     libvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
                     self._event_lifecycle_callback,
                     self)
-            except Exception:
-                LOG.warn(_("URI %s does not support events"),
-                         self.uri())
+            except Exception as e:
+                LOG.warn(_("URI %(uri)s does not support events: %(error)s"),
+                         {'uri': self.uri(), 'error': e})
 
-            if self.has_min_version(MIN_LIBVIRT_CLOSE_CALLBACK_VERSION):
+            if self._has_min_version(wrapped_conn,
+                                     MIN_LIBVIRT_CLOSE_CALLBACK_VERSION):
                 try:
                     LOG.debug(_("Registering for connection events: %s") %
                               str(self))
                     wrapped_conn.registerCloseCallback(
                         self._close_callback, None)
-                except libvirt.libvirtError:
-                    LOG.debug(_("URI %s does not support connection events"),
-                             self.uri())
+                except libvirt.libvirtError as e:
+                    LOG.warn(_("URI %(uri)s does not support connection"
+                             " events: %(error)s"),
+                             {'uri': self.uri(), 'error': e})
 
         return wrapped_conn
 
