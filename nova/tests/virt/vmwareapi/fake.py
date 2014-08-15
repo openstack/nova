@@ -1174,6 +1174,12 @@ class FakeVim(object):
     def _create_vm(self, method, *args, **kwargs):
         """Creates and registers a VM object with the Host System."""
         config_spec = kwargs.get("config")
+
+        if config_spec.guestId not in constants.VALID_OS_TYPES:
+            ex = vexc.VMwareDriverException('A specified parameter was '
+                                            'not correct.')
+            return create_task(method, "error", error_fault=ex).obj
+
         pool = kwargs.get('pool')
         name = config_spec.name
 

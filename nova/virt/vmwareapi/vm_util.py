@@ -22,11 +22,12 @@ import copy
 import functools
 
 from oslo.config import cfg
+from oslo.utils import excutils
 from oslo.utils import units
 from oslo.vmware import exceptions as vexc
 
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LW
 from nova.network import model as network_model
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import constants
@@ -1274,7 +1275,23 @@ def create_vm(session, instance, vm_folder, config_spec, res_pool_ref):
         session.vim,
         "CreateVM_Task", vm_folder,
         config=config_spec, pool=res_pool_ref)
-    task_info = session._wait_for_task(vm_create_task)
+    try:
+        task_info = session._wait_for_task(vm_create_task)
+    except vexc.VMwareDriverException:
+        # An invalid guestId will result in an error with no specific fault
+        # type and the generic error 'A specified parameter was not correct'.
+        # As guestId is user-editable, we try to help the user out with some
+        # additional information if we notice that guestId isn't in our list of
+        # known-good values.
+        # We don't check this in advance or do anything more than warn because
+        # we can't guarantee that our list of known-good guestIds is complete.
+        # Consequently, a value which we don't recognise may in fact be valid.
+        with excutils.save_and_reraise_exception():
+            if config_spec.guestId not in constants.VALID_OS_TYPES:
+                LOG.warning(_LW('vmware_ostype from image is not recognised: '
+                                '\'%(ostype)s\'. An invalid os type may be '
+                                'one cause of this instance creation failure'),
+                         {'ostype': config_spec.guestId})
     LOG.debug("Created VM on the ESX host", instance=instance)
     return task_info.result
 

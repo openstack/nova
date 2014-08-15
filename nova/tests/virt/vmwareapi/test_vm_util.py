@@ -21,11 +21,15 @@ import re
 import mock
 from oslo.vmware import exceptions as vexc
 
+from nova import context
 from nova import exception
 from nova.network import model as network_model
 from nova.openstack.common import uuidutils
 from nova import test
+from nova.tests import fake_instance
 from nova.tests.virt.vmwareapi import fake
+from nova.tests.virt.vmwareapi import stubs
+from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import vm_util
 
 
@@ -39,6 +43,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     def setUp(self):
         super(VMwareVMUtilTestCase, self).setUp()
         fake.reset()
+        stubs.set_stubs(self.stubs)
         vm_util.vm_refs_cache_reset()
 
     def tearDown(self):
@@ -765,6 +770,40 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                 'fake_vm_folder', config='fake_config_spec',
                 pool='fake_res_pool_ref')
             wait_for_task.assert_called_once_with('fake_create_vm_task')
+
+    @mock.patch.object(vm_util.LOG, 'warning')
+    def test_create_vm_invalid_guestid(self, mock_log_warn):
+        """Ensure we warn when create_vm() fails after we passed an
+        unrecognised guestId
+        """
+
+        found = [False]
+
+        def fake_log_warn(msg, values):
+            if not isinstance(values, dict):
+                return
+            if values.get('ostype') == 'invalid_os_type':
+                found[0] = True
+        mock_log_warn.side_effect = fake_log_warn
+
+        instance_values = {'id': 7, 'name': 'fake-name',
+                           'uuid': uuidutils.generate_uuid(),
+                           'vcpus': 2, 'memory_mb': 2048}
+        instance = fake_instance.fake_instance_obj(
+            context.RequestContext('fake', 'fake', is_admin=False),
+            **instance_values)
+
+        session = driver.VMwareAPISession()
+
+        config_spec = vm_util.get_vm_create_spec(
+            session.vim.client.factory,
+            instance, instance.name, 'fake-datastore', [],
+            os_type='invalid_os_type')
+
+        self.assertRaises(vexc.VMwareDriverException,
+                          vm_util.create_vm, session, instance, 'folder',
+                          config_spec, 'res-pool')
+        self.assertTrue(found[0])
 
     def test_convert_vif_model(self):
         expected = "VirtualE1000"
