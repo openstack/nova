@@ -836,6 +836,51 @@ class _TestInstanceObject(object):
         self.assertEqual({'1985': 'present'}, inst._orig_metadata)
         self.assertEqual({}, inst._orig_system_metadata)
 
+    def test_load_generic_calls_handler(self):
+        inst = instance.Instance(context=self.context,
+                                 uuid='fake-uuid')
+        with mock.patch.object(inst, '_load_generic') as mock_load:
+            def fake_load(name):
+                inst.system_metadata = {}
+
+            mock_load.side_effect = fake_load
+            inst.system_metadata
+            mock_load.assert_called_once_with('system_metadata')
+
+    def test_load_fault_calls_handler(self):
+        inst = instance.Instance(context=self.context,
+                                 uuid='fake-uuid')
+        with mock.patch.object(inst, '_load_fault') as mock_load:
+            def fake_load():
+                inst.fault = None
+
+            mock_load.side_effect = fake_load
+            inst.fault
+            mock_load.assert_called_once_with()
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    def test_load_generic(self, mock_get):
+        inst2 = instance.Instance(metadata={'foo': 'bar'})
+        mock_get.return_value = inst2
+        inst = instance.Instance(context=self.context,
+                                 uuid='fake-uuid')
+        inst.metadata
+        self.assertEqual({'foo': 'bar'}, inst.metadata)
+        mock_get.assert_called_once_with(self.context,
+                                         uuid='fake-uuid',
+                                         expected_attrs=['metadata'])
+        self.assertNotIn('metadata', inst.obj_what_changed())
+
+    @mock.patch('nova.db.instance_fault_get_by_instance_uuids')
+    def test_load_fault(self, mock_get):
+        fake_fault = test_instance_fault.fake_faults['fake-uuid'][0]
+        mock_get.return_value = {'fake': [fake_fault]}
+        inst = instance.Instance(context=self.context, uuid='fake')
+        fault = inst.fault
+        mock_get.assert_called_once_with(self.context, ['fake'])
+        self.assertEqual(fake_fault['id'], fault.id)
+        self.assertNotIn('metadata', inst.obj_what_changed())
+
 
 class TestInstanceObject(test_objects._LocalTest,
                          _TestInstanceObject):
