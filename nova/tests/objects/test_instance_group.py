@@ -269,6 +269,14 @@ class _TestInstanceGroupObjects(test.TestCase):
         self.assertEqual(1, len(hosts))
         self.assertIn('hostB', hosts)
 
+    def test_obj_make_compatible(self):
+        group = instance_group.InstanceGroup(uuid='fake-uuid',
+                                             name='fake-name')
+        group.create(self.context)
+        group_primitive = group.obj_to_primitive()
+        group.obj_make_compatible(group_primitive, '1.6')
+        self.assertEqual({}, group_primitive['metadetails'])
+
 
 class TestInstanceGroupObject(test_objects._LocalTest,
                               _TestInstanceGroupObjects):
