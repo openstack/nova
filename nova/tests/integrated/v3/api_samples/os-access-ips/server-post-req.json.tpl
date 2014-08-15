@@ -3,8 +3,8 @@
         "os-access-ips:access_ip_v4": "%(access_ip_v4)s",
         "os-access-ips:access_ip_v6": "%(access_ip_v6)s",
         "name" : "new-server-test",
-        "image_ref" : "%(host)s/openstack/images/%(image_id)s",
-        "flavor_ref" : "%(host)s/openstack/flavors/1",
+        "imageRef" : "%(host)s/openstack/images/%(image_id)s",
+        "flavorRef" : "%(host)s/openstack/flavors/1",
         "metadata" : {
             "My Server Name" : "Apache1"
         },

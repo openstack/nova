@@ -491,7 +491,7 @@ class ServersController(wsgi.Controller):
         try:
             flavor_id = self._flavor_id_from_req_data(body)
         except ValueError as error:
-            msg = _("Invalid flavor_ref provided.")
+            msg = _("Invalid flavorRef provided.")
             raise exc.HTTPBadRequest(explanation=msg)
 
         try:
@@ -519,7 +519,7 @@ class ServersController(wsgi.Controller):
             msg = _("Can not find requested image")
             raise exc.HTTPBadRequest(explanation=msg)
         except exception.FlavorNotFound as error:
-            msg = _("Invalid flavor_ref provided.")
+            msg = _("Invalid flavorRef provided.")
             raise exc.HTTPBadRequest(explanation=msg)
         except exception.KeypairNotFound as error:
             msg = _("Invalid key_name provided.")
@@ -779,7 +779,7 @@ class ServersController(wsgi.Controller):
         image_uuid = image_href.split('/').pop()
 
         if not uuidutils.is_uuid_like(image_uuid):
-            msg = _("Invalid image_ref provided.")
+            msg = _("Invalid imageRef provided.")
             raise exc.HTTPBadRequest(explanation=msg)
 
         return image_uuid
@@ -788,24 +788,24 @@ class ServersController(wsgi.Controller):
         """Get image data from the request or raise appropriate
         exceptions.
 
-        The field image_ref is mandatory when no block devices have been
+        The field imageRef is mandatory when no block devices have been
         defined and must be a proper uuid when present.
         """
-        image_href = server_dict.get('image_ref')
+        image_href = server_dict.get('imageRef')
 
         if not image_href and create_kwargs.get('block_device_mapping'):
             return ''
         elif image_href:
             return self._image_uuid_from_href(unicode(image_href))
         else:
-            msg = _("Missing image_ref attribute")
+            msg = _("Missing imageRef attribute")
             raise exc.HTTPBadRequest(explanation=msg)
 
     def _flavor_id_from_req_data(self, data):
         try:
-            flavor_ref = data['server']['flavor_ref']
+            flavor_ref = data['server']['flavorRef']
         except (TypeError, KeyError):
-            msg = _("Missing flavor_ref attribute")
+            msg = _("Missing flavorRef attribute")
             raise exc.HTTPBadRequest(explanation=msg)
 
         return common.get_id_from_href(flavor_ref)
@@ -817,12 +817,12 @@ class ServersController(wsgi.Controller):
         """Resizes a given instance to the flavor size requested."""
         resize_dict = body['resize']
         try:
-            flavor_ref = str(resize_dict["flavor_ref"])
+            flavor_ref = str(resize_dict["flavorRef"])
             if not flavor_ref:
-                msg = _("Resize request has invalid 'flavor_ref' attribute.")
+                msg = _("Resize request has invalid 'flavorRef' attribute.")
                 raise exc.HTTPBadRequest(explanation=msg)
         except (KeyError, TypeError):
-            msg = _("Resize requests require 'flavor_ref' attribute.")
+            msg = _("Resize requests require 'flavorRef' attribute.")
             raise exc.HTTPBadRequest(explanation=msg)
 
         resize_kwargs = {}
@@ -837,9 +837,9 @@ class ServersController(wsgi.Controller):
         rebuild_dict = body['rebuild']
 
         try:
-            image_href = rebuild_dict["image_ref"]
+            image_href = rebuild_dict["imageRef"]
         except (KeyError, TypeError):
-            msg = _("Could not parse image_ref from request.")
+            msg = _("Could not parse imageRef from request.")
             raise exc.HTTPBadRequest(explanation=msg)
 
         image_href = self._image_uuid_from_href(image_href)

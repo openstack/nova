@@ -344,9 +344,9 @@ class ServersControllerCreateTest(test.TestCase):
     def _test_create_extra(self, params, no_image=False,
                            override_controller=None):
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
-        server = dict(name='server_test', image_ref=image_uuid, flavor_ref=2)
+        server = dict(name='server_test', imageRef=image_uuid, flavorRef=2)
         if no_image:
-            server.pop('image_ref', None)
+            server.pop('imageRef', None)
         server.update(params)
         body = dict(server=server)
         req = fakes.HTTPRequestV3.blank('/v3/servers')
@@ -384,8 +384,8 @@ class ServersControllerCreateTest(test.TestCase):
         body = {
             'server': {
                 'name': 'config_drive_test',
-                'image_ref': image_href,
-                'flavor_ref': flavor_ref,
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
                 'metadata': {
                     'hello': 'world',
                     'open': 'stack',
@@ -416,8 +416,8 @@ class ServersControllerCreateTest(test.TestCase):
         body = {
             'server': {
                 'name': 'config_drive_test',
-                'image_ref': image_href,
-                'flavor_ref': flavor_ref,
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
                 'metadata': {
                     'hello': 'world',
                     'open': 'stack',

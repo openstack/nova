@@ -140,9 +140,9 @@ class ServersControllerCreateTest(test.TestCase):
     def _test_create_extra(self, params, no_image=False,
                            override_controller=None):
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
-        server = dict(name='server_test', image_ref=image_uuid, flavor_ref=2)
+        server = dict(name='server_test', imageRef=image_uuid, flavorRef=2)
         if no_image:
-            server.pop('image_ref', None)
+            server.pop('imageRef', None)
         server.update(params)
         body = dict(server=server)
         req = fakes.HTTPRequestV3.blank('/servers')
@@ -217,8 +217,8 @@ class ServersControllerCreateTest(test.TestCase):
             'server': {
                 multiple_create.MIN_ATTRIBUTE_NAME: -1,
                 'name': 'server_test',
-                'image_ref': image_href,
-                'flavor_ref': flavor_ref,
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
             }
         }
         req = fakes.HTTPRequestV3.blank('/servers')
@@ -238,8 +238,8 @@ class ServersControllerCreateTest(test.TestCase):
             'server': {
                 multiple_create.MAX_ATTRIBUTE_NAME: -1,
                 'name': 'server_test',
-                'image_ref': image_href,
-                'flavor_ref': flavor_ref,
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
             }
         }
         req = fakes.HTTPRequestV3.blank('/servers')
@@ -260,8 +260,8 @@ class ServersControllerCreateTest(test.TestCase):
                 multiple_create.MIN_ATTRIBUTE_NAME: 4,
                 multiple_create.MAX_ATTRIBUTE_NAME: 2,
                 'name': 'server_test',
-                'image_ref': image_href,
-                'flavor_ref': flavor_ref,
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
             }
         }
         req = fakes.HTTPRequestV3.blank('/servers')
@@ -281,8 +281,8 @@ class ServersControllerCreateTest(test.TestCase):
             'server': {
                 multiple_create.MIN_ATTRIBUTE_NAME: 'abcd',
                 'name': 'server_test',
-                'image_ref': image_href,
-                'flavor_ref': flavor_ref,
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
             }
         }
         req = fakes.HTTPRequestV3.blank('/servers')
@@ -302,8 +302,8 @@ class ServersControllerCreateTest(test.TestCase):
             'server': {
                 multiple_create.MAX_ATTRIBUTE_NAME: 'abcd',
                 'name': 'server_test',
-                'image_ref': image_href,
-                'flavor_ref': flavor_ref,
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
             }
         }
         req = fakes.HTTPRequestV3.blank('/servers')
@@ -325,8 +325,8 @@ class ServersControllerCreateTest(test.TestCase):
             'server': {
                 multiple_create.MIN_ATTRIBUTE_NAME: 2,
                 'name': 'server_test',
-                'image_ref': image_href,
-                'flavor_ref': flavor_ref,
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
                 'metadata': {'hello': 'world',
                              'open': 'stack'},
             }
@@ -352,8 +352,8 @@ class ServersControllerCreateTest(test.TestCase):
             'server': {
                 multiple_create.MIN_ATTRIBUTE_NAME: 2,
                 'name': 'server_test',
-                'image_ref': image_href,
-                'flavor_ref': flavor_ref,
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
                 'metadata': {'hello': 'world',
                              'open': 'stack'},
             }
@@ -387,8 +387,8 @@ class ServersControllerCreateTest(test.TestCase):
             'server': {
                 multiple_create.MIN_ATTRIBUTE_NAME: 2,
                 'name': 'server_test',
-                'image_ref': image_href,
-                'flavor_ref': flavor_ref,
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
                 'metadata': {'hello': 'world',
                              'open': 'stack'},
                 multiple_create.RRID_ATTRIBUTE_NAME: resv_id_return
@@ -463,8 +463,8 @@ class ServersControllerCreateTest(test.TestCase):
             'server': {
                 multiple_create.MAX_ATTRIBUTE_NAME: 2.5,
                 'name': 'server_test',
-                'image_ref': image_href,
-                'flavor_ref': flavor_ref,
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
                 'metadata': {'hello': 'world',
                              'open': 'stack'},
             }
@@ -484,8 +484,8 @@ class ServersControllerCreateTest(test.TestCase):
             'server': {
                 multiple_create.MIN_ATTRIBUTE_NAME: 2.5,
                 'name': 'server_test',
-                'image_ref': image_href,
-                'flavor_ref': flavor_ref,
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
                 'metadata': {'hello': 'world',
                              'open': 'stack'},
             }
