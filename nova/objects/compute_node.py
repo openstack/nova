@@ -18,6 +18,7 @@ from nova import objects
 from nova.objects import base
 from nova.objects import fields
 from nova.openstack.common import jsonutils
+from nova import utils
 
 
 class ComputeNode(base.NovaPersistentObject, base.NovaObject):
@@ -52,8 +53,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         }
 
     def obj_make_compatible(self, primitive, target_version):
-        target_version = (int(target_version.split('.')[0]),
-                          int(target_version.split('.')[1]))
+        target_version = utils.convert_version_to_tuple(target_version)
         if target_version < (1, 4) and 'host_ip' in primitive:
             del primitive['host_ip']
         if target_version < (1, 3) and 'stats' in primitive:
