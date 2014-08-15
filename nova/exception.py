@@ -1639,3 +1639,35 @@ class ImageVCPULimitsRangeImpossible(Invalid):
 
 class InvalidArchitectureName(Invalid):
     msg_fmt = _("Architecture name '%(arch)s' is not recognised")
+
+
+class ImageNUMATopologyIncomplete(Invalid):
+    msg_fmt = _("CPU and memory allocation must be provided for all "
+                "NUMA nodes")
+
+
+class ImageNUMATopologyForbidden(Invalid):
+    msg_fmt = _("Image property '%(name)s' is not permitted to override "
+                "NUMA configuration set against the flavor")
+
+
+class ImageNUMATopologyAsymmetric(Invalid):
+    msg_fmt = _("Asymmetric NUMA topologies require explicit assignment "
+                "of CPUs and memory to nodes in image or flavor")
+
+
+class ImageNUMATopologyCPUOutOfRange(Invalid):
+    msg_fmt = _("CPU number %(cpunum)d is larger than max %(cpumax)d")
+
+
+class ImageNUMATopologyCPUDuplicates(Invalid):
+    msg_fmt = _("CPU number %(cpunum)d is assigned to two nodes")
+
+
+class ImageNUMATopologyCPUsUnassigned(Invalid):
+    msg_fmt = _("CPU number %(cpuset)s is not assigned to any node")
+
+
+class ImageNUMATopologyMemoryOutOfRange(Invalid):
+    msg_fmt = _("%(memsize)d MB of memory assigned, but expected "
+                "%(memtotal)d MB")
