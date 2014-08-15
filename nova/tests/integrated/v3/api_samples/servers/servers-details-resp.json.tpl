@@ -21,13 +21,13 @@
                     }
                 ]
             },
-            "host_id": "%(hostid)s",
+            "hostId": "%(hostid)s",
             "id": "%(id)s",
             "image": {
                 "id": "%(uuid)s",
                 "links": [
                     {
-                        "href": "%(glance_host)s/images/%(uuid)s",
+                        "href": "%(host)s/images/%(uuid)s",
                         "rel": "bookmark"
                     }
                 ]

@@ -302,8 +302,8 @@ class ServersControllerTest(ControllerTest):
         server1 = self.controller.show(req, FAKE_UUID)
         server2 = self.controller.show(req, FAKE_UUID)
 
-        self.assertNotEqual(server1['server']['host_id'],
-                            server2['server']['host_id'])
+        self.assertNotEqual(server1['server']['hostId'],
+                            server2['server']['hostId'])
 
     def _get_server_data_dict(self, uuid, image_bookmark, flavor_bookmark,
                               status="ACTIVE", progress=100):
@@ -317,7 +317,7 @@ class ServersControllerTest(ControllerTest):
                 "progress": progress,
                 "name": "server1",
                 "status": status,
-                "host_id": '',
+                "hostId": '',
                 "image": {
                     "id": "10",
                     "links": [
@@ -362,7 +362,7 @@ class ServersControllerTest(ControllerTest):
 
     def test_get_server_by_id(self):
         self.flags(use_ipv6=True)
-        image_bookmark = "http://localhost:9292/images/10"
+        image_bookmark = "http://localhost/images/10"
         flavor_bookmark = "http://localhost/flavors/1"
 
         uuid = FAKE_UUID
@@ -378,7 +378,7 @@ class ServersControllerTest(ControllerTest):
         self.assertThat(res_dict, matchers.DictMatches(expected_server))
 
     def test_get_server_with_active_status_by_id(self):
-        image_bookmark = "http://localhost:9292/images/10"
+        image_bookmark = "http://localhost/images/10"
         flavor_bookmark = "http://localhost/flavors/1"
 
         new_return_server = fakes.fake_instance_get(
@@ -395,7 +395,7 @@ class ServersControllerTest(ControllerTest):
 
     def test_get_server_with_id_image_ref_by_id(self):
         image_ref = "10"
-        image_bookmark = "http://localhost:9292/images/10"
+        image_bookmark = "http://localhost/images/10"
         flavor_id = "1"
         flavor_bookmark = "http://localhost/flavors/1"
 
@@ -1225,7 +1225,7 @@ class ServersControllerTest(ControllerTest):
             "links": [
                 {
                     "rel": "bookmark",
-                    "href": 'http://localhost:9292/images/10',
+                    "href": 'http://localhost/images/10',
                     },
                 ],
             }
@@ -1234,7 +1234,7 @@ class ServersControllerTest(ControllerTest):
 
         for i, s in enumerate(res_dict['servers']):
             self.assertEqual(s['id'], fakes.get_fake_uuid(i))
-            self.assertEqual(s['host_id'], '')
+            self.assertEqual(s['hostId'], '')
             self.assertEqual(s['name'], 'server%d' % (i + 1))
             self.assertEqual(s['image'], expected_image)
             self.assertEqual(s['flavor'], expected_flavor)
@@ -1243,8 +1243,8 @@ class ServersControllerTest(ControllerTest):
 
     def test_get_all_server_details_with_host(self):
         """We want to make sure that if two instances are on the same host,
-        then they return the same host_id. If two instances are on different
-        hosts, they should return different host_ids. In this test,
+        then they return the same hostId. If two instances are on different
+        hosts, they should return different hostIds. In this test,
         there are 5 instances - 2 on one host and 3 on another.
         """
 
@@ -1260,13 +1260,13 @@ class ServersControllerTest(ControllerTest):
         res_dict = self.controller.detail(req)
 
         server_list = res_dict['servers']
-        host_ids = [server_list[0]['host_id'], server_list[1]['host_id']]
+        host_ids = [server_list[0]['hostId'], server_list[1]['hostId']]
         self.assertTrue(host_ids[0] and host_ids[1])
         self.assertNotEqual(host_ids[0], host_ids[1])
 
         for i, s in enumerate(server_list):
             self.assertEqual(s['id'], fakes.get_fake_uuid(i))
-            self.assertEqual(s['host_id'], host_ids[i % 2])
+            self.assertEqual(s['hostId'], host_ids[i % 2])
             self.assertEqual(s['name'], 'server%d' % (i + 1))
 
     def test_get_servers_joins_pci_devices(self):
@@ -2676,7 +2676,7 @@ class ServersViewBuilderTest(test.TestCase):
         self.assertThat(output, matchers.DictMatches(expected_server))
 
     def test_build_server_detail(self):
-        image_bookmark = "http://localhost:9292/images/5"
+        image_bookmark = "http://localhost/images/5"
         flavor_bookmark = "http://localhost/flavors/1"
         self_link = "http://localhost/v3/servers/%s" % self.uuid
         bookmark_link = "http://localhost/servers/%s" % self.uuid
@@ -2690,7 +2690,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "progress": 0,
                 "name": "test_server",
                 "status": "BUILD",
-                "host_id": '',
+                "hostId": '',
                 "image": {
                     "id": "5",
                     "links": [
@@ -2734,17 +2734,12 @@ class ServersViewBuilderTest(test.TestCase):
         output = self.view_builder.show(self.request, self.instance)
         self.assertThat(output, matchers.DictMatches(expected_server))
 
-    def test_build_server_no_image(self):
-        self.instance["image_ref"] = ""
-        output = self.view_builder.show(self.request, self.instance)
-        self.assertEqual(output['server']['image'], {})
-
     def test_build_server_detail_with_fault(self):
         self.instance['vm_state'] = vm_states.ERROR
         self.instance['fault'] = fake_instance.fake_fault_obj(
                                      self.request.context, self.uuid)
 
-        image_bookmark = "http://localhost:9292/images/5"
+        image_bookmark = "http://localhost/images/5"
         flavor_bookmark = "http://localhost/flavors/1"
         self_link = "http://localhost/v3/servers/%s" % self.uuid
         bookmark_link = "http://localhost/servers/%s" % self.uuid
@@ -2757,7 +2752,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "created": "2010-10-10T12:00:00Z",
                 "name": "test_server",
                 "status": "ERROR",
-                "host_id": '',
+                "hostId": '',
                 "image": {
                     "id": "5",
                     "links": [
@@ -2893,7 +2888,7 @@ class ServersViewBuilderTest(test.TestCase):
         # set the power state of the instance to running
         self.instance['vm_state'] = vm_states.ACTIVE
         self.instance['progress'] = 100
-        image_bookmark = "http://localhost:9292/images/5"
+        image_bookmark = "http://localhost/images/5"
         flavor_bookmark = "http://localhost/flavors/1"
         self_link = "http://localhost/v3/servers/%s" % self.uuid
         bookmark_link = "http://localhost/servers/%s" % self.uuid
@@ -2907,7 +2902,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "progress": 100,
                 "name": "test_server",
                 "status": "ACTIVE",
-                "host_id": '',
+                "hostId": '',
                 "image": {
                     "id": "5",
                     "links": [
@@ -2958,7 +2953,7 @@ class ServersViewBuilderTest(test.TestCase):
         metadata = nova_utils.metadata_to_dict(metadata)
         self.instance['metadata'] = metadata
 
-        image_bookmark = "http://localhost:9292/images/5"
+        image_bookmark = "http://localhost/images/5"
         flavor_bookmark = "http://localhost/flavors/1"
         self_link = "http://localhost/v3/servers/%s" % self.uuid
         bookmark_link = "http://localhost/servers/%s" % self.uuid
@@ -2972,7 +2967,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "progress": 0,
                 "name": "test_server",
                 "status": "BUILD",
-                "host_id": '',
+                "hostId": '',
                 "image": {
                     "id": "5",
                     "links": [

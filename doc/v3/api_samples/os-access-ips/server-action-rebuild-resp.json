@@ -21,13 +21,13 @@
                 }
             ]
         },
-        "host_id": "5c8072dbcda8ce3f26deb6662bd7718e1a6d349bdf2296911d1be4ac",
+        "hostId": "5c8072dbcda8ce3f26deb6662bd7718e1a6d349bdf2296911d1be4ac",
         "id": "53a63a19-c145-47f8-9ae5-b39d6bff33ec",
         "image": {
             "id": "70a599e0-31e7-49b7-b260-868f441e862b",
             "links": [
                 {
-                    "href": "http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "href": "http://openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
                     "rel": "bookmark"
                 }
             ]
