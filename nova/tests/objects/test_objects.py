@@ -36,12 +36,18 @@ from nova import test
 from nova.tests import fake_notifier
 
 
+class MyOwnedObject(base.NovaPersistentObject, base.NovaObject):
+    VERSION = '1.0'
+    fields = {'baz': fields.Field(fields.Integer())}
+
+
 class MyObj(base.NovaPersistentObject, base.NovaObject):
     VERSION = '1.6'
     fields = {'foo': fields.Field(fields.Integer()),
               'bar': fields.Field(fields.String()),
               'missing': fields.Field(fields.String()),
               'readonly': fields.Field(fields.Integer(), read_only=True),
+              'rel_object': fields.ObjectField('MyOwnedObject', nullable=True)
               }
 
     @staticmethod
@@ -88,6 +94,7 @@ class MyObj(base.NovaPersistentObject, base.NovaObject):
         self.bar = 'meow'
         self.save()
         self.foo = 42
+        self.rel_object = MyOwnedObject(baz=42)
 
     def obj_make_compatible(self, primitive, target_version):
         # NOTE(danms): Simulate an older version that had a different
@@ -578,9 +585,10 @@ class _TestObject(object):
         obj.bar = 'something'
         self.assertEqual(obj.obj_what_changed(), set(['bar']))
         obj.modify_save_modify(self.context)
-        self.assertEqual(obj.obj_what_changed(), set(['foo']))
+        self.assertEqual(obj.obj_what_changed(), set(['foo', 'rel_object']))
         self.assertEqual(obj.foo, 42)
         self.assertEqual(obj.bar, 'meow')
+        self.assertIsInstance(obj.rel_object, MyOwnedObject)
         self.assertRemotes()
 
     def test_changed_with_sub_object(self):
@@ -664,7 +672,8 @@ class _TestObject(object):
 
     def test_object_inheritance(self):
         base_fields = base.NovaPersistentObject.fields.keys()
-        myobj_fields = ['foo', 'bar', 'missing', 'readonly'] + base_fields
+        myobj_fields = ['foo', 'bar', 'missing',
+                        'readonly', 'rel_object'] + base_fields
         myobj3_fields = ['new_field']
         self.assertTrue(issubclass(TestSubclassedObject, MyObj))
         self.assertEqual(len(myobj_fields), len(MyObj.fields))
@@ -712,7 +721,7 @@ class _TestObject(object):
         obj = MyObj(foo=123)
         self.assertEqual('MyObj(bar=<?>,created_at=<?>,deleted=<?>,'
                          'deleted_at=<?>,foo=123,missing=<?>,readonly=<?>,'
-                         'updated_at=<?>)', repr(obj))
+                         'rel_object=<?>,updated_at=<?>)', repr(obj))
 
 
 class TestObject(_LocalTest, _TestObject):
@@ -892,6 +901,23 @@ class TestObjectSerializer(_BaseTestCase):
             self.assertEqual(1, len(thing2))
             for item in thing2:
                 self.assertIsInstance(item, MyObj)
+        # dict case
+        thing = {'key': obj}
+        primitive = ser.serialize_entity(self.context, thing)
+        self.assertEqual(1, len(primitive))
+        for item in primitive.itervalues():
+            self.assertNotIsInstance(item, base.NovaObject)
+        thing2 = ser.deserialize_entity(self.context, primitive)
+        self.assertEqual(1, len(thing2))
+        for item in thing2.itervalues():
+            self.assertIsInstance(item, MyObj)
+
+        # object-action updates dict case
+        thing = {'foo': obj.obj_to_primitive()}
+        primitive = ser.serialize_entity(self.context, thing)
+        self.assertEqual(thing, primitive)
+        thing2 = ser.deserialize_entity(self.context, thing)
+        self.assertIsInstance(thing2['foo'], base.NovaObject)
 
 
 # NOTE(danms): The hashes in this list should only be changed if
@@ -933,7 +959,8 @@ object_data = {
     'KeyPairList': '1.0-854cfff138dac9d5925c89cf805d1a70',
     'Migration': '1.1-67c47726c2c71422058cd9d149d6d3ed',
     'MigrationList': '1.1-6ca2ebb822ebfe1a660bace824b378c6',
-    'MyObj': '1.6-9039bc29de1c08943771407697c83076',
+    'MyObj': '1.6-55bfc22259fd3df239e4a49fa3552c93',
+    'MyOwnedObject': '1.0-0f3d6c028543d7f3715d121db5b8e298',
     'Network': '1.2-2ea21ede5e45bb80e7b7ac7106915c4e',
     'NetworkList': '1.2-16510568c6e64cb8b358cb2b11333196',
     'PciDevice': '1.1-523c46f960d93f78db55f0280b09441e',
@@ -947,7 +974,7 @@ object_data = {
     'SecurityGroupRuleList': '1.0-af4deeea8699ee90fb217f77d711d781',
     'Service': '1.2-5a3df338c669e1148251431370b440ef',
     'ServiceList': '1.0-ae64b4922df28d7cd11c59cddddf926c',
-    'TestSubclassedObject': '1.6-1629421d83f474b7fadc41d3fc0e4998',
+    'TestSubclassedObject': '1.6-c63feb2f2533b7d075490c04a2cc10dd',
     'VirtualInterface': '1.0-10fdac4c704102b6d57d6936d6d790d2',
     'VirtualInterfaceList': '1.0-dc9e9d5bce522d28f96092c49119b3e0',
 }
