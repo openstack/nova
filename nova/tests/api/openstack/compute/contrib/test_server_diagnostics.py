@@ -80,6 +80,16 @@ class ServerDiagnosticsTest(test.NoDBTestCase):
         res = req.get_response(self.router)
         self.assertEqual(409, res.status_int)
 
+    @mock.patch.object(compute_api.API, 'get_diagnostics',
+                side_effect=NotImplementedError)
+    @mock.patch.object(compute_api.API, 'get', fake_instance_get)
+    def test_get_diagnostics_raise_no_notimplementederror(self,
+                      mock_get_diagnostics):
+        req = fakes.HTTPRequest.blank(
+            '/fake/servers/%s/diagnostics' % UUID)
+        res = req.get_response(self.router)
+        self.assertEqual(501, res.status_int)
+
 
 class TestServerDiagnosticsXMLSerializer(test.NoDBTestCase):
     namespace = wsgi.XMLNS_V11

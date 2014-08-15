@@ -21,6 +21,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
+from nova.i18n import _
 
 
 authorize = extensions.extension_authorizer('compute', 'server_diagnostics')
@@ -52,6 +53,9 @@ class ServerDiagnosticsController(object):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'get_diagnostics')
+        except NotImplementedError:
+            msg = _("Unable to get diagnostics, functionality not implemented")
+            raise webob.exc.HTTPNotImplemented(explanation=msg)
 
 
 class Server_diagnostics(extensions.ExtensionDescriptor):
