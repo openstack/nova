@@ -752,8 +752,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.vmwareapi.vmops.VMwareVMOps._set_machine_id')
     @mock.patch(
         'nova.virt.vmwareapi.imagecache.ImageCacheManager.enlist_image')
-    @mock.patch('nova.virt.vmwareapi.vm_util.get_vnc_port', return_value=5900)
-    @mock.patch('nova.virt.vmwareapi.vmops.VMwareVMOps._set_vnc_config')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_and_set_vnc_config')
     @mock.patch('nova.virt.vmwareapi.vm_util.power_on_instance')
     @mock.patch('nova.virt.vmwareapi.vm_util.copy_virtual_disk')
     # TODO(dims): Need to add tests for create_virtual_disk after the
@@ -761,8 +760,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def _test_spawn(self,
                    mock_copy_virtual_disk,
                    mock_power_on_instance,
-                   mock_set_vnc_config,
-                   mock_get_vnc_port,
+                   mock_get_and_set_vnc_config,
                    mock_enlist_image,
                    mock_set_machine_id,
                    mock_mkdir,
@@ -816,7 +814,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
             self.assertEqual(expected_mkdir_calls, len(mock_mkdir.mock_calls))
 
-            mock_get_vnc_port.assert_called_once_with(self._session)
             mock_get_mo_id_for_instance.assert_called_once_with(self._instance)
             mock_get_res_pool_ref.assert_called_once_with(
                     self._session, None, 'fake_node_mo_id')
@@ -839,10 +836,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                     'fake_vm_folder',
                     'fake_create_spec',
                     'fake_rp_ref')
-            mock_set_vnc_config.assert_called_once_with(
+            mock_get_and_set_vnc_config.assert_called_once_with(
                 self._session._get_vim().client.factory,
-                self._instance,
-                5900)
+                self._instance)
             mock_set_machine_id.assert_called_once_with(
                 self._session._get_vim().client.factory,
                 self._instance,

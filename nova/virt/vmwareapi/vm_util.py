@@ -29,7 +29,6 @@ from nova.i18n import _
 from nova.network import model as network_model
 from nova.openstack.common import log as logging
 from nova.openstack.common import units
-from nova import utils
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import vim_util
 
@@ -720,7 +719,6 @@ def get_vnc_config_spec(client_factory, port):
     return virtual_machine_config_spec
 
 
-@utils.synchronized('vmware.get_vnc_port')
 def get_vnc_port(session):
     """Return VNC port for an VM or None if there is no available port."""
     min_port = CONF.vmware.vnc_port
