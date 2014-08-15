@@ -25,7 +25,6 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova import exception
-from nova.i18n import _
 from nova import utils
 
 
@@ -76,9 +75,6 @@ class RescueController(wsgi.Controller):
         except exception.InstanceNotRescuable as non_rescuable:
             raise exc.HTTPBadRequest(
                 explanation=non_rescuable.format_message())
-        except NotImplementedError:
-            msg = _("The rescue operation is not implemented by this cloud.")
-            raise exc.HTTPNotImplemented(explanation=msg)
 
         if CONF.enable_instance_password:
             return {'admin_password': password}
@@ -100,9 +96,6 @@ class RescueController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                                                                   'unrescue')
-        except NotImplementedError:
-            msg = _("The unrescue operation is not implemented by this cloud.")
-            raise exc.HTTPNotImplemented(explanation=msg)
 
         return webob.Response(status_int=202)
 
