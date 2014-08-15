@@ -81,7 +81,7 @@ from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import firewall
 from nova.virt.libvirt import imagebackend
-from nova.virt.libvirt import rbd
+from nova.virt.libvirt import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt import netutils
 
@@ -6238,7 +6238,7 @@ class LibvirtConnTestCase(test.TestCase,
                     "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
         conn.destroy(self.context, instance, [])
 
-    @mock.patch.object(rbd, 'RBDDriver')
+    @mock.patch.object(rbd_utils, 'RBDDriver')
     def test_cleanup_rbd(self, mock_driver):
         driver = mock_driver.return_value
         driver.cleanup_volumes = mock.Mock()

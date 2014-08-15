@@ -92,7 +92,7 @@ from nova.virt.libvirt import firewall as libvirt_firewall
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import lvm
-from nova.virt.libvirt import rbd
+from nova.virt.libvirt import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import vif as libvirt_vif
 from nova.virt import netutils
@@ -1087,7 +1087,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @staticmethod
     def _get_rbd_driver():
-        return rbd.RBDDriver(
+        return rbd_utils.RBDDriver(
                 pool=CONF.libvirt.images_rbd_pool,
                 ceph_conf=CONF.libvirt.images_rbd_ceph_conf,
                 rbd_user=CONF.libvirt.rbd_user)
