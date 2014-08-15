@@ -89,7 +89,7 @@ TIME_UNITS = {
     'SECOND': 1,
     'MINUTE': 60,
     'HOUR': 3600,
-    'DAY': 84400
+    'DAY': 86400
 }
 
 
