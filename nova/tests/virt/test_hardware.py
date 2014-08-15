@@ -12,9 +12,15 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import uuid
+
+import mock
 import six
 
+from nova import context
 from nova import exception
+from nova import objects
+from nova.objects import base as base_obj
 from nova import test
 from nova.tests import matchers
 from nova.virt import hardware as hw
@@ -1211,3 +1217,118 @@ class NUMATopologyClaimsTest(test.NoDBTestCase):
                      self.host, [self.medium_instance, self.small_instance],
                      self.limits),
                 six.text_type)
+
+
+class HelperMethodsTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(HelperMethodsTestCase, self).setUp()
+        self.hosttopo = hw.VirtNUMAHostTopology([
+            hw.VirtNUMATopologyCellUsage(0, set([0, 1]), 512),
+            hw.VirtNUMATopologyCellUsage(1, set([2, 3]), 512),
+        ])
+        self.instancetopo = hw.VirtNUMAInstanceTopology([
+            hw.VirtNUMATopologyCell(0, set([0, 1]), 256),
+            hw.VirtNUMATopologyCell(1, set([2]), 256),
+        ])
+        self.context = context.RequestContext('fake-user',
+                                              'fake-project')
+
+    def _check_usage(self, host_usage):
+        self.assertEqual(2, host_usage.cells[0].cpu_usage)
+        self.assertEqual(256, host_usage.cells[0].memory_usage)
+        self.assertEqual(1, host_usage.cells[1].cpu_usage)
+        self.assertEqual(256, host_usage.cells[1].memory_usage)
+
+    def test_dicts_json(self):
+        host = {'numa_topology': self.hosttopo.to_json()}
+        instance = {'numa_topology': self.instancetopo.to_json()}
+
+        res = hw.get_host_numa_usage_from_instance(host, instance)
+        self.assertIsInstance(res, six.string_types)
+        self._check_usage(hw.VirtNUMAHostTopology.from_json(res))
+
+    def test_dicts_instance_json(self):
+        host = {'numa_topology': self.hosttopo}
+        instance = {'numa_topology': self.instancetopo.to_json()}
+
+        res = hw.get_host_numa_usage_from_instance(host, instance)
+        self.assertIsInstance(res, hw.VirtNUMAHostTopology)
+        self._check_usage(res)
+
+    def test_dicts_host_json(self):
+        host = {'numa_topology': self.hosttopo.to_json()}
+        instance = {'numa_topology': self.instancetopo}
+
+        res = hw.get_host_numa_usage_from_instance(host, instance)
+        self.assertIsInstance(res, six.string_types)
+        self._check_usage(hw.VirtNUMAHostTopology.from_json(res))
+
+    def test_object_host_instance_json(self):
+        host = objects.ComputeNode(numa_topology=self.hosttopo.to_json())
+        instance = {'numa_topology': self.instancetopo.to_json()}
+
+        res = hw.get_host_numa_usage_from_instance(host, instance)
+        self.assertIsInstance(res, six.string_types)
+        self._check_usage(hw.VirtNUMAHostTopology.from_json(res))
+
+    def test_object_host_instance(self):
+        host = objects.ComputeNode(numa_topology=self.hosttopo.to_json())
+        instance = {'numa_topology': self.instancetopo}
+
+        res = hw.get_host_numa_usage_from_instance(host, instance)
+        self.assertIsInstance(res, six.string_types)
+        self._check_usage(hw.VirtNUMAHostTopology.from_json(res))
+
+    def test_instance_with_fetch(self):
+        host = objects.ComputeNode(numa_topology=self.hosttopo.to_json())
+        fake_uuid = str(uuid.uuid4())
+        instance = {'uuid': fake_uuid}
+
+        with mock.patch.object(objects.InstanceNUMATopology,
+                'get_by_instance_uuid', return_value=None) as get_mock:
+            res = hw.get_host_numa_usage_from_instance(host, instance)
+            self.assertIsInstance(res, six.string_types)
+            self.assertTrue(get_mock.called)
+
+    def test_object_instance_with_load(self):
+        host = objects.ComputeNode(numa_topology=self.hosttopo.to_json())
+        fake_uuid = str(uuid.uuid4())
+        instance = objects.Instance(context=self.context, uuid=fake_uuid)
+
+        with mock.patch.object(objects.InstanceNUMATopology,
+                'get_by_instance_uuid', return_value=None) as get_mock:
+            res = hw.get_host_numa_usage_from_instance(host, instance)
+            self.assertIsInstance(res, six.string_types)
+            self.assertTrue(get_mock.called)
+
+    def test_instance_serialized_by_base_obj_to_primitive(self):
+        host = objects.ComputeNode(numa_topology=self.hosttopo.to_json())
+        fake_uuid = str(uuid.uuid4())
+        instance = objects.Instance(context=self.context, id=1, uuid=fake_uuid,
+                numa_topology=objects.InstanceNUMATopology.obj_from_topology(
+                    self.instancetopo))
+        instance_raw = base_obj.obj_to_primitive(instance)
+        res = hw.get_host_numa_usage_from_instance(host, instance_raw)
+        self.assertIsInstance(res, six.string_types)
+        self._check_usage(hw.VirtNUMAHostTopology.from_json(res))
+
+    def test_attr_host(self):
+        class Host(object):
+            def __init__(obj):
+                obj.numa_topology = self.hosttopo.to_json()
+
+        host = Host()
+        instance = {'numa_topology': self.instancetopo.to_json()}
+
+        res = hw.get_host_numa_usage_from_instance(host, instance)
+        self.assertIsInstance(res, six.string_types)
+        self._check_usage(hw.VirtNUMAHostTopology.from_json(res))
+
+    def test_never_serialize_result(self):
+        host = {'numa_topology': self.hosttopo.to_json()}
+        instance = {'numa_topology': self.instancetopo}
+
+        res = hw.get_host_numa_usage_from_instance(host, instance,
+                                                  never_serialize_result=True)
+        self.assertIsInstance(res, hw.VirtNUMAHostTopology)
+        self._check_usage(res)
