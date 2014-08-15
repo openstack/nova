@@ -310,7 +310,7 @@ class IPAddress(FieldType):
         try:
             return netaddr.IPAddress(value)
         except netaddr.AddrFormatError as e:
-            raise ValueError(str(e))
+            raise ValueError(six.text_type(e))
 
     def from_primitive(self, obj, attr, value):
         return self.coerce(obj, attr, value)
@@ -353,7 +353,7 @@ class IPNetwork(IPAddress):
         try:
             return netaddr.IPNetwork(value)
         except netaddr.AddrFormatError as e:
-            raise ValueError(str(e))
+            raise ValueError(six.text_type(e))
 
 
 class IPV4Network(IPNetwork):
@@ -362,7 +362,7 @@ class IPV4Network(IPNetwork):
         try:
             return netaddr.IPNetwork(value, version=4)
         except netaddr.AddrFormatError as e:
-            raise ValueError(str(e))
+            raise ValueError(six.text_type(e))
 
 
 class IPV6Network(IPNetwork):
@@ -371,7 +371,7 @@ class IPV6Network(IPNetwork):
         try:
             return netaddr.IPNetwork(value, version=6)
         except netaddr.AddrFormatError as e:
-            raise ValueError(str(e))
+            raise ValueError(six.text_type(e))
 
 
 class CompoundFieldType(FieldType):

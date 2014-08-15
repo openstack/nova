@@ -582,7 +582,7 @@ class Controller(wsgi.Controller):
                 if not strutils.bool_from_string(all_tenants, True):
                     del search_opts['all_tenants']
             except ValueError as err:
-                raise exception.InvalidInput(str(err))
+                raise exception.InvalidInput(six.text_type(err))
 
         if 'all_tenants' in search_opts:
             policy.enforce(context, 'compute:get_all_tenants',

@@ -37,6 +37,7 @@ Nova Specific Commandments
 - [N322] Method's default argument shouldn't be mutable
 - [N323] Ensure that the _() function is explicitly imported to ensure proper translations.
 - [N324] Ensure that jsonutils.%(fun)s must be used instead of json.%(fun)s
+- [N325] str() cannot be used on an exception.  Remove use or use six.text_type()
 
 Creating Unit Tests
 -------------------

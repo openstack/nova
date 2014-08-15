@@ -21,6 +21,7 @@ the system.
 import datetime
 
 from oslo.config import cfg
+import six
 
 from nova.compute import flavors
 import nova.context
@@ -97,7 +98,8 @@ def send_api_fault(url, status, exception):
     if not CONF.notify_api_faults:
         return
 
-    payload = {'url': url, 'exception': str(exception), 'status': status}
+    payload = {'url': url, 'exception': six.text_type(exception),
+               'status': status}
 
     rpc.get_notifier('api').error(None, 'api.fault', payload)
 

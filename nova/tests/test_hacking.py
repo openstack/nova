@@ -12,6 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import textwrap
+
+import mock
+import pep8
+
 from nova.hacking import checks
 from nova import test
 
@@ -238,3 +243,61 @@ class HackingTestCase(test.NoDBTestCase):
         self.assertEqual(0,
             len(list(checks.use_jsonutils("json.dumb",
                                  "./nova/virt/xenapi/driver.py"))))
+
+    # We are patching pep8 so that only the check under test is actually
+    # installed.
+    @mock.patch('pep8._checks',
+                {'physical_line': {}, 'logical_line': {}, 'tree': {}})
+    def _run_check(self, code, checker):
+        pep8.register_check(checker)
+
+        lines = textwrap.dedent(code).strip().splitlines(True)
+
+        checker = pep8.Checker(lines=lines)
+        checker.check_all()
+        checker.report._deferred_print.sort()
+        return checker.report._deferred_print
+
+    def _assert_has_errors(self, code, checker, expected_errors=None):
+        actual_errors = [e[:3] for e in self._run_check(code, checker)]
+        self.assertEqual(expected_errors or [], actual_errors)
+
+    def test_str_exception(self):
+
+        checker = checks.CheckForStrExc
+        code = """
+               def f(a, b):
+                   try:
+                       p = str(a) + str(b)
+                   except ValueError as e:
+                       p = str(e)
+                   return p
+               """
+        errors = [(5, 16, 'N325')]
+        self._assert_has_errors(code, checker, expected_errors=errors)
+
+        code = """
+               def f(a, b):
+                   try:
+                       p = str(a) + str(b)
+                   except ValueError as e:
+                       p = unicode(e)
+                   return p
+               """
+        errors = []
+        self._assert_has_errors(code, checker, expected_errors=errors)
+
+        code = """
+               def f(a, b):
+                   try:
+                       p = str(a) + str(b)
+                   except ValueError as e:
+                       try:
+                           p  = unicode(a) + unicode(b)
+                       except ValueError as ve:
+                           p = str(e) + str(ve)
+                       p = unicode(e)
+                   return p
+               """
+        errors = [(8, 20, 'N325'), (8, 29, 'N325')]
+        self._assert_has_errors(code, checker, expected_errors=errors)

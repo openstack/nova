@@ -15,6 +15,7 @@
 import os.path
 import traceback
 
+import six
 import webob
 from webob import exc
 
@@ -325,7 +326,7 @@ class AdminActionsController(wsgi.Controller):
             disk_over_commit = strutils.bool_from_string(disk_over_commit,
                                                          strict=True)
         except ValueError as err:
-            raise exc.HTTPBadRequest(explanation=str(err))
+            raise exc.HTTPBadRequest(explanation=six.text_type(err))
 
         try:
             instance = self.compute_api.get(context, id, want_objects=True)

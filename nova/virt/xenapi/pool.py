@@ -18,6 +18,7 @@ Management class for Pool-related functions (join, eject, etc).
 """
 
 from oslo.config import cfg
+import six
 import six.moves.urllib.parse as urlparse
 
 from nova.compute import rpcapi as compute_rpcapi
@@ -198,7 +199,7 @@ class ResourcePool(object):
             LOG.error(_("Pool-eject failed: %s"), e)
             raise exception.AggregateError(aggregate_id=aggregate_id,
                                            action='remove_from_aggregate',
-                                           reason=str(e.details))
+                                           reason=six.text_type(e.details))
 
     def _init_pool(self, aggregate_id, aggregate_name):
         """Set the name label of a XenServer pool."""
@@ -209,7 +210,7 @@ class ResourcePool(object):
             LOG.error(_("Unable to set up pool: %s."), e)
             raise exception.AggregateError(aggregate_id=aggregate_id,
                                            action='add_to_aggregate',
-                                           reason=str(e.details))
+                                           reason=six.text_type(e.details))
 
     def _clear_pool(self, aggregate_id):
         """Clear the name label of a XenServer pool."""
@@ -220,7 +221,7 @@ class ResourcePool(object):
             LOG.error(_("Pool-set_name_label failed: %s"), e)
             raise exception.AggregateError(aggregate_id=aggregate_id,
                                            action='remove_from_aggregate',
-                                           reason=str(e.details))
+                                           reason=six.text_type(e.details))
 
     def _create_slave_info(self):
         """XenServer specific info needed to join the hypervisor pool."""

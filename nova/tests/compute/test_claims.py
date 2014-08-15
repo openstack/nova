@@ -18,6 +18,8 @@
 import re
 import uuid
 
+import six
+
 from nova.compute import claims
 from nova import exception
 from nova.openstack.common import jsonutils
@@ -110,7 +112,7 @@ class ClaimTestCase(test.NoDBTestCase):
             fn(*a, **kw)
             self.fail("Expected exception not raised")
         except e as ee:
-            self.assertTrue(re.search(re_obj, str(ee)))
+            self.assertTrue(re.search(re_obj, six.text_type(ee)))
 
     def test_memory_unlimited(self):
         self._claim(memory_mb=99999999)

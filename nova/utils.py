@@ -770,7 +770,7 @@ def tempdir(**kwargs):
         try:
             shutil.rmtree(tmpdir)
         except OSError as e:
-            LOG.error(_('Could not remove tmpdir: %s'), str(e))
+            LOG.error(_('Could not remove tmpdir: %s'), e)
 
 
 def walk_class_hierarchy(clazz, encountered=None):

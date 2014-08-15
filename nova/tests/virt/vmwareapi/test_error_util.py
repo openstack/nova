@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
+
 from nova import test
 from nova.tests.virt.vmwareapi import fake
 from nova.virt.vmwareapi import error_util
@@ -68,7 +70,7 @@ class ErrorUtilTestCase(test.NoDBTestCase):
 
     def test_exception_summary_string(self):
         e = error_util.VimException("string", ValueError("foo"))
-        string = str(e)
+        string = six.text_type(e)
         self.assertEqual("string: foo", string)
 
     def test_vim_fault_exception_string(self):
@@ -78,5 +80,5 @@ class ErrorUtilTestCase(test.NoDBTestCase):
 
     def test_vim_fault_exception(self):
         vfe = error_util.VimFaultException([ValueError("example")], "cause")
-        string = str(vfe)
+        string = six.text_type(vfe)
         self.assertEqual("cause", string)

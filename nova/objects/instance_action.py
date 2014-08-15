@@ -117,7 +117,7 @@ def serialize_args(fn):
         exc_val = kwargs.get('exc_val')
         exc_tb = kwargs.get('exc_tb')
         if exc_val is not None:
-            kwargs['exc_val'] = str(exc_val)
+            kwargs['exc_val'] = six.text_type(exc_val)
         if not isinstance(exc_tb, six.string_types) and exc_tb is not None:
             kwargs['exc_tb'] = ''.join(traceback.format_tb(exc_tb))
         # NOTE(danms): We wrap a descriptor, so use that protocol

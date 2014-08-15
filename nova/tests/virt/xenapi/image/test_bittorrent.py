@@ -15,6 +15,7 @@
 
 import mox
 import pkg_resources
+import six
 
 from nova import context
 from nova.i18n import _
@@ -125,7 +126,7 @@ class LookupTorrentURLTestCase(test.NoDBTestCase):
         self.assertEqual(_('Cannot create default bittorrent URL without'
                            ' torrent_base_url set'
                            ' or torrent URL fetcher extension'),
-                         str(exc))
+                         six.text_type(exc))
 
     def test_default_fetch_url_base_url_is_set(self):
         self.flags(torrent_base_url='http://foo',
@@ -158,4 +159,4 @@ class LookupTorrentURLTestCase(test.NoDBTestCase):
                 RuntimeError, self.store._lookup_torrent_url_fn)
         self.assertEqual(_('Multiple torrent URL fetcher extensions found.'
                            ' Failing.'),
-                         str(exc))
+                         six.text_type(exc))

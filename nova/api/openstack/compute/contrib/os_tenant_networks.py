@@ -17,6 +17,7 @@
 import netaddr
 import netaddr.core as netexc
 from oslo.config import cfg
+import six
 import webob
 from webob import exc
 
@@ -136,7 +137,7 @@ class NetworkController(object):
             self.network_api.delete(context, id)
         except exception.PolicyNotAuthorized as e:
             _rollback_quota(reservation)
-            raise exc.HTTPForbidden(explanation=str(e))
+            raise exc.HTTPForbidden(explanation=six.text_type(e))
         except exception.NetworkInUse as e:
             _rollback_quota(reservation)
             raise exc.HTTPConflict(explanation=e.format_message())
@@ -196,7 +197,7 @@ class NetworkController(object):
             if CONF.enable_network_quota:
                 QUOTAS.commit(context, reservation)
         except exception.PolicyNotAuthorized as e:
-            raise exc.HTTPForbidden(explanation=str(e))
+            raise exc.HTTPForbidden(explanation=six.text_type(e))
         except Exception:
             if CONF.enable_network_quota:
                 QUOTAS.rollback(context, reservation)

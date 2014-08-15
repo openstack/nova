@@ -183,7 +183,7 @@ class NetworkController(wsgi.Controller):
                      " with project %(project)s: %(message)s") %
                    {"network": network_id or "",
                     "project": project_id,
-                    "message": getattr(ex, "value", str(ex))})
+                    "message": getattr(ex, "value", ex)})
             raise exc.HTTPBadRequest(explanation=msg)
 
         return webob.Response(status_int=202)

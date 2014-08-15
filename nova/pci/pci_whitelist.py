@@ -15,13 +15,13 @@
 #    under the License.
 
 import jsonschema
+from oslo.config import cfg
+import six
 
 from nova import exception
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.pci import pci_utils
-
-from oslo.config import cfg
 
 pci_opts = [cfg.MultiStrOpt('pci_passthrough_whitelist',
                             default=[],
@@ -77,7 +77,7 @@ class PciHostDevicesWhiteList(object):
                 jsonschema.validate(spec, _WHITELIST_SCHEMA)
                 specs.extend(spec)
         except Exception as e:
-            raise exception.PciConfigInvalidWhitelist(reason=str(e))
+            raise exception.PciConfigInvalidWhitelist(reason=six.text_type(e))
 
         return specs
 

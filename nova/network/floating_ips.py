@@ -17,6 +17,7 @@
 
 from oslo.config import cfg
 from oslo import messaging
+import six
 
 from nova import context
 from nova.db import base
@@ -376,7 +377,7 @@ class FloatingIP(object):
                         LOG.warn(_('Failed to disassociated floating '
                                    'address: %s'), floating_address)
                         pass
-                    if "Cannot find device" in str(e):
+                    if "Cannot find device" in six.text_type(e):
                         try:
                             LOG.error(_('Interface %s not found'), interface)
                         except Exception:

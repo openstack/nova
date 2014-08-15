@@ -40,6 +40,7 @@ import copy
 
 import jsonschema
 from oslo.config import cfg
+import six
 
 from nova import exception
 from nova.openstack.common import jsonutils
@@ -124,7 +125,7 @@ def _get_alias_from_config():
     except exception.PciInvalidAlias:
         raise
     except Exception as e:
-        raise exception.PciInvalidAlias(reason=str(e))
+        raise exception.PciInvalidAlias(reason=six.text_type(e))
 
     return aliases
 

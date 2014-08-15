@@ -25,6 +25,7 @@ import time
 
 from eventlet import event
 from oslo.config import cfg
+import six
 import suds
 
 from nova import exception
@@ -759,7 +760,8 @@ class VMwareAPISession(object):
                     # Raise specific exceptions here if possible
                     if excep.fault_list:
                         fault = excep.fault_list[0]
-                        raise error_util.get_fault_class(fault)(str(excep))
+                        msg_excep = six.text_type(excep)
+                        raise error_util.get_fault_class(fault)(msg_excep)
                     break
             except error_util.SessionOverLoadException:
                 # For exceptions which may come because of session overload,
@@ -839,7 +841,7 @@ class VMwareAPISession(object):
                           {'task_name': task_name, 'task_ref': task_ref})
                 done.send(task_info)
             else:
-                error_info = str(task_info.error.localizedMessage)
+                error_info = six.text_type(task_info.error.localizedMessage)
                 LOG.warn(_("Task [%(task_name)s] %(task_ref)s "
                           "status: error %(error_info)s"),
                          {'task_name': task_name, 'task_ref': task_ref,
