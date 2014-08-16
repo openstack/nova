@@ -1258,7 +1258,7 @@ class ComputeManager(manager.Manager):
                 exception.UnexpectedDeletingTaskStateError):
             msg = _("Instance disappeared before we could start it")
             # Quickly bail out of here
-            raise exception.BuildAbortException(instance_uuid=instance['uuid'],
+            raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=msg)
 
     def _validate_instance_group_policy(self, context, instance,
