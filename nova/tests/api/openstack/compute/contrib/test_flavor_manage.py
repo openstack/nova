@@ -174,6 +174,10 @@ class FlavorManageTest(test.NoDBTestCase):
         self.request_body['flavor']['name'] = ' '
         self._create_flavor_bad_request_case(self.request_body)
 
+    def test_create_with_name_too_long(self):
+        self.request_body['flavor']['name'] = 'a' * 256
+        self._create_flavor_bad_request_case(self.request_body)
+
     def test_create_without_flavorname(self):
         del self.request_body['flavor']['name']
         self._create_flavor_bad_request_case(self.request_body)
@@ -205,6 +209,46 @@ class FlavorManageTest(test.NoDBTestCase):
 
     def test_create_with_leading_trailing_whitespaces_in_flavor_id(self):
         self.request_body['flavor']['id'] = "   bad_id   "
+        self._create_flavor_bad_request_case(self.request_body)
+
+    def test_create_without_ram(self):
+        del self.request_body['flavor']['ram']
+        self._create_flavor_bad_request_case(self.request_body)
+
+    def test_create_with_0_ram(self):
+        self.request_body['flavor']['ram'] = 0
+        self._create_flavor_bad_request_case(self.request_body)
+
+    def test_create_without_vcpus(self):
+        del self.request_body['flavor']['vcpus']
+        self._create_flavor_bad_request_case(self.request_body)
+
+    def test_create_with_0_vcpus(self):
+        self.request_body['flavor']['vcpus'] = 0
+        self._create_flavor_bad_request_case(self.request_body)
+
+    def test_create_without_disk(self):
+        del self.request_body['flavor']['disk']
+        self._create_flavor_bad_request_case(self.request_body)
+
+    def test_create_with_minus_disk(self):
+        self.request_body['flavor']['disk'] = -1
+        self._create_flavor_bad_request_case(self.request_body)
+
+    def test_create_with_minus_ephemeral(self):
+        self.request_body['flavor']['OS-FLV-EXT-DATA:ephemeral'] = -1
+        self._create_flavor_bad_request_case(self.request_body)
+
+    def test_create_with_minus_swap(self):
+        self.request_body['flavor']['swap'] = -1
+        self._create_flavor_bad_request_case(self.request_body)
+
+    def test_create_with_minus_rxtx_factor(self):
+        self.request_body['flavor']['rxtx_factor'] = -1
+        self._create_flavor_bad_request_case(self.request_body)
+
+    def test_create_with_non_boolean_is_public(self):
+        self.request_body['flavor']['os-flavor-access:is_public'] = 123
         self._create_flavor_bad_request_case(self.request_body)
 
     def test_flavor_exists_exception_returns_409(self):
