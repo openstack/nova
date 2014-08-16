@@ -3753,7 +3753,7 @@ class ComputeTestCase(BaseTestCase):
 
     def _run_instance_reschedules_on_anti_affinity_violation(self, group,
                                                              hint):
-        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance = self._create_fake_instance_obj()
         filter_properties = {'scheduler_hints': {'group': hint}}
         self.assertRaises(exception.RescheduledException,
                           self.compute._build_instance,

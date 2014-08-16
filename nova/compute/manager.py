@@ -1281,11 +1281,11 @@ class ComputeManager(manager.Manager):
             if 'anti-affinity' not in group.policies:
                 return
 
-            group_hosts = group.get_hosts(context, exclude=[instance['uuid']])
+            group_hosts = group.get_hosts(context, exclude=[instance.uuid])
             if self.host in group_hosts:
                 msg = _("Anti-affinity instance group policy was violated.")
                 raise exception.RescheduledException(
-                        instance_uuid=instance['uuid'],
+                        instance_uuid=instance.uuid,
                         reason=msg)
 
         _do_validation(context, instance, group_hint)
