@@ -1523,7 +1523,7 @@ class ComputeManager(manager.Manager):
         """Save the host and launched_on fields and log appropriately."""
         LOG.audit(_('Starting instance...'), context=context,
                   instance=instance)
-        self._instance_update(context, instance['uuid'],
+        self._instance_update(context, instance.uuid,
                               vm_state=vm_states.BUILDING,
                               task_state=None,
                               expected_task_state=(task_states.SCHEDULING,

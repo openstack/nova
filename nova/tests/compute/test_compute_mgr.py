@@ -1792,6 +1792,15 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             calls = [mock.call(self.context, bdm.volume_id) for bdm in bdms]
             self.assertEqual(calls, volume_delete.call_args_list)
 
+    def test_start_building(self):
+        instance = fake_instance.fake_instance_obj(self.context)
+        with mock.patch.object(self.compute, '_instance_update') as update:
+            self.compute._start_building(self.context, instance)
+            update.assert_called_once_with(
+                self.context, instance.uuid, vm_state=vm_states.BUILDING,
+                task_state=None, expected_task_state=(task_states.SCHEDULING,
+                                                      None))
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):
