@@ -234,11 +234,8 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                           'uuid': '456',
                           'vm_state': '',
                           'task_state': ''}]
-            all_instances = []
-            for instance in instances:
-                all_instances.append(fake_instance.fake_instance_obj(
-                    None, **instance))
-
+            all_instances = [fake_instance.fake_instance_obj(None, **instance)
+                             for instance in instances]
             self.images = set(['1', '2'])
             datastore = ds_util.Datastore(name='ds', ref='fake-ds-ref')
             dc_info = vmops.DcInfo(ref='dc_ref', name='name',
