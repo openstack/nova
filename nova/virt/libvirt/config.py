@@ -1288,16 +1288,23 @@ class LibvirtConfigGuestCharBase(LibvirtConfigGuestDevice):
 
         self.type = "pty"
         self.source_path = None
+        self.listen_port = None
+        self.listen_host = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestCharBase, self).format_dom()
 
         dev.set("type", self.type)
+
         if self.type == "file":
             dev.append(etree.Element("source", path=self.source_path))
         elif self.type == "unix":
             dev.append(etree.Element("source", mode="bind",
                                     path=self.source_path))
+        elif self.type == "tcp":
+            dev.append(etree.Element("source", mode="bind",
+                                     host=self.listen_host,
+                                     service=str(self.listen_port)))
 
         return dev
 

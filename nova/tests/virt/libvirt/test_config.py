@@ -952,6 +952,18 @@ class LibvirtConfigGuestSerialTest(LibvirtConfigBaseTest):
               <source path="/tmp/vm.log"/>
             </serial>""")
 
+    def test_config_serial_port(self):
+        obj = config.LibvirtConfigGuestSerial()
+        obj.type = "tcp"
+        obj.listen_port = 11111
+        obj.listen_host = "0.0.0.0"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <serial type="tcp">
+              <source host="0.0.0.0" service="11111" mode="bind"/>
+            </serial>""")
+
 
 class LibvirtConfigGuestConsoleTest(LibvirtConfigBaseTest):
     def test_config_pty(self):
