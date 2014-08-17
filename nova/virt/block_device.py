@@ -466,3 +466,9 @@ def is_implemented(bdm):
         except _NotTransformable:
             pass
     return False
+
+
+def is_block_device_mapping(bdm):
+    return (bdm.source_type in ('image', 'volume', 'snapshot', 'blank')
+            and bdm.destination_type == 'volume'
+            and is_implemented(bdm))
