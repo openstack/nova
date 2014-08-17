@@ -67,8 +67,12 @@ class VolumeOps(object):
         self._default_root_device = 'vda'
 
     def ebs_root_in_block_devices(self, block_device_info):
-        return self._volutils.volume_in_mapping(self._default_root_device,
-                                                block_device_info)
+        if block_device_info:
+            root_device = block_device_info.get('root_device_name')
+            if not root_device:
+                root_device = self._default_root_device
+            return self._volutils.volume_in_mapping(root_device,
+                                                    block_device_info)
 
     def attach_volumes(self, block_device_info, instance_name, ebs_root):
         mapping = driver.block_device_info_get_mapping(block_device_info)

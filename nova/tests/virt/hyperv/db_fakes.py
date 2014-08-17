@@ -82,7 +82,7 @@ def get_fake_block_device_info(target_portal, volume_id):
                                       'target_discovered': False}},
                                      'mount_device': 'vda',
                                      'delete_on_termination': False}],
-            'root_device_name': None,
+            'root_device_name': 'fake_root_device_name',
             'ephemerals': [],
             'swap': None
             }
