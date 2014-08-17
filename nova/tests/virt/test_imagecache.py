@@ -16,6 +16,7 @@ from oslo.config import cfg
 
 from nova.compute import vm_states
 from nova import test
+from nova.tests import fake_instance
 from nova.virt import imagecache
 
 CONF = cfg.CONF
@@ -47,26 +48,29 @@ class ImageCacheManagerTests(test.NoDBTestCase):
                           None, [], None)
 
     def test_list_running_instances(self):
-        all_instances = [{'image_ref': '1',
-                          'host': CONF.host,
-                          'name': 'inst-1',
-                          'uuid': '123',
-                          'vm_state': '',
-                          'task_state': ''},
-                         {'image_ref': '2',
-                          'host': CONF.host,
-                          'name': 'inst-2',
-                          'uuid': '456',
-                          'vm_state': '',
-                          'task_state': ''},
-                         {'image_ref': '2',
-                          'kernel_id': '21',
-                          'ramdisk_id': '22',
-                          'host': 'remotehost',
-                          'name': 'inst-3',
-                          'uuid': '789',
-                          'vm_state': '',
-                          'task_state': ''}]
+        instances = [{'image_ref': '1',
+                      'host': CONF.host,
+                      'id': '1',
+                      'uuid': '123',
+                      'vm_state': '',
+                      'task_state': ''},
+                     {'image_ref': '2',
+                      'host': CONF.host,
+                      'id': '2',
+                      'uuid': '456',
+                      'vm_state': '',
+                      'task_state': ''},
+                     {'image_ref': '2',
+                      'kernel_id': '21',
+                      'ramdisk_id': '22',
+                      'host': 'remotehost',
+                      'id': '3',
+                      'uuid': '789',
+                      'vm_state': '',
+                      'task_state': ''}]
+
+        all_instances = [fake_instance.fake_instance_obj(None, **instance)
+                         for instance in instances]
 
         image_cache_manager = imagecache.ImageCacheManager()
 
@@ -75,13 +79,17 @@ class ImageCacheManagerTests(test.NoDBTestCase):
                                                               all_instances)
 
         self.assertEqual(len(running['used_images']), 4)
-        self.assertEqual(running['used_images']['1'], (1, 0, ['inst-1']))
-        self.assertEqual(running['used_images']['2'], (1, 1, ['inst-2',
-                                                              'inst-3']))
-        self.assertEqual(running['used_images']['21'], (0, 1, ['inst-3']))
-        self.assertEqual(running['used_images']['22'], (0, 1, ['inst-3']))
+        self.assertEqual((1, 0, ['instance-00000001']),
+                         running['used_images']['1'])
+        self.assertEqual((1, 1, ['instance-00000002',
+                                 'instance-00000003']),
+                         running['used_images']['2'])
+        self.assertEqual((0, 1, ['instance-00000003']),
+                         running['used_images']['21'])
+        self.assertEqual((0, 1, ['instance-00000003']),
+                         running['used_images']['22'])
 
-        self.assertIn('inst-1', running['instance_names'])
+        self.assertIn('instance-00000001', running['instance_names'])
         self.assertIn('123', running['instance_names'])
 
         self.assertEqual(len(running['image_popularity']), 4)
@@ -91,20 +99,25 @@ class ImageCacheManagerTests(test.NoDBTestCase):
         self.assertEqual(running['image_popularity']['22'], 1)
 
     def test_list_resizing_instances(self):
-        all_instances = [{'image_ref': '1',
-                          'host': CONF.host,
-                          'name': 'inst-1',
-                          'uuid': '123',
-                          'vm_state': vm_states.RESIZED,
-                          'task_state': None}]
+        instances = [{'image_ref': '1',
+                      'host': CONF.host,
+                      'id': '1',
+                      'uuid': '123',
+                      'vm_state': vm_states.RESIZED,
+                      'task_state': None}]
+
+        all_instances = [fake_instance.fake_instance_obj(None, **instance)
+                         for instance in instances]
 
         image_cache_manager = imagecache.ImageCacheManager()
         running = image_cache_manager._list_running_instances(None,
                                                               all_instances)
 
         self.assertEqual(len(running['used_images']), 1)
-        self.assertEqual((1, 0, ['inst-1']), running['used_images']['1'])
-        self.assertEqual(set(['inst-1', '123', 'inst-1_resize', '123_resize']),
+        self.assertEqual((1, 0, ['instance-00000001']),
+                         running['used_images']['1'])
+        self.assertEqual(set(['instance-00000001', '123',
+                              'instance-00000001_resize', '123_resize']),
                          running['instance_names'])
 
         self.assertEqual(len(running['image_popularity']), 1)

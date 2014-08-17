@@ -20,6 +20,7 @@ from oslo.config import cfg
 
 from nova.openstack.common import timeutils
 from nova import test
+from nova.tests import fake_instance
 from nova.tests.virt.vmwareapi import fake
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import imagecache
@@ -233,9 +234,14 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                           'uuid': '456',
                           'vm_state': '',
                           'task_state': ''}]
+            all_instances = []
+            for instance in instances:
+                all_instances.append(fake_instance.fake_instance_obj(
+                    None, **instance))
+
             self.images = set(['1', '2'])
             datastore = ds_util.Datastore(name='ds', ref='fake-ds-ref')
             dc_info = vmops.DcInfo(ref='dc_ref', name='name',
                                    vmFolder='vmFolder')
             datastores_info = [(datastore, dc_info)]
-            self._imagecache.update('context', instances, datastores_info)
+            self._imagecache.update('context', all_instances, datastores_info)
