@@ -25,13 +25,11 @@ CONF = cfg.CONF
 class ImageCacheManagerTests(test.NoDBTestCase):
 
     def test_configurationi_defaults(self):
-        self.assertEqual(CONF.image_cache_manager_interval,
-                         2400)
-        self.assertEqual(CONF.image_cache_subdirectory_name,
-                         '_base')
+        self.assertEqual(2400, CONF.image_cache_manager_interval)
+        self.assertEqual('_base', CONF.image_cache_subdirectory_name)
         self.assertTrue(CONF.remove_unused_base_images)
-        self.assertEqual(CONF.remove_unused_original_minimum_age_seconds,
-                         24 * 3600)
+        self.assertEqual(24 * 3600,
+                         CONF.remove_unused_original_minimum_age_seconds)
 
     def test_cache_manager(self):
         cache_manager = imagecache.ImageCacheManager()
@@ -41,8 +39,8 @@ class ImageCacheManagerTests(test.NoDBTestCase):
         self.assertRaises(NotImplementedError,
                           cache_manager._get_base)
         base_images = cache_manager._list_base_images(None)
-        self.assertEqual(base_images['unexplained_images'], [])
-        self.assertEqual(base_images['originals'], [])
+        self.assertEqual([], base_images['unexplained_images'])
+        self.assertEqual([], base_images['originals'])
         self.assertRaises(NotImplementedError,
                           cache_manager._age_and_verify_cached_images,
                           None, [], None)
@@ -78,7 +76,7 @@ class ImageCacheManagerTests(test.NoDBTestCase):
         running = image_cache_manager._list_running_instances(None,
                                                               all_instances)
 
-        self.assertEqual(len(running['used_images']), 4)
+        self.assertEqual(4, len(running['used_images']))
         self.assertEqual((1, 0, ['instance-00000001']),
                          running['used_images']['1'])
         self.assertEqual((1, 1, ['instance-00000002',
@@ -92,11 +90,11 @@ class ImageCacheManagerTests(test.NoDBTestCase):
         self.assertIn('instance-00000001', running['instance_names'])
         self.assertIn('123', running['instance_names'])
 
-        self.assertEqual(len(running['image_popularity']), 4)
-        self.assertEqual(running['image_popularity']['1'], 1)
-        self.assertEqual(running['image_popularity']['2'], 2)
-        self.assertEqual(running['image_popularity']['21'], 1)
-        self.assertEqual(running['image_popularity']['22'], 1)
+        self.assertEqual(4, len(running['image_popularity']))
+        self.assertEqual(1, running['image_popularity']['1'])
+        self.assertEqual(2, running['image_popularity']['2'])
+        self.assertEqual(1, running['image_popularity']['21'])
+        self.assertEqual(1, running['image_popularity']['22'])
 
     def test_list_resizing_instances(self):
         instances = [{'image_ref': '1',
@@ -113,12 +111,12 @@ class ImageCacheManagerTests(test.NoDBTestCase):
         running = image_cache_manager._list_running_instances(None,
                                                               all_instances)
 
-        self.assertEqual(len(running['used_images']), 1)
+        self.assertEqual(1, len(running['used_images']))
         self.assertEqual((1, 0, ['instance-00000001']),
                          running['used_images']['1'])
         self.assertEqual(set(['instance-00000001', '123',
                               'instance-00000001_resize', '123_resize']),
                          running['instance_names'])
 
-        self.assertEqual(len(running['image_popularity']), 1)
-        self.assertEqual(running['image_popularity']['1'], 1)
+        self.assertEqual(1, len(running['image_popularity']))
+        self.assertEqual(1, running['image_popularity']['1'])
