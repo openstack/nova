@@ -154,8 +154,10 @@ class ApiTestCase(test.TestCase):
         flavor = flavors.get_default_flavor()
         flavor['rxtx_factor'] = 0
         sys_meta = flavors.save_flavor_info({}, flavor)
-        instance = dict(id='id', uuid='uuid', project_id='project_id',
+        instance = dict(id=1, uuid='uuid', project_id='project_id',
             host='host', system_metadata=utils.dict_to_metadata(sys_meta))
+        instance = fake_instance.fake_instance_obj(
+            self.context, expected_attrs=['system_metadata'], **instance)
         self.network_api.allocate_for_instance(
             self.context, instance, 'vpn', 'requested_networks', macs=macs)
 

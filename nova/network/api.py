@@ -219,7 +219,7 @@ class API(base_api.NetworkAPI):
         """Allocates all network structures for an instance.
 
         :param context: The request context.
-        :param instance: An Instance dict.
+        :param instance: nova.objects.instance.Instance object.
         :param vpn: A boolean, if True, indicate a vpn to access the instance.
         :param requested_networks: A dictionary of requested_networks,
             Optional value containing network_id, fixed_ip, and port_id.
@@ -243,9 +243,9 @@ class API(base_api.NetworkAPI):
         args = {}
         args['vpn'] = vpn
         args['requested_networks'] = requested_networks
-        args['instance_id'] = instance['uuid']
-        args['project_id'] = instance['project_id']
-        args['host'] = instance['host']
+        args['instance_id'] = instance.uuid
+        args['project_id'] = instance.project_id
+        args['host'] = instance.host
         args['rxtx_factor'] = flavor['rxtx_factor']
         args['macs'] = macs
         args['dhcp_options'] = dhcp_options
