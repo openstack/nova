@@ -829,7 +829,7 @@ class ServersController(wsgi.Controller):
 
         return self._resize(req, id, flavor_ref, **resize_kwargs)
 
-    @extensions.expected_errors((400, 404, 409, 413))
+    @extensions.expected_errors((400, 403, 404, 409, 413))
     @wsgi.response(202)
     @wsgi.action('rebuild')
     def _action_rebuild(self, req, id, body):
@@ -894,6 +894,8 @@ class ServersController(wsgi.Controller):
         except exception.ImageNotFound:
             msg = _("Cannot find image for rebuild")
             raise exc.HTTPBadRequest(explanation=msg)
+        except exception.QuotaError as error:
+            raise exc.HTTPForbidden(explanation=error.format_message())
         except (exception.ImageNotActive,
                 exception.FlavorDiskTooSmall,
                 exception.FlavorMemoryTooSmall,
