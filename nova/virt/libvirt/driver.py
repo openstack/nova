@@ -583,12 +583,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_new_connection(self):
         # call with _wrapped_conn_lock held
         LOG.debug(_('Connecting to libvirt: %s'), self.uri())
-        if not CONF.libvirt_nonblocking:
-            wrapped_conn = self._connect(self.uri(), self.read_only)
-        else:
-            wrapped_conn = tpool.proxy_call(
-                (libvirt.virDomain, libvirt.virConnect),
-                self._connect, self.uri(), self.read_only)
+        wrapped_conn = self._connect(self.uri(), self.read_only)
 
         self._wrapped_conn = wrapped_conn
 
@@ -685,7 +680,15 @@ class LibvirtDriver(driver.ComputeDriver):
             flags = 0
             if read_only:
                 flags = libvirt.VIR_CONNECT_RO
-            return libvirt.openAuth(uri, auth, flags)
+            if not CONF.libvirt_nonblocking:
+                return libvirt.openAuth(uri, auth, flags)
+            else:
+                # tpool.proxy_call creates a native thread. Due to limitations
+                # with eventlet locking we cannot use the logging API inside
+                # the called function.
+                return tpool.proxy_call(
+                    (libvirt.virDomain, libvirt.virConnect),
+                    libvirt.openAuth, uri, auth, flags)
         except libvirt.libvirtError as ex:
             LOG.exception(_("Connection to libvirt failed: %s"), ex)
             payload = dict(ip=LibvirtDriver.get_host_ip_addr(),
