@@ -14,6 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 from lxml import etree
 import webob
 
@@ -41,9 +43,7 @@ class QuotaSetsTest(test.TestCase):
         super(QuotaSetsTest, self).setUp()
         self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
         self.controller = quotas.QuotaSetsController(self.ext_mgr)
-
-    def test_format_quota_set(self):
-        raw_quota_set = {
+        self.default_quotas = {
             'instances': 10,
             'cores': 20,
             'ram': 51200,
@@ -55,9 +55,12 @@ class QuotaSetsTest(test.TestCase):
             'injected_file_content_bytes': 10240,
             'security_groups': 10,
             'security_group_rules': 20,
-            'key_pairs': 100}
+            'key_pairs': 100
+        }
 
-        quota_set = self.controller._format_quota_set('1234', raw_quota_set)
+    def test_format_quota_set(self):
+        quota_set = self.controller._format_quota_set('1234',
+                                                      self.default_quotas)
         qs = quota_set['quota_set']
 
         self.assertEqual(qs['id'], '1234')
@@ -79,21 +82,8 @@ class QuotaSetsTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank(uri)
         res_dict = self.controller.defaults(req, 'fake_tenant')
-
-        expected = {'quota_set': {
-                    'id': 'fake_tenant',
-                    'instances': 10,
-                    'cores': 20,
-                    'ram': 51200,
-                    'floating_ips': 10,
-                    'fixed_ips': -1,
-                    'metadata_items': 128,
-                    'injected_files': 5,
-                    'injected_file_path_bytes': 255,
-                    'injected_file_content_bytes': 10240,
-                    'security_groups': 10,
-                    'security_group_rules': 20,
-                    'key_pairs': 100}}
+        self.default_quotas.update({'id': 'fake_tenant'})
+        expected = {'quota_set': self.default_quotas}
 
         self.assertEqual(res_dict, expected)
 
@@ -117,15 +107,11 @@ class QuotaSetsTest(test.TestCase):
         self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
         self.ext_mgr.is_loaded('os-user-quotas').AndReturn(True)
         self.mox.ReplayAll()
-        body = {'quota_set': {'instances': 50, 'cores': 50,
-                              'ram': 51200, 'floating_ips': 10,
-                              'metadata_items': 128,
-                              'injected_files': 5,
-                              'injected_file_content_bytes': 10240,
-                              'injected_file_path_bytes': 255,
-                              'security_groups': 10,
-                              'security_group_rules': 20,
-                              'key_pairs': 100, 'fixed_ips': -1}}
+        self.default_quotas.update({
+            'instances': 50,
+            'cores': 50
+        })
+        body = {'quota_set': self.default_quotas}
 
         req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
                                       use_admin_context=True)
@@ -157,14 +143,12 @@ class QuotaSetsTest(test.TestCase):
         self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
         self.ext_mgr.is_loaded('os-user-quotas').AndReturn(True)
         self.mox.ReplayAll()
-        body = {'quota_set': {'instances': 50, 'cores': 50,
-                              'ram': 51200, 'floating_ips': 10,
-                              'fixed_ips': -1, 'metadata_items': 128,
-                              'injected_files': 5,
-                              'injected_file_content_bytes': 10240,
-                              'security_groups': 10,
-                              'security_group_rules': 20,
-                              'key_pairs': 100}}
+
+        self.default_quotas.update({
+            'instances': 50,
+            'cores': 50
+        })
+        body = {'quota_set': self.default_quotas}
 
         req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me')
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.update,
@@ -209,27 +193,15 @@ class QuotaSetsTest(test.TestCase):
                           req, 'update_me', body)
 
     def test_quotas_update_invalid_value_json_fromat_empty_string(self):
-        expected_resp = {'quota_set': {
-                              'instances': 50, 'cores': 50,
-                              'ram': 51200, 'floating_ips': 10,
-                              'fixed_ips': -1, 'metadata_items': 128,
-                              'injected_files': 5,
-                              'injected_file_content_bytes': 10240,
-                              'injected_file_path_bytes': 255,
-                              'security_groups': 10,
-                              'security_group_rules': 20,
-                              'key_pairs': 100}}
+        self.default_quotas.update({
+            'instances': 50,
+            'cores': 50
+        })
+        expected_resp = {'quota_set': self.default_quotas}
 
         # when PUT JSON format with empty string for quota
-        body = {'quota_set': {'instances': 50, 'cores': 50,
-                              'ram': '', 'floating_ips': 10,
-                              'fixed_ips': -1, 'metadata_items': 128,
-                              'injected_files': 5,
-                              'injected_file_content_bytes': 10240,
-                              'injected_file_path_bytes': 255,
-                              'security_groups': 10,
-                              'security_group_rules': 20,
-                              'key_pairs': 100}}
+        body = copy.deepcopy(expected_resp)
+        body['quota_set']['ram'] = ''
         req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
                                       use_admin_context=True)
         self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
@@ -239,26 +211,15 @@ class QuotaSetsTest(test.TestCase):
         self.assertEqual(res_dict, expected_resp)
 
     def test_quotas_update_invalid_value_xml_fromat_empty_string(self):
-        expected_resp = {'quota_set': {
-                              'instances': 50, 'cores': 50,
-                              'ram': 51200, 'floating_ips': 10,
-                              'fixed_ips': -1, 'metadata_items': 128,
-                              'injected_files': 5,
-                              'injected_file_content_bytes': 10240,
-                              'injected_file_path_bytes': 255,
-                              'security_groups': 10,
-                              'security_group_rules': 20,
-                              'key_pairs': 100}}
+        self.default_quotas.update({
+            'instances': 50,
+            'cores': 50
+        })
+        expected_resp = {'quota_set': self.default_quotas}
+
         # when PUT XML format with empty string for quota
-        body = {'quota_set': {'instances': 50, 'cores': 50,
-                              'ram': {}, 'floating_ips': 10,
-                              'fixed_ips': -1, 'metadata_items': 128,
-                              'injected_files': 5,
-                              'injected_file_content_bytes': 10240,
-                              'injected_file_path_bytes': 255,
-                              'security_groups': 10,
-                              'security_group_rules': 20,
-                              'key_pairs': 100}}
+        body = copy.deepcopy(expected_resp)
+        body['quota_set']['ram'] = {}
         req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
                                       use_admin_context=True)
         self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
@@ -269,15 +230,10 @@ class QuotaSetsTest(test.TestCase):
 
     def test_quotas_update_invalid_value_non_int(self):
         # when PUT non integer value
-        body = {'quota_set': {'instances': test, 'cores': 50,
-                              'ram': {}, 'floating_ips': 10,
-                              'fixed_ips': -1, 'metadata_items': 128,
-                              'injected_files': 5,
-                              'injected_file_content_bytes': 10240,
-                              'injected_file_path_bytes': 255,
-                              'security_groups': 10,
-                              'security_group_rules': 20,
-                              'key_pairs': 100}}
+        self.default_quotas.update({
+            'instances': 'test'
+        })
+        body = {'quota_set': self.default_quotas}
         req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
                                       use_admin_context=True)
         self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
@@ -288,15 +244,10 @@ class QuotaSetsTest(test.TestCase):
 
     def test_quotas_update_invalid_value_with_float(self):
         # when PUT non integer value
-        body = {'quota_set': {'instances': 50.5, 'cores': 50,
-                              'ram': {}, 'floating_ips': 10,
-                              'fixed_ips': -1, 'metadata_items': 128,
-                              'injected_files': 5,
-                              'injected_file_content_bytes': 10240,
-                              'injected_file_path_bytes': 255,
-                              'security_groups': 10,
-                              'security_group_rules': 20,
-                              'key_pairs': 100}}
+        self.default_quotas.update({
+            'instances': 50.5
+        })
+        body = {'quota_set': self.default_quotas}
         req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
                                       use_admin_context=True)
         self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
@@ -307,16 +258,10 @@ class QuotaSetsTest(test.TestCase):
 
     def test_quotas_update_invalid_value_with_unicode(self):
         # when PUT non integer value
-        body = {'quota_set': {'instances': u'\u30aa\u30fc\u30d7\u30f3',
-                              'cores': 50,
-                              'ram': {}, 'floating_ips': 10,
-                              'fixed_ips': -1, 'metadata_items': 128,
-                              'injected_files': 5,
-                              'injected_file_content_bytes': 10240,
-                              'injected_file_path_bytes': 255,
-                              'security_groups': 10,
-                              'security_group_rules': 20,
-                              'key_pairs': 100}}
+        self.default_quotas.update({
+            'instances': u'\u30aa\u30fc\u30d7\u30f3'
+        })
+        body = {'quota_set': self.default_quotas}
         req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
                                       use_admin_context=True)
         self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
