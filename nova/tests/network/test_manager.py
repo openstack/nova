@@ -3027,6 +3027,32 @@ class FloatingIPTestCase(test.TestCase):
         self._test_associate_floating_ip_failure('Cannot find device',
                 exception.NoFloatingIpInterface)
 
+    @mock.patch('nova.objects.FloatingIP.get_by_address')
+    def test_get_floating_ip_by_address(self, mock_get):
+        mock_get.return_value = mock.sentinel.floating
+        self.assertEqual(mock.sentinel.floating,
+                         self.network.get_floating_ip_by_address(
+                             self.context,
+                             mock.sentinel.address))
+        mock_get.assert_called_once_with(self.context, mock.sentinel.address)
+
+    @mock.patch('nova.objects.FloatingIPList.get_by_project')
+    def test_get_floating_ips_by_project(self, mock_get):
+        mock_get.return_value = mock.sentinel.floatings
+        self.assertEqual(mock.sentinel.floatings,
+                         self.network.get_floating_ips_by_project(
+                             self.context))
+        mock_get.assert_called_once_with(self.context, self.context.project_id)
+
+    @mock.patch('nova.objects.FloatingIPList.get_by_fixed_address')
+    def test_get_floating_ips_by_fixed_address(self, mock_get):
+        mock_get.return_value = [objects.FloatingIP(address='1.2.3.4'),
+                                 objects.FloatingIP(address='5.6.7.8')]
+        self.assertEqual(['1.2.3.4', '5.6.7.8'],
+                         self.network.get_floating_ips_by_fixed_address(
+                             self.context, mock.sentinel.address))
+        mock_get.assert_called_once_with(self.context, mock.sentinel.address)
+
 
 class InstanceDNSTestCase(test.TestCase):
     """Tests nova.network.manager instance DNS."""
