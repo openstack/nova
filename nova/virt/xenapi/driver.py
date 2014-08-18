@@ -502,7 +502,7 @@ class XenAPIDriver(driver.ComputeDriver):
         pass
 
     def check_can_live_migrate_source(self, context, instance,
-                                      dest_check_data):
+                                      dest_check_data, block_device_info=None):
         """Check if it is possible to execute live migration.
 
         This checks if the live migration can succeed, based on the
@@ -512,6 +512,7 @@ class XenAPIDriver(driver.ComputeDriver):
         :param instance: nova.db.sqlalchemy.models.Instance
         :param dest_check_data: result of check_can_live_migrate_destination
                                 includes the block_migration flag
+        :param block_device_info: result of _get_instance_block_device_info
         """
         return self._vmops.check_can_live_migrate_source(context, instance,
                                                          dest_check_data)
