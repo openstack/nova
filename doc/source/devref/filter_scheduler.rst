@@ -157,6 +157,8 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
   properties and aggregate metadata.
 * |MetricsFilter| - filters hosts based on metrics weight_setting. Only hosts with
   the available metrics are passed.
+* |NUMATopologyFilter| - filters hosts based on the NUMA topology requested by the
+  instance, if any.
 
 Now we can focus on these standard filter classes in details. I will pass the
 simplest ones, such as |AllHostsFilter|, |CoreFilter| and |RamFilter| are,
@@ -269,6 +271,24 @@ is the scope of the key and ``trusted_host`` is the actual key value.
 The value of this pair (``trusted``/``untrusted``) must match the
 integrity of a host (obtained from the Attestation service) before it is
 passed by the |TrustedFilter|.
+
+The |NUMATopologyFilter| considers the NUMA topology that was specified for the instance
+through the use of flavor extra_specs in combination with the image properties, as
+described in detail in the related nova-spec document:
+
+* http://git.openstack.org/cgit/openstack/nova-specs/tree/specs/juno/virt-driver-numa-placement.rst
+
+and try to match it with the topology exposed by the host, accounting for the
+``ram_allocation_ratio`` and ``cpu_allocation_ratio`` for over-subscription. The
+filtering is done in the following manner:
+
+* Filter will try to match the exact NUMA cells of the instance to those of
+  the host. It *will not* attempt to pack the instance onto the host.
+* It will consider the standard over-subscription limits for each host NUMA cell,
+  and provide limits to the compute host accordingly (as mentioned above).
+* If instance has no topology defined, it will be considered for any host.
+* If instance has a topology defined, it will be considered only for NUMA
+  capable hosts.
 
 To use filters you specify next two settings:
 
@@ -390,6 +410,7 @@ in :mod:``nova.tests.scheduler``.
 .. |ServerGroupAffinityFilter| replace:: :class:`ServerGroupAffinityFilter <nova.scheduler.filters.affinity_filter.ServerGroupAffinityFilter>`
 .. |AggregateInstanceExtraSpecsFilter| replace:: :class:`AggregateInstanceExtraSpecsFilter <nova.scheduler.filters.aggregate_instance_extra_specs.AggregateInstanceExtraSpecsFilter>`
 .. |AggregateMultiTenancyIsolation| replace:: :class:`AggregateMultiTenancyIsolation <nova.scheduler.filters.aggregate_multitenancy_isolation.AggregateMultiTenancyIsolation>`
+.. |NUMATopologyFilter| replace:: :class:`NUMATopologyFilter <nova.scheduler.filters.numa_topology_filter.NUMATopologyFilter>`
 .. |RamWeigher| replace:: :class:`RamWeigher <nova.scheduler.weights.all_weighers.RamWeigher>`
 .. |AggregateImagePropertiesIsolation| replace:: :class:`AggregateImagePropertiesIsolation <nova.scheduler.filters.aggregate_image_properties_isolation.AggregateImagePropertiesIsolation>`
 .. |MetricsFilter| replace:: :class:`MetricsFilter <nova.scheduler.filters.metrics_filter.MetricsFilter>`
