@@ -418,49 +418,46 @@ class QuotaXMLSerializerTest(test.TestCase):
         self.assertEqual(result, exemplar)
 
 
-fake_quotas = {'ram': {'limit': 51200,
-                       'in_use': 12800,
-                       'reserved': 12800},
-               'cores': {'limit': 20,
-                         'in_use': 10,
-                         'reserved': 5},
-               'instances': {'limit': 100,
-                             'in_use': 0,
-                             'reserved': 0}}
-
-
-def fake_get_quotas(self, context, id, user_id=None, usages=False):
-    if usages:
-        return fake_quotas
-    else:
-        return dict((k, v['limit']) for k, v in fake_quotas.items())
-
-
 class ExtendedQuotasTest(test.TestCase):
 
     def setUp(self):
         super(ExtendedQuotasTest, self).setUp()
         self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
         self.controller = quotas.QuotaSetsController(self.ext_mgr)
+        self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
+        self.ext_mgr.is_loaded('os-user-quotas').AndReturn(True)
+        self.mox.ReplayAll()
+
+    fake_quotas = {'ram': {'limit': 51200,
+                           'in_use': 12800,
+                           'reserved': 12800},
+                   'cores': {'limit': 20,
+                             'in_use': 10,
+                             'reserved': 5},
+                   'instances': {'limit': 100,
+                                 'in_use': 0,
+                                 'reserved': 0}}
+
+    def fake_get_quotas(self, context, id, user_id=None, usages=False):
+        if usages:
+            return self.fake_quotas
+        else:
+            return dict((k, v['limit']) for k, v in self.fake_quotas.items())
 
     def test_quotas_update_exceed_in_used(self):
 
         body = {'quota_set': {'cores': 10}}
 
         self.stubs.Set(quotas.QuotaSetsController, '_get_quotas',
-                       fake_get_quotas)
+                       self.fake_get_quotas)
         req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
                                       use_admin_context=True)
-        self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
-        self.ext_mgr.is_loaded('os-user-quotas').AndReturn(True)
-        self.mox.ReplayAll()
-
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 'update_me', body)
 
     def test_quotas_force_update_exceed_in_used(self):
         self.stubs.Set(quotas.QuotaSetsController, '_get_quotas',
-                       fake_get_quotas)
+                       self.fake_get_quotas)
         req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
                                       use_admin_context=True)
         expected = {'quota_set': {'ram': 25600, 'instances': 200, 'cores': 10}}
@@ -468,13 +465,10 @@ class ExtendedQuotasTest(test.TestCase):
                               'instances': 200,
                               'cores': 10,
                               'force': 'True'}}
-        fake_quotas.get('ram')['limit'] = 25600
-        fake_quotas.get('cores')['limit'] = 10
-        fake_quotas.get('instances')['limit'] = 200
+        self.fake_quotas.get('ram')['limit'] = 25600
+        self.fake_quotas.get('cores')['limit'] = 10
+        self.fake_quotas.get('instances')['limit'] = 200
 
-        self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
-        self.ext_mgr.is_loaded('os-user-quotas').AndReturn(True)
-        self.mox.ReplayAll()
         res_dict = self.controller.update(req, 'update_me', body)
         self.assertEqual(res_dict, expected)
 
