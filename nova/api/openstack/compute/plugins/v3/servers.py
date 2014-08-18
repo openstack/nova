@@ -228,27 +228,24 @@ class ServersController(wsgi.Controller):
             if 'default' not in task_state:
                 search_opts['task_state'] = task_state
 
-        if 'changes_since' in search_opts:
+        if 'changes-since' in search_opts:
             try:
-                parsed = timeutils.parse_isotime(search_opts['changes_since'])
+                parsed = timeutils.parse_isotime(search_opts['changes-since'])
             except ValueError:
-                msg = _('Invalid changes_since value')
+                msg = _('Invalid changes-since value')
                 raise exc.HTTPBadRequest(explanation=msg)
-            search_opts['changes_since'] = parsed
+            search_opts['changes-since'] = parsed
 
         # By default, compute's get_all() will return deleted instances.
         # If an admin hasn't specified a 'deleted' search option, we need
         # to filter out deleted instances by setting the filter ourselves.
-        # ... Unless 'changes_since' is specified, because 'changes_since'
+        # ... Unless 'changes-since' is specified, because 'changes-since'
         # should return recently deleted images according to the API spec.
 
         if 'deleted' not in search_opts:
-            if 'changes_since' not in search_opts:
-                # No 'changes_since', so we only want non-deleted servers
+            if 'changes-since' not in search_opts:
+                # No 'changes-since', so we only want non-deleted servers
                 search_opts['deleted'] = False
-
-        if 'changes_since' in search_opts:
-            search_opts['changes-since'] = search_opts.pop('changes_since')
 
         if search_opts.get("vm_state") == ['deleted']:
             if context.is_admin:
@@ -997,7 +994,7 @@ class ServersController(wsgi.Controller):
     def _get_server_search_options(self):
         """Return server search options allowed by non-admin."""
         return ('reservation_id', 'name', 'status', 'image', 'flavor',
-                'ip', 'changes_since', 'all_tenants')
+                'ip', 'changes-since', 'all_tenants')
 
     def _get_instance(self, context, instance_uuid):
         try:
