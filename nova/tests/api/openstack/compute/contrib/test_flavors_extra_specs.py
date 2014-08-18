@@ -213,6 +213,9 @@ class FlavorsExtraSpecsTest(test.TestCase):
     def test_create_non_dict_extra_specs(self):
         self._test_create_bad_request({"extra_specs": "non_dict"})
 
+    def test_create_non_string_key(self):
+        self._test_create_bad_request({"extra_specs": {None: "value1"}})
+
     def test_create_non_string_value(self):
         self._test_create_bad_request({"extra_specs": {"key1": None}})
 
@@ -297,6 +300,9 @@ class FlavorsExtraSpecsTest(test.TestCase):
 
     def test_update_item_non_dict_extra_specs(self):
         self._test_update_item_bad_request("non_dict")
+
+    def test_update_item_non_string_key(self):
+        self._test_update_item_bad_request({None: "value1"})
 
     def test_update_item_non_string_value(self):
         self._test_update_item_bad_request({"key1": None})
