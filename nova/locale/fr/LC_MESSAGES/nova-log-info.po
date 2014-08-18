@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-08-12 06:05+0000\n"
-"PO-Revision-Date: 2014-08-07 07:51+0000\n"
+"POT-Creation-Date: 2014-08-18 06:03+0000\n"
+"PO-Revision-Date: 2014-08-15 05:00+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: French (http://www.transifex.com/projects/p/nova/language/"
 "fr/)\n"
@@ -44,7 +44,12 @@ msgstr "Exception HTTP générée : %s"
 msgid "Deleting network with id %s"
 msgstr "Suppression du réseau avec l'ID %s"
 
-#: nova/compute/manager.py:5452
+#: nova/compute/manager.py:2663
+#, python-format
+msgid "bringing vm to original state: '%s'"
+msgstr "Restauration de l'état original de la machine virtuelle : '%s'"
+
+#: nova/compute/manager.py:5471
 #, python-format
 msgid ""
 "During sync_power_state the instance has a pending task (%(task)s). Skip."
@@ -146,97 +151,102 @@ msgstr "Suppression ligne en double avec l'ID : %(id)s de la table : %(table)s"
 msgid "%(num_values)d values found, of which the minimum value will be used."
 msgstr ""
 
+#: nova/virt/block_device.py:221
+#, python-format
+msgid "preserve multipath_id %s"
+msgstr ""
+
 #: nova/virt/firewall.py:444
 #, python-format
 msgid "instance chain %s disappeared during refresh, skipping"
 msgstr ""
 
-#: nova/virt/disk/vfs/guestfs.py:137
+#: nova/virt/disk/vfs/guestfs.py:139
 msgid "Unable to force TCG mode, libguestfs too old?"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:837
+#: nova/virt/libvirt/driver.py:835
 #, python-format
 msgid ""
 "Unable to use bulk domain list APIs, falling back to slow code path: %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:950
+#: nova/virt/libvirt/driver.py:948
 msgid "Instance destroyed successfully."
 msgstr "Instance détruite avec succès."
 
-#: nova/virt/libvirt/driver.py:960
+#: nova/virt/libvirt/driver.py:958
 msgid "Instance may be started again."
 msgstr "L'instance peut être redémarrée."
 
-#: nova/virt/libvirt/driver.py:970
+#: nova/virt/libvirt/driver.py:968
 msgid "Going to destroy instance again."
 msgstr "Tentative de redestruction de l'instance."
 
-#: nova/virt/libvirt/driver.py:1570
+#: nova/virt/libvirt/driver.py:1576
 msgid "Beginning live snapshot process"
 msgstr "Démarrage du processus d'instantané en temps réel"
 
-#: nova/virt/libvirt/driver.py:1573
+#: nova/virt/libvirt/driver.py:1579
 msgid "Beginning cold snapshot process"
 msgstr "Démarrage du processus d'instantané à froid"
 
-#: nova/virt/libvirt/driver.py:1602
+#: nova/virt/libvirt/driver.py:1608
 msgid "Snapshot extracted, beginning image upload"
 msgstr "Instantané extrait, démarrage du téléchargement d'image"
 
-#: nova/virt/libvirt/driver.py:1614
+#: nova/virt/libvirt/driver.py:1620
 msgid "Snapshot image upload complete"
 msgstr "Téléchargement d'image instantanée terminé"
 
-#: nova/virt/libvirt/driver.py:2047
+#: nova/virt/libvirt/driver.py:2132
 msgid "Instance soft rebooted successfully."
 msgstr "Instance redémarrée par logiciel avec succès."
 
-#: nova/virt/libvirt/driver.py:2090
+#: nova/virt/libvirt/driver.py:2175
 msgid "Instance shutdown successfully."
 msgstr "L'instance s'est arrêtée avec succès."
 
-#: nova/virt/libvirt/driver.py:2098
+#: nova/virt/libvirt/driver.py:2183
 msgid "Instance may have been rebooted during soft reboot, so return now."
 msgstr "L'instance a sans doute été redémarrée par logiciel ; retour en cours."
 
-#: nova/virt/libvirt/driver.py:2167
+#: nova/virt/libvirt/driver.py:2252
 msgid "Instance rebooted successfully."
 msgstr "L'instance a redémarré avec succès."
 
-#: nova/virt/libvirt/driver.py:2335
+#: nova/virt/libvirt/driver.py:2420
 msgid "Instance spawned successfully."
 msgstr "Instance générée avec succès."
 
-#: nova/virt/libvirt/driver.py:2351
+#: nova/virt/libvirt/driver.py:2436
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
 msgstr "data: %(data)r, fpath: %(fpath)r"
 
-#: nova/virt/libvirt/driver.py:2390 nova/virt/libvirt/driver.py:2417
+#: nova/virt/libvirt/driver.py:2475 nova/virt/libvirt/driver.py:2502
 #, python-format
 msgid "Truncated console log returned, %d bytes ignored"
 msgstr "Journal de console tronqué retourné, %d octets ignorés"
 
-#: nova/virt/libvirt/driver.py:2646
+#: nova/virt/libvirt/driver.py:2731
 msgid "Creating image"
 msgstr "Création de l'image"
 
-#: nova/virt/libvirt/driver.py:2772
+#: nova/virt/libvirt/driver.py:2857
 msgid "Using config drive"
 msgstr "Utilisation de l'unité de config"
 
-#: nova/virt/libvirt/driver.py:2781
+#: nova/virt/libvirt/driver.py:2866
 #, python-format
 msgid "Creating config drive at %(path)s"
 msgstr "Création de l'unité de config à %(path)s"
 
-#: nova/virt/libvirt/driver.py:3334
+#: nova/virt/libvirt/driver.py:3437
 msgid "Configuring timezone for windows instance to localtime"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4217
+#: nova/virt/libvirt/driver.py:4320
 #, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. Instance="
@@ -246,7 +256,7 @@ msgstr ""
 "être détaché. Instance=%(instance_name)s Disk=%(disk)s Code=%(errcode)s "
 "Erreur=%(e)s"
 
-#: nova/virt/libvirt/driver.py:4223
+#: nova/virt/libvirt/driver.py:4326
 #, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
@@ -255,26 +265,26 @@ msgstr ""
 "Domaine introuvable dans libvirt pour l'instance %s. Impossible d'obtenir "
 "les stats de bloc pour l'unité"
 
-#: nova/virt/libvirt/driver.py:4465
+#: nova/virt/libvirt/driver.py:4568
 #, python-format
 msgid "Instance launched has CPU info: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5207
+#: nova/virt/libvirt/driver.py:5316
 msgid "Instance running successfully."
 msgstr "L'instance s'exécute avec succès."
 
-#: nova/virt/libvirt/driver.py:5481
+#: nova/virt/libvirt/driver.py:5590
 #, python-format
 msgid "Deleting instance files %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5494
+#: nova/virt/libvirt/driver.py:5603
 #, python-format
 msgid "Deletion of %s failed"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5498
+#: nova/virt/libvirt/driver.py:5607
 #, python-format
 msgid "Deletion of %s complete"
 msgstr ""
@@ -292,12 +302,12 @@ msgid "Attempted to unfilter instance which is not filtered"
 msgstr ""
 "Vous avez essayé d'annuler le filtre d'une instance qui n'est pas filtrée"
 
-#: nova/virt/libvirt/imagecache.py:191
+#: nova/virt/libvirt/imagecache.py:190
 #, python-format
 msgid "Writing stored info to %s"
 msgstr "Ecriture d'informations stockées dans %s"
 
-#: nova/virt/libvirt/imagecache.py:401
+#: nova/virt/libvirt/imagecache.py:400
 #, python-format
 msgid ""
 "image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
@@ -305,27 +315,27 @@ msgstr ""
 "image %(id)s à (%(base_file)s) : vérification d'image ignorée, aucun hachage "
 "stocké"
 
-#: nova/virt/libvirt/imagecache.py:410
+#: nova/virt/libvirt/imagecache.py:409
 #, python-format
 msgid "%(id)s (%(base_file)s): generating checksum"
 msgstr "%(id)s (%(base_file)s) : génération d'un total de contrôle"
 
-#: nova/virt/libvirt/imagecache.py:438
+#: nova/virt/libvirt/imagecache.py:437
 #, python-format
 msgid "Base file too young to remove: %s"
 msgstr "Fichier de base trop jeune pour un retrait : %s"
 
-#: nova/virt/libvirt/imagecache.py:441
+#: nova/virt/libvirt/imagecache.py:440
 #, python-format
 msgid "Removing base file: %s"
 msgstr "Retrait du fichier de base : %s"
 
-#: nova/virt/libvirt/imagecache.py:459
+#: nova/virt/libvirt/imagecache.py:458
 #, python-format
 msgid "image %(id)s at (%(base_file)s): checking"
 msgstr "image %(id)s à (%(base_file)s) : vérification"
 
-#: nova/virt/libvirt/imagecache.py:483
+#: nova/virt/libvirt/imagecache.py:482
 #, python-format
 msgid ""
 "image %(id)s at (%(base_file)s): in use: on this node %(local)d local, "
@@ -335,17 +345,17 @@ msgstr ""
 "%(local)d local, %(remote)d sur d'autres noeuds partageant ce stockage "
 "d'instance"
 
-#: nova/virt/libvirt/imagecache.py:550
+#: nova/virt/libvirt/imagecache.py:549
 #, python-format
 msgid "Active base files: %s"
 msgstr "Fichiers de base actifs : %s"
 
-#: nova/virt/libvirt/imagecache.py:553
+#: nova/virt/libvirt/imagecache.py:552
 #, python-format
 msgid "Corrupt base files: %s"
 msgstr "Fichiers de base endommagés : %s"
 
-#: nova/virt/libvirt/imagecache.py:557
+#: nova/virt/libvirt/imagecache.py:556
 #, python-format
 msgid "Removable base files: %s"
 msgstr "Fichiers de base pouvant être retirés : %s"
