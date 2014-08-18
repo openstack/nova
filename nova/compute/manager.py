@@ -4522,8 +4522,11 @@ class ComputeManager(manager.Manager):
         is_volume_backed = self.compute_api.is_volume_backed_instance(ctxt,
                                                                       instance)
         dest_check_data['is_volume_backed'] = is_volume_backed
+        block_device_info = self._get_instance_block_device_info(
+                            ctxt, instance, refresh_conn_info=True)
         return self.driver.check_can_live_migrate_source(ctxt, instance,
-                                                         dest_check_data)
+                                                         dest_check_data,
+                                                         block_device_info)
 
     @object_compat
     @wrap_exception()

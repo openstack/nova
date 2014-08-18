@@ -955,14 +955,20 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         self.mox.StubOutWithMock(self.compute.compute_api,
                                  'is_volume_backed_instance')
+        self.mox.StubOutWithMock(self.compute,
+                                 '_get_instance_block_device_info')
         self.mox.StubOutWithMock(self.compute.driver,
                                  'check_can_live_migrate_source')
 
         instance_p = obj_base.obj_to_primitive(instance)
         self.compute.compute_api.is_volume_backed_instance(
                 self.context, instance).AndReturn(is_volume_backed)
+        self.compute._get_instance_block_device_info(
+                self.context, instance, refresh_conn_info=True
+                ).AndReturn({'block_device_mapping': 'fake'})
         self.compute.driver.check_can_live_migrate_source(
-                self.context, instance, expected_dest_check_data)
+                self.context, instance, expected_dest_check_data,
+                {'block_device_mapping': 'fake'})
 
         self.mox.ReplayAll()
 
