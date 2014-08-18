@@ -237,6 +237,8 @@ class API(base_api.NetworkAPI):
     def allocate_for_instance(self, context, instance, **kwargs):
         """Allocate network resources for the instance.
 
+        :param context: The request context.
+        :param instance: nova.objects.instance.Instance object.
         :param requested_networks: optional value containing
             network_id, fixed_ip, and port_id
         :param security_groups: security groups to allocate for instance
@@ -263,10 +265,10 @@ class API(base_api.NetworkAPI):
             available_macs = set(hypervisor_macs)
         neutron = neutronv2.get_client(context)
         LOG.debug('allocate_for_instance()', instance=instance)
-        if not instance['project_id']:
+        if not instance.project_id:
             msg = _('empty project id for instance %s')
             raise exception.InvalidInput(
-                reason=msg % instance['uuid'])
+                reason=msg % instance.uuid)
         requested_networks = kwargs.get('requested_networks')
         dhcp_opts = kwargs.get('dhcp_options', None)
         ports = {}
@@ -281,7 +283,7 @@ class API(base_api.NetworkAPI):
                     if hypervisor_macs is not None:
                         if port['mac_address'] not in hypervisor_macs:
                             raise exception.PortNotUsable(port_id=port_id,
-                                instance=instance['uuid'])
+                                instance=instance.uuid)
                         else:
                             # Don't try to use this MAC if we need to create a
                             # port on the fly later. Identical MACs may be
@@ -294,7 +296,7 @@ class API(base_api.NetworkAPI):
                     net_ids.append(network_id)
                     ordered_networks.append((network_id, fixed_ip, port_id))
 
-        nets = self._get_available_networks(context, instance['project_id'],
+        nets = self._get_available_networks(context, instance.project_id,
                                             net_ids)
         if not nets:
             LOG.warn(_LW("No network configured!"), instance=instance)
@@ -319,7 +321,7 @@ class API(base_api.NetworkAPI):
         # TODO(arosen) Should optimize more to do direct query for security
         # group if len(security_groups) == 1
         if len(security_groups):
-            search_opts = {'tenant_id': instance['project_id']}
+            search_opts = {'tenant_id': instance.project_id}
             user_security_groups = neutron.list_security_groups(
                 **search_opts).get('security_groups')
 
@@ -377,8 +379,8 @@ class API(base_api.NetworkAPI):
 
                 raise exception.SecurityGroupCannotBeApplied()
             network_id = network['id']
-            zone = 'compute:%s' % instance['availability_zone']
-            port_req_body = {'port': {'device_id': instance['uuid'],
+            zone = 'compute:%s' % instance.availability_zone
+            port_req_body = {'port': {'device_id': instance.uuid,
                                       'device_owner': zone}}
             try:
                 self._populate_neutron_extension_values(context, instance,
