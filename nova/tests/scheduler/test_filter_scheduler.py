@@ -154,10 +154,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.driver.schedule_run_instance(fake_context, request_spec,
                 None, None, None, None, {}, False)
 
-    @mock.patch.object(objects.InstancePCIRequests,
-        'get_by_instance_uuid',
-        return_value=objects.InstancePCIRequests(requests=[]))
-    def test_schedule_happy_day(self, mock_pci_req):
+    @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
+                return_value={'numa_topology': None,
+                              'pci_requests': None})
+    def test_schedule_happy_day(self, mock_get_extra):
         """Make sure there's nothing glaringly wrong with _schedule()
         by doing a happy day pass through.
         """
@@ -459,10 +459,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self._group_details_in_filter_properties(group, 'get_by_name',
                                                  group.name, 'anti-affinity')
 
-    @mock.patch.object(objects.InstancePCIRequests,
-        'get_by_instance_uuid',
-        return_value=objects.InstancePCIRequests(requests=[]))
-    def test_schedule_host_pool(self, mock_pci_req):
+    @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
+                return_value={'numa_topology': None,
+                              'pci_requests': None})
+    def test_schedule_host_pool(self, mock_get_extra):
         """Make sure the scheduler_host_subset_size property works properly."""
 
         self.flags(scheduler_host_subset_size=2)
@@ -492,10 +492,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # one host should be chosen
         self.assertEqual(len(hosts), 1)
 
-    @mock.patch.object(objects.InstancePCIRequests,
-        'get_by_instance_uuid',
-        return_value=objects.InstancePCIRequests(requests=[]))
-    def test_schedule_large_host_pool(self, mock_pci_req):
+    @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
+                return_value={'numa_topology': None,
+                              'pci_requests': None})
+    def test_schedule_large_host_pool(self, mock_get_extra):
         """Hosts should still be chosen if pool size
         is larger than number of filtered hosts.
         """
@@ -526,10 +526,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # one host should be chose
         self.assertEqual(len(hosts), 1)
 
-    @mock.patch.object(objects.InstancePCIRequests,
-        'get_by_instance_uuid',
-        return_value=objects.InstancePCIRequests(requests=[]))
-    def test_schedule_chooses_best_host(self, mock_pci_req):
+    @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
+                return_value={'numa_topology': None,
+                              'pci_requests': None})
+    def test_schedule_chooses_best_host(self, mock_get_extra):
         """If scheduler_host_subset_size is 1, the largest host with greatest
         weight should be returned.
         """
@@ -576,10 +576,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.assertEqual(50, hosts[0].weight)
 
-    @mock.patch.object(objects.InstancePCIRequests,
-        'get_by_instance_uuid',
-        return_value=objects.InstancePCIRequests(requests=[]))
-    def test_select_destinations(self, mock_pci_req):
+    @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
+                return_value={'numa_topology': None,
+                              'pci_requests': None})
+    def test_select_destinations(self, mock_get_extra):
         """select_destinations is basically a wrapper around _schedule().
 
         Similar to the _schedule tests, this just does a happy path test to

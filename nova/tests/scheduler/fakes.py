@@ -23,7 +23,13 @@ from nova import db
 from nova.openstack.common import jsonutils
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
+from nova.virt import hardware
 
+NUMA_TOPOLOGY = hardware.VirtNUMAHostTopology(
+                           cells=[hardware.VirtNUMATopologyCellUsage(
+                                      0, set([1, 2]), 512),
+                                  hardware.VirtNUMATopologyCellUsage(
+                                      1, set([3, 4]), 512)])
 
 COMPUTE_NODES = [
         dict(id=1, local_gb=1024, memory_mb=1024, vcpus=1,
@@ -31,25 +37,25 @@ COMPUTE_NODES = [
              free_disk_gb=512, local_gb_used=0, updated_at=None,
              service=dict(host='host1', disabled=False),
              hypervisor_hostname='node1', host_ip='127.0.0.1',
-             hypervisor_version=0),
+             hypervisor_version=0, numa_topology=None),
         dict(id=2, local_gb=2048, memory_mb=2048, vcpus=2,
              disk_available_least=1024, free_ram_mb=1024, vcpus_used=2,
              free_disk_gb=1024, local_gb_used=0, updated_at=None,
              service=dict(host='host2', disabled=True),
              hypervisor_hostname='node2', host_ip='127.0.0.1',
-             hypervisor_version=0),
+             hypervisor_version=0, numa_topology=None),
         dict(id=3, local_gb=4096, memory_mb=4096, vcpus=4,
              disk_available_least=3333, free_ram_mb=3072, vcpus_used=1,
              free_disk_gb=3072, local_gb_used=0, updated_at=None,
              service=dict(host='host3', disabled=False),
              hypervisor_hostname='node3', host_ip='127.0.0.1',
-             hypervisor_version=0),
+             hypervisor_version=0, numa_topology=NUMA_TOPOLOGY.to_json()),
         dict(id=4, local_gb=8192, memory_mb=8192, vcpus=8,
              disk_available_least=8192, free_ram_mb=8192, vcpus_used=0,
              free_disk_gb=8888, local_gb_used=0, updated_at=None,
              service=dict(host='host4', disabled=False),
              hypervisor_hostname='node4', host_ip='127.0.0.1',
-             hypervisor_version=0),
+             hypervisor_version=0, numa_topology=None),
         # Broken entry
         dict(id=5, local_gb=1024, memory_mb=1024, vcpus=1, service=None),
 ]
@@ -60,7 +66,7 @@ COMPUTE_NODES_METRICS = [
              free_disk_gb=512, local_gb_used=0, updated_at=None,
              service=dict(host='host1', disabled=False),
              hypervisor_hostname='node1', host_ip='127.0.0.1',
-             hypervisor_version=0,
+             hypervisor_version=0, numa_topology=None,
              metrics=jsonutils.dumps([{'name': 'foo',
                                        'value': 512,
                                        'timestamp': None,
@@ -77,7 +83,7 @@ COMPUTE_NODES_METRICS = [
              free_disk_gb=1024, local_gb_used=0, updated_at=None,
              service=dict(host='host2', disabled=True),
              hypervisor_hostname='node2', host_ip='127.0.0.1',
-             hypervisor_version=0,
+             hypervisor_version=0, numa_topology=None,
              metrics=jsonutils.dumps([{'name': 'foo',
                                        'value': 1024,
                                        'timestamp': None,
@@ -94,7 +100,7 @@ COMPUTE_NODES_METRICS = [
              free_disk_gb=3072, local_gb_used=0, updated_at=None,
              service=dict(host='host3', disabled=False),
              hypervisor_hostname='node3', host_ip='127.0.0.1',
-             hypervisor_version=0,
+             hypervisor_version=0, numa_topology=None,
              metrics=jsonutils.dumps([{'name': 'foo',
                                        'value': 3072,
                                        'timestamp': None,
@@ -111,7 +117,7 @@ COMPUTE_NODES_METRICS = [
              free_disk_gb=8192, local_gb_used=0, updated_at=None,
              service=dict(host='host4', disabled=False),
              hypervisor_hostname='node4', host_ip='127.0.0.1',
-             hypervisor_version=0,
+             hypervisor_version=0, numa_topology=None,
              metrics=jsonutils.dumps([{'name': 'foo',
                                        'value': 8192,
                                        'timestamp': None,
@@ -128,7 +134,7 @@ COMPUTE_NODES_METRICS = [
              free_disk_gb=768, local_gb_used=0, updated_at=None,
              service=dict(host='host5', disabled=False),
              hypervisor_hostname='node5', host_ip='127.0.0.1',
-             hypervisor_version=0,
+             hypervisor_version=0, numa_topology=None,
              metrics=jsonutils.dumps([{'name': 'foo',
                                        'value': 768,
                                        'timestamp': None,
@@ -150,7 +156,7 @@ COMPUTE_NODES_METRICS = [
              free_disk_gb=2048, local_gb_used=0, updated_at=None,
              service=dict(host='host6', disabled=False),
              hypervisor_hostname='node6', host_ip='127.0.0.1',
-             hypervisor_version=0,
+             hypervisor_version=0, numa_topology=None,
              metrics=jsonutils.dumps([{'name': 'foo',
                                        'value': 2048,
                                        'timestamp': None,

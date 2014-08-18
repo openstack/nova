@@ -34,6 +34,7 @@ from nova.openstack.common import timeutils
 from nova.pci import pci_stats
 from nova.scheduler import filters
 from nova.scheduler import weights
+from nova.virt import hardware
 
 host_manager_opts = [
     cfg.MultiStrOpt('scheduler_available_filters',
@@ -122,6 +123,7 @@ class HostState(object):
         self.free_disk_mb = 0
         self.vcpus_total = 0
         self.vcpus_used = 0
+        self.numa_topology = None
 
         # Additional host information from the compute node stats:
         self.num_instances = 0
@@ -197,6 +199,7 @@ class HostState(object):
         self.vcpus_total = compute['vcpus']
         self.vcpus_used = compute['vcpus_used']
         self.updated = compute['updated_at']
+        self.numa_topology = compute['numa_topology']
         if 'pci_stats' in compute:
             self.pci_stats = pci_stats.PciDeviceStats(compute['pci_stats'])
         else:
@@ -243,6 +246,11 @@ class HostState(object):
             context, instance['uuid'])
         if pci_requests.requests and self.pci_stats:
             self.pci_stats.apply_requests(pci_requests.requests)
+
+        # Calculate the numa usage
+        updated_numa_topology = hardware.get_host_numa_usage_from_instance(
+                self, instance)
+        self.numa_topology = updated_numa_topology
 
         vm_state = instance.get('vm_state', vm_states.BUILDING)
         task_state = instance.get('task_state')
