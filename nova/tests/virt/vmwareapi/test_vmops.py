@@ -40,6 +40,14 @@ from nova.virt.vmwareapi import vmops
 from nova.virt.vmwareapi import vmware_images
 
 
+class DsPathMatcher:
+    def __init__(self, expected_ds_path_str):
+        self.expected_ds_path_str = expected_ds_path_str
+
+    def __eq__(self, ds_path_param):
+        return str(ds_path_param) == self.expected_ds_path_str
+
+
 class VMwareVMOpsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(VMwareVMOpsTestCase, self).setUp()
@@ -1045,3 +1053,204 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         with mock.patch.object(db, 'flavor_get', _fake_flavor_get):
             self._test_spawn(allocations={'cpu_shares_level': 'custom',
                                           'cpu_shares_share': 1948})
+
+    def _make_vm_config_info(self, is_iso=False, is_sparse_disk=False):
+        disk_type = (constants.DISK_TYPE_SPARSE if is_sparse_disk
+                     else constants.DEFAULT_DISK_TYPE)
+        file_type = (constants.DISK_FORMAT_ISO if is_iso
+                     else constants.DEFAULT_DISK_FORMAT)
+
+        image_info = vmware_images.VMwareImage(
+                image_id=self._image_id,
+                file_size=10 * units.Mi,
+                file_type=file_type,
+                disk_type=disk_type,
+                linked_clone=True)
+        cache_root_folder = self._ds.build_path("vmware_base", self._image_id)
+        mock_imagecache = mock.Mock()
+        mock_imagecache.get_image_cache_folder.return_value = cache_root_folder
+        vi = vmops.VirtualMachineInstanceConfigInfo(
+                self._instance, "fake_uuid", image_info,
+                self._ds, self._dc_info, mock_imagecache)
+        return vi
+
+    @mock.patch.object(vmops.VMwareVMOps, 'check_cache_folder')
+    @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_as_file')
+    @mock.patch.object(vmops.VMwareVMOps, '_prepare_iso_image')
+    @mock.patch.object(vmops.VMwareVMOps, '_prepare_sparse_image')
+    @mock.patch.object(vmops.VMwareVMOps, '_prepare_flat_image')
+    @mock.patch.object(vmops.VMwareVMOps, '_cache_iso_image')
+    @mock.patch.object(vmops.VMwareVMOps, '_cache_sparse_image')
+    @mock.patch.object(vmops.VMwareVMOps, '_cache_flat_image')
+    @mock.patch.object(vmops.VMwareVMOps, '_delete_datastore_file')
+    def _test_fetch_image_if_missing(self,
+                                     mock_delete_datastore_file,
+                                     mock_cache_flat_image,
+                                     mock_cache_sparse_image,
+                                     mock_cache_iso_image,
+                                     mock_prepare_flat_image,
+                                     mock_prepare_sparse_image,
+                                     mock_prepare_iso_image,
+                                     mock_fetch_image_as_file,
+                                     mock_check_cache_folder,
+                                     is_iso=False,
+                                     is_sparse_disk=False):
+
+        tmp_dir_path = mock.Mock()
+        tmp_image_path = mock.Mock()
+        if is_iso:
+            mock_prepare = mock_prepare_iso_image
+            mock_cache = mock_cache_iso_image
+        elif is_sparse_disk:
+            mock_prepare = mock_prepare_sparse_image
+            mock_cache = mock_cache_sparse_image
+        else:
+            mock_prepare = mock_prepare_flat_image
+            mock_cache = mock_cache_flat_image
+        mock_prepare.return_value = tmp_dir_path, tmp_image_path
+
+        vi = self._make_vm_config_info(is_iso, is_sparse_disk)
+        self._vmops._fetch_image_if_missing(self._context, vi)
+
+        mock_check_cache_folder.assert_called_once_with(
+                self._ds.name, self._ds.ref)
+        mock_prepare.assert_called_once_with(vi)
+        mock_fetch_image_as_file.assert_called_once_with(
+                self._context, vi, tmp_image_path)
+        mock_cache.assert_called_once_with(vi, tmp_image_path)
+        mock_delete_datastore_file.assert_called_once_with(
+                vi.instance, str(tmp_dir_path), self._dc_info.ref)
+
+    def test_fetch_image_if_missing(self):
+        self._test_fetch_image_if_missing()
+
+    def test_fetch_image_if_missing_with_sparse(self):
+        self._test_fetch_image_if_missing(
+                is_sparse_disk=True)
+
+    def test_fetch_image_if_missing_with_iso(self):
+        self._test_fetch_image_if_missing(
+                is_iso=True)
+
+    @mock.patch.object(vmware_images, 'fetch_image')
+    def test_fetch_image_as_file(self, mock_fetch_image):
+        vi = self._make_vm_config_info()
+        image_ds_loc = mock.Mock()
+        self._vmops._fetch_image_as_file(self._context, vi, image_ds_loc)
+        mock_fetch_image.assert_called_once_with(
+                self._context,
+                vi.instance,
+                self._session._host,
+                self._dc_info.name,
+                self._ds.name,
+                image_ds_loc.rel_path,
+                cookies='Fake-CookieJar')
+
+    @mock.patch.object(uuidutils, 'generate_uuid', return_value='tmp-uuid')
+    def test_prepare_iso_image(self, mock_generate_uuid):
+        vi = self._make_vm_config_info(is_iso=True)
+        tmp_dir_loc, tmp_image_ds_loc = self._vmops._prepare_iso_image(vi)
+
+        expected_tmp_dir_path = '[%s] vmware_temp/tmp-uuid' % (self._ds.name)
+        expected_image_path = '[%s] vmware_temp/tmp-uuid/%s/%s.iso' % (
+                self._ds.name, self._image_id, self._image_id)
+
+        self.assertEqual(str(tmp_dir_loc), expected_tmp_dir_path)
+        self.assertEqual(str(tmp_image_ds_loc), expected_image_path)
+
+    @mock.patch.object(uuidutils, 'generate_uuid', return_value='tmp-uuid')
+    def test_prepare_sparse_image(self, mock_generate_uuid):
+        vi = self._make_vm_config_info(is_sparse_disk=True)
+        tmp_dir_loc, tmp_image_ds_loc = self._vmops._prepare_sparse_image(vi)
+
+        expected_tmp_dir_path = '[%s] vmware_temp/tmp-uuid' % (self._ds.name)
+        expected_image_path = '[%s] vmware_temp/tmp-uuid/%s/%s' % (
+                self._ds.name, self._image_id, "tmp-sparse.vmdk")
+
+        self.assertEqual(str(tmp_dir_loc), expected_tmp_dir_path)
+        self.assertEqual(str(tmp_image_ds_loc), expected_image_path)
+
+    @mock.patch.object(ds_util, 'mkdir')
+    @mock.patch.object(vm_util, 'create_virtual_disk')
+    @mock.patch.object(vmops.VMwareVMOps, '_delete_datastore_file')
+    @mock.patch.object(uuidutils, 'generate_uuid', return_value='tmp-uuid')
+    def test_prepare_flat_image(self,
+                                mock_generate_uuid,
+                                mock_delete_datastore_file,
+                                mock_create_virtual_disk,
+                                mock_mkdir):
+        vi = self._make_vm_config_info()
+        tmp_dir_loc, tmp_image_ds_loc = self._vmops._prepare_flat_image(vi)
+
+        expected_tmp_dir_path = '[%s] vmware_temp/tmp-uuid' % (self._ds.name)
+        expected_image_path = '[%s] vmware_temp/tmp-uuid/%s/%s-flat.vmdk' % (
+                self._ds.name, self._image_id, self._image_id)
+        expected_image_path_parent = '[%s] vmware_temp/tmp-uuid/%s' % (
+                self._ds.name, self._image_id)
+        expected_path_to_create = '[%s] vmware_temp/tmp-uuid/%s/%s.vmdk' % (
+                self._ds.name, self._image_id, self._image_id)
+
+        mock_mkdir.assert_called_once_with(
+                self._session, DsPathMatcher(expected_image_path_parent),
+                self._dc_info.ref)
+
+        self.assertEqual(str(tmp_dir_loc), expected_tmp_dir_path)
+        self.assertEqual(str(tmp_image_ds_loc), expected_image_path)
+
+        image_info = vi.ii
+        mock_create_virtual_disk.assert_called_once_with(
+            self._session, self._dc_info.ref,
+            image_info.adapter_type,
+            image_info.disk_type,
+            DsPathMatcher(expected_path_to_create),
+            image_info.file_size_in_kb)
+        mock_delete_datastore_file.assert_called_once_with(
+                vi.instance, DsPathMatcher(expected_image_path),
+                self._dc_info.ref)
+
+    @mock.patch.object(ds_util, 'file_move')
+    def test_cache_iso_image(self, mock_file_move):
+        vi = self._make_vm_config_info(is_iso=True)
+        tmp_image_ds_loc = mock.Mock()
+
+        self._vmops._cache_iso_image(vi, tmp_image_ds_loc)
+
+        mock_file_move.assert_called_once_with(
+                self._session, self._dc_info.ref,
+                tmp_image_ds_loc.parent,
+                DsPathMatcher('[fake_ds] vmware_base/%s' % self._image_id))
+
+    @mock.patch.object(ds_util, 'file_move')
+    def test_cache_flat_image(self, mock_file_move):
+        vi = self._make_vm_config_info()
+        tmp_image_ds_loc = mock.Mock()
+
+        self._vmops._cache_flat_image(vi, tmp_image_ds_loc)
+
+        mock_file_move.assert_called_once_with(
+                self._session, self._dc_info.ref,
+                tmp_image_ds_loc.parent,
+                DsPathMatcher('[fake_ds] vmware_base/%s' % self._image_id))
+
+    @mock.patch.object(ds_util, 'file_move')
+    @mock.patch.object(vm_util, 'copy_virtual_disk')
+    @mock.patch.object(vmops.VMwareVMOps, '_delete_datastore_file')
+    def test_cache_sparse_image(self,
+                                mock_delete_datastore_file,
+                                mock_copy_virtual_disk,
+                                mock_file_move):
+        vi = self._make_vm_config_info(is_sparse_disk=True)
+
+        sparse_disk_path = "[%s] vmware_temp/tmp-uuid/%s/tmp-sparse.vmdk" % (
+                self._ds.name, self._image_id)
+        tmp_image_ds_loc = ds_util.DatastorePath.parse(sparse_disk_path)
+
+        self._vmops._cache_sparse_image(vi, tmp_image_ds_loc)
+
+        target_disk_path = "[%s] vmware_temp/tmp-uuid/%s/%s.vmdk" % (
+                self._ds.name,
+                self._image_id, self._image_id)
+        mock_copy_virtual_disk.assert_called_once_with(
+                self._session, self._dc_info.ref,
+                sparse_disk_path,
+                DsPathMatcher(target_disk_path))
