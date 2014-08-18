@@ -30,6 +30,7 @@ from nova.network import model as network_model
 from nova.network import neutronv2
 from nova.network.neutronv2 import constants
 from nova.network.security_group import openstack_driver
+from nova import objects
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
@@ -844,7 +845,7 @@ class API(base_api.NetworkAPI):
                             instance_id=orig_instance_uuid)
             LOG.info(_('re-assign floating IP %(address)s from '
                        'instance %(instance_id)s') % msg_dict)
-            orig_instance = self.db.instance_get_by_uuid(context,
+            orig_instance = objects.Instance.get_by_uuid(context,
                                                          orig_instance_uuid)
 
             # purge cached nw info for the original instance
