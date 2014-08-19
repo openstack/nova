@@ -266,7 +266,7 @@ class VMUtils(object):
         vm = self._lookup_vm_check(vm_name)
         return self._get_vm_ide_controller(vm, ctrller_addr)
 
-    def get_attached_disks_count(self, scsi_controller_path):
+    def get_attached_disks(self, scsi_controller_path):
         volumes = self._conn.query("SELECT * FROM %(class_name)s "
                                    "WHERE ResourceSubType = "
                                    "'%(res_sub_type)s' AND "
@@ -277,7 +277,7 @@ class VMUtils(object):
                                     self._PHYS_DISK_RES_SUB_TYPE,
                                     'parent':
                                     scsi_controller_path.replace("'", "''")})
-        return len(volumes)
+        return volumes
 
     def _get_new_setting_data(self, class_name):
         return self._conn.query("SELECT * FROM %s WHERE InstanceID "
