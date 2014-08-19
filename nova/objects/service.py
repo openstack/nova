@@ -30,7 +30,8 @@ class Service(base.NovaPersistentObject, base.NovaObject):
     # Version 1.1: Added compute_node nested object
     # Version 1.2: String attributes updated to support unicode
     # Version 1.3: ComputeNode version 1.5
-    VERSION = '1.3'
+    # Version 1.4: Added use_slave to get_by_compute_host
+    VERSION = '1.4'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -104,7 +105,7 @@ class Service(base.NovaPersistentObject, base.NovaObject):
         return cls._from_db_object(context, cls(), db_service)
 
     @base.remotable_classmethod
-    def get_by_compute_host(cls, context, host):
+    def get_by_compute_host(cls, context, host, use_slave=False):
         db_service = db.service_get_by_compute_host(context, host)
         return cls._from_db_object(context, cls(), db_service)
 
@@ -138,7 +139,8 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              Service <= version 1.2
     # Version 1.1  Service version 1.3
-    VERSION = '1.1'
+    # Version 1.2: Service version 1.4
+    VERSION = '1.2'
 
     fields = {
         'objects': fields.ListOfObjectsField('Service'),
@@ -147,6 +149,7 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
         '1.0': '1.2',
         # NOTE(danms): Service was at 1.2 before we added this
         '1.1': '1.3',
+        '1.2': '1.4',
         }
 
     @base.remotable_classmethod
