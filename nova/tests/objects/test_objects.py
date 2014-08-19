@@ -980,6 +980,22 @@ object_data = {
 }
 
 
+object_relationships = {
+    'BlockDeviceMapping': {'Instance': '1.13'},
+    'FixedIP': {'Instance': '1.13', 'Network': '1.2',
+                'VirtualInterface': '1.0'},
+    'FloatingIP': {'FixedIP': '1.1'},
+    'Instance': {'InstanceFault': '1.2',
+                 'InstanceInfoCache': '1.5',
+                 'PciDeviceList': '1.0',
+                 'SecurityGroupList': '1.0'},
+    'MyObj': {'MyOwnedObject': '1.0'},
+    'SecurityGroupRule': {'SecurityGroup': '1.1'},
+    'Service': {'ComputeNode': '1.4'},
+    'TestSubclassedObject': {'MyOwnedObject': '1.0'}
+}
+
+
 class TestObjectVersions(test.TestCase):
     def setUp(self):
         super(TestObjectVersions, self).setUp()
@@ -1031,3 +1047,36 @@ class TestObjectVersions(test.TestCase):
                          'Some objects have changed; please make sure the '
                          'versions have been bumped, and then update their '
                          'hashes here.')
+
+    def _build_tree(self, tree, obj_class):
+        obj_name = obj_class.obj_name()
+        if obj_name in tree:
+            return
+
+        for name, field in obj_class.fields.items():
+            if isinstance(field._type, fields.Object):
+                sub_obj_name = field._type._obj_name
+                sub_obj_class = base.NovaObject._obj_classes[sub_obj_name][0]
+                self._build_tree(tree, sub_obj_class)
+                tree.setdefault(obj_name, {})
+                tree[obj_name][sub_obj_name] = sub_obj_class.VERSION
+
+    def test_relationships(self):
+        tree = {}
+        for obj_name in base.NovaObject._obj_classes.keys():
+            self._build_tree(tree, base.NovaObject._obj_classes[obj_name][0])
+
+        stored = set([(x, str(y)) for x, y in object_relationships.items()])
+        computed = set([(x, str(y)) for x, y in tree.items()])
+        changed = stored - computed
+        expected = {}
+        actual = {}
+        for name, deps in changed:
+            expected[name] = object_relationships.get(name)
+            actual[name] = tree.get(name)
+        self.assertEqual(expected, actual,
+                         'Some objects have changed dependencies. '
+                         'Please make sure to bump the versions of '
+                         'parent objects and provide a rule in their '
+                         'obj_make_compatible() routines to backlevel '
+                         'the child object.')
