@@ -615,7 +615,7 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
         self.disk.get_disk_size(self.TEMPLATE_PATH
                                          ).AndReturn(self.TEMPLATE_SIZE)
         self.mox.StubOutWithMock(self.lvm, 'remove_volumes')
-        self.lvm.remove_volumes(self.PATH)
+        self.lvm.remove_volumes([self.PATH])
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -633,7 +633,7 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
                                self.SIZE,
                                sparse=False)
         self.mox.StubOutWithMock(self.lvm, 'remove_volumes')
-        self.lvm.remove_volumes(self.PATH)
+        self.lvm.remove_volumes([self.PATH])
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -878,7 +878,7 @@ class EncryptedLvmTestCase(_ImageTestCase, test.TestCase):
                 sparse=False)
             self.dmcrypt.delete_volume.assert_called_with(
                 self.PATH.rpartition('/')[2])
-            self.lvm.remove_volumes.assert_called_with(self.LV_PATH)
+            self.lvm.remove_volumes.assert_called_with([self.LV_PATH])
 
     def test_create_image_encrypt_negative(self):
         with contextlib.nested(
@@ -925,7 +925,7 @@ class EncryptedLvmTestCase(_ImageTestCase, test.TestCase):
                 self.KEY)
             self.dmcrypt.delete_volume.assert_called_with(
                 self.PATH.rpartition('/')[2])
-            self.lvm.remove_volumes.assert_called_with(self.LV_PATH)
+            self.lvm.remove_volumes.assert_called_with([self.LV_PATH])
 
     def test_create_image_generated_negative(self):
         with contextlib.nested(
@@ -971,7 +971,7 @@ class EncryptedLvmTestCase(_ImageTestCase, test.TestCase):
                 context=self.CONTEXT)
             self.dmcrypt.delete_volume.assert_called_with(
                 self.PATH.rpartition('/')[2])
-            self.lvm.remove_volumes.assert_called_with(self.LV_PATH)
+            self.lvm.remove_volumes.assert_called_with([self.LV_PATH])
 
     def test_create_image_generated_encrypt_negative(self):
         with contextlib.nested(
@@ -1014,7 +1014,7 @@ class EncryptedLvmTestCase(_ImageTestCase, test.TestCase):
                 self.KEY)
             self.dmcrypt.delete_volume.assert_called_with(
                 self.PATH.rpartition('/')[2])
-            self.lvm.remove_volumes.assert_called_with(self.LV_PATH)
+            self.lvm.remove_volumes.assert_called_with([self.LV_PATH])
 
     def test_prealloc_image(self):
         self.flags(preallocate_images='space')
