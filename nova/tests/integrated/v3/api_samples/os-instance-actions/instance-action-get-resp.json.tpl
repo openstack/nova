@@ -1,7 +1,7 @@
 {
-    "server_action": {
+    "instanceAction": {
             "action": "%(action)s",
-            "server_uuid": "%(instance_uuid)s",
+            "instance_uuid": "%(instance_uuid)s",
             "request_id": "%(request_id)s",
             "user_id": "%(integer_id)s",
             "project_id": "%(integer_id)s",
