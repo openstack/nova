@@ -843,7 +843,7 @@ class TestVolumeCreateRequestXMLDeserializer(test.TestCase):
         self.assertEqual(request['body'], expected)
 
 
-class CommonUnprocessableEntityTestCase(object):
+class CommonBadRequestTestCase(object):
 
     resource = None
     entity_name = None
@@ -851,44 +851,44 @@ class CommonUnprocessableEntityTestCase(object):
     kwargs = {}
 
     """
-    Tests of places we throw 422 Unprocessable Entity from
+    Tests of places we throw 400 Bad Request from
     """
 
     def setUp(self):
-        super(CommonUnprocessableEntityTestCase, self).setUp()
+        super(CommonBadRequestTestCase, self).setUp()
         self.controller = self.controller_cls()
 
-    def _unprocessable_create(self, body):
+    def _bad_request_create(self, body):
         req = fakes.HTTPRequest.blank('/v2/fake/' + self.resource)
         req.method = 'POST'
 
         kwargs = self.kwargs.copy()
         kwargs['body'] = body
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, **kwargs)
 
     def test_create_no_body(self):
-        self._unprocessable_create(body=None)
+        self._bad_request_create(body=None)
 
     def test_create_missing_volume(self):
         body = {'foo': {'a': 'b'}}
-        self._unprocessable_create(body=body)
+        self._bad_request_create(body=body)
 
     def test_create_malformed_entity(self):
         body = {self.entity_name: 'string'}
-        self._unprocessable_create(body=body)
+        self._bad_request_create(body=body)
 
 
-class UnprocessableVolumeTestCase(CommonUnprocessableEntityTestCase,
-                                  test.TestCase):
+class BadRequestVolumeTestCase(CommonBadRequestTestCase,
+                               test.TestCase):
 
     resource = 'os-volumes'
     entity_name = 'volume'
     controller_cls = volumes.VolumeController
 
 
-class UnprocessableAttachmentTestCase(CommonUnprocessableEntityTestCase,
-                                      test.TestCase):
+class BadRequestAttachmentTestCase(CommonBadRequestTestCase,
+                                   test.TestCase):
 
     resource = 'servers/' + FAKE_UUID + '/os-volume_attachments'
     entity_name = 'volumeAttachment'
@@ -896,7 +896,7 @@ class UnprocessableAttachmentTestCase(CommonUnprocessableEntityTestCase,
     kwargs = {'server_id': FAKE_UUID}
 
 
-class UnprocessableSnapshotTestCase(CommonUnprocessableEntityTestCase,
+class BadRequestSnapshotTestCase(CommonBadRequestTestCase,
                                     test.TestCase):
 
     resource = 'os-snapshots'
@@ -941,7 +941,7 @@ class CreateSnapshotTestCase(test.TestCase):
 
     def test_force_invalid(self):
         self.body['snapshot']['force'] = 'foo'
-        self.assertRaises(exception.InvalidParameterValue,
+        self.assertRaises(exc.HTTPBadRequest,
                           self.controller.create, self.req, body=self.body)
 
 
