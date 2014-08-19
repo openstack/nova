@@ -27,7 +27,7 @@ from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova import conductor
 from nova import exception
-from nova.i18n import _, _LE, _LW
+from nova.i18n import _, _LE, _LI, _LW
 from nova.network import base_api
 from nova.network import model as network_model
 from nova.network import neutronv2
@@ -545,7 +545,7 @@ class API(base_api.NetworkAPI):
                 neutronv2.get_client(context).update_port(port,
                                                           port_req_body)
             except Exception:
-                LOG.info(_('Unable to reset device ID for port %s'), port,
+                LOG.info(_LI('Unable to reset device ID for port %s'), port,
                          instance=instance)
 
         self._delete_ports(neutron, instance, ports, raise_if_fail=True)
@@ -612,7 +612,7 @@ class API(base_api.NetworkAPI):
         # NOTE(danms): This is an inner method intended to be called
         # by other code that updates instance nwinfo. It *must* be
         # called with the refresh_cache-%(instance_uuid) lock held!
-        LOG.debug('get_instance_nw_info()', instance=instance)
+        LOG.debug('_get_instance_nw_info()', instance=instance)
         nw_info = self._build_network_info_model(context, instance, networks,
                                                  port_ids)
         return network_model.NetworkInfo.hydrate(nw_info)
@@ -771,8 +771,7 @@ class API(base_api.NetworkAPI):
         Return the number of instances than can be successfully allocated
         with the requested network configuration.
         """
-        LOG.debug('validate_networks() for %s',
-                  requested_networks)
+        LOG.debug('validate_networks() for %s', requested_networks)
 
         neutron = neutronv2.get_client(context)
         ports_needed_per_instance = 0
@@ -960,8 +959,8 @@ class API(base_api.NetworkAPI):
 
             msg_dict = dict(address=floating_address,
                             instance_id=orig_instance_uuid)
-            LOG.info(_('re-assign floating IP %(address)s from '
-                       'instance %(instance_id)s') % msg_dict)
+            LOG.info(_LI('re-assign floating IP %(address)s from '
+                         'instance %(instance_id)s'), msg_dict)
             orig_instance = objects.Instance.get_by_uuid(context,
                                                          orig_instance_uuid)
 
