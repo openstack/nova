@@ -925,15 +925,14 @@ class Resource(wsgi.Application):
             return Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
         if body:
-            msg = _("Action: '%(action)s', body: "
+            msg = _("Action: '%(action)s', calling method: %(meth)s, body: "
                     "%(body)s") % {'action': action,
-                                   'body': unicode(body, 'utf-8')}
+                                   'body': unicode(body, 'utf-8'),
+                                   'meth': str(meth)}
             LOG.debug(logging.mask_password(msg))
-        LOG.debug("Calling method '%(meth)s' (Content-type='%(ctype)s', "
-                  "Accept='%(accept)s')",
-                  {'meth': str(meth),
-                   'ctype': content_type,
-                   'accept': accept})
+        else:
+            LOG.debug("Calling method '%(meth)s'",
+                      {'meth': str(meth)})
 
         # Now, deserialize the request body...
         try:
