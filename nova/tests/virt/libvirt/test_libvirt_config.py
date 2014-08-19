@@ -235,8 +235,30 @@ class LibvirtConfigCPUTest(LibvirtConfigBaseTest):
               <arch>x86_64</arch>
               <model>Penryn</model>
               <vendor>Intel</vendor>
-              <feature name="mtrr"/>
               <feature name="apic"/>
+              <feature name="mtrr"/>
+            </cpu>
+        """)
+
+    def test_only_uniq_cpu_featues(self):
+        obj = config.LibvirtConfigCPU()
+        obj.model = "Penryn"
+        obj.vendor = "Intel"
+        obj.arch = "x86_64"
+
+        obj.add_feature(config.LibvirtConfigCPUFeature("mtrr"))
+        obj.add_feature(config.LibvirtConfigCPUFeature("apic"))
+        obj.add_feature(config.LibvirtConfigCPUFeature("apic"))
+        obj.add_feature(config.LibvirtConfigCPUFeature("mtrr"))
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <cpu>
+              <arch>x86_64</arch>
+              <model>Penryn</model>
+              <vendor>Intel</vendor>
+              <feature name="apic"/>
+              <feature name="mtrr"/>
             </cpu>
         """)
 
@@ -285,8 +307,8 @@ class LibvirtConfigGuestCPUTest(LibvirtConfigBaseTest):
               <arch>x86_64</arch>
               <model>Penryn</model>
               <vendor>Intel</vendor>
-              <feature name="mtrr" policy="require"/>
               <feature name="apic" policy="require"/>
+              <feature name="mtrr" policy="require"/>
             </cpu>
         """)
 
