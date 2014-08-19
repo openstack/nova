@@ -499,27 +499,22 @@ class FloatingIP(object):
         """Returns a floating IP as a dict."""
         # NOTE(vish): This is no longer used but can't be removed until
         #             we major version the network_rpcapi.
-        # NOTE(danms): Not converting to objects since it's not used
-        return dict(self.db.floating_ip_get_by_address(context,
-                                                       address).iteritems())
+        return objects.FloatingIP.get_by_address(context, address)
 
     def get_floating_ips_by_project(self, context):
         """Returns the floating IPs allocated to a project."""
         # NOTE(vish): This is no longer used but can't be removed until
         #             we major version the network_rpcapi.
-        # NOTE(danms): Not converting to objects since it's not used
-        ips = self.db.floating_ip_get_all_by_project(context,
+        return objects.FloatingIPList.get_by_project(context,
                                                      context.project_id)
-        return [dict(ip.iteritems()) for ip in ips]
 
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
         """Returns the floating IPs associated with a fixed_address."""
         # NOTE(vish): This is no longer used but can't be removed until
         #             we major version the network_rpcapi.
-        # NOTE(danms): Not converting to objects since it's not used
-        floating_ips = self.db.floating_ip_get_by_fixed_address(context,
-                                                                fixed_address)
-        return [floating_ip['address'] for floating_ip in floating_ips]
+        floating_ips = objects.FloatingIPList.get_by_fixed_address(
+            context, fixed_address)
+        return [str(floating_ip.address) for floating_ip in floating_ips]
 
     def _is_stale_floating_ip_address(self, context, floating_ip):
         try:
