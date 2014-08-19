@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-08-12 06:05+0000\n"
+"POT-Creation-Date: 2014-08-18 06:04+0000\n"
 "PO-Revision-Date: 2014-06-14 19:30+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: French (http://www.transifex.com/projects/p/nova/language/"
@@ -196,7 +196,7 @@ msgstr ""
 msgid "Failed to dealloc network for failed instance"
 msgstr ""
 
-#: nova/compute/manager.py:1458 nova/compute/manager.py:3514
+#: nova/compute/manager.py:1458 nova/compute/manager.py:3527
 msgid "Error trying to reschedule"
 msgstr ""
 
@@ -205,97 +205,137 @@ msgstr ""
 msgid "Instance failed network setup after %(attempts)d attempt(s)"
 msgstr ""
 
-#: nova/compute/manager.py:1755
+#: nova/compute/manager.py:1761
 msgid "Instance failed block device setup"
 msgstr ""
 
-#: nova/compute/manager.py:1775 nova/compute/manager.py:2116
-#: nova/compute/manager.py:4058
+#: nova/compute/manager.py:1781 nova/compute/manager.py:2123
+#: nova/compute/manager.py:4071
 msgid "Instance failed to spawn"
 msgstr ""
 
-#: nova/compute/manager.py:1957
+#: nova/compute/manager.py:1964
 msgid "Unexpected build failure, not rescheduling build."
 msgstr ""
 
-#: nova/compute/manager.py:2026 nova/compute/manager.py:2078
+#: nova/compute/manager.py:2033 nova/compute/manager.py:2085
 msgid "Failed to allocate network(s)"
 msgstr ""
 
-#: nova/compute/manager.py:2104
+#: nova/compute/manager.py:2111
 msgid "Failure prepping block device"
 msgstr ""
 
-#: nova/compute/manager.py:2137
+#: nova/compute/manager.py:2144
 msgid "Failed to deallocate networks"
 msgstr ""
 
-#: nova/compute/manager.py:2367 nova/compute/manager.py:3705
-#: nova/compute/manager.py:5803
+#: nova/compute/manager.py:2374 nova/compute/manager.py:3718
+#: nova/compute/manager.py:5822
 msgid "Setting instance vm_state to ERROR"
 msgstr ""
 
-#: nova/compute/manager.py:2579 nova/compute/manager.py:4914
+#: nova/compute/manager.py:2586 nova/compute/manager.py:4933
 #, python-format
 msgid "Failed to get compute_info for %s"
 msgstr ""
 
-#: nova/compute/manager.py:3005
+#: nova/compute/manager.py:3013
 #, python-format
 msgid "set_admin_password failed: %s"
 msgstr ""
 
-#: nova/compute/manager.py:3090
+#: nova/compute/manager.py:3098
 msgid "Error trying to Rescue Instance"
 msgstr ""
 
-#: nova/compute/manager.py:3711
+#: nova/compute/manager.py:3724
 #, python-format
 msgid "Failed to rollback quota for failed finish_resize: %s"
 msgstr ""
 
-#: nova/compute/manager.py:4310
+#: nova/compute/manager.py:4323
 #, python-format
 msgid "Failed to attach %(volume_id)s at %(mountpoint)s"
 msgstr ""
 
-#: nova/compute/manager.py:4349
+#: nova/compute/manager.py:4362
 #, python-format
 msgid "Failed to detach volume %(volume_id)s from %(mp)s"
 msgstr ""
 
-#: nova/compute/manager.py:4422
+#: nova/compute/manager.py:4441
 #, python-format
 msgid "Failed to swap volume %(old_volume_id)s for %(new_volume_id)s"
 msgstr ""
 
-#: nova/compute/manager.py:4429
+#: nova/compute/manager.py:4448
 #, python-format
 msgid "Failed to connect to volume %(volume_id)s with volume at %(mountpoint)s"
 msgstr ""
 
-#: nova/compute/manager.py:4716
+#: nova/compute/manager.py:4735
 #, python-format
 msgid "Pre live migration failed at %s"
 msgstr ""
 
-#: nova/compute/manager.py:5216
+#: nova/compute/manager.py:5235
 msgid "Periodic task failed to offload instance."
 msgstr ""
 
-#: nova/compute/manager.py:5256
+#: nova/compute/manager.py:5275
 #, python-format
 msgid "Failed to generate usage audit for instance on host %s"
 msgstr ""
 
-#: nova/compute/manager.py:5446
+#: nova/compute/manager.py:5465
 msgid ""
 "Periodic sync_power_state task had an error while processing an instance."
 msgstr ""
 
-#: nova/compute/manager.py:5549 nova/compute/manager.py:5558
-#: nova/compute/manager.py:5589 nova/compute/manager.py:5600
+#: nova/compute/manager.py:5568 nova/compute/manager.py:5577
+#: nova/compute/manager.py:5608 nova/compute/manager.py:5619
 msgid "error during stop() in sync_power_state."
+msgstr ""
+
+#: nova/network/neutronv2/api.py:234
+#, python-format
+msgid "Neutron error creating port on network %s"
+msgstr ""
+
+#: nova/network/neutronv2/api.py:418
+#, python-format
+msgid "Failed to update port %s"
+msgstr ""
+
+#: nova/network/neutronv2/api.py:425
+#, python-format
+msgid "Failed to delete port %s"
+msgstr ""
+
+#: nova/network/neutronv2/api.py:500 nova/network/neutronv2/api.py:524
+#, python-format
+msgid "Failed to delete neutron port %s"
+msgstr ""
+
+#: nova/network/neutronv2/api.py:697
+#, python-format
+msgid "Failed to access port %s"
+msgstr ""
+
+#: nova/network/neutronv2/api.py:931
+#, python-format
+msgid "Unable to access floating IP %s"
+msgstr ""
+
+#: nova/network/neutronv2/api.py:1065
+#, python-format
+msgid "Unable to access floating IP %(fixed_ip)s for port %(port_id)s"
+msgstr ""
+
+#: nova/network/neutronv2/api.py:1124
+#, python-format
+msgid "Unable to update host of port %s"
 msgstr ""
 
 #: nova/objects/instance_fault.py:87
@@ -389,116 +429,116 @@ msgid ""
 "Failed to mount container filesystem '%(image)s' on '%(target)s': %(errors)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:641
+#: nova/virt/libvirt/driver.py:639
 #, python-format
 msgid "Nova requires libvirt version %(major)i.%(minor)i.%(micro)i or greater."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:766
+#: nova/virt/libvirt/driver.py:764
 #, python-format
 msgid "Connection to libvirt failed: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:929
+#: nova/virt/libvirt/driver.py:927
 #, python-format
 msgid "Error from libvirt during destroy. Code=%(errcode)s Error=%(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1007
+#: nova/virt/libvirt/driver.py:1005
 #, python-format
 msgid "Error from libvirt during undefine. Code=%(errcode)s Error=%(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1035
+#: nova/virt/libvirt/driver.py:1033
 #, python-format
 msgid "Error from libvirt during unfilter. Code=%(errcode)s Error=%(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1438
+#: nova/virt/libvirt/driver.py:1444
 msgid "attaching network adapter failed."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1465
+#: nova/virt/libvirt/driver.py:1471
 msgid "detaching network adapter failed."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1717
+#: nova/virt/libvirt/driver.py:1726
 msgid "Failed to send updated snapshot status to volume service."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1825
+#: nova/virt/libvirt/driver.py:1834
 msgid ""
 "Unable to create quiesced VM snapshot, attempting again with quiescing "
 "disabled."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1831
+#: nova/virt/libvirt/driver.py:1840
 msgid "Unable to create VM snapshot, failing volume_snapshot operation."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1880
+#: nova/virt/libvirt/driver.py:1889
 msgid ""
 "Error occurred during volume_snapshot_create, sending error status to Cinder."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2026
+#: nova/virt/libvirt/driver.py:2111
 msgid ""
 "Error occurred during volume_snapshot_delete, sending error status to Cinder."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2492 nova/virt/libvirt/driver.py:2497
+#: nova/virt/libvirt/driver.py:2577 nova/virt/libvirt/driver.py:2582
 #, python-format
 msgid "Error on '%(path)s' while checking direct I/O: '%(ex)s'"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2620
+#: nova/virt/libvirt/driver.py:2705
 #, python-format
 msgid "Error injecting data into image %(img_id)s (%(e)s)"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2788
+#: nova/virt/libvirt/driver.py:2873
 #, python-format
 msgid "Creating config drive failed with error: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2881
+#: nova/virt/libvirt/driver.py:2966
 #, python-format
 msgid "Attaching PCI devices %(dev)s to %(dom)s failed."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3680
+#: nova/virt/libvirt/driver.py:3783
 #, python-format
 msgid "Error defining a domain with XML: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3684
+#: nova/virt/libvirt/driver.py:3787
 #, python-format
 msgid "Error launching a defined domain with XML: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3689
+#: nova/virt/libvirt/driver.py:3792
 #, python-format
 msgid "Error enabling hairpin mode with XML: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3703
+#: nova/virt/libvirt/driver.py:3806
 #, python-format
 msgid "Neutron Reported failure on event %(event)s for instance %(uuid)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4012
+#: nova/virt/libvirt/driver.py:4115
 #, python-format
 msgid ""
 "Hostname has changed from %(old)s to %(new)s. A restart is required to take "
 "effect."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4691
+#: nova/virt/libvirt/driver.py:4794
 #, python-format
 msgid "Live Migration failure: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5487
+#: nova/virt/libvirt/driver.py:5596
 #, python-format
 msgid "Failed to cleanup directory %(target)s: %(e)s"
 msgstr ""
@@ -515,17 +555,17 @@ msgid ""
 "%(size)s"
 msgstr ""
 
-#: nova/virt/libvirt/imagecache.py:130
+#: nova/virt/libvirt/imagecache.py:129
 #, python-format
 msgid "Error reading image info file %(filename)s: %(error)s"
 msgstr ""
 
-#: nova/virt/libvirt/imagecache.py:391
+#: nova/virt/libvirt/imagecache.py:390
 #, python-format
 msgid "image %(id)s at (%(base_file)s): image verification failed"
 msgstr ""
 
-#: nova/virt/libvirt/imagecache.py:448
+#: nova/virt/libvirt/imagecache.py:447
 #, python-format
 msgid "Failed to remove %(base_file)s, error was %(error)s"
 msgstr ""
@@ -535,19 +575,19 @@ msgstr ""
 msgid "ignoring unrecognized volume_clear='%s' value"
 msgstr ""
 
-#: nova/virt/libvirt/rbd.py:62
+#: nova/virt/libvirt/rbd_utils.py:62
 #, python-format
 msgid "error opening rbd image %s"
 msgstr ""
 
-#: nova/virt/libvirt/vif.py:485 nova/virt/libvirt/vif.py:509
-#: nova/virt/libvirt/vif.py:533
+#: nova/virt/libvirt/vif.py:454 nova/virt/libvirt/vif.py:474
+#: nova/virt/libvirt/vif.py:496
 msgid "Failed while plugging vif"
 msgstr ""
 
-#: nova/virt/libvirt/vif.py:588 nova/virt/libvirt/vif.py:605
-#: nova/virt/libvirt/vif.py:627 nova/virt/libvirt/vif.py:649
-#: nova/virt/libvirt/vif.py:674 nova/virt/libvirt/vif.py:696
+#: nova/virt/libvirt/vif.py:546 nova/virt/libvirt/vif.py:560
+#: nova/virt/libvirt/vif.py:579 nova/virt/libvirt/vif.py:598
+#: nova/virt/libvirt/vif.py:619 nova/virt/libvirt/vif.py:639
 msgid "Failed while unplugging vif"
 msgstr ""
 
@@ -566,18 +606,18 @@ msgstr ""
 msgid "Couldn't unmount the GlusterFS share %s"
 msgstr ""
 
-#: nova/virt/vmwareapi/vmops.py:509
+#: nova/virt/vmwareapi/vmops.py:508
 #, python-format
 msgid ""
 "Failed to copy cached image %(source)s to %(dest)s for resize: %(error)s"
 msgstr ""
 
-#: nova/virt/vmwareapi/vmops.py:1553
+#: nova/virt/vmwareapi/vmops.py:1551
 #, python-format
 msgid "Attaching network adapter failed. Exception:  %s"
 msgstr ""
 
-#: nova/virt/vmwareapi/vmops.py:1593
+#: nova/virt/vmwareapi/vmops.py:1591
 #, python-format
 msgid "Detaching network adapter failed. Exception: %s"
 msgstr ""
