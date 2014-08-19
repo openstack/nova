@@ -120,6 +120,39 @@ class FlavorManageTest(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller._delete, req, "failtest")
 
+    def _test_create_missing_parameter(self, parameter):
+        body = {
+            "flavor": {
+                "name": "azAZ09. -_",
+                "ram": 512,
+                "vcpus": 2,
+                "disk": 1,
+                "OS-FLV-EXT-DATA:ephemeral": 1,
+                "id": unicode('1234'),
+                "swap": 512,
+                "rxtx_factor": 1,
+                "os-flavor-access:is_public": True,
+            }
+        }
+
+        del body['flavor'][parameter]
+
+        req = fakes.HTTPRequest.blank('/v2/123/flavors')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller._create,
+                          req, body)
+
+    def test_create_missing_name(self):
+        self._test_create_missing_parameter('name')
+
+    def test_create_missing_ram(self):
+        self._test_create_missing_parameter('ram')
+
+    def test_create_missing_vcpus(self):
+        self._test_create_missing_parameter('vcpus')
+
+    def test_create_missing_disk(self):
+        self._test_create_missing_parameter('disk')
+
     def _create_flavor_success_case(self, body):
         url = '/v2/fake/flavors'
         req = webob.Request.blank(url)

@@ -56,10 +56,26 @@ class FlavorManageController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=msg)
         vals = body['flavor']
         name = vals.get('name')
+        if name is None:
+            msg = _("A valid name parameter is required")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
         flavorid = vals.get('id')
         memory = vals.get('ram')
+        if memory is None:
+            msg = _("A valid ram parameter is required")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
         vcpus = vals.get('vcpus')
+        if vcpus is None:
+            msg = _("A valid vcpus parameter is required")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
         root_gb = vals.get('disk')
+        if root_gb is None:
+            msg = _("A valid disk parameter is required")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
         ephemeral_gb = vals.get('OS-FLV-EXT-DATA:ephemeral', 0)
         swap = vals.get('swap', 0)
         rxtx_factor = vals.get('rxtx_factor', 1.0)
