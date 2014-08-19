@@ -1,0 +1,43 @@
+# Injected by Nova on instance boot
+#
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+# The loopback network interface
+auto lo
+iface lo inet loopback
+{% for ifc in interfaces %}
+
+auto {{ ifc.name }}
+iface {{ ifc.name }} inet static
+    address {{ ifc.address }}
+    netmask {{ ifc.netmask }}
+    broadcast {{ ifc.broadcast }}
+{% if ifc.gateway %}
+    gateway {{ ifc.gateway }}
+{% endif %}
+{% if ifc.dns %}
+    dns-nameservers {{ ifc.dns }}
+{% endif %}
+{% for route in ifc.routes %}
+    post-up ip route add {{ route.cidr }} via {{ route.gateway }} dev {{ ifc.name }}
+    pre-down ip route del {{ route.cidr }} via {{ route.gateway }} dev {{ ifc.name }}
+{% endfor %}
+{% if use_ipv6 %}
+{% if libvirt_virt_type == 'lxc' %}
+{% if ifc.address_v6 %}
+    post-up ip -6 addr add {{ ifc.address_v6 }}/{{ifc.netmask_v6 }} dev ${IFACE}
+{% endif %}
+{% if ifc.gateway_v6 %}
+    post-up ip -6 route add default via {{ ifc.gateway_v6 }} dev ${IFACE}
+{% endif %}
+{% else %}
+iface {{ ifc.name }} inet6 static
+    address {{ ifc.address_v6 }}
+    netmask {{ ifc.netmask_v6 }}
+{% if ifc.gateway_v6 %}
+    gateway {{ ifc.gateway_v6 }}
+{% endif %}
+{% endif %}
+{% endif %}
+{% endfor %}
