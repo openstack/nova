@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
+
 import mock
 
 from nova import test
@@ -23,7 +25,7 @@ class PathUtilsTestCase(test.NoDBTestCase):
     """Unit tests for the Hyper-V PathUtils class."""
 
     def setUp(self):
-        self.fake_instance_dir = 'C:/fake_instance_dir'
+        self.fake_instance_dir = os.path.join('C:', 'fake_instance_dir')
         self.fake_instance_name = 'fake_instance_name'
         self._pathutils = pathutils.PathUtils()
         super(PathUtilsTestCase, self).setUp()
@@ -43,9 +45,9 @@ class PathUtilsTestCase(test.NoDBTestCase):
     def test_lookup_configdrive_path(self):
         for format_ext in constants.DISK_FORMAT_MAP:
             configdrive_path = self._mock_lookup_configdrive_path(format_ext)
-            self.assertEqual(configdrive_path,
-                             self.fake_instance_dir + '/configdrive.' +
-                             format_ext)
+            fake_path = os.path.join(self.fake_instance_dir,
+                                     'configdrive.' + format_ext)
+            self.assertEqual(configdrive_path, fake_path)
 
     def test_lookup_configdrive_path_non_exist(self):
         self._pathutils.get_instance_dir = mock.MagicMock(
