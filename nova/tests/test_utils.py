@@ -1083,3 +1083,10 @@ class GetImageFromSystemMetadataTestCase(test.NoDBTestCase):
 
         # Verify that the foo1 key has not been inherited
         self.assertTrue("foo1" not in image)
+
+
+class ConstantTimeCompareTestCase(test.NoDBTestCase):
+    def test_constant_time_compare(self):
+        self.assertTrue(utils.constant_time_compare("abcd1234", "abcd1234"))
+        self.assertFalse(utils.constant_time_compare("abcd1234", "a"))
+        self.assertFalse(utils.constant_time_compare("abcd1234", "ABCD234"))

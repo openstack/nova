@@ -23,6 +23,7 @@ import contextlib
 import datetime
 import functools
 import hashlib
+import hmac
 import inspect
 import os
 import pyclbr
@@ -1302,3 +1303,20 @@ def get_boolean(value):
         return value
     else:
         return strutils.bool_from_string(value)
+
+if hasattr(hmac, 'compare_digest'):
+    constant_time_compare = hmac.compare_digest
+else:
+    def constant_time_compare(first, second):
+        """Returns True if both string inputs are equal, otherwise False.
+
+        This function should take a constant amount of time regardless of
+        how many characters in the strings match.
+
+        """
+        if len(first) != len(second):
+            return False
+        result = 0
+        for x, y in zip(first, second):
+            result |= ord(x) ^ ord(y)
+        return result == 0

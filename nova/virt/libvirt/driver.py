@@ -285,7 +285,6 @@ MIN_LIBVIRT_VERSION = (0, 9, 6)
 # When the above version matches/exceeds this version
 # delete it & corresponding code using it
 MIN_LIBVIRT_HOST_CPU_VERSION = (0, 9, 10)
-MIN_LIBVIRT_CLOSE_CALLBACK_VERSION = (1, 0, 1)
 MIN_LIBVIRT_DEVICE_CALLBACK_VERSION = (1, 1, 1)
 # Live snapshot requirements
 REQ_HYPERVISOR_LIVESNAPSHOT = "QEMU"
@@ -398,26 +397,30 @@ class LibvirtDriver(driver.ComputeDriver):
                                               driver_cache)
         conf.driver_cache = cache_mode
 
-    def has_min_version(self, lv_ver=None, hv_ver=None, hv_type=None):
+    @staticmethod
+    def _has_min_version(conn, lv_ver=None, hv_ver=None, hv_type=None):
         try:
             if lv_ver is not None:
-                libvirt_version = self._conn.getLibVersion()
+                libvirt_version = conn.getLibVersion()
                 if libvirt_version < utils.convert_version_to_int(lv_ver):
                     return False
 
             if hv_ver is not None:
-                hypervisor_version = self._conn.getVersion()
+                hypervisor_version = conn.getVersion()
                 if hypervisor_version < utils.convert_version_to_int(hv_ver):
                     return False
 
             if hv_type is not None:
-                hypervisor_type = self._conn.getType()
+                hypervisor_type = conn.getType()
                 if hypervisor_type != hv_type:
                     return False
 
             return True
         except Exception:
             return False
+
+    def has_min_version(self, lv_ver=None, hv_ver=None, hv_type=None):
+        return self._has_min_version(self._conn, lv_ver, hv_ver, hv_type)
 
     def _native_thread(self):
         """Receives async events coming in from libvirtd.
@@ -576,42 +579,50 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._init_events()
 
+    def _get_new_connection(self):
+        # call with _wrapped_conn_lock held
+        LOG.debug(_('Connecting to libvirt: %s'), self.uri())
+        wrapped_conn = self._connect(self.uri(), self.read_only)
+
+        self._wrapped_conn = wrapped_conn
+
+        try:
+            LOG.debug(_("Registering for lifecycle events %s"), self)
+            wrapped_conn.domainEventRegisterAny(
+                None,
+                libvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
+                self._event_lifecycle_callback,
+                self)
+        except Exception as e:
+            LOG.warn(_("URI %(uri)s does not support events: %(error)s"),
+                     {'uri': self.uri(), 'error': e})
+
+        try:
+            LOG.debug(_("Registering for connection events: %s") %
+                      str(self))
+            wrapped_conn.registerCloseCallback(self._close_callback, None)
+        except (TypeError, AttributeError) as e:
+            # NOTE: The registerCloseCallback of python-libvirt 1.0.1+
+            # is defined with 3 arguments, and the above registerClose-
+            # Callback succeeds. However, the one of python-libvirt 1.0.0
+            # is defined with 4 arguments and TypeError happens here.
+            # Then python-libvirt 0.9 does not define a method register-
+            # CloseCallback.
+            LOG.debug(_("The version of python-libvirt does not support "
+                        "registerCloseCallback or is too old: %s"), e)
+        except libvirt.libvirtError as e:
+            LOG.warn(_("URI %(uri)s does not support connection"
+                       " events: %(error)s"),
+                     {'uri': self.uri(), 'error': e})
+
+        return wrapped_conn
+
     def _get_connection(self):
+        # multiple concurrent connections are protected by _wrapped_conn_lock
         with self._wrapped_conn_lock:
             wrapped_conn = self._wrapped_conn
-
-        if not wrapped_conn or not self._test_connection(wrapped_conn):
-            LOG.debug(_('Connecting to libvirt: %s'), self.uri())
-            if not CONF.libvirt_nonblocking:
-                wrapped_conn = self._connect(self.uri(), self.read_only)
-            else:
-                wrapped_conn = tpool.proxy_call(
-                    (libvirt.virDomain, libvirt.virConnect),
-                    self._connect, self.uri(), self.read_only)
-            with self._wrapped_conn_lock:
-                self._wrapped_conn = wrapped_conn
-
-            try:
-                LOG.debug(_("Registering for lifecycle events %s") %
-                          str(self))
-                wrapped_conn.domainEventRegisterAny(
-                    None,
-                    libvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
-                    self._event_lifecycle_callback,
-                    self)
-            except Exception:
-                LOG.warn(_("URI %s does not support events"),
-                         self.uri())
-
-            if self.has_min_version(MIN_LIBVIRT_CLOSE_CALLBACK_VERSION):
-                try:
-                    LOG.debug(_("Registering for connection events: %s") %
-                              str(self))
-                    wrapped_conn.registerCloseCallback(
-                        self._close_callback, None)
-                except libvirt.libvirtError:
-                    LOG.debug(_("URI %s does not support connection events"),
-                             self.uri())
+            if not wrapped_conn or not self._test_connection(wrapped_conn):
+                wrapped_conn = self._get_new_connection()
 
         return wrapped_conn
 
@@ -674,7 +685,15 @@ class LibvirtDriver(driver.ComputeDriver):
             flags = 0
             if read_only:
                 flags = libvirt.VIR_CONNECT_RO
-            return libvirt.openAuth(uri, auth, flags)
+            if not CONF.libvirt_nonblocking:
+                return libvirt.openAuth(uri, auth, flags)
+            else:
+                # tpool.proxy_call creates a native thread. Due to limitations
+                # with eventlet locking we cannot use the logging API inside
+                # the called function.
+                return tpool.proxy_call(
+                    (libvirt.virDomain, libvirt.virConnect),
+                    libvirt.openAuth, uri, auth, flags)
         except libvirt.libvirtError as ex:
             LOG.exception(_("Connection to libvirt failed: %s"), ex)
             payload = dict(ip=LibvirtDriver.get_host_ip_addr(),
@@ -1025,7 +1044,11 @@ class LibvirtDriver(driver.ComputeDriver):
     def _cleanup_resize(self, instance, network_info):
         target = libvirt_utils.get_instance_path(instance) + "_resize"
         if os.path.exists(target):
-            shutil.rmtree(target)
+            # Deletion can fail over NFS, so retry the deletion as required.
+            # Set maximum attempt as 5, most test can remove the directory
+            # for the second time.
+            utils.execute('rm', '-rf', target, delay_on_retry=True,
+                          attempts=5)
 
         if instance['host'] != CONF.host:
             self._undefine_domain(instance)
@@ -1384,7 +1407,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 virt_dom.managedSave(0)
 
         snapshot_backend = self.image_backend.snapshot(disk_path,
-                snapshot_name,
                 image_type=source_format)
 
         if live_snapshot:
@@ -1393,7 +1415,6 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             LOG.info(_("Beginning cold snapshot process"),
                      instance=instance)
-            snapshot_backend.snapshot_create()
 
         update_task_state(task_state=task_states.IMAGE_PENDING_UPLOAD)
         snapshot_directory = CONF.libvirt_snapshots_directory
@@ -1409,8 +1430,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 else:
                     snapshot_backend.snapshot_extract(out_path, image_format)
             finally:
-                if not live_snapshot:
-                    snapshot_backend.snapshot_delete()
                 new_dom = None
                 # NOTE(dkang): because previous managedSave is not called
                 #              for LXC, _create_domain must not be called.
@@ -1513,7 +1532,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Convert the delta (CoW) image with a backing file to a flat
         # image with no backing file.
-        libvirt_utils.extract_snapshot(disk_delta, 'qcow2', None,
+        libvirt_utils.extract_snapshot(disk_delta, 'qcow2',
                                        out_path, image_format)
 
     def _volume_snapshot_update_status(self, context, snapshot_id, status):
@@ -2776,6 +2795,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                                     connection_info,
                                                     info)
                     devices.append(cfg)
+                    self.virtapi.block_device_mapping_update(
+                        nova_context.get_admin_context(), vol.id,
+                        {'connection_info': jsonutils.dumps(connection_info)})
 
             if 'disk.config' in disk_mapping:
                 diskconfig = self.get_guest_disk_config(instance,

@@ -144,6 +144,15 @@ class API(base.Base):
             nets,
             net_ids)
 
+        if not context.is_admin:
+            for net in nets:
+                # Perform this check here rather than in validate_networks to
+                # ensure the check is performed everytime allocate_for_instance
+                # is invoked
+                if net.get('router:external'):
+                    raise exception.ExternalNetworkAttachForbidden(
+                        network_uuid=net['id'])
+
         return nets
 
     def _create_port(self, port_client, instance, network_id, port_req_body,
@@ -410,6 +419,15 @@ class API(base.Base):
         requested_networks = kwargs.get('requested_networks') or {}
         ports_to_skip = [port_id for nets, fips, port_id in requested_networks]
         ports = set(ports) - set(ports_to_skip)
+        # Reset device_id and device_owner for the ports that are skipped
+        for port in ports_to_skip:
+            port_req_body = {'port': {'device_id': '', 'device_owner': ''}}
+            try:
+                neutronv2.get_client(context).update_port(port,
+                                                          port_req_body)
+            except Exception:
+                LOG.info(_('Unable to reset device ID for port %s'), port,
+                         instance=instance)
 
         for port in ports:
             try:
@@ -421,6 +439,13 @@ class API(base.Base):
                     with excutils.save_and_reraise_exception():
                         LOG.exception(_("Failed to delete neutron port %s"),
                                       port)
+
+        # NOTE(arosen): This clears out the network_cache only if the instance
+        # hasn't already been deleted. This is needed when an instance fails to
+        # launch and is rescheduled onto another compute node. If the instance
+        # has already been deleted this call does nothing.
+        update_instance_info_cache(self, context, instance,
+                                   network_model.NetworkInfo([]))
 
     def allocate_port_for_instance(self, context, instance, port_id,
                                    network_id=None, requested_ip=None,

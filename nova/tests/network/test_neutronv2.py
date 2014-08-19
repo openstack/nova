@@ -180,8 +180,13 @@ class TestNeutronv2Base(test.TestCase):
         self.nets4 = [{'id': 'his_netid4',
                       'name': 'his_netname4',
                       'tenant_id': 'his_tenantid'}]
-
-        self.nets = [self.nets1, self.nets2, self.nets3, self.nets4]
+        # A network request with external networks
+        self.nets5 = self.nets1 + [{'id': 'the-external-one',
+                                    'name': 'out-of-this-world',
+                                    'router:external': True,
+                                    'tenant_id': 'should-be-an-admin'}]
+        self.nets = [self.nets1, self.nets2, self.nets3,
+                     self.nets4, self.nets5]
 
         self.port_address = '10.0.1.2'
         self.port_data1 = [{'network_id': 'my_netid1',
@@ -875,18 +880,48 @@ class TestNeutronv2(TestNeutronv2Base):
                           api.allocate_for_instance, self.context,
                           self.instance, requested_networks=requested_networks)
 
-    def _deallocate_for_instance(self, number):
+    def _deallocate_for_instance(self, number, requested_networks=None):
+        api = neutronapi.API()
         port_data = number == 1 and self.port_data1 or self.port_data2
+        ret_data = copy.deepcopy(port_data)
+        if requested_networks:
+            for net, fip, port in requested_networks:
+                ret_data.append({'network_id': net,
+                                 'device_id': self.instance['uuid'],
+                                 'device_owner': 'compute:nova',
+                                 'id': port,
+                                 'status': 'DOWN',
+                                 'admin_state_up': True,
+                                 'fixed_ips': [],
+                                 'mac_address': 'fake_mac', })
         self.moxed_client.list_ports(
             device_id=self.instance['uuid']).AndReturn(
-                {'ports': port_data})
+                {'ports': ret_data})
+        if requested_networks:
+            for net, fip, port in requested_networks:
+                self.moxed_client.update_port(port)
         for port in reversed(port_data):
             self.moxed_client.delete_port(port['id'])
 
+        self.mox.StubOutWithMock(api.db, 'instance_info_cache_update')
+        api.db.instance_info_cache_update(self.context,
+                                          self.instance['uuid'],
+                                          {'network_info': '[]'})
         self.mox.ReplayAll()
 
         api = neutronapi.API()
-        api.deallocate_for_instance(self.context, self.instance)
+        api.deallocate_for_instance(self.context, self.instance,
+                                    requested_networks=requested_networks)
+
+    def test_deallocate_for_instance_1_with_requested(self):
+        requested = [('fake-net', 'fake-fip', 'fake-port')]
+        # Test to deallocate in one port env.
+        self._deallocate_for_instance(1, requested_networks=requested)
+
+    def test_deallocate_for_instance_2_with_requested(self):
+        requested = [('fake-net', 'fake-fip', 'fake-port')]
+        # Test to deallocate in one port env.
+        self._deallocate_for_instance(2, requested_networks=requested)
 
     def test_deallocate_for_instance_1(self):
         # Test to deallocate in one port env.
@@ -1150,7 +1185,8 @@ class TestNeutronv2(TestNeutronv2Base):
                           api.get_fixed_ip_by_address,
                           self.context, address)
 
-    def _get_available_networks(self, prv_nets, pub_nets, req_ids=None):
+    def _get_available_networks(self, prv_nets, pub_nets,
+                                req_ids=None, context=None):
         api = neutronapi.API()
         nets = prv_nets + pub_nets
         if req_ids:
@@ -1167,9 +1203,10 @@ class TestNeutronv2(TestNeutronv2Base):
                 **mox_list_params).AndReturn({'networks': pub_nets})
 
         self.mox.ReplayAll()
-        rets = api._get_available_networks(self.context,
-                                           self.instance['project_id'],
-                                           req_ids)
+        rets = api._get_available_networks(
+            context if context else self.context,
+            self.instance['project_id'],
+            req_ids)
         self.assertEqual(rets, nets)
 
     def test_get_available_networks_all_private(self):
@@ -1187,6 +1224,20 @@ class TestNeutronv2(TestNeutronv2Base):
         # specify only first and last network
         req_ids = [net['id'] for net in (self.nets3[0], self.nets3[-1])]
         self._get_available_networks(prv_nets, pub_nets, req_ids)
+
+    def test_get_available_networks_with_externalnet_fails(self):
+        req_ids = [net['id'] for net in self.nets5]
+        self.assertRaises(
+            exception.ExternalNetworkAttachForbidden,
+            self._get_available_networks,
+            self.nets5, pub_nets=[], req_ids=req_ids)
+
+    def test_get_available_networks_with_externalnet_admin_ctx(self):
+        admin_ctx = context.RequestContext('userid', 'my_tenantid',
+                                           is_admin=True)
+        req_ids = [net['id'] for net in self.nets5]
+        self._get_available_networks(self.nets5, pub_nets=[],
+                                     req_ids=req_ids, context=admin_ctx)
 
     def test_get_floating_ip_pools(self):
         api = neutronapi.API()

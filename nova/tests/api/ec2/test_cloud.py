@@ -29,6 +29,7 @@ import string
 import tempfile
 
 import fixtures
+import mock
 from oslo.config import cfg
 
 from nova.api.ec2 import cloud
@@ -50,6 +51,7 @@ from nova.network import neutronv2
 from nova.openstack.common import log as logging
 from nova.openstack.common import policy as common_policy
 from nova.openstack.common import timeutils
+from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.api.openstack.compute.contrib import (
     test_neutron_security_groups as test_neutron)
@@ -2876,6 +2878,24 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(
                 ec2utils.resource_type_from_id(self.context, 'x-12345'),
                 None)
+
+    @mock.patch.object(ec2utils, 'ec2_vol_id_to_uuid',
+                       side_effect=lambda
+                               ec2_volume_id: uuidutils.generate_uuid())
+    def test_detach_volume_unattched_error(self, mock_ec2_vol_id_to_uuid):
+        # Validates that VolumeUnattached is raised if the volume doesn't
+        # have an instance_uuid value.
+        ec2_volume_id = 'vol-987654321'
+
+        with mock.patch.object(self.cloud.volume_api, 'get',
+                               side_effect=lambda context, volume_id:
+                               {'id': volume_id}) as mock_get:
+            self.assertRaises(exception.VolumeUnattached,
+                              self.cloud.detach_volume,
+                              self.context,
+                              ec2_volume_id)
+            mock_get.assert_called_once_with(self.context, mock.ANY)
+            mock_ec2_vol_id_to_uuid.assert_called_once_with(ec2_volume_id)
 
 
 class CloudTestCaseNeutronProxy(test.TestCase):

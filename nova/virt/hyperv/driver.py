@@ -151,10 +151,14 @@ class HyperVDriver(driver.ComputeDriver):
             ctxt, instance_ref, dest_check_data)
 
     def plug_vifs(self, instance, network_info):
-        LOG.debug(_("plug_vifs called"), instance=instance)
+        """Plug VIFs into networks."""
+        msg = _("VIF plugging is not supported by the Hyper-V driver.")
+        raise NotImplementedError(msg)
 
     def unplug_vifs(self, instance, network_info):
-        LOG.debug(_("unplug_vifs called"), instance=instance)
+        """Unplug VIFs from networks."""
+        msg = _("VIF unplugging is not supported by the Hyper-V driver.")
+        raise NotImplementedError(msg)
 
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
         LOG.debug(_("ensure_filtering_rules_for_instance called"),

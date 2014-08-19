@@ -898,7 +898,7 @@ class CloudController(object):
                 'volumeId': ec2utils.id_to_ec2_vol_id(volume_id)}
 
     def _get_instance_from_volume(self, context, volume):
-        if volume['instance_uuid']:
+        if volume.get('instance_uuid'):
             try:
                 return db.instance_get_by_uuid(context,
                                                volume['instance_uuid'])
