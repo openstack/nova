@@ -1,0 +1,8 @@
+{
+    "volume": {
+        "availability_zone": "zone1:host1",
+        "display_name": "Volume Name",
+        "display_description": "Volume Description",
+        "size": 100
+    }
+}
