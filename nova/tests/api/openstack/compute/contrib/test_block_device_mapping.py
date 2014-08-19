@@ -18,9 +18,11 @@ import mox
 from oslo.config import cfg
 from webob import exc
 
+from nova.api.openstack.compute import extensions
 from nova.api.openstack.compute import plugins
 from nova.api.openstack.compute.plugins.v3 import block_device_mapping
-from nova.api.openstack.compute.plugins.v3 import servers
+from nova.api.openstack.compute.plugins.v3 import servers as servers_v3
+from nova.api.openstack.compute import servers as servers_v2
 from nova import block_device
 from nova.compute import api as compute_api
 from nova import exception
@@ -33,19 +35,20 @@ from nova.tests import matchers
 CONF = cfg.CONF
 
 
-class BlockDeviceMappingTest(test.TestCase):
-    def setUp(self):
-        super(BlockDeviceMappingTest, self).setUp()
+class BlockDeviceMappingTestV21(test.TestCase):
 
+    def _setup_controller(self):
         ext_info = plugins.LoadedExtensionInfo()
-        self.controller = servers.ServersController(extension_info=ext_info)
-
+        self.controller = servers_v3.ServersController(extension_info=ext_info)
         CONF.set_override('extensions_blacklist', 'os-block-device-mapping',
                           'osapi_v3')
-        self.no_volumes_controller = servers.ServersController(
-            extension_info=ext_info)
+        self.no_bdm_v2_controller = servers_v3.ServersController(
+                extension_info=ext_info)
         CONF.set_override('extensions_blacklist', '', 'osapi_v3')
 
+    def setUp(self):
+        super(BlockDeviceMappingTestV21, self).setUp()
+        self._setup_controller()
         fake.stub_out_image_service(self.stubs)
 
         self.bdm = [{
@@ -57,7 +60,7 @@ class BlockDeviceMappingTest(test.TestCase):
             'delete_on_termination': False,
         }]
 
-    def _test_create(self, params, no_image=False, override_controller=None):
+    def _get_servers_body(self, no_image=False):
         body = {
             'server': {
                 'min_count': 2,
@@ -70,10 +73,12 @@ class BlockDeviceMappingTest(test.TestCase):
                 },
             },
         }
-
         if no_image:
             del body['server']['imageRef']
+        return body
 
+    def _test_create(self, params, no_image=False, override_controller=None):
+        body = self._get_servers_body(no_image)
         body['server'].update(params)
 
         req = fakes.HTTPRequestV3.blank('/servers')
@@ -100,7 +105,7 @@ class BlockDeviceMappingTest(test.TestCase):
 
         params = {block_device_mapping.ATTRIBUTE_NAME: bdm}
         self._test_create(params,
-                          override_controller=self.no_volumes_controller)
+                          override_controller=self.no_bdm_v2_controller)
 
     def test_create_instance_with_volumes_enabled_no_image(self):
         """Test that the create will fail if there is no image
@@ -281,14 +286,35 @@ class BlockDeviceMappingTest(test.TestCase):
 
     @mock.patch('nova.compute.api.API._get_bdm_image_metadata')
     def test_create_instance_non_bootable_volume_fails(self, fake_bdm_meta):
-        bdm = [{
-            'id': 1,
-            'bootable': False,
-            'volume_id': '1',
-            'status': 'active',
-            'device_name': 'vda',
-        }]
-        params = {'block_device_mapping': bdm}
+        params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
         fake_bdm_meta.side_effect = exception.InvalidBDMVolumeNotBootable(id=1)
         self.assertRaises(exc.HTTPBadRequest, self._test_create, params,
                           no_image=True)
+
+
+class BlockDeviceMappingTestV2(BlockDeviceMappingTestV21):
+
+    def _setup_controller(self):
+        self.ext_mgr = extensions.ExtensionManager()
+        self.ext_mgr.extensions = {'os-volumes': 'fake',
+                                   'os-block-device-mapping-v2-boot': 'fake'}
+        self.controller = servers_v2.Controller(self.ext_mgr)
+        self.ext_mgr_bdm_v2 = extensions.ExtensionManager()
+        self.ext_mgr_bdm_v2.extensions = {'os-volumes': 'fake'}
+        self.no_bdm_v2_controller = servers_v2.Controller(
+            self.ext_mgr_bdm_v2)
+
+    def test_create_instance_with_block_device_mapping_disabled(self):
+        bdm = [{'device_name': 'foo'}]
+
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertIsNone(kwargs['block_device_mapping'], None)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(compute_api.API, 'create', create)
+
+        params = {block_device_mapping.ATTRIBUTE_NAME: bdm}
+        self._test_create(params,
+                          override_controller=self.no_bdm_v2_controller)

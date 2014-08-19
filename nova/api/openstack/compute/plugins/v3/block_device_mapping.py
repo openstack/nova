@@ -22,7 +22,7 @@ from nova import block_device
 from nova import exception
 
 ALIAS = "os-block-device-mapping"
-ATTRIBUTE_NAME = "%s:block_device_mapping" % ALIAS
+ATTRIBUTE_NAME = "block_device_mapping_v2"
 
 
 class BlockDeviceMapping(extensions.V3APIExtensionBase):
