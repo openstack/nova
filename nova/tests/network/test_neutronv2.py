@@ -2023,7 +2023,8 @@ class TestNeutronv2(TestNeutronv2Base):
         api.associate_floating_ip(self.context, self.instance,
                                   address, fixed_address)
 
-    def test_reassociate_floating_ip(self):
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    def test_reassociate_floating_ip(self, mock_get):
         api = neutronapi.API()
         address = self.fip_associated['floating_ip_address']
         new_fixed_address = self.port_address
@@ -2040,11 +2041,10 @@ class TestNeutronv2(TestNeutronv2Base):
                                     'fixed_ip_address': new_fixed_address}})
         self.moxed_client.show_port(self.fip_associated['port_id']).\
                 AndReturn({'port': self.port_data2[1]})
-        self.mox.StubOutWithMock(api.db, 'instance_get_by_uuid')
-        api.db.instance_get_by_uuid(mox.IgnoreArg(),
-                                   self.instance['uuid']).\
-             AndReturn(self.instance)
-        self._setup_mock_for_refresh_cache(api, [self.instance,
+
+        mock_get.return_value = fake_instance.fake_instance_obj(
+            self.context, **self.instance)
+        self._setup_mock_for_refresh_cache(api, [mock_get.return_value,
                                                  self.instance2])
 
         self.mox.ReplayAll()
