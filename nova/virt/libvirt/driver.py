@@ -5136,7 +5136,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                  'but disk file was removed by concurrent '
                                  'operations such as resize.'),
                                 {'i_name': dom.name()})
-                if e.errno == errno.EACCES:
+                elif e.errno == errno.EACCES:
                     LOG.warn(_LW('Periodic task is updating the host stat, '
                                  'it is trying to get disk %(i_name)s, '
                                  'but access is denied. It is most likely '
