@@ -49,7 +49,13 @@ name = {
     'type': 'string', 'minLength': 1, 'maxLength': 255,
 
     # NOTE: Allow to some spaces in middle of name.
-    'pattern': '^(?! )[a-zA-Z0-9. _-]+(?<! )$',
+    # Also note that the regexp below deliberately allows and
+    # empty string. This is so only the constraint above
+    # which enforces a minimum length for the name is triggered
+    # when an empty string is tested. Otherwise it is not
+    # deterministic which constraint fails and this causes issues
+    # for some unittests when PYTHONHASHSEED is set randomly.
+    'pattern': '^(?! )[a-zA-Z0-9. _-]*(?<! )$',
 }
 
 
