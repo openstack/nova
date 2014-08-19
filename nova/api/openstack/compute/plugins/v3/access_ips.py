@@ -17,11 +17,9 @@ from webob import exc
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.i18n import _
-from nova.openstack.common import log as logging
 from nova import utils
 
 ALIAS = "os-access-ips"
-LOG = logging.getLogger(__name__)
 authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
 
 

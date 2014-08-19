@@ -24,7 +24,6 @@ from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 from nova import utils
 
@@ -32,7 +31,6 @@ CONF = cfg.CONF
 CONF.import_opt('enable_instance_password',
                 'nova.api.openstack.compute.servers')
 
-LOG = logging.getLogger(__name__)
 ALIAS = "os-evacuate"
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
