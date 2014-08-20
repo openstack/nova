@@ -245,6 +245,18 @@ class ServerMetaDataTest(BaseTest):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, self.uuid, body)
 
+    def test_create_item_non_dict(self):
+        self.stubs.Set(nova.db, 'instance_metadata_update',
+                       return_create_instance_metadata)
+        req = fakes.HTTPRequest.blank(self.url + '/key1')
+        req.method = 'PUT'
+        body = {"metadata": None}
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create, req, self.uuid, body)
+
     def test_create_item_key_too_long(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
@@ -347,6 +359,18 @@ class ServerMetaDataTest(BaseTest):
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.update_all, req, '100', body)
 
+    def test_update_all_non_dict(self):
+        self.stubs.Set(nova.db, 'instance_metadata_update',
+                       return_create_instance_metadata)
+        req = fakes.HTTPRequest.blank(self.url)
+        req.method = 'PUT'
+        body = {"metadata": None}
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.update_all, req, self.uuid, body)
+
     def test_update_item(self):
         self.stubs.Set(objects.Instance, 'save', fake_instance_save)
         req = fakes.HTTPRequest.blank(self.url + '/key1')
@@ -436,6 +460,18 @@ class ServerMetaDataTest(BaseTest):
         req = fakes.HTTPRequest.blank(self.url + '/bad')
         req.method = 'PUT'
         body = {"meta": {"key1": "value1"}}
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.update, req, self.uuid, 'bad', body)
+
+    def test_update_item_non_dict(self):
+        self.stubs.Set(nova.db, 'instance_metadata_update',
+                       return_create_instance_metadata)
+        req = fakes.HTTPRequest.blank(self.url + '/bad')
+        req.method = 'PUT'
+        body = {"meta": None}
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
