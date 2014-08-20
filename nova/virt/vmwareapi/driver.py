@@ -230,10 +230,12 @@ class VMwareVCDriver(driver.ComputeDriver):
 
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    flavor, network_info,
-                                   block_device_info=None):
+                                   block_device_info=None,
+                                   timeout=0, retry_interval=0):
         """Transfers the disk of a running instance in multiple phases, turning
         off the instance before the end.
         """
+        # TODO(PhilDay): Add support for timeout (clean shutdown)
         _vmops = self._get_vmops_for_compute_node(instance['node'])
         return _vmops.migrate_disk_and_power_off(context, instance,
                                                  dest, flavor)

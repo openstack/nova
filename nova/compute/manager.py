@@ -3576,7 +3576,8 @@ class ComputeManager(manager.Manager):
     @errors_out_migration
     @wrap_instance_fault
     def resize_instance(self, context, instance, image,
-                        reservations, migration, instance_type):
+                        reservations, migration, instance_type,
+                        clean_shutdown=True):
         """Starts the migration of a running instance to another host."""
 
         quotas = quotas_obj.Quotas.from_reservations(context,
@@ -3604,10 +3605,13 @@ class ComputeManager(manager.Manager):
             block_device_info = self._get_instance_block_device_info(
                                 context, instance, bdms=bdms)
 
+            timeout, retry_interval = self._get_power_off_values(context,
+                                            instance, clean_shutdown)
             disk_info = self.driver.migrate_disk_and_power_off(
                     context, instance, migration.dest_host,
                     instance_type, network_info,
-                    block_device_info)
+                    block_device_info,
+                    timeout, retry_interval)
 
             self._terminate_volume_connections(context, instance, bdms)
 

@@ -5295,9 +5295,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    flavor, network_info,
-                                   block_device_info=None):
+                                   block_device_info=None,
+                                   timeout=0, retry_interval=0):
         LOG.debug("Starting migrate_disk_and_power_off",
-                  instance=instance)
+                   instance=instance)
 
         # Checks if the migration needs a disk resize down.
         for kind in ('root_gb', 'ephemeral_gb'):
@@ -5329,7 +5330,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if not shared_storage:
             utils.execute('ssh', dest, 'mkdir', '-p', inst_base)
 
-        self.power_off(instance)
+        self.power_off(instance, timeout, retry_interval)
 
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
