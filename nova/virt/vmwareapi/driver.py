@@ -524,8 +524,9 @@ class VMwareVCDriver(driver.ComputeDriver):
         _vmops = self._get_vmops_for_compute_node(instance.node)
         _vmops.unrescue(instance)
 
-    def power_off(self, instance):
+    def power_off(self, instance, timeout=0, retry_interval=0):
         """Power off the specified instance."""
+        # TODO(PhilDay): Add support for timeout (clean shutdown)
         _vmops = self._get_vmops_for_compute_node(instance['node'])
         _vmops.power_off(instance)
 

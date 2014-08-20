@@ -219,6 +219,25 @@ def get_image_metadata(context, image_api, image_id_or_uri, instance):
     return utils.get_image_from_system_metadata(system_meta)
 
 
+def get_value_from_system_metadata(instance, key, type, default):
+    """Get a value of a specified type from image metadata.
+
+    @param instance: The instance object
+    @param key: The name of the property to get
+    @param type: The python type the value is be returned as
+    @param default: The value to return if key is not set or not the right type
+    """
+    value = instance.system_metadata.get(key, default)
+    try:
+        return type(value)
+    except ValueError:
+        LOG.warning(_LW("Metadata value %(value)s for %(key)s is not of "
+                        "type %(type)s. Using default value %(default)s."),
+                    {'value': value, 'key': key, 'type': type,
+                     'default': default}, instance=instance)
+        return default
+
+
 def notify_usage_exists(notifier, context, instance_ref, current_period=False,
                         ignore_missing_network_data=True,
                         system_metadata=None, extra_usage_info=None):

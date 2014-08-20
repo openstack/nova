@@ -184,7 +184,7 @@ class FakeDriver(driver.ComputeDriver):
                                            block_device_info=None):
         pass
 
-    def power_off(self, instance):
+    def power_off(self, instance, shutdown_timeout=0, shutdown_attempts=0):
         pass
 
     def power_on(self, context, instance, network_info, block_device_info):

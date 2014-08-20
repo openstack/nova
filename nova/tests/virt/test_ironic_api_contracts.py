@@ -103,7 +103,7 @@ class IronicAPIContractsTestCase(test.NoDBTestCase):
 
         self._check_method(driver.ComputeDriver.power_off,
                            "ComputeDriver.power_off",
-                           ['self', 'instance'])
+                           ['self', 'instance', 'timeout', 'retry_interval'])
 
         self._check_method(driver.ComputeDriver.power_on,
                            "ComputeDriver.power_on",

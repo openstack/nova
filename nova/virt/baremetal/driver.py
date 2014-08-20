@@ -407,8 +407,9 @@ class BareMetalDriver(driver.ComputeDriver):
         """Cleanup after instance being destroyed."""
         pass
 
-    def power_off(self, instance, node=None):
+    def power_off(self, instance, timeout=0, retry_interval=0, node=None):
         """Power off the specified instance."""
+        # TODO(PhilDay): Add support for timeout (clean shutdown)
         if not node:
             node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
         pm = get_power_manager(node=node, instance=instance)

@@ -742,6 +742,28 @@ class ComputeGetImageMetadataTestCase(test.TestCase):
         self.assertThat(expected, matchers.DictMatches(image_meta))
 
 
+class ComputeUtilsGetValFromSysMetadata(test.TestCase):
+
+    def test_get_value_from_system_metadata(self):
+        instance = fake_instance.fake_instance_obj('fake-context')
+        system_meta = {'int_val': 1,
+                       'int_string': '2',
+                       'not_int': 'Nope'}
+        instance.system_metadata = system_meta
+
+        result = compute_utils.get_value_from_system_metadata(
+                   instance, 'int_val', int, 0)
+        self.assertEqual(1, result)
+
+        result = compute_utils.get_value_from_system_metadata(
+                   instance, 'int_string', int, 0)
+        self.assertEqual(2, result)
+
+        result = compute_utils.get_value_from_system_metadata(
+                   instance, 'not_int', int, 0)
+        self.assertEqual(0, result)
+
+
 class ComputeUtilsGetNWInfo(test.TestCase):
     def test_instance_object_none_info_cache(self):
         inst = fake_instance.fake_instance_obj('fake-context',

@@ -299,8 +299,9 @@ class XenAPIDriver(driver.ComputeDriver):
         """Unrescue the specified instance."""
         self._vmops.unrescue(instance)
 
-    def power_off(self, instance):
+    def power_off(self, instance, timeout=0, retry_interval=0):
         """Power off the specified instance."""
+        # TODO(PhilDay): Add support for timeout (clean shutdown)
         self._vmops.power_off(instance)
 
     def power_on(self, context, instance, network_info,

@@ -592,10 +592,13 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def power_off(self, instance):
+    def power_off(self, instance, timeout=0, retry_interval=0):
         """Power off the specified instance.
 
         :param instance: nova.objects.instance.Instance
+        :param timeout: time to wait for GuestOS to shutdown
+        :param retry_interval: How often to signal guest while
+                               waiting for it to shutdown
         """
         raise NotImplementedError()
 
