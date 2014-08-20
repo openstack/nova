@@ -23,7 +23,9 @@ import re
 
 from oslo.config import cfg
 from oslo.vmware import api
+from oslo.vmware import pbm
 from oslo.vmware import vim
+from oslo.vmware import vim_util
 import suds
 
 from nova import exception
@@ -79,8 +81,24 @@ vmwareapi_opts = [
                     'work-arounds')
     ]
 
+spbm_opts = [
+    cfg.BoolOpt('pbm_enabled',
+                default=False,
+                help='The PBM status.'),
+    cfg.StrOpt('pbm_wsdl_location',
+               help='PBM service WSDL file location URL. '
+                    'e.g. file:///opt/SDK/spbm/wsdl/pbmService.wsdl '
+                    'Not setting this will disable storage policy based '
+                    'placement of instances.'),
+    cfg.StrOpt('pbm_default_policy',
+               help='The PBM default policy. If pbm_wsdl_location is set and '
+                    'there is no defined storage policy for the specific '
+                    'request then this policy will be used.'),
+    ]
+
 CONF = cfg.CONF
 CONF.register_opts(vmwareapi_opts, 'vmware')
+CONF.register_opts(spbm_opts, 'vmware')
 
 TIME_BETWEEN_API_CALL_RETRIES = 1.0
 
@@ -136,9 +154,11 @@ class VMwareVCDriver(driver.ComputeDriver):
 
         self._session = VMwareAPISession(scheme=scheme)
 
-        # TODO(hartsocks): back-off into a configuration test module.
-        if CONF.vmware.use_linked_clone is None:
-            raise error_util.UseLinkedCloneConfigurationFault()
+        # Update the PBM location if necessary
+        if CONF.vmware.pbm_enabled:
+            self._update_pbm_location()
+
+        self._validate_configuration()
 
         # Get the list of clusters to be used
         self._cluster_names = CONF.vmware.cluster_name
@@ -170,6 +190,33 @@ class VMwareVCDriver(driver.ComputeDriver):
         self._vmops = self._resources.get(first_cluster).get('vmops')
         self._volumeops = self._resources.get(first_cluster).get('volumeops')
         self._vc_state = self._resources.get(first_cluster).get('vcstate')
+
+    def _update_pbm_location(self):
+        if CONF.vmware.pbm_wsdl_location:
+            pbm_wsdl_loc = CONF.vmware.pbm_wsdl_location
+        else:
+            version = vim_util.get_vc_version(self._session)
+            pbm_wsdl_loc = pbm.get_pbm_wsdl_location(version)
+        # TODO(garyk): Update this with oslo.vmware method. The session.pbm
+        # is lazy loaded so this enables us to update this entry on the fly
+        self._session._pbm_wsdl_loc = pbm_wsdl_loc
+        self._session._pbm = None
+
+    def _validate_configuration(self):
+        if CONF.vmware.use_linked_clone is None:
+            raise error_util.UseLinkedCloneConfigurationFault()
+
+        if CONF.vmware.pbm_enabled:
+            if not CONF.vmware.pbm_default_policy:
+                raise error_util.PbmDefaultPolicyUnspecified()
+            if not pbm.get_profile_id_by_name(
+                            self._session,
+                            CONF.vmware.pbm_default_policy):
+                raise error_util.PbmDefaultPolicyDoesNotExist()
+            if CONF.vmware.datastore_regex:
+                LOG.warning(_LW(
+                    "datastore_regex is ignored when PBM is enabled"))
+                self._datastore_regex = None
 
     def init_host(self, host):
         vim = self._session.vim

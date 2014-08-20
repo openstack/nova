@@ -31,6 +31,7 @@ from oslo.config import cfg
 from oslo.utils import timeutils
 from oslo.utils import units
 from oslo.vmware import exceptions as vexc
+from oslo.vmware import pbm
 from oslo.vmware import vim
 import suds
 
@@ -116,6 +117,8 @@ def _fake_create_session(inst):
     session = vmwareapi_fake.DataObject()
     session.key = 'fake_key'
     session.userName = 'fake_username'
+    session._pbm_wsdl_loc = None
+    session._pbm = None
     inst._session = session
 
 
@@ -316,6 +319,28 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_driver_capabilities(self):
         self.assertTrue(self.conn.capabilities['has_imagecache'])
         self.assertFalse(self.conn.capabilities['supports_recreate'])
+
+    def test_configuration_linked_clone(self):
+        self.flags(use_linked_clone=None, group='vmware')
+        self.assertRaises(error_util.UseLinkedCloneConfigurationFault,
+                          self.conn._validate_configuration)
+
+    @mock.patch.object(pbm, 'get_profile_id_by_name')
+    def test_configuration_pbm(self, get_profile_mock):
+        get_profile_mock.return_value = 'fake-profile'
+        self.flags(pbm_enabled=True,
+                   pbm_default_policy='fake-policy',
+                   pbm_wsdl_location='fake-location', group='vmware')
+        self.conn._validate_configuration()
+
+    @mock.patch.object(pbm, 'get_profile_id_by_name')
+    def test_configuration_pbm_bad_default(self, get_profile_mock):
+        get_profile_mock.return_value = None
+        self.flags(pbm_enabled=True,
+                   pbm_wsdl_location='fake-location',
+                   pbm_default_policy='fake-policy', group='vmware')
+        self.assertRaises(error_util.PbmDefaultPolicyDoesNotExist,
+                          self.conn._validate_configuration)
 
     def test_login_retries(self):
         self.attempts = 0
@@ -2592,3 +2617,11 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
 
     def test_finish_revert_migration_power_off(self):
         self._test_finish_revert_migration(power_on=False)
+
+    def test_pbm_wsdl_location(self):
+        self.flags(pbm_enabled=True,
+                   pbm_wsdl_location='fira',
+                   group='vmware')
+        self.conn._update_pbm_location()
+        self.assertEqual('fira', self.conn._session._pbm_wsdl_loc)
+        self.assertIsNone(self.conn._session._pbm)
