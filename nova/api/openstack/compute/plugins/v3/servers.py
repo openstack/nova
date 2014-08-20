@@ -551,7 +551,8 @@ class ServersController(wsgi.Controller):
                 exception.InvalidBDMVolume,
                 exception.InvalidBDMImage,
                 exception.InvalidBDMBootSequence,
-                exception.InvalidBDMLocalsLimit) as error:
+                exception.InvalidBDMLocalsLimit,
+                exception.InvalidBDMVolumeNotBootable) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except (exception.PortInUse,
                 exception.NetworkAmbiguous,
