@@ -221,6 +221,7 @@ policy_data = """
     "compute_extension:hypervisors": "rule:admin_api",
     "compute_extension:v3:os-hypervisors": "rule:admin_api",
     "compute_extension:image_size": "",
+    "compute_extension:v3:image-size": "",
     "compute_extension:instance_actions": "",
     "compute_extension:v3:os-instance-actions": "",
     "compute_extension:instance_actions:events": "is_admin:True",
