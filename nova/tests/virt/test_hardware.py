@@ -920,6 +920,76 @@ class NUMATopologyTest(test.NoDBTestCase):
         self.assertEqual(hostusage.cells[2].cpu_usage, 1)
         self.assertEqual(hostusage.cells[2].memory_usage, 256)
 
+    def test_host_usage_culmulative_with_free(self):
+        hosttopo = hw.VirtNUMAHostTopology([
+            hw.VirtNUMATopologyCellUsage(
+                0, set([0, 1, 2, 3]), 1024, cpu_usage=2, memory_usage=512),
+            hw.VirtNUMATopologyCellUsage(
+                1, set([4, 6]), 512, cpu_usage=1, memory_usage=512),
+            hw.VirtNUMATopologyCellUsage(2, set([5, 7]), 256),
+        ])
+        instance1 = hw.VirtNUMAInstanceTopology([
+            hw.VirtNUMATopologyCell(0, set([0, 1, 2]), 512),
+            hw.VirtNUMATopologyCell(1, set([3]), 256),
+            hw.VirtNUMATopologyCell(2, set([4]), 256)])
+
+        hostusage = hw.VirtNUMAHostTopology.usage_from_instances(
+                hosttopo, [instance1])
+        self.assertIsInstance(hostusage.cells[0],
+                              hw.VirtNUMATopologyCellUsage)
+        self.assertEqual(hostusage.cells[0].cpu_usage, 5)
+        self.assertEqual(hostusage.cells[0].memory_usage, 1024)
+
+        self.assertIsInstance(hostusage.cells[1],
+                              hw.VirtNUMATopologyCellUsage)
+        self.assertEqual(hostusage.cells[1].cpu_usage, 2)
+        self.assertEqual(hostusage.cells[1].memory_usage, 768)
+
+        self.assertIsInstance(hostusage.cells[2],
+                              hw.VirtNUMATopologyCellUsage)
+        self.assertEqual(hostusage.cells[2].cpu_usage, 1)
+        self.assertEqual(hostusage.cells[2].memory_usage, 256)
+
+        # Test freeing of resources
+        hostusage = hw.VirtNUMAHostTopology.usage_from_instances(
+                hostusage, [instance1], free=True)
+        self.assertEqual(hostusage.cells[0].cpu_usage, 2)
+        self.assertEqual(hostusage.cells[0].memory_usage, 512)
+
+        self.assertEqual(hostusage.cells[1].cpu_usage, 1)
+        self.assertEqual(hostusage.cells[1].memory_usage, 512)
+
+        self.assertEqual(hostusage.cells[2].cpu_usage, 0)
+        self.assertEqual(hostusage.cells[2].memory_usage, 0)
+
+    def test_topo_usage_none(self):
+        hosttopo = hw.VirtNUMAHostTopology([
+            hw.VirtNUMATopologyCellUsage(0, set([0, 1]), 512),
+            hw.VirtNUMATopologyCellUsage(1, set([2, 3]), 512),
+        ])
+        instance1 = hw.VirtNUMAInstanceTopology([
+            hw.VirtNUMATopologyCell(0, set([0, 1]), 256),
+            hw.VirtNUMATopologyCell(2, set([2]), 256),
+        ])
+
+        hostusage = hw.VirtNUMAHostTopology.usage_from_instances(
+                None, [instance1])
+        self.assertIsNone(hostusage)
+
+        hostusage = hw.VirtNUMAHostTopology.usage_from_instances(
+                hosttopo, [])
+        self.assertEqual(hostusage.cells[0].cpu_usage, 0)
+        self.assertEqual(hostusage.cells[0].memory_usage, 0)
+        self.assertEqual(hostusage.cells[1].cpu_usage, 0)
+        self.assertEqual(hostusage.cells[1].memory_usage, 0)
+
+        hostusage = hw.VirtNUMAHostTopology.usage_from_instances(
+                hosttopo, None)
+        self.assertEqual(hostusage.cells[0].cpu_usage, 0)
+        self.assertEqual(hostusage.cells[0].memory_usage, 0)
+        self.assertEqual(hostusage.cells[1].cpu_usage, 0)
+        self.assertEqual(hostusage.cells[1].memory_usage, 0)
+
     def _test_to_dict(self, cell_or_topo, expected):
         got = cell_or_topo._to_dict()
         self.assertThat(expected, matchers.DictMatches(got))
