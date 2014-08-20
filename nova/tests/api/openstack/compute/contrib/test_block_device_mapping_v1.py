@@ -70,7 +70,6 @@ class BlockDeviceMappingTestV21(test.TestCase):
     def _get_servers_body(self, no_image=False):
         body = {
             'server': {
-                'min_count': 2,
                 'name': 'server_test',
                 'imageRef': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                 'flavorRef': 'http://localhost/123/flavors/3',

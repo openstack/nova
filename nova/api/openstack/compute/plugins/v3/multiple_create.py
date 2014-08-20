@@ -22,9 +22,9 @@ from nova.openstack.common import strutils
 from nova import utils
 
 ALIAS = "os-multiple-create"
-MIN_ATTRIBUTE_NAME = "%s:min_count" % ALIAS
-MAX_ATTRIBUTE_NAME = "%s:max_count" % ALIAS
-RRID_ATTRIBUTE_NAME = "%s:return_reservation_id" % ALIAS
+MIN_ATTRIBUTE_NAME = "min_count"
+MAX_ATTRIBUTE_NAME = "max_count"
+RRID_ATTRIBUTE_NAME = "return_reservation_id"
 
 
 class MultipleCreate(extensions.V3APIExtensionBase):

@@ -514,8 +514,6 @@ class ServersTestV3(client.TestOpenStackClientV3Mixin, ServersTest):
     _api_version = 'v3'
     _image_ref_parameter = 'imageRef'
     _flavor_ref_parameter = 'flavorRef'
-    _return_resv_id_parameter = 'os-multiple-create:return_reservation_id'
-    _min_count_parameter = 'os-multiple-create:min_count'
     _access_ipv4_parameter = None
     _access_ipv6_parameter = None
 
