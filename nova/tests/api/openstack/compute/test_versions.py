@@ -168,6 +168,12 @@ class VersionsTest(test.NoDBTestCase):
         accept = "application/json;version=2"
         self._test_get_version_2_detail('/', accept=accept)
 
+    def test_get_version_2_versions_invalid(self):
+        req = webob.Request.blank('/v2/versions/1234')
+        req.accept = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(404, res.status_int)
+
     def test_get_version_2_detail_xml(self):
         req = webob.Request.blank('/v2/')
         req.accept = "application/xml"
