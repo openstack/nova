@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import re
+
 from nova.api import validation
 from nova.api.validation import parameter_types
 from nova import exception
@@ -24,11 +26,10 @@ class APIValidationTestCase(test.TestCase):
         try:
             method(body=body)
         except exception.ValidationError as ex:
-            expected_kwargs = {
-                'code': 400,
-                'detail': expected_detail
-            }
-            self.assertEqual(ex.kwargs, expected_kwargs)
+            self.assertEqual(400, ex.kwargs['code'])
+            if not re.match(expected_detail, ex.kwargs['detail']):
+                self.assertEqual(expected_detail, ex.kwargs['detail'],
+                                 'Exception details did not match expected')
         except Exception as ex:
             self.fail('An unexpected exception happens: %s' % ex)
         else:
@@ -314,22 +315,22 @@ class IntegerRangeTestCase(APIValidationTestCase):
 
     def test_validate_integer_range_fails(self):
         detail = ("Invalid input for field/attribute foo. Value: 0."
-                  " 0.0 is less than the minimum of 1")
+                  " 0(.0)? is less than the minimum of 1")
         self.check_validation_error(self.post, body={'foo': 0},
                                     expected_detail=detail)
 
         detail = ("Invalid input for field/attribute foo. Value: 11."
-                  " 11.0 is greater than the maximum of 10")
+                  " 11(.0)? is greater than the maximum of 10")
         self.check_validation_error(self.post, body={'foo': 11},
                                     expected_detail=detail)
 
         detail = ("Invalid input for field/attribute foo. Value: 0."
-                  " 0.0 is less than the minimum of 1")
+                  " 0(.0)? is less than the minimum of 1")
         self.check_validation_error(self.post, body={'foo': '0'},
                                     expected_detail=detail)
 
         detail = ("Invalid input for field/attribute foo. Value: 11."
-                  " 11.0 is greater than the maximum of 10")
+                  " 11(.0)? is greater than the maximum of 10")
         self.check_validation_error(self.post, body={'foo': '11'},
                                     expected_detail=detail)
 
@@ -555,7 +556,7 @@ class TcpUdpPortTestCase(APIValidationTestCase):
                                     expected_detail=detail)
 
         detail = ("Invalid input for field/attribute foo. Value: 65536."
-                  " 65536.0 is greater than the maximum of 65535")
+                  " 65536(.0)? is greater than the maximum of 65535")
         self.check_validation_error(self.post, body={'foo': 65536},
                                     expected_detail=detail)
 
