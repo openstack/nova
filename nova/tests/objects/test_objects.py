@@ -1030,7 +1030,7 @@ class TestObjectVersions(test.TestCase):
 
         if os.getenv('GENERATE_HASHES'):
             file('object_hashes.txt', 'w').write(
-                pprint.pformat(self._fingerprints))
+                pprint.pformat(fingerprints))
             raise test.TestingException(
                 'Generated hashes in object_hashes.txt')
 
