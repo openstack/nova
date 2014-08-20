@@ -273,6 +273,7 @@ policy_data = """
     "compute_extension:v3:os-server-password": "",
     "compute_extension:server_usage": "",
     "compute_extension:v3:os-server-usage": "",
+    "compute_extension:v3:os-server-groups": "",
     "compute_extension:services": "",
     "compute_extension:v3:os-services": "",
     "compute_extension:shelve": "",

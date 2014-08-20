@@ -228,6 +228,8 @@
     "compute_extension:server_usage": "",
     "compute_extension:v3:os-server-usage": "",
     "compute_extension:v3:os-server-usage:discoverable": "",
+    "compute_extension:v3:os-server-groups": "",
+    "compute_extension:v3:os-server-groups:discoverable": "",
     "compute_extension:services": "rule:admin_api",
     "compute_extension:v3:os-services": "rule:admin_api",
     "compute_extension:v3:os-services:discoverable": "",
