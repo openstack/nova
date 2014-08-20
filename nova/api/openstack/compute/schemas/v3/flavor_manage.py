@@ -62,7 +62,14 @@ create = {
                 },
                 'flavor-access:is_public': parameter_types.boolean,
             },
-            'required': ['name', 'id', 'ram', 'vcpus', 'disk'],
+            # TODO(oomichi): 'id' should be required with v2.1+microversions.
+            # On v2.0 API, nova-api generates a flavor-id automatically if
+            # specifying null as 'id' or not specifying 'id'. Ideally a client
+            # should specify null as 'id' for requesting auto-generated id
+            # exactly. However, this strict limitation causes a backwards
+            # incompatible issue on v2.1. So now here relaxes the requirement
+            # of 'id'.
+            'required': ['name', 'ram', 'vcpus', 'disk'],
             'additionalProperties': False,
         },
     },
