@@ -1706,6 +1706,12 @@ class ComputeManager(manager.Manager):
         # If we're here from a reschedule the network may already be allocated.
         if strutils.bool_from_string(
                 instance.system_metadata.get('network_allocated', 'False')):
+            # NOTE(alex_xu): The network_allocated is True means the network
+            # resource already allocated at previous scheduling, and the
+            # network setup is cleanup at previous. After rescheduling, the
+            # network resource need setup on the new host.
+            self.network_api.setup_instance_network_on_host(
+                context, instance, instance.host)
             return self._get_instance_nw_info(context, instance)
 
         if not self.is_neutron_security_groups:
@@ -2086,6 +2092,13 @@ class ComputeManager(manager.Manager):
             if self.driver.deallocate_networks_on_reschedule(instance):
                 self._cleanup_allocated_networks(context, instance,
                         requested_networks)
+            else:
+                # NOTE(alex_xu): Network already allocated and we don't
+                # want to deallocate them before rescheduling. But we need
+                # cleanup those network resource setup on this host before
+                # rescheduling.
+                self.network_api.cleanup_instance_network_on_host(
+                    context, instance, self.host)
 
             instance.task_state = task_states.SCHEDULING
             instance.save()
