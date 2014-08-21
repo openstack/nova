@@ -120,7 +120,7 @@ class CreateImportSharedTestMixIn(object):
         self.assertEqual(expected_message, unicode(exc))
 
     def assertInvalidKeypair(self, expected_message, name):
-        msg = _('Keypair data is invalid') + ': ' + expected_message
+        msg = _('Keypair data is invalid: %s') % expected_message
         self.assertKeyNameRaises(exception.InvalidKeypair, msg, name)
 
     def test_name_too_short(self):

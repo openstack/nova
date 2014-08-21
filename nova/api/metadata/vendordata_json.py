@@ -44,13 +44,15 @@ class JsonFileVendorData(base.VendorDataDriver):
                     data = jsonutils.load(fp)
             except IOError as e:
                 if e.errno == errno.ENOENT:
-                    LOG.warn(logprefix + _LW("file does not exist"))
+                    LOG.warn(_LW("%(logprefix)sfile does not exist"),
+                             {'logprefix': logprefix})
                 else:
-                    LOG.warn(logprefix + _LW("Unexpected IOError when "
-                                             "reading"))
+                    LOG.warn(_LW("%(logprefix)unexpected IOError when "
+                                 "reading"), {'logprefix': logprefix})
                 raise e
             except ValueError:
-                LOG.warn(logprefix + _LW("failed to load json"))
+                LOG.warn(_LW("%(logprefix)sfailed to load json"),
+                         {'logprefix': logprefix})
                 raise
 
         self._data = data

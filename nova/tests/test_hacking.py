@@ -301,3 +301,39 @@ class HackingTestCase(test.NoDBTestCase):
                """
         errors = [(8, 20, 'N325'), (8, 29, 'N325')]
         self._assert_has_errors(code, checker, expected_errors=errors)
+
+    def test_trans_add(self):
+
+        checker = checks.CheckForTransAdd
+        code = """
+               def fake_tran(msg):
+                   return msg
+
+
+               _ = fake_tran
+               _LI = _
+               _LW = _
+               _LE = _
+               _LC = _
+
+
+               def f(a, b):
+                   msg = _('test') + 'add me'
+                   msg = _LI('test') + 'add me'
+                   msg = _LW('test') + 'add me'
+                   msg = _LE('test') + 'add me'
+                   msg = _LC('test') + 'add me'
+                   msg = 'add to me' + _('test')
+                   return msg
+               """
+        errors = [(13, 10, 'N326'), (14, 10, 'N326'), (15, 10, 'N326'),
+                  (16, 10, 'N326'), (17, 10, 'N326'), (18, 24, 'N326')]
+        self._assert_has_errors(code, checker, expected_errors=errors)
+
+        code = """
+               def f(a, b):
+                   msg = 'test' + 'add me'
+                   return msg
+               """
+        errors = []
+        self._assert_has_errors(code, checker, expected_errors=errors)
