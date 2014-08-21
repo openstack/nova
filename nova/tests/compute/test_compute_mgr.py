@@ -1993,6 +1993,39 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
 
+    def test_rescheduled_exception_with_non_ascii_exception(self):
+        exc = exception.NovaException(u's\xe9quence')
+        self.mox.StubOutWithMock(self.compute.driver, 'spawn')
+        self.mox.StubOutWithMock(conductor_rpcapi.ConductorAPI,
+                                 'instance_update')
+        self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
+        self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
+        self.compute._build_networks_for_instance(self.context, self.instance,
+                self.requested_networks, self.security_groups).AndReturn(
+                        self.network_info)
+        self.compute._shutdown_instance(self.context, self.instance,
+                self.block_device_mapping, self.requested_networks,
+                try_deallocate_networks=False)
+        self._notify_about_instance_usage('create.start',
+            extra_usage_info={'image_name': self.image.get('name')})
+        self._build_and_run_instance_update()
+        self.compute.driver.spawn(self.context, self.instance, self.image,
+                self.injected_files, self.admin_pass,
+                network_info=self.network_info,
+                block_device_info=self.block_device_info).AndRaise(exc)
+        self._notify_about_instance_usage('create.error',
+                fault=exc, stub=False)
+        conductor_rpcapi.ConductorAPI.instance_update(
+            self.context, self.instance['uuid'], mox.IgnoreArg(), 'conductor')
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.RescheduledException,
+                self.compute._build_and_run_instance, self.context,
+                self.instance, self.image, self.injected_files,
+                self.admin_pass, self.requested_networks, self.security_groups,
+                self.block_device_mapping, self.node,
+                self.limits, self.filter_properties)
+
     def test_rescheduled_exception_without_retry(self):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')

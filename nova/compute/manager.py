@@ -2058,7 +2058,7 @@ class ComputeManager(manager.Manager):
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
             raise exception.RescheduledException(
-                    instance_uuid=instance.uuid, reason=str(e))
+                    instance_uuid=instance.uuid, reason=six.text_type(e))
 
         # NOTE(alaski): This is only useful during reschedules, remove it now.
         instance.system_metadata.pop('network_allocated', None)
