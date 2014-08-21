@@ -5224,6 +5224,17 @@ class ComputeManager(manager.Manager):
                 _set_migration_to_error(migration, reason,
                                         instance=instance)
                 continue
+            # race condition: The instance in DELETING state should not be
+            # set the migration state to error, otherwise the instance in
+            # to be deleted which is in RESIZED state
+            # will not be able to confirm resize
+            if instance.task_state in [task_states.DELETING,
+                                       task_states.SOFT_DELETING]:
+                msg = ("Instance being deleted or soft deleted during resize "
+                       "confirmation. Skipping.")
+                LOG.debug(msg, instance=instance)
+                continue
+
             vm_state = instance['vm_state']
             task_state = instance['task_state']
             if vm_state != vm_states.RESIZED or task_state is not None:

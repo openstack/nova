@@ -6206,16 +6206,24 @@ class ComputeTestCase(BaseTestCase):
             fake_instance.fake_db_instance(uuid='fake_uuid5',
                                            vm_state=vm_states.ACTIVE,
                                            task_state=None),
+            # The expceted migration result will be None instead of error
+            # since _poll_unconfirmed_resizes will not change it
+            # when the instance vm state is RESIZED and task state
+            # is deleting, see bug 1301696 for more detail
             fake_instance.fake_db_instance(uuid='fake_uuid6',
                                            vm_state=vm_states.RESIZED,
-                                           task_state='deleting')]
+                                           task_state='deleting'),
+            fake_instance.fake_db_instance(uuid='fake_uuid7',
+                                           vm_state=vm_states.RESIZED,
+                                           task_state='soft-deleting')]
         expected_migration_status = {'fake_uuid1': 'confirmed',
                                      'noexist': 'error',
                                      'fake_uuid2': 'error',
                                      'fake_uuid3': 'error',
                                      'fake_uuid4': None,
                                      'fake_uuid5': 'error',
-                                     'fake_uuid6': 'error'}
+                                     'fake_uuid6': None,
+                                     'fake_uuid7': None}
         migrations = []
         for i, instance in enumerate(instances, start=1):
             fake_mig = test_migration.fake_db_migration()
