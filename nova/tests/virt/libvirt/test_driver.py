@@ -7347,23 +7347,7 @@ class LibvirtConnTestCase(test.TestCase,
         mock_list.assert_called_with()
 
     def test_get_memory_used_normal(self):
-        def fake_get_info():
-            return ['x86_64', 15814L, 8, 1208, 1, 1, 4, 2]
-
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn.getInfo = fake_get_info
-
-        real_open = __builtin__.open
-
-        class fake_file(object):
-            def __enter__(self):
-                return self
-
-            def __exit__(self, exc_type, exc_value, exc_traceback):
-                return False
-
-            def read(self):
-                return """
+        m = mock.mock_open(read_data="""
 MemTotal:       16194180 kB
 MemFree:          233092 kB
 MemAvailable:    8892356 kB
@@ -7371,21 +7355,19 @@ Buffers:          567708 kB
 Cached:          8362404 kB
 SwapCached:            0 kB
 Active:          8381604 kB
-"""
+""")
+        with contextlib.nested(
+                mock.patch("__builtin__.open", m, create=True),
+                mock.patch.object(libvirt_driver.LibvirtDriver,
+                                  "_conn"),
+                mock.patch('sys.platform', 'linux2'),
+                ) as (mock_file, mock_conn, mock_platform):
+            mock_conn.getInfo.return_value = [
+                'x86_64', 15814L, 8, 1208, 1, 1, 4, 2]
 
-        def fake_open(path, *args, **kwargs):
-            if path == "/proc/meminfo":
-                return fake_file()
-            else:
-                return real_open(path, *args, **kwargs)
+            drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
-        self.mox.StubOutWithMock(__builtin__, 'open')
-        __builtin__.open = fake_open
-
-        self.mox.ReplayAll()
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-        self.assertEqual(6866, drvr._get_memory_mb_used())
+            self.assertEqual(6866, drvr._get_memory_mb_used())
 
     def test_get_memory_used_xen(self):
         self.flags(virt_type='xen', group='libvirt')
@@ -7425,7 +7407,8 @@ Active:          8381604 kB
                                   "_list_instance_domains"),
                 mock.patch.object(libvirt_driver.LibvirtDriver,
                                   "_conn"),
-                ) as (mock_file, mock_list, mock_conn):
+                mock.patch('sys.platform', 'linux2'),
+                ) as (mock_file, mock_list, mock_conn, mock_platform):
             mock_list.return_value = [
                 DiagFakeDomain(0, 15814),
                 DiagFakeDomain(1, 750),
