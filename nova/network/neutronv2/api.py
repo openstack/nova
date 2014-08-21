@@ -1310,22 +1310,8 @@ class API(base_api.NetworkAPI):
 
     def migrate_instance_finish(self, context, instance, migration):
         """Finish migrating the network of an instance."""
-        if not self._has_port_binding_extension(context, refresh_cache=True):
-            return
-        neutron = get_client(context, admin=True)
-        search_opts = {'device_id': instance['uuid'],
-                       'tenant_id': instance['project_id']}
-        data = neutron.list_ports(**search_opts)
-        ports = data['ports']
-        for p in ports:
-            port_req_body = {'port': {'binding:host_id':
-                                      migration['dest_compute']}}
-            try:
-                neutron.update_port(p['id'], port_req_body)
-            except Exception:
-                with excutils.save_and_reraise_exception():
-                    LOG.exception(_LE("Unable to update host of port %s"),
-                                  p['id'])
+        self._update_port_binding_for_instance(context, instance,
+                                               migration['dest_compute'])
 
     def add_network_to_project(self, context, project_id, network_uuid=None):
         """Force add a network to the project."""
@@ -1565,6 +1551,31 @@ class API(base_api.NetworkAPI):
     def create_public_dns_domain(self, context, domain, project=None):
         """Create a private DNS domain with optional nova project."""
         raise NotImplementedError()
+
+    def setup_instance_network_on_host(self, context, instance, host):
+        """Setup network for specified instance on host."""
+        self._update_port_binding_for_instance(context, instance, host)
+
+    def cleanup_instance_network_on_host(self, context, instance, host):
+        """Cleanup network for specified instance on host."""
+        pass
+
+    def _update_port_binding_for_instance(self, context, instance, host):
+        if not self._has_port_binding_extension(context, refresh_cache=True):
+            return
+        neutron = get_client(context, admin=True)
+        search_opts = {'device_id': instance['uuid'],
+                       'tenant_id': instance['project_id']}
+        data = neutron.list_ports(**search_opts)
+        ports = data['ports']
+        for p in ports:
+            try:
+                neutron.update_port(p['id'],
+                                    {'port': {'binding:host_id': host}})
+            except Exception:
+                with excutils.save_and_reraise_exception():
+                    LOG.exception(_LE("Unable to update host of port %s"),
+                                  p['id'])
 
 
 def _ensure_requested_network_ordering(accessor, unordered, preferred):

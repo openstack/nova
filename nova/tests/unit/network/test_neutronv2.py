@@ -3063,16 +3063,19 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
 
         self.assertEqual(port_req_body['port']['binding:profile'], profile)
 
-    def test_migrate_instance_finish_binding_false(self):
+    def _test_update_port_binding_false(self, func_name, *args):
         api = neutronapi.API()
+        func = getattr(api, func_name)
         self.mox.StubOutWithMock(api, '_has_port_binding_extension')
         api._has_port_binding_extension(mox.IgnoreArg(),
                                         refresh_cache=True).AndReturn(False)
         self.mox.ReplayAll()
-        api.migrate_instance_finish(self.context, None, None)
+        func(*args)
 
-    def test_migrate_instance_finish_binding_true(self):
+    def _test_update_port_binding_true(self, expected_bind_host,
+                                       func_name, *args):
         api = neutronapi.API()
+        func = getattr(api, func_name)
         self.mox.StubOutWithMock(api, '_has_port_binding_extension')
         api._has_port_binding_extension(mox.IgnoreArg(),
                                         refresh_cache=True).AndReturn(True)
@@ -3082,17 +3085,17 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
                        'tenant_id': self.instance['project_id']}
         ports = {'ports': [{'id': 'test1'}]}
         self.moxed_client.list_ports(**search_opts).AndReturn(ports)
-        migration = {'source_compute': self.instance.get('host'),
-                     'dest_compute': 'dest_host', }
         port_req_body = {'port':
-                         {'binding:host_id': migration['dest_compute']}}
+                         {'binding:host_id': expected_bind_host}}
         self.moxed_client.update_port('test1',
                                       port_req_body).AndReturn(None)
         self.mox.ReplayAll()
-        api.migrate_instance_finish(self.context, self.instance, migration)
+        func(*args)
 
-    def test_migrate_instance_finish_binding_true_exception(self):
+    def _test_update_port_true_exception(self, expected_bind_host,
+                                         func_name, *args):
         api = neutronapi.API()
+        func = getattr(api, func_name)
         self.mox.StubOutWithMock(api, '_has_port_binding_extension')
         api._has_port_binding_extension(mox.IgnoreArg(),
                                         refresh_cache=True).AndReturn(True)
@@ -3102,17 +3105,54 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
                        'tenant_id': self.instance['project_id']}
         ports = {'ports': [{'id': 'test1'}]}
         self.moxed_client.list_ports(**search_opts).AndReturn(ports)
-        migration = {'source_compute': self.instance.get('host'),
-                     'dest_compute': 'dest_host', }
         port_req_body = {'port':
-                         {'binding:host_id': migration['dest_compute']}}
+                         {'binding:host_id': expected_bind_host}}
         self.moxed_client.update_port('test1',
                                       port_req_body).AndRaise(
             Exception("fail to update port"))
         self.mox.ReplayAll()
         self.assertRaises(NEUTRON_CLIENT_EXCEPTION,
-                          api.migrate_instance_finish,
-                          self.context, self.instance, migration)
+                          func,
+                          *args)
+
+    def test_migrate_instance_finish_binding_false(self):
+        self._test_update_port_binding_false('migrate_instance_finish',
+                                             self.context, None,
+                                             {'dest_compute': 'fake'})
+
+    def test_migrate_instance_finish_binding_true(self):
+        migration = {'source_compute': self.instance.get('host'),
+                     'dest_compute': 'dest_host'}
+        self._test_update_port_binding_true('dest_host',
+                                            'migrate_instance_finish',
+                                            self.context, self.instance,
+                                            migration)
+
+    def test_migrate_instance_finish_binding_true_exception(self):
+        migration = {'source_compute': self.instance.get('host'),
+                     'dest_compute': 'dest_host'}
+        self._test_update_port_true_exception('dest_host',
+                                              'migrate_instance_finish',
+                                              self.context,
+                                              self.instance,
+                                              migration)
+
+    def test_setup_instance_network_on_host_false(self):
+        self._test_update_port_binding_false(
+            'setup_instance_network_on_host', self.context, None,
+            'fake_host')
+
+    def test_setup_instance_network_on_host_true(self):
+        self._test_update_port_binding_true('fake_host',
+                                            'setup_instance_network_on_host',
+                                            self.context,
+                                            self.instance,
+                                            'fake_host')
+
+    def test_setup_instance_network_on_host_exception(self):
+        self._test_update_port_true_exception(
+            'fake_host', 'setup_instance_network_on_host',
+            self.context, self.instance, 'fake_host')
 
     def test_associate_not_implemented(self):
         api = neutronapi.API()

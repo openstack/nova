@@ -512,6 +512,24 @@ class ApiTestCase(test.TestCase):
         mock_get_by_floating.assert_called_once_with(self.context,
                                                      mock.sentinel.floating)
 
+    @mock.patch('nova.network.api.API.migrate_instance_start')
+    def test_cleanup_instance_network_on_host(self, fake_migrate_start):
+        instance = fake_instance.fake_instance_obj(self.context)
+        self.network_api.cleanup_instance_network_on_host(
+            self.context, instance, 'fake_compute_source')
+        fake_migrate_start.assert_called_once_with(
+            self.context, instance,
+            {'source_compute': 'fake_compute_source', 'dest_compute': None})
+
+    @mock.patch('nova.network.api.API.migrate_instance_finish')
+    def test_setup_instance_network_on_host(self, fake_migrate_finish):
+        instance = fake_instance.fake_instance_obj(self.context)
+        self.network_api.setup_instance_network_on_host(
+            self.context, instance, 'fake_compute_source')
+        fake_migrate_finish.assert_called_once_with(
+            self.context, instance,
+            {'source_compute': None, 'dest_compute': 'fake_compute_source'})
+
 
 @mock.patch('nova.network.api.API')
 @mock.patch('nova.db.instance_info_cache_update')
