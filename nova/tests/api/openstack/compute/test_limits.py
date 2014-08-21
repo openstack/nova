@@ -27,7 +27,9 @@ import six
 import webob
 
 from nova.api.openstack.compute import limits
+from nova.api.openstack.compute.plugins.v3 import limits as limits_v3
 from nova.api.openstack.compute import views
+from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 import nova.context
 from nova.openstack.common import jsonutils
@@ -74,14 +76,15 @@ class BaseLimitTestSuite(test.NoDBTestCase):
         return self.time
 
 
-class LimitsControllerTest(BaseLimitTestSuite):
+class LimitsControllerTestV21(BaseLimitTestSuite):
     """Tests for `limits.LimitsController` class."""
+    limits_controller = limits_v3.LimitsController
 
     def setUp(self):
         """Run before each test."""
-        super(LimitsControllerTest, self).setUp()
-        self.controller = limits.create_resource()
-        self.ctrler = limits.LimitsController()
+        super(LimitsControllerTestV21, self).setUp()
+        self.controller = wsgi.Resource(self.limits_controller())
+        self.ctrler = self.limits_controller()
 
     def _get_index_request(self, accept_header="application/json",
                            tenant_id=None):
@@ -210,6 +213,10 @@ class LimitsControllerTest(BaseLimitTestSuite):
             self.assertEqual(expected, body)
             get_project_quotas.assert_called_once_with(context, tenant_id,
                                                        usages=False)
+
+
+class LimitsControllerTestV2(LimitsControllerTestV21):
+    limits_controller = limits.LimitsController
 
     def _populate_limits_diff_regex(self, request):
         """Put limit info into a request."""

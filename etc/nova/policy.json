@@ -182,6 +182,7 @@
     "compute_extension:v3:os-keypairs:show": "",
     "compute_extension:v3:os-keypairs:create": "",
     "compute_extension:v3:os-keypairs:delete": "",
+    "compute_extension:v3:limits:discoverable": "",
     "compute_extension:v3:os-lock-server:discoverable": "",
     "compute_extension:v3:os-lock-server:lock": "rule:admin_or_owner",
     "compute_extension:v3:os-lock-server:unlock": "rule:admin_or_owner",
