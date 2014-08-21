@@ -46,7 +46,7 @@
             "My Server Name": "Apache1"
         },
         "name": "new-server-test",
-        "os-config-drive:config_drive": "",
+        "config_drive": "",
         "progress": 0,
         "status": "ACTIVE",
         "tenant_id": "openstack",

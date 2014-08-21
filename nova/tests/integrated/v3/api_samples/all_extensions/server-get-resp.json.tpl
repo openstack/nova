@@ -48,7 +48,7 @@
             "My Server Name": "Apache1"
         },
         "name": "new-server-test",
-        "os-config-drive:config_drive": "",
+        "config_drive": "",
         "os-extended-availability-zone:availability_zone": "nova",
         "os-extended-server-attributes:host": "%(compute_host)s",
         "os-extended-server-attributes:hypervisor_hostname": "%(hypervisor_hostname)s",

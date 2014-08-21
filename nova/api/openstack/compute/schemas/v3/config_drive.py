@@ -15,5 +15,5 @@
 from nova.api.validation import parameter_types
 
 server_create = {
-    'os-config-drive:config_drive': parameter_types.boolean,
+    'config_drive': parameter_types.boolean,
 }
