@@ -341,7 +341,19 @@ class NovaObject(object):
         This is responsible for taking the primitive representation of
         an object and making it suitable for the given target_version.
         This may mean converting the format of object attributes, removing
-        attributes that have been added since the target version, etc.
+        attributes that have been added since the target version, etc. In
+        general:
+
+        - If a new version of an object adds a field, this routine
+          should remove it for older versions.
+        - If a new version changed or restricted the format of a field, this
+          should convert it back to something a client knowing only of the
+          older version will tolerate.
+        - If an object that this object depends on is bumped, then this
+          object should also take a version bump. Then, this routine should
+          backlevel the dependent object (by calling its obj_make_compatible())
+          if the requested version of this object is older than the version
+          where the new dependent object was added.
 
         :param:primitive: The result of self.obj_to_primitive()
         :param:target_version: The version string requested by the recipient
