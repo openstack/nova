@@ -195,8 +195,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         return self
 
     def obj_make_compatible(self, primitive, target_version):
-        target_version = (int(target_version.split('.')[0]),
-                          int(target_version.split('.')[1]))
+        target_version = utils.convert_version_to_tuple(target_version)
         unicode_attributes = ['user_id', 'project_id', 'image_ref',
                               'kernel_id', 'ramdisk_id', 'hostname',
                               'key_name', 'key_data', 'host', 'node',

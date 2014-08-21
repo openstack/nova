@@ -20,6 +20,7 @@ from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import fields
+from nova import utils
 
 network_opts = [
     cfg.BoolOpt('share_dhcp_address',
@@ -97,7 +98,7 @@ class Network(obj_base.NovaPersistentObject, obj_base.NovaObject):
                              'or integral prefix' % netmask)
 
     def obj_make_compatible(self, primitive, target_version):
-        target_version = tuple(int(x) for x in target_version.split('.'))
+        target_version = utils.convert_version_to_tuple(target_version)
         if target_version < (1, 2):
             if 'mtu' in primitive:
                 del primitive['mtu']
