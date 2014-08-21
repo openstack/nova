@@ -263,4 +263,7 @@
   <extension alias="os-extended-evacuate-find-host" updated="%(isotime)s" namespace="http://docs.openstack.org/compute/ext/extended_evacuate_find_host/api/v2" name="ExtendedEvacuateFindHost">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-server-group-quotas" updated="%(isotime)s" namespace="http://docs.openstack.org/compute/ext/server-group-quotas/api/v2" name="ServerGroupQuotas">
+    <description>%(text)s</description>
+  </extension>
 </extensions>

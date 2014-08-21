@@ -505,7 +505,6 @@ class UserQuotasTestV21(BaseQuotaSetsTest):
 class QuotaSetsTestV2(QuotaSetsTestV21):
     plugin = quotas_v2
     validation_error = webob.exc.HTTPBadRequest
-    include_server_group_quotas = False
 
     def _setup_controller(self):
         self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
@@ -568,6 +567,10 @@ class QuotaSetsTestV2(QuotaSetsTestV21):
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
                           req, 1234)
 
+
+class QuotaSetsTestV2WithoutServerGroupQuotas(QuotaSetsTestV2):
+    include_server_group_quotas = False
+
     # NOTE: os-server-group-quotas is only for v2.0.   On v2.1 this feature
     # is always enabled, so this test is only needed for v2.0
     def test_quotas_update_without_server_group_quotas_extenstion(self):
@@ -598,7 +601,6 @@ class ExtendedQuotasTestV2(ExtendedQuotasTestV21):
 
 class UserQuotasTestV2(UserQuotasTestV21):
     plugin = quotas_v2
-    include_server_group_quotas = False
 
     def _setup_controller(self):
         self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
@@ -607,6 +609,10 @@ class UserQuotasTestV2(UserQuotasTestV21):
         self.mox.ReplayAll()
         self.controller = self.plugin.QuotaSetsController(self.ext_mgr)
         self.mox.ResetAll()
+
+
+class UserQuotasTestV2WithoutServerGroupQuotas(UserQuotasTestV2):
+    include_server_group_quotas = False
 
     # NOTE: os-server-group-quotas is only for v2.0.   On v2.1 this feature
     # is always enabled, so this test is only needed for v2.0
