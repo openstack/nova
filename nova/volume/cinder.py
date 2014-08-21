@@ -428,20 +428,28 @@ class API(object):
 
     @translate_volume_exception
     def get_volume_metadata(self, context, volume_id):
-        raise NotImplementedError()
+        vol = cinderclient(context).volumes.get(volume_id)
+        return vol.metadata
 
     @translate_volume_exception
-    def delete_volume_metadata(self, context, volume_id, key):
-        raise NotImplementedError()
+    def delete_volume_metadata(self, context, volume_id, keys):
+        cinderclient(context).volumes.delete_metadata(volume_id, keys)
 
     @translate_volume_exception
     def update_volume_metadata(self, context, volume_id,
                                metadata, delete=False):
-        raise NotImplementedError()
+        if delete:
+            # Completely replace volume metadata with one given
+            return cinderclient(context).volumes.update_all_metadata(
+                volume_id, metadata)
+        else:
+            return cinderclient(context).volumes.set_metadata(
+                volume_id, metadata)
 
     @translate_volume_exception
-    def get_volume_metadata_value(self, volume_id, key):
-        raise NotImplementedError()
+    def get_volume_metadata_value(self, context, volume_id, key):
+        vol = cinderclient(context).volumes.get(volume_id)
+        return vol.metadata.get(key)
 
     @translate_snapshot_exception
     def update_snapshot_status(self, context, snapshot_id, status):
