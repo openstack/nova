@@ -20,6 +20,9 @@ from nova import test
 from nova.tests.unit.api.openstack import fakes
 
 
+FAKE_UPDATED_DATE = extension_info.FAKE_UPDATED_DATE
+
+
 class fake_extension(object):
     def __init__(self, name, alias, description, version):
         self.name = name
@@ -32,6 +35,18 @@ fake_extensions = {
     'ext1-alias': fake_extension('ext1', 'ext1-alias', 'ext1 description', 1),
     'ext2-alias': fake_extension('ext2', 'ext2-alias', 'ext2 description', 2),
     'ext3-alias': fake_extension('ext3', 'ext3-alias', 'ext3 description', 1)
+}
+
+
+simulated_extension_list = {
+    'servers': fake_extension('Servers', 'servers', 'Servers.', 1),
+    'images': fake_extension('Images', 'images', 'Images.', 2),
+    'os-quota-sets': fake_extension('Quotas', 'os-quota-sets',
+                                    'Quotas management support', 1),
+    'os-cells': fake_extension('Cells', 'os-cells',
+                                    'Cells description', 1),
+    'os-flavor-access': fake_extension('FlavorAccess', 'os-flavor-access',
+                                    'Flavor access support.', 1)
 }
 
 
@@ -65,8 +80,9 @@ class ExtensionInfoTest(test.NoDBTestCase):
             self.assertEqual(e['alias'], fake_extensions[e['alias']].alias)
             self.assertEqual(e['description'],
                              fake_extensions[e['alias']].__doc__)
-            self.assertEqual(e['version'],
-                             fake_extensions[e['alias']].version)
+            self.assertEqual(e['updated'], FAKE_UPDATED_DATE)
+            self.assertEqual(e['links'], [])
+            self.assertEqual(6, len(e))
 
     def test_extension_info_show(self):
         self.stubs.Set(policy, 'enforce', fake_policy_enforce)
@@ -79,8 +95,9 @@ class ExtensionInfoTest(test.NoDBTestCase):
                          fake_extensions['ext1-alias'].alias)
         self.assertEqual(res_dict['extension']['description'],
                          fake_extensions['ext1-alias'].__doc__)
-        self.assertEqual(res_dict['extension']['version'],
-                         fake_extensions['ext1-alias'].version)
+        self.assertEqual(res_dict['extension']['updated'], FAKE_UPDATED_DATE)
+        self.assertEqual(res_dict['extension']['links'], [])
+        self.assertEqual(6, len(res_dict['extension']))
 
     def test_extension_info_list_not_all_discoverable(self):
         self.stubs.Set(policy, 'enforce', fake_policy_enforce_selective)
@@ -94,5 +111,47 @@ class ExtensionInfoTest(test.NoDBTestCase):
             self.assertEqual(e['alias'], fake_extensions[e['alias']].alias)
             self.assertEqual(e['description'],
                              fake_extensions[e['alias']].__doc__)
-            self.assertEqual(e['version'],
-                             fake_extensions[e['alias']].version)
+            self.assertEqual(e['updated'], FAKE_UPDATED_DATE)
+            self.assertEqual(e['links'], [])
+            self.assertEqual(6, len(e))
+
+
+class ExtensionInfoV21Test(test.NoDBTestCase):
+
+    def setUp(self):
+        super(ExtensionInfoV21Test, self).setUp()
+        ext_info = plugins.LoadedExtensionInfo()
+        ext_info.extensions = simulated_extension_list
+        self.controller = extension_info.ExtensionInfoController(ext_info)
+        self.stubs.Set(policy, 'enforce', fake_policy_enforce)
+
+    def test_extension_info_list(self):
+        req = fakes.HTTPRequest.blank('/extensions')
+        res_dict = self.controller.index(req)
+        self.assertEqual(5, len(res_dict['extensions']))
+
+        expected_output = simulated_extension_list
+
+        for e in res_dict['extensions']:
+            self.assertIn(e['alias'], expected_output)
+            self.assertEqual(e['name'], expected_output[e['alias']].name)
+            self.assertEqual(e['alias'], expected_output[e['alias']].alias)
+            self.assertEqual(e['description'],
+                             expected_output[e['alias']].__doc__)
+            self.assertEqual(e['updated'], FAKE_UPDATED_DATE)
+            self.assertEqual(e['links'], [])
+            self.assertEqual(6, len(e))
+
+    def test_extension_info_show(self):
+        req = fakes.HTTPRequest.blank('/extensions/os-cells')
+        res_dict = self.controller.show(req, 'os-cells')
+        self.assertEqual(1, len(res_dict))
+        self.assertEqual(res_dict['extension']['name'],
+                         simulated_extension_list['os-cells'].name)
+        self.assertEqual(res_dict['extension']['alias'],
+                         simulated_extension_list['os-cells'].alias)
+        self.assertEqual(res_dict['extension']['description'],
+                         simulated_extension_list['os-cells'].__doc__)
+        self.assertEqual(res_dict['extension']['updated'], FAKE_UPDATED_DATE)
+        self.assertEqual(res_dict['extension']['links'], [])
+        self.assertEqual(6, len(res_dict['extension']))

@@ -22,16 +22,31 @@ from nova.api.openstack import extensions as api_extensions
 from nova.tests.functional.v3 import api_sample_base
 
 
-class ExtensionInfoSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
-    sample_dir = "extension-info"
+def fake_soft_extension_authorizer(api_name, extension_name):
+    def authorize(context, action=None):
+        return True
+    return authorize
 
-    def test_list_extensions(self):
+
+class ExtensionInfoAllSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
+    all_extensions = True
+
+    @mock.patch.object(api_extensions, 'soft_extension_authorizer')
+    def test_list_extensions(self, soft_auth):
+        soft_auth.side_effect = fake_soft_extension_authorizer
         response = self._do_get('extensions')
         subs = self._get_regexes()
         self._verify_response('extensions-list-resp', subs, response, 200)
 
-    def test_get_extensions(self):
-        response = self._do_get('extensions/flavors')
+
+class ExtensionInfoSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
+    sample_dir = "extension-info"
+    extra_extensions_to_load = ["os-create-backup"]
+
+    @mock.patch.object(api_extensions, 'soft_extension_authorizer')
+    def test_get_extensions(self, soft_auth):
+        soft_auth.side_effect = fake_soft_extension_authorizer
+        response = self._do_get('extensions/os-create-backup')
         subs = self._get_regexes()
         self._verify_response('extensions-get-resp', subs, response, 200)
 
@@ -64,8 +79,3 @@ class ExtensionInfoFormatTest(api_sample_base.ApiSampleTestBaseV3):
         # name should be CamelCase.
         pattern = '^[A-Z]{1}[a-z]{1}[a-zA-Z]*$'
         self._test_list_extensions('name', pattern)
-
-    def test_list_extensions_alias_format(self):
-        # alias should contain lowercase chars and '-' only.
-        pattern = '^[a-z-]+$'
-        self._test_list_extensions('alias', pattern)
