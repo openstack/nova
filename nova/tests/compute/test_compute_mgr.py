@@ -938,7 +938,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             {'deleted': True, 'soft_deleted': False, 'host': 'fake-mini',
              'cleaned': False},
             expected_attrs=['info_cache', 'security_groups',
-                            'system_metadata']).AndReturn([a, b, c])
+                            'system_metadata'],
+            use_slave=True).AndReturn([a, b, c])
 
         self.mox.StubOutWithMock(self.compute.driver, 'delete_instance_files')
         self.compute.driver.delete_instance_files(

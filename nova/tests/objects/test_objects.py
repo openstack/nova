@@ -954,7 +954,7 @@ object_data = {
     'InstanceGroup': '1.7-b31ea31fdb452ab7810adbe789244f91',
     'InstanceGroupList': '1.2-a474822eebc3e090012e581adcc1fa09',
     'InstanceInfoCache': '1.5-ef64b604498bfa505a8c93747a9d8b2f',
-    'InstanceList': '1.6-6891f6f61f8eb0b55c0cefac3f734c24',
+    'InstanceList': '1.7-71e48495e83df551cefe6691478c865c',
     'KeyPair': '1.1-3410f51950d052d861c11946a6ae621a',
     'KeyPairList': '1.0-71132a568cc5d078ba1748a9c02c87b8',
     'Migration': '1.1-67c47726c2c71422058cd9d149d6d3ed',

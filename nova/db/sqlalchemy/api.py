@@ -2070,9 +2070,10 @@ def regex_filter(query, model, filters):
 
 @require_context
 def instance_get_active_by_window_joined(context, begin, end=None,
-                                         project_id=None, host=None):
+                                         project_id=None, host=None,
+                                         use_slave=False):
     """Return instances and joins that were active during window."""
-    session = get_session()
+    session = get_session(use_slave=use_slave)
     query = session.query(models.Instance)
 
     query = query.options(joinedload('info_cache')).\

@@ -615,7 +615,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.4: Instance <= version 1.12
     # Version 1.5: Added method get_active_by_window_joined.
     # Version 1.6: Instance <= version 1.13
-    VERSION = '1.6'
+    # Version 1.7: Added use_slave to get_active_by_window_joined
+    VERSION = '1.7'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -628,6 +629,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         '1.4': '1.12',
         '1.5': '1.12',
         '1.6': '1.13',
+        '1.7': '1.13',
         }
 
     @base.remotable_classmethod
@@ -675,7 +677,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def _get_active_by_window_joined(cls, context, begin, end=None,
                                     project_id=None, host=None,
-                                    expected_attrs=None):
+                                    expected_attrs=None,
+                                    use_slave=False):
         # NOTE(mriedem): We need to convert the begin/end timestamp strings
         # to timezone-aware datetime objects for the DB API call.
         begin = timeutils.parse_isotime(begin)
@@ -691,7 +694,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     @classmethod
     def get_active_by_window_joined(cls, context, begin, end=None,
                                     project_id=None, host=None,
-                                    expected_attrs=None):
+                                    expected_attrs=None,
+                                    use_slave=False):
         """Get instances and joins active during a certain time window.
 
         :param:context: nova request context
@@ -701,6 +705,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         :param:host: used to filter instances on a given compute host
         :param:expected_attrs: list of related fields that can be joined
         in the database layer when querying for instances
+        :param use_slave if True, ship this query off to a DB slave
         :returns: InstanceList
 
         """
@@ -710,7 +715,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         end = timeutils.isotime(end) if end else None
         return cls._get_active_by_window_joined(context, begin, end,
                                                 project_id, host,
-                                                expected_attrs)
+                                                expected_attrs,
+                                                use_slave=use_slave)
 
     @base.remotable_classmethod
     def get_by_security_group_id(cls, context, security_group_id):
