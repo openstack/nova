@@ -1761,9 +1761,9 @@ class ComputeManager(manager.Manager):
             return block_device_info
 
         except exception.OverQuota:
-            msg = ('Failed to create block device for instance due to being '
-                   'over volume resource quota')
-            LOG.debug(msg, instance=instance)
+            msg = _LW('Failed to create block device for instance due to '
+                      'being over volume resource quota')
+            LOG.warn(msg, instance=instance)
             raise exception.InvalidBDM()
 
         except Exception:
