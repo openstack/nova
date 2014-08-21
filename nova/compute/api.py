@@ -93,6 +93,16 @@ compute_opts = [
                default='nokernel',
                help='Kernel image that indicates not to use a kernel, but to '
                     'use a raw disk image instead'),
+    cfg.StrOpt('single_instance_display_name_template',
+               default='%(name)s',
+               help='When creating a instances with a single request '
+                    'template will be used to build the display name for '
+                    'each instance. The benefit is that the instances '
+                    'can be configured to incorporate the project_id or '
+                    'project_name. To restore legacy '
+                    'behavior of every instance having the same name, set '
+                    'this option to "%(name)s".  Valid keys for the '
+                    'template are: name, uuid, project_id, project_name.'),
     cfg.StrOpt('multi_instance_display_name_template',
                default='%(name)s-%(uuid)s',
                help='When creating multiple instances with a single request '
@@ -553,9 +563,33 @@ class API(base.Base):
             'uuid': instance['uuid'],
             'name': instance['display_name'],
             'count': index + 1,
+            'project_name': context.project_name,
+            'project_id': instance['project_id'],
         }
         try:
             new_name = (CONF.multi_instance_display_name_template %
+                        params)
+        except (KeyError, TypeError):
+            LOG.exception(_LE('Failed to set instance name using '
+                              'multi_instance_display_name_template.'))
+            new_name = instance['display_name']
+        instance.display_name = new_name
+        if not instance.get('hostname', None):
+            instance.hostname = utils.sanitize_hostname(new_name)
+        instance.save()
+        return instance
+
+    def _apply_single_instance_name_template(self, context, instance, index):
+        ''' Allow nova to use uuid, name, project_name, project_id to add to the
+        instance/vm upon creation'''
+        params = {
+            'uuid': instance['uuid'],
+            'name': instance['display_name'],
+            'project_name': context.project_name,
+            'project_id': instance['project_id'],
+        }
+        try:
+            new_name = (CONF.single_instance_display_name_template %
                         params)
         except (KeyError, TypeError):
             LOG.exception(_LE('Failed to set instance name using '
@@ -1240,6 +1274,10 @@ class API(base.Base):
             # the UUID from the instance.
             instance = self._apply_instance_name_template(context, instance,
                                                           index)
+        else:
+            instance = self._apply_single_instance_name_template(context,
+                                                                 instance,
+                                                                 index)
 
         # NOTE (ndipanov): This can now raise exceptions but the instance
         #                  has been created, so delete it and re-raise so
