@@ -606,6 +606,22 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertEqual(host, selected_hosts[0])
         self.assertEqual(node, selected_nodes[0])
 
+    @mock.patch.object(filter_scheduler.FilterScheduler, '_schedule')
+    def test_select_destinations_notifications(self, mock_schedule):
+        mock_schedule.return_value = [mock.Mock()]
+
+        with mock.patch.object(self.driver.notifier, 'info') as mock_info:
+            request_spec = {'num_instances': 1}
+
+            self.driver.select_destinations(self.context, request_spec, {})
+
+            expected = [
+                mock.call(self.context, 'scheduler.select_destinations.start',
+                 dict(request_spec=request_spec)),
+                mock.call(self.context, 'scheduler.select_destinations.end',
+                 dict(request_spec=request_spec))]
+            self.assertEqual(expected, mock_info.call_args_list)
+
     def test_select_destinations_no_valid_host(self):
 
         def _return_no_host(*args, **kwargs):

@@ -140,6 +140,9 @@ class FilterScheduler(driver.Scheduler):
 
     def select_destinations(self, context, request_spec, filter_properties):
         """Selects a filtered set of hosts and nodes."""
+        self.notifier.info(context, 'scheduler.select_destinations.start',
+                           dict(request_spec=request_spec))
+
         num_instances = request_spec['num_instances']
         selected_hosts = self._schedule(context, request_spec,
                                         filter_properties)
@@ -150,6 +153,9 @@ class FilterScheduler(driver.Scheduler):
 
         dests = [dict(host=host.obj.host, nodename=host.obj.nodename,
                       limits=host.obj.limits) for host in selected_hosts]
+
+        self.notifier.info(context, 'scheduler.select_destinations.end',
+                           dict(request_spec=request_spec))
         return dests
 
     def _provision_resource(self, context, weighed_host, request_spec,
