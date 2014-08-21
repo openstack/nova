@@ -33,10 +33,9 @@ LOG = logging.getLogger(__name__)
 class VMwareVolumeOps(object):
     """Management class for Volume-related tasks."""
 
-    def __init__(self, session, cluster=None, vc_support=False):
+    def __init__(self, session, cluster=None):
         self._session = session
         self._cluster = cluster
-        self._vc_support = vc_support
 
     def attach_disk_to_vm(self, vm_ref, instance,
                           adapter_type, disk_type, vmdk_path=None,
@@ -439,10 +438,6 @@ class VMwareVolumeOps(object):
         is on the datastore of the instance.
         """
 
-        # Consolidation only supported with VC driver
-        if not self._vc_support:
-            return
-
         original_device = self._get_vmdk_base_volume_device(volume_ref)
 
         original_device_path = original_device.backing.fileName
@@ -568,7 +563,7 @@ class VMwareVolumeOps(object):
         driver_type = connection_info['driver_volume_type']
         LOG.debug("Root volume attach. Driver type: %s", driver_type,
                   instance=instance)
-        if self._vc_support and driver_type == 'vmdk':
+        if driver_type == 'vmdk':
             vm_ref = vm_util.get_vm_ref(self._session, instance)
             data = connection_info['data']
             # Get the volume ref
