@@ -18,6 +18,7 @@ import webob
 
 from nova.api.openstack.compute.contrib import server_groups
 from nova.api.openstack.compute.plugins.v3 import server_groups as sg_v3
+from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import context
 import nova.db
@@ -81,12 +82,13 @@ def server_group_db(sg):
 
 class ServerGroupTestV21(test.TestCase):
 
-    sg_controller_cls = sg_v3.ServerGroupController
-
     def setUp(self):
         super(ServerGroupTestV21, self).setUp()
-        self.controller = self.sg_controller_cls()
+        self._setup_controller()
         self.app = self._get_app()
+
+    def _setup_controller(self):
+        self.controller = sg_v3.ServerGroupController()
 
     def _get_app(self):
         return fakes.wsgi_app_v3(init_only=('os-server-groups',))
@@ -362,7 +364,11 @@ class ServerGroupTestV21(test.TestCase):
 
 
 class ServerGroupTestV2(ServerGroupTestV21):
-    sg_controller_cls = server_groups.ServerGroupController
+
+    def _setup_controller(self):
+        ext_mgr = extensions.ExtensionManager()
+        ext_mgr.extensions = {}
+        self.controller = server_groups.ServerGroupController(ext_mgr)
 
     def _get_app(self):
         return fakes.wsgi_app(init_only=('os-server-groups',))

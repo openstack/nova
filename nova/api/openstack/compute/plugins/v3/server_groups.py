@@ -23,8 +23,12 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 import nova.exception
 from nova.i18n import _
+from nova.i18n import _LE
 from nova import objects
+from nova.openstack.common import log as logging
 from nova import utils
+
+LOG = logging.getLogger(__name__)
 
 ALIAS = "os-server-groups"
 
@@ -138,9 +142,31 @@ class ServerGroupController(wsgi.Controller):
         context = _authorize_context(req)
         try:
             sg = objects.InstanceGroup.get_by_uuid(context, id)
-            sg.destroy(context)
         except nova.exception.InstanceGroupNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
+
+        quotas = objects.Quotas()
+        project_id, user_id = objects.quotas.ids_from_server_group(context, sg)
+        try:
+            # We have to add the quota back to the user that created
+            # the server group
+            quotas.reserve(context, project_id=project_id,
+                           user_id=user_id, server_groups=-1)
+        except Exception:
+            quotas = None
+            LOG.exception(_LE("Failed to update usages deallocating "
+                                  "server group"))
+
+        try:
+            sg.destroy(context)
+        except nova.exception.InstanceGroupNotFound as e:
+            if quotas:
+                quotas.rollback()
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
+
+        if quotas:
+            quotas.commit()
+
         return webob.Response(status_int=204)
 
     @extensions.expected_errors(())
@@ -158,7 +184,7 @@ class ServerGroupController(wsgi.Controller):
                   for group in limited_list]
         return {'server_groups': result}
 
-    @extensions.expected_errors(400)
+    @extensions.expected_errors((400, 403))
     def create(self, req, body):
         """Creates a new server group."""
         context = _authorize_context(req)
@@ -167,6 +193,14 @@ class ServerGroupController(wsgi.Controller):
             self._validate_input_body(body, 'server_group')
         except nova.exception.InvalidInput as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
+
+        quotas = objects.Quotas()
+        try:
+            quotas.reserve(context, project_id=context.project_id,
+                           user_id=context.user_id, server_groups=1)
+        except nova.exception.OverQuota:
+            msg = _("Quota exceeded, too many server groups.")
+            raise exc.HTTPForbidden(explanation=msg)
 
         vals = body['server_group']
         sg = objects.InstanceGroup(context)
@@ -177,7 +211,10 @@ class ServerGroupController(wsgi.Controller):
             sg.policies = vals.get('policies')
             sg.create()
         except ValueError as e:
+            quotas.rollback()
             raise exc.HTTPBadRequest(explanation=e)
+
+        quotas.commit()
 
         return {'server_group': self._format_server_group(context, sg)}
 

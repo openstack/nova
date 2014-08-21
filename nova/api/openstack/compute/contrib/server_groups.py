@@ -24,8 +24,13 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 import nova.exception
 from nova.i18n import _
+from nova.i18n import _LE
 from nova import objects
+from nova.openstack.common import log as logging
 from nova import utils
+
+LOG = logging.getLogger(__name__)
+
 
 # NOTE(russellb) There is one other policy, 'legacy', but we don't allow that
 # being set via the API.  It's only used when a group gets automatically
@@ -128,6 +133,9 @@ class ServerGroupXMLDeserializer(wsgi.MetadataXMLDeserializer):
 class ServerGroupController(wsgi.Controller):
     """The Server group API controller for the OpenStack API."""
 
+    def __init__(self, ext_mgr):
+        self.ext_mgr = ext_mgr
+
     def _format_server_group(self, context, group):
         # the id field has its value as the uuid of the server group
         # There is no 'uuid' key in server_group seen by clients.
@@ -220,9 +228,34 @@ class ServerGroupController(wsgi.Controller):
         context = _authorize_context(req)
         try:
             sg = objects.InstanceGroup.get_by_uuid(context, id)
-            sg.destroy(context)
         except nova.exception.InstanceGroupNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
+
+        quotas = None
+        if self.ext_mgr.is_loaded('os-server-group-quotas'):
+            quotas = objects.Quotas()
+            project_id, user_id = objects.quotas.ids_from_server_group(context,
+                                                                       sg)
+            try:
+                # We have to add the quota back to the user that created
+                # the server group
+                quotas.reserve(context, project_id=project_id,
+                               user_id=user_id, server_groups=-1)
+            except Exception:
+                quotas = None
+                LOG.exception(_LE("Failed to update usages deallocating "
+                                  "server group"))
+
+        try:
+            sg.destroy(context)
+        except nova.exception.InstanceGroupNotFound as e:
+            if quotas:
+                quotas.rollback()
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
+
+        if quotas:
+            quotas.commit()
+
         return webob.Response(status_int=204)
 
     @wsgi.serializers(xml=ServerGroupsTemplate)
@@ -251,6 +284,16 @@ class ServerGroupController(wsgi.Controller):
         except nova.exception.InvalidInput as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
+        quotas = None
+        if self.ext_mgr.is_loaded('os-server-group-quotas'):
+            quotas = objects.Quotas()
+            try:
+                quotas.reserve(context, project_id=context.project_id,
+                               user_id=context.user_id, server_groups=1)
+            except nova.exception.OverQuota:
+                msg = _("Quota exceeded, too many server groups.")
+                raise exc.HTTPForbidden(explanation=msg)
+
         vals = body['server_group']
         sg = objects.InstanceGroup(context)
         sg.project_id = context.project_id
@@ -260,7 +303,12 @@ class ServerGroupController(wsgi.Controller):
             sg.policies = vals.get('policies')
             sg.create()
         except ValueError as e:
+            if quotas:
+                quotas.rollback()
             raise exc.HTTPBadRequest(explanation=e)
+
+        if quotas:
+            quotas.commit()
 
         return {'server_group': self._format_server_group(context, sg)}
 
@@ -283,7 +331,7 @@ class Server_groups(extensions.ExtensionDescriptor):
 
         res = extensions.ResourceExtension(
             'os-server-groups',
-            controller=ServerGroupController(),
+            controller=ServerGroupController(self.ext_mgr),
             member_actions={"action": "POST", })
 
         resources.append(res)

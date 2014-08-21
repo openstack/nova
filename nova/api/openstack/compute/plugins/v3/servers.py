@@ -511,6 +511,7 @@ class ServersController(wsgi.Controller):
                             metadata=server_dict.get('metadata', {}),
                             admin_password=password,
                             requested_networks=requested_networks,
+                            check_server_group_quota=True,
                             **create_kwargs)
         except (exception.QuotaError,
                 exception.PortLimitExceeded) as error:

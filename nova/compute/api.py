@@ -848,7 +848,8 @@ class API(base.Base):
 
     def _provision_instances(self, context, instance_type, min_count,
             max_count, base_options, boot_meta, security_groups,
-            block_device_mapping, shutdown_terminate):
+            block_device_mapping, shutdown_terminate,
+            instance_group, check_server_group_quota):
         # Reserve quotas
         num_instances, quotas = self._check_num_instances_quota(
                 context, instance_type, min_count, max_count)
@@ -866,6 +867,25 @@ class API(base.Base):
                 pci_requests.instance_uuid = instance.uuid
                 pci_requests.save(context)
                 instances.append(instance)
+
+                if instance_group:
+                    if check_server_group_quota:
+                        count = QUOTAS.count(context,
+                                             'server_group_members',
+                                             instance_group,
+                                             context.user_id)
+                        try:
+                            QUOTAS.limit_check(context,
+                                               server_group_members=count + 1)
+                        except exception.OverQuota:
+                            msg = _("Quota exceeded, too many servers in "
+                                    "group")
+                            raise exception.QuotaError(msg)
+
+                    objects.InstanceGroup.add_members(context,
+                                                      instance_group.uuid,
+                                                      [instance.uuid])
+
                 # send a state update notification for the initial create to
                 # show it going from non-existent to BUILDING
                 notifications.send_update_with_states(context, instance, None,
@@ -938,26 +958,8 @@ class API(base.Base):
         return {}
 
     @staticmethod
-    def _update_instance_group_by_name(context, instance_uuids, group_name):
-        try:
-            ig = objects.InstanceGroup.get_by_name(context, group_name)
-            objects.InstanceGroup.add_members(context, ig.uuid, instance_uuids)
-        except exception.InstanceGroupNotFound:
-            # NOTE(russellb) If the group does not already exist, we need to
-            # automatically create it to be backwards compatible with old
-            # handling of the 'group' scheduler hint.  The policy type will be
-            # 'legacy', indicating that this group was created to emulate
-            # legacy group behavior.
-            ig = objects.InstanceGroup(context)
-            ig.name = group_name
-            ig.project_id = context.project_id
-            ig.user_id = context.user_id
-            ig.policies = ['legacy']
-            ig.members = instance_uuids
-            ig.create()
-
-    @staticmethod
-    def _update_instance_group(context, instances, scheduler_hints):
+    def _get_requested_instance_group(context, scheduler_hints,
+                                      check_quota):
         if not scheduler_hints:
             return
 
@@ -965,14 +967,45 @@ class API(base.Base):
         if not group_hint:
             return
 
-        instance_uuids = [instance.uuid for instance in instances]
-
         if uuidutils.is_uuid_like(group_hint):
-            objects.InstanceGroup.add_members(context, group_hint,
-                                              instance_uuids)
+            group = objects.InstanceGroup.get_by_uuid(context, group_hint)
         else:
-            API._update_instance_group_by_name(context, instance_uuids,
-                    group_hint)
+            try:
+                group = objects.InstanceGroup.get_by_name(context, group_hint)
+            except exception.InstanceGroupNotFound:
+                # NOTE(russellb) If the group does not already exist, we need
+                # to automatically create it to be backwards compatible with
+                # old handling of the 'group' scheduler hint.  The policy type
+                # will be 'legacy', indicating that this group was created to
+                # emulate legacy group behavior.
+                quotas = None
+                if check_quota:
+                    quotas = objects.Quotas()
+                    try:
+                        quotas.reserve(context,
+                                       project_id=context.project_id,
+                                       user_id=context.user_id,
+                                       server_groups=1)
+                    except nova.exception.OverQuota:
+                        msg = _("Quota exceeded, too many server groups.")
+                        raise nova.exception.QuotaError(msg)
+
+                group = objects.InstanceGroup(context)
+                group.name = group_hint
+                group.project_id = context.project_id
+                group.user_id = context.user_id
+                group.policies = ['legacy']
+                try:
+                    group.create()
+                except Exception:
+                    with excutils.save_and_reraise_exception():
+                        if quotas:
+                            quotas.rollback()
+
+                if quotas:
+                    quotas.commit()
+
+        return group
 
     def _create_instance(self, context, instance_type,
                image_href, kernel_id, ramdisk_id,
@@ -985,7 +1018,8 @@ class API(base.Base):
                requested_networks, config_drive,
                block_device_mapping, auto_disk_config,
                reservation_id=None, scheduler_hints=None,
-               legacy_bdm=True, shutdown_terminate=False):
+               legacy_bdm=True, shutdown_terminate=False,
+               check_server_group_quota=False):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed and schedule the instance(s) for
         creation.
@@ -1041,16 +1075,18 @@ class API(base.Base):
             base_options, instance_type, boot_meta, min_count, max_count,
             block_device_mapping, legacy_bdm)
 
+        instance_group = self._get_requested_instance_group(context,
+                                   scheduler_hints, check_server_group_quota)
+
         instances = self._provision_instances(context, instance_type,
                 min_count, max_count, base_options, boot_meta, security_groups,
-                block_device_mapping, shutdown_terminate)
+                block_device_mapping, shutdown_terminate,
+                instance_group, check_server_group_quota)
 
         filter_properties = self._build_filter_properties(context,
                 scheduler_hints, forced_host,
                 forced_node, instance_type,
                 base_options.get('pci_request_info'))
-
-        self._update_instance_group(context, instances, scheduler_hints)
 
         for instance in instances:
             self._record_action_start(context, instance,
@@ -1366,7 +1402,7 @@ class API(base.Base):
                block_device_mapping=None, access_ip_v4=None,
                access_ip_v6=None, requested_networks=None, config_drive=None,
                auto_disk_config=None, scheduler_hints=None, legacy_bdm=True,
-               shutdown_terminate=False):
+               shutdown_terminate=False, check_server_group_quota=False):
         """Provision instances, sending instance information to the
         scheduler.  The scheduler will determine where the instance(s)
         go and will handle creating the DB entries.
@@ -1384,19 +1420,20 @@ class API(base.Base):
                     requested_networks)
 
         return self._create_instance(
-                               context, instance_type,
-                               image_href, kernel_id, ramdisk_id,
-                               min_count, max_count,
-                               display_name, display_description,
-                               key_name, key_data, security_group,
-                               availability_zone, user_data, metadata,
-                               injected_files, admin_password,
-                               access_ip_v4, access_ip_v6,
-                               requested_networks, config_drive,
-                               block_device_mapping, auto_disk_config,
-                               scheduler_hints=scheduler_hints,
-                               legacy_bdm=legacy_bdm,
-                               shutdown_terminate=shutdown_terminate)
+                       context, instance_type,
+                       image_href, kernel_id, ramdisk_id,
+                       min_count, max_count,
+                       display_name, display_description,
+                       key_name, key_data, security_group,
+                       availability_zone, user_data, metadata,
+                       injected_files, admin_password,
+                       access_ip_v4, access_ip_v6,
+                       requested_networks, config_drive,
+                       block_device_mapping, auto_disk_config,
+                       scheduler_hints=scheduler_hints,
+                       legacy_bdm=legacy_bdm,
+                       shutdown_terminate=shutdown_terminate,
+                       check_server_group_quota=check_server_group_quota)
 
     def trigger_provider_fw_rules_refresh(self, context):
         """Called when a rule is added/removed from a provider firewall."""
