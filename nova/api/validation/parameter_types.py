@@ -100,3 +100,9 @@ metadata = {
     },
     'additionalProperties': False
 }
+
+
+mac_address = {
+    'type': 'string',
+    'pattern': '^([0-9a-fA-F]{2})(:[0-9a-fA-F]{2}){5}$'
+}

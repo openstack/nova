@@ -65,6 +65,8 @@
     "compute_extension:v3:os-attach-interfaces": "",
     "compute_extension:v3:os-attach-interfaces:discoverable": "",
     "compute_extension:baremetal_nodes": "rule:admin_api",
+    "compute_extension:v3:os-baremetal-nodes": "rule:admin_api",
+    "compute_extension:v3:os-baremetal-nodes:discoverable": "",
     "compute_extension:v3:os-block-device-mapping-v1:discoverable": "",
     "compute_extension:cells": "rule:admin_api",
     "compute_extension:cells:create": "rule:admin_api",
