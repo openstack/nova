@@ -24,25 +24,25 @@ from nova import test
 fake_agents_list = [{'hypervisor': 'kvm', 'os': 'win',
                      'architecture': 'x86',
                      'version': '7.0',
-                     'url': 'xxx://xxxx/xxx/xxx',
+                     'url': 'http://example.com/path/to/resource',
                      'md5hash': 'add6bb58e139be103324d04d82d8f545',
                      'id': 1},
                     {'hypervisor': 'kvm', 'os': 'linux',
                      'architecture': 'x86',
                      'version': '16.0',
-                     'url': 'xxx://xxxx/xxx/xxx1',
+                     'url': 'http://example.com/path/to/resource1',
                      'md5hash': 'add6bb58e139be103324d04d82d8f546',
                      'id': 2},
                     {'hypervisor': 'xen', 'os': 'linux',
                      'architecture': 'x86',
                      'version': '16.0',
-                     'url': 'xxx://xxxx/xxx/xxx2',
+                     'url': 'http://example.com/path/to/resource2',
                      'md5hash': 'add6bb58e139be103324d04d82d8f547',
                      'id': 3},
                     {'hypervisor': 'xen', 'os': 'win',
                      'architecture': 'power',
                      'version': '7.0',
-                     'url': 'xxx://xxxx/xxx/xxx3',
+                     'url': 'http://example.com/path/to/resource3',
                      'md5hash': 'add6bb58e139be103324d04d82d8f548',
                      'id': 4},
                     ]
@@ -106,13 +106,13 @@ class AgentsTest(test.NoDBTestCase):
                 'os': 'win',
                 'architecture': 'x86',
                 'version': '7.0',
-                'url': 'xxx://xxxx/xxx/xxx',
+                'url': 'http://example.com/path/to/resource',
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
         response = {'agent': {'hypervisor': 'kvm',
                     'os': 'win',
                     'architecture': 'x86',
                     'version': '7.0',
-                    'url': 'xxx://xxxx/xxx/xxx',
+                    'url': 'http://example.com/path/to/resource',
                     'md5hash': 'add6bb58e139be103324d04d82d8f545',
                     'agent_id': 1}}
         res_dict = self.controller.create(req, body)
@@ -151,7 +151,7 @@ class AgentsTest(test.NoDBTestCase):
                 'os': 'win',
                 'architecture': 'x86',
                 'version': '7.0',
-                'url': 'xxx://xxxx/xxx/xxx',
+                'url': 'http://example.com/path/to/resource',
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
         body['agent'][key] = 'x' * 256
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -185,25 +185,25 @@ class AgentsTest(test.NoDBTestCase):
         agents_list = [{'hypervisor': 'kvm', 'os': 'win',
                      'architecture': 'x86',
                      'version': '7.0',
-                     'url': 'xxx://xxxx/xxx/xxx',
+                     'url': 'http://example.com/path/to/resource',
                      'md5hash': 'add6bb58e139be103324d04d82d8f545',
                      'agent_id': 1},
                     {'hypervisor': 'kvm', 'os': 'linux',
                      'architecture': 'x86',
                      'version': '16.0',
-                     'url': 'xxx://xxxx/xxx/xxx1',
+                     'url': 'http://example.com/path/to/resource1',
                      'md5hash': 'add6bb58e139be103324d04d82d8f546',
                      'agent_id': 2},
                     {'hypervisor': 'xen', 'os': 'linux',
                      'architecture': 'x86',
                      'version': '16.0',
-                     'url': 'xxx://xxxx/xxx/xxx2',
+                     'url': 'http://example.com/path/to/resource2',
                      'md5hash': 'add6bb58e139be103324d04d82d8f547',
                      'agent_id': 3},
                     {'hypervisor': 'xen', 'os': 'win',
                      'architecture': 'power',
                      'version': '7.0',
-                     'url': 'xxx://xxxx/xxx/xxx3',
+                     'url': 'http://example.com/path/to/resource3',
                      'md5hash': 'add6bb58e139be103324d04d82d8f548',
                      'agent_id': 4},
                     ]
@@ -215,13 +215,13 @@ class AgentsTest(test.NoDBTestCase):
         response = [{'hypervisor': 'kvm', 'os': 'win',
                      'architecture': 'x86',
                      'version': '7.0',
-                     'url': 'xxx://xxxx/xxx/xxx',
+                     'url': 'http://example.com/path/to/resource',
                      'md5hash': 'add6bb58e139be103324d04d82d8f545',
                      'agent_id': 1},
                     {'hypervisor': 'kvm', 'os': 'linux',
                      'architecture': 'x86',
                      'version': '16.0',
-                     'url': 'xxx://xxxx/xxx/xxx1',
+                     'url': 'http://example.com/path/to/resource1',
                      'md5hash': 'add6bb58e139be103324d04d82d8f546',
                      'agent_id': 2},
                     ]
@@ -230,11 +230,11 @@ class AgentsTest(test.NoDBTestCase):
     def test_agents_update(self):
         req = FakeRequest()
         body = {'para': {'version': '7.0',
-                'url': 'xxx://xxxx/xxx/xxx',
+                'url': 'http://example.com/path/to/resource',
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
         response = {'agent': {'agent_id': 1,
                     'version': '7.0',
-                    'url': 'xxx://xxxx/xxx/xxx',
+                    'url': 'http://example.com/path/to/resource',
                     'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
         res_dict = self.controller.update(req, 1, body)
         self.assertEqual(res_dict, response)
@@ -258,7 +258,7 @@ class AgentsTest(test.NoDBTestCase):
     def _test_agents_update_with_invalid_length(self, key):
         req = FakeRequest()
         body = {'para': {'version': '7.0',
-                'url': 'xxx://xxxx/xxx/xxx',
+                'url': 'http://example.com/path/to/resource',
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
         body['para'][key] = 'x' * 256
         self.assertRaises(webob.exc.HTTPBadRequest,

@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <agent>
-  <url>xxxxxxxxxxxx</url>
+  <url>http://example.com/path/to/resource</url>
   <hypervisor>hypervisor</hypervisor>
   <md5hash>add6bb58e139be103324d04d82d8f545</md5hash>
   <version>8.0</version>

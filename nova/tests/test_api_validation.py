@@ -693,6 +693,64 @@ class UuidTestCase(APIValidationTestCase):
                                     expected_detail=detail)
 
 
+class UriTestCase(APIValidationTestCase):
+
+    def setUp(self):
+        super(UriTestCase, self).setUp()
+        schema = {
+            'type': 'object',
+            'properties': {
+                'foo': {
+                    'type': 'string',
+                    'format': 'uri',
+                },
+            },
+        }
+
+        @validation.schema(request_body_schema=schema)
+        def post(body):
+            return 'Validation succeeded.'
+
+        self.post = post
+
+    def test_validate_uri(self):
+        self.assertEqual('Validation succeeded.',
+                         self.post(
+                         body={'foo': 'http://localhost:8774/v2/servers'}
+                         ))
+        self.assertEqual('Validation succeeded.',
+                         self.post(
+                         body={'foo': 'http://[::1]:8774/v2/servers'}
+                         ))
+
+    def test_validate_uri_fails(self):
+        base_detail = ("Invalid input for field/attribute foo. Value: {0}. "
+                       "'{0}' is not a 'uri'")
+        invalid_uri = 'http://localhost:8774/v2/servers##'
+        self.check_validation_error(self.post,
+                                    body={'foo': invalid_uri},
+                                    expected_detail=base_detail.format(
+                                        invalid_uri))
+
+        invalid_uri = 'http://[fdf8:01]:8774/v2/servers'
+        self.check_validation_error(self.post,
+                                    body={'foo': invalid_uri},
+                                    expected_detail=base_detail.format(
+                                        invalid_uri))
+
+        invalid_uri = '1'
+        self.check_validation_error(self.post,
+                                    body={'foo': invalid_uri},
+                                    expected_detail=base_detail.format(
+                                        invalid_uri))
+
+        invalid_uri = 'abc'
+        self.check_validation_error(self.post,
+                                    body={'foo': invalid_uri},
+                                    expected_detail=base_detail.format(
+                                        invalid_uri))
+
+
 class Ipv4TestCase(APIValidationTestCase):
 
     def setUp(self):
