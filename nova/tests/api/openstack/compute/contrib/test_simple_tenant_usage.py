@@ -19,7 +19,10 @@ from lxml import etree
 import mock
 import webob
 
-from nova.api.openstack.compute.contrib import simple_tenant_usage
+from nova.api.openstack.compute.contrib import simple_tenant_usage as \
+    simple_tenant_usage_v2
+from nova.api.openstack.compute.plugins.v3 import simple_tenant_usage as \
+    simple_tenant_usage_v21
 from nova.compute import flavors
 from nova.compute import vm_states
 from nova import context
@@ -102,9 +105,13 @@ def fake_instance_get_active_by_window_joined(context, begin, end,
 
 @mock.patch.object(db, 'instance_get_active_by_window_joined',
                    fake_instance_get_active_by_window_joined)
-class SimpleTenantUsageTest(test.TestCase):
+class SimpleTenantUsageTestV21(test.TestCase):
+    url = '/v3/os-simple-tenant-usage'
+    alt_url = '/v3/os-simple-tenant-usage'
+    policy_rule_prefix = "compute_extension:v3:os-simple-tenant-usage"
+
     def setUp(self):
-        super(SimpleTenantUsageTest, self).setUp()
+        super(SimpleTenantUsageTestV21, self).setUp()
         self.admin_context = context.RequestContext('fakeadmin_0',
                                                     'faketenant_0',
                                                     is_admin=True)
@@ -114,21 +121,20 @@ class SimpleTenantUsageTest(test.TestCase):
         self.alt_user_context = context.RequestContext('fakeadmin_0',
                                                       'faketenant_1',
                                                        is_admin=False)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Simple_tenant_usage'])
+
+    def _get_wsgi_app(self, context):
+        return fakes.wsgi_app_v3(fake_auth_context=context,
+                                 init_only=('servers',
+                                            'os-simple-tenant-usage'))
 
     def _test_verify_index(self, start, stop):
         req = webob.Request.blank(
-                    '/v2/faketenant_0/os-simple-tenant-usage?start=%s&end=%s' %
+                    self.url + '?start=%s&end=%s' %
                     (start.isoformat(), stop.isoformat()))
         req.method = "GET"
         req.headers["content-type"] = "application/json"
 
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.admin_context,
-                               init_only=('os-simple-tenant-usage',)))
+        res = req.get_response(self._get_wsgi_app(self.admin_context))
 
         self.assertEqual(res.status_int, 200)
         res_dict = jsonutils.loads(res.body)
@@ -160,15 +166,12 @@ class SimpleTenantUsageTest(test.TestCase):
 
     def _get_tenant_usages(self, detailed=''):
         req = webob.Request.blank(
-                    '/v2/faketenant_0/os-simple-tenant-usage?'
-                    'detailed=%s&start=%s&end=%s' %
+                    self.url + '?detailed=%s&start=%s&end=%s' %
                     (detailed, START.isoformat(), STOP.isoformat()))
         req.method = "GET"
         req.headers["content-type"] = "application/json"
 
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.admin_context,
-                               init_only=('os-simple-tenant-usage',)))
+        res = req.get_response(self._get_wsgi_app(self.admin_context))
         self.assertEqual(res.status_int, 200)
         res_dict = jsonutils.loads(res.body)
         return res_dict['tenant_usages']
@@ -194,15 +197,12 @@ class SimpleTenantUsageTest(test.TestCase):
     def _test_verify_show(self, start, stop):
         tenant_id = 0
         req = webob.Request.blank(
-                  '/v2/faketenant_0/os-simple-tenant-usage/'
-                  'faketenant_%s?start=%s&end=%s' %
+                  self.url + '/faketenant_%s?start=%s&end=%s' %
                   (tenant_id, start.isoformat(), stop.isoformat()))
         req.method = "GET"
         req.headers["content-type"] = "application/json"
 
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.user_context,
-                               init_only=('os-simple-tenant-usage',)))
+        res = req.get_response(self._get_wsgi_app(self.user_context))
         self.assertEqual(res.status_int, 200)
         res_dict = jsonutils.loads(res.body)
 
@@ -220,14 +220,13 @@ class SimpleTenantUsageTest(test.TestCase):
 
     def test_verify_show_cant_view_other_tenant(self):
         req = webob.Request.blank(
-                  '/v2/faketenant_1/os-simple-tenant-usage/'
-                  'faketenant_0?start=%s&end=%s' %
+                  self.alt_url + '/faketenant_0?start=%s&end=%s' %
                   (START.isoformat(), STOP.isoformat()))
         req.method = "GET"
         req.headers["content-type"] = "application/json"
 
         rules = {
-            "compute_extension:simple_tenant_usage:show":
+            self.policy_rule_prefix + ":show":
                 common_policy.parse_rule([
                     ["role:admin"], ["project_id:%(project_id)s"]
                     ])
@@ -235,9 +234,7 @@ class SimpleTenantUsageTest(test.TestCase):
         policy.set_rules(rules)
 
         try:
-            res = req.get_response(fakes.wsgi_app(
-                                   fake_auth_context=self.alt_user_context,
-                                   init_only=('os-simple-tenant-usage',)))
+            res = req.get_response(self._get_wsgi_app(self.alt_user_context))
             self.assertEqual(res.status_int, 403)
         finally:
             policy.reset()
@@ -246,40 +243,34 @@ class SimpleTenantUsageTest(test.TestCase):
         future = NOW + datetime.timedelta(hours=HOURS)
         tenant_id = 0
         req = webob.Request.blank(
-                  '/v2/faketenant_0/os-simple-tenant-usage/'
+                  self.url + '/'
                   'faketenant_%s?start=%s&end=%s' %
                   (tenant_id, future.isoformat(), NOW.isoformat()))
         req.method = "GET"
         req.headers["content-type"] = "application/json"
 
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.user_context,
-                               init_only=('os-simple-tenant-usage',)))
+        res = req.get_response(self._get_wsgi_app(self.user_context))
         self.assertEqual(res.status_int, 400)
 
     def test_get_tenants_usage_with_invalid_start_date(self):
         tenant_id = 0
         req = webob.Request.blank(
-                  '/v2/faketenant_0/os-simple-tenant-usage/'
+                  self.url + '/'
                   'faketenant_%s?start=%s&end=%s' %
                   (tenant_id, "xxxx", NOW.isoformat()))
         req.method = "GET"
         req.headers["content-type"] = "application/json"
 
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.user_context,
-                               init_only=('os-simple-tenant-usage',)))
+        res = req.get_response(self._get_wsgi_app(self.user_context))
         self.assertEqual(res.status_int, 400)
 
     def _test_get_tenants_usage_with_one_date(self, date_url_param):
         req = webob.Request.blank(
-                  '/v2/faketenant_0/os-simple-tenant-usage/'
+                  self.url + '/'
                   'faketenant_0?%s' % date_url_param)
         req.method = "GET"
         req.headers["content-type"] = "application/json"
-        res = req.get_response(fakes.wsgi_app(
-                               fake_auth_context=self.user_context,
-                               init_only=('os-simple-tenant-usage',)))
+        res = req.get_response(self._get_wsgi_app(self.user_context))
         self.assertEqual(200, res.status_int)
 
     def test_get_tenants_usage_with_no_start_date(self):
@@ -289,6 +280,20 @@ class SimpleTenantUsageTest(test.TestCase):
     def test_get_tenants_usage_with_no_end_date(self):
         self._test_get_tenants_usage_with_one_date(
             'start=%s' % (NOW - datetime.timedelta(5)).isoformat())
+
+
+class SimpleTenantUsageTestV2(SimpleTenantUsageTestV21):
+    url = '/v2/faketenant_0/os-simple-tenant-usage'
+    alt_url = '/v2/faketenant_1/os-simple-tenant-usage'
+    policy_rule_prefix = "compute_extension:simple_tenant_usage"
+
+    def _get_wsgi_app(self, context):
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Simple_tenant_usage'])
+        return fakes.wsgi_app(fake_auth_context=context,
+                              init_only=('os-simple-tenant-usage', ))
 
 
 class SimpleTenantUsageSerializerTest(test.TestCase):
@@ -324,7 +329,7 @@ class SimpleTenantUsageSerializerTest(test.TestCase):
         self.assertEqual(len(not_seen), 0)
 
     def test_serializer_show(self):
-        serializer = simple_tenant_usage.SimpleTenantUsageTemplate()
+        serializer = simple_tenant_usage_v2.SimpleTenantUsageTemplate()
         today = timeutils.utcnow()
         yesterday = today - datetime.timedelta(days=1)
         raw_usage = dict(
@@ -371,7 +376,7 @@ class SimpleTenantUsageSerializerTest(test.TestCase):
         self._verify_tenant_usage(raw_usage, tree)
 
     def test_serializer_index(self):
-        serializer = simple_tenant_usage.SimpleTenantUsagesTemplate()
+        serializer = simple_tenant_usage_v2.SimpleTenantUsagesTemplate()
         today = timeutils.utcnow()
         yesterday = today - datetime.timedelta(days=1)
         raw_usages = [dict(
@@ -458,10 +463,11 @@ class SimpleTenantUsageSerializerTest(test.TestCase):
             self._verify_tenant_usage(raw_usages[idx], child)
 
 
-class SimpleTenantUsageControllerTest(test.TestCase):
+class SimpleTenantUsageControllerTestV21(test.TestCase):
+    controller = simple_tenant_usage_v21.SimpleTenantUsageController()
+
     def setUp(self):
-        super(SimpleTenantUsageControllerTest, self).setUp()
-        self.controller = simple_tenant_usage.SimpleTenantUsageController()
+        super(SimpleTenantUsageControllerTestV21, self).setUp()
 
         self.context = context.RequestContext('fakeuser', 'fake-project')
 
@@ -510,16 +516,26 @@ class SimpleTenantUsageControllerTest(test.TestCase):
         self.assertIsNone(flavor)
 
 
-class SimpleTenantUsageUtils(test.NoDBTestCase):
+class SimpleTenantUsageControllerTestV2(SimpleTenantUsageControllerTestV21):
+    controller = simple_tenant_usage_v2.SimpleTenantUsageController()
+
+
+class SimpleTenantUsageUtilsV21(test.NoDBTestCase):
+    simple_tenant_usage = simple_tenant_usage_v21
+
     def test_valid_string(self):
-        dt = simple_tenant_usage.parse_strtime("2014-02-21T13:47:20.824060",
-                                               "%Y-%m-%dT%H:%M:%S.%f")
+        dt = self.simple_tenant_usage.parse_strtime(
+            "2014-02-21T13:47:20.824060", "%Y-%m-%dT%H:%M:%S.%f")
         self.assertEqual(datetime.datetime(
                 microsecond=824060, second=20, minute=47, hour=13,
                 day=21, month=2, year=2014), dt)
 
     def test_invalid_string(self):
         self.assertRaises(exception.InvalidStrTime,
-                          simple_tenant_usage.parse_strtime,
+                          self.simple_tenant_usage.parse_strtime,
                           "2014-02-21 13:47:20.824060",
                           "%Y-%m-%dT%H:%M:%S.%f")
+
+
+class SimpleTenantUsageUtilsV2(SimpleTenantUsageUtilsV21):
+    simple_tenant_usage = simple_tenant_usage_v2
