@@ -25,7 +25,6 @@ from nova.tests.virt.vmwareapi import fake
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import network_util
-from nova.virt.vmwareapi import vmware_images
 
 
 def fake_get_vim_object(arg):
@@ -65,8 +64,6 @@ def set_stubs(stubs):
     """Set the stubs."""
     stubs.Set(network_util, 'get_network_with_the_name',
               fake.fake_get_network)
-    stubs.Set(vmware_images, 'get_vmdk_size_and_properties',
-              fake.fake_get_vmdk_size_and_properties)
     stubs.Set(driver.VMwareAPISession, "_get_vim_object",
               fake_get_vim_object)
     stubs.Set(driver.VMwareAPISession, "_is_vim_object",

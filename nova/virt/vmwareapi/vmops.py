@@ -36,7 +36,6 @@ from nova.i18n import _, _LE
 from nova.openstack.common import excutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import strutils
 from nova.openstack.common import units
 from nova.openstack.common import uuidutils
 from nova import utils
@@ -66,8 +65,6 @@ VMWARE_POWER_STATES = {
                    'poweredOff': power_state.SHUTDOWN,
                     'poweredOn': power_state.RUNNING,
                     'suspended': power_state.SUSPENDED}
-
-VMWARE_LINKED_CLONE = 'vmware_linked_clone'
 
 RESIZE_TOTAL_STEPS = 4
 
@@ -154,11 +151,13 @@ class VMwareVMOps(object):
     def _get_vmdk_path(self, ds_name, folder, name):
         return str(ds_util.DatastorePath(ds_name, folder, '%s.vmdk' % name))
 
-    def _get_disk_format(self, image_meta):
-        disk_format = image_meta.get('disk_format')
-        if disk_format not in ['iso', 'vmdk', None]:
-            raise exception.InvalidDiskFormat(disk_format=disk_format)
-        return (disk_format, disk_format == 'iso')
+    def _extend_if_required(self, dc_info, image_info, instance,
+                            root_vmdk_path):
+        """Increase the size of the root vmdk if necessary."""
+        if instance.root_gb > image_info.file_size_in_gb:
+            size_in_kb = instance.root_gb * units.Mi
+            self._extend_virtual_disk(instance, size_in_kb,
+                                      root_vmdk_path, dc_info.ref)
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None,
@@ -198,57 +197,16 @@ class VMwareVMOps(object):
             if block_device_mapping:
                 ebs_root = True
 
-        (file_type, is_iso) = self._get_disk_format(image_meta)
-
         client_factory = self._session._get_vim().client.factory
         datastore = ds_util.get_datastore(
                 self._session, self._cluster,
                 datastore_regex=self._datastore_regex)
         dc_info = self.get_datacenter_ref_and_name(datastore.ref)
 
-        # TODO(hartsocks): this pattern is confusing, reimplement as methods
-        # The use of nested functions in this file makes for a confusing and
-        # hard to maintain file. At some future date, refactor this method to
-        # be a full-fledged method. This will also make unit testing easier.
-        def _get_image_properties(root_size):
-            """Get the Size of the flat vmdk file that is there on the storage
-            repository.
-            """
-            image_ref = instance.image_ref
-            if image_ref:
-                _image_info = vmware_images.get_vmdk_size_and_properties(
-                        context, image_ref, instance)
-            else:
-                # The case that the image may be booted from a volume
-                _image_info = (root_size, {})
-
-            image_size, image_properties = _image_info
-            vmdk_file_size_in_kb = int(image_size) / 1024
-            os_type = image_properties.get("vmware_ostype",
-                                           constants.DEFAULT_OS_TYPE)
-            adapter_type = image_properties.get("vmware_adaptertype",
-                                                constants.DEFAULT_ADAPTER_TYPE)
-            disk_type = image_properties.get("vmware_disktype",
-                                             constants.DEFAULT_DISK_TYPE)
-            # Get the network card type from the image properties.
-            vif_model = image_properties.get("hw_vif_model",
-                                             constants.DEFAULT_VIF_MODEL)
-
-            # Fetch the image_linked_clone data here. It is retrieved
-            # with the above network based API call. To retrieve it
-            # later will necessitate additional network calls using the
-            # identical method. Consider this a cache.
-            image_linked_clone = image_properties.get(VMWARE_LINKED_CLONE)
-
-            return (vmdk_file_size_in_kb, os_type, adapter_type, disk_type,
-                vif_model, image_linked_clone)
-
-        root_gb_in_kb = instance.root_gb * units.Mi
-
-        (vmdk_file_size_in_kb, os_type, adapter_type, disk_type, vif_model,
-            image_linked_clone) = _get_image_properties(root_gb_in_kb)
-
-        if root_gb_in_kb and vmdk_file_size_in_kb > root_gb_in_kb:
+        image_info = vmware_images.VMwareImage.from_image(instance.image_ref,
+                                                          image_meta)
+        if (instance.root_gb != 0 and
+                image_info.file_size_in_gb > instance.root_gb):
             reason = _("Image disk size greater than requested disk size")
             raise exception.InstanceUnacceptable(instance_id=instance.uuid,
                                                  reason=reason)
@@ -258,7 +216,8 @@ class VMwareVMOps(object):
                                                 self._cluster, node_mo_id)
 
         vif_infos = vmwarevif.get_vif_info(self._session, self._cluster,
-                                           utils.is_neutron(), vif_model,
+                                           utils.is_neutron(),
+                                           image_info.vif_model,
                                            network_info)
 
         # Get the instance name. In some cases this may differ from the 'uuid',
@@ -269,7 +228,7 @@ class VMwareVMOps(object):
         # Create the VM
         config_spec = vm_util.get_vm_create_spec(
                             client_factory, instance, instance_name,
-                            datastore.name, vif_infos, os_type)
+                            datastore.name, vif_infos, image_info.os_type)
 
         vm_ref = vm_util.create_vm(self._session, instance, dc_info.vmFolder,
                                    config_spec, res_pool_ref)
@@ -292,22 +251,19 @@ class VMwareVMOps(object):
             # this logic allows for instances or images to decide
             # for themselves which strategy is best for them.
 
-            linked_clone = VMwareVMOps.decide_linked_clone(
-                image_linked_clone,
-                CONF.vmware.use_linked_clone
-            )
             upload_name = instance.image_ref
             upload_folder = '%s/%s' % (self._base_folder, upload_name)
 
             # The vmdk meta-data file
             uploaded_file_path = str(datastore.build_path(
-                    upload_folder, "%s.%s" % (upload_name, file_type)))
+                    upload_folder,
+                    "%s.%s" % (upload_name, image_info.file_type)))
 
             session_vim = self._session._get_vim()
             cookies = session_vim.client.options.transport.cookiejar
 
             ds_browser = self._get_ds_browser(datastore.ref)
-            upload_file_name = upload_name + ".%s" % file_type
+            upload_file_name = upload_name + ".%s" % image_info.file_type
 
             # Check if the timestamp file exists - if so then delete it. This
             # will ensure that the aging will not delete a cache image if it
@@ -351,8 +307,8 @@ class VMwareVMOps(object):
                 upload_path_loc = datastore.build_path(
                         upload_folder, upload_file_name)
                 upload_rel_path = upload_path_loc.rel_path
-                if not is_iso:
-                    if disk_type != "sparse":
+                if not image_info.is_iso:
+                    if not image_info.is_sparse:
                         # Create a flat virtual disk and retain the metadata
                         # file. This will be done in the unique temporary
                         # directory.
@@ -364,10 +320,10 @@ class VMwareVMOps(object):
                                   datastore.name, instance=instance)
                         vm_util.create_virtual_disk(self._session,
                                                     dc_info.ref,
-                                                    adapter_type,
-                                                    disk_type,
+                                                    image_info.adapter_type,
+                                                    image_info.disk_type,
                                                     str(upload_path_loc),
-                                                    vmdk_file_size_in_kb)
+                                                    image_info.file_size_in_kb)
                         LOG.debug("Virtual disk created on %s.",
                                   datastore.name, instance=instance)
                         self._delete_datastore_file(instance,
@@ -385,12 +341,13 @@ class VMwareVMOps(object):
                                           upload_rel_path,
                                           cookies=cookies)
 
-                if not is_iso and disk_type == "sparse":
+                if not image_info.is_iso and image_info.is_sparse:
                     # Copy the sparse virtual disk to a thin virtual disk.
                     disk_type = "thin"
-                    copy_spec = self.get_copy_virtual_disk_spec(client_factory,
-                                                                adapter_type,
-                                                                disk_type)
+                    copy_spec = self.get_copy_virtual_disk_spec(
+                            client_factory,
+                            image_info.adapter_type,
+                            disk_type)
                     vm_util.copy_virtual_disk(self._session, dc_info.ref,
                                               str(sparse_ds_loc),
                                               str(upload_path_loc),
@@ -416,13 +373,9 @@ class VMwareVMOps(object):
                                             datastore.build_path(
                                                     tmp_upload_folder),
                                             dc_info.ref)
-            else:
-                # linked clone base disk exists
-                if disk_type == "sparse":
-                    disk_type = "thin"
 
-            if is_iso:
-                if root_gb_in_kb:
+            if image_info.is_iso:
+                if instance.root_gb != 0:
                     dest_vmdk_path = self._get_vmdk_path(datastore.name,
                                                          instance.uuid,
                                                          instance_name)
@@ -431,10 +384,10 @@ class VMwareVMOps(object):
                               datastore.name, instance=instance)
                     vm_util.create_virtual_disk(self._session,
                                                 dc_info.ref,
-                                                adapter_type,
-                                                disk_type,
+                                                image_info.adapter_type,
+                                                image_info.disk_type,
                                                 dest_vmdk_path,
-                                                root_gb_in_kb)
+                                                image_info.file_size_in_kb)
                     LOG.debug("Blank virtual disk created on %s.",
                               datastore.name, instance=instance)
                     root_vmdk_path = dest_vmdk_path
@@ -442,24 +395,24 @@ class VMwareVMOps(object):
                     root_vmdk_path = None
             else:
                 # Extend the disk size if necessary
-                if not linked_clone:
+                if not image_info.linked_clone:
                     # If we are not using linked_clone, copy the image from
                     # the cache into the instance directory.  If we are using
                     # linked clone it is references from the cache directory
                     dest_vmdk_path = self._get_vmdk_path(datastore.name,
                             instance_name, instance_name)
-                    copy_spec = self.get_copy_virtual_disk_spec(client_factory,
-                                                                 adapter_type,
-                                                                 disk_type)
+                    copy_spec = self.get_copy_virtual_disk_spec(
+                                        client_factory,
+                                        image_info.adapter_type,
+                                        image_info.disk_type)
                     vm_util.copy_virtual_disk(self._session,
                                               dc_info.ref,
                                               uploaded_file_path,
                                               dest_vmdk_path, copy_spec)
 
                     root_vmdk_path = dest_vmdk_path
-                    if root_gb_in_kb > vmdk_file_size_in_kb:
-                        self._extend_virtual_disk(instance, root_gb_in_kb,
-                                                  root_vmdk_path, dc_info.ref)
+                    self._extend_if_required(dc_info, image_info, instance,
+                                             root_vmdk_path)
                 else:
                     upload_folder = '%s/%s' % (self._base_folder, upload_name)
                     if instance.root_gb:
@@ -493,7 +446,9 @@ class VMwareVMOps(object):
                                       instance.root_gb)
 
                             copy_spec = self.get_copy_virtual_disk_spec(
-                                client_factory, adapter_type, disk_type)
+                                                client_factory,
+                                                image_info.adapter_type,
+                                                image_info.disk_type)
 
                             # Create a copy of the base image, ensuring we
                             # clean up on failure
@@ -524,20 +479,21 @@ class VMwareVMOps(object):
                             # Resize the copy to the appropriate size. No need
                             # for cleanup up here, as _extend_virtual_disk
                             # already does it
-                            if root_gb_in_kb > vmdk_file_size_in_kb:
-                                self._extend_virtual_disk(instance,
-                                                          root_gb_in_kb,
-                                                          root_vmdk_path,
-                                                          dc_info.ref)
+                            self._extend_if_required(dc_info, image_info,
+                                                     instance, root_vmdk_path)
 
             # Attach the root disk to the VM.
-            if root_vmdk_path:
+            if root_vmdk_path is not None:
                 self._volumeops.attach_disk_to_vm(
-                                    vm_ref, instance,
-                                    adapter_type, disk_type, root_vmdk_path,
-                                    root_gb_in_kb, linked_clone)
+                                    vm_ref,
+                                    instance,
+                                    image_info.adapter_type,
+                                    image_info.disk_type,
+                                    root_vmdk_path,
+                                    instance.root_gb * units.Mi,
+                                    image_info.linked_clone)
 
-            if is_iso:
+            if image_info.is_iso:
                 self._attach_cdrom_to_vm(
                     vm_ref, instance,
                     datastore.ref,
@@ -626,52 +582,6 @@ class VMwareVMOps(object):
         vm_util.reconfigure_vm(self._session, vm_ref, cdrom_attach_config_spec)
         LOG.debug("Reconfigured VM instance to attach cdrom %s",
                   file_path, instance=instance)
-
-    @staticmethod
-    def decide_linked_clone(image_linked_clone, global_linked_clone):
-        """Explicit decision logic: whether to use linked clone on a vmdk.
-
-        This is *override* logic not boolean logic.
-
-        1. let the image over-ride if set at all
-        2. default to the global setting
-
-        In math terms, I need to allow:
-        glance image to override global config.
-
-        That is g vs c. "g" for glance. "c" for Config.
-
-        So, I need  g=True vs c=False to be True.
-        And, I need g=False vs c=True to be False.
-        And, I need g=None vs c=True to be True.
-
-        Some images maybe independently best tuned for use_linked_clone=True
-        saving datastorage space. Alternatively a whole OpenStack install may
-        be tuned to performance use_linked_clone=False but a single image
-        in this environment may be best configured to save storage space and
-        set use_linked_clone=True only for itself.
-
-        The point is: let each layer of control override the layer beneath it.
-
-        rationale:
-        For technical discussion on the clone strategies and their trade-offs
-        see: https://www.vmware.com/support/ws5/doc/ws_clone_typeofclone.html
-
-        :param image_linked_clone: boolean or string or None
-        :param global_linked_clone: boolean or string or None
-        :return: Boolean
-        """
-
-        value = None
-
-        # Consider the values in order of override.
-        if image_linked_clone is not None:
-            value = image_linked_clone
-        else:
-            # this will never be not-set by this point.
-            value = global_linked_clone
-
-        return strutils.bool_from_string(value)
 
     def get_copy_virtual_disk_spec(self, client_factory, adapter_type,
                                    disk_type):

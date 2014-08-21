@@ -54,6 +54,7 @@ from nova.tests.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.virt.vmwareapi import stubs
 from nova import utils as nova_utils
 from nova.virt import driver as v_driver
+from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
@@ -693,19 +694,35 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         else:
             self.assertFalse(vmwareapi_fake.get_file(str(cache)))
 
-    def test_instance_dir_disk_created(self):
+    @mock.patch.object(nova.virt.vmwareapi.vmware_images.VMwareImage,
+                       'from_image')
+    def test_instance_dir_disk_created(self, mock_from_image):
         """Test image file is cached when even when use_linked_clone
             is False
         """
+        img_props = vmware_images.VMwareImage(
+            image_id=self.fake_image_uuid,
+            linked_clone=False)
 
+        mock_from_image.return_value = img_props
         self._create_vm()
         path = ds_util.DatastorePath(self.ds, self.uuid, '%s.vmdk' % self.uuid)
         self.assertTrue(vmwareapi_fake.get_file(str(path)))
         self._cached_files_exist()
 
-    def test_cache_dir_disk_created(self):
+    @mock.patch.object(nova.virt.vmwareapi.vmware_images.VMwareImage,
+                       'from_image')
+    def test_cache_dir_disk_created(self, mock_from_image):
         """Test image disk is cached when use_linked_clone is True."""
         self.flags(use_linked_clone=True, group='vmware')
+
+        img_props = vmware_images.VMwareImage(
+            image_id=self.fake_image_uuid,
+            file_size=1 * units.Ki,
+            disk_type=constants.DISK_TYPE_SPARSE)
+
+        mock_from_image.return_value = img_props
+
         self._create_vm()
         path = ds_util.DatastorePath(self.ds, 'vmware_base',
                                      self.fake_image_uuid,
@@ -748,7 +765,18 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.image['disk_format'] = 'iso'
         self._create_vm()
 
-    def test_iso_disk_cdrom_attach_with_config_drive(self):
+    @mock.patch.object(nova.virt.vmwareapi.vmware_images.VMwareImage,
+                       'from_image')
+    def test_iso_disk_cdrom_attach_with_config_drive(self,
+                                                     mock_from_image):
+        img_props = vmware_images.VMwareImage(
+            image_id=self.fake_image_uuid,
+            file_size=80 * units.Gi,
+            file_type='iso',
+            linked_clone=False)
+
+        mock_from_image.return_value = img_props
+
         self.flags(force_config_drive=True)
         iso_path = [
             ds_util.DatastorePath(self.ds, 'vmware_base',
@@ -920,57 +948,32 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._check_vm_info(info, power_state.RUNNING)
         self.assertTrue(vmwareapi_fake.get_file(str(root)))
 
-    def test_spawn_disk_extend_sparse(self):
-        self.mox.StubOutWithMock(vmware_images, 'get_vmdk_size_and_properties')
-        result = [1024, {"vmware_ostype": "otherGuest",
-                         "vmware_adaptertype": "lsiLogic",
-                         "vmware_disktype": "sparse"}]
-        vmware_images.get_vmdk_size_and_properties(
-                mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn(result)
-        self.mox.StubOutWithMock(self.conn._vmops, '_extend_virtual_disk')
-        requested_size = 80 * units.Mi
-        self.conn._vmops._extend_virtual_disk(mox.IgnoreArg(),
-                requested_size, mox.IgnoreArg(), mox.IgnoreArg())
-        self.mox.ReplayAll()
-        self._create_vm()
-        info = self.conn.get_info({'uuid': self.uuid,
-                                   'node': self.instance_node})
-        self._check_vm_info(info, power_state.RUNNING)
+    @mock.patch.object(nova.virt.vmwareapi.vmware_images.VMwareImage,
+                       'from_image')
+    def test_spawn_disk_extend_sparse(self, mock_from_image):
+        img_props = vmware_images.VMwareImage(
+            image_id=self.fake_image_uuid,
+            file_size=units.Ki,
+            disk_type=constants.DISK_TYPE_SPARSE,
+            linked_clone=True)
 
-    def test_spawn_disk_extend_insufficient_disk_space(self):
-        self.flags(use_linked_clone=True, group='vmware')
-        self.wait_task = self.conn._session._wait_for_task
-        self.call_method = self.conn._session._call_method
-        self.task_ref = None
-        id = self.fake_image_uuid
-        cached_image = '[%s] vmware_base/%s/%s.80.vmdk' % (self.ds,
-                                                           id, id)
-        tmp_file = '[%s] vmware_base/%s/%s.80-flat.vmdk' % (self.ds,
-                                                            id, id)
+        mock_from_image.return_value = img_props
 
-        def fake_wait_for_task(task_ref):
-            if task_ref == self.task_ref:
-                self.task_ref = None
-                self.assertTrue(vmwareapi_fake.get_file(cached_image))
-                self.assertTrue(vmwareapi_fake.get_file(tmp_file))
-                raise exception.NovaException('No space!')
-            return self.wait_task(task_ref)
-
-        def fake_call_method(module, method, *args, **kwargs):
-            task_ref = self.call_method(module, method, *args, **kwargs)
-            if method == "ExtendVirtualDisk_Task":
-                self.task_ref = task_ref
-            return task_ref
-
-        self.stubs.Set(self.conn._session, "_call_method", fake_call_method)
-        self.stubs.Set(self.conn._session, "_wait_for_task",
-                       fake_wait_for_task)
-
-        self.assertRaises(exception.NovaException,
-                          self._create_vm)
-        self.assertFalse(vmwareapi_fake.get_file(cached_image))
-        self.assertFalse(vmwareapi_fake.get_file(tmp_file))
+        with contextlib.nested(
+            mock.patch.object(self.conn._vmops, '_extend_virtual_disk'),
+            mock.patch.object(self.conn._vmops, 'get_datacenter_ref_and_name'),
+        ) as (mock_extend, mock_get_dc):
+            dc_val = mock.Mock()
+            dc_val.ref = "fake_dc_ref"
+            dc_val.name = "dc1"
+            mock_get_dc.return_value = dc_val
+            self._create_vm()
+            iid = img_props.image_id
+            cached_image = ds_util.DatastorePath(self.ds, 'vmware_base',
+                                                 iid, '%s.80.vmdk' % iid)
+            mock_extend.assert_called_once_with(
+                    self.instance, self.instance.root_gb * units.Mi,
+                    str(cached_image), "fake_dc_ref")
 
     def test_spawn_disk_extend_failed_copy(self):
         # Spawn instance
@@ -1086,28 +1089,63 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             self.assertRaises(DeleteError, self._create_vm)
         self.assertTrue(vmwareapi_fake.get_file(cached_image))
 
-    def test_spawn_disk_invalid_disk_size(self):
-        self.mox.StubOutWithMock(vmware_images, 'get_vmdk_size_and_properties')
-        result = [82 * units.Gi,
-                  {"vmware_ostype": "otherGuest",
-                   "vmware_adaptertype": "lsiLogic",
-                   "vmware_disktype": "sparse"}]
-        vmware_images.get_vmdk_size_and_properties(
-                mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn(result)
-        self.mox.ReplayAll()
+    @mock.patch.object(nova.virt.vmwareapi.vmware_images.VMwareImage,
+                       'from_image')
+    def test_spawn_disk_invalid_disk_size(self, mock_from_image):
+        img_props = vmware_images.VMwareImage(
+            image_id=self.fake_image_uuid,
+            file_size=82 * units.Gi,
+            disk_type=constants.DISK_TYPE_SPARSE,
+            linked_clone=True)
+
+        mock_from_image.return_value = img_props
+
         self.assertRaises(exception.InstanceUnacceptable,
                           self._create_vm)
 
-    def test_spawn_invalid_disk_format(self):
-        self._create_instance()
-        self.image['disk_format'] = 'invalid'
-        self.assertRaises(exception.InvalidDiskFormat,
-                          self.conn.spawn, self.context,
-                          self.instance, self.image,
-                          injected_files=[], admin_password=None,
-                          network_info=self.network_info,
-                          block_device_info=None)
+    @mock.patch.object(nova.virt.vmwareapi.vmware_images.VMwareImage,
+                       'from_image')
+    def test_spawn_disk_extend_insufficient_disk_space(self, mock_from_image):
+        img_props = vmware_images.VMwareImage(
+            image_id=self.fake_image_uuid,
+            file_size=1024,
+            disk_type=constants.DISK_TYPE_SPARSE,
+            linked_clone=True)
+
+        mock_from_image.return_value = img_props
+
+        cached_image = ds_util.DatastorePath(self.ds, 'vmware_base',
+                                             self.fake_image_uuid,
+                                             '%s.80.vmdk' %
+                                              self.fake_image_uuid)
+        tmp_file = ds_util.DatastorePath(self.ds, 'vmware_base',
+                                         self.fake_image_uuid,
+                                         '%s.80-flat.vmdk' %
+                                          self.fake_image_uuid)
+
+        NoDiskSpace = error_util.get_fault_class('NoDiskSpace')
+
+        def fake_wait_for_task(task_ref):
+            if task_ref == self.task_ref:
+                self.task_ref = None
+                raise NoDiskSpace()
+            return self.wait_task(task_ref)
+
+        def fake_call_method(module, method, *args, **kwargs):
+            task_ref = self.call_method(module, method, *args, **kwargs)
+            if method == 'ExtendVirtualDisk_Task':
+                self.task_ref = task_ref
+            return task_ref
+
+        with contextlib.nested(
+            mock.patch.object(self.conn._session, '_wait_for_task',
+                              fake_wait_for_task),
+            mock.patch.object(self.conn._session, '_call_method',
+                              fake_call_method)
+        ) as (mock_wait_for_task, mock_call_method):
+            self.assertRaises(NoDiskSpace, self._create_vm)
+            self.assertFalse(vmwareapi_fake.get_file(str(cached_image)))
+            self.assertFalse(vmwareapi_fake.get_file(str(tmp_file)))
 
     def test_spawn_with_move_file_exists_exception(self):
         # The test will validate that the spawn completes
@@ -2300,28 +2338,20 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase,
                           network_info=self.network_info,
                           block_device_info=None)
 
-    def test_spawn_with_sparse_image(self):
-        # Only a sparse disk image triggers the copy
-        self.mox.StubOutWithMock(vmware_images, 'get_vmdk_size_and_properties')
-        result = [1024, {"vmware_ostype": "otherGuest",
-                         "vmware_adaptertype": "lsiLogic",
-                         "vmware_disktype": "sparse"}]
-        vmware_images.get_vmdk_size_and_properties(
-                mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn(result)
+    @mock.patch.object(nova.virt.vmwareapi.vmware_images.VMwareImage,
+                       'from_image')
+    @mock.patch.object(vmops.VMwareVCVMOps, 'get_copy_virtual_disk_spec')
+    def test_spawn_with_sparse_image(self, mock_get_copy_virtual_disk_spec,
+                                     mock_from_image):
+        img_info = vmware_images.VMwareImage(
+            image_id=self.fake_image_uuid,
+            file_size=1024,
+            disk_type=constants.DISK_TYPE_SPARSE,
+            linked_clone=False)
 
-        # Ensure VMwareVCVMOps's get_copy_virtual_disk_spec is getting called
-        # two times
-        self.mox.StubOutWithMock(vmops.VMwareVCVMOps,
-                                 'get_copy_virtual_disk_spec')
-        self.conn._vmops.get_copy_virtual_disk_spec(
-                mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn(None)
-        self.conn._vmops.get_copy_virtual_disk_spec(
-                mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn(None)
+        mock_from_image.return_value = img_info
+        mock_get_copy_virtual_disk_spec.return_value = None
 
-        self.mox.ReplayAll()
         self._create_vm()
         info = self.conn.get_info({'uuid': self.uuid,
                                    'node': self.instance_node})

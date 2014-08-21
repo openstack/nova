@@ -29,6 +29,7 @@ from nova.tests import fake_instance
 import nova.tests.image.fake
 from nova.tests.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.virt.vmwareapi import stubs
+from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
@@ -36,6 +37,39 @@ from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
 from nova.virt.vmwareapi import vmware_images
+
+
+class VMwareVMOpsSimpleTestCase(test.NoDBTestCase):
+    @mock.patch.object(vm_util, 'get_res_pool_ref')
+    @mock.patch.object(ds_util, 'get_datastore')
+    @mock.patch.object(vmops.VMwareVMOps, 'get_datacenter_ref_and_name')
+    def test_spawn_disk_invalid_disk_size(self,
+                                          mock_get_datacenter_ref_and_name,
+                                          mock_get_datastore,
+                                          mock_get_res_pool_ref):
+        image = {
+            'id': 'c1c8ce3d-c2e0-4247-890c-ccf5cc1c004c',
+            'disk_format': 'vmdk',
+            'size': 999999999 * units.Gi,
+        }
+        self._context = context.RequestContext('fake_user', 'fake_project')
+        instance = fake_instance.fake_instance_obj(self._context,
+            image_ref=nova.tests.image.fake.get_valid_image_id(),
+            uuid='fake_uuid',
+            root_gb=1,
+            node='respool-1001(MyResPoolName)'
+        )
+
+        ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
+        self.assertRaises(exception.InstanceUnacceptable,
+                          ops.spawn,
+                          mock.Mock(),
+                          instance,
+                          image,
+                          injected_files=[],
+                          admin_password=None,
+                          network_info=None,
+                          block_device_info=None)
 
 
 class VMwareVMOpsTestCase(test.NoDBTestCase):
@@ -60,7 +94,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             'vcpus': 1,
             'memory_mb': 512,
             'image_ref': self._image_id,
-            'root_gb': 1,
+            'root_gb': 10,
             'node': 'respool-1001(MyResPoolName)'
         }
         self._instance = fake_instance.fake_instance_obj(
@@ -122,21 +156,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                   rxtx_cap=3)
                 ])
 
-    def test_get_disk_format_none(self):
-        format, is_iso = self._vmops._get_disk_format({'disk_format': None})
-        self.assertIsNone(format)
-        self.assertFalse(is_iso)
-
-    def test_get_disk_format_iso(self):
-        format, is_iso = self._vmops._get_disk_format({'disk_format': 'iso'})
-        self.assertEqual('iso', format)
-        self.assertTrue(is_iso)
-
-    def test_get_disk_format_bad(self):
-        self.assertRaises(exception.InvalidDiskFormat,
-                          self._vmops._get_disk_format,
-                          {'disk_format': 'foo'})
-
     def test_get_machine_id_str(self):
         result = vmops.VMwareVMOps._get_machine_id_str(self.network_info)
         self.assertEqual(result,
@@ -145,33 +164,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         result = vmops.VMwareVMOps._get_machine_id_str(
                                         self.pure_IPv6_network_info)
         self.assertEqual('DE:AD:BE:EF:00:00;;;;;#', result)
-
-    def test_use_linked_clone_override_nf(self):
-        value = vmops.VMwareVMOps.decide_linked_clone(None, False)
-        self.assertFalse(value, "No overrides present but still overridden!")
-
-    def test_use_linked_clone_override_none_true(self):
-        value = vmops.VMwareVMOps.decide_linked_clone(None, True)
-        self.assertTrue(value, "No overrides present but still overridden!")
-
-    def test_use_linked_clone_override_ny(self):
-        value = vmops.VMwareVMOps.decide_linked_clone(None, "yes")
-        self.assertTrue(value, "No overrides present but still overridden!")
-
-    def test_use_linked_clone_override_ft(self):
-        value = vmops.VMwareVMOps.decide_linked_clone(False, True)
-        self.assertFalse(value,
-                        "image level metadata failed to override global")
-
-    def test_use_linked_clone_override_no_true(self):
-        value = vmops.VMwareVMOps.decide_linked_clone("no", True)
-        self.assertFalse(value,
-                        "image level metadata failed to override global")
-
-    def test_use_linked_clone_override_yf(self):
-        value = vmops.VMwareVMOps.decide_linked_clone("yes", False)
-        self.assertTrue(value,
-                        "image level metadata failed to override global")
 
     def _setup_create_folder_mocks(self):
         ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
@@ -670,8 +662,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             mock_get_res_pool_ref.assert_called_once_with(
                     self._session, None, 'fake_node_mo_id')
             mock_get_vif_info.assert_called_once_with(
-                    self._session, None, False, network_model.VIF_MODEL_E1000,
-                    network_info)
+                    self._session, None, False,
+                    constants.DEFAULT_VIF_MODEL, network_info)
             mock_get_create_spec.assert_called_once_with(
                     self._session._get_vim().client.factory,
                     self._instance,

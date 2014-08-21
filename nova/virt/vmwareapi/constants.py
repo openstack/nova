@@ -18,8 +18,15 @@ Shared constants across the VMware driver
 
 from nova.network import model as network_model
 
+DISK_FORMAT_ISO = 'iso'
+DISK_FORMAT_VMDK = 'vmdk'
+DISK_FORMATS_ALL = [DISK_FORMAT_ISO, DISK_FORMAT_VMDK]
+
+DISK_TYPE_SPARSE = 'sparse'
+DISK_TYPE_PREALLOCATED = 'preallocated'
 
 DEFAULT_VIF_MODEL = network_model.VIF_MODEL_E1000
 DEFAULT_OS_TYPE = "otherGuest"
 DEFAULT_ADAPTER_TYPE = "lsiLogic"
-DEFAULT_DISK_TYPE = "preallocated"
+DEFAULT_DISK_TYPE = DISK_TYPE_PREALLOCATED
+DEFAULT_DISK_FORMAT = DISK_FORMAT_VMDK
