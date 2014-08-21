@@ -30,10 +30,11 @@ class VMwareDSUtilDatastoreSelectionTestCase(test.NoDBTestCase):
     def setUp(self):
         super(VMwareDSUtilDatastoreSelectionTestCase, self).setUp()
         self.data = [
-            ['VMFS', 'os-some-name', True, 987654321, 12346789],
-            ['NFS', 'another-name', True, 9876543210, 123467890],
-            ['BAD', 'some-name-bad', True, 98765432100, 1234678900],
-            ['VMFS', 'some-name-good', False, 987654321, 12346789],
+            ['VMFS', 'os-some-name', True, 'normal', 987654321, 12346789],
+            ['NFS', 'another-name', True, 'normal', 9876543210, 123467890],
+            ['BAD', 'some-name-bad', True, 'normal', 98765432100, 1234678900],
+            ['VMFS', 'some-name-good', False, 'normal', 987654321, 12346789],
+            ['VMFS', 'new-name', True, 'inMaintenance', 987654321, 12346789]
         ]
 
     def build_result_set(self, mock_data, name_list=None):
@@ -56,7 +57,8 @@ class VMwareDSUtilDatastoreSelectionTestCase(test.NoDBTestCase):
     @property
     def propset_name_list(self):
         return ['summary.type', 'summary.name', 'summary.accessible',
-                'summary.capacity', 'summary.freeSpace']
+                'summary.maintenanceMode', 'summary.capacity',
+                'summary.freeSpace']
 
     def test_filter_datastores_simple(self):
         datastores = self.build_result_set(self.data)
@@ -95,11 +97,14 @@ class VMwareDSUtilDatastoreSelectionTestCase(test.NoDBTestCase):
     def test_filter_datastores_specific_match(self):
 
         data = [
-            ['VMFS', 'os-some-name', True, 987654321, 1234678],
-            ['NFS', 'another-name', True, 9876543210, 123467890],
-            ['BAD', 'some-name-bad', True, 98765432100, 1234678900],
-            ['VMFS', 'some-name-good', True, 987654321, 12346789],
-            ['VMFS', 'some-other-good', False, 987654321000, 12346789000],
+            ['VMFS', 'os-some-name', True, 'normal', 987654321, 1234678],
+            ['NFS', 'another-name', True, 'normal', 9876543210, 123467890],
+            ['BAD', 'some-name-bad', True, 'normal', 98765432100, 1234678900],
+            ['VMFS', 'some-name-good', True, 'normal', 987654321, 12346789],
+            ['VMFS', 'some-other-good', False, 'normal', 987654321000,
+             12346789000],
+            ['VMFS', 'new-name', True, 'inMaintenance', 987654321000,
+             12346789000]
         ]
         # only the DS some-name-good is accessible and matches the regex
         datastores = self.build_result_set(data)

@@ -164,6 +164,10 @@ class DsUtilTestCase(test.NoDBTestCase):
     def test_get_datastore(self):
         fake_objects = fake.FakeRetrieveResult()
         fake_objects.add_object(fake.Datastore())
+        fake_objects.add_object(fake.Datastore("fake-ds-2", 2048, 1000,
+                                               False, "normal"))
+        fake_objects.add_object(fake.Datastore("fake-ds-3", 4096, 2000,
+                                               True, "inMaintenance"))
         result = ds_util.get_datastore(
             fake.FakeObjectRetrievalSession(fake_objects))
 
@@ -254,6 +258,64 @@ class DsUtilTestCase(test.NoDBTestCase):
         self.assertRaises(exception.DatastoreNotFound,
                 ds_util.get_datastore,
                 fake.FakeObjectRetrievalSession(fake_objects))
+
+    def test_get_datastore_ds_in_maintenance(self):
+        data_store = fake.Datastore()
+        data_store.set("summary.maintenanceMode", "inMaintenance")
+
+        fake_objects = fake.FakeRetrieveResult()
+        fake_objects.add_object(data_store)
+
+        self.assertRaises(exception.DatastoreNotFound,
+                ds_util.get_datastore,
+                fake.FakeObjectRetrievalSession(fake_objects))
+
+    def _test_is_datastore_valid(self, accessible=True,
+                                 maintenance_mode="normal",
+                                 type="VMFS",
+                                 datastore_regex=None):
+        propdict = {}
+        propdict["summary.accessible"] = accessible
+        propdict["summary.maintenanceMode"] = maintenance_mode
+        propdict["summary.type"] = type
+        propdict["summary.name"] = "ds-1"
+
+        return ds_util._is_datastore_valid(propdict, datastore_regex)
+
+    def test_is_datastore_valid(self):
+        for ds_type in ds_util.ALLOWED_DATASTORE_TYPES:
+            self.assertTrue(self._test_is_datastore_valid(True,
+                                                          "normal",
+                                                          ds_type))
+
+    def test_is_datastore_valid_inaccessible_ds(self):
+        self.assertFalse(self._test_is_datastore_valid(False,
+                                                      "normal",
+                                                      "VMFS"))
+
+    def test_is_datastore_valid_ds_in_maintenance(self):
+        self.assertFalse(self._test_is_datastore_valid(True,
+                                                      "inMaintenance",
+                                                      "VMFS"))
+
+    def test_is_datastore_valid_ds_type_invalid(self):
+        self.assertFalse(self._test_is_datastore_valid(True,
+                                                      "normal",
+                                                      "vfat"))
+
+    def test_is_datastore_valid_not_matching_regex(self):
+        datastore_regex = re.compile("ds-2")
+        self.assertFalse(self._test_is_datastore_valid(True,
+                                                      "normal",
+                                                      "VMFS",
+                                                      datastore_regex))
+
+    def test_is_datastore_valid_matching_regex(self):
+        datastore_regex = re.compile("ds-1")
+        self.assertTrue(self._test_is_datastore_valid(True,
+                                                      "normal",
+                                                      "VMFS",
+                                                      datastore_regex))
 
 
 class DatastoreTestCase(test.NoDBTestCase):
