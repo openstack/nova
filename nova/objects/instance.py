@@ -38,7 +38,7 @@ _INSTANCE_OPTIONAL_JOINED_FIELDS = ['metadata', 'system_metadata',
                                     'info_cache', 'security_groups',
                                     'pci_devices']
 # These are fields that are optional but don't translate to db columns
-_INSTANCE_OPTIONAL_NON_COLUMN_FIELDS = ['fault']
+_INSTANCE_OPTIONAL_NON_COLUMN_FIELDS = ['fault', 'numa_topology']
 
 # These are fields that can be specified as expected_attrs
 INSTANCE_OPTIONAL_ATTRS = (_INSTANCE_OPTIONAL_JOINED_FIELDS +
@@ -72,7 +72,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
     # Version 1.11: Update instance from database during destroy
     # Version 1.12: Added ephemeral_key_uuid
     # Version 1.13: Added delete_metadata_key()
-    VERSION = '1.13'
+    # Version 1.14: Added numa_topology
+    VERSION = '1.14'
 
     fields = {
         'id': fields.IntegerField(),
@@ -158,6 +159,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         'cleaned': fields.BooleanField(default=False),
 
         'pci_devices': fields.ObjectField('PciDeviceList', nullable=True),
+        'numa_topology': fields.ObjectField('InstanceNUMATopology',
+                                            nullable=True)
         }
 
     obj_extra_fields = ['name']
@@ -206,6 +209,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                               'default_ephemeral_device',
                               'default_swap_device', 'config_drive',
                               'cell_name']
+        if target_version < (1, 14) and 'numa_topology' in primitive:
+                del primitive['numa_topology']
         if target_version < (1, 10) and 'info_cache' in primitive:
             # NOTE(danms): Instance <= 1.9 (havana) had info_cache 1.4
             self.info_cache.obj_make_compatible(primitive['info_cache'],
@@ -251,6 +256,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
 
         Converts a database entity to a formal object.
         """
+        instance._context = context
         if expected_attrs is None:
             expected_attrs = []
         # Most of the field names match right now, so be quick
@@ -272,6 +278,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             instance['fault'] = (
                 objects.InstanceFault.get_latest_for_instance(
                     context, instance.uuid))
+        if 'numa_topology' in expected_attrs:
+            instance._load_numa_topology()
 
         if 'info_cache' in expected_attrs:
             if db_inst['info_cache'] is None:
@@ -299,7 +307,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                     objects.SecurityGroup, db_inst['security_groups'])
             instance['security_groups'] = sec_groups
 
-        instance._context = context
         instance.obj_reset_changes()
         return instance
 
@@ -339,7 +346,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             updates['info_cache'] = {
                 'network_info': updates['info_cache'].network_info.json()
                 }
+        numa_topology = updates.pop('numa_topology', None)
         db_inst = db.instance_create(context, updates)
+        if numa_topology:
+            expected_attrs.append('numa_topology')
+            numa_topology.create(context, db_inst['uuid'])
         self._from_db_object(context, self, db_inst, expected_attrs)
 
     @base.remotable
@@ -375,6 +386,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
 
     def _save_fault(self, context):
         # NOTE(danms): I don't think we need to worry about this, do we?
+        pass
+
+    def _save_numa_topology(self, context):
+        # NOTE(ndipanov): No need for this yet.
         pass
 
     def _save_pci_devices(self, context):
@@ -527,6 +542,14 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         self.fault = objects.InstanceFault.get_latest_for_instance(
             self._context, self.uuid)
 
+    def _load_numa_topology(self):
+        try:
+            self.numa_topology = \
+                objects.InstanceNUMATopology.get_by_instance_uuid(
+                    self._context, self.uuid)
+        except exception.NumaTopologyNotFound:
+            self.numa_topology = None
+
     def obj_load_attr(self, attrname):
         if attrname not in INSTANCE_OPTIONAL_ATTRS:
             raise exception.ObjectActionError(
@@ -546,6 +569,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             # NOTE(danms): We handle fault differently here so that we
             # can be more efficient
             self._load_fault()
+        elif attrname == 'numa_topology':
+            self._load_numa_topology()
         else:
             self._load_generic(attrname)
         self.obj_reset_changes([attrname])
@@ -625,7 +650,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.5: Added method get_active_by_window_joined.
     # Version 1.6: Instance <= version 1.13
     # Version 1.7: Added use_slave to get_active_by_window_joined
-    VERSION = '1.7'
+    # Version 1.8: Instance <= version 1.14
+    VERSION = '1.8'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -639,6 +665,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         '1.5': '1.12',
         '1.6': '1.13',
         '1.7': '1.13',
+        '1.8': '1.14',
         }
 
     @base.remotable_classmethod

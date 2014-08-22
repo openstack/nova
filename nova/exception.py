@@ -1700,3 +1700,7 @@ class ImageNUMATopologyMemoryOutOfRange(Invalid):
 
 class InvalidHostname(Invalid):
     msg_fmt = _("Invalid characters in hostname '%(hostname)s'")
+
+
+class NumaTopologyNotFound(NotFound):
+    msg_fmt = _("Instance %(instance_uuid)s does not specify a NUMA topology")

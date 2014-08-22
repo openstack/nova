@@ -919,6 +919,23 @@ def instance_info_cache_delete(context, instance_uuid):
 ###################
 
 
+def instance_extra_create(context, values):
+    """Create the instance extra data record
+    """
+    return IMPL.instance_extra_create(context, values)
+
+
+def instance_extra_get_by_instance_uuid(context, instance_uuid):
+    """Get the instance extra record
+
+    :param instance_uuid: = uuid of the instance tied to the topology record
+    """
+    return IMPL.instance_extra_get_by_instance_uuid(context, instance_uuid)
+
+
+###################
+
+
 def key_pair_create(context, values):
     """Create a key_pair from the values dictionary."""
     return IMPL.key_pair_create(context, values)

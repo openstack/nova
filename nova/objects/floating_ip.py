@@ -17,6 +17,7 @@ from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import fields
+from nova import utils
 
 FLOATING_IP_OPTIONAL_ATTRS = ['fixed_ip']
 
@@ -24,7 +25,8 @@ FLOATING_IP_OPTIONAL_ATTRS = ['fixed_ip']
 class FloatingIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added _get_addresses_by_instance_uuid()
-    VERSION = '1.1'
+    # Version 1.2: FixedIP <= version 1.2
+    VERSION = '1.2'
     fields = {
         'id': fields.IntegerField(),
         'address': fields.IPAddressField(),
@@ -36,6 +38,13 @@ class FloatingIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
         'interface': fields.StringField(nullable=True),
         'fixed_ip': fields.ObjectField('FixedIP', nullable=True),
         }
+
+    def obj_make_compatible(self, primitive, target_version):
+        target_version = utils.convert_version_to_tuple(target_version)
+        if target_version < (1, 2) and 'fixed_ip' in primitive:
+            primitive['fixed_ip'] = (
+                    objects.FixedIP().object_make_compatible(
+                        primitive['fixed_ip']['nova_object.data'], '1.1'))
 
     @staticmethod
     def _from_db_object(context, floatingip, db_floatingip,
@@ -158,8 +167,9 @@ class FloatingIPList(obj_base.ObjectListBase, obj_base.NovaObject):
         '1.0': '1.0',
         '1.1': '1.1',
         '1.2': '1.1',
+        '1.3': '1.2',
         }
-    VERSION = '1.2'
+    VERSION = '1.3'
 
     @obj_base.remotable_classmethod
     def get_all(cls, context):
