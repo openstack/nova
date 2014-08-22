@@ -15,6 +15,7 @@
 
 """The instance type extra specs extension."""
 
+import six
 from webob import exc
 
 from nova.api.openstack import extensions
@@ -70,6 +71,11 @@ class FlavorExtraSpecsController(object):
             try:
                 utils.check_string_length(key, 'extra_specs key',
                                           min_length=1, max_length=255)
+
+                # NOTE(dims): The following check was added for backwards
+                # compatibility.
+                if (isinstance(value, (int, long, float))):
+                    value = six.text_type(value)
                 utils.check_string_length(value, 'extra_specs value',
                                           max_length=255)
             except exception.InvalidInput as error:
