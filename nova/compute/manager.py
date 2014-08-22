@@ -1697,8 +1697,7 @@ class ComputeManager(manager.Manager):
             update_instance = update_root_bdm = True
 
         if update_instance:
-            self._instance_update(context, instance.uuid,
-                                  root_device_name=root_device_name)
+            instance.save()
         if update_root_bdm:
             root_bdm.save()
 
