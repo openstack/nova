@@ -111,10 +111,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
                                  'get_by_instance_uuid')
 
-        instance = fake_instance.fake_db_instance(system_metadata={})
+        instance = fake_instance.fake_instance_obj(self.context)
 
         objects.BlockDeviceMappingList.get_by_instance_uuid(
-                mox.IgnoreArg(), instance['uuid']).AndReturn([])
+                mox.IgnoreArg(), instance.uuid).AndReturn([])
 
         node = 'fake_node'
         self.compute._get_resource_tracker(node).AndReturn(
@@ -134,7 +134,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.compute._allocate_network(mox.IgnoreArg(), instance,
                 mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
                 mox.IgnoreArg()).WithSideEffects(fake_allocate)
-        self.compute._instance_update(self.context, instance['uuid'],
+        self.compute._instance_update(self.context, instance.uuid,
                 system_metadata={'network_allocated': 'True'})
 
         self.mox.ReplayAll()
@@ -1903,10 +1903,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(objects.InstanceActionEvent,
                                  'event_finish_with_failure')
         objects.InstanceActionEvent.event_start(
-                self.context, self.instance['uuid'], mox.IgnoreArg(),
+                self.context, self.instance.uuid, mox.IgnoreArg(),
                 want_result=False)
         objects.InstanceActionEvent.event_finish_with_failure(
-                self.context, self.instance['uuid'], mox.IgnoreArg(),
+                self.context, self.instance.uuid, mox.IgnoreArg(),
                 exc_val=mox.IgnoreArg(), exc_tb=mox.IgnoreArg(),
                 want_result=False)
 
@@ -1945,7 +1945,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.block_device_mapping, self.node, self.limits,
                 self.filter_properties).AndRaise(
                         exception.BuildAbortException(reason='',
-                            instance_uuid=self.instance['uuid']))
+                            instance_uuid=self.instance.uuid))
         self.compute._cleanup_allocated_networks(self.context, self.instance,
                 self.requested_networks)
         self.compute._cleanup_volumes(self.context, self.instance.uuid,
@@ -1976,7 +1976,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.block_device_mapping, self.node, self.limits,
                 self.filter_properties).AndRaise(
                         exception.RescheduledException(reason='',
-                            instance_uuid=self.instance['uuid']))
+                            instance_uuid=self.instance.uuid))
         self.compute.compute_task_api.build_instances(self.context,
                 [self.instance], self.image, self.filter_properties,
                 self.admin_pass, self.injected_files, self.requested_networks,
@@ -2039,11 +2039,11 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.block_device_mapping, self.node, self.limits,
                 {}).AndRaise(
                         exception.RescheduledException(reason='',
-                            instance_uuid=self.instance['uuid']))
+                            instance_uuid=self.instance.uuid))
         self.compute._cleanup_allocated_networks(self.context, self.instance,
             self.requested_networks)
         self.compute._set_instance_error_state(self.context,
-                                               self.instance['uuid'])
+                                               self.instance.uuid)
         self._instance_action_events()
         self.mox.ReplayAll()
 
@@ -2071,7 +2071,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.block_device_mapping, self.node, self.limits,
                 self.filter_properties).AndRaise(
                         exception.RescheduledException(reason='',
-                            instance_uuid=self.instance['uuid']))
+                            instance_uuid=self.instance.uuid))
         self.compute.driver.deallocate_networks_on_reschedule(
                 self.instance).AndReturn(False)
         self.compute.compute_task_api.build_instances(self.context,
@@ -2105,7 +2105,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.block_device_mapping, self.node, self.limits,
                 self.filter_properties).AndRaise(
                         exception.RescheduledException(reason='',
-                            instance_uuid=self.instance['uuid']))
+                            instance_uuid=self.instance.uuid))
         self.compute.driver.deallocate_networks_on_reschedule(
                 self.instance).AndReturn(True)
         self.compute._cleanup_allocated_networks(self.context, self.instance,
@@ -2201,7 +2201,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self._notify_about_instance_usage('create.end',
                 fault=exc, stub=False)
         conductor_rpcapi.ConductorAPI.instance_update(
-            self.context, self.instance['uuid'], mox.IgnoreArg(), 'conductor')
+            self.context, self.instance.uuid, mox.IgnoreArg(), 'conductor')
         self.mox.ReplayAll()
 
         self.assertRaises(exception.InstanceNotFound,
@@ -2232,7 +2232,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 network_info=self.network_info,
                 block_device_info=self.block_device_info).AndRaise(exc)
         conductor_rpcapi.ConductorAPI.instance_update(
-            self.context, self.instance['uuid'], mox.IgnoreArg(), 'conductor')
+            self.context, self.instance.uuid, mox.IgnoreArg(), 'conductor')
         self._notify_about_instance_usage('create.error',
             fault=exc, stub=False)
         self.mox.ReplayAll()
@@ -2317,7 +2317,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 block_device_info=self.block_device_info))
 
             instance_update.assert_has_calls(mock.call(self.context,
-                self.instance['uuid'], mock.ANY, 'conductor'))
+                self.instance.uuid, mock.ANY, 'conductor'))
 
             _shutdown_instance.assert_called_once_with(self.context,
                     self.instance, self.block_device_mapping,
@@ -2371,12 +2371,12 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
     def test_build_resources_buildabort_reraise(self):
         exc = exception.BuildAbortException(
-                instance_uuid=self.instance['uuid'], reason='')
+                instance_uuid=self.instance.uuid, reason='')
         self.mox.StubOutWithMock(self.compute, '_build_resources')
         self.mox.StubOutWithMock(conductor_rpcapi.ConductorAPI,
                                  'instance_update')
         conductor_rpcapi.ConductorAPI.instance_update(
-            self.context, self.instance['uuid'], mox.IgnoreArg(), 'conductor')
+            self.context, self.instance.uuid, mox.IgnoreArg(), 'conductor')
         self._notify_about_instance_usage('create.start',
             extra_usage_info={'image_name': self.image.get('name')})
         self.compute._build_resources(self.context, self.instance,

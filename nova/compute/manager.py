@@ -1318,7 +1318,7 @@ class ComputeManager(manager.Manager):
 
         network_info = None
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                context, instance['uuid'])
+                context, instance.uuid)
 
         # b64 decode the files to inject:
         injected_files_orig = injected_files
@@ -1341,7 +1341,7 @@ class ComputeManager(manager.Manager):
                         dhcp_options)
 
                 self._instance_update(
-                        context, instance['uuid'],
+                        context, instance.uuid,
                         vm_state=vm_states.BUILDING,
                         task_state=task_states.BLOCK_DEVICE_MAPPING)
 
@@ -1354,8 +1354,8 @@ class ComputeManager(manager.Manager):
                         context, instance, bdms)
 
                 set_access_ip = (is_first_time and
-                                 not instance['access_ip_v4'] and
-                                 not instance['access_ip_v6'])
+                                 not instance.access_ip_v4 and
+                                 not instance.access_ip_v6)
 
                 instance = self._spawn(context, instance, image_meta,
                                        network_info, block_device_info,
@@ -1374,7 +1374,7 @@ class ComputeManager(manager.Manager):
                           'for deleted instance')
                 LOG.exception(msg, instance=instance)
             raise exception.BuildAbortException(
-                instance_uuid=instance['uuid'],
+                instance_uuid=instance.uuid,
                 reason=_("Instance disappeared during build"))
         except (exception.UnexpectedTaskStateError,
                 exception.VirtualInterfaceCreateException) as e:
@@ -1406,9 +1406,9 @@ class ComputeManager(manager.Manager):
                     filter_properties, bdms, legacy_bdm_in_spec)
             if rescheduled:
                 # log the original build error
-                self._log_original_error(exc_info, instance['uuid'])
+                self._log_original_error(exc_info, instance.uuid)
                 raise exception.RescheduledException(
-                        instance_uuid=instance['uuid'],
+                        instance_uuid=instance.uuid,
                         reason=unicode(exc_info[1]))
             else:
                 # not re-scheduling, go to error:
