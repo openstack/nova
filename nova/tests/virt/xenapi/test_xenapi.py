@@ -974,7 +974,7 @@ iface eth0 inet6 static
             return '', ''
 
         def _umount_handler(cmd, *ignore_args, **ignore_kwargs):
-            # Umount would normall make files in the m,ounted filesystem
+            # Umount would normally make files in the mounted filesystem
             # disappear, so do that here
             LOG.debug('Removing simulated guest agent files in %s',
                       self._tmpdir)
