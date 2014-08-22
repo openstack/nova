@@ -286,34 +286,35 @@ class InterfaceAttachTests(test.NoDBTestCase):
         self.assertEqual(result['interfaceAttachment']['net_id'],
             FAKE_NET_ID2)
 
-    def test_attach_interface_with_port_and_network_id(self):
+    def _attach_interface_bad_request_case(self, body):
         self.stubs.Set(compute_api.API, 'attach_interface',
                        fake_attach_interface)
         attachments = attach_interfaces.InterfaceAttachmentController()
         req = webob.Request.blank('/v2/fake/os-interfaces/attach')
         req.method = 'POST'
-        req.body = jsonutils.dumps({'interfaceAttachment':
-                                   {'port_id': FAKE_PORT_ID1,
-                                    'net_id': FAKE_NET_ID2}})
+        req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
         self.assertRaises(exc.HTTPBadRequest,
                           attachments.create, req, FAKE_UUID1,
                           jsonutils.loads(req.body))
 
+    def test_attach_interface_with_port_and_network_id(self):
+        body = {
+            'interfaceAttachment': {
+                'port_id': FAKE_PORT_ID1,
+                'net_id': FAKE_NET_ID2
+            }
+        }
+        self._attach_interface_bad_request_case(body)
+
     def test_attach_interface_with_invalid_data(self):
-        self.stubs.Set(compute_api.API, 'attach_interface',
-                       fake_attach_interface)
-        attachments = attach_interfaces.InterfaceAttachmentController()
-        req = webob.Request.blank('/v2/fake/os-interfaces/attach')
-        req.method = 'POST'
-        req.body = jsonutils.dumps({'interfaceAttachment':
-                                    {'net_id': 'bad_id'}})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
-        self.assertRaises(exc.HTTPBadRequest,
-                          attachments.create, req, FAKE_UUID1,
-                          jsonutils.loads(req.body))
+        body = {
+            'interfaceAttachment': {
+                'net_id': 'bad_id'
+            }
+        }
+        self._attach_interface_bad_request_case(body)
 
     def test_attach_interface_with_invalid_state(self):
         def fake_attach_interface_invalid_state(*args, **kwargs):
