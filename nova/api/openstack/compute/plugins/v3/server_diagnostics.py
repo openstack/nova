@@ -27,18 +27,21 @@ authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 class ServerDiagnosticsController(object):
+    def __init__(self):
+        self.compute_api = compute.API()
+
     @extensions.expected_errors((404, 409, 501))
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         authorize(context)
-        compute_api = compute.API()
         try:
-            instance = compute_api.get(context, server_id, want_objects=True)
+            instance = self.compute_api.get(context, server_id,
+                want_objects=True)
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         try:
-            return compute_api.get_instance_diagnostics(context, instance)
+            return self.compute_api.get_instance_diagnostics(context, instance)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'get_diagnostics')
