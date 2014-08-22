@@ -2067,7 +2067,14 @@ class ComputeManager(manager.Manager):
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = None
         instance.launched_at = timeutils.utcnow()
-        instance.save(expected_task_state=task_states.SPAWNING)
+
+        try:
+            instance.save(expected_task_state=task_states.SPAWNING)
+        except (exception.InstanceNotFound,
+                exception.UnexpectedDeletingTaskStateError) as e:
+            with excutils.save_and_reraise_exception():
+                self._notify_about_instance_usage(context, instance,
+                    'create.end', fault=e)
 
         self._notify_about_instance_usage(context, instance, 'create.end',
                 extra_usage_info={'message': _('Success')},
