@@ -218,7 +218,7 @@ policy_data = """
     "compute_extension:v3:os-hide-server-addresses": "",
     "compute_extension:hosts": "",
     "compute_extension:v3:os-hosts": "rule:admin_api",
-    "compute_extension:hypervisors": "",
+    "compute_extension:hypervisors": "rule:admin_api",
     "compute_extension:v3:os-hypervisors": "rule:admin_api",
     "compute_extension:image_size": "",
     "compute_extension:instance_actions": "",
