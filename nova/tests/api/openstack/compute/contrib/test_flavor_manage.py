@@ -30,7 +30,7 @@ from nova.tests.api.openstack import fakes
 
 def fake_get_flavor_by_flavor_id(flavorid, ctxt=None, read_deleted='yes'):
     if flavorid == 'failtest':
-        raise exception.NotFound("Not found sucka!")
+        raise exception.FlavorNotFound(flavor_id=flavorid)
     elif not str(flavorid) == '1234':
         raise Exception("This test expects flavorid 1234, not %s" % flavorid)
     if read_deleted != 'no':
