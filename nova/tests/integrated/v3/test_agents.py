@@ -74,7 +74,7 @@ class AgentsJsonTest(api_sample_base.ApiSampleTestBaseV3):
                 }
         response = self._do_post('os-agents', 'agent-post-req',
                                  project)
-        self._verify_response('agent-post-resp', project, response, 201)
+        self._verify_response('agent-post-resp', project, response, 200)
 
     def test_agent_list(self):
         # Return a list of all agent builds.
@@ -95,4 +95,4 @@ class AgentsJsonTest(api_sample_base.ApiSampleTestBaseV3):
         # Deletes an existing agent build.
         agent_id = 1
         response = self._do_delete('os-agents/%s' % agent_id)
-        self.assertEqual(response.status, 204)
+        self.assertEqual(response.status, 200)

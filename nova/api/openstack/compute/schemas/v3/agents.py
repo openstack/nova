@@ -56,7 +56,7 @@ create = {
 update = {
     'type': 'object',
     'properties': {
-        'agent': {
+        'para': {
             'type': 'object',
             'properties': {
                 'version': {
@@ -76,6 +76,6 @@ update = {
             'additionalProperties': False,
         },
     },
-    'required': ['agent'],
+    'required': ['para'],
     'additionalProperties': False,
 }

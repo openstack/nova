@@ -78,7 +78,12 @@ class AgentController(object):
         context = req.environ['nova.context']
         authorize(context)
 
-        para = body['agent']
+        # TODO(oomichi): This parameter name "para" is different from the ones
+        # of the other APIs. Most other names are resource names like "server"
+        # etc. This name should be changed to "agent" for consistent naming
+        # with v2.1+microversions.
+        para = body['para']
+
         url = para['url']
         md5hash = para['md5hash']
         version = para['version']
@@ -93,11 +98,19 @@ class AgentController(object):
         except exception.AgentBuildNotFound as ex:
             raise webob.exc.HTTPNotFound(explanation=ex.format_message())
 
-        return {"agent": {'agent_id': int(id), 'version': version,
+        # TODO(alex_xu): The agent_id should be integer that consistent with
+        # create/index actions. But parameter 'id' is string type that parsed
+        # from url. This is a bug, but because back-compatibility, it can't be
+        # fixed for v2 API. This will be fixed after v3 API feature exposed by
+        # v2.1+microversions in the future. lp bug #1333494
+        return {"agent": {'agent_id': id, 'version': version,
                 'url': url, 'md5hash': md5hash}}
 
+    # TODO(oomichi): Here should be 204(No Content) instead of 200 by v2.1
+    # +microversions because the resource agent has been deleted completely
+    # when returning a response.
     @extensions.expected_errors(404)
-    @wsgi.response(204)
+    @wsgi.response(200)
     def delete(self, req, id):
         """Deletes an existing agent build."""
         context = req.environ['nova.context']
@@ -109,8 +122,11 @@ class AgentController(object):
         except exception.AgentBuildNotFound as ex:
             raise webob.exc.HTTPNotFound(explanation=ex.format_message())
 
+    # TODO(oomichi): Here should be 201(Created) instead of 200 by v2.1
+    # +microversions because the creation of a resource agent finishes
+    # when returning a response.
     @extensions.expected_errors((400, 409))
-    @wsgi.response(201)
+    @wsgi.response(200)
     @validation.schema(schema.create)
     def create(self, req, body):
         """Creates a new agent build."""
