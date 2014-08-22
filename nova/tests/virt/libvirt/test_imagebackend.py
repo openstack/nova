@@ -402,14 +402,14 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
     def test_create_image_too_small(self):
         fn = self.prepare_mocks()
         self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(imagebackend.disk, 'get_disk_size')
+        self.mox.StubOutWithMock(imagebackend.Qcow2, 'get_disk_size')
         if self.OLD_STYLE_INSTANCE_PATH:
             os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
         os.path.exists(self.DISK_INFO_PATH).AndReturn(False)
         os.path.exists(self.INSTANCES_PATH).AndReturn(True)
         os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
-        imagebackend.disk.get_disk_size(self.TEMPLATE_PATH
-                                       ).AndReturn(self.SIZE)
+        imagebackend.Qcow2.get_disk_size(self.TEMPLATE_PATH
+                                         ).AndReturn(self.SIZE)
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -736,10 +736,12 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         self.libvirt_utils = imagebackend.libvirt_utils
         self.utils = imagebackend.utils
         self.rbd = self.mox.CreateMockAnything()
+        self.rados = self.mox.CreateMockAnything()
 
     def prepare_mocks(self):
         fn = self.mox.CreateMockAnything()
         self.mox.StubOutWithMock(imagebackend, 'rbd')
+        self.mox.StubOutWithMock(imagebackend, 'rados')
         return fn
 
     def test_cache(self):
@@ -848,9 +850,13 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         fake_processutils.fake_execute_clear_log()
         fake_processutils.stub_out_processutils_execute(self.stubs)
         self.mox.StubOutWithMock(imagebackend, 'rbd')
+        self.mox.StubOutWithMock(imagebackend, 'rados')
         image = self.image_class(self.INSTANCE, self.NAME)
 
         def fake_fetch(target, *args, **kwargs):
+            return
+
+        def fake_resize(rbd_name, size):
             return
 
         self.stubs.Set(os.path, 'exists', lambda _: True)
@@ -863,6 +869,128 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
     def test_parent_compatible(self):
         self.assertEqual(getargspec(imagebackend.Image.libvirt_info),
              getargspec(self.image_class.libvirt_info))
+
+    def test_direct_fetch(self):
+        self.prepare_mocks()
+        self.rbd.RBD_FEATURE_LAYERING = 1
+
+        image = self.image_class(self.INSTANCE, self.NAME)
+        self.mox.StubOutWithMock(image, '_clone')
+        image._clone('b', 'c', 'd')
+        self.mox.ReplayAll()
+
+        def fake_parse_location(url):
+            return 'a', 'b', 'c', 'd'
+
+        self.stubs.Set(image, 'check_image_exists', lambda: False)
+        self.stubs.Set(image, '_is_cloneable', lambda x: True)
+        self.stubs.Set(image, '_parse_location', fake_parse_location)
+
+        image.direct_fetch('image_id',
+                           {'disk_format': 'raw'},
+                           [{'url': 'rbd://a/b/c/d'}])
+
+        self.mox.VerifyAll()
+
+    def test_direct_fetch_fail(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        self.stubs.Set(image, '_is_cloneable', lambda: True)
+        self.assertRaises(exception.ImageUnacceptable,
+                          image.direct_fetch, 'image_id',
+                          {'disk_format': 'raw'},
+                          [{'url': 'rbd://a/b/c/d'}])
+        self.rbd.RBD_FEATURE_LAYERING = 1
+        self.assertRaises(exception.ImageUnacceptable,
+                          image.direct_fetch, 'image_id',
+                          {},
+                          [{'url': 'rbd://a/b/c/d'}])
+        self.assertRaises(exception.ImageUnacceptable,
+                          image.direct_fetch, 'image_id',
+                          {'disk_format': 'raw'},
+                          [])
+        self.stubs.Set(image, '_is_cloneable', lambda: False)
+        self.assertRaises(exception.ImageUnacceptable,
+                          image.direct_fetch, 'image_id',
+                          {'disk_format': 'raw'},
+                          [{'url': 'rbd://a/b/c/d'}])
+
+    def test_good_locations(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        locations = ['rbd://fsid/pool/image/snap',
+                     'rbd://%2F/%2F/%2F/%2F', ]
+        map(image._parse_location, locations)
+
+    def test_bad_locations(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        locations = ['rbd://image',
+                     'http://path/to/somewhere/else',
+                     'rbd://image/extra',
+                     'rbd://image/',
+                     'rbd://fsid/pool/image/',
+                     'rbd://fsid/pool/image/snap/',
+                     'rbd://///', ]
+        for loc in locations:
+            self.assertRaises(exception.ImageUnacceptable,
+                              image._parse_location,
+                              loc)
+            self.assertFalse(image._is_cloneable(loc))
+
+    def test_cloneable(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        self.stubs.Set(image, '_get_fsid', lambda: 'abc')
+        location = u'rbd://abc/pool/image/snap'
+        mock_proxy = self.mox.CreateMockAnything()
+        self.mox.StubOutWithMock(imagebackend, 'RBDVolumeProxy')
+
+        imagebackend.RBDVolumeProxy(image, 'image',
+                                    pool='pool',
+                                    snapshot='snap',
+                                    read_only=True).AndReturn(mock_proxy)
+        mock_proxy.__enter__().AndReturn(mock_proxy)
+        mock_proxy.__exit__(None, None, None).AndReturn(None)
+
+        self.mox.ReplayAll()
+
+        self.assertTrue(image._is_cloneable(location))
+
+    def test_uncloneable_different_fsid(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        self.stubs.Set(image, '_get_fsid', lambda: 'abc')
+        location = 'rbd://def/pool/image/snap'
+        self.assertFalse(image._is_cloneable(location))
+
+    def test_uncloneable_unreadable(self):
+        self.prepare_mocks()
+        image = self.image_class(self.INSTANCE, self.NAME, rbd=self.rbd)
+        self.stubs.Set(image, '_get_fsid', lambda: 'abc')
+        location = 'rbd://abc/pool/image/snap'
+        self.stubs.Set(self.rbd, 'Error', test.TestingException)
+        self.mox.StubOutWithMock(imagebackend, 'RBDVolumeProxy')
+
+        imagebackend.RBDVolumeProxy(image, 'image',
+                                    pool='pool',
+                                    snapshot='snap',
+                                    read_only=True).AndRaise(
+            test.TestingException)
+
+        self.mox.ReplayAll()
+
+        self.assertFalse(image._is_cloneable(location))
+
+    def test_image_path(self):
+
+        conf = "FakeConf"
+        pool = "FakePool"
+        user = "FakeUser"
+
+        self.flags(libvirt_images_rbd_pool=pool)
+        self.flags(libvirt_images_rbd_ceph_conf=conf)
+        self.flags(rbd_user=user)
+        image = self.image_class(self.INSTANCE, self.NAME)
+        rbd_path = "rbd:%s/%s:id=%s:conf=%s" % (pool, image.rbd_name,
+                                                user, conf)
+
+        self.assertEqual(image.path, rbd_path)
 
 
 class BackendTestCase(test.NoDBTestCase):

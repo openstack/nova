@@ -2906,7 +2906,7 @@ class LibvirtConnTestCase(test.TestCase):
         ret = conn.check_can_live_migrate_source(self.context, instance_ref,
                                                  dest_check_data)
         self.assertTrue(type(ret) == dict)
-        self.assertTrue('is_shared_storage' in ret)
+        self.assertTrue('is_shared_instance_path' in ret)
 
     def test_check_can_live_migrate_source_vol_backed_w_disk_raises(self):
         instance_ref = db.instance_create(self.context, self.test_instance)
@@ -3198,7 +3198,7 @@ class LibvirtConnTestCase(test.TestCase):
             self.mox.StubOutWithMock(conn, 'plug_vifs')
             conn.plug_vifs(mox.IsA(inst_ref), nw_info)
             self.mox.ReplayAll()
-            migrate_data = {'is_shared_storage': False,
+            migrate_data = {'is_shared_instance_path': False,
                             'is_volume_backed': True,
                             'block_migration': False,
                             'instance_relative_path': inst_ref['name']
@@ -4369,8 +4369,10 @@ class LibvirtConnTestCase(test.TestCase):
         def fake_get_info(instance_name):
             return {'state': power_state.SHUTDOWN, 'id': -1}
 
-        fake_volumes = ['fakeinstancename.local', 'fakeinstancename.swap',
-                        'fakeinstancename', 'wronginstancename']
+        fake_volumes = ['875a8070-d0b9-4949-8b31-104d125c9a64.local',
+                        '875a8070-d0b9-4949-8b31-104d125c9a64.swap',
+                        '875a8070-d0b9-4949-8b31-104d125c9a64',
+                        'wrong875a8070-d0b9-4949-8b31-104d125c9a64']
         fake_pool = 'fake_pool'
         fake_instance = {'name': 'fakeinstancename', 'id': 'instanceid',
                          'uuid': '875a8070-d0b9-4949-8b31-104d125c9a64'}

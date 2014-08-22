@@ -340,7 +340,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_rollback_live_migration_at_destination(self):
         self._test_compute_api('rollback_live_migration_at_destination',
-                'cast', instance=self.fake_instance, host='host')
+                'cast', instance=self.fake_instance, host='host',
+                destroy_disks=True)
 
     def test_run_instance(self):
         self._test_compute_api('run_instance', 'cast',

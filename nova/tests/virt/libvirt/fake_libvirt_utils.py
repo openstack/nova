@@ -211,10 +211,16 @@ def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
 
 
 def list_rbd_volumes(pool):
-    fake_volumes = ['fakeinstancename.local', 'fakeinstancename.swap',
-                    'fakeinstancename', 'wronginstancename']
+    fake_volumes = ['875a8070-d0b9-4949-8b31-104d125c9a64.local',
+                    '875a8070-d0b9-4949-8b31-104d125c9a64.swap',
+                    '875a8070-d0b9-4949-8b31-104d125c9a64',
+                    'wrong875a8070-d0b9-4949-8b31-104d125c9a64']
     return fake_volumes
 
 
 def remove_rbd_volumes(pool, *names):
     pass
+
+
+def ascii_str(s):
+    return libvirt_utils.ascii_str(s)

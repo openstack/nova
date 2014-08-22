@@ -682,12 +682,13 @@ class ComputeAPI(rpcclient.RpcProxy):
                    instance=instance, migration=migration,
                    reservations=reservations)
 
-    def rollback_live_migration_at_destination(self, ctxt, instance, host):
+    def rollback_live_migration_at_destination(self, ctxt, instance, host,
+                                               destroy_disks=True):
         instance_p = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=host,
                 version=_get_version('2.0'))
         cctxt.cast(ctxt, 'rollback_live_migration_at_destination',
-                   instance=instance_p)
+                   instance=instance_p, destroy_disks=destroy_disks)
 
     def run_instance(self, ctxt, instance, host, request_spec,
                      filter_properties, requested_networks,

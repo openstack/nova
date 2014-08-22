@@ -18,6 +18,7 @@
 import abc
 import contextlib
 import os
+import urllib
 
 from oslo.config import cfg
 
@@ -35,8 +36,10 @@ from nova.virt.libvirt import utils as libvirt_utils
 
 
 try:
+    import rados
     import rbd
 except ImportError:
+    rados = None
     rbd = None
 
 
@@ -69,6 +72,8 @@ CONF = cfg.CONF
 CONF.register_opts(__imagebackend_opts)
 CONF.import_opt('base_dir_name', 'nova.virt.libvirt.imagecache')
 CONF.import_opt('preallocate_images', 'nova.virt.driver')
+CONF.import_opt('rbd_user', 'nova.virt.libvirt.volume')
+CONF.import_opt('rbd_secret_uuid', 'nova.virt.libvirt.volume')
 
 LOG = logging.getLogger(__name__)
 
@@ -198,8 +203,7 @@ class Image(object):
                           (CONF.preallocate_images, self.path))
         return can_fallocate
 
-    @staticmethod
-    def verify_base_size(base, size, base_size=0):
+    def verify_base_size(self, base, size, base_size=0):
         """Check that the base image is not larger than size.
            Since images can't be generally shrunk, enforce this
            constraint taking account of virtual image size.
@@ -218,7 +222,7 @@ class Image(object):
             return
 
         if size and not base_size:
-            base_size = disk.get_disk_size(base)
+            base_size = self.get_disk_size(base)
 
         if size < base_size:
             msg = _('%(base)s virtual size %(base_size)s '
@@ -227,6 +231,9 @@ class Image(object):
                               'base_size': base_size,
                               'size': size})
             raise exception.InstanceTypeDiskTooSmall()
+
+    def get_disk_size(self, name):
+        disk.get_disk_size(name)
 
     def snapshot_create(self):
         raise NotImplementedError()
@@ -295,6 +302,14 @@ class Image(object):
         except OSError as e:
             raise exception.DiskInfoReadWriteFail(reason=unicode(e))
         return driver_format
+
+    def direct_fetch(self, image_id, image_meta, image_locations, max_size=0):
+        """Create an image from a direct image location.
+
+        :raises: exception.ImageUnacceptable if it cannot be fetched directly
+        """
+        reason = _('direct_fetch() is not implemented')
+        raise exception.ImageUnacceptable(image_id=image_id, reason=reason)
 
 
 class Raw(Image):
@@ -507,32 +522,110 @@ class Lvm(Image):
         libvirt_utils.execute(*cmd, run_as_root=True, attempts=3)
 
 
+class RBDVolumeProxy(object):
+    """Context manager for dealing with an existing rbd volume.
+
+    This handles connecting to rados and opening an ioctx automatically, and
+    otherwise acts like a librbd Image object.
+
+    The underlying librados client and ioctx can be accessed as the attributes
+    'client' and 'ioctx'.
+    """
+    def __init__(self, driver, name, pool=None, snapshot=None,
+                 read_only=False):
+        client, ioctx = driver._connect_to_rados(pool)
+        try:
+            self.volume = driver.rbd.Image(ioctx, str(name),
+                                           snapshot=libvirt_utils.ascii_str(
+                                                        snapshot),
+                                           read_only=read_only)
+        except driver.rbd.Error:
+            LOG.exception(_("error opening rbd image %s"), name)
+            driver._disconnect_from_rados(client, ioctx)
+            raise
+        self.driver = driver
+        self.client = client
+        self.ioctx = ioctx
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type_, value, traceback):
+        try:
+            self.volume.close()
+        finally:
+            self.driver._disconnect_from_rados(self.client, self.ioctx)
+
+    def __getattr__(self, attrib):
+        return getattr(self.volume, attrib)
+
+
+class RADOSClient(object):
+    """Context manager to simplify error handling for connecting to ceph."""
+    def __init__(self, driver, pool=None):
+        self.driver = driver
+        self.cluster, self.ioctx = driver._connect_to_rados(pool)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type_, value, traceback):
+        self.driver._disconnect_from_rados(self.cluster, self.ioctx)
+
+
 class Rbd(Image):
     def __init__(self, instance=None, disk_name=None, path=None,
                  snapshot_name=None, **kwargs):
-        super(Rbd, self).__init__("block", "rbd", is_block_dev=True)
+        super(Rbd, self).__init__("block", 'raw', is_block_dev=True)
         if path:
             try:
-                self.rbd_name = path.split('/')[1]
+                self.rbd_name = str(path.split('/')[1])
             except IndexError:
                 raise exception.InvalidDevicePath(path=path)
         else:
-            self.rbd_name = '%s_%s' % (instance['name'], disk_name)
+            self.rbd_name = str('%s_%s' % (instance['uuid'], disk_name))
         self.snapshot_name = snapshot_name
         if not CONF.libvirt_images_rbd_pool:
             raise RuntimeError(_('You should specify'
                                  ' libvirt_images_rbd_pool'
                                  ' flag to use rbd images.'))
-        self.pool = CONF.libvirt_images_rbd_pool
-        self.ceph_conf = CONF.libvirt_images_rbd_ceph_conf
+        self.pool = str(CONF.libvirt_images_rbd_pool)
+        self.ceph_conf = libvirt_utils.ascii_str(
+                         CONF.libvirt_images_rbd_ceph_conf)
+        self.rbd_user = libvirt_utils.ascii_str(CONF.rbd_user)
         self.rbd = kwargs.get('rbd', rbd)
+        self.rados = kwargs.get('rados', rados)
+
+        self.path = 'rbd:%s/%s' % (self.pool, self.rbd_name)
+        if self.rbd_user:
+            self.path += ':id=' + self.rbd_user
+        if self.ceph_conf:
+            self.path += ':conf=' + self.ceph_conf
+
+    def _connect_to_rados(self, pool=None):
+        client = self.rados.Rados(rados_id=self.rbd_user,
+                                  conffile=self.ceph_conf)
+        try:
+            client.connect()
+            pool_to_open = str(pool or self.pool)
+            ioctx = client.open_ioctx(pool_to_open)
+            return client, ioctx
+        except self.rados.Error:
+            # shutdown cannot raise an exception
+            client.shutdown()
+            raise
+
+    def _disconnect_from_rados(self, client, ioctx):
+        # closing an ioctx cannot raise an exception
+        ioctx.close()
+        client.shutdown()
 
     def _supports_layering(self):
         return hasattr(self.rbd, 'RBD_FEATURE_LAYERING')
 
     def _ceph_args(self):
         args = []
-        args.extend(['--id', CONF.rbd_user])
+        args.extend(['--id', self.rbd_user])
         args.extend(['--conf', self.ceph_conf])
         return args
 
@@ -566,7 +659,7 @@ class Rbd(Image):
         info = vconfig.LibvirtConfigGuestDisk()
 
         hosts, ports = self._get_mon_addrs()
-        info.device_type = device_type
+        info.source_device = device_type
         info.driver_format = 'raw'
         info.driver_cache = cache_mode
         info.target_bus = disk_bus
@@ -598,6 +691,17 @@ class Rbd(Image):
 
         return False
 
+    def _resize(self, size):
+        with RBDVolumeProxy(self, self.rbd_name) as vol:
+            vol.resize(int(size))
+
+    def _size(self):
+        return self.get_disk_size(self.rbd_name)
+
+    def get_disk_size(self, name):
+        with RBDVolumeProxy(self, name) as vol:
+            return vol.size()
+
     def create_image(self, prepare_template, base, size, *args, **kwargs):
         if self.rbd is None:
             raise RuntimeError(_('rbd python libraries not found'))
@@ -608,28 +712,103 @@ class Rbd(Image):
             old_format = False
             features = self.rbd.RBD_FEATURE_LAYERING
 
-        if not os.path.exists(base):
+        if not self.check_image_exists():
             prepare_template(target=base, max_size=size, *args, **kwargs)
         else:
             self.verify_base_size(base, size)
 
-        # keep using the command line import instead of librbd since it
-        # detects zeroes to preserve sparseness in the image
-        args = ['--pool', self.pool, base, self.rbd_name]
-        if self._supports_layering():
-            args += ['--new-format']
-        args += self._ceph_args()
-        libvirt_utils.import_rbd_image(*args)
+        # prepare_template may have created the image via direct_fetch()
+        if not self.check_image_exists():
+            # keep using the command line import instead of librbd since it
+            # detects zeroes to preserve sparseness in the image
+            args = ['--pool', self.pool, base, self.rbd_name]
+            if self._supports_layering():
+                args += ['--new-format']
+            args += self._ceph_args()
+            libvirt_utils.import_rbd_image(*args)
+
+        if size and self._size() < size:
+            self._resize(size)
 
     def snapshot_create(self):
         pass
 
     def snapshot_extract(self, target, out_format):
-        snap = 'rbd:%s/%s' % (self.pool, self.rbd_name)
-        images.convert_image(snap, target, out_format)
+        images.convert_image(self.path, target, out_format)
 
     def snapshot_delete(self):
         pass
+
+    def _parse_location(self, location):
+        prefix = 'rbd://'
+        if not location.startswith(prefix):
+            reason = _('Not stored in rbd')
+            raise exception.ImageUnacceptable(image_id=location, reason=reason)
+        pieces = map(urllib.unquote, location[len(prefix):].split('/'))
+        if any(map(lambda p: p == '', pieces)):
+            reason = _('Blank components')
+            raise exception.ImageUnacceptable(image_id=location, reason=reason)
+        if len(pieces) != 4:
+            reason = _('Not an rbd snapshot')
+            raise exception.ImageUnacceptable(image_id=location, reason=reason)
+        return pieces
+
+    def _get_fsid(self):
+        with RADOSClient(self) as client:
+            return client.cluster.get_fsid()
+
+    def _is_cloneable(self, image_location):
+        try:
+            fsid, pool, image, snapshot = self._parse_location(image_location)
+        except exception.ImageUnacceptable as e:
+            LOG.debug(_('not cloneable: %s'), e)
+            return False
+
+        if self._get_fsid() != fsid:
+            reason = _('%s is in a different ceph cluster') % image_location
+            LOG.debug(reason)
+            return False
+
+        # check that we can read the image
+        try:
+            with RBDVolumeProxy(self, image,
+                                pool=pool,
+                                snapshot=snapshot,
+                                read_only=True):
+                return True
+        except self.rbd.Error as e:
+            LOG.debug(_('Unable to open image %(loc)s: %(err)s') %
+                      dict(loc=image_location, err=e))
+            return False
+
+    def _clone(self, pool, image, snapshot):
+        with RADOSClient(self, str(pool)) as src_client:
+            with RADOSClient(self) as dest_client:
+                self.rbd.RBD().clone(src_client.ioctx,
+                                     str(image),
+                                     str(snapshot),
+                                     dest_client.ioctx,
+                                     self.rbd_name,
+                                     features=self.rbd.RBD_FEATURE_LAYERING)
+
+    def direct_fetch(self, image_id, image_meta, image_locations, max_size=0):
+        if self.check_image_exists():
+            return
+        if image_meta.get('disk_format') not in ['raw', 'iso']:
+            reason = _('Image is not raw format')
+            raise exception.ImageUnacceptable(image_id=image_id, reason=reason)
+        if not self._supports_layering():
+            reason = _('installed version of librbd does not support cloning')
+            raise exception.ImageUnacceptable(image_id=image_id, reason=reason)
+
+        for location in image_locations:
+            url = location['url']
+            if self._is_cloneable(url):
+                prefix, pool, image, snapshot = self._parse_location(url)
+                return self._clone(pool, image, snapshot)
+
+        reason = _('No image locations are accessible')
+        raise exception.ImageUnacceptable(image_id=image_id, reason=reason)
 
 
 class Backend(object):
