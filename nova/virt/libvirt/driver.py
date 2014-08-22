@@ -5045,7 +5045,8 @@ class LibvirtDriver(driver.ComputeDriver):
                           block_device_info=block_device_info,
                           write_to_disk=True)
         self._create_domain_and_network(context, xml, instance, network_info,
-                                        block_device_info, power_on)
+                                        block_device_info, power_on,
+                                        vifs_already_plugged=True)
         if power_on:
             timer = loopingcall.FixedIntervalLoopingCall(
                                                     self._wait_for_running,

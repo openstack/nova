@@ -8412,11 +8412,13 @@ class LibvirtDriverTestCase(test.TestCase):
                               block_device_info=None, inject_files=True):
             self.assertFalse(inject_files)
 
-        def fake_create_domain(xml, instance=None, launch_flags=0,
-                               power_on=True):
+        def fake_create_domain_and_network(
+            context, xml, instance, network_info,
+            block_device_info=None, power_on=True, reboot=False,
+            vifs_already_plugged=False):
             self.fake_create_domain_called = True
             self.assertEqual(powered_on, power_on)
-            return mock.MagicMock()
+            self.assertTrue(vifs_already_plugged)
 
         def fake_enable_hairpin(instance):
             pass
@@ -8438,8 +8440,8 @@ class LibvirtDriverTestCase(test.TestCase):
         self.stubs.Set(self.libvirtconnection, 'plug_vifs', fake_plug_vifs)
         self.stubs.Set(self.libvirtconnection, '_create_image',
                        fake_create_image)
-        self.stubs.Set(self.libvirtconnection, '_create_domain',
-                       fake_create_domain)
+        self.stubs.Set(self.libvirtconnection, '_create_domain_and_network',
+                       fake_create_domain_and_network)
         self.stubs.Set(self.libvirtconnection, '_enable_hairpin',
                        fake_enable_hairpin)
         self.stubs.Set(utils, 'execute', fake_execute)
