@@ -16,14 +16,14 @@ from nova.api.openstack import extensions
 
 
 ALIAS = "os-user-data"
-ATTRIBUTE_NAME = '%s:user_data' % ALIAS
+ATTRIBUTE_NAME = 'user_data'
 
 
 class UserData(extensions.V3APIExtensionBase):
     """Add user_data to the Create Server v1.1 API."""
 
     name = "UserData"
-    alias = "os-user-data"
+    alias = ALIAS
     version = 1
 
     def get_controller_extensions(self):
