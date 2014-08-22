@@ -1700,16 +1700,12 @@ class ComputeManager(manager.Manager):
         if update_root_bdm:
             root_bdm.save()
 
-        def _is_mapping(bdm):
-            return (bdm.source_type in ('image', 'volume', 'snapshot', 'blank')
-                    and bdm.destination_type == 'volume'
-                    and driver_block_device.is_implemented(bdm))
-
         ephemerals = filter(block_device.new_format_is_ephemeral,
                             block_devices)
         swap = filter(block_device.new_format_is_swap,
                       block_devices)
-        block_device_mapping = filter(_is_mapping, block_devices)
+        block_device_mapping = filter(
+              driver_block_device.is_block_device_mapping, block_devices)
 
         self._default_device_names_for_instance(instance,
                                                 root_device_name,

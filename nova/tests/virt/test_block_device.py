@@ -666,3 +666,19 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         local_image = self.image_bdm.copy()
         local_image['destination_type'] = 'local'
         self.assertFalse(driver_block_device.is_implemented(local_image))
+
+    def test_is_block_device_mapping(self):
+        test_swap = self.driver_classes['swap'](self.swap_bdm)
+        test_ephemeral = self.driver_classes['ephemeral'](self.ephemeral_bdm)
+        test_image = self.driver_classes['image'](self.image_bdm)
+        test_snapshot = self.driver_classes['snapshot'](self.snapshot_bdm)
+        test_volume = self.driver_classes['volume'](self.volume_bdm)
+        test_blank = self.driver_classes['blank'](self.blank_bdm)
+
+        for bdm in (test_image, test_snapshot, test_volume, test_blank):
+            self.assertTrue(driver_block_device.is_block_device_mapping(
+                bdm._bdm_obj))
+
+        for bdm in (test_swap, test_ephemeral):
+            self.assertFalse(driver_block_device.is_block_device_mapping(
+                bdm._bdm_obj))
