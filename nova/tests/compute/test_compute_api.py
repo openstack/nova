@@ -1705,6 +1705,27 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api.volume_snapshot_delete(self.context, volume_id,
                 snapshot_id, {})
 
+    def test_boot_volume_basic_property(self):
+        block_device_mapping = [{
+            'id': 1,
+            'device_name': 'vda',
+            'no_device': None,
+            'virtual_name': None,
+            'snapshot_id': None,
+            'volume_id': '1',
+            'delete_on_termination': False,
+        }]
+        fake_volume = {"volume_image_metadata":
+                       {"min_ram": 256, "min_disk": 128, "foo": "bar"}}
+        with mock.patch.object(self.compute_api.volume_api, 'get',
+                               return_value=fake_volume):
+            meta = self.compute_api._get_bdm_image_metadata(
+                self.context, block_device_mapping)
+            self.assertEqual(256, meta['min_ram'])
+            self.assertEqual(128, meta['min_disk'])
+            self.assertEqual('active', meta['status'])
+            self.assertEqual('bar', meta['properties']['foo'])
+
     def _create_instance_with_disabled_disk_config(self, object=False):
         sys_meta = {"image_auto_disk_config": "Disabled"}
         params = {"system_metadata": sys_meta}

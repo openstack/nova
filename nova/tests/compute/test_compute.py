@@ -504,12 +504,18 @@ class ComputeVolumeTestCase(BaseTestCase):
         def volume_api_get(*args, **kwargs):
             if metadata:
                 return {
-                    'volume_image_metadata': {'vol_test_key': 'vol_test_value'}
+                    'volume_image_metadata': {'vol_test_key': 'vol_test_value',
+                                              'min_ram': 128,
+                                              'min_disk': 256,
+                                             },
                 }
             else:
                 return {}
 
         self.stubs.Set(self.compute_api.volume_api, 'get', volume_api_get)
+
+        expected_no_metadata = {'min_disk': 0, 'min_ram': 0, 'properties': {},
+                                'size': 0, 'status': 'active'}
 
         block_device_mapping = [{
             'id': 1,
@@ -524,9 +530,12 @@ class ComputeVolumeTestCase(BaseTestCase):
         image_meta = self.compute_api._get_bdm_image_metadata(
             self.context, block_device_mapping)
         if metadata:
-            self.assertEqual(image_meta['vol_test_key'], 'vol_test_value')
+            self.assertEqual(image_meta['properties']['vol_test_key'],
+                             'vol_test_value')
+            self.assertEqual(128, image_meta['min_ram'])
+            self.assertEqual(256, image_meta['min_disk'])
         else:
-            self.assertEqual(image_meta, {})
+            self.assertEqual(expected_no_metadata, image_meta)
 
         # Test it with new-style BDMs
         block_device_mapping = [{
@@ -540,9 +549,12 @@ class ComputeVolumeTestCase(BaseTestCase):
         image_meta = self.compute_api._get_bdm_image_metadata(
             self.context, block_device_mapping, legacy_bdm=False)
         if metadata:
-            self.assertEqual(image_meta['vol_test_key'], 'vol_test_value')
+            self.assertEqual(image_meta['properties']['vol_test_key'],
+                             'vol_test_value')
+            self.assertEqual(128, image_meta['min_ram'])
+            self.assertEqual(256, image_meta['min_disk'])
         else:
-            self.assertEqual(image_meta, {})
+            self.assertEqual(expected_no_metadata, image_meta)
 
     def test_boot_volume_no_metadata(self):
         self.test_boot_volume_metadata(metadata=False)
@@ -570,7 +582,8 @@ class ComputeVolumeTestCase(BaseTestCase):
             self.context, block_device_mapping, legacy_bdm=False)
 
         if metadata:
-            self.assertEqual(image_meta['img_test_key'], 'img_test_value')
+            self.assertEqual('img_test_value',
+                             image_meta['properties']['img_test_key'])
         else:
             self.assertEqual(image_meta, {})
 
@@ -10860,7 +10873,7 @@ class CheckRequestedImageTestCase(test.TestCase):
         self.instance_type['root_gb'] = 1
 
     def test_no_image_specified(self):
-        self.compute_api._check_requested_image(self.context, None, {},
+        self.compute_api._check_requested_image(self.context, None, None,
                 self.instance_type)
 
     def test_image_status_must_be_active(self):
