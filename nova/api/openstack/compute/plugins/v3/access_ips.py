@@ -90,7 +90,12 @@ class AccessIPs(extensions.V3APIExtensionBase):
     def get_resources(self):
         return []
 
-    def server_create(self, server_dict, create_kwargs):
+    # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
+    # parameter as this is placed to handle scheduler_hint extension for V2.1.
+    # making 'body_deprecated_param' as optional to avoid changes for
+    # server_update & server_rebuild
+    def server_create(self, server_dict, create_kwargs,
+                      body_deprecated_param=None):
         if AccessIPs.v4_key in server_dict:
             access_ip_v4 = server_dict.get(AccessIPs.v4_key)
             if access_ip_v4:
