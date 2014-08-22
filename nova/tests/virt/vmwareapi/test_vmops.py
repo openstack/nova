@@ -520,30 +520,45 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_finish_revert_migration_power_off(self):
         self._test_finish_revert_migration(power_on=False)
 
-    def test_spawn_mask_block_device_info_password(self):
+    @mock.patch.object(vmops.LOG, 'debug')
+    @mock.patch('nova.virt.vmwareapi.volumeops.VMwareVolumeOps'
+                '.attach_root_volume')
+    def test_spawn_mask_block_device_info_password(self,
+                                                   mock_attach_root_volume,
+                                                   mock_debug):
         # Very simple test that just ensures block_device_info auth_password
         # is masked when logged; the rest of the test just fails out early.
         data = {'auth_password': 'scrubme'}
         bdm = [{'connection_info': {'data': data}}]
         bdi = {'block_device_mapping': bdm}
 
+        self.password_logged = False
+
         # Tests that the parameters to the to_xml method are sanitized for
         # passwords when logged.
         def fake_debug(*args, **kwargs):
             if 'auth_password' in args[0]:
+                self.password_logged = True
                 self.assertNotIn('scrubme', args[0])
 
-        with mock.patch.object(vmops.LOG, 'debug',
-                               side_effect=fake_debug) as debug_mock:
-            # the invalid disk format will cause an exception
-            image_meta = {'disk_format': 'fake'}
-            self.assertRaises(exception.InvalidDiskFormat, self._vmops.spawn,
-                              self._context, self._instance, image_meta,
-                              injected_files=None, admin_password=None,
-                              network_info=[], block_device_info=bdi)
-            # we don't care what the log message is, we just want to make sure
-            # our stub method is called which asserts the password is scrubbed
-            self.assertTrue(debug_mock.called)
+        mock_debug.side_effect = fake_debug
+        self.flags(flat_injected=False, vnc_enabled=False)
+        mock_attach_root_volume.side_effect = Exception
+
+        # Call spawn(). We don't care what it does as long as it generates
+        # the log message, which we check below.
+        try:
+            self._vmops.spawn(
+                self._context, self._instance, {},
+                injected_files=None, admin_password=None,
+                network_info=[], block_device_info=bdi
+            )
+        except Exception:
+            pass
+
+        # Check that the relevant log message was generated, and therefore
+        # that we checked it was scrubbed
+        self.assertTrue(self.password_logged)
 
     def test_get_ds_browser(self):
         cache = self._vmops._datastore_browser_mapping
