@@ -5441,7 +5441,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         # If we have a non partitioned image that we can extend
         # then ensure we're in 'raw' format so we can extend file system.
-        fmt = info['type']
+        fmt, org = [info['type']] * 2
         pth = info['path']
         if (size and fmt == 'qcow2' and
                 disk.can_resize_image(pth, size) and
@@ -5453,7 +5453,7 @@ class LibvirtDriver(driver.ComputeDriver):
             use_cow = fmt == 'qcow2'
             disk.extend(pth, size, use_cow=use_cow)
 
-        if fmt == 'raw' and CONF.use_cow_images:
+        if fmt != org:
             # back to qcow2 (no backing_file though) so that snapshot
             # will be available
             self._disk_raw_to_qcow2(pth)
@@ -5468,6 +5468,8 @@ class LibvirtDriver(driver.ComputeDriver):
         for info in disk_info:
             size = self._disk_size_from_instance(instance, info)
             self._disk_resize(info, size)
+            if info['type'] == 'raw' and CONF.use_cow_images:
+                self._disk_raw_to_qcow2(info['path'])
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
