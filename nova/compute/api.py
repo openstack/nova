@@ -155,10 +155,9 @@ def check_instance_state(vm_state=None, task_state=(None,),
                     method=f.__name__)
             if must_have_launched and not instance['launched_at']:
                 raise exception.InstanceInvalidState(
-                    attr=None,
-                    not_launched=True,
+                    attr='launched_at',
                     instance_uuid=instance['uuid'],
-                    state=instance['vm_state'],
+                    state=instance['launched_at'],
                     method=f.__name__)
 
             return f(self, context, instance, *args, **kw)
