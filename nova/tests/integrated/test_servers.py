@@ -512,8 +512,8 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 class ServersTestV3(client.TestOpenStackClientV3Mixin, ServersTest):
     _force_delete_parameter = 'force_delete'
     _api_version = 'v3'
-    _image_ref_parameter = 'image_ref'
-    _flavor_ref_parameter = 'flavor_ref'
+    _image_ref_parameter = 'imageRef'
+    _flavor_ref_parameter = 'flavorRef'
     _return_resv_id_parameter = 'os-multiple-create:return_reservation_id'
     _min_count_parameter = 'os-multiple-create:min_count'
     _access_ipv4_parameter = None

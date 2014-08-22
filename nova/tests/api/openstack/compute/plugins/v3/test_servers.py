@@ -1381,7 +1381,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         self.body = {
             'rebuild': {
                 'name': 'new_name',
-                'image_ref': self.image_href,
+                'imageRef': self.image_href,
                 'metadata': {
                     'open': 'stack',
                 },
@@ -1891,8 +1891,8 @@ class ServersControllerCreateTest(test.TestCase):
         self.body = {
             'server': {
                 'name': 'server_test',
-                'image_ref': self.image_uuid,
-                'flavor_ref': self.flavor_ref,
+                'imageRef': self.image_uuid,
+                'flavorRef': self.flavor_ref,
                 'metadata': {
                     'hello': 'world',
                     'open': 'stack',
@@ -1919,8 +1919,8 @@ class ServersControllerCreateTest(test.TestCase):
 
     def _test_create_instance(self, flavor=2):
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
-        self.body['server']['image_ref'] = image_uuid
-        self.body['server']['flavor_ref'] = flavor
+        self.body['server']['imageRef'] = image_uuid
+        self.body['server']['flavorRef'] = flavor
         self.req.body = jsonutils.dumps(self.body)
         server = self.controller.create(self.req, body=self.body).obj['server']
         self._check_admin_password_len(server)
@@ -1947,7 +1947,7 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_server_bad_image_href(self):
         image_href = 1
         self.body['server']['min_count'] = 1
-        self.body['server']['image_ref'] = image_href,
+        self.body['server']['imageRef'] = image_href,
         self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create,
@@ -1983,7 +1983,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.addCleanup(image_service.update, context, self.image_uuid,
                         {'status': 'active'})
 
-        self.body['server']['flavor_ref'] = 2
+        self.body['server']['flavorRef'] = 2
         self.req.body = jsonutils.dumps(self.body)
         with testtools.ExpectedException(
                 webob.exc.HTTPBadRequest,
@@ -2004,7 +2004,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.addCleanup(image_service.update, context, self.image_uuid,
                         {'size': orig_size})
 
-        self.body['server']['flavor_ref'] = 2
+        self.body['server']['flavorRef'] = 2
         self.req.body = jsonutils.dumps(self.body)
 
         with testtools.ExpectedException(
@@ -2014,7 +2014,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_image_ref_is_bookmark(self):
         image_href = 'http://localhost/images/%s' % self.image_uuid
-        self.body['server']['image_ref'] = image_href
+        self.body['server']['imageRef'] = image_href
         self.req.body = jsonutils.dumps(self.body)
         res = self.controller.create(self.req, body=self.body).obj
 
@@ -2025,8 +2025,8 @@ class ServersControllerCreateTest(test.TestCase):
         image_uuid = 'this_is_not_a_valid_uuid'
         image_href = 'http://localhost/images/%s' % image_uuid
         flavor_ref = 'http://localhost/flavors/3'
-        self.body['server']['image_ref'] = image_href
-        self.body['server']['flavor_ref'] = flavor_ref
+        self.body['server']['imageRef'] = image_href
+        self.body['server']['flavorRef'] = flavor_ref
         self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           self.req, body=self.body)
@@ -2036,9 +2036,9 @@ class ServersControllerCreateTest(test.TestCase):
         self._test_create_instance()
 
     def _test_create_extra(self, params, no_image=False):
-        self.body['server']['flavor_ref'] = 2
+        self.body['server']['flavorRef'] = 2
         if no_image:
-            self.body['server'].pop('image_ref', None)
+            self.body['server'].pop('imageRef', None)
         self.body['server'].update(params)
         self.req.body = jsonutils.dumps(self.body)
         self.req.headers["content-type"] = "application/json"
@@ -2167,7 +2167,7 @@ class ServersControllerCreateTest(test.TestCase):
         # proper local hrefs must start with 'http://localhost/v3/'
         self.flags(enable_instance_password=False)
         image_href = 'http://localhost/v2/fake/images/%s' % self.image_uuid
-        self.body['server']['image_ref'] = image_href
+        self.body['server']['imageRef'] = image_href
         self.req.body = jsonutils.dumps(self.body)
         res = self.controller.create(self.req, body=self.body).obj
 
@@ -2179,7 +2179,7 @@ class ServersControllerCreateTest(test.TestCase):
         # proper local hrefs must start with 'http://localhost/v3/'
         image_href = 'http://localhost/v2/images/%s' % self.image_uuid
         self.body['server']['name'] = 'X' * 256
-        self.body['server']['image_ref'] = image_href
+        self.body['server']['imageRef'] = image_href
         self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           self.req, body=self.body)
@@ -2211,7 +2211,7 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance(self):
         # proper local hrefs must start with 'http://localhost/v3/'
         image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['image_ref'] = image_href
+        self.body['server']['imageRef'] = image_href
         self.req.body = jsonutils.dumps(self.body)
         res = self.controller.create(self.req, body=self.body).obj
 
@@ -2233,8 +2233,8 @@ class ServersControllerCreateTest(test.TestCase):
         body = {
             'server': {
                 'name': 'server_test',
-                'image_ref': image_href,
-                'flavor_ref': flavor_ref,
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
                 'metadata': {
                     'hello': 'world',
                     'open': 'stack',
@@ -2253,7 +2253,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.flags(enable_instance_password=False)
         # proper local hrefs must start with 'http://localhost/v3/'
         image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['image_ref'] = image_href
+        self.body['server']['imageRef'] = image_href
         self.req.body = jsonutils.dumps(self.body)
         res = self.controller.create(self.req, body=self.body).obj
 
@@ -2264,7 +2264,7 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_too_much_metadata(self):
         self.flags(quota_metadata_items=1)
         image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['image_ref'] = image_href
+        self.body['server']['imageRef'] = image_href
         self.body['server']['metadata']['vote'] = 'fiddletown'
         self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPForbidden,
@@ -2273,7 +2273,7 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_metadata_key_too_long(self):
         self.flags(quota_metadata_items=1)
         image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['image_ref'] = image_href
+        self.body['server']['imageRef'] = image_href
         self.body['server']['metadata'] = {('a' * 260): '12345'}
 
         self.req.body = jsonutils.dumps(self.body)
@@ -2283,7 +2283,7 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_metadata_value_too_long(self):
         self.flags(quota_metadata_items=1)
         image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['image_ref'] = image_href
+        self.body['server']['imageRef'] = image_href
         self.body['server']['metadata'] = {'key1': ('a' * 260)}
         self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
@@ -2292,7 +2292,7 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_metadata_key_blank(self):
         self.flags(quota_metadata_items=1)
         image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['image_ref'] = image_href
+        self.body['server']['imageRef'] = image_href
         self.body['server']['metadata'] = {'': 'abcd'}
         self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -2301,7 +2301,7 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_metadata_not_dict(self):
         self.flags(quota_metadata_items=1)
         image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['image_ref'] = image_href
+        self.body['server']['imageRef'] = image_href
         self.body['server']['metadata'] = 'string'
         self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -2310,7 +2310,7 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_metadata_key_not_string(self):
         self.flags(quota_metadata_items=1)
         image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['image_ref'] = image_href
+        self.body['server']['imageRef'] = image_href
         self.body['server']['metadata'] = {1: 'test'}
         self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -2319,7 +2319,7 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_metadata_value_not_string(self):
         self.flags(quota_metadata_items=1)
         image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['image_ref'] = image_href
+        self.body['server']['imageRef'] = image_href
         self.body['server']['metadata'] = {'test': ['a', 'list']}
         self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -2332,7 +2332,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_invalid_key_name(self):
         image_href = 'http://localhost/v2/images/2'
-        self.body['server']['image_ref'] = image_href
+        self.body['server']['imageRef'] = image_href
         self.body['server']['key_name'] = 'nonexistentkey'
         self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -2349,8 +2349,8 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_invalid_flavor_href(self):
         image_href = 'http://localhost/v2/images/2'
         flavor_ref = 'http://localhost/v2/flavors/asdf'
-        self.body['server']['image_ref'] = image_href
-        self.body['server']['flavor_ref'] = flavor_ref
+        self.body['server']['imageRef'] = image_href
+        self.body['server']['flavorRef'] = flavor_ref
         self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, self.req, body=self.body)
@@ -2358,8 +2358,8 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_invalid_flavor_id_int(self):
         image_href = 'http://localhost/v2/images/2'
         flavor_ref = -1
-        self.body['server']['image_ref'] = image_href
-        self.body['server']['flavor_ref'] = flavor_ref
+        self.body['server']['imageRef'] = image_href
+        self.body['server']['flavorRef'] = flavor_ref
         self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, self.req, body=self.body)
@@ -2367,15 +2367,15 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_bad_flavor_href(self):
         image_href = 'http://localhost/v2/images/2'
         flavor_ref = 'http://localhost/v2/flavors/17'
-        self.body['server']['image_ref'] = image_href
-        self.body['server']['flavor_ref'] = flavor_ref
+        self.body['server']['imageRef'] = image_href
+        self.body['server']['flavorRef'] = flavor_ref
         self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, self.req, body=self.body)
 
     def test_create_instance_bad_href(self):
         image_href = 'asdf'
-        self.body['server']['image_ref'] = image_href
+        self.body['server']['imageRef'] = image_href
         self.req.body = jsonutils.dumps(self.body)
 
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -2389,7 +2389,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertEqual(FAKE_UUID, server['id'])
 
     def test_create_instance_admin_password(self):
-        self.body['server']['flavor_ref'] = 3
+        self.body['server']['flavorRef'] = 3
         self.body['server']['adminPass'] = 'testpass'
         self.req.body = jsonutils.dumps(self.body)
         res = self.controller.create(self.req, body=self.body).obj
@@ -2400,7 +2400,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_admin_password_pass_disabled(self):
         self.flags(enable_instance_password=False)
-        self.body['server']['flavor_ref'] = 3
+        self.body['server']['flavorRef'] = 3
         self.body['server']['adminPass'] = 'testpass'
         self.req.body = jsonutils.dumps(self.body)
         res = self.controller.create(self.req, body=self.body).obj
@@ -2409,7 +2409,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertIn('adminPass', self.body['server'])
 
     def test_create_instance_admin_password_empty(self):
-        self.body['server']['flavor_ref'] = 3
+        self.body['server']['flavorRef'] = 3
         self.body['server']['adminPass'] = ''
         self.req.body = jsonutils.dumps(self.body)
 
@@ -2426,7 +2426,7 @@ class ServersControllerCreateTest(test.TestCase):
     def _do_test_create_instance_above_quota(self, resource, allowed, quota,
                                              expected_msg):
         fakes.stub_out_instance_quota(self.stubs, allowed, quota, resource)
-        self.body['server']['flavor_ref'] = 3
+        self.body['server']['flavorRef'] = 3
         self.req.body = jsonutils.dumps(self.body)
         try:
             self.controller.create(self.req, body=self.body).obj['server']
@@ -2546,8 +2546,8 @@ class ServersControllerCreateTestWithMock(test.TestCase):
         self.body = {
             'server': {
                 'name': 'server_test',
-                'image_ref': self.image_uuid,
-                'flavor_ref': self.flavor_ref,
+                'imageRef': self.image_uuid,
+                'flavorRef': self.flavor_ref,
                 'metadata': {
                     'hello': 'world',
                     'open': 'stack',
@@ -2559,9 +2559,9 @@ class ServersControllerCreateTestWithMock(test.TestCase):
         self.req.headers["content-type"] = "application/json"
 
     def _test_create_extra(self, params, no_image=False):
-        self.body['server']['flavor_ref'] = 2
+        self.body['server']['flavorRef'] = 2
         if no_image:
-            self.body['server'].pop('image_ref', None)
+            self.body['server'].pop('imageRef', None)
         self.body['server'].update(params)
         self.req.body = jsonutils.dumps(self.body)
         self.req.headers["content-type"] = "application/json"

@@ -1,5 +1,5 @@
 {
     "resize" : {
-        "flavor_ref" : "2"
+        "flavorRef" : "2"
     }
 }

@@ -62,8 +62,8 @@ class BlockDeviceMappingTest(test.TestCase):
             'server': {
                 'min_count': 2,
                 'name': 'server_test',
-                'image_ref': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
-                'flavor_ref': 'http://localhost/123/flavors/3',
+                'imageRef': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
+                'flavorRef': 'http://localhost/123/flavors/3',
                 'metadata': {
                     'hello': 'world',
                     'open': 'stack',
@@ -72,7 +72,7 @@ class BlockDeviceMappingTest(test.TestCase):
         }
 
         if no_image:
-            del body['server']['image_ref']
+            del body['server']['imageRef']
 
         body['server'].update(params)
 
@@ -109,7 +109,7 @@ class BlockDeviceMappingTest(test.TestCase):
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
-            self.assertNotIn('image_ref', kwargs)
+            self.assertNotIn('imageRef', kwargs)
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)

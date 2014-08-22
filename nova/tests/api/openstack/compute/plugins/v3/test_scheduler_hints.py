@@ -66,8 +66,8 @@ class SchedulerHintsTestCase(test.TestCase):
         req.content_type = 'application/json'
         body = {'server': {
                   'name': 'server_test',
-                  'image_ref': 'cedef40a-ed67-4d10-800e-17455edce175',
-                  'flavor_ref': '1',
+                  'imageRef': 'cedef40a-ed67-4d10-800e-17455edce175',
+                  'flavorRef': '1',
                }}
 
         req.body = jsonutils.dumps(body)
@@ -89,8 +89,8 @@ class SchedulerHintsTestCase(test.TestCase):
         body = {
             'server': {
                   'name': 'server_test',
-                  'image_ref': 'cedef40a-ed67-4d10-800e-17455edce175',
-                  'flavor_ref': '1',
+                  'imageRef': 'cedef40a-ed67-4d10-800e-17455edce175',
+                  'flavorRef': '1',
                   'os-scheduler-hints:scheduler_hints': hints,
             },
         }
@@ -106,8 +106,8 @@ class SchedulerHintsTestCase(test.TestCase):
         body = {
             'server': {
                   'name': 'server_test',
-                  'image_ref': 'cedef40a-ed67-4d10-800e-17455edce175',
-                  'flavor_ref': '1',
+                  'imageRef': 'cedef40a-ed67-4d10-800e-17455edce175',
+                  'flavorRef': '1',
                   'os-scheduler-hints:scheduler_hints': 'non-dict',
             },
         }
@@ -213,9 +213,9 @@ class ServersControllerCreateTest(test.TestCase):
     def _test_create_extra(self, params, no_image=False,
                            override_controller=None):
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
-        server = dict(name='server_test', image_ref=image_uuid, flavor_ref=2)
+        server = dict(name='server_test', imageRef=image_uuid, flavorRef=2)
         if no_image:
-            server.pop('image_ref', None)
+            server.pop('imageRef', None)
         server.update(params)
         body = dict(server=server)
         req = fakes.HTTPRequestV3.blank('/servers')

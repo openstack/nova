@@ -2,7 +2,7 @@
     "rebuild" : {
         "os-access-ips:access_ip_v4": "%(access_ip_v4)s",
         "os-access-ips:access_ip_v6": "%(access_ip_v6)s",
-        "image_ref" : "%(glance_host)s/images/%(image_id)s",
+        "imageRef" : "%(glance_host)s/images/%(image_id)s",
         "name" : "new-server-test",
         "metadata" : {
             "meta_var" : "meta_val"

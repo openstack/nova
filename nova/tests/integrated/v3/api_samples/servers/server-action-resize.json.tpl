@@ -1,5 +1,5 @@
 {
     "resize" : {
-        "flavor_ref" : "%(id)s"
+        "flavorRef" : "%(id)s"
     }
 }

@@ -152,9 +152,9 @@ class ServerActionsControllerTest(test.TestCase):
         actions = ['resize', 'confirm_resize', 'revert_resize', 'reboot',
                    'rebuild']
 
-        body_map = {'resize': {'flavor_ref': '2'},
+        body_map = {'resize': {'flavorRef': '2'},
                     'reboot': {'type': 'HARD'},
-                    'rebuild': {'image_ref': self.image_uuid,
+                    'rebuild': {'imageRef': self.image_uuid,
                                 'adminPass': 'TNc53Dr8s7vw'}}
 
         args_map = {'resize': (('2'), {}),
@@ -260,7 +260,7 @@ class ServerActionsControllerTest(test.TestCase):
 
         body = {
             "rebuild": {
-                "image_ref": self._image_href,
+                "imageRef": self._image_href,
             },
         }
 
@@ -287,7 +287,7 @@ class ServerActionsControllerTest(test.TestCase):
         # proper local hrefs must start with 'http://localhost/v3/'
         body = {
             'rebuild': {
-                'image_ref': self.image_uuid,
+                'imageRef': self.image_uuid,
             },
         }
 
@@ -308,7 +308,7 @@ class ServerActionsControllerTest(test.TestCase):
         # proper local hrefs must start with 'http://localhost/v3/'
         body = {
             'rebuild': {
-                'image_ref': self.image_href,
+                'imageRef': self.image_href,
             },
         }
 
@@ -328,7 +328,7 @@ class ServerActionsControllerTest(test.TestCase):
 
         body = {
             "rebuild": {
-                "image_ref": self._image_href,
+                "imageRef": self._image_href,
             },
         }
 
@@ -344,7 +344,7 @@ class ServerActionsControllerTest(test.TestCase):
     def test_rebuild_raises_conflict_on_invalid_state(self):
         body = {
             "rebuild": {
-                "image_ref": self._image_href,
+                "imageRef": self._image_href,
             },
         }
 
@@ -369,7 +369,7 @@ class ServerActionsControllerTest(test.TestCase):
 
         body = {
             "rebuild": {
-                "image_ref": self._image_href,
+                "imageRef": self._image_href,
                 "metadata": metadata,
             },
         }
@@ -382,7 +382,7 @@ class ServerActionsControllerTest(test.TestCase):
     def test_rebuild_accepted_with_bad_metadata(self):
         body = {
             "rebuild": {
-                "image_ref": self._image_href,
+                "imageRef": self._image_href,
                 "metadata": "stack",
             },
         }
@@ -395,7 +395,7 @@ class ServerActionsControllerTest(test.TestCase):
     def test_rebuild_with_too_large_metadata(self):
         body = {
             "rebuild": {
-                "image_ref": self._image_href,
+                "imageRef": self._image_href,
                 "metadata": {
                    256 * "k": "value"
                 }
@@ -426,7 +426,7 @@ class ServerActionsControllerTest(test.TestCase):
 
         body = {
             "rebuild": {
-                "image_ref": self._image_href,
+                "imageRef": self._image_href,
                 "adminPass": "asdf",
             },
         }
@@ -448,7 +448,7 @@ class ServerActionsControllerTest(test.TestCase):
 
         body = {
             "rebuild": {
-                "image_ref": self._image_href,
+                "imageRef": self._image_href,
                 "admin_password": "asdf",
             },
         }
@@ -467,7 +467,7 @@ class ServerActionsControllerTest(test.TestCase):
 
         body = {
             "rebuild": {
-                "image_ref": self._image_href,
+                "imageRef": self._image_href,
             },
         }
 
@@ -479,7 +479,7 @@ class ServerActionsControllerTest(test.TestCase):
     def test_rebuild_with_bad_image(self):
         body = {
             "rebuild": {
-                "image_ref": "foo",
+                "imageRef": "foo",
             },
         }
         req = fakes.HTTPRequestV3.blank(self.url)
@@ -507,7 +507,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.stubs.Set(fake._FakeImageService, 'show', return_image_meta)
         body = {
             "rebuild": {
-                "image_ref": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
+                "imageRef": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
             },
         }
         req = fakes.HTTPRequestV3.blank(self.url)
@@ -552,7 +552,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.stubs.Set(objects.Instance, 'save', fake_save)
         body = {
             "rebuild": {
-                "image_ref": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
+                "imageRef": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
             },
         }
         req = fakes.HTTPRequestV3.blank(self.url)
@@ -568,7 +568,7 @@ class ServerActionsControllerTest(test.TestCase):
 
         body = {
             "rebuild": {
-                "image_ref": self._image_href,
+                "imageRef": self._image_href,
             },
         }
         if value is not None:
@@ -599,7 +599,7 @@ class ServerActionsControllerTest(test.TestCase):
 
     def test_resize_server(self):
 
-        body = dict(resize=dict(flavor_ref="http://localhost/3"))
+        body = dict(resize=dict(flavorRef="http://localhost/3"))
 
         self.resize_called = False
 
@@ -622,7 +622,7 @@ class ServerActionsControllerTest(test.TestCase):
                           req, FAKE_UUID, body)
 
     def test_resize_server_no_flavor_ref(self):
-        body = dict(resize=dict(flavor_ref=None))
+        body = dict(resize=dict(flavorRef=None))
 
         req = fakes.HTTPRequestV3.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -630,7 +630,7 @@ class ServerActionsControllerTest(test.TestCase):
                           req, FAKE_UUID, body)
 
     def test_resize_with_server_not_found(self):
-        body = dict(resize=dict(flavor_ref="http://localhost/3"))
+        body = dict(resize=dict(flavorRef="http://localhost/3"))
 
         self.stubs.Set(compute_api.API, 'get', return_server_not_found)
 
@@ -640,7 +640,7 @@ class ServerActionsControllerTest(test.TestCase):
                           req, FAKE_UUID, body)
 
     def test_resize_with_image_exceptions(self):
-        body = dict(resize=dict(flavor_ref="http://localhost/3"))
+        body = dict(resize=dict(flavorRef="http://localhost/3"))
         self.resize_called = 0
         image_id = 'fake_image_id'
 
@@ -668,7 +668,7 @@ class ServerActionsControllerTest(test.TestCase):
             self.assertEqual(self.resize_called, call_no + 1)
 
     def test_resize_with_too_many_instances(self):
-        body = dict(resize=dict(flavor_ref="http://localhost/3"))
+        body = dict(resize=dict(flavorRef="http://localhost/3"))
 
         def fake_resize(*args, **kwargs):
             raise exception.TooManyInstances(message="TooManyInstance")
@@ -683,7 +683,7 @@ class ServerActionsControllerTest(test.TestCase):
     @mock.patch('nova.compute.api.API.resize',
                 side_effect=exception.CannotResizeDisk(reason=''))
     def test_resize_raises_cannot_resize_disk(self, mock_resize):
-        body = dict(resize=dict(flavor_ref="http://localhost/3"))
+        body = dict(resize=dict(flavorRef="http://localhost/3"))
         req = fakes.HTTPRequestV3.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_resize,
@@ -693,14 +693,14 @@ class ServerActionsControllerTest(test.TestCase):
                 side_effect=exception.FlavorNotFound(reason='',
                                                      flavor_id='fake_id'))
     def test_resize_raises_flavor_not_found(self, mock_resize):
-        body = dict(resize=dict(flavor_ref="http://localhost/3"))
+        body = dict(resize=dict(flavorRef="http://localhost/3"))
         req = fakes.HTTPRequestV3.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_resize,
                           req, FAKE_UUID, body)
 
     def test_resize_raises_conflict_on_invalid_state(self):
-        body = dict(resize=dict(flavor_ref="http://localhost/3"))
+        body = dict(resize=dict(flavorRef="http://localhost/3"))
 
         def fake_resize(*args, **kwargs):
             raise exception.InstanceInvalidState(attr='fake_attr',
