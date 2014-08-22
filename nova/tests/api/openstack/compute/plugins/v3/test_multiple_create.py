@@ -371,7 +371,7 @@ class ServersControllerCreateTest(test.TestCase):
     def _check_admin_password_len(self, server_dict):
         """utility function - check server_dict for admin_password length."""
         self.assertEqual(CONF.password_length,
-                         len(server_dict["admin_password"]))
+                         len(server_dict["adminPass"]))
 
     def _check_admin_password_missing(self, server_dict):
         """utility function - check server_dict for admin_password absence."""

@@ -10,7 +10,7 @@
                 }
             ]
         },
-        "admin_password": "99WHAxN8gpvg",
+        "adminPass": "99WHAxN8gpvg",
         "created": "2013-11-06T07:51:09Z",
         "flavor": {
             "id": "1",

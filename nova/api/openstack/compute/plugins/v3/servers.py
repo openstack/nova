@@ -564,7 +564,7 @@ class ServersController(wsgi.Controller):
         server = self._view_builder.create(req, instances[0])
 
         if CONF.enable_instance_password:
-            server['server']['admin_password'] = password
+            server['server']['adminPass'] = password
 
         robj = wsgi.ResponseObject(server)
 
@@ -907,7 +907,7 @@ class ServersController(wsgi.Controller):
         # Add on the admin_password attribute since the view doesn't do it
         # unless instance passwords are disabled
         if CONF.enable_instance_password:
-            view['server']['admin_password'] = password
+            view['server']['adminPass'] = password
 
         robj = wsgi.ResponseObject(view)
         return self._add_location(robj)
@@ -981,12 +981,12 @@ class ServersController(wsgi.Controller):
     def _get_server_admin_password(self, server):
         """Determine the admin password for a server on creation."""
         try:
-            password = server['admin_password']
+            password = server['adminPass']
             self._validate_admin_password(password)
         except KeyError:
             password = utils.generate_password()
         except ValueError:
-            raise exc.HTTPBadRequest(explanation=_("Invalid admin_password"))
+            raise exc.HTTPBadRequest(explanation=_("Invalid adminPass"))
 
         return password
 

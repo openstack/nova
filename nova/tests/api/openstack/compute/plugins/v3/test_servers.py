@@ -1635,8 +1635,8 @@ class ServersControllerUpdateTest(ControllerTest):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, FAKE_UUID, body=body)
 
-    def test_update_server_adminPass_ignored(self):
-        inst_dict = dict(name='server_test', adminPass='bacon')
+    def test_update_server_admin_password_ignored(self):
+        inst_dict = dict(name='server_test', admin_password='bacon')
         body = dict(server=inst_dict)
 
         def server_update(context, id, params):
@@ -1911,11 +1911,11 @@ class ServersControllerCreateTest(test.TestCase):
     def _check_admin_password_len(self, server_dict):
         """utility function - check server_dict for admin_password length."""
         self.assertEqual(CONF.password_length,
-                         len(server_dict["admin_password"]))
+                         len(server_dict["adminPass"]))
 
     def _check_admin_password_missing(self, server_dict):
         """utility function - check server_dict for admin_password absence."""
-        self.assertNotIn("admin_password", server_dict)
+        self.assertNotIn("adminPass", server_dict)
 
     def _test_create_instance(self, flavor=2):
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
@@ -2390,27 +2390,27 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_admin_password(self):
         self.body['server']['flavor_ref'] = 3
-        self.body['server']['admin_password'] = 'testpass'
+        self.body['server']['adminPass'] = 'testpass'
         self.req.body = jsonutils.dumps(self.body)
         res = self.controller.create(self.req, body=self.body).obj
 
         server = res['server']
-        self.assertEqual(server['admin_password'],
-                         self.body['server']['admin_password'])
+        self.assertEqual(server['adminPass'],
+                         self.body['server']['adminPass'])
 
     def test_create_instance_admin_password_pass_disabled(self):
         self.flags(enable_instance_password=False)
         self.body['server']['flavor_ref'] = 3
-        self.body['server']['admin_password'] = 'testpass'
+        self.body['server']['adminPass'] = 'testpass'
         self.req.body = jsonutils.dumps(self.body)
         res = self.controller.create(self.req, body=self.body).obj
 
         self.assertIn('server', res)
-        self.assertIn('admin_password', self.body['server'])
+        self.assertIn('adminPass', self.body['server'])
 
     def test_create_instance_admin_password_empty(self):
         self.body['server']['flavor_ref'] = 3
-        self.body['server']['admin_password'] = ''
+        self.body['server']['adminPass'] = ''
         self.req.body = jsonutils.dumps(self.body)
 
         # The fact that the action doesn't raise is enough validation
