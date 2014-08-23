@@ -24,7 +24,6 @@ create_backup = {
                 'name': parameter_types.name,
                 'backup_type': {
                     'type': 'string',
-                    'enum': ['daily', 'weekly'],
                 },
                 'rotation': {
                     'type': ['integer', 'string'],
