@@ -1102,13 +1102,17 @@ class TestNeutronv2(TestNeutronv2Base):
                           self.instance, requested_networks=requested_networks)
 
     def _deallocate_for_instance(self, number, requested_networks=None):
+        # TODO(mriedem): Remove this conversion when all neutronv2 APIs are
+        # converted to handling instance objects.
+        self.instance = fake_instance.fake_instance_obj(self.context,
+                                                        **self.instance)
         api = neutronapi.API()
         port_data = number == 1 and self.port_data1 or self.port_data2
         ret_data = copy.deepcopy(port_data)
         if requested_networks:
             for net, fip, port in requested_networks:
                 ret_data.append({'network_id': net,
-                                 'device_id': self.instance['uuid'],
+                                 'device_id': self.instance.uuid,
                                  'device_owner': 'compute:nova',
                                  'id': port,
                                  'status': 'DOWN',
@@ -1116,7 +1120,7 @@ class TestNeutronv2(TestNeutronv2Base):
                                  'fixed_ips': [],
                                  'mac_address': 'fake_mac', })
         self.moxed_client.list_ports(
-            device_id=self.instance['uuid']).AndReturn(
+            device_id=self.instance.uuid).AndReturn(
                 {'ports': ret_data})
         if requested_networks:
             for net, fip, port in requested_networks:
@@ -1126,7 +1130,7 @@ class TestNeutronv2(TestNeutronv2Base):
 
         self.mox.StubOutWithMock(api.db, 'instance_info_cache_update')
         api.db.instance_info_cache_update(self.context,
-                                          self.instance['uuid'],
+                                          self.instance.uuid,
                                           {'network_info': '[]'})
         self.mox.ReplayAll()
 
@@ -1153,9 +1157,13 @@ class TestNeutronv2(TestNeutronv2Base):
         self._deallocate_for_instance(2)
 
     def test_deallocate_for_instance_port_not_found(self):
+        # TODO(mriedem): Remove this conversion when all neutronv2 APIs are
+        # converted to handling instance objects.
+        self.instance = fake_instance.fake_instance_obj(self.context,
+                                                        **self.instance)
         port_data = self.port_data1
         self.moxed_client.list_ports(
-            device_id=self.instance['uuid']).AndReturn(
+            device_id=self.instance.uuid).AndReturn(
                 {'ports': port_data})
 
         NeutronNotFound = neutronv2.exceptions.NeutronClientException(

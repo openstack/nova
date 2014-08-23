@@ -472,7 +472,7 @@ class API(base_api.NetworkAPI):
     def deallocate_for_instance(self, context, instance, **kwargs):
         """Deallocate all network resources related to the instance."""
         LOG.debug('deallocate_for_instance()', instance=instance)
-        search_opts = {'device_id': instance['uuid']}
+        search_opts = {'device_id': instance.uuid}
         neutron = neutronv2.get_client(context)
         data = neutron.list_ports(**search_opts)
         ports = [port['id'] for port in data.get('ports', [])]
