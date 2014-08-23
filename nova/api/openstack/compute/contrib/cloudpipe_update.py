@@ -13,6 +13,7 @@
 #    under the License.
 
 
+import webob
 import webob.exc
 
 from nova.api.openstack import extensions
@@ -55,7 +56,7 @@ class CloudpipeUpdateController(wsgi.Controller):
             msg = _("Invalid request body: %s") % unicode(ex)
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        return webob.exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
 
 class Cloudpipe_update(extensions.ExtensionDescriptor):

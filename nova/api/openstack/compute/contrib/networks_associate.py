@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import webob
 from webob import exc
 
 from nova.api.openstack import extensions
@@ -43,7 +44,7 @@ class NetworkAssociateActionController(wsgi.Controller):
             msg = _('Disassociate host is not implemented by the configured '
                     'Network API')
             raise exc.HTTPNotImplemented(explanation=msg)
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     @wsgi.action("disassociate_project")
     def _disassociate_project_only(self, req, id, body):
@@ -60,7 +61,7 @@ class NetworkAssociateActionController(wsgi.Controller):
                     'configured Network API')
             raise exc.HTTPNotImplemented(explanation=msg)
 
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
     @wsgi.action("associate_host")
     def _associate_host(self, req, id, body):
@@ -78,7 +79,7 @@ class NetworkAssociateActionController(wsgi.Controller):
                     'Network API')
             raise exc.HTTPNotImplemented(explanation=msg)
 
-        return exc.HTTPAccepted()
+        return webob.Response(status_int=202)
 
 
 class Networks_associate(extensions.ExtensionDescriptor):

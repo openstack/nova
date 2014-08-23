@@ -1005,6 +1005,7 @@ class FloatingIpsJsonTest(ApiSampleTestBaseV2):
         self.test_floating_ips_create()
         response = self._do_delete('os-floating-ips/%d' % 1)
         self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), "")
 
 
 class ExtendedFloatingIpsJsonTest(FloatingIpsJsonTest):
@@ -1361,6 +1362,7 @@ class CloudPipeUpdateJsonTest(ApiSampleTestBaseV2):
                                 'cloud-pipe-update-req',
                                 subs)
         self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), "")
 
 
 class CloudPipeUpdateXmlTest(CloudPipeUpdateJsonTest):
@@ -1550,6 +1552,7 @@ class FixedIpJsonTest(ApiSampleTestBaseV2):
                                  'fixedip-post-req',
                                  project)
         self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), "")
 
     def test_get_fixed_ip(self):
         # Return data about the given fixed ip.
@@ -2603,6 +2606,7 @@ class OsNetworksJsonTests(ApiSampleTestBaseV2):
         response = self._do_delete('os-tenant-networks/%s' %
                                                 net["network"]["id"])
         self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), "")
 
 
 class OsNetworksXmlTests(OsNetworksJsonTests):
@@ -2614,6 +2618,7 @@ class OsNetworksXmlTests(OsNetworksJsonTests):
         network_id = net.find('id').text
         response = self._do_delete('os-tenant-networks/%s' % network_id)
         self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), "")
 
 
 class NetworksJsonTests(ApiSampleTestBaseV2):
@@ -2646,6 +2651,7 @@ class NetworksJsonTests(ApiSampleTestBaseV2):
         response = self._do_post('os-networks/%s/action' % uuid,
                                  'networks-disassociate-req', {})
         self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), "")
 
     def test_network_show(self):
         uuid = test_networks.FAKE_NETWORKS[0]['uuid']
@@ -2663,6 +2669,12 @@ class NetworksJsonTests(ApiSampleTestBaseV2):
         response = self._do_post("os-networks/add",
                                  'network-add-req', {})
         self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), "")
+
+    def test_network_delete(self):
+        response = self._do_delete('os-networks/always_delete')
+        self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), "")
 
 
 class NetworksXmlTests(NetworksJsonTests):
@@ -2742,24 +2754,28 @@ class NetworksAssociateJsonTests(ApiSampleTestBaseV2):
                                  'network-disassociate-req',
                                  {})
         self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), "")
 
     def test_disassociate_host(self):
         response = self._do_post('os-networks/1/action',
                                  'network-disassociate-host-req',
                                  {})
         self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), "")
 
     def test_disassociate_project(self):
         response = self._do_post('os-networks/1/action',
                                  'network-disassociate-project-req',
                                  {})
         self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), "")
 
     def test_associate_host(self):
         response = self._do_post('os-networks/1/action',
                                  'network-associate-host-req',
                                  {"host": "testHost"})
         self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), "")
 
 
 class NetworksAssociateXmlTests(NetworksAssociateJsonTests):
