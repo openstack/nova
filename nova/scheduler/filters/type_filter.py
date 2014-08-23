@@ -29,7 +29,7 @@ class TypeAffinityFilter(filters.BaseHostFilter):
     def host_passes(self, host_state, filter_properties):
         """Dynamically limits hosts to one instance type
 
-        Return False if host has any instance types other then the requested
+        Return False if host has any instance types other than the requested
         type. Return True if all instance types match or if host is empty.
         """
 
