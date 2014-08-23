@@ -237,9 +237,16 @@ class ComputeAttestationCache(object):
             entry['vtime'] = timeutils.normalize_time(
                             timeutils.parse_isotime(state['vtime']))
         except ValueError:
-            # Mark the system as un-trusted if get invalid vtime.
-            entry['trust_lvl'] = 'unknown'
-            entry['vtime'] = timeutils.utcnow()
+            try:
+                # Mt. Wilson does not necessarily return an ISO8601 formatted
+                # `vtime`, so we should try to parse it as a string formatted
+                # datetime.
+                vtime = timeutils.parse_strtime(state['vtime'], fmt="%c")
+                entry['vtime'] = timeutils.normalize_time(vtime)
+            except ValueError:
+                # Mark the system as un-trusted if get invalid vtime.
+                entry['trust_lvl'] = 'unknown'
+                entry['vtime'] = timeutils.utcnow()
 
         self.compute_nodes[host] = entry
 

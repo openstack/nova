@@ -1449,6 +1449,29 @@ class HostFiltersTestCase(test.NoDBTestCase):
         filt_cls.host_passes(host, filter_properties)     # Fill the caches
         self.assertEqual(set(self.oat_hosts), set(['node1', 'node2']))
 
+    def test_trusted_filter_trusted_and_locale_formated_vtime_passes(self):
+        self.oat_data = {"hosts": [{"host_name": "host1",
+                                    "trust_lvl": "trusted",
+                                    "vtime": timeutils.strtime(fmt="%c")},
+                                   {"host_name": "host2",
+                                    "trust_lvl": "trusted",
+                                    "vtime": timeutils.strtime(fmt="%D")},
+                                    # This is just a broken date to ensure that
+                                    # we're not just arbitrarily accepting any
+                                    # date format.
+                        ]}
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['TrustedFilter']()
+        extra_specs = {'trust:trusted_host': 'trusted'}
+        filter_properties = {'context': self.context.elevated(),
+                             'instance_type': {'memory_mb': 1024,
+                                               'extra_specs': extra_specs}}
+        host = fakes.FakeHostState('host1', 'host1', {})
+        bad_host = fakes.FakeHostState('host2', 'host2', {})
+
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        self.assertFalse(filt_cls.host_passes(bad_host, filter_properties))
+
     def test_core_filter_passes(self):
         filt_cls = self.class_map['CoreFilter']()
         filter_properties = {'instance_type': {'vcpus': 1}}
