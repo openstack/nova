@@ -36,6 +36,7 @@ class VolumeUtilsV2TestCase(test.NoDBTestCase):
         super(VolumeUtilsV2TestCase, self).setUp()
         self._volutilsv2 = volumeutilsv2.VolumeUtilsV2()
         self._volutilsv2._conn_storage = mock.MagicMock()
+        self._volutilsv2._conn_wmi = mock.MagicMock()
         self.flags(volume_attach_retry_count=4, group='hyperv')
         self.flags(volume_attach_retry_interval=0, group='hyperv')
 
@@ -110,3 +111,37 @@ class VolumeUtilsV2TestCase(test.NoDBTestCase):
 
     def test_login_target_exception(self):
         self._test_login_target(False, True)
+
+    def test_logout_storage_target(self):
+        mock_msft_target = self._volutilsv2._conn_storage.MSFT_iSCSITarget
+        mock_msft_session = self._volutilsv2._conn_storage.MSFT_iSCSISession
+
+        mock_target = mock.MagicMock()
+        mock_target.IsConnected = True
+        mock_msft_target.return_value = [mock_target]
+
+        mock_session = mock.MagicMock()
+        mock_session.IsPersistent = True
+        mock_msft_session.return_value = [mock_session]
+
+        self._volutilsv2.logout_storage_target(self._FAKE_TARGET)
+
+        mock_msft_target.assert_called_once_with(NodeAddress=self._FAKE_TARGET)
+        mock_msft_session.assert_called_once_with(
+            TargetNodeAddress=self._FAKE_TARGET)
+
+        mock_session.Unregister.assert_called_once_with()
+        mock_target.Disconnect.assert_called_once_with()
+
+    @mock.patch.object(volumeutilsv2.VolumeUtilsV2, 'logout_storage_target')
+    def test_execute_log_out(self, mock_logout_target):
+        sess_class = self._volutilsv2._conn_wmi.MSiSCSIInitiator_SessionClass
+
+        mock_session = mock.MagicMock()
+        sess_class.return_value = [mock_session]
+
+        self._volutilsv2.execute_log_out(mock.sentinel.FAKE_SESSION_ID)
+
+        sess_class.assert_called_once_with(
+            SessionId=mock.sentinel.FAKE_SESSION_ID)
+        mock_logout_target.assert_called_once_with(mock_session.TargetName)
