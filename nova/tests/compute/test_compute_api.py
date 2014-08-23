@@ -1974,6 +1974,42 @@ class _ComputeAPIUnitTestMixIn(object):
                 None, new_image, flavor, {}, [])
         self.assertEqual(vm_mode.XEN, instance.vm_mode)
 
+    def _test_check_injected_file_quota_onset_file_limit_exceeded(self,
+                                                                  side_effect):
+        injected_files = [
+            {
+                "path": "/etc/banner.txt",
+                "contents": "foo"
+            }
+        ]
+        with mock.patch.object(quota.QUOTAS, 'limit_check',
+                               side_effect=side_effect):
+            self.compute_api._check_injected_file_quota(
+                self.context, injected_files)
+
+    def test_check_injected_file_quota_onset_file_limit_exceeded(self):
+        # This is the first call to limit_check.
+        side_effect = exception.OverQuota(overs='injected_files')
+        self.assertRaises(exception.OnsetFileLimitExceeded,
+            self._test_check_injected_file_quota_onset_file_limit_exceeded,
+            side_effect)
+
+    def test_check_injected_file_quota_onset_file_path_limit(self):
+        # This is the second call to limit_check.
+        side_effect = (mock.DEFAULT,
+                       exception.OverQuota(overs='injected_file_path_bytes'))
+        self.assertRaises(exception.OnsetFilePathLimitExceeded,
+            self._test_check_injected_file_quota_onset_file_limit_exceeded,
+            side_effect)
+
+    def test_check_injected_file_quota_onset_file_content_limit(self):
+        # This is the second call to limit_check but with different overs.
+        side_effect = (mock.DEFAULT,
+            exception.OverQuota(overs='injected_file_content_bytes'))
+        self.assertRaises(exception.OnsetFileContentLimitExceeded,
+            self._test_check_injected_file_quota_onset_file_limit_exceeded,
+            side_effect)
+
     @mock.patch('nova.objects.Quotas.commit')
     @mock.patch('nova.objects.Quotas.reserve')
     @mock.patch('nova.objects.Instance.save')

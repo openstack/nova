@@ -1213,11 +1213,11 @@ class OnsetFileLimitExceeded(QuotaError):
     msg_fmt = _("Personality file limit exceeded")
 
 
-class OnsetFilePathLimitExceeded(QuotaError):
+class OnsetFilePathLimitExceeded(OnsetFileLimitExceeded):
     msg_fmt = _("Personality file path too long")
 
 
-class OnsetFileContentLimitExceeded(QuotaError):
+class OnsetFileContentLimitExceeded(OnsetFileLimitExceeded):
     msg_fmt = _("Personality file content too long")
 
 

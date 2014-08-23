@@ -1393,6 +1393,8 @@ class Controller(wsgi.Controller):
         except exception.ImageNotFound:
             msg = _("Cannot find image for rebuild")
             raise exc.HTTPBadRequest(explanation=msg)
+        except exception.QuotaError as error:
+            raise exc.HTTPForbidden(explanation=error.format_message())
         except (exception.ImageNotActive,
                 exception.FlavorDiskTooSmall,
                 exception.FlavorMemoryTooSmall,

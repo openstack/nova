@@ -15,6 +15,7 @@
 #    under the License.
 
 import base64
+import contextlib
 import copy
 import datetime
 import uuid
@@ -1482,6 +1483,24 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_rebuild,
                           self.req, FAKE_UUID, body=self.body)
+
+    def test_rebuild_instance_onset_file_limit_over_quota(self):
+        def fake_get_image(self, context, image_href, **kwargs):
+            return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
+                        name='public image', is_public=True, status='active')
+
+        with contextlib.nested(
+            mock.patch.object(fake._FakeImageService, 'show',
+                              side_effect=fake_get_image),
+            mock.patch.object(self.controller.compute_api, 'rebuild',
+                              side_effect=exception.OnsetFileLimitExceeded)
+        ) as (
+            show_mock, rebuild_mock
+        ):
+            self.req.body = jsonutils.dumps(self.body)
+            self.assertRaises(webob.exc.HTTPForbidden,
+                              self.controller._action_rebuild,
+                              self.req, FAKE_UUID, body=self.body)
 
     def test_start(self):
         self.mox.StubOutWithMock(compute_api.API, 'start')
