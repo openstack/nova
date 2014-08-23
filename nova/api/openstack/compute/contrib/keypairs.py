@@ -102,9 +102,7 @@ class KeypairController(object):
 
         except exception.KeypairLimitExceeded:
             msg = _("Quota exceeded, too many key pairs.")
-            raise webob.exc.HTTPRequestEntityTooLarge(
-                        explanation=msg,
-                        headers={'Retry-After': 0})
+            raise webob.exc.HTTPForbidden(explanation=msg)
         except exception.InvalidKeypair as exc:
             raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
         except exception.KeyPairExists as exc:

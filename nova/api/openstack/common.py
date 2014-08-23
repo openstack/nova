@@ -291,8 +291,7 @@ def check_img_metadata_properties_quota(context, metadata):
         QUOTAS.limit_check(context, metadata_items=len(metadata))
     except exception.OverQuota:
         expl = _("Image metadata limit exceeded")
-        raise webob.exc.HTTPRequestEntityTooLarge(explanation=expl,
-                                                headers={'Retry-After': 0})
+        raise webob.exc.HTTPForbidden(explanation=expl)
 
     #  check the key length.
     if isinstance(metadata, dict):

@@ -1152,6 +1152,9 @@ class NoValidHost(NovaException):
 class QuotaError(NovaException):
     ec2_code = 'ResourceLimitExceeded'
     msg_fmt = _("Quota exceeded: code=%(code)s")
+    # NOTE(cyeoh): 413 should only be used for the ec2 API
+    # The error status code for out of quota for the nova api should be
+    # 403 Forbidden.
     code = 413
     headers = {'Retry-After': 0}
     safe = True

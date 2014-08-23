@@ -265,7 +265,7 @@ class ImageMetaDataTest(test.NoDBTestCase):
                           self.controller.delete, req, '100', 'key1')
 
     @mock.patch(CHK_QUOTA_STR,
-                side_effect=webob.exc.HTTPRequestEntityTooLarge(
+                side_effect=webob.exc.HTTPForbidden(
                         explanation='', headers={'Retry-After': 0}))
     @mock.patch('nova.image.api.API.update')
     @mock.patch('nova.image.api.API.get', return_value=get_image_123())
@@ -277,12 +277,12 @@ class ImageMetaDataTest(test.NoDBTestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
-        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
+        self.assertRaises(webob.exc.HTTPForbidden,
                           self.controller.create, req, '123', body)
         self.assertFalse(update_mocked.called)
 
     @mock.patch(CHK_QUOTA_STR,
-                side_effect=webob.exc.HTTPRequestEntityTooLarge(
+                side_effect=webob.exc.HTTPForbidden(
                         explanation='', headers={'Retry-After': 0}))
     @mock.patch('nova.image.api.API.update')
     @mock.patch('nova.image.api.API.get', return_value=get_image_123())
@@ -295,7 +295,7 @@ class ImageMetaDataTest(test.NoDBTestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
-        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
+        self.assertRaises(webob.exc.HTTPForbidden,
                           self.controller.update, req, '123', 'blah', body)
         self.assertFalse(update_mocked.called)
 

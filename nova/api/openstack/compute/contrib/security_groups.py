@@ -194,7 +194,7 @@ def translate_exceptions():
         raise exc.HTTPNotFound(explanation=msg)
     except exception.SecurityGroupLimitExceeded as exp:
         msg = exp.format_message()
-        raise exc.HTTPRequestEntityTooLarge(explanation=msg)
+        raise exc.HTTPForbidden(explanation=msg)
     except exception.NoUniqueMatch as exp:
         msg = exp.format_message()
         raise exc.HTTPConflict(explanation=msg)

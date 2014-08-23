@@ -134,9 +134,7 @@ class Controller(object):
                 explanation=error.format_message())
 
         except exception.QuotaError as error:
-            raise exc.HTTPRequestEntityTooLarge(
-                explanation=error.format_message(),
-                headers={'Retry-After': 0})
+            raise exc.HTTPForbidden(explanation=error.format_message())
 
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())

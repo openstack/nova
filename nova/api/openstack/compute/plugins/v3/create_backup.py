@@ -34,7 +34,7 @@ class CreateBackupController(wsgi.Controller):
         super(CreateBackupController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    @extensions.expected_errors((400, 404, 409, 413))
+    @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.action('create_backup')
     @validation.schema(create_backup.create_backup)
     def _create_backup(self, req, id, body):

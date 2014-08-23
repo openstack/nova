@@ -195,11 +195,11 @@ class KeypairsTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 413)
+        self.assertEqual(res.status_int, 403)
         res_dict = jsonutils.loads(res.body)
         self.assertEqual(
             "Quota exceeded, too many key pairs.",
-            res_dict['overLimit']['message'])
+            res_dict['forbidden']['message'])
 
     def test_keypair_create_quota_limit(self):
 
@@ -219,11 +219,11 @@ class KeypairsTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 413)
+        self.assertEqual(res.status_int, 403)
         res_dict = jsonutils.loads(res.body)
         self.assertEqual(
             "Quota exceeded, too many key pairs.",
-            res_dict['overLimit']['message'])
+            res_dict['forbidden']['message'])
 
     def test_keypair_create_duplicate(self):
         self.stubs.Set(db, "key_pair_create", db_key_pair_create_duplicate)

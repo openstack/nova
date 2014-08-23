@@ -48,7 +48,7 @@ class KeypairController(object):
             clean[attr] = keypair[attr]
         return clean
 
-    @extensions.expected_errors((400, 409, 413))
+    @extensions.expected_errors((400, 403, 409))
     @wsgi.response(201)
     @validation.schema(keypairs.create)
     def create(self, req, body):
@@ -86,9 +86,7 @@ class KeypairController(object):
 
         except exception.KeypairLimitExceeded:
             msg = _("Quota exceeded, too many key pairs.")
-            raise webob.exc.HTTPRequestEntityTooLarge(
-                        explanation=msg,
-                        headers={'Retry-After': 0})
+            raise webob.exc.HTTPForbidden(explanation=msg)
         except exception.InvalidKeypair as exc:
             raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
         except exception.KeyPairExists as exc:

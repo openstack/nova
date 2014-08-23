@@ -53,7 +53,7 @@ class ServerMetadataController(wsgi.Controller):
         context = req.environ['nova.context']
         return {'metadata': self._get_metadata(context, server_id)}
 
-    @extensions.expected_errors((400, 404, 409, 413))
+    @extensions.expected_errors((400, 403, 404, 409, 413))
     @wsgi.response(201)
     def create(self, req, server_id, body):
         if not self.is_valid_body(body, 'metadata'):
@@ -69,7 +69,7 @@ class ServerMetadataController(wsgi.Controller):
 
         return {'metadata': new_metadata}
 
-    @extensions.expected_errors((400, 404, 409, 413))
+    @extensions.expected_errors((400, 403, 404, 409, 413))
     def update(self, req, server_id, id, body):
         if not self.is_valid_body(body, 'metadata'):
             msg = _("Malformed request body")
@@ -91,7 +91,7 @@ class ServerMetadataController(wsgi.Controller):
 
         return {'metadata': meta_item}
 
-    @extensions.expected_errors((400, 404, 409, 413))
+    @extensions.expected_errors((400, 403, 404, 409, 413))
     def update_all(self, req, server_id, body):
         if not self.is_valid_body(body, 'metadata'):
             msg = _("Malformed request body")
@@ -123,9 +123,7 @@ class ServerMetadataController(wsgi.Controller):
                 explanation=error.format_message())
 
         except exception.QuotaError as error:
-            raise exc.HTTPRequestEntityTooLarge(
-                explanation=error.format_message(),
-                headers={'Retry-After': 0})
+            raise exc.HTTPForbidden(explanation=error.format_message())
 
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
