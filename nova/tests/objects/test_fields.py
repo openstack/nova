@@ -296,7 +296,8 @@ class TestObject(TestField):
         self.coerce_bad_values = [OtherTestableObject(), 1, 'foo']
         self.to_primitive_values = [(test_inst, test_inst.obj_to_primitive())]
         self.from_primitive_values = [(test_inst.obj_to_primitive(),
-                                       test_inst)]
+                                       test_inst),
+                                       (test_inst, test_inst)]
 
     def test_stringify(self):
         obj = self._test_cls(uuid='fake-uuid')

@@ -458,6 +458,10 @@ class Object(FieldType):
     def from_primitive(obj, attr, value):
         # FIXME(danms): Avoid circular import from base.py
         from nova.objects import base as obj_base
+        # NOTE (ndipanov): If they already got hydrated by the serializer, just
+        # pass them back unchanged
+        if isinstance(value, obj_base.NovaObject):
+            return value
         return obj_base.NovaObject.obj_from_primitive(value, obj._context)
 
     def describe(self):
