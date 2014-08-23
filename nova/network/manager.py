@@ -1079,12 +1079,13 @@ class NetworkManager(manager.Manager):
                         network_size=None, cidr_v6=None,
                         gateway=None, gateway_v6=None, bridge=None,
                         bridge_interface=None, dns1=None, dns2=None,
-                        fixed_cidr=None, **kwargs):
+                        fixed_cidr=None, allowed_start=None,
+                        allowed_end=None, **kwargs):
         arg_names = ("label", "cidr", "multi_host", "num_networks",
                      "network_size", "cidr_v6",
                      "gateway", "gateway_v6", "bridge",
                      "bridge_interface", "dns1", "dns2",
-                     "fixed_cidr")
+                     "fixed_cidr", "allowed_start", "allowed_end")
         if 'mtu' not in kwargs:
             kwargs['mtu'] = CONF.network_device_mtu
         if 'dhcp_server' not in kwargs:
@@ -1149,12 +1150,24 @@ class NetworkManager(manager.Manager):
         LOG.debug('Create network: |%s|', kwargs)
         return self._do_create_networks(context, **kwargs)
 
+    @staticmethod
+    def _index_of(subnet, ip):
+        try:
+            start = netaddr.IPAddress(ip)
+        except netaddr.AddrFormatError:
+            raise ValueError(_("Not a valid IP Address"))
+        index = start.value - subnet.value
+        if index < 0 or index >= subnet.size:
+            raise ValueError(_("IP not within cidr range"))
+        return index
+
     def _do_create_networks(self, context,
                             label, cidr, multi_host, num_networks,
                             network_size, cidr_v6, gateway, gateway_v6, bridge,
                             bridge_interface, dns1=None, dns2=None,
                             fixed_cidr=None, mtu=None, dhcp_server=None,
-                            enable_dhcp=None, share_address=None, **kwargs):
+                            enable_dhcp=None, share_address=None,
+                            allowed_start=None, allowed_end=None, **kwargs):
         """Create networks based on parameters."""
         # NOTE(jkoelker): these are dummy values to make sure iter works
         # TODO(tr3buchet): disallow carving up networks
@@ -1250,17 +1263,38 @@ class NetworkManager(manager.Manager):
             else:
                 net.label = label
 
+            bottom_reserved = self._bottom_reserved_ips
+            top_reserved = self._top_reserved_ips
             extra_reserved = []
             if cidr and subnet_v4:
+                current = subnet_v4[1]
+                if allowed_start:
+                    try:
+                        val = self._index_of(subnet_v4, allowed_start)
+                    except ValueError as exc:
+                        raise ValueError('allowed_start: %s' % unicode(exc))
+                    current = netaddr.IPAddress(allowed_start)
+                    bottom_reserved = val
+                if allowed_end:
+                    try:
+                        val = self._index_of(subnet_v4, allowed_end)
+                    except ValueError as exc:
+                        raise ValueError('allowed_end: %s' % unicode(exc))
+                    top_reserved = subnet_v4.size - 1 - val
                 net.cidr = str(subnet_v4)
                 net.netmask = str(subnet_v4.netmask)
-                net.gateway = gateway or str(subnet_v4[1])
                 net.broadcast = str(subnet_v4.broadcast)
-                net.dhcp_start = str(subnet_v4[2])
+                if gateway:
+                    net.gateway = gateway
+                else:
+                    net.gateway = current
+                    current += 1
                 if not dhcp_server:
                     dhcp_server = net.gateway
-                if net.dhcp_start == dhcp_server:
-                    net.dhcp_start = str(subnet_v4[3])
+                net.dhcp_start = current
+                current += 1
+                if str(net.dhcp_start) == dhcp_server:
+                    net.dhcp_start = current
                 net.dhcp_server = dhcp_server
                 extra_reserved.append(str(net.dhcp_server))
                 extra_reserved.append(str(net.gateway))
@@ -1286,8 +1320,9 @@ class NetworkManager(manager.Manager):
                         used_vlans.sort()
                         vlan = used_vlans[-1] + 1
 
-                net.vpn_private_address = str(subnet_v4[2])
-                net.dhcp_start = str(subnet_v4[3])
+                net.vpn_private_address = net.dhcp_start
+                extra_reserved.append(str(net.vpn_private_address))
+                net.dhcp_start = net.dhcp_start + 1
                 net.vlan = vlan
                 net.bridge = 'br%s' % vlan
 
@@ -1301,7 +1336,8 @@ class NetworkManager(manager.Manager):
 
             if cidr and subnet_v4:
                 self._create_fixed_ips(context, net.id, fixed_cidr,
-                                       extra_reserved)
+                                       extra_reserved, bottom_reserved,
+                                       top_reserved)
         # NOTE(danms): Remove this in RPC API v2.0
         return obj_base.obj_to_primitive(networks)
 
@@ -1332,16 +1368,12 @@ class NetworkManager(manager.Manager):
         return 1  # broadcast
 
     def _create_fixed_ips(self, context, network_id, fixed_cidr=None,
-                          extra_reserved=None):
+                          extra_reserved=None, bottom_reserved=0,
+                          top_reserved=0):
         """Create all fixed ips for network."""
         network = self._get_network_by_id(context, network_id)
-        # NOTE(vish): Should these be properties of the network as opposed
-        #             to properties of the manager class?
-        bottom_reserved = self._bottom_reserved_ips
-        top_reserved = self._top_reserved_ips
         if extra_reserved is None:
             extra_reserved = []
-
         if not fixed_cidr:
             fixed_cidr = netaddr.IPNetwork(network['cidr'])
         num_ips = len(fixed_cidr)
