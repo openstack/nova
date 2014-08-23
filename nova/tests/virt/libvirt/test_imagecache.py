@@ -623,12 +623,8 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                       'uuid': '456',
                       'vm_state': '',
                       'task_state': ''}]
-
-        all_instances = []
-        for instance in instances:
-            all_instances.append(fake_instance.fake_instance_obj(
-                None, **instance))
-
+        all_instances = [fake_instance.fake_instance_obj(None, **instance)
+                         for instance in instances]
         image_cache_manager = imagecache.ImageCacheManager()
 
         # Fake the utils call which finds the backing image
