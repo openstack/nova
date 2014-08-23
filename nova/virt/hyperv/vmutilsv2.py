@@ -58,6 +58,7 @@ class VMUtilsV2(vmutils.VMUtils):
 
     _vm_power_states_map = {constants.HYPERV_VM_STATE_ENABLED: 2,
                             constants.HYPERV_VM_STATE_DISABLED: 3,
+                            constants.HYPERV_VM_STATE_SHUTTING_DOWN: 4,
                             constants.HYPERV_VM_STATE_REBOOT: 11,
                             constants.HYPERV_VM_STATE_PAUSED: 9,
                             constants.HYPERV_VM_STATE_SUSPENDED: 6}

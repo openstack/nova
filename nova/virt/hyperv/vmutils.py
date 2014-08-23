@@ -80,8 +80,11 @@ class VMUtils(object):
     'Msvm_SyntheticEthernetPortSettingData'
     _AFFECTED_JOB_ELEMENT_CLASS = "Msvm_AffectedJobElement"
 
+    _SHUTDOWN_COMPONENT = "Msvm_ShutdownComponent"
+
     _vm_power_states_map = {constants.HYPERV_VM_STATE_ENABLED: 2,
                             constants.HYPERV_VM_STATE_DISABLED: 3,
+                            constants.HYPERV_VM_STATE_SHUTTING_DOWN: 4,
                             constants.HYPERV_VM_STATE_REBOOT: 10,
                             constants.HYPERV_VM_STATE_PAUSED: 32768,
                             constants.HYPERV_VM_STATE_SUSPENDED: 32769}
@@ -386,6 +389,21 @@ class VMUtils(object):
         vm = self._lookup_vm_check(vm_name)
 
         self._add_virt_resource(new_nic_data, vm.path_())
+
+    def soft_shutdown_vm(self, vm_name):
+        vm = self._lookup_vm_check(vm_name)
+        shutdown_component = vm.associators(
+            wmi_result_class=self._SHUTDOWN_COMPONENT)
+
+        if not shutdown_component:
+            # If no shutdown_component is found, it means the VM is already
+            # in a shutdown state.
+            return
+
+        reason = 'Soft shutdown requested by OpenStack Nova.'
+        (ret_val, ) = shutdown_component[0].InitiateShutdown(Force=False,
+                                                             Reason=reason)
+        self.check_ret_val(ret_val, None)
 
     def set_vm_state(self, vm_name, req_state):
         """Set the desired state of the VM."""
