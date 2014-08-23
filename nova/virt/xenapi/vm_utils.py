@@ -728,6 +728,40 @@ def strip_base_mirror_from_vdis(session, vm_ref):
         _try_strip_base_mirror_from_vdi(session, vdi_ref)
 
 
+def _get_snapshots_for_vm(session, instance, vm_ref):
+    sr_ref = safe_find_sr(session)
+    vm_vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
+    parent_uuid = _get_vhd_parent_uuid(session, vm_vdi_ref)
+
+    if not parent_uuid:
+        return []
+
+    return _child_vhds(session, sr_ref, parent_uuid, old_snapshots_only=True)
+
+
+def remove_old_snapshots(session, instance, vm_ref):
+    """See if there is an snapshot present that should be removed."""
+    LOG.debug("Starting remove_old_snapshots for VM", instance=instance)
+
+    snapshot_uuids = _get_snapshots_for_vm(session, instance, vm_ref)
+    number_of_snapshots = len(snapshot_uuids)
+
+    if number_of_snapshots <= 0:
+        LOG.debug("No snapshots to remove.", instance=instance)
+        return
+
+    if number_of_snapshots > 1:
+        LOG.debug("More snapshots than expected, only deleting one.",
+                  instance=instance)
+
+    vdi_uuid = snapshot_uuids[0]
+    vdi_ref = session.VDI.get_by_uuid(vdi_uuid)
+    safe_destroy_vdis(session, [vdi_ref])
+    scan_default_sr(session)
+    # TODO(johnthetubaguy): we could look for older snapshots too
+    LOG.debug("Removed one old snapshot.", instance=instance)
+
+
 @contextlib.contextmanager
 def snapshot_attached_here(session, instance, vm_ref, label, userdevice='0',
                            post_snapshot_callback=None):
@@ -2048,7 +2082,14 @@ def _walk_vdi_chain(session, vdi_uuid):
         vdi_uuid = parent_uuid
 
 
-def _child_vhds(session, sr_ref, vdi_uuid):
+def _is_vdi_a_snapshot(vdi_rec):
+    """Ensure VDI is a snapshot, and not cached image."""
+    is_a_snapshot = vdi_rec['is_a_snapshot']
+    image_id = vdi_rec['other_config'].get('image-id')
+    return is_a_snapshot and not image_id
+
+
+def _child_vhds(session, sr_ref, vdi_uuid, old_snapshots_only=False):
     """Return the immediate children of a given VHD.
 
     This is not recursive, only the immediate children are returned.
@@ -2064,9 +2105,12 @@ def _child_vhds(session, sr_ref, vdi_uuid):
         if parent_uuid != vdi_uuid:
             continue
 
+        if old_snapshots_only and not _is_vdi_a_snapshot(rec):
+            continue
+
         children.add(rec_uuid)
 
-    return children
+    return list(children)
 
 
 def _count_parents_children(session, vdi_ref, sr_ref):

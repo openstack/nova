@@ -228,6 +228,10 @@ class XenAPIDriver(driver.ComputeDriver):
         """Create snapshot from a running VM instance."""
         self._vmops.snapshot(context, instance, image_id, update_task_state)
 
+    def post_interrupted_snapshot_cleanup(self, context, instance):
+        """Cleans up any resources left after a failed snapshot."""
+        self._vmops.post_interrupted_snapshot_cleanup(context, instance)
+
     def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None, bad_volumes_callback=None):
         """Reboot VM instance."""
