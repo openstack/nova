@@ -3197,20 +3197,23 @@ class ComputeManager(manager.Manager):
         instance's system_metadata. Optionally update the "current"
         instance_type to the saved old one first.
 
-        Returns the updated system_metadata as a dict, as well as the
-        post-cleanup current instance type.
+        Returns the updated system_metadata as a dict, the
+        post-cleanup current instance type and the to-be dropped
+        instance type.
         """
         sys_meta = instance.system_metadata
         if restore_old:
             instance_type = flavors.extract_flavor(instance, 'old_')
+            drop_instance_type = flavors.extract_flavor(instance)
             sys_meta = flavors.save_flavor_info(sys_meta, instance_type)
         else:
             instance_type = flavors.extract_flavor(instance)
+            drop_instance_type = flavors.extract_flavor(instance, 'old_')
 
         flavors.delete_flavor_info(sys_meta, 'old_')
         flavors.delete_flavor_info(sys_meta, 'new_')
 
-        return sys_meta, instance_type
+        return sys_meta, instance_type, drop_instance_type
 
     @wrap_exception()
     @wrap_instance_event
@@ -3274,8 +3277,8 @@ class ComputeManager(manager.Manager):
         with self._error_out_instance_on_exception(context, instance,
                                                    quotas=quotas):
             # NOTE(danms): delete stashed migration information
-            sys_meta, instance_type = self._cleanup_stored_instance_types(
-                migration, instance)
+            sys_meta, instance_type, old_instance_type = (
+                self._cleanup_stored_instance_types(migration, instance))
             sys_meta.pop('old_vm_state', None)
 
             instance.system_metadata = sys_meta
@@ -3293,7 +3296,7 @@ class ComputeManager(manager.Manager):
             migration.save(context.elevated())
 
             rt = self._get_resource_tracker(migration.source_node)
-            rt.drop_resize_claim(instance, prefix='old_')
+            rt.drop_resize_claim(instance, old_instance_type)
 
             # NOTE(mriedem): The old_vm_state could be STOPPED but the user
             # might have manually powered up the instance to confirm the
@@ -3398,8 +3401,8 @@ class ComputeManager(manager.Manager):
             self._notify_about_instance_usage(
                     context, instance, "resize.revert.start")
 
-            sys_meta, instance_type = self._cleanup_stored_instance_types(
-                migration, instance, True)
+            sys_meta, instance_type, drop_instance_type = (
+                self._cleanup_stored_instance_types(migration, instance, True))
 
             # NOTE(mriedem): delete stashed old_vm_state information; we
             # default to ACTIVE for backwards compatibility if old_vm_state

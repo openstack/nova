@@ -5187,11 +5187,15 @@ class ComputeTestCase(BaseTestCase):
         if revert:
             flavors.extract_flavor(instance, 'old_').AndReturn(
                 {'instance_type_id': old})
+            flavors.extract_flavor(instance).AndReturn(
+                {'instance_type_id': new})
             flavors.save_flavor_info(
                 sys_meta, {'instance_type_id': old}).AndReturn(sys_meta)
         else:
             flavors.extract_flavor(instance).AndReturn(
                 {'instance_type_id': new})
+            flavors.extract_flavor(instance, 'old_').AndReturn(
+                {'instance_type_id': old})
         flavors.delete_flavor_info(
             sys_meta, 'old_').AndReturn(sys_meta)
         flavors.delete_flavor_info(
@@ -5202,7 +5206,8 @@ class ComputeTestCase(BaseTestCase):
                                                           revert)
         self.assertEqual(res,
                          (sys_meta,
-                          {'instance_type_id': revert and old or new}))
+                          {'instance_type_id': revert and old or new},
+                          {'instance_type_id': revert and new or old}))
 
     def test_cleanup_stored_instance_types_for_resize(self):
         self._test_cleanup_stored_instance_types('1', '2')
