@@ -2669,6 +2669,50 @@ class NetworksXmlTests(NetworksJsonTests):
     ctype = 'xml'
 
 
+class ExtendedNetworksJsonTests(ApiSampleTestBaseV2):
+    extends_name = ("nova.api.openstack.compute.contrib."
+                    "os_networks.Os_networks")
+    extension_name = ("nova.api.openstack.compute.contrib."
+                      "extended_networks.Extended_networks")
+
+    def setUp(self):
+        super(ExtendedNetworksJsonTests, self).setUp()
+        fake_network_api = test_networks.FakeNetworkAPI()
+        self.stubs.Set(network_api.API, "get_all",
+                       fake_network_api.get_all)
+        self.stubs.Set(network_api.API, "get",
+                       fake_network_api.get)
+        self.stubs.Set(network_api.API, "associate",
+                       fake_network_api.associate)
+        self.stubs.Set(network_api.API, "delete",
+                       fake_network_api.delete)
+        self.stubs.Set(network_api.API, "create",
+                       fake_network_api.create)
+        self.stubs.Set(network_api.API, "add_network_to_project",
+                       fake_network_api.add_network_to_project)
+
+    def test_network_list(self):
+        response = self._do_get('os-networks')
+        subs = self._get_regexes()
+        self._verify_response('networks-list-resp', subs, response, 200)
+
+    def test_network_show(self):
+        uuid = test_networks.FAKE_NETWORKS[0]['uuid']
+        response = self._do_get('os-networks/%s' % uuid)
+        subs = self._get_regexes()
+        self._verify_response('network-show-resp', subs, response, 200)
+
+    def test_network_create(self):
+        response = self._do_post("os-networks",
+                                 'network-create-req', {})
+        subs = self._get_regexes()
+        self._verify_response('network-create-resp', subs, response, 200)
+
+
+class ExtendedNetworksXmlTests(ExtendedNetworksJsonTests):
+    ctype = 'xml'
+
+
 class NetworksAssociateJsonTests(ApiSampleTestBaseV2):
     extension_name = ("nova.api.openstack.compute.contrib"
                                      ".networks_associate.Networks_associate")

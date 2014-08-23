@@ -590,32 +590,27 @@ class NetworkInUse(NovaException):
     msg_fmt = _("Network %(network_id)s is still in use.")
 
 
-class InvalidNetworkParam(Invalid):
-    # NOTE(vish) base class for network create param errors
-    code = 422
-
-
-class NetworkNotCreated(InvalidNetworkParam):
+class NetworkNotCreated(Invalid):
     msg_fmt = _("%(req)s is required to create a network.")
 
 
-class LabelTooLong(InvalidNetworkParam):
+class LabelTooLong(Invalid):
     msg_fmt = _("Maximum allowed length for 'label' is 255.")
 
 
-class InvalidIntValue(InvalidNetworkParam):
+class InvalidIntValue(Invalid):
     msg_fmt = _("%(key)s must be an integer.")
 
 
-class InvalidCidr(InvalidNetworkParam):
+class InvalidCidr(Invalid):
     msg_fmt = _("%(cidr)s is not a valid ip network.")
 
 
-class InvalidAddress(InvalidNetworkParam):
+class InvalidAddress(Invalid):
     msg_fmt = _("%(address)s is not a valid ip address.")
 
 
-class AddressOutOfRange(InvalidNetworkParam):
+class AddressOutOfRange(Invalid):
     msg_fmt = _("%(address)s is not within %(cidr)s.")
 
 
