@@ -3614,7 +3614,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     '%(event)s for instance %(uuid)s'),
                   {'event': event_name, 'uuid': instance.uuid})
         if CONF.vif_plugging_is_fatal:
-            raise exception.NovaException()
+            raise exception.VirtualInterfaceCreateException()
 
     def _get_neutron_events(self, network_info):
         # NOTE(danms): We need to collect any VIFs that are currently
@@ -3687,14 +3687,14 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 self.firewall_driver.apply_instance_filter(instance,
                                                            network_info)
-        except exception.NovaException:
+        except exception.VirtualInterfaceCreateException:
             # Neutron reported failure and we didn't swallow it, so
             # bail here
-            if domain:
-                domain.destroy()
-            self.cleanup(context, instance, network_info=network_info,
-                         block_device_info=block_device_info)
-            raise exception.VirtualInterfaceCreateException()
+            with excutils.save_and_reraise_exception():
+                if domain:
+                    domain.destroy()
+                self.cleanup(context, instance, network_info=network_info,
+                             block_device_info=block_device_info)
         except eventlet.timeout.Timeout:
             # We never heard from Neutron
             LOG.warn(_('Timeout waiting for vif plugging callback for '
