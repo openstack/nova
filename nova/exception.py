@@ -1696,3 +1696,7 @@ class ImageNUMATopologyCPUsUnassigned(Invalid):
 class ImageNUMATopologyMemoryOutOfRange(Invalid):
     msg_fmt = _("%(memsize)d MB of memory assigned, but expected "
                 "%(memtotal)d MB")
+
+
+class InvalidHostname(Invalid):
+    msg_fmt = _("Invalid characters in hostname '%(hostname)s'")

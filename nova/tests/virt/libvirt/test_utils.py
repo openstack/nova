@@ -299,3 +299,15 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
         self.assertEqual(67108864, image_info.virtual_size)
         self.assertEqual(98304, image_info.disk_size)
         self.assertEqual(3, len(image_info.snapshots))
+
+    def test_valid_hostname_normal(self):
+        self.assertTrue(libvirt_utils.is_valid_hostname("hello.world.com"))
+
+    def test_valid_hostname_ipv4addr(self):
+        self.assertTrue(libvirt_utils.is_valid_hostname("10.0.2.1"))
+
+    def test_valid_hostname_ipv6addr(self):
+        self.assertTrue(libvirt_utils.is_valid_hostname("240:2ac3::2"))
+
+    def test_valid_hostname_bad(self):
+        self.assertFalse(libvirt_utils.is_valid_hostname("foo/?com=/bin/sh"))

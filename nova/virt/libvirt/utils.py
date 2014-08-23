@@ -21,6 +21,7 @@
 import errno
 import os
 import platform
+import re
 
 from lxml import etree
 from oslo.config import cfg
@@ -489,3 +490,7 @@ def is_mounted(mount_path, source=None):
         if exc.errno == errno.ENOENT:
             LOG.info(_LI("findmnt tool is not installed"))
         return False
+
+
+def is_valid_hostname(hostname):
+    return re.match(r"^[\w\-\.:]+$", hostname)
