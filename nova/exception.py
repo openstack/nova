@@ -1293,8 +1293,13 @@ class MarkerNotFound(NotFound):
 
 
 class InvalidInstanceIDMalformed(Invalid):
+    msg_fmt = _("Invalid id: %(instance_id)s (expecting \"i-...\")")
     ec2_code = 'InvalidInstanceID.Malformed'
-    msg_fmt = _("Invalid id: %(val)s (expecting \"i-...\").")
+
+
+class InvalidVolumeIDMalformed(Invalid):
+    msg_fmt = _("Invalid id: %(volume_id)s (expecting \"i-...\")")
+    ec2_code = 'InvalidVolumeID.Malformed'
 
 
 class CouldNotFetchImage(NovaException):
