@@ -40,7 +40,9 @@ class BlockDeviceMapping(extensions.V3APIExtensionBase):
 
     # use nova.api.extensions.server.extensions entry point to modify
     # server create kwargs
-    def server_create(self, server_dict, create_kwargs):
+    # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
+    # parameter as this is placed to handle scheduler_hint extension for V2.1.
+    def server_create(self, server_dict, create_kwargs, body_deprecated_param):
         block_device_mapping = server_dict.get(ATTRIBUTE_NAME, [])
 
         try:

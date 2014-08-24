@@ -15,8 +15,12 @@
 
 import datetime
 
+from oslo.config import cfg
+
 from nova.api.openstack import compute
-from nova.api.openstack.compute import servers
+from nova.api.openstack.compute import plugins
+from nova.api.openstack.compute.plugins.v3 import servers as servers_v21
+from nova.api.openstack.compute import servers as servers_v2
 from nova.api.openstack import extensions
 import nova.compute.api
 from nova.compute import flavors
@@ -31,16 +35,22 @@ from nova.tests.image import fake
 UUID = fakes.FAKE_UUID
 
 
-class SchedulerHintsTestCase(test.TestCase):
+CONF = cfg.CONF
+
+
+class SchedulerHintsTestCaseV21(test.TestCase):
 
     def setUp(self):
-        super(SchedulerHintsTestCase, self).setUp()
+        super(SchedulerHintsTestCaseV21, self).setUp()
         self.fake_instance = fakes.stub_instance(1, uuid=UUID)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Scheduler_hints'])
-        self.app = compute.APIRouter(init_only=('servers',))
+        self._set_up_router()
+
+    def _set_up_router(self):
+        self.app = compute.APIRouterV3(init_only=('servers',
+                                                  'os-scheduler-hints'))
+
+    def _get_request(self):
+        return fakes.HTTPRequestV3.blank('/servers')
 
     def test_create_server_without_hints(self):
 
@@ -50,7 +60,7 @@ class SchedulerHintsTestCase(test.TestCase):
 
         self.stubs.Set(nova.compute.api.API, 'create', fake_create)
 
-        req = fakes.HTTPRequest.blank('/fake/servers')
+        req = self._get_request()
         req.method = 'POST'
         req.content_type = 'application/json'
         body = {'server': {
@@ -71,7 +81,7 @@ class SchedulerHintsTestCase(test.TestCase):
 
         self.stubs.Set(nova.compute.api.API, 'create', fake_create)
 
-        req = fakes.HTTPRequest.blank('/fake/servers')
+        req = self._get_request()
         req.method = 'POST'
         req.content_type = 'application/json'
         body = {
@@ -88,7 +98,7 @@ class SchedulerHintsTestCase(test.TestCase):
         self.assertEqual(202, res.status_int)
 
     def test_create_server_bad_hints(self):
-        req = fakes.HTTPRequest.blank('/fake/servers')
+        req = self._get_request()
         req.method = 'POST'
         req.content_type = 'application/json'
         body = {
@@ -105,16 +115,27 @@ class SchedulerHintsTestCase(test.TestCase):
         self.assertEqual(400, res.status_int)
 
 
-class ServersControllerCreateTest(test.TestCase):
+class SchedulerHintsTestCaseV2(SchedulerHintsTestCaseV21):
+
+    def _set_up_router(self):
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Scheduler_hints'])
+        self.app = compute.APIRouter(init_only=('servers',))
+
+    def _get_request(self):
+        return fakes.HTTPRequest.blank('/fake/servers')
+
+
+class ServersControllerCreateTestV21(test.TestCase):
 
     def setUp(self):
         """Shared implementation for tests below that create instance."""
-        super(ServersControllerCreateTest, self).setUp()
+        super(ServersControllerCreateTestV21, self).setUp()
 
         self.instance_cache_num = 0
-        self.ext_mgr = extensions.ExtensionManager()
-        self.ext_mgr.extensions = {}
-        self.controller = servers.Controller(self.ext_mgr)
+        self._set_up_controller()
 
         def instance_create(context, inst):
             inst_type = flavors.get_flavor_by_flavor_id(3)
@@ -146,16 +167,30 @@ class ServersControllerCreateTest(test.TestCase):
         fake.stub_out_image_service(self.stubs)
         self.stubs.Set(db, 'instance_create', instance_create)
 
+    def _set_up_controller(self):
+        ext_info = plugins.LoadedExtensionInfo()
+        CONF.set_override('extensions_blacklist', 'os-scheduler-hints',
+                          'osapi_v3')
+        self.no_scheduler_hints_controller = servers_v21.ServersController(
+            extension_info=ext_info)
+
+    def _verify_availability_zone(self, **kwargs):
+        self.assertNotIn('scheduler_hints', kwargs)
+
+    def _get_request(self):
+        return fakes.HTTPRequestV3.blank('/servers')
+
     def _test_create_extra(self, params):
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
         server = dict(name='server_test', imageRef=image_uuid, flavorRef=2)
         body = dict(server=server)
         body.update(params)
-        req = fakes.HTTPRequest.blank('/fake//servers')
+        req = self._get_request()
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        server = self.controller.create(req, body=body).obj['server']
+        server = self.no_scheduler_hints_controller.create(
+                     req, body=body).obj['server']
 
     def test_create_instance_with_scheduler_hints_disabled(self):
         hints = {'same_host': '48e6a9f6-30af-47e0-bc04-acaed113bb4e'}
@@ -163,8 +198,23 @@ class ServersControllerCreateTest(test.TestCase):
         old_create = nova.compute.api.API.create
 
         def create(*args, **kwargs):
-            self.assertEqual(kwargs['scheduler_hints'], {})
+            self._verify_availability_zone(**kwargs)
             return old_create(*args, **kwargs)
 
         self.stubs.Set(nova.compute.api.API, 'create', create)
         self._test_create_extra(params)
+
+
+class ServersControllerCreateTestV2(ServersControllerCreateTestV21):
+
+    def _set_up_controller(self):
+        self.ext_mgr = extensions.ExtensionManager()
+        self.ext_mgr.extensions = {}
+        self.no_scheduler_hints_controller = servers_v2.Controller(
+                                                 self.ext_mgr)
+
+    def _verify_availability_zone(self, **kwargs):
+        self.assertEqual(kwargs['scheduler_hints'], {})
+
+    def _get_request(self):
+        return fakes.HTTPRequest.blank('/fake/servers')

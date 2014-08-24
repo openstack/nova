@@ -459,7 +459,7 @@ class ServersController(wsgi.Controller):
         # moved to the extension
         if list(self.create_extension_manager):
             self.create_extension_manager.map(self._create_extension_point,
-                                              server_dict, create_kwargs)
+                                              server_dict, create_kwargs, body)
 
         image_uuid = self._image_from_req_data(server_dict, create_kwargs)
 
@@ -570,11 +570,15 @@ class ServersController(wsgi.Controller):
 
         return self._add_location(robj)
 
-    def _create_extension_point(self, ext, server_dict, create_kwargs):
+    # NOTE(gmann): Parameter 'req_body' is placed to handle scheduler_hint
+    # extension for V2.1. No other extension supposed to use this as
+    # it will be removed soon.
+    def _create_extension_point(self, ext, server_dict,
+                                create_kwargs, req_body):
         handler = ext.obj
         LOG.debug("Running _create_extension_point for %s", ext.obj)
 
-        handler.server_create(server_dict, create_kwargs)
+        handler.server_create(server_dict, create_kwargs, req_body)
 
     def _rebuild_extension_point(self, ext, rebuild_dict, rebuild_kwargs):
         handler = ext.obj

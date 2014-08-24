@@ -33,8 +33,17 @@ class SchedulerHints(extensions.V3APIExtensionBase):
     def get_resources(self):
         return []
 
-    def server_create(self, server_dict, create_kwargs):
-        scheduler_hints = server_dict.get(ALIAS + ':scheduler_hints', {})
+    # NOTE(gmann): Accepting request body in this function to fetch "scheduler
+    # hint". This is a workaround to allow OS_SCH-HNT at the top level
+    # of the body request, but that it will be changed in the future to be a
+    # subset of the servers dict.
+    def server_create(self, server_dict, create_kwargs, req_body):
+        scheduler_hints = {}
+        if 'os:scheduler_hints' in req_body:
+            scheduler_hints = req_body['os:scheduler_hints']
+        elif 'OS-SCH-HNT:scheduler_hints' in req_body:
+            scheduler_hints = req_body['OS-SCH-HNT:scheduler_hints']
+
         if not isinstance(scheduler_hints, dict):
             msg = _("Malformed scheduler_hints attribute")
             raise webob.exc.HTTPBadRequest(explanation=msg)
