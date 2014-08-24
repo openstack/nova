@@ -353,6 +353,11 @@ class FakeDriver(driver.ComputeDriver):
                                 host='fakerdpconsole.com',
                                 port=6969)
 
+    def get_serial_console(self, context, instance):
+        return ctype.ConsoleSerial(internal_access_path='FAKE',
+                                   host='fakerdpconsole.com',
+                                   port=6969)
+
     def get_console_pool_info(self, console_type):
         return {'address': '127.0.0.1',
                 'username': 'fakeuser',

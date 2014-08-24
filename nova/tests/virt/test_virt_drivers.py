@@ -556,6 +556,13 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.assertIsInstance(rdp_console, ctype.ConsoleRDP)
 
     @catch_notimplementederror
+    def test_get_serial_console(self):
+        instance_ref, network_info = self._get_running_instance()
+        serial_console = self.connection.get_serial_console(self.ctxt,
+                                                            instance_ref)
+        self.assertIsInstance(serial_console, ctype.ConsoleSerial)
+
+    @catch_notimplementederror
     def test_get_console_pool_info(self):
         instance_ref, network_info = self._get_running_instance()
         console_pool = self.connection.get_console_pool_info(instance_ref)
