@@ -239,6 +239,8 @@ CONF.import_opt('image_cache_subdirectory_name', 'nova.virt.imagecache')
 CONF.import_opt('image_cache_manager_interval', 'nova.virt.imagecache')
 CONF.import_opt('enabled', 'nova.rdp', group='rdp')
 CONF.import_opt('html5_proxy_base_url', 'nova.rdp', group='rdp')
+CONF.import_opt('enabled', 'nova.console.serial', group='serial_console')
+CONF.import_opt('base_url', 'nova.console.serial', group='serial_console')
 
 LOG = logging.getLogger(__name__)
 
@@ -4325,6 +4327,42 @@ class ComputeManager(manager.Manager):
 
         return connect_info
 
+    @messaging.expected_exceptions(
+        exception.ConsoleTypeInvalid,
+        exception.InstanceNotReady,
+        exception.InstanceNotFound,
+        exception.ConsoleTypeUnavailable,
+        exception.SocketPortRangeExhaustedException,
+        exception.ImageSerialPortNumberInvalid,
+        exception.ImageSerialPortNumberExceedFlavorValue,
+        NotImplementedError)
+    @wrap_exception()
+    @wrap_instance_fault
+    def get_serial_console(self, context, console_type, instance):
+        """Returns connection information for a serial console."""
+
+        LOG.debug("Getting serial console", instance=instance)
+
+        if not CONF.serial_console.enabled:
+            raise exception.ConsoleTypeUnavailable(console_type=console_type)
+
+        context = context.elevated()
+
+        token = str(uuid.uuid4())
+        access_url = '%s?token=%s' % (CONF.serial_console.base_url, token)
+
+        try:
+            # Retrieve connect info from driver, and then decorate with our
+            # access info token
+            console = self.driver.get_serial_console(context, instance)
+            connect_info = console.get_connection_info(token, access_url)
+        except exception.InstanceNotFound:
+            if instance.vm_state != vm_states.BUILDING:
+                raise
+            raise exception.InstanceNotReady(instance_id=instance['uuid'])
+
+        return connect_info
+
     @messaging.expected_exceptions(exception.ConsoleTypeInvalid,
                                    exception.InstanceNotReady,
                                    exception.InstanceNotFound)
@@ -4336,6 +4374,8 @@ class ComputeManager(manager.Manager):
             console_info = self.driver.get_spice_console(ctxt, instance)
         elif console_type == "rdp-html5":
             console_info = self.driver.get_rdp_console(ctxt, instance)
+        elif console_type == "serial":
+            console_info = self.driver.get_serial_console(ctxt, instance)
         else:
             console_info = self.driver.get_vnc_console(ctxt, instance)
 
