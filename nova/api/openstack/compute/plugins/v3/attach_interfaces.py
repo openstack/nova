@@ -77,7 +77,7 @@ class InterfaceAttachmentController(object):
         if port_info['port']['device_id'] != server_id:
             raise exc.HTTPNotFound()
 
-        return {'interface_attachment': _translate_interface_attachment_view(
+        return {'interfaceAttachment': _translate_interface_attachment_view(
                 port_info['port'])}
 
     @extensions.expected_errors((400, 404, 409, 500, 501))
@@ -91,7 +91,7 @@ class InterfaceAttachmentController(object):
         port_id = None
         req_ip = None
         if body:
-            attachment = body['interface_attachment']
+            attachment = body['interfaceAttachment']
             network_id = attachment.get('net_id', None)
             port_id = attachment.get('port_id', None)
             try:
@@ -177,7 +177,7 @@ class InterfaceAttachmentController(object):
         ports = data.get('ports', [])
         results = [entity_maker(port) for port in ports]
 
-        return {'interface_attachments': results}
+        return {'interfaceAttachments': results}
 
 
 class AttachInterfaces(extensions.V3APIExtensionBase):

@@ -15,7 +15,7 @@
 create = {
     'type': 'object',
     'properties': {
-        'interface_attachment': {
+        'interfaceAttachment': {
             'type': 'object',
             'properties': {
                 'net_id': {
