@@ -47,9 +47,9 @@
                 "My Server Name": "Apache1"
             },
             "name": "new-server-test",
-            "os-extended-server-attributes:host": "bc8efe4fdb7148a4bb921a2b03d17de6",
-            "os-extended-server-attributes:hypervisor_hostname": "fake-mini",
-            "os-extended-server-attributes:instance_name": "instance-00000001",
+            "OS-EXT-SRV-ATTR:host": "bc8efe4fdb7148a4bb921a2b03d17de6",
+            "OS-EXT-SRV-ATTR:hypervisor_hostname": "fake-mini",
+            "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
             "progress": 0,
             "status": "ACTIVE",
             "tenant_id": "openstack",

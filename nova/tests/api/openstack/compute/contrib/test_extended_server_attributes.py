@@ -54,25 +54,24 @@ def fake_compute_get_all(*args, **kwargs):
                                             db_list, fields)
 
 
-class ExtendedServerAttributesTest(test.TestCase):
+class ExtendedServerAttributesTestV21(test.TestCase):
     content_type = 'application/json'
     prefix = 'OS-EXT-SRV-ATTR:'
+    fake_url = '/v3'
 
     def setUp(self):
-        super(ExtendedServerAttributesTest, self).setUp()
+        super(ExtendedServerAttributesTestV21, self).setUp()
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
         self.stubs.Set(db, 'instance_get_by_uuid', fake_compute_get)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Extended_server_attributes'])
 
     def _make_request(self, url):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
+        res = req.get_response(
+            fakes.wsgi_app_v3(init_only=('servers',
+                                         'os-extended-server-attributes')))
         return res
 
     def _get_server(self, body):
@@ -89,7 +88,7 @@ class ExtendedServerAttributesTest(test.TestCase):
                          node)
 
     def test_show(self):
-        url = '/v2/fake/servers/%s' % UUID3
+        url = self.fake_url + '/servers/%s' % UUID3
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
@@ -99,7 +98,7 @@ class ExtendedServerAttributesTest(test.TestCase):
                                 instance_name=NAME_FMT % 1)
 
     def test_detail(self):
-        url = '/v2/fake/servers/detail'
+        url = self.fake_url + '/servers/detail'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
@@ -115,13 +114,30 @@ class ExtendedServerAttributesTest(test.TestCase):
             raise exception.InstanceNotFound(instance_id='fake')
 
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
-        url = '/v2/fake/servers/70f6db34-de8d-4fbd-aafb-4065bdfa6115'
+        url = self.fake_url + '/servers/70f6db34-de8d-4fbd-aafb-4065bdfa6115'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 404)
 
 
-class ExtendedServerAttributesXmlTest(ExtendedServerAttributesTest):
+class ExtendedServerAttributesTestV2(ExtendedServerAttributesTestV21):
+    fake_url = '/v2/fake'
+
+    def setUp(self):
+        super(ExtendedServerAttributesTestV2, self).setUp()
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Extended_server_attributes'])
+
+    def _make_request(self, url):
+        req = webob.Request.blank(url)
+        req.headers['Accept'] = self.content_type
+        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
+        return res
+
+
+class ExtendedServerAttributesXmlTest(ExtendedServerAttributesTestV2):
     content_type = 'application/xml'
     ext = extended_server_attributes
     prefix = '{%s}' % ext.Extended_server_attributes.namespace
