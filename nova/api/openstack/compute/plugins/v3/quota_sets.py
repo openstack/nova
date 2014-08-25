@@ -32,10 +32,6 @@ from nova import quota
 ALIAS = "os-quota-sets"
 QUOTAS = quota.QUOTAS
 LOG = logging.getLogger(__name__)
-# NOTE: If FILTERED_QUOTAS list is changed,
-# then the schema file also needs to be updated.
-FILTERED_QUOTAS = ['injected_files', 'injected_file_content_bytes',
-                   'injected_file_path_bytes']
 authorize_update = extensions.extension_authorizer('compute',
                                                    'v3:%s:update' % ALIAS)
 authorize_show = extensions.extension_authorizer('compute',
@@ -50,7 +46,7 @@ class QuotaSetsController(wsgi.Controller):
 
     def _format_quota_set(self, project_id, quota_set):
         """Convert the quota object to a result dict."""
-        quota_set.update(id=project_id)
+        quota_set.update(id=str(project_id))
         return dict(quota_set=quota_set)
 
     def _validate_quota_limit(self, limit, minimum, maximum):
@@ -69,8 +65,6 @@ class QuotaSetsController(wsgi.Controller):
                                             usages=usages)
         else:
             values = QUOTAS.get_project_quotas(context, id, usages=usages)
-        values = dict((k, v) for k, v in values.items() if k not in
-                      FILTERED_QUOTAS)
 
         if usages:
             return values
@@ -173,12 +167,13 @@ class QuotaSetsController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize_show(context)
         values = QUOTAS.get_defaults(context)
-        values = dict((k, v) for k, v in values.items() if k not in
-                      FILTERED_QUOTAS)
         return self._format_quota_set(id, values)
 
+    # TODO(oomichi): Here should be 204(No Content) instead of 202 by v2.1
+    # +microversions because the resource quota-set has been deleted completely
+    # when returning a response.
     @extensions.expected_errors(403)
-    @wsgi.response(204)
+    @wsgi.response(202)
     def delete(self, req, id):
         context = req.environ['nova.context']
         authorize_delete(context)
