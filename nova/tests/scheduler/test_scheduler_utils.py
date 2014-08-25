@@ -22,6 +22,7 @@ from oslo.config import cfg
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova import db
+from nova import exception
 from nova import notifications
 from nova import rpc
 from nova.scheduler import utils as scheduler_utils
@@ -186,6 +187,18 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
 
     def test_populate_filter_props_force_nodes_no_retry(self):
         self._test_populate_filter_props(force_nodes=['force-node'])
+
+    @mock.patch.object(scheduler_utils, '_max_attempts')
+    def test_populate_retry_exception_at_max_attempts(self, _max_attempts):
+        _max_attempts.return_value = 2
+        msg = 'The exception text was preserved!'
+        filter_properties = dict(retry=dict(num_attempts=2, hosts=[],
+                                            exc=[msg]))
+        nvh = self.assertRaises(exception.NoValidHost,
+                                scheduler_utils.populate_retry,
+                                filter_properties, 'fake-uuid')
+        # make sure 'msg' is a substring of the complete exception text
+        self.assertIn(msg, nvh.message)
 
     def _check_parse_options(self, opts, sep, converter, expected):
         good = scheduler_utils.parse_options(opts,
