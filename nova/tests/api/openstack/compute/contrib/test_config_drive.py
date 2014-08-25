@@ -15,14 +15,20 @@
 
 import datetime
 
+from oslo.config import cfg
 import webob
 
-from nova.api.openstack.compute.contrib import config_drive
-from nova.api.openstack.compute import servers
+from nova.api.openstack.compute.contrib import config_drive as config_drive_v2
+from nova.api.openstack.compute import plugins
+from nova.api.openstack.compute.plugins.v3 import config_drive \
+    as config_drive_v21
+from nova.api.openstack.compute.plugins.v3 import servers as servers_v21
+from nova.api.openstack.compute import servers as servers_v2
 from nova.api.openstack import extensions
 from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova import db
+from nova import exception
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -30,27 +36,34 @@ from nova.tests import fake_instance
 from nova.tests.image import fake
 
 
-class ConfigDriveTest(test.TestCase):
+CONF = cfg.CONF
+
+
+class ConfigDriveTestV21(test.TestCase):
+    base_url = '/v3/servers/'
+
+    def _setup_wsgi(self):
+        self.app = fakes.wsgi_app_v3(init_only=('servers', 'os-config-drive'))
+
+    def _get_config_drive_controller(self):
+        return config_drive_v21.ConfigDriveController()
 
     def setUp(self):
-        super(ConfigDriveTest, self).setUp()
-        self.Controller = config_drive.Controller()
+        super(ConfigDriveTestV21, self).setUp()
+        self.Controller = self._get_config_drive_controller()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fake.stub_out_image_service(self.stubs)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Config_drive'])
+        self._setup_wsgi()
 
     def test_show(self):
         self.stubs.Set(db, 'instance_get',
                         fakes.fake_instance_get())
         self.stubs.Set(db, 'instance_get_by_uuid',
                         fakes.fake_instance_get())
-        req = webob.Request.blank('/v2/fake/servers/1')
+        req = webob.Request.blank(self.base_url + '1')
         req.headers['Content-Type'] = 'application/json'
-        response = req.get_response(fakes.wsgi_app(init_only=('servers',)))
+        response = req.get_response(self.app)
         self.assertEqual(response.status_int, 200)
         res_dict = jsonutils.loads(response.body)
         self.assertIn('config_drive', res_dict['server'])
@@ -58,25 +71,54 @@ class ConfigDriveTest(test.TestCase):
     def test_detail_servers(self):
         self.stubs.Set(db, 'instance_get_all_by_filters',
                        fakes.fake_instance_get_all_by_filters())
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/detail')
-        res = req.get_response(fakes.wsgi_app(init_only=('servers,')))
+        req = fakes.HTTPRequest.blank(self.base_url + 'detail')
+        res = req.get_response(self.app)
         server_dicts = jsonutils.loads(res.body)['servers']
         self.assertNotEqual(len(server_dicts), 0)
         for server_dict in server_dicts:
             self.assertIn('config_drive', server_dict)
 
 
-class ServersControllerCreateTest(test.TestCase):
+class ConfigDriveTestV2(ConfigDriveTestV21):
+    base_url = '/v2/fake/servers/'
+
+    def _get_config_drive_controller(self):
+        return config_drive_v2.Controller()
+
+    def _setup_wsgi(self):
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Config_drive'])
+        self.app = fakes.wsgi_app(init_only=('servers',))
+
+
+class ServersControllerCreateTestV21(test.TestCase):
+    base_url = '/v3/'
+    bad_request = exception.ValidationError
+
+    def _set_up_controller(self):
+        ext_info = plugins.LoadedExtensionInfo()
+        self.controller = servers_v21.ServersController(
+            extension_info=ext_info)
+        CONF.set_override('extensions_blacklist',
+                          'os-config-drive',
+                          'osapi_v3')
+        self.no_config_drive_controller = servers_v21.ServersController(
+            extension_info=ext_info)
+
+    def _verfiy_config_drive(self, **kwargs):
+        self.assertNotIn('config_drive', kwargs)
+
+    def _initialize_extension(self):
+        pass
 
     def setUp(self):
         """Shared implementation for tests below that create instance."""
-        super(ServersControllerCreateTest, self).setUp()
+        super(ServersControllerCreateTestV21, self).setUp()
 
         self.instance_cache_num = 0
-
-        self.ext_mgr = extensions.ExtensionManager()
-        self.ext_mgr.extensions = {}
-        self.controller = servers.Controller(self.ext_mgr)
+        self._set_up_controller()
 
         def instance_create(context, inst):
             inst_type = flavors.get_flavor_by_flavor_id(3)
@@ -108,30 +150,34 @@ class ServersControllerCreateTest(test.TestCase):
         fake.stub_out_image_service(self.stubs)
         self.stubs.Set(db, 'instance_create', instance_create)
 
-    def _test_create_extra(self, params):
+    def _test_create_extra(self, params, override_controller):
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
         server = dict(name='server_test', imageRef=image_uuid, flavorRef=2)
         server.update(params)
         body = dict(server=server)
-        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req = fakes.HTTPRequest.blank(self.base_url + 'servers')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        server = self.controller.create(req, body=body).obj['server']
+        if override_controller is not None:
+            server = override_controller.create(req, body=body).obj['server']
+        else:
+            server = self.controller.create(req, body=body).obj['server']
 
     def test_create_instance_with_config_drive_disabled(self):
         params = {'config_drive': "False"}
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
-            self.assertIsNone(kwargs['config_drive'])
+            self._verfiy_config_drive(**kwargs)
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
-        self._test_create_extra(params)
+        self._test_create_extra(params,
+            override_controller=self.no_config_drive_controller)
 
     def _create_instance_body_of_config_drive(self, param):
-        self.ext_mgr.extensions = {'os-config-drive': 'fake'}
+        self._initialize_extension()
 
         def create(*args, **kwargs):
             self.assertIn('config_drive', kwargs)
@@ -140,7 +186,7 @@ class ServersControllerCreateTest(test.TestCase):
         old_create = compute_api.API.create
         self.stubs.Set(compute_api.API, 'create', create)
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        flavor_ref = 'http://localhost/v2/fake/flavors/3'
+        flavor_ref = ('http://localhost' + self.base_url + 'flavors/3')
         body = {
             'server': {
                 'name': 'config_drive_test',
@@ -150,7 +196,7 @@ class ServersControllerCreateTest(test.TestCase):
             },
         }
 
-        req = fakes.HTTPRequest.blank('/v2/fake/servers')
+        req = fakes.HTTPRequest.blank(self.base_url + 'servers')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -174,7 +220,7 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_with_bad_config_drive(self):
         param = 12345
         req, body = self._create_instance_body_of_config_drive(param)
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(self.bad_request,
                           self.controller.create, req, body=body)
 
     def test_create_instance_without_config_drive(self):
@@ -184,6 +230,29 @@ class ServersControllerCreateTest(test.TestCase):
         res = self.controller.create(req, body=body).obj
         server = res['server']
         self.assertEqual(fakes.FAKE_UUID, server['id'])
+
+    def test_create_instance_with_empty_config_drive(self):
+        param = ''
+        req, body = self._create_instance_body_of_config_drive(param)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create, req, body=body)
+
+
+class ServersControllerCreateTestV2(ServersControllerCreateTestV21):
+    base_url = '/v2/fake/'
+    bad_request = webob.exc.HTTPBadRequest
+
+    def _set_up_controller(self):
+        self.ext_mgr = extensions.ExtensionManager()
+        self.ext_mgr.extensions = {}
+        self.controller = servers_v2.Controller(self.ext_mgr)
+        self.no_config_drive_controller = None
+
+    def _verfiy_config_drive(self, **kwargs):
+        self.assertIsNone(kwargs['config_drive'])
+
+    def _initialize_extension(self):
+        self.ext_mgr.extensions = {'os-config-drive': 'fake'}
 
     def test_create_instance_with_empty_config_drive(self):
         param = ''

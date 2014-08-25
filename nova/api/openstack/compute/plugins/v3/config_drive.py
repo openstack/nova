@@ -21,7 +21,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 
 ALIAS = "os-config-drive"
-ATTRIBUTE_NAME = "%s:config_drive" % ALIAS
+ATTRIBUTE_NAME = "config_drive"
 authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
 
 

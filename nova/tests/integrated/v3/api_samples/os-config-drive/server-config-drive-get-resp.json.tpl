@@ -1,6 +1,6 @@
 {
     "server": {
-        "os-config-drive:config_drive": "%(cdrive)s",
+        "config_drive": "%(cdrive)s",
         "addresses": {
             "private": [
                 {
