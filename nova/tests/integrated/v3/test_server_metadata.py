@@ -45,7 +45,7 @@ class ServersMetadataJsonTest(test_servers.ServersSampleBase):
         response = self._do_post('servers/%s/metadata' % uuid,
                                  'server-metadata-all-req',
                                  subs)
-        self._verify_response('server-metadata-all-resp', subs, response, 201)
+        self._verify_response('server-metadata-all-resp', subs, response, 200)
 
     def test_metadata_get_all(self):
         # Test getting all metadata for a server.

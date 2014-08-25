@@ -54,7 +54,8 @@ class ServerMetadataController(wsgi.Controller):
         return {'metadata': self._get_metadata(context, server_id)}
 
     @extensions.expected_errors((400, 403, 404, 409, 413))
-    @wsgi.response(201)
+    # NOTE(gmann): Returns 200 for backwards compatibility but should be 201
+    # as this operation complete the creation of metadata.
     def create(self, req, server_id, body):
         if not self.is_valid_body(body, 'metadata'):
             msg = _("Malformed request body")
@@ -71,10 +72,10 @@ class ServerMetadataController(wsgi.Controller):
 
     @extensions.expected_errors((400, 403, 404, 409, 413))
     def update(self, req, server_id, id, body):
-        if not self.is_valid_body(body, 'metadata'):
+        if not self.is_valid_body(body, 'meta'):
             msg = _("Malformed request body")
             raise exc.HTTPBadRequest(explanation=msg)
-        meta_item = body['metadata']
+        meta_item = body['meta']
         if id not in meta_item:
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
@@ -89,7 +90,7 @@ class ServerMetadataController(wsgi.Controller):
                                        meta_item,
                                        delete=False)
 
-        return {'metadata': meta_item}
+        return {'meta': meta_item}
 
     @extensions.expected_errors((400, 403, 404, 409, 413))
     def update_all(self, req, server_id, body):
@@ -139,7 +140,7 @@ class ServerMetadataController(wsgi.Controller):
         data = self._get_metadata(context, server_id)
 
         try:
-            return {'metadata': {id: data[id]}}
+            return {'meta': {id: data[id]}}
         except KeyError:
             msg = _("Metadata item was not found")
             raise exc.HTTPNotFound(explanation=msg)
