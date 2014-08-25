@@ -1099,7 +1099,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 with excutils.save_and_reraise_exception() as ctxt:
                     if destroy_disks:
                         # Don't block on Volume errors if we're trying to
-                        # delete the instance as we may be patially created
+                        # delete the instance as we may be partially created
                         # or deleted
                         ctxt.reraise = False
                         LOG.warn(_LW("Ignoring Volume Error on vol %(vol_id)s "
