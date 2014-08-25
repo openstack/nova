@@ -1301,15 +1301,17 @@ def create_virtual_disk(session, dc_ref, adapter_type, disk_type,
 
 
 def copy_virtual_disk(session, dc_ref, source, dest):
-    """Copy a sparse virtual disk to a thin virtual disk. This is also
-       done to generate the meta-data file whose specifics
-       depend on the size of the disk, thin/thick provisioning and the
-       storage adapter type.
+    """Copy a sparse virtual disk to a thin virtual disk.
+
+    This is also done to generate the meta-data file whose specifics
+    depend on the size of the disk, thin/thick provisioning and the
+    storage adapter type.
 
     :param session: - session for connection
     :param dc_ref: - data center reference object
     :param source: - source datastore path
     :param dest: - destination datastore path
+    :returns: None
     """
     LOG.debug("Copying Virtual Disk %(source)s to %(dest)s",
               {'source': source, 'dest': dest})
