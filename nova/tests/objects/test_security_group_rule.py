@@ -15,8 +15,8 @@
 import mock
 
 from nova import db
-from nova.objects import security_group
-from nova.objects import security_group_rule
+from nova import exception
+from nova import objects
 from nova.tests.objects import test_objects
 from nova.tests.objects import test_security_group
 
@@ -37,7 +37,7 @@ class _TestSecurityGroupRuleObject(object):
     def test_get_by_id(self):
         with mock.patch.object(db, 'security_group_rule_get') as sgrg:
             sgrg.return_value = fake_rule
-            rule = security_group_rule.SecurityGroupRule.get_by_id(
+            rule = objects.SecurityGroupRule.get_by_id(
                 self.context, 1)
             for field in fake_rule:
                 if field == 'cidr':
@@ -47,17 +47,42 @@ class _TestSecurityGroupRuleObject(object):
             sgrg.assert_called_with(self.context, 1)
 
     def test_get_by_security_group(self):
-        secgroup = security_group.SecurityGroup()
+        secgroup = objects.SecurityGroup()
         secgroup.id = 123
         rule = dict(fake_rule)
         rule['grantee_group'] = dict(test_security_group.fake_secgroup, id=123)
         stupid_method = 'security_group_rule_get_by_security_group'
         with mock.patch.object(db, stupid_method) as sgrgbsg:
             sgrgbsg.return_value = [rule]
-            rules = (security_group_rule.SecurityGroupRuleList.
+            rules = (objects.SecurityGroupRuleList.
                      get_by_security_group(self.context, secgroup))
             self.assertEqual(1, len(rules))
             self.assertEqual(123, rules[0].grantee_group.id)
+
+    @mock.patch.object(db, 'security_group_rule_create',
+                       return_value=fake_rule)
+    def test_create(self, db_mock):
+        rule = objects.SecurityGroupRule()
+        rule.protocol = 'tcp'
+        secgroup = objects.SecurityGroup()
+        secgroup.id = 123
+        parentgroup = objects.SecurityGroup()
+        parentgroup.id = 223
+        rule.grantee_group = secgroup
+        rule.parent_group = parentgroup
+        rule.create(self.context)
+        updates = db_mock.call_args[0][1]
+        self.assertEqual(fake_rule['id'], rule.id)
+        self.assertEqual(updates['group_id'], rule.grantee_group.id)
+        self.assertEqual(updates['parent_group_id'], rule.parent_group.id)
+
+    @mock.patch.object(db, 'security_group_rule_create',
+                       return_value=fake_rule)
+    def test_set_id_failure(self, db_mock):
+        rule = objects.SecurityGroupRule()
+        rule.create(self.context)
+        self.assertRaises(exception.ReadOnlyFieldError, setattr,
+                          rule, 'id', 124)
 
 
 class TestSecurityGroupRuleObject(test_objects._LocalTest,

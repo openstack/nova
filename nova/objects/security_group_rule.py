@@ -13,6 +13,7 @@
 #    under the License.
 
 from nova import db
+from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -22,10 +23,11 @@ OPTIONAL_ATTRS = ['parent_group', 'grantee_group']
 
 class SecurityGroupRule(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Added create() and set id as read_only
+    VERSION = '1.1'
 
     fields = {
-        'id': fields.IntegerField(),
+        'id': fields.IntegerField(read_only=True),
         'protocol': fields.StringField(nullable=True),
         'from_port': fields.IntegerField(nullable=True),
         'to_port': fields.IntegerField(nullable=True),
@@ -54,6 +56,21 @@ class SecurityGroupRule(base.NovaPersistentObject, base.NovaObject):
         rule.obj_reset_changes()
         return rule
 
+    @base.remotable
+    def create(self, context):
+        if self.obj_attr_is_set('id'):
+            raise exception.ObjectActionError(action='create',
+                                      reason='already created')
+        updates = self.obj_get_changes()
+        parent_group = updates.pop('parent_group', None)
+        if parent_group:
+            updates['parent_group_id'] = parent_group.id
+        grantee_group = updates.pop('grantee_group', None)
+        if grantee_group:
+            updates['group_id'] = grantee_group.id
+        db_rule = db.security_group_rule_create(context, updates)
+        self._from_db_object(context, self, db_rule)
+
     @base.remotable_classmethod
     def get_by_id(cls, context, rule_id):
         db_rule = db.security_group_rule_get(context, rule_id)
@@ -64,8 +81,10 @@ class SecurityGroupRuleList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('SecurityGroupRule'),
         }
+    VERSION = '1.1'
     child_versions = {
         '1.0': '1.0',
+        '1.1': '1.1',
         }
 
     @base.remotable_classmethod
