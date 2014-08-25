@@ -1077,3 +1077,43 @@ class NUMATopologyTest(test.NoDBTestCase):
 
         for exp_cell, got_cell in zip(expected.cells, got.cells):
             self.assertNUMACellMatches(exp_cell, got_cell)
+
+
+class NumberOfSerialPortsTest(test.NoDBTestCase):
+    def test_flavor(self):
+        flavor = FakeFlavor(8, 2048, {"hw:serial_port_count": 3})
+        num_ports = hw.get_number_of_serial_ports(flavor, None)
+        self.assertEqual(3, num_ports)
+
+    def test_image_meta(self):
+        flavor = FakeFlavor(8, 2048, {})
+        image_meta = {"properties": {"hw_serial_port_count": 2}}
+        num_ports = hw.get_number_of_serial_ports(flavor, image_meta)
+        self.assertEqual(2, num_ports)
+
+    def test_flavor_invalid_value(self):
+        flavor = FakeFlavor(8, 2048, {"hw:serial_port_count": 'foo'})
+        image_meta = {"properties": {}}
+        self.assertRaises(exception.ImageSerialPortNumberInvalid,
+                          hw.get_number_of_serial_ports,
+                          flavor, image_meta)
+
+    def test_image_meta_invalid_value(self):
+        flavor = FakeFlavor(8, 2048, {})
+        image_meta = {"properties": {"hw_serial_port_count": 'bar'}}
+        self.assertRaises(exception.ImageSerialPortNumberInvalid,
+                          hw.get_number_of_serial_ports,
+                          flavor, image_meta)
+
+    def test_image_meta_smaller_than_flavor(self):
+        flavor = FakeFlavor(8, 2048, {"hw:serial_port_count": 3})
+        image_meta = {"properties": {"hw_serial_port_count": 2}}
+        num_ports = hw.get_number_of_serial_ports(flavor, image_meta)
+        self.assertEqual(2, num_ports)
+
+    def test_flavor_smaller_than_image_meta(self):
+        flavor = FakeFlavor(8, 2048, {"hw:serial_port_count": 3})
+        image_meta = {"properties": {"hw_serial_port_count": 4}}
+        self.assertRaises(exception.ImageSerialPortNumberExceedFlavorValue,
+                          hw.get_number_of_serial_ports,
+                          flavor, image_meta)

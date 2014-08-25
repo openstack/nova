@@ -140,6 +140,52 @@ def format_cpu_spec(cpuset, allow_ranges=True):
         return ",".join(str(id) for id in sorted(cpuset))
 
 
+def get_number_of_serial_ports(flavor, image_meta):
+    """Get the number of serial consoles from the flavor or image
+
+    :param flavor: Flavor object to read extra specs from
+    :param image_meta: Image object to read image metadata from
+
+    If flavor extra specs is not set, then any image meta value is permitted.
+    If flavour extra specs *is* set, then this provides the default serial
+    port count. The image meta is permitted to override the extra specs, but
+    *only* with a lower value. ie
+
+    - flavor hw:serial_port_count=4
+      VM gets 4 serial ports
+    - flavor hw:serial_port_count=4 and image hw_serial_port_count=2
+      VM gets 2 serial ports
+    - image hw_serial_port_count=6
+      VM gets 6 serial ports
+    - flavor hw:serial_port_count=4 and image hw_serial_port_count=6
+      Abort guest boot - forbidden to exceed flavor value
+
+    :returns: number of serial ports
+    """
+
+    def get_number(obj, property):
+        num_ports = obj.get(property)
+        if num_ports is not None:
+            try:
+                num_ports = int(num_ports)
+            except ValueError:
+                raise exception.ImageSerialPortNumberInvalid(
+                    num_ports=num_ports, property=property)
+        return num_ports
+
+    image_meta_prop = (image_meta or {}).get('properties', {})
+
+    flavor_num_ports = get_number(flavor.extra_specs, "hw:serial_port_count")
+    image_num_ports = get_number(image_meta_prop, "hw_serial_port_count")
+
+    if (flavor_num_ports and image_num_ports) is not None:
+        if image_num_ports > flavor_num_ports:
+            raise exception.ImageSerialPortNumberExceedFlavorValue()
+        return image_num_ports
+
+    return flavor_num_ports or image_num_ports or 1
+
+
 class VirtCPUTopology(object):
 
     def __init__(self, sockets, cores, threads):

@@ -55,6 +55,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_mode
+from nova.console import serial as serial_console
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
@@ -242,6 +243,9 @@ CONF.import_opt('server_proxyclient_address', 'nova.spice', group='spice')
 CONF.import_opt('vcpu_pin_set', 'nova.virt.hardware')
 CONF.import_opt('vif_plugging_is_fatal', 'nova.virt.driver')
 CONF.import_opt('vif_plugging_timeout', 'nova.virt.driver')
+CONF.import_opt('enabled', 'nova.console.serial', group='serial_console')
+CONF.import_opt('proxyclient_address', 'nova.console.serial',
+                group='serial_console')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     libvirt_firewall.__name__,
@@ -1119,6 +1123,26 @@ class LibvirtDriver(driver.ComputeDriver):
             # NOTE(haomai): destroy volumes if needed
             if CONF.libvirt.images_type == 'rbd':
                 self._cleanup_rbd(instance)
+
+        if CONF.serial_console.enabled:
+            for host, port in self._get_serial_ports_from_instance(instance):
+                serial_console.release_port(host=host, port=port)
+
+    def _get_serial_ports_from_instance(self, instance, mode=None):
+        """Returns an iterator over serial port(s) configured on instance.
+
+        :param mode: Should be a value in (None, bind, connect)
+        """
+        virt_dom = self._lookup_by_name(instance['name'])
+        xml = virt_dom.XMLDesc(0)
+        tree = etree.fromstring(xml)
+        for serial in tree.findall("./devices/serial"):
+            if serial.get("type") == "tcp":
+                source = serial.find("./source")
+                if source is not None:
+                    if mode and source.get("mode") != mode:
+                        continue
+                    yield (source.get("host"), int(source.get("service")))
 
     @staticmethod
     def _get_rbd_driver():
@@ -3637,14 +3661,29 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if ((CONF.libvirt.virt_type == "qemu" or
              CONF.libvirt.virt_type == "kvm")):
-            # The QEMU 'pty' driver throws away any data if no
-            # client app is connected. Thus we can't get away
-            # with a single type=pty console. Instead we have
-            # to configure two separate consoles.
-            consolelog = vconfig.LibvirtConfigGuestSerial()
-            consolelog.type = "file"
-            consolelog.source_path = self._get_console_log_path(instance)
-            guest.add_device(consolelog)
+            # Create the serial console char devices
+            if CONF.serial_console.enabled:
+                num_ports = hardware.get_number_of_serial_ports(
+                    flavor, image_meta)
+                for port in six.moves.range(num_ports):
+                    console = vconfig.LibvirtConfigGuestSerial()
+                    console.port = port
+                    console.type = "tcp"
+                    console.listen_host = (
+                        CONF.serial_console.proxyclient_address)
+                    console.listen_port = (
+                        serial_console.acquire_port(
+                            console.listen_host))
+                    guest.add_device(console)
+            else:
+                # The QEMU 'pty' driver throws away any data if no
+                # client app is connected. Thus we can't get away
+                # with a single type=pty console. Instead we have
+                # to configure two separate consoles.
+                consolelog = vconfig.LibvirtConfigGuestSerial()
+                consolelog.type = "file"
+                consolelog.source_path = self._get_console_log_path(instance)
+                guest.add_device(consolelog)
 
             consolepty = vconfig.LibvirtConfigGuestSerial()
         else:
