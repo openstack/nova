@@ -1704,3 +1704,11 @@ class InvalidHostname(Invalid):
 
 class NumaTopologyNotFound(NotFound):
     msg_fmt = _("Instance %(instance_uuid)s does not specify a NUMA topology")
+
+
+class SocketPortRangeExhaustedException(NovaException):
+    msg_fmt = _("Not able to acquire a free port for %(host)s")
+
+
+class SocketPortInUseException(NovaException):
+    msg_fmt = _("Not able to bind %(host)s:%(port)d, %(error)s")
