@@ -1,5 +1,5 @@
 {
-    "change_password" : {
-        "admin_password" : "%(password)s"
+    "changePassword" : {
+        "adminPass" : "%(password)s"
     }
 }

@@ -18,15 +18,15 @@ from nova.api.validation import parameter_types
 change_password = {
     'type': 'object',
     'properties': {
-        'change_password': {
+        'changePassword': {
             'type': 'object',
             'properties': {
-                'admin_password': parameter_types.admin_password,
+                'adminPass': parameter_types.admin_password,
             },
-            'required': ['admin_password'],
+            'required': ['adminPass'],
             'additionalProperties': False,
         },
     },
-    'required': ['change_password'],
+    'required': ['changePassword'],
     'additionalProperties': False,
 }

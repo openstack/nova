@@ -34,15 +34,18 @@ class AdminPasswordController(wsgi.Controller):
         super(AdminPasswordController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    @wsgi.action('change_password')
-    @wsgi.response(204)
+    # TODO(eliqiao): Here should be 204(No content) instead of 202 by v2.1
+    # +micorversions because the password has been changed when returning
+    # a response.
+    @wsgi.action('changePassword')
+    @wsgi.response(202)
     @extensions.expected_errors((400, 404, 409, 501))
     @validation.schema(admin_password.change_password)
     def change_password(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)
 
-        password = body['change_password']['admin_password']
+        password = body['changePassword']['adminPass']
         instance = common.get_instance(self.compute_api, context, id,
                                        want_objects=True)
         try:
@@ -51,7 +54,7 @@ class AdminPasswordController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as e:
             raise common.raise_http_conflict_for_instance_invalid_state(
-                e, 'change_password')
+                e, 'changePassword')
         except NotImplementedError:
             msg = _("Unable to set password on instance")
             raise exc.HTTPNotImplemented(explanation=msg)
