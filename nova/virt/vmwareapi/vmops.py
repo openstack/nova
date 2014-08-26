@@ -638,6 +638,7 @@ class VMwareVMOps(object):
         snapshot = task_info.result
         return snapshot
 
+    @vim.retry_if_task_in_progress
     def _delete_vm_snapshot(self, instance, vm_ref, snapshot):
         LOG.debug("Deleting Snapshot of the VM instance", instance=instance)
         delete_snapshot_task = self._session._call_method(
@@ -740,7 +741,6 @@ class VMwareVMOps(object):
                       instance=instance)
 
         _copy_vmdk_content()
-        # Note(vui): handle snapshot cleanup on exceptions.
         self._delete_vm_snapshot(instance, vm_ref, snapshot)
 
         cookies = self._session._get_vim().client.options.transport.cookiejar

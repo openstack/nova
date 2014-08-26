@@ -32,6 +32,7 @@ INVALID_POWER_STATE = 'InvalidPowerState'
 INVALID_PROPERTY = 'InvalidProperty'
 NO_PERMISSION = 'NoPermission'
 NOT_AUTHENTICATED = 'NotAuthenticated'
+TASK_IN_PROGRESS = 'TaskInProgress'
 
 
 class VimException(Exception):
@@ -203,6 +204,10 @@ class InvalidPowerStateException(VMwareDriverException):
     code = 409
 
 
+class TaskInProgress(VMwareDriverException):
+    msg_fmt = _("Virtual machine is busy.")
+
+
 # Populate the fault registry with the exceptions that have
 # special treatment.
 _fault_classes_registry = {
@@ -215,7 +220,8 @@ _fault_classes_registry = {
     INVALID_POWER_STATE: InvalidPowerStateException,
     INVALID_PROPERTY: InvalidPropertyException,
     NO_PERMISSION: NoPermissionException,
-    NOT_AUTHENTICATED: NotAuthenticatedException
+    NOT_AUTHENTICATED: NotAuthenticatedException,
+    TASK_IN_PROGRESS: TaskInProgress,
 }
 
 

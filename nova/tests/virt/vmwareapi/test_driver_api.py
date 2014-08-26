@@ -1415,6 +1415,37 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
         self._test_snapshot()
 
+    def _snapshot_delete_vm_snapshot_exception(self, exception, call_count=1):
+        self._create_vm()
+        fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0].obj
+        snapshot_ref = vmwareapi_fake.ManagedObjectReference(
+                               value="Snapshot-123",
+                               name="VirtualMachineSnapshot")
+
+        with contextlib.nested(
+            mock.patch.object(self.conn._session, '_wait_for_task',
+                              side_effect=exception),
+            mock.patch.object(time, 'sleep')
+        ) as (_fake_wait, _fake_sleep):
+            if exception != error_util.TaskInProgress:
+                self.assertRaises(exception,
+                                  self.conn._vmops._delete_vm_snapshot,
+                                  self.instance, fake_vm, snapshot_ref)
+                self.assertEqual(0, _fake_sleep.call_count)
+            else:
+                self.conn._vmops._delete_vm_snapshot(self.instance, fake_vm,
+                                                     snapshot_ref)
+                self.assertEqual(call_count - 1, _fake_sleep.call_count)
+            self.assertEqual(call_count, _fake_wait.call_count)
+
+    def test_snapshot_delete_vm_snapshot_exception(self):
+        self._snapshot_delete_vm_snapshot_exception(exception.NovaException)
+
+    def test_snapshot_delete_vm_snapshot_exception_retry(self):
+        self.flags(api_retry_count=5, group='vmware')
+        self._snapshot_delete_vm_snapshot_exception(error_util.TaskInProgress,
+                                                    5)
+
     def test_reboot(self):
         self._create_vm()
         info = self.conn.get_info({'name': 1, 'uuid': self.uuid,
