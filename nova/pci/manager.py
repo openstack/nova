@@ -266,22 +266,6 @@ class PciDevTracker(object):
                 for dev in devs:
                     self._free_device(dev)
 
-    def set_compute_node_id(self, node_id):
-        """Set the compute node id that this object is tracking for.
-
-        In current resource tracker implementation, the
-        compute_node entry is created in the last step of
-        update_available_resoruces, thus we have to lazily set the
-        compute_node_id at that time.
-        """
-
-        if self.node_id and self.node_id != node_id:
-            raise exception.PciTrackerInvalidNodeId(node_id=self.node_id,
-                                                    new_node_id=node_id)
-        self.node_id = node_id
-        for dev in self.pci_devs:
-            dev.compute_node_id = node_id
-
 
 def get_instance_pci_devs(inst, request_id=None):
     """Get the devices allocated to one or all requests for an instance.

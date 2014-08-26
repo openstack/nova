@@ -284,6 +284,64 @@ class ResourceTracker(object):
     def disabled(self):
         return self.compute_node is None
 
+    def _init_compute_node(self, context, resources):
+        """Initialise the compute node if it does not already exist.
+
+        The resource tracker will be inoperable if compute_node
+        is not defined. The compute_node will remain undefined if
+        we fail to create it or if there is no associated service
+        registered.
+
+        If this method has to create a compute node it needs initial
+        values - these come from resources.
+
+        :param context: security context
+        :param resources: initial values
+        """
+
+        # if there is already a compute node we don't
+        # need to do anything
+        if self.compute_node:
+            return
+
+        # TODO(pmurray): this lookup should be removed when the service_id
+        # field in the compute node goes away. At the moment it is deprecated
+        # but still a required field, so it has to be assigned below.
+        service = self._get_service(context)
+        if not service:
+            # no service record, disable resource
+            return
+
+        # now try to get the compute node record from the
+        # database. If we get one we are done.
+        self.compute_node = self._get_compute_node(context)
+        if self.compute_node:
+            return
+
+        # there was no local copy and none in the database
+        # so we need to create a new compute node. This needs
+        # to be initialised with resource values.
+        cn = {}
+        cn.update(resources)
+        # TODO(pmurray) service_id is deprecated but is still a required field.
+        # This should be removed when the field is changed.
+        cn['service_id'] = service.id
+        cn['host'] = self.host
+        # initialize load stats from existing instances:
+        self._write_ext_resources(cn)
+        # NOTE(pmurray): the stats field is stored as a json string. The
+        # json conversion will be done automatically by the ComputeNode object
+        # so this can be removed when using ComputeNode.
+        cn['stats'] = jsonutils.dumps(cn['stats'])
+        # pci_passthrough_devices may be in resources but are not
+        # stored in compute nodes
+        cn.pop('pci_passthrough_devices', None)
+
+        self.compute_node = self.conductor_api.compute_node_create(context, cn)
+        LOG.info(_LI('Compute_service record created for '
+                     '%(host)s:%(node)s'),
+                 {'host': self.host, 'node': self.nodename})
+
     def _get_host_metrics(self, context, nodename):
         """Get the metrics from monitors and
         notify information to message bus.
@@ -320,7 +378,7 @@ class ResourceTracker(object):
         if not resources:
             # The virt driver does not support this function
             LOG.info(_LI("Virt driver does not support "
-                 "'get_available_resource'  Compute tracking is disabled."))
+                 "'get_available_resource'. Compute tracking is disabled."))
             self.compute_node = None
             return
         resources['host_ip'] = CONF.my_ip
@@ -341,10 +399,20 @@ class ResourceTracker(object):
 
         self._report_hypervisor_resource_view(resources)
 
-        return self._update_available_resource(context, resources)
+        self._update_available_resource(context, resources)
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def _update_available_resource(self, context, resources):
+
+        # initialise the compute node object, creating it
+        # if it does not already exist.
+        self._init_compute_node(context, resources)
+
+        # if we could not init the compute node the tracker will be
+        # disabled and we should quit now
+        if self.disabled:
+            return
+
         if 'pci_passthrough_devices' in resources:
             devs = []
             for dev in jsonutils.loads(resources.pop(
@@ -395,49 +463,18 @@ class ResourceTracker(object):
 
         metrics = self._get_host_metrics(context, self.nodename)
         resources['metrics'] = jsonutils.dumps(metrics)
-        self._sync_compute_node(context, resources)
 
-    def _sync_compute_node(self, context, resources):
-        """Create or update the compute node DB record."""
-        if not self.compute_node:
-            # we need a copy of the ComputeNode record:
-            service = self._get_service(context)
-            if not service:
-                # no service record, disable resource
-                return
+        # TODO(sbauza): Juno compute nodes are missing the host field and
+        # the Juno ResourceTracker does not set this field, even if
+        # the ComputeNode object can show it.
+        # Unfortunately, as we're not yet using ComputeNode.save(), we need
+        # to add this field in the resources dict until the RT is using
+        # the ComputeNode.save() method for populating the table.
+        # tl;dr: To be removed once RT is using ComputeNode.save()
+        resources['host'] = self.host
 
-            cn = self._get_compute_node(context)
-            if cn:
-                self.compute_node = cn
-                if self.pci_tracker:
-                    self.pci_tracker.set_compute_node_id(cn['id'])
-
-        if not self.compute_node:
-            # Need to create the ComputeNode record:
-            resources['service_id'] = service.id
-            resources['host'] = self.host
-            self._create(context, resources)
-            if self.pci_tracker:
-                self.pci_tracker.set_compute_node_id(self.compute_node['id'])
-            LOG.info(_LI('Compute_service record created for '
-                         '%(host)s:%(node)s'),
-                     {'host': self.host, 'node': self.nodename})
-
-        else:
-            # just update the record:
-
-            # TODO(sbauza): Juno compute nodes are missing the host field and
-            # the Juno ResourceTracker does not set this field, even if
-            # the ComputeNode object can show it.
-            # Unfortunately, as we're not yet using ComputeNode.save(), we need
-            # to add this field in the resources dict until the RT is using
-            # the ComputeNode.save() method for populating the table.
-            # tl;dr: To be removed once RT is using ComputeNode.save()
-            resources['host'] = self.host
-
-            self._update(context, resources)
-            LOG.info(_LI('Compute_service record updated for '
-                         '%(host)s:%(node)s'),
+        self._update(context, resources)
+        LOG.info(_LI('Compute_service record updated for %(host)s:%(node)s'),
                      {'host': self.host, 'node': self.nodename})
 
     def _get_compute_node(self, context):
@@ -454,20 +491,6 @@ class ResourceTracker(object):
         resources['stats'] = {}
         resources['stats'].update(self.stats)
         self.ext_resources_handler.write_resources(resources)
-
-    def _create(self, context, values):
-        """Create the compute node in the DB."""
-        # initialize load stats from existing instances:
-        self._write_ext_resources(values)
-        # NOTE(pmurray): the stats field is stored as a json string. The
-        # json conversion will be done automatically by the ComputeNode object
-        # so this can be removed when using ComputeNode.
-        values['stats'] = jsonutils.dumps(values['stats'])
-
-        self.compute_node = self.conductor_api.compute_node_create(context,
-                                                                   values)
-        # NOTE(sbauza): We don't want to miss the first creation event
-        self._update_resource_stats(context, values)
 
     def _get_service(self, context):
         try:
