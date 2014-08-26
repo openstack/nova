@@ -104,6 +104,12 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
   ``max_io_ops_per_host`` setting. Maximum number of I/O intensive instances allowed to
   run on this host, the host will be ignored by scheduler if more than ``max_io_ops_per_host``
   instances such as build/resize/snapshot etc are running on it.
+* |AggregateIoOpsFilter| - filters hosts by I/O operations with per-aggregate
+  ``max_io_ops_per_host`` setting. If no per-aggregate value is found, it will
+  fall back to the global default ``max_io_ops_per_host``. If more than
+  one value is found for a host (meaning the host is in two or more different
+  aggregates with different max io operations settings), the minimum value
+  will be used.
 * |PciPassthroughFilter| - Filter that schedules instances on a host if the host
   has devices to meet the device requests in the 'extra_specs' for the flavor.
 * |SimpleCIDRAffinityFilter| - allows to put a new instance on a host within
@@ -356,6 +362,7 @@ in :mod:``nova.tests.scheduler``.
 .. |DiskFilter| replace:: :class:`DiskFilter <nova.scheduler.filters.disk_filter.DiskFilter>`
 .. |NumInstancesFilter| replace:: :class:`NumInstancesFilter <nova.scheduler.filters.num_instances_filter.NumInstancesFilter>`
 .. |IoOpsFilter| replace:: :class:`IoOpsFilter <nova.scheduler.filters.io_ops_filter.IoOpsFilter>`
+.. |AggregateIoOpsFilter| replace:: :class:`AggregateIoOpsFilter <nova.scheduler.filters.io_ops_filter.AggregateIoOpsFilter>`
 .. |PciPassthroughFilter| replace:: :class:`PciPassthroughFilter <nova.scheduler.filters.pci_passthrough_filter.PciPassthroughFilter>`
 .. |SimpleCIDRAffinityFilter| replace:: :class:`SimpleCIDRAffinityFilter <nova.scheduler.filters.affinity_filter.SimpleCIDRAffinityFilter>`
 .. |GroupAntiAffinityFilter| replace:: :class:`GroupAntiAffinityFilter <nova.scheduler.filters.affinity_filter.GroupAntiAffinityFilter>`

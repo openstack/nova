@@ -1902,3 +1902,28 @@ class HostFiltersTestCase(test.NoDBTestCase):
                                    attribute_dict={'metrics': metrics})
         filt_cls = self.class_map['MetricsFilter']()
         self.assertFalse(filt_cls.host_passes(host, None))
+
+    def test_aggregate_filter_num_iops_value(self):
+        self.flags(max_io_ops_per_host=7)
+        filt_cls = self.class_map['AggregateIoOpsFilter']()
+        host = fakes.FakeHostState('host1', 'node1',
+                                   {'num_io_ops': 7})
+        filter_properties = {'context': self.context}
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+        self._create_aggregate_with_host(
+            name='fake_aggregate',
+            hosts=['host1'],
+            metadata={'max_io_ops_per_host': 8})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_aggregate_filter_num_iops_value_error(self):
+        self.flags(max_io_ops_per_host=8)
+        filt_cls = self.class_map['AggregateIoOpsFilter']()
+        host = fakes.FakeHostState('host1', 'node1',
+                                   {'num_io_ops': 7})
+        self._create_aggregate_with_host(
+            name='fake_aggregate',
+            hosts=['host1'],
+            metadata={'max_io_ops_per_host': 'XXX'})
+        filter_properties = {'context': self.context}
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
