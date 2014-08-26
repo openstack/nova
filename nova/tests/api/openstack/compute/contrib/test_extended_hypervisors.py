@@ -91,7 +91,8 @@ class ExtendedHypervisorsTest(test_hypervisors.HypervisorsTest):
                          host_ip='2.2.2.2')]))
 
     def test_show_withid(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/1')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/1',
+                                      use_admin_context=True)
         result = self.controller.show(req, '1')
 
         self.assertEqual(result, dict(hypervisor=dict(
