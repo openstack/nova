@@ -41,23 +41,25 @@ def fake_compute_get(*args, **kwargs):
     return _return_server
 
 
-class HideServerAddressesTest(test.TestCase):
+class HideServerAddressesTestV21(test.TestCase):
     content_type = 'application/json'
+    base_url = '/v3/servers'
+
+    def _setup_wsgi(self):
+        self.wsgi_app = fakes.wsgi_app_v3(
+            init_only=('servers', 'os-hide-server-addresses'))
 
     def setUp(self):
-        super(HideServerAddressesTest, self).setUp()
+        super(HideServerAddressesTestV21, self).setUp()
         fakes.stub_out_nw_api(self.stubs)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Hide_server_addresses'])
         return_server = fakes.fake_instance_get()
         self.stubs.Set(db, 'instance_get_by_uuid', return_server)
+        self._setup_wsgi()
 
     def _make_request(self, url):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
+        res = req.get_response(self.wsgi_app)
         return res
 
     @staticmethod
@@ -85,7 +87,7 @@ class HideServerAddressesTest(test.TestCase):
         self.stubs.Set(compute.api.API, 'get',
                        fake_compute_get(instance_id, uuid=uuid,
                                         vm_state=vm_states.BUILDING))
-        res = self._make_request('/v2/fake/servers/%s' % uuid)
+        res = self._make_request(self.base_url + '/%s' % uuid)
         self.assertEqual(res.status_int, 200)
 
         server = self._get_server(res.body)
@@ -98,7 +100,7 @@ class HideServerAddressesTest(test.TestCase):
         self.stubs.Set(compute.api.API, 'get',
                        fake_compute_get(instance_id, uuid=uuid,
                                         vm_state=vm_states.ACTIVE))
-        res = self._make_request('/v2/fake/servers/%s' % uuid)
+        res = self._make_request(self.base_url + '/%s' % uuid)
         self.assertEqual(res.status_int, 200)
 
         server = self._get_server(res.body)
@@ -118,7 +120,7 @@ class HideServerAddressesTest(test.TestCase):
                 args[1], objects.InstanceList(), instances, fields)
 
         self.stubs.Set(compute.api.API, 'get_all', get_all)
-        res = self._make_request('/v2/fake/servers/detail')
+        res = self._make_request(self.base_url + '/detail')
 
         self.assertEqual(res.status_int, 200)
         servers = self._get_servers(res.body)
@@ -136,12 +138,23 @@ class HideServerAddressesTest(test.TestCase):
             raise exception.InstanceNotFound(instance_id='fake')
 
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
-        res = self._make_request('/v2/fake/servers/' + fakes.get_fake_uuid())
+        res = self._make_request(self.base_url + '/' + fakes.get_fake_uuid())
 
         self.assertEqual(res.status_int, 404)
 
 
-class HideAddressesXmlTest(HideServerAddressesTest):
+class HideServerAddressesTestV2(HideServerAddressesTestV21):
+    base_url = '/v2/fake/servers'
+
+    def _setup_wsgi(self):
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Hide_server_addresses'])
+        self.wsgi_app = fakes.wsgi_app(init_only=('servers',))
+
+
+class HideAddressesXmlTest(HideServerAddressesTestV2):
     content_type = 'application/xml'
 
     @staticmethod
