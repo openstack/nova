@@ -52,27 +52,30 @@ def fake_compute_get_all(*args, **kwargs):
                                             db_list, fields)
 
 
-class ExtendedStatusTest(test.TestCase):
+class ExtendedStatusTestV21(test.TestCase):
     content_type = 'application/json'
     prefix = 'OS-EXT-STS:'
+    fake_url = '/v3'
 
-    def setUp(self):
-        super(ExtendedStatusTest, self).setUp()
-        fakes.stub_out_nw_api(self.stubs)
-        self.stubs.Set(compute.api.API, 'get', fake_compute_get)
-        self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Extended_status'])
-        return_server = fakes.fake_instance_get()
-        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
+    def _set_flags(self):
+        pass
 
     def _make_request(self, url):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
+        res = req.get_response(fakes.wsgi_app_v3(
+            init_only=('servers',
+                       'os-extended-status')))
         return res
+
+    def setUp(self):
+        super(ExtendedStatusTestV21, self).setUp()
+        fakes.stub_out_nw_api(self.stubs)
+        self.stubs.Set(compute.api.API, 'get', fake_compute_get)
+        self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
+        self._set_flags()
+        return_server = fakes.fake_instance_get()
+        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
 
     def _get_server(self, body):
         return jsonutils.loads(body).get('server')
@@ -87,7 +90,7 @@ class ExtendedStatusTest(test.TestCase):
         self.assertEqual(server.get('%stask_state' % self.prefix), task_state)
 
     def test_show(self):
-        url = '/v2/fake/servers/%s' % UUID3
+        url = self.fake_url + '/servers/%s' % UUID3
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
@@ -97,7 +100,7 @@ class ExtendedStatusTest(test.TestCase):
                                 task_state='kayaking')
 
     def test_detail(self):
-        url = '/v2/fake/servers/detail'
+        url = self.fake_url + '/servers/detail'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
@@ -113,13 +116,29 @@ class ExtendedStatusTest(test.TestCase):
             raise exception.InstanceNotFound(instance_id='fake')
 
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
-        url = '/v2/fake/servers/70f6db34-de8d-4fbd-aafb-4065bdfa6115'
+        url = self.fake_url + '/servers/70f6db34-de8d-4fbd-aafb-4065bdfa6115'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 404)
 
 
-class ExtendedStatusXmlTest(ExtendedStatusTest):
+class ExtendedStatusTestV2(ExtendedStatusTestV21):
+    fake_url = '/v2/fake'
+
+    def _set_flags(self):
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Extended_status'])
+
+    def _make_request(self, url):
+        req = webob.Request.blank(url)
+        req.headers['Accept'] = self.content_type
+        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
+        return res
+
+
+class ExtendedStatusXmlTest(ExtendedStatusTestV2):
     content_type = 'application/xml'
     prefix = '{%s}' % extended_status.Extended_status.namespace
 

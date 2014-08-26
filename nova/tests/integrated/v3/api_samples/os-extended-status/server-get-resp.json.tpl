@@ -1,9 +1,9 @@
 {
     "server": {
-        "os-extended-status:task_state": null,
-        "os-extended-status:vm_state": "active",
-        "os-extended-status:power_state": 1,
-        "os-extended-status:locked_by": null,
+        "OS-EXT-STS:task_state": null,
+        "OS-EXT-STS:vm_state": "active",
+        "OS-EXT-STS:power_state": 1,
+        "OS-EXT-STS:locked_by": null,
         "updated": "%(isotime)s",
         "created": "%(isotime)s",
         "addresses": {

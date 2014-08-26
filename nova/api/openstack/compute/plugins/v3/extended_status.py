@@ -29,7 +29,7 @@ class ExtendedStatusController(wsgi.Controller):
 
     def _extend_server(self, server, instance):
         for state in ['task_state', 'vm_state', 'power_state', 'locked_by']:
-            key = "%s:%s" % (ExtendedStatus.alias, state)
+            key = "%s:%s" % ('OS-EXT-STS', state)
             server[key] = instance[state]
 
     @wsgi.extends
