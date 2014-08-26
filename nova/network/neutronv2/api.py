@@ -20,6 +20,7 @@ import time
 from neutronclient.common import exceptions as neutron_client_exc
 from oslo.config import cfg
 
+from nova.api.openstack import extensions
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova import conductor
@@ -120,6 +121,9 @@ CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
 CONF.import_opt('flat_injected', 'nova.network.manager')
 LOG = logging.getLogger(__name__)
 
+soft_external_network_attach_authorize = extensions.soft_core_authorizer(
+    'network', 'attach_external_network')
+
 
 class API(base_api.NetworkAPI):
     """API for interacting with the neutron 2.x API."""
@@ -164,7 +168,7 @@ class API(base_api.NetworkAPI):
             nets,
             net_ids)
 
-        if not context.is_admin:
+        if not soft_external_network_attach_authorize(context):
             for net in nets:
                 # Perform this check here rather than in validate_networks to
                 # ensure the check is performed every time
