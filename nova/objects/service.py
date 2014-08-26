@@ -19,6 +19,7 @@ from nova import objects
 from nova.objects import base
 from nova.objects import fields
 from nova.openstack.common import log as logging
+from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -28,7 +29,8 @@ class Service(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added compute_node nested object
     # Version 1.2: String attributes updated to support unicode
-    VERSION = '1.2'
+    # Version 1.3: ComputeNode version 1.5
+    VERSION = '1.3'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -41,6 +43,13 @@ class Service(base.NovaPersistentObject, base.NovaObject):
         'availability_zone': fields.StringField(nullable=True),
         'compute_node': fields.ObjectField('ComputeNode'),
         }
+
+    def obj_make_compatible(self, primitive, target_version):
+        target_version = utils.convert_version_to_tuple(target_version)
+        if target_version < (1, 3) and 'compute_node' in primitive:
+            primitive['compute_node'] = (
+                    objects.ComputeNode().object_make_compatible(
+                        primitive, '1.4'))
 
     @staticmethod
     def _do_compute_node(context, service, db_service):
@@ -128,7 +137,8 @@ class Service(base.NovaPersistentObject, base.NovaObject):
 class ServiceList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              Service <= version 1.2
-    VERSION = '1.0'
+    # Version 1.2  Service version 1.3
+    VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('Service'),
@@ -136,6 +146,7 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
     child_versions = {
         '1.0': '1.2',
         # NOTE(danms): Service was at 1.2 before we added this
+        '1.1': '1.3',
         }
 
     @base.remotable_classmethod

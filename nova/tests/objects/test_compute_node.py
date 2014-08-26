@@ -21,6 +21,7 @@ from nova.objects import service
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova.tests.objects import test_objects
+from nova.virt import hardware
 
 NOW = timeutils.utcnow().replace(microsecond=0)
 fake_stats = {'num_foo': '10'}
@@ -28,6 +29,10 @@ fake_stats_db_format = jsonutils.dumps(fake_stats)
 # host_ip is coerced from a string to an IPAddress
 # but needs to be converted to a string for the database format
 fake_host_ip = '127.0.0.1'
+fake_numa_topology = hardware.VirtNUMAHostTopology(
+        cells=[hardware.VirtNUMATopologyCellUsage(0, set([1, 2]), 512),
+               hardware.VirtNUMATopologyCellUsage(1, set([3, 4]), 512)])
+fake_numa_topology_db_format = fake_numa_topology.to_json()
 fake_compute_node = {
     'created_at': NOW,
     'updated_at': None,
@@ -53,6 +58,7 @@ fake_compute_node = {
     'metrics': '',
     'stats': fake_stats_db_format,
     'host_ip': fake_host_ip,
+    'numa_topology': fake_numa_topology_db_format,
     }
 
 
@@ -188,6 +194,11 @@ class _TestComputeNodeObject(object):
         self.compare_obj(computes[0], fake_compute_node,
                          comparators={'stats': self.json_comparator,
                                       'host_ip': self.str_comparator})
+
+    def test_compat_numa_topology(self):
+        compute = compute_node.ComputeNode()
+        primitive = compute.obj_to_primitive(target_version='1.4')
+        self.assertNotIn('numa_topology', primitive)
 
 
 class TestComputeNodeObject(test_objects._LocalTest,

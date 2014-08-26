@@ -106,6 +106,7 @@ class MultiNodeComputeTestCase(BaseTestCase):
                                    'deleted_at': None,
                                    'free_ram_mb': 130560,
                                    'metrics': '',
+                                   'numa_topology': '',
                                    'stats': '',
                                    'id': 2,
                                    'host_ip': '127.0.0.1'}]
