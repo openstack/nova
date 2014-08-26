@@ -30,10 +30,15 @@ from nova import objects
 from nova.objects import base
 from nova.objects import fields
 from nova.openstack.common import jsonutils
+from nova.openstack.common import log
 from nova.openstack.common import timeutils
 from nova import rpc
 from nova import test
 from nova.tests import fake_notifier
+from nova import utils
+
+
+LOG = log.getLogger(__name__)
 
 
 class MyOwnedObject(base.NovaPersistentObject, base.NovaObject):
@@ -99,7 +104,7 @@ class MyObj(base.NovaPersistentObject, base.NovaObject):
     def obj_make_compatible(self, primitive, target_version):
         # NOTE(danms): Simulate an older version that had a different
         # format for the 'bar' attribute
-        if target_version == '1.1':
+        if target_version == '1.1' and 'bar' in primitive:
             primitive['bar'] = 'old%s' % primitive['bar']
 
 
@@ -1080,3 +1085,18 @@ class TestObjectVersions(test.TestCase):
                          'parent objects and provide a rule in their '
                          'obj_make_compatible() routines to backlevel '
                          'the child object.')
+
+    def test_obj_make_compatible(self):
+        # Iterate all object classes and verify that we can run
+        # obj_make_compatible with every older version than current.
+        # This doesn't actually test the data conversions, but it at least
+        # makes sure the method doesn't blow up on something basic like
+        # expecting the wrong version format.
+        for obj_name in base.NovaObject._obj_classes:
+            obj_class = base.NovaObject._obj_classes[obj_name][0]
+            version = utils.convert_version_to_tuple(obj_class.VERSION)
+            for n in range(version[1]):
+                test_version = '%d.%d' % (version[0], n)
+                LOG.info('testing obj: %s version: %s' %
+                         (obj_name, test_version))
+                obj_class().obj_to_primitive(target_version=test_version)
