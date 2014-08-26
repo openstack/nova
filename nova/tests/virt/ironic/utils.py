@@ -84,7 +84,7 @@ class FakePortClient(object):
 
 class FakeNodeClient(object):
 
-    def list(self):
+    def list(self, detail=False):
         return []
 
     def get(self, node_uuid):

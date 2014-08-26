@@ -307,15 +307,43 @@ class IronicDriverTestCase(test.NoDBTestCase, test_driver.DriverAPITestHelper):
         expected = [n.instance_uuid for n in nodes]
         self.assertEqual(sorted(expected), sorted(uuids))
 
+    @mock.patch.object(FAKE_CLIENT.node, 'list')
     @mock.patch.object(FAKE_CLIENT.node, 'get')
-    def test_node_is_available(self, mock_get):
+    def test_node_is_available_empty_cache_empty_list(self, mock_get,
+                                                      mock_list):
         node = ironic_utils.get_test_node()
         mock_get.return_value = node
+        mock_list.return_value = []
         self.assertTrue(self.driver.node_is_available(node.uuid))
         mock_get.assert_called_with(node.uuid)
+        mock_list.assert_called_with(detail=True)
 
         mock_get.side_effect = ironic_exception.NotFound
         self.assertFalse(self.driver.node_is_available(node.uuid))
+
+    @mock.patch.object(FAKE_CLIENT.node, 'list')
+    @mock.patch.object(FAKE_CLIENT.node, 'get')
+    def test_node_is_available_empty_cache(self, mock_get, mock_list):
+        node = ironic_utils.get_test_node()
+        mock_get.return_value = node
+        mock_list.return_value = [node]
+        self.assertTrue(self.driver.node_is_available(node.uuid))
+        mock_list.assert_called_with(detail=True)
+        self.assertEqual(0, mock_get.call_count)
+
+    @mock.patch.object(FAKE_CLIENT.node, 'list')
+    @mock.patch.object(FAKE_CLIENT.node, 'get')
+    def test_node_is_available_with_cache(self, mock_get, mock_list):
+        node = ironic_utils.get_test_node()
+        mock_get.return_value = node
+        mock_list.return_value = [node]
+        # populate the cache
+        self.driver.get_available_nodes(refresh=True)
+        # prove that zero calls are made after populating cache
+        mock_list.reset_mock()
+        self.assertTrue(self.driver.node_is_available(node.uuid))
+        self.assertEqual(0, mock_list.call_count)
+        self.assertEqual(0, mock_get.call_count)
 
     def test__node_resources_unavailable(self):
         node_dicts = [
@@ -361,14 +389,39 @@ class IronicDriverTestCase(test.NoDBTestCase, test_driver.DriverAPITestHelper):
         self.assertEqual(sorted(expected_uuids), sorted(available_nodes))
 
     @mock.patch.object(FAKE_CLIENT.node, 'get')
+    @mock.patch.object(FAKE_CLIENT.node, 'list')
     @mock.patch.object(ironic_driver.IronicDriver, '_node_resource')
-    def test_get_available_resource(self, mock_nr, mock_get):
+    def test_get_available_resource(self, mock_nr, mock_list, mock_get):
         node = ironic_utils.get_test_node()
+        node_2 = ironic_utils.get_test_node(uuid=uuidutils.generate_uuid())
         fake_resource = 'fake-resource'
         mock_get.return_value = node
+        # ensure cache gets populated without the node we want
+        mock_list.return_value = [node_2]
         mock_nr.return_value = fake_resource
+
         result = self.driver.get_available_resource(node.uuid)
         self.assertEqual(fake_resource, result)
+        mock_nr.assert_called_once_with(node)
+        mock_get.assert_called_once_with(node.uuid)
+
+    @mock.patch.object(FAKE_CLIENT.node, 'get')
+    @mock.patch.object(FAKE_CLIENT.node, 'list')
+    @mock.patch.object(ironic_driver.IronicDriver, '_node_resource')
+    def test_get_available_resource_with_cache(self, mock_nr, mock_list,
+                                               mock_get):
+        node = ironic_utils.get_test_node()
+        fake_resource = 'fake-resource'
+        mock_list.return_value = [node]
+        mock_nr.return_value = fake_resource
+        # populate the cache
+        self.driver.get_available_nodes(refresh=True)
+        mock_list.reset_mock()
+
+        result = self.driver.get_available_resource(node.uuid)
+        self.assertEqual(fake_resource, result)
+        self.assertEqual(0, mock_list.call_count)
+        self.assertEqual(0, mock_get.call_count)
         mock_nr.assert_called_once_with(node)
 
     @mock.patch.object(FAKE_CLIENT.node, 'get_by_instance_uuid')
