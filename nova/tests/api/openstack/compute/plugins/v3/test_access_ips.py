@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import copy
-
 import webob
 
 from nova.api.openstack.compute.plugins.v3 import access_ips
@@ -226,16 +224,6 @@ class AccessIPsControllerTest(test.NoDBTestCase):
 
     def test_create_without_access_ips(self):
         self._test_with_access_ips(self.controller.create, {'body': {}})
-
-    def test_create_with_reservation_id(self):
-        req = wsgi.Request({'nova.context':
-                    fakes.FakeRequestContext('fake_user', 'fake',
-                                             is_admin=True)})
-        expected_res = {'servers_reservation': {'reservation_id': 'test'}}
-        body = copy.deepcopy(expected_res)
-        resp_obj = wsgi.ResponseObject(body)
-        self.controller.create(req, resp_obj, body)
-        self.assertEqual(expected_res, resp_obj.obj)
 
     def test_show(self):
         self._test_with_access_ips(self.controller.show)

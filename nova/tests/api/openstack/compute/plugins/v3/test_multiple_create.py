@@ -401,7 +401,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
         res = self.controller.create(req, body=body)
-        reservation_id = res.obj['servers_reservation']['reservation_id']
+        reservation_id = res.obj['reservation_id']
         self.assertNotEqual(reservation_id, "")
         self.assertIsNotNone(reservation_id)
         self.assertTrue(len(reservation_id) > 1)
