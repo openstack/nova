@@ -27,6 +27,7 @@ from nova import objects
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import timeutils
 from nova import test
 from nova.tests import fake_block_device
 from nova.tests.image import fake as fake_image
@@ -511,6 +512,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     @catch_notimplementederror
     def test_get_instance_diagnostics(self):
         instance_ref, network_info = self._get_running_instance(obj=True)
+        instance_ref['launched_at'] = timeutils.utcnow()
         self.connection.get_instance_diagnostics(instance_ref)
 
     @catch_notimplementederror
