@@ -379,6 +379,22 @@ class _TestInstanceObject(object):
         self.assertEqual('goodbye', inst.display_name)
         self.assertEqual(set([]), inst.obj_what_changed())
 
+    @mock.patch('nova.db.instance_update_and_get_original')
+    @mock.patch('nova.objects.Instance._from_db_object')
+    def test_save_does_not_refresh_pci_devices(self, mock_fdo, mock_update):
+        # NOTE(danms): This tests that we don't update the pci_devices
+        # field from the contents of the database. This is not because we
+        # don't necessarily want to, but because the way pci_devices is
+        # currently implemented it causes versioning issues. When that is
+        # resolved, this test should go away.
+        mock_update.return_value = None, None
+        inst = instance.Instance(context=self.context, id=123)
+        inst.uuid = 'foo'
+        inst.pci_devices = pci_device.PciDeviceList()
+        inst.save()
+        self.assertNotIn('pci_devices',
+                         mock_fdo.call_args_list[0][1]['expected_attrs'])
+
     def test_get_deleted(self):
         fake_inst = dict(self.fake_instance, id=123, deleted=123)
         fake_uuid = fake_inst['uuid']
