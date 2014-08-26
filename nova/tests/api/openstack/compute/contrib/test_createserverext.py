@@ -220,25 +220,25 @@ class CreateserverextTest(test.TestCase):
         _create_inst = self._create_instance_with_networks_json
         request, response, networks = _create_inst([FAKE_NETWORKS[0]])
         self.assertEqual(response.status_int, 202)
-        self.assertEqual(networks, [FAKE_NETWORKS[0]])
+        self.assertEqual([FAKE_NETWORKS[0]], networks.as_tuples())
 
     def test_create_instance_with_one_network_xml(self):
         _create_inst = self._create_instance_with_networks_xml
         request, response, networks = _create_inst([FAKE_NETWORKS[0]])
         self.assertEqual(response.status_int, 202)
-        self.assertEqual(networks, [FAKE_NETWORKS[0]])
+        self.assertEqual([FAKE_NETWORKS[0]], networks.as_tuples())
 
     def test_create_instance_with_two_networks(self):
         _create_inst = self._create_instance_with_networks_json
         request, response, networks = _create_inst(FAKE_NETWORKS)
         self.assertEqual(response.status_int, 202)
-        self.assertEqual(networks, FAKE_NETWORKS)
+        self.assertEqual(FAKE_NETWORKS, networks.as_tuples())
 
     def test_create_instance_with_two_networks_xml(self):
         _create_inst = self._create_instance_with_networks_xml
         request, response, networks = _create_inst(FAKE_NETWORKS)
         self.assertEqual(response.status_int, 202)
-        self.assertEqual(networks, FAKE_NETWORKS)
+        self.assertEqual(FAKE_NETWORKS, networks.as_tuples())
 
     def test_create_instance_with_duplicate_networks(self):
         _create_inst = self._create_instance_with_networks_json
@@ -311,8 +311,8 @@ class CreateserverextTest(test.TestCase):
         response = request.get_response(fakes.wsgi_app(
             init_only=('servers', 'os-create-server-ext')))
         self.assertEqual(response.status_int, 202)
-        self.assertEqual(self.networks,
-                         [('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', None)])
+        self.assertEqual([('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', None)],
+                         self.networks.as_tuples())
 
     def test_create_instance_with_network_no_fixed_ip_xml(self):
         body_dict = self._create_networks_request_dict([FAKE_NETWORKS[0]])
@@ -321,8 +321,8 @@ class CreateserverextTest(test.TestCase):
         response = request.get_response(fakes.wsgi_app(
             init_only=('servers', 'os-create-server-ext')))
         self.assertEqual(response.status_int, 202)
-        self.assertEqual(self.networks,
-                         [('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', None)])
+        self.assertEqual([('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', None)],
+                         self.networks.as_tuples())
 
     def test_create_instance_with_userdata(self):
         user_data_contents = '#!/bin/bash\necho "Oh no!"\n'

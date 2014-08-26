@@ -486,7 +486,7 @@ class ServersController(wsgi.Controller):
             requested_networks = server_dict.get('networks')
         if requested_networks is not None:
             requested_networks = self._get_requested_networks(
-                requested_networks).as_tuples()
+                requested_networks)
 
         try:
             flavor_id = self._flavor_id_from_req_data(body)

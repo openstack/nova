@@ -197,7 +197,9 @@ class _ComputeAPIUnitTestMixIn(object):
         address = '10.0.0.1'
         min_count = 1
         max_count = 2
-        requested_networks = [(None, address, port)]
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(address=address,
+                                            port_id=port)])
 
         self.assertRaises(exception.MultiplePortsNotApplicable,
             self.compute_api.create, self.context, 'fake_flavor', 'image_id',
@@ -218,7 +220,9 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_specified_ip_and_multiple_instances(self):
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         address = '10.0.0.1'
-        requested_networks = [(network, address)]
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id=network,
+                                            address=address)])
         self._test_specified_ip_and_multiple_instances_helper(
             requested_networks)
 
@@ -226,7 +230,9 @@ class _ComputeAPIUnitTestMixIn(object):
         self.flags(network_api_class='nova.network.neutronv2.api.API')
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         address = '10.0.0.1'
-        requested_networks = [(network, address, None)]
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id=network,
+                                            address=address)])
         self._test_specified_ip_and_multiple_instances_helper(
             requested_networks)
 
