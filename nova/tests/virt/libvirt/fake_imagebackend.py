@@ -71,3 +71,7 @@ class Raw(imagebackend.Image):
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
         pass
+
+
+class Rbd(Raw):
+    pass
