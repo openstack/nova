@@ -159,6 +159,30 @@ class VMwareVMOps(object):
             self._extend_virtual_disk(instance, size_in_kb,
                                       root_vmdk_path, dc_info.ref)
 
+    def build_virtual_machine(self, instance, instance_name, image_info,
+                              dc_info, datastore, network_info):
+        node_mo_id = vm_util.get_mo_id_from_instance(instance)
+        res_pool_ref = vm_util.get_res_pool_ref(self._session,
+                                                self._cluster, node_mo_id)
+        vif_infos = vmwarevif.get_vif_info(self._session,
+                                           self._cluster,
+                                           utils.is_neutron(),
+                                           image_info.vif_model,
+                                           network_info)
+
+        # Get the create vm config spec
+        client_factory = self._session._get_vim().client.factory
+        config_spec = vm_util.get_vm_create_spec(client_factory,
+                                                 instance,
+                                                 instance_name,
+                                                 datastore.name,
+                                                 vif_infos,
+                                                 image_info.os_type)
+        # Create the VM
+        vm_ref = vm_util.create_vm(self._session, instance, dc_info.vmFolder,
+                                   config_spec, res_pool_ref)
+        return vm_ref
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None,
               instance_name=None, power_on=True):
@@ -206,27 +230,14 @@ class VMwareVMOps(object):
             raise exception.InstanceUnacceptable(instance_id=instance.uuid,
                                                  reason=reason)
 
-        node_mo_id = vm_util.get_mo_id_from_instance(instance)
-        res_pool_ref = vm_util.get_res_pool_ref(self._session,
-                                                self._cluster, node_mo_id)
-
-        vif_infos = vmwarevif.get_vif_info(self._session, self._cluster,
-                                           utils.is_neutron(),
-                                           image_info.vif_model,
-                                           network_info)
-
-        # Get the instance name. In some cases this may differ from the 'uuid',
-        # for example when the spawn of a rescue instance takes place.
-        if not instance_name:
-            instance_name = instance.uuid
-
-        # Create the VM
-        config_spec = vm_util.get_vm_create_spec(
-                            client_factory, instance, instance_name,
-                            datastore.name, vif_infos, image_info.os_type)
-
-        vm_ref = vm_util.create_vm(self._session, instance, dc_info.vmFolder,
-                                   config_spec, res_pool_ref)
+        # Creates the virtual machine. The virtual machine reference returned
+        # is unique within Virtual Center.
+        vm_ref = self.build_virtual_machine(instance,
+                                            instance_name,
+                                            image_info,
+                                            dc_info,
+                                            datastore,
+                                            network_info)
 
         # Cache the vm_ref. This saves a remote call to the VC. This uses the
         # instance_name. This covers all use cases including rescue and resize.
