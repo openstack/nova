@@ -30,6 +30,7 @@ from nova import compute
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova.console import type as ctype
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _, _LE
@@ -1291,7 +1292,7 @@ class VMwareVMOps(object):
         """Return connection info for a vnc console using ESX logic."""
         vnc_console = self._get_vnc_console_connection(instance)
         vnc_console['host'] = CONF.vmware.host_ip
-        return vnc_console
+        return ctype.ConsoleVNC(**vnc_console)
 
     @staticmethod
     def _get_machine_id_str(network_info):

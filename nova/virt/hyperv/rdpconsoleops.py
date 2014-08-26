@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.console import type as ctype
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import hostops
 from nova.virt.hyperv import utilsfactory
@@ -35,6 +36,5 @@ class RDPConsoleOps(object):
         LOG.debug("RDP console: %(host)s:%(port)s, %(vm_id)s",
                   {"host": host, "port": port, "vm_id": vm_id})
 
-        return {'host': host,
-                'port': port,
-                'internal_access_path': vm_id}
+        return ctype.ConsoleRDP(
+            host=host, port=port, internal_access_path=vm_id)

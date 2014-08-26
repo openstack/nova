@@ -48,6 +48,7 @@ from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova.conductor import manager as conductor_manager
+from nova.console import type as ctype
 from nova import context
 from nova import db
 from nova import exception
@@ -3091,13 +3092,13 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance_obj()
 
         def fake_driver_get_console(*args, **kwargs):
-            return {'host': "fake_host", 'port': "5900",
-                    'internal_access_path': None}
+            return ctype.ConsoleVNC(host="fake_host", port=5900)
+
         self.stubs.Set(self.compute.driver, "get_vnc_console",
                        fake_driver_get_console)
 
         self.assertTrue(self.compute.validate_console_port(
-            context=self.context, instance=instance, port="5900",
+            context=self.context, instance=instance, port=5900,
             console_type="novnc"))
 
     def test_validate_console_port_spice(self):
@@ -3106,13 +3107,13 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance_obj()
 
         def fake_driver_get_console(*args, **kwargs):
-            return {'host': "fake_host", 'port': "5900",
-                    'internal_access_path': None}
+            return ctype.ConsoleSpice(host="fake_host", port=5900, tlsPort=88)
+
         self.stubs.Set(self.compute.driver, "get_spice_console",
                        fake_driver_get_console)
 
         self.assertTrue(self.compute.validate_console_port(
-            context=self.context, instance=instance, port="5900",
+            context=self.context, instance=instance, port=5900,
             console_type="spice-html5"))
 
     def test_validate_console_port_rdp(self):
@@ -3120,13 +3121,13 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance_obj()
 
         def fake_driver_get_console(*args, **kwargs):
-            return {'host': "fake_host", 'port': "5900",
-                    'internal_access_path': None}
+            return ctype.ConsoleRDP(host="fake_host", port=5900)
+
         self.stubs.Set(self.compute.driver, "get_rdp_console",
                        fake_driver_get_console)
 
         self.assertTrue(self.compute.validate_console_port(
-            context=self.context, instance=instance, port="5900",
+            context=self.context, instance=instance, port=5900,
             console_type="rdp-html5"))
 
     def test_validate_console_port_wrong_port(self):
@@ -3135,8 +3136,8 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance_obj()
 
         def fake_driver_get_console(*args, **kwargs):
-            return {'host': "fake_host", 'port': "5900",
-                    'internal_access_path': None}
+            return ctype.ConsoleSpice(host="fake_host", port=5900, tlsPort=88)
+
         self.stubs.Set(self.compute.driver, "get_vnc_console",
                        fake_driver_get_console)
 
