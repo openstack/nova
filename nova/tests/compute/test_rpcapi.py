@@ -862,4 +862,4 @@ class ComputeRpcAPITestCase(test.TestCase):
                 admin_password='passwd', injected_files=None,
                 requested_networks=['network1'], security_groups=None,
                 block_device_mapping=None, node='node', limits=[],
-                version='3.23')
+                version='3.33')

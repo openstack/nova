@@ -1259,7 +1259,7 @@ class _BaseTaskTestCase(object):
                                    'limits': []},
                 admin_password='admin_password',
                 injected_files='injected_files',
-                requested_networks='requested_networks',
+                requested_networks=None,
                 security_groups='security_groups',
                 block_device_mapping=mox.IgnoreArg(),
                 node='node1', limits=[])
@@ -1285,7 +1285,7 @@ class _BaseTaskTestCase(object):
                                              'hosts': [['host2', 'node2']]}},
                 admin_password='admin_password',
                 injected_files='injected_files',
-                requested_networks='requested_networks',
+                requested_networks=None,
                 security_groups='security_groups',
                 block_device_mapping=mox.IgnoreArg(),
                 node='node2', limits=[])
@@ -1300,7 +1300,7 @@ class _BaseTaskTestCase(object):
                 filter_properties={},
                 admin_password='admin_password',
                 injected_files='injected_files',
-                requested_networks='requested_networks',
+                requested_networks=None,
                 security_groups='security_groups',
                 block_device_mapping='block_device_mapping',
                 legacy_bdm=False)
@@ -1337,7 +1337,7 @@ class _BaseTaskTestCase(object):
                 filter_properties={},
                 admin_password='admin_password',
                 injected_files='injected_files',
-                requested_networks='requested_networks',
+                requested_networks=None,
                 security_groups='security_groups',
                 block_device_mapping='block_device_mapping',
                 legacy_bdm=False)
@@ -1929,7 +1929,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                                         'node2']]}},
                 admin_password='admin_password',
                 injected_files='injected_files',
-                requested_networks='requested_networks',
+                requested_networks=None,
                 security_groups='security_groups',
                 block_device_mapping=mox.IsA(objects.BlockDeviceMappingList),
                 node='node2', limits=[])
@@ -1944,7 +1944,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 filter_properties={},
                 admin_password='admin_password',
                 injected_files='injected_files',
-                requested_networks='requested_networks',
+                requested_networks=None,
                 security_groups='security_groups',
                 block_device_mapping='block_device_mapping',
                 legacy_bdm=False)
@@ -1980,7 +1980,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                     filter_properties={},
                     admin_password='admin_password',
                     injected_files='injected_files',
-                    requested_networks='requested_networks',
+                    requested_networks=None,
                     security_groups='security_groups',
                     block_device_mapping='block_device_mapping',
                     legacy_bdm=False)
@@ -1994,7 +1994,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                                             'node2']]}},
                     admin_password='admin_password',
                     injected_files='injected_files',
-                    requested_networks='requested_networks',
+                    requested_networks=None,
                     security_groups='security_groups',
                     block_device_mapping=mock.ANY,
                     node='node2', limits=[])

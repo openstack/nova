@@ -267,6 +267,7 @@ class ComputeAPI(object):
         * 3.31 - Add get_instance_diagnostics
         * 3.32 - Add destroy_disks and migrate_data optional parameters to
                  rollback_live_migration_at_destination()
+        * 3.33 - Make build_and_run_instance() take a NetworkRequestList object
 
     '''
 
@@ -1039,7 +1040,13 @@ class ComputeAPI(object):
             filter_properties, admin_password=None, injected_files=None,
             requested_networks=None, security_groups=None,
             block_device_mapping=None, node=None, limits=None):
-        cctxt = self.client.prepare(server=host, version='3.23')
+        version = '3.33'
+        if not self.client.can_send_version(version):
+            version = '3.23'
+            if requested_networks is not None:
+                requested_networks = requested_networks.as_tuples()
+
+        cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'build_and_run_instance', instance=instance,
                 image=image, request_spec=request_spec,
                 filter_properties=filter_properties,

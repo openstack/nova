@@ -365,6 +365,7 @@ class ComputeTaskAPI(object):
     1.6 - Made migrate_server use instance objects
     1.7 - Do not send block_device_mapping and legacy_bdm to build_instances
     1.8 - Add rebuild_instance
+    1.9 - Converted requested_networks to NetworkRequestList object
 
     """
 
@@ -405,12 +406,15 @@ class ComputeTaskAPI(object):
                'requested_networks': requested_networks,
                'security_groups': security_groups}
 
-        if self.client.can_send_version('1.7'):
-            version = '1.7'
-        else:
+        version = '1.9'
+        if not self.client.can_send_version('1.9'):
+            version = '1.8'
+            kw['requested_networks'] = kw['requested_networks'].as_tuples()
+        if not self.client.can_send_version('1.7'):
             version = '1.5'
             kw.update({'block_device_mapping': block_device_mapping,
                        'legacy_bdm': legacy_bdm})
+
         cctxt = self.client.prepare(version=version)
         cctxt.cast(context, 'build_instances', **kw)
 
