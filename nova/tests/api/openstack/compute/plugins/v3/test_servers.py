@@ -2672,6 +2672,13 @@ class ServersControllerCreateTestWithMock(test.TestCase):
                           self._test_create_extra, params)
         self.assertEqual(1, len(create_mock.call_args_list))
 
+    @mock.patch.object(compute_api.API, 'create',
+                       side_effect=exception.InvalidVolume(reason='error'))
+    def test_create_instance_with_invalid_volume_error(self, create_mock):
+        # Tests that InvalidVolume is translated to a 400 error.
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra, {})
+
 
 class ServersViewBuilderTest(test.TestCase):
 

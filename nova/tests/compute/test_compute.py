@@ -1041,25 +1041,32 @@ class ComputeVolumeTestCase(BaseTestCase):
                          'boot_index': 0,
                          'delete_on_termination': False}]
 
-        # Check that the volume status is 'available' and reject if not
-        def fake_volume_get_1(self, context, volume_id):
-            return {'id': volume_id,
-                    'status': 'creating',
-                    'attach_status': 'detached'}
-        self.stubs.Set(cinder.API, 'get', fake_volume_get_1)
+        # First we test a list of invalid status values that should result
+        # in an InvalidVolume exception being raised.
+        status_values = (
+            # First two check that the status is 'available'.
+            ('creating', 'detached'),
+            ('error', 'detached'),
+            # Checks that the attach_status is 'detached'.
+            ('available', 'attached')
+        )
 
-        self.assertRaises(exception.InvalidBDMVolume,
-                          self.compute_api._validate_bdm,
-                          self.context, self.instance,
-                          instance_type, all_mappings)
+        for status, attach_status in status_values:
+            def fake_volume_get(self, ctxt, volume_id):
+                return {'id': volume_id,
+                        'status': status,
+                        'attach_status': attach_status}
+            self.stubs.Set(cinder.API, 'get', fake_volume_get)
+            self.assertRaises(exception.InvalidVolume,
+                              self.compute_api._validate_bdm,
+                              self.context, self.instance,
+                              instance_type, all_mappings)
 
-        # Check that the volume attach_status is 'detached' and reject if not
-        def fake_volume_get_2(self, context, volume_id):
-            return {'id': volume_id,
-                    'status': 'available',
-                    'attach_status': 'attached'}
-        self.stubs.Set(cinder.API, 'get', fake_volume_get_2)
+        # Now we test a 404 case that results in InvalidBDMVolume.
+        def fake_volume_get_not_found(self, context, volume_id):
+            raise exception.VolumeNotFound(volume_id)
 
+        self.stubs.Set(cinder.API, 'get', fake_volume_get_not_found)
         self.assertRaises(exception.InvalidBDMVolume,
                           self.compute_api._validate_bdm,
                           self.context, self.instance,
@@ -1067,11 +1074,11 @@ class ComputeVolumeTestCase(BaseTestCase):
 
         # Check that the volume status is 'available' and attach_status is
         # 'detached' and accept the request if so
-        def fake_volume_get_3(self, context, volume_id):
+        def fake_volume_get_ok(self, context, volume_id):
             return {'id': volume_id,
                     'status': 'available',
                     'attach_status': 'detached'}
-        self.stubs.Set(cinder.API, 'get', fake_volume_get_3)
+        self.stubs.Set(cinder.API, 'get', fake_volume_get_ok)
 
         self.compute_api._validate_bdm(self.context, self.instance,
                                        instance_type, all_mappings)
