@@ -15,9 +15,12 @@
 #    under the License.
 
 from lxml import etree
+import mock
 import mox
+from webob import exc
 
 from nova.api.openstack.compute.contrib import certificates
+from nova.cert import rpcapi
 from nova import context
 from nova import exception
 from nova.openstack.common import policy as common_policy
@@ -95,6 +98,15 @@ class CertificatesTest(test.NoDBTestCase):
                                 self.controller.create, req)
         self.assertIn("compute_extension:certificates",
                       exc.format_message())
+
+    @mock.patch.object(rpcapi.CertAPI, 'fetch_ca',
+                side_effect=exception.CryptoCAFileNotFound(project='fake'))
+    def test_non_exist_certificates_show(self, mock_fetch_ca):
+        req = fakes.HTTPRequest.blank('/v2/fake/os-certificates/root')
+        self.assertRaises(
+            exc.HTTPNotFound,
+            self.controller.show,
+            req, 'root')
 
 
 class CertificatesSerializerTest(test.NoDBTestCase):
