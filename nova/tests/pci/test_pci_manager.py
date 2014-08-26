@@ -272,21 +272,6 @@ class PciDevTrackerTestCase(test.TestCase):
         self.assertEqual(len(self.tracker.pci_devs), 2)
         self.assertEqual(self.destroy_called, 1)
 
-    def test_set_compute_node_id(self):
-        self.tracker = pci_manager.PciDevTracker(self.fake_context)
-        fake_pci_devs = [copy.deepcopy(fake_pci), copy.deepcopy(fake_pci_1),
-                         copy.deepcopy(fake_pci_2)]
-        self.tracker.set_hvdevs(fake_pci_devs)
-        self.tracker.set_compute_node_id(1)
-        self.assertEqual(self.tracker.node_id, 1)
-        self.assertEqual(self.tracker.pci_devs[0].compute_node_id, 1)
-        fake_pci_3 = dict(fake_pci, address='0000:00:00.4', vendor_id='v2')
-        fake_pci_devs = [copy.deepcopy(fake_pci), copy.deepcopy(fake_pci_1),
-                         copy.deepcopy(fake_pci_3), copy.deepcopy(fake_pci_3)]
-        self.tracker.set_hvdevs(fake_pci_devs)
-        for dev in self.tracker.pci_devs:
-            self.assertEqual(dev.compute_node_id, 1)
-
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance')
     def test_clean_usage(self, mock_get):
         inst_2 = copy.copy(self.inst)
