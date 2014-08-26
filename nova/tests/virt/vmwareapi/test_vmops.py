@@ -130,9 +130,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     def test_get_machine_id_str(self):
         result = vmops.VMwareVMOps._get_machine_id_str(self.network_info)
-        self.assertEqual(result,
-                         'DE:AD:BE:EF:00:00;192.168.0.100;255.255.255.0;'
-                         '192.168.0.1;192.168.0.255;192.168.0.1#')
+        self.assertEqual('DE:AD:BE:EF:00:00;192.168.0.100;255.255.255.0;'
+                         '192.168.0.1;192.168.0.255;192.168.0.1#', result)
         result = vmops.VMwareVMOps._get_machine_id_str(
                                         self.pure_IPv6_network_info)
         self.assertEqual('DE:AD:BE:EF:00:00;;;;;#', result)
@@ -211,9 +210,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_delete_vm_snapshot(self):
         def fake_call_method(module, method, *args, **kwargs):
             self.assertEqual('RemoveSnapshot_Task', method)
-            self.assertEqual(args[0], "fake_vm_snapshot")
-            self.assertEqual(kwargs['removeChildren'], False)
-            self.assertEqual(kwargs['consolidate'], True)
+            self.assertEqual('fake_vm_snapshot', args[0])
+            self.assertFalse(kwargs['removeChildren'])
+            self.assertTrue(kwargs['consolidate'])
             return 'fake_remove_snapshot_task'
 
         with contextlib.nested(
@@ -233,9 +232,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             expected_method = method_list.pop(0)
             self.assertEqual(expected_method, method)
             if (expected_method == 'CreateSnapshot_Task'):
-                self.assertEqual(args[0], "fake_vm_ref")
-                self.assertEqual(kwargs['memory'], False)
-                self.assertEqual(kwargs['quiesce'], True)
+                self.assertEqual('fake_vm_ref', args[0])
+                self.assertFalse(kwargs['memory'])
+                self.assertTrue(kwargs['quiesce'])
                 return 'fake_snapshot_task'
             elif (expected_method == 'get_dynamic_property'):
                 task_info = mock.Mock()
@@ -906,20 +905,20 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 self._instance, image_info, instance_name=instance_name)
         self.assertEqual(image_info, vi.ii)
         self.assertEqual(self._ds, vi.datastore)
-        self.assertEqual(vi.root_gb, self._instance.root_gb)
-        self.assertEqual(vi.instance, self._instance)
-        if instance_name:
-            self.assertEqual(vi.instance_name, instance_name)
+        self.assertEqual(self._instance.root_gb, vi.root_gb)
+        self.assertEqual(self._instance, vi.instance)
+        if instance_name is not None:
+            self.assertEqual(instance_name, vi.instance_name)
         else:
-            self.assertEqual(vi.instance_name, self._instance['uuid'])
+            self.assertEqual(self._instance.uuid, vi.instance_name)
 
         cache_image_path = '[%s] vmware_base/%s/%s.vmdk' % (
             self._ds.name, self._image_id, self._image_id)
-        self.assertEqual(str(vi.cache_image_path), cache_image_path)
+        self.assertEqual(cache_image_path, str(vi.cache_image_path))
 
         cache_image_folder = '[%s] vmware_base/%s' % (
             self._ds.name, self._image_id)
-        self.assertEqual(str(vi.cache_image_folder), cache_image_folder)
+        self.assertEqual(cache_image_folder, str(vi.cache_image_folder))
 
     def test_get_spawn_vm_config_info(self):
         image_size = (self._instance.root_gb) * units.Gi / 2
