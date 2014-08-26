@@ -17,7 +17,7 @@ from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import flavors
 from nova import db
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _LE
 from nova import notifications
 from nova import objects
 from nova.objects import base
@@ -429,7 +429,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                 try:
                     getattr(self, '_save_%s' % field)(context)
                 except AttributeError:
-                    LOG.exception(_('No save handler for %s') % field,
+                    LOG.exception(_LE('No save handler for %s'), field,
                                   instance=self)
             elif field in changes:
                 updates[field] = self[field]

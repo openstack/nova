@@ -20,7 +20,7 @@ import eventlet
 from oslo.config import cfg
 
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
@@ -87,10 +87,10 @@ class ZooKeeperDriver(api.ServiceGroupDriver):
             try:
                 member = membership.Membership(self._session, path, member_id)
             except RuntimeError:
-                LOG.exception(_("Unable to join. It is possible that either "
-                                "another node exists with the same name, or "
-                                "this node just restarted. We will try "
-                                "again in a short while to make sure."))
+                LOG.exception(_LE("Unable to join. It is possible that either"
+                                  " another node exists with the same name, or"
+                                  " this node just restarted. We will try "
+                                  "again in a short while to make sure."))
                 eventlet.sleep(CONF.zookeeper.sg_retry_interval)
                 member = membership.Membership(self._session, path, member_id)
             self._memberships[(group, member_id)] = member

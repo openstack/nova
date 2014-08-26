@@ -31,7 +31,7 @@ from oslo.config import cfg
 from nova.api.ec2 import ec2utils
 import nova.cert.rpcapi
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova.image import glance
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
@@ -328,8 +328,8 @@ class S3ImageService(object):
                                 shutil.copyfileobj(part, combined)
 
                 except Exception:
-                    LOG.exception(_("Failed to download %(image_location)s "
-                                    "to %(image_path)s"), log_vars)
+                    LOG.exception(_LE("Failed to download %(image_location)s "
+                                      "to %(image_path)s"), log_vars)
                     _update_image_state(context, image_uuid, 'failed_download')
                     return
 
@@ -345,8 +345,8 @@ class S3ImageService(object):
                     self._decrypt_image(context, enc_filename, encrypted_key,
                                         encrypted_iv, dec_filename)
                 except Exception:
-                    LOG.exception(_("Failed to decrypt %(image_location)s "
-                                    "to %(image_path)s"), log_vars)
+                    LOG.exception(_LE("Failed to decrypt %(image_location)s "
+                                      "to %(image_path)s"), log_vars)
                     _update_image_state(context, image_uuid, 'failed_decrypt')
                     return
 
@@ -356,8 +356,8 @@ class S3ImageService(object):
                     unz_filename = self._untarzip_image(image_path,
                                                         dec_filename)
                 except Exception:
-                    LOG.exception(_("Failed to untar %(image_location)s "
-                                    "to %(image_path)s"), log_vars)
+                    LOG.exception(_LE("Failed to untar %(image_location)s "
+                                      "to %(image_path)s"), log_vars)
                     _update_image_state(context, image_uuid, 'failed_untar')
                     return
 
@@ -366,8 +366,8 @@ class S3ImageService(object):
                     with open(unz_filename) as image_file:
                         _update_image_data(context, image_uuid, image_file)
                 except Exception:
-                    LOG.exception(_("Failed to upload %(image_location)s "
-                                    "to %(image_path)s"), log_vars)
+                    LOG.exception(_LE("Failed to upload %(image_location)s "
+                                      "to %(image_path)s"), log_vars)
                     _update_image_state(context, image_uuid, 'failed_upload')
                     return
 

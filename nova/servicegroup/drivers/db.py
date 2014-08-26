@@ -18,7 +18,7 @@ import six
 
 from nova import conductor
 from nova import context
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.servicegroup import api
@@ -107,4 +107,4 @@ class DbDriver(api.ServiceGroupDriver):
         except Exception:  # pylint: disable=W0702
             if not getattr(service, 'model_disconnected', False):
                 service.model_disconnected = True
-                LOG.exception(_('model server went away'))
+                LOG.exception(_LE('model server went away'))

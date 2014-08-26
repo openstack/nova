@@ -24,7 +24,7 @@ import six
 
 from nova import context
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova import objects
 from nova.objects import fields
 from nova.openstack.common import log as logging
@@ -83,8 +83,7 @@ def make_class_properties(cls):
                 return setattr(self, attrname, field_value)
             except Exception:
                 attr = "%s.%s" % (self.obj_name(), name)
-                LOG.exception(_('Error setting %(attr)s') %
-                              {'attr': attr})
+                LOG.exception(_LE('Error setting %(attr)s'), {'attr': attr})
                 raise
 
         setattr(cls, name, property(getter, setter))
