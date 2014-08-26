@@ -137,7 +137,7 @@ class Service(base.NovaPersistentObject, base.NovaObject):
 class ServiceList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              Service <= version 1.2
-    # Version 1.2  Service version 1.3
+    # Version 1.1  Service version 1.3
     VERSION = '1.1'
 
     fields = {
