@@ -18,6 +18,7 @@ from nova import objects
 from nova.objects import base
 from nova.objects import fields
 from nova.openstack.common import uuidutils
+from nova import utils
 
 
 class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
@@ -45,6 +46,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
         }
 
     def obj_make_compatible(self, primitive, target_version):
+        target_version = utils.convert_version_to_tuple(target_version)
         if target_version < (1, 7):
             # NOTE(danms): Before 1.7, we had an always-empty
             # metadetails property
