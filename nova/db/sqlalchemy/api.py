@@ -2172,19 +2172,12 @@ def instance_floating_address_get_all(context, instance_uuid):
     if not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(uuid=instance_uuid)
 
-    fixed_ip_ids = model_query(context, models.FixedIp.id,
-                               base_model=models.FixedIp).\
-                        filter_by(instance_uuid=instance_uuid).\
-                        all()
-    if not fixed_ip_ids:
-        raise exception.FixedIpNotFoundForInstance(instance_uuid=instance_uuid)
-
-    fixed_ip_ids = [fixed_ip_id.id for fixed_ip_id in fixed_ip_ids]
-
-    floating_ips = model_query(context, models.FloatingIp.address,
+    floating_ips = model_query(context,
+                               models.FloatingIp.address,
                                base_model=models.FloatingIp).\
-                    filter(models.FloatingIp.fixed_ip_id.in_(fixed_ip_ids)).\
-                    all()
+        join(models.FloatingIp.fixed_ip).\
+        filter_by(instance_uuid=instance_uuid)
+
     return [floating_ip.address for floating_ip in floating_ips]
 
 

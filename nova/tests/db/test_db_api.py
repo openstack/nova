@@ -2000,6 +2000,10 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 db.instance_floating_address_get_all(ctxt, instance_uuids[2])
         self.assertEqual(set([float_addresses[2]]), set(real_float_addresses))
 
+        self.assertRaises(exception.InvalidUUID,
+                          db.instance_floating_address_get_all,
+                          ctxt, 'invalid_uuid')
+
     def test_instance_stringified_ips(self):
         instance = self.create_instance_with_args()
         instance = db.instance_update(
