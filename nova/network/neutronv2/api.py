@@ -275,6 +275,9 @@ class API(base_api.NetworkAPI):
             raise exception.InvalidInput(
                 reason=msg % instance.uuid)
         requested_networks = kwargs.get('requested_networks')
+        if isinstance(requested_networks, objects.NetworkRequestList):
+            # NOTE(danms): Temporary and transitional
+            requested_networks = requested_networks.as_tuples()
         dhcp_opts = kwargs.get('dhcp_options', None)
         ports = {}
         net_ids = []
