@@ -434,6 +434,30 @@ class Dict(CompoundFieldType):
                       for key, val in sorted(value.items())]))
 
 
+class Set(CompoundFieldType):
+    def coerce(self, obj, attr, value):
+        if not isinstance(value, set):
+            raise ValueError(_('A set is required here'))
+
+        coerced = set()
+        for element in value:
+            coerced.add(self._element_type.coerce(
+                obj, '%s["%s"]' % (attr, element), element))
+        return coerced
+
+    def to_primitive(self, obj, attr, value):
+        return tuple(
+            self._element_type.to_primitive(obj, attr, x) for x in value)
+
+    def from_primitive(self, obj, attr, value):
+        return set([self._element_type.from_primitive(obj, attr, x)
+                    for x in value])
+
+    def stringify(self, value):
+        return 'set([%s])' % (
+            ','.join([self._element_type.stringify(x) for x in value]))
+
+
 class Object(FieldType):
     def __init__(self, obj_name, **kwargs):
         self._obj_name = obj_name
@@ -573,6 +597,10 @@ class DictOfNullableStringsField(AutoTypedField):
 
 class ListOfStringsField(AutoTypedField):
     AUTO_TYPE = List(String())
+
+
+class SetOfIntegersField(AutoTypedField):
+    AUTO_TYPE = Set(Integer())
 
 
 class ListOfDictOfNullableStringsField(AutoTypedField):
