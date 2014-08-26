@@ -64,6 +64,10 @@ class FlavorExtraSpecsController(object):
 
         try:
             flavors.validate_extra_spec_keys(specs.keys())
+        except TypeError:
+            msg = _("Fail to validate provided extra specs keys. "
+                    "Expected string")
+            raise exc.HTTPBadRequest(explanation=msg)
         except exception.InvalidInput as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
 
