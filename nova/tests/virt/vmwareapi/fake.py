@@ -29,6 +29,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import units
 from nova.openstack.common import uuidutils
 from nova.virt.vmwareapi import constants
+from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
 
 _CLASSES = ['Datacenter', 'Datastore', 'ResourcePool', 'VirtualMachine',
@@ -1132,7 +1133,15 @@ class FakeVim(object):
         """Creates and registers a VM object with the Host System."""
         config_spec = kwargs.get("config")
         pool = kwargs.get('pool')
-        ds = _db_content["Datastore"].keys()[0]
+
+        vm_path = ds_util.DatastorePath.parse(config_spec.files.vmPathName)
+        for key, value in _db_content["Datastore"].iteritems():
+            if value.get('summary.name') == vm_path.datastore:
+                ds = key
+                break
+        else:
+            ds = create_datastore(vm_path.datastore, 1024, 500)
+
         host = _db_content["HostSystem"].keys()[0]
         vm_dict = {"name": config_spec.name,
                   "ds": [ds],
