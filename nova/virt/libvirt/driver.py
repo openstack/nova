@@ -181,7 +181,9 @@ libvirt_opts = [
                   'scality='
                       'nova.virt.libvirt.volume.LibvirtScalityVolumeDriver',
                   ],
-                help='Libvirt handlers for remote volumes.'),
+                help='DEPRECATED. Libvirt handlers for remote volumes. '
+                     'This option is deprecated and will be removed in the '
+                     'Kilo release.'),
     cfg.StrOpt('disk_prefix',
                help='Override the default disk prefix for the devices attached'
                     ' to a server, which is dependent on virt_type. '
