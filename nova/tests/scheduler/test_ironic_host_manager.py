@@ -18,10 +18,10 @@ Tests For IronicHostManager
 """
 
 import mock
+from oslo.serialization import jsonutils
 
 from nova import db
 from nova import exception
-from nova.openstack.common import jsonutils
 from nova.scheduler import filters
 from nova.scheduler import host_manager
 from nova.scheduler import ironic_host_manager

@@ -19,6 +19,7 @@ import mock
 from neutronclient.common import exceptions as n_exc
 from neutronclient.neutron import v2_0 as neutronv20
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute.contrib import security_groups
@@ -32,7 +33,6 @@ from nova.network import neutronv2
 from nova.network.neutronv2 import api as neutron_api
 from nova.network.security_group import neutron_driver
 from nova.objects import instance as instance_obj
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack.compute.contrib import test_security_groups
 from nova.tests.api.openstack import fakes

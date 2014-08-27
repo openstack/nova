@@ -20,13 +20,13 @@ import time
 
 from oslo.config import cfg
 from oslo import messaging
+from oslo.serialization import jsonutils
 
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import rpcapi as compute_rpcapi
 from nova.i18n import _, _LW
 from nova import manager
 from nova import objects
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import memorycache
 

@@ -17,6 +17,7 @@ from lxml import etree
 import mock
 import mox
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute.contrib import security_groups as secgroups_v2
@@ -29,7 +30,6 @@ import nova.db
 from nova import exception
 from nova import objects
 from nova.objects import instance as instance_obj
-from nova.openstack.common import jsonutils
 from nova import quota
 from nova import test
 from nova.tests.api.openstack import fakes

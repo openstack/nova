@@ -24,11 +24,11 @@ import datetime
 import os
 
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 from oslo.utils import excutils
 from oslo.utils import timeutils
 
 from nova.i18n import _
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 
 

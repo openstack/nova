@@ -14,6 +14,7 @@
 #    under the License.
 
 from lxml import etree
+from oslo.serialization import jsonutils
 import webob
 import webob.dec
 import webob.exc
@@ -21,7 +22,6 @@ import webob.exc
 from nova.api import openstack as openstack_api
 from nova.api.openstack import wsgi
 from nova import exception
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 

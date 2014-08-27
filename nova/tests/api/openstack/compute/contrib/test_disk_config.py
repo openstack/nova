@@ -15,11 +15,12 @@
 
 import datetime
 
+from oslo.serialization import jsonutils
+
 from nova.api.openstack import compute
 from nova.compute import api as compute_api
 from nova import db
 from nova import objects
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance

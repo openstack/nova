@@ -15,6 +15,7 @@
 import functools
 import operator
 
+from oslo.serialization import jsonutils
 from oslo.utils import excutils
 
 from nova import block_device
@@ -22,7 +23,6 @@ from nova.i18n import _
 from nova.i18n import _LI
 from nova import objects
 from nova.objects import base as obj_base
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.volume import encryptors
 

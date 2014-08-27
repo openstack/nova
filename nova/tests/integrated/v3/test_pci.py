@@ -13,9 +13,9 @@
 #    under the License.
 
 import mock
+from oslo.serialization import jsonutils
 
 from nova import db
-from nova.openstack.common import jsonutils
 from nova.tests.integrated.v3 import api_sample_base
 from nova.tests.integrated.v3 import test_servers
 

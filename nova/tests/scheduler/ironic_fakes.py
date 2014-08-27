@@ -16,7 +16,7 @@
 Fake nodes for Ironic host manager tests.
 """
 
-from nova.openstack.common import jsonutils
+from oslo.serialization import jsonutils
 
 
 COMPUTE_NODES = [

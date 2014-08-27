@@ -15,9 +15,10 @@
 
 import string
 
+from oslo.serialization import jsonutils
+
 from nova.compute import api as compute_api
 from nova import exception
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance

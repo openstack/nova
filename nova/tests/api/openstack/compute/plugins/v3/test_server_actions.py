@@ -18,6 +18,7 @@ import uuid
 import mock
 import mox
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute import plugins
@@ -30,7 +31,6 @@ from nova import db
 from nova import exception
 from nova.image import glance
 from nova import objects
-from nova.openstack.common import jsonutils
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.api.openstack import fakes

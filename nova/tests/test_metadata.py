@@ -28,6 +28,7 @@ except ImportError:
 
 import mock
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 import webob
 
 from nova.api.metadata import base
@@ -42,7 +43,6 @@ from nova.db.sqlalchemy import api
 from nova import exception
 from nova.network import api as network_api
 from nova import objects
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests import fake_block_device
 from nova.tests import fake_instance

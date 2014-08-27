@@ -25,6 +25,7 @@ import zlib
 from eventlet import greenthread
 import netaddr
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 from oslo.utils import excutils
 from oslo.utils import importutils
 from oslo.utils import strutils
@@ -43,7 +44,6 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.pci import pci_manager
 from nova import utils

@@ -13,6 +13,7 @@
 #    under the License.
 
 import mock
+from oslo.serialization import jsonutils
 from oslo.utils import timeutils
 
 from nova import db
@@ -20,7 +21,6 @@ from nova import exception
 from nova.objects import compute_node
 from nova.objects import hv_spec
 from nova.objects import service
-from nova.openstack.common import jsonutils
 from nova.tests.objects import test_objects
 from nova.virt import hardware
 

@@ -19,13 +19,13 @@ import re
 import uuid
 
 import mock
+from oslo.serialization import jsonutils
 import six
 
 from nova.compute import claims
 from nova import db
 from nova import exception
 from nova import objects
-from nova.openstack.common import jsonutils
 from nova.pci import pci_manager
 from nova import test
 from nova.tests.pci import pci_fakes

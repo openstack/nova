@@ -13,6 +13,7 @@
 #    under the License.
 
 
+from oslo.serialization import jsonutils
 from webob import exc
 
 from nova.api.openstack.compute.plugins.v3 import pci
@@ -21,7 +22,6 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import objects
-from nova.openstack.common import jsonutils
 from nova.pci import pci_device
 from nova import test
 from nova.tests.api.openstack import fakes

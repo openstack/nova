@@ -16,13 +16,13 @@
 import copy
 
 import mock
+from oslo.serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute import image_metadata
 from nova.api.openstack.compute.plugins.v3 import image_metadata \
      as image_metadata_v21
 from nova import exception
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import image_fixtures

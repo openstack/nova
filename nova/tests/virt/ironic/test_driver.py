@@ -18,13 +18,13 @@
 from ironicclient import exc as ironic_exception
 import mock
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 
 from nova.compute import power_state as nova_states
 from nova.compute import task_states
 from nova import context as nova_context
 from nova import exception
 from nova import objects
-from nova.openstack.common import jsonutils
 from nova.openstack.common import loopingcall
 from nova.openstack.common import uuidutils
 from nova import test

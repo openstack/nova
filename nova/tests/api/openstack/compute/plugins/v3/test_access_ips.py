@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.serialization import jsonutils
+
 from nova.api.openstack.compute import plugins
 from nova.api.openstack.compute.plugins.v3 import access_ips
 from nova.api.openstack.compute.plugins.v3 import servers
@@ -20,7 +22,6 @@ from nova.compute import api as compute_api
 from nova import db
 from nova import exception
 from nova.objects import instance as instance_obj
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests.image import fake

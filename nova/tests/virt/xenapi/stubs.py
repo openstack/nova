@@ -16,7 +16,8 @@
 import pickle
 import random
 
-from nova.openstack.common import jsonutils
+from oslo.serialization import jsonutils
+
 from nova import test
 import nova.tests.image.fake
 from nova.virt.xenapi.client import session

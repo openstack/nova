@@ -14,8 +14,8 @@ Tests For BaremetalHostManager
 """
 
 import mock
+from oslo.serialization import jsonutils
 
-from nova.openstack.common import jsonutils
 from nova.scheduler import baremetal_host_manager
 from nova.scheduler import host_manager
 from nova import test

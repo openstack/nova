@@ -17,11 +17,11 @@ import os
 import re
 
 from lxml import etree
+from oslo.serialization import jsonutils
 from oslo.utils import importutils
 import six
 
 from nova.i18n import _
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.integrated import integrated_helpers
 

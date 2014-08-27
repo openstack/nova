@@ -16,6 +16,7 @@
 import datetime
 
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 
 from nova.api.openstack import compute
 from nova.api.openstack.compute import plugins
@@ -25,7 +26,6 @@ from nova.api.openstack import extensions
 import nova.compute.api
 from nova.compute import flavors
 from nova import db
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance

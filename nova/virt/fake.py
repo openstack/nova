@@ -26,6 +26,7 @@ semantics of real hypervisor connections.
 import contextlib
 
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 
 from nova.compute import arch
 from nova.compute import hvtype
@@ -36,7 +37,6 @@ from nova.console import type as ctype
 from nova import db
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import diagnostics

@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.serialization import jsonutils
 import six
 import webob
 
@@ -21,7 +22,6 @@ from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 
 

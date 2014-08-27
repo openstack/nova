@@ -13,10 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.serialization import jsonutils
+
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova.i18n import _
-from nova.openstack.common import jsonutils
 
 
 class Stats(dict):

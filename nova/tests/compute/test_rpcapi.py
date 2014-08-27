@@ -20,12 +20,12 @@ import contextlib
 
 import mock
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
 from nova.objects import block_device as objects_block_dev
 from nova.objects import network_request as objects_network_request
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests import fake_block_device
 from nova.tests.fake_instance import fake_instance_obj

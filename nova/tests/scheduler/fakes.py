@@ -17,10 +17,10 @@ Fakes For Scheduler tests.
 """
 
 import mox
+from oslo.serialization import jsonutils
 
 from nova.compute import vm_states
 from nova import db
-from nova.openstack.common import jsonutils
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
 from nova.virt import hardware

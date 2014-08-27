@@ -13,11 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.serialization import jsonutils
+
 from nova import db
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import utils
 

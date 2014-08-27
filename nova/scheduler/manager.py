@@ -21,6 +21,7 @@ Scheduler Service
 
 from oslo.config import cfg
 from oslo import messaging
+from oslo.serialization import jsonutils
 from oslo.utils import excutils
 from oslo.utils import importutils
 
@@ -30,7 +31,6 @@ from nova.compute import vm_states
 from nova import exception
 from nova import manager
 from nova import objects
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task
 from nova import quota

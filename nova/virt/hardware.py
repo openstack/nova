@@ -15,13 +15,13 @@
 import collections
 
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 import six
 
 from nova import context
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 
 virt_cpu_opts = [

@@ -19,6 +19,7 @@ import uuid
 
 import mock
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 from oslo.utils import timeutils
 
 from nova.compute import flavors
@@ -30,7 +31,6 @@ from nova import context
 from nova import db
 from nova import objects
 from nova.objects import base as obj_base
-from nova.openstack.common import jsonutils
 from nova import rpc
 from nova import test
 from nova.tests.compute.monitors import test_monitors

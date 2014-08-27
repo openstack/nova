@@ -16,6 +16,7 @@
 import datetime
 import uuid
 
+from oslo.serialization import jsonutils
 from oslo.utils import timeutils
 import routes
 import six
@@ -39,7 +40,6 @@ from nova.db.sqlalchemy import models
 from nova import exception as exc
 import nova.netconf
 from nova.network import api as network_api
-from nova.openstack.common import jsonutils
 from nova import quota
 from nova.tests import fake_block_device
 from nova.tests import fake_network

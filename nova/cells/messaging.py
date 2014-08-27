@@ -32,6 +32,7 @@ import traceback
 from eventlet import queue
 from oslo.config import cfg
 from oslo import messaging
+from oslo.serialization import jsonutils
 from oslo.utils import excutils
 from oslo.utils import importutils
 from oslo.utils import timeutils
@@ -51,7 +52,6 @@ from nova.i18n import _
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import base as objects_base
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova import rpc

@@ -14,11 +14,11 @@
 #    under the License.
 
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 import webob
 
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 

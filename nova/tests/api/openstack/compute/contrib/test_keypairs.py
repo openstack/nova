@@ -14,6 +14,7 @@
 #    under the License.
 
 from lxml import etree
+from oslo.serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute.contrib import keypairs as keypairs_v2
@@ -21,7 +22,6 @@ from nova.api.openstack.compute.plugins.v3 import keypairs as keypairs_v21
 from nova.api.openstack import wsgi
 from nova import db
 from nova import exception
-from nova.openstack.common import jsonutils
 from nova.openstack.common import policy as common_policy
 from nova import policy
 from nova import quota

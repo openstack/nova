@@ -16,6 +16,8 @@
 
 """The security groups extension."""
 
+from oslo.serialization import jsonutils
+
 from nova.api.openstack.compute.schemas.v3 import security_groups as \
                                                   schema_security_groups
 from nova.api.openstack import extensions
@@ -25,7 +27,6 @@ from nova.compute import api as compute_api
 from nova import exception
 from nova.network.security_group import neutron_driver
 from nova.network.security_group import openstack_driver
-from nova.openstack.common import jsonutils
 
 
 ALIAS = 'os-security-groups'

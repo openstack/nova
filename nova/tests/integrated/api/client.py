@@ -14,10 +14,10 @@
 
 import urllib
 
+from oslo.serialization import jsonutils
 import requests
 
 from nova.i18n import _
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.tests.image import fake
 

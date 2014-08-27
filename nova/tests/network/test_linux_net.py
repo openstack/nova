@@ -21,6 +21,7 @@ import os
 import mock
 import mox
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 from oslo.utils import timeutils
 
 from nova import context
@@ -30,7 +31,6 @@ from nova.network import driver
 from nova.network import linux_net
 from nova import objects
 from nova.openstack.common import fileutils
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova import test

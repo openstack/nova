@@ -17,6 +17,7 @@
 from xml.dom import minidom
 
 import mock
+from oslo.serialization import jsonutils
 import webob
 import webob.dec
 import webob.exc
@@ -27,7 +28,6 @@ from nova.api.openstack import wsgi
 from nova import exception
 from nova import i18n
 from nova.i18n import _
-from nova.openstack.common import jsonutils
 from nova import test
 
 

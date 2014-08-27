@@ -16,9 +16,10 @@
 
 import copy
 
+from oslo.serialization import jsonutils
+
 from nova import exception
 from nova.i18n import _LE
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.pci import pci_utils
 from nova.pci import pci_whitelist

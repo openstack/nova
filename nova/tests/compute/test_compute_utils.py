@@ -21,6 +21,7 @@ import string
 
 import mock
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 from oslo.utils import importutils
 import six
 import testtools
@@ -37,7 +38,6 @@ from nova.network import api as network_api
 from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
-from nova.openstack.common import jsonutils
 from nova.openstack.common import periodic_task
 from nova import rpc
 from nova import test

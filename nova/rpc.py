@@ -28,10 +28,10 @@ __all__ = [
 
 from oslo.config import cfg
 from oslo import messaging
+from oslo.serialization import jsonutils
 
 import nova.context
 import nova.exception
-from nova.openstack.common import jsonutils
 
 CONF = cfg.CONF
 TRANSPORT = None

@@ -31,6 +31,7 @@ import mock
 import mox
 from oslo.config import cfg
 from oslo import messaging
+from oslo.serialization import jsonutils
 from oslo.utils import importutils
 from oslo.utils import timeutils
 import six
@@ -64,7 +65,6 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova import policy

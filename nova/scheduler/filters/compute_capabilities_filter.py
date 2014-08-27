@@ -13,9 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.serialization import jsonutils
 import six
 
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
 from nova.scheduler.filters import extra_specs_ops

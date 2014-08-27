@@ -16,6 +16,7 @@
 import datetime
 
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute.contrib import config_drive as config_drive_v2
@@ -29,7 +30,6 @@ from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova import db
 from nova import exception
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance

@@ -17,6 +17,7 @@ import datetime
 
 from lxml import etree
 import mock
+from oslo.serialization import jsonutils
 from oslo.utils import timeutils
 import webob
 
@@ -30,7 +31,6 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import objects
-from nova.openstack.common import jsonutils
 from nova.openstack.common import policy as common_policy
 from nova import policy
 from nova import test

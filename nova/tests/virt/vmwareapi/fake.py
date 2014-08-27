@@ -22,12 +22,12 @@ A fake VMware VI API implementation.
 import collections
 import pprint
 
+from oslo.serialization import jsonutils
 from oslo.utils import units
 from oslo.vmware import exceptions as vexc
 
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova.virt.vmwareapi import constants

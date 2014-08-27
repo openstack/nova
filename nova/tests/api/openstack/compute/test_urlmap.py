@@ -13,9 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.serialization import jsonutils
 import webob
 
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 import nova.tests.image.fake

@@ -44,12 +44,12 @@ the Open Attestation project at:
 """
 
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 from oslo.utils import timeutils
 import requests
 
 from nova import context
 from nova import db
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
 
