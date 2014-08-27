@@ -28,11 +28,11 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
     def test_keypairs_post(self, public_key=None):
         """Get api sample of key pairs post request."""
         key_name = 'keypair-' + str(uuid.uuid4())
-        response = self._do_post('keypairs', 'keypairs-post-req',
+        response = self._do_post('os-keypairs', 'keypairs-post-req',
                                  {'keypair_name': key_name})
         subs = self._get_regexes()
         subs['keypair_name'] = '(%s)' % key_name
-        self._verify_response('keypairs-post-resp', subs, response, 201)
+        self._verify_response('keypairs-post-resp', subs, response, 200)
         # NOTE(maurosr): return the key_name is necessary cause the
         # verification returns the label of the last compared information in
         # the response, not necessarily the key name.
@@ -49,16 +49,16 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
                           "9FhY+2YiUkpwFOcLImyrxEsYXpD/0d3ac30bNH6Sw9JD9UZHYc"
                           "pSxsIbECHw== Generated-by-Nova"
         }
-        response = self._do_post('keypairs', 'keypairs-import-post-req',
+        response = self._do_post('os-keypairs', 'keypairs-import-post-req',
                                  subs)
         subs = self._get_regexes()
         subs['keypair_name'] = '(%s)' % key_name
-        self._verify_response('keypairs-import-post-resp', subs, response, 201)
+        self._verify_response('keypairs-import-post-resp', subs, response, 200)
 
     def test_keypairs_list(self):
         # Get api sample of key pairs list request.
         key_name = self.test_keypairs_post()
-        response = self._do_get('keypairs')
+        response = self._do_get('os-keypairs')
         subs = self._get_regexes()
         subs['keypair_name'] = '(%s)' % key_name
         self._verify_response('keypairs-list-resp', subs, response, 200)
@@ -66,7 +66,7 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
     def test_keypairs_get(self):
         # Get api sample of key pairs get request.
         key_name = self.test_keypairs_post()
-        response = self._do_get('keypairs/%s' % key_name)
+        response = self._do_get('os-keypairs/%s' % key_name)
         subs = self._get_regexes()
         subs['keypair_name'] = '(%s)' % key_name
         self._verify_response('keypairs-get-resp', subs, response, 200)
