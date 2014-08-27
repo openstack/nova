@@ -87,6 +87,7 @@ class LiveMigrationOpsTestCase(test_base.HyperVBaseTestCase):
                                 mock_get_cached_image,
                                 mock_ebs_root_in_block_devices):
         mock_instance = fake_instance.fake_instance_obj(self.context)
+        mock_instance.image_ref = "fake_image_ref"
         mock_ebs_root_in_block_devices.return_value = None
         CONF.set_override('use_cow_images', True)
         self._livemigrops.pre_live_migration(
