@@ -65,14 +65,14 @@ class CommonMixin(object):
                 task_state=None, launched_at=timeutils.utcnow())
         instance = objects.Instance._from_db_object(
                 self.context, objects.Instance(), instance)
-        self.compute_api.get(self.context, uuid,
+        self.compute_api.get(self.context, uuid, expected_attrs=None,
                              want_objects=True).AndReturn(instance)
         return instance
 
     def _stub_instance_get_failure(self, exc_info, uuid=None):
         if uuid is None:
             uuid = uuidutils.generate_uuid()
-        self.compute_api.get(self.context, uuid,
+        self.compute_api.get(self.context, uuid, expected_attrs=None,
                              want_objects=True).AndRaise(exc_info)
         return uuid
 
@@ -402,7 +402,7 @@ class CreateBackupTests(CommonMixin, test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        res = self._make_request(self._make_url(instance['uuid']), body)
+        res = self._make_request(self._make_url(instance['uuid']), body=body)
         self.assertEqual(202, res.status_int)
         self.assertIn('fake-image-id', res.headers['Location'])
 
@@ -414,7 +414,7 @@ class CreateBackupTests(CommonMixin, test.NoDBTestCase):
                 'rotation': 1,
             },
         }
-        res = self._make_request(self._make_url('fake'), body)
+        res = self._make_request(self._make_url('fake'), body=body)
         self.assertEqual(400, res.status_int)
 
     def test_create_backup_no_rotation(self):
@@ -425,7 +425,7 @@ class CreateBackupTests(CommonMixin, test.NoDBTestCase):
                 'backup_type': 'daily',
             },
         }
-        res = self._make_request(self._make_url('fake'), body)
+        res = self._make_request(self._make_url('fake'), body=body)
         self.assertEqual(400, res.status_int)
 
     def test_create_backup_negative_rotation(self):
@@ -439,7 +439,7 @@ class CreateBackupTests(CommonMixin, test.NoDBTestCase):
                 'rotation': -1,
             },
         }
-        res = self._make_request(self._make_url('fake'), body)
+        res = self._make_request(self._make_url('fake'), body=body)
         self.assertEqual(400, res.status_int)
 
     def test_create_backup_no_backup_type(self):
@@ -450,12 +450,12 @@ class CreateBackupTests(CommonMixin, test.NoDBTestCase):
                 'rotation': 1,
             },
         }
-        res = self._make_request(self._make_url('fake'), body)
+        res = self._make_request(self._make_url('fake'), body=body)
         self.assertEqual(400, res.status_int)
 
     def test_create_backup_bad_entity(self):
         body = {'createBackup': 'go'}
-        res = self._make_request(self._make_url('fake'), body)
+        res = self._make_request(self._make_url('fake'), body=body)
         self.assertEqual(400, res.status_int)
 
     def test_create_backup_rotation_is_zero(self):
@@ -478,7 +478,7 @@ class CreateBackupTests(CommonMixin, test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        res = self._make_request(self._make_url(instance['uuid']), body)
+        res = self._make_request(self._make_url(instance['uuid']), body=body)
         self.assertEqual(202, res.status_int)
         self.assertNotIn('Location', res.headers)
 
@@ -502,7 +502,7 @@ class CreateBackupTests(CommonMixin, test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        res = self._make_request(self._make_url(instance['uuid']), body)
+        res = self._make_request(self._make_url(instance['uuid']), body=body)
         self.assertEqual(202, res.status_int)
         self.assertIn('fake-image-id', res.headers['Location'])
 
@@ -544,7 +544,7 @@ class CreateBackupTests(CommonMixin, test.NoDBTestCase):
                 'rotation': 1,
             },
         }
-        res = self._make_request(self._make_url('fake'), body)
+        res = self._make_request(self._make_url('fake'), body=body)
         self.assertEqual(400, res.status_int)
 
 
@@ -576,7 +576,7 @@ class ResetStateTests(test.NoDBTestCase):
     def test_no_instance(self):
         self.mox.StubOutWithMock(self.compute_api, 'get')
         exc = exception.InstanceNotFound(instance_id='inst_id')
-        self.compute_api.get(self.context, self.uuid,
+        self.compute_api.get(self.context, self.uuid, expected_attrs=None,
                              want_objects=True).AndRaise(exc)
 
         self.mox.ReplayAll()
@@ -604,7 +604,7 @@ class ResetStateTests(test.NoDBTestCase):
                                  "Instance.%s doesn't match" % k)
             instance.obj_reset_changes()
 
-        self.compute_api.get(self.context, instance.uuid,
+        self.compute_api.get(self.context, instance.uuid, expected_attrs=None,
                              want_objects=True).AndReturn(instance)
         instance.save(admin_state_reset=True).WithSideEffects(check_state)
 
@@ -614,7 +614,8 @@ class ResetStateTests(test.NoDBTestCase):
         self.mox.ReplayAll()
 
         body = {"os-resetState": {"state": "active"}}
-        result = self.admin_api._reset_state(self.request, self.uuid, body)
+        result = self.admin_api._reset_state(self.request, self.uuid,
+                                             body=body)
 
         self.assertEqual(result.status_int, 202)
 
@@ -623,6 +624,7 @@ class ResetStateTests(test.NoDBTestCase):
                               task_state=None))
         self.mox.ReplayAll()
         body = {"os-resetState": {"state": "error"}}
-        result = self.admin_api._reset_state(self.request, self.uuid, body)
+        result = self.admin_api._reset_state(self.request, self.uuid,
+                                             body=body)
 
         self.assertEqual(result.status_int, 202)
