@@ -15,7 +15,6 @@
 import webob.exc
 
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
 import nova.cert.rpcapi
 from nova import exception
 from nova.i18n import _
@@ -55,8 +54,10 @@ class CertificatesController(object):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         return {'certificate': _translate_certificate_view(cert)}
 
+    # NOTE(gmann): Here should be 201 instead of 200 by v2.1
+    # +microversions because the resource certificate has been created
+    # completely when returning a response.
     @extensions.expected_errors(())
-    @wsgi.response(201)
     def create(self, req, body=None):
         """Create a certificate."""
         context = req.environ['nova.context']
