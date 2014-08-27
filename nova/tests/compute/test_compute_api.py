@@ -419,7 +419,9 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api, 'update')
         self.mox.StubOutWithMock(inst, 'save')
-        inst.save(expected_task_state=[None, task_states.REBOOTING])
+        inst.save(expected_task_state=[None, task_states.REBOOTING,
+                                       task_states.REBOOT_PENDING,
+                                       task_states.REBOOT_STARTED])
         self.compute_api._record_action_start(self.context, inst,
                                               instance_actions.REBOOT)
 
@@ -454,6 +456,14 @@ class _ComputeAPIUnitTestMixIn(object):
         self._test_reboot_type(vm_states.ACTIVE, 'HARD',
                                task_state=task_states.REBOOTING)
 
+    def test_reboot_hard_reboot_started(self):
+        self._test_reboot_type(vm_states.ACTIVE, 'HARD',
+                               task_state=task_states.REBOOT_STARTED)
+
+    def test_reboot_hard_reboot_pending(self):
+        self._test_reboot_type(vm_states.ACTIVE, 'HARD',
+                               task_state=task_states.REBOOT_PENDING)
+
     def test_reboot_hard_rescued(self):
         self._test_reboot_type_fails('HARD', vm_state=vm_states.RESCUED)
 
@@ -482,6 +492,14 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_reboot_soft_rebooting_hard(self):
         self._test_reboot_type_fails('SOFT',
                                      task_state=task_states.REBOOTING_HARD)
+
+    def test_reboot_soft_reboot_started(self):
+        self._test_reboot_type_fails('SOFT',
+                                     task_state=task_states.REBOOT_STARTED)
+
+    def test_reboot_soft_reboot_pending(self):
+        self._test_reboot_type_fails('SOFT',
+                                     task_state=task_states.REBOOT_PENDING)
 
     def test_reboot_soft_rescued(self):
         self._test_reboot_type_fails('SOFT', vm_state=vm_states.RESCUED)
