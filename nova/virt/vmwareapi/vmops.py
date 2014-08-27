@@ -212,9 +212,6 @@ class VMwareVMOps(object):
                       {'ds': datastore_path},
                       exc_info=True)
 
-    def _get_vmdk_path(self, ds_name, folder, name):
-        return str(ds_util.DatastorePath(ds_name, folder, '%s.vmdk' % name))
-
     def _extend_if_required(self, dc_info, image_info, instance,
                             root_vmdk_path):
         """Increase the size of the root vmdk if necessary."""
