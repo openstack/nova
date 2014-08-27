@@ -43,7 +43,7 @@ class NotSpecifiedSentinel:
 
 def get_attrname(name):
     """Return the mangled name of the attribute's underlying storage."""
-    return '_%s' % name
+    return '_' + name
 
 
 def make_class_properties(cls):
