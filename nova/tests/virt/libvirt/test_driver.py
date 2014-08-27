@@ -5684,6 +5684,34 @@ class LibvirtConnTestCase(test.TestCase,
         conn._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
                                is_block_dev=True)
 
+    def test_create_configdrive(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = db.instance_create(self.context, self.test_instance)
+        network_info = _fake_network_info(self.stubs, 1)
+        files = {'/etc/foo.conf': 'raw'}
+        target = '/whateverfile/path'
+
+        self.mox.StubOutWithMock(instance_metadata.InstanceMetadata,
+                                                            '__init__')
+        self.mox.StubOutWithMock(configdrive, 'ConfigDriveBuilder')
+        self.mox.StubOutWithMock(configdrive.ConfigDriveBuilder, 'make_drive')
+
+        instance_metadata.InstanceMetadata.__init__(instance,
+                                            content=files,
+                                            extra_md={'admin_pass': 'fake'},
+                                            network_info=network_info)
+        cdb = self.mox.CreateMockAnything()
+        m = configdrive.ConfigDriveBuilder(instance_md=mox.IgnoreArg())
+        m.AndReturn(cdb)
+        # __enter__ and __exit__ are required by "with"
+        cdb.__enter__().AndReturn(cdb)
+        cdb.make_drive(target)
+        cdb.__exit__(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg()
+                        ).AndReturn(None)
+
+        self.mox.ReplayAll()
+        conn._create_configdrive(target, instance, 'fake', files, network_info)
+
     def test_create_swap_default(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.mox.StubOutWithMock(utils, 'execute')
@@ -10743,8 +10771,7 @@ class LibvirtDriverTestCase(test.TestCase):
     def test_rescue_config_drive_rbd(self):
         CONF.set_override('images_type', 'rbd', 'libvirt')
         instance = self._create_instance()
-        uuid = instance.uuid
-        configdrive_path = uuid + '/disk.config.rescue'
+        rescue_password = 'fake_password'
 
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
             "<devices>"
@@ -10769,10 +10796,6 @@ class LibvirtDriverTestCase(test.TestCase):
         self.mox.StubOutWithMock(libvirt_utils, 'write_to_file')
         self.mox.StubOutWithMock(imagebackend.Backend, 'image')
         self.mox.StubOutWithMock(imagebackend.Image, 'cache')
-        self.mox.StubOutWithMock(instance_metadata.InstanceMetadata,
-                                                            '__init__')
-        self.mox.StubOutWithMock(configdrive, 'ConfigDriveBuilder')
-        self.mox.StubOutWithMock(configdrive.ConfigDriveBuilder, 'make_drive')
         self.mox.StubOutWithMock(self.libvirtconnection, '_get_guest_xml')
         self.mox.StubOutWithMock(self.libvirtconnection, '_destroy')
         self.mox.StubOutWithMock(self.libvirtconnection, '_create_domain')
@@ -10804,24 +10827,14 @@ class LibvirtDriverTestCase(test.TestCase):
                                 project_id=mox.IgnoreArg(),
                                 size=None, user_id=mox.IgnoreArg())
 
-        instance_metadata.InstanceMetadata.__init__(mox.IgnoreArg(),
-                                            content=mox.IgnoreArg(),
-                                            extra_md=mox.IgnoreArg(),
-                                            network_info=mox.IgnoreArg())
-        cdb = self.mox.CreateMockAnything()
-        m = configdrive.ConfigDriveBuilder(instance_md=mox.IgnoreArg())
-        m.AndReturn(cdb)
-        # __enter__ and __exit__ are required by "with"
-        cdb.__enter__().AndReturn(cdb)
-        cdb.make_drive(mox.Regex(configdrive_path))
-        cdb.__exit__(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg()
-                        ).AndReturn(None)
-
         imagebackend.Backend.image(instance, 'disk.config.rescue', None
                                    ).AndReturn(fake_imagebackend.Rbd())
         imagebackend.Image.cache(fetch_func=mox.IgnoreArg(),
-                                 context=mox.IgnoreArg(),
-                                 filename='disk.config.rescue')
+                                 filename='disk.config.rescue',
+                                 instance=instance,
+                                 admin_pass='fake_password',
+                                 files=None,
+                                 network_info=network_info)
 
         image_meta = {'id': 'fake', 'name': 'fake'}
         self.libvirtconnection._get_guest_xml(mox.IgnoreArg(), instance,
@@ -10834,16 +10847,13 @@ class LibvirtDriverTestCase(test.TestCase):
 
         self.mox.ReplayAll()
 
-        rescue_password = 'fake_password'
-
         self.libvirtconnection.rescue(self.context, instance, network_info,
                                                 image_meta, rescue_password)
         self.mox.VerifyAll()
 
     def test_rescue_config_drive(self):
         instance = self._create_instance()
-        uuid = instance.uuid
-        configdrive_path = uuid + '/disk.config.rescue'
+        rescue_password = 'fake_password'
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
                     "<devices>"
                     "<disk type='file'><driver name='qemu' type='raw'/>"
@@ -10860,10 +10870,6 @@ class LibvirtDriverTestCase(test.TestCase):
         self.mox.StubOutWithMock(libvirt_utils, 'write_to_file')
         self.mox.StubOutWithMock(imagebackend.Backend, 'image')
         self.mox.StubOutWithMock(imagebackend.Image, 'cache')
-        self.mox.StubOutWithMock(instance_metadata.InstanceMetadata,
-                                                            '__init__')
-        self.mox.StubOutWithMock(configdrive, 'ConfigDriveBuilder')
-        self.mox.StubOutWithMock(configdrive.ConfigDriveBuilder, 'make_drive')
         self.mox.StubOutWithMock(self.libvirtconnection, '_get_guest_xml')
         self.mox.StubOutWithMock(self.libvirtconnection, '_destroy')
         self.mox.StubOutWithMock(self.libvirtconnection, '_create_domain')
@@ -10895,24 +10901,14 @@ class LibvirtDriverTestCase(test.TestCase):
                                 project_id=mox.IgnoreArg(),
                                 size=None, user_id=mox.IgnoreArg())
 
-        instance_metadata.InstanceMetadata.__init__(mox.IgnoreArg(),
-                                            content=mox.IgnoreArg(),
-                                            extra_md=mox.IgnoreArg(),
-                                            network_info=mox.IgnoreArg())
-        cdb = self.mox.CreateMockAnything()
-        m = configdrive.ConfigDriveBuilder(instance_md=mox.IgnoreArg())
-        m.AndReturn(cdb)
-        # __enter__ and __exit__ are required by "with"
-        cdb.__enter__().AndReturn(cdb)
-        cdb.make_drive(mox.Regex(configdrive_path))
-        cdb.__exit__(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg()
-                        ).AndReturn(None)
-
         imagebackend.Backend.image(instance, 'disk.config.rescue', 'raw'
                                    ).AndReturn(fake_imagebackend.Raw())
         imagebackend.Image.cache(fetch_func=mox.IgnoreArg(),
-                                 context=mox.IgnoreArg(),
-                                 filename='disk.config.rescue')
+                                 filename='disk.config.rescue',
+                                 instance=instance,
+                                 admin_pass='fake_password',
+                                 files=None,
+                                 network_info=network_info)
 
         image_meta = {'id': 'fake', 'name': 'fake'}
         self.libvirtconnection._get_guest_xml(mox.IgnoreArg(), instance,
@@ -10924,8 +10920,6 @@ class LibvirtDriverTestCase(test.TestCase):
         self.libvirtconnection._create_domain(mox.IgnoreArg())
 
         self.mox.ReplayAll()
-
-        rescue_password = 'fake_password'
 
         self.libvirtconnection.rescue(self.context, instance, network_info,
                                                 image_meta, rescue_password)
