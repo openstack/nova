@@ -50,7 +50,7 @@ class FlavorManageController(wsgi.Controller):
 
     @wsgi.response(201)
     @wsgi.action("create")
-    @extensions.expected_errors((400, 409))
+    @extensions.expected_errors((400, 409, 500))
     @validation.schema(flavor_manage.create)
     def _create(self, req, body):
         context = req.environ['nova.context']
@@ -81,6 +81,9 @@ class FlavorManageController(wsgi.Controller):
         except (exception.FlavorExists,
                 exception.FlavorIdExists) as err:
             raise webob.exc.HTTPConflict(explanation=err.format_message())
+        except exception.FlavorCreateFailed as err:
+            raise webob.exc.HTTPInternalServerError(explanation=
+                err.format_message())
 
         return self._view_builder.show(req, flavor)
 
