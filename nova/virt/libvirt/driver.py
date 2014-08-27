@@ -2984,9 +2984,11 @@ class LibvirtDriver(driver.ComputeDriver):
                     # cdb.make_drive call
                     pass
 
-                raw('disk.config').cache(fetch_func=dummy_fetch_func,
-                                         context=context,
-                                         filename='disk.config' + suffix)
+                image_type = self._get_configdrive_image_type()
+                backend = image('disk.config', image_type)
+                backend.cache(fetch_func=dummy_fetch_func,
+                              context=context,
+                              filename='disk.config' + suffix)
 
         # File injection only if needed
         elif inject_files and CONF.libvirt.inject_partition != -2:
@@ -3308,14 +3310,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     vol.save()
 
             if 'disk.config' in disk_mapping:
-                # NOTE(sileht): a configdrive is a raw image
-                # it works well with rbd, lvm and raw images_type
-                # but we must force to raw image_type if the desired
-                # images_type is qcow2
-                if CONF.libvirt.images_type not in ['rbd', 'lvm']:
-                    image_type = "raw"
-                else:
-                    image_type = None
+                image_type = self._get_configdrive_image_type()
                 diskconfig = self._get_guest_disk_config(instance,
                                                          'disk.config',
                                                          disk_mapping,
@@ -3335,6 +3330,17 @@ class LibvirtDriver(driver.ComputeDriver):
             devices.append(scsi_controller)
 
         return devices
+
+    @staticmethod
+    def _get_configdrive_image_type():
+        # NOTE(sileht): a configdrive is a raw image
+        # it works well with rbd, lvm and raw images_type
+        # but we must force to raw image_type if the desired
+        # images_type is qcow2
+        if CONF.libvirt.images_type not in ['rbd', 'lvm']:
+            return "raw"
+        else:
+            return None
 
     def _get_host_sysinfo_serial_hardware(self):
         """Get a UUID from the host hardware
