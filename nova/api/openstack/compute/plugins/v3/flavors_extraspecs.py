@@ -13,15 +13,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
 import webob
 
 from nova.api.openstack.compute.schemas.v3 import flavors_extraspecs
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova import utils
 
 ALIAS = 'flavor-extra-specs'
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
@@ -37,6 +38,19 @@ class FlavorExtraSpecsController(object):
         flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
         return dict(extra_specs=flavor.extra_specs)
 
+    # NOTE(gmann): Max length for numeric value is being checked
+    # explicitly as json schema cannot have max length check for numeric value
+    def _check_extra_specs_value(self, specs):
+        for key, value in specs.iteritems():
+            try:
+                if isinstance(value, (six.integer_types, float)):
+                    value = six.text_type(value)
+                    utils.check_string_length(value, 'extra_specs value',
+                                              max_length=255)
+            except exception.InvalidInput as error:
+                raise webob.exc.HTTPBadRequest(
+                          explanation=error.format_message())
+
     @extensions.expected_errors(())
     def index(self, req, flavor_id):
         """Returns the list of extra specs for a given flavor."""
@@ -44,14 +58,17 @@ class FlavorExtraSpecsController(object):
         authorize(context, action='index')
         return self._get_extra_specs(context, flavor_id)
 
+    # NOTE(gmann): Here should be 201 instead of 200 by v2.1
+    # +microversions because the flavor extra specs has been created
+    # completely when returning a response.
     @extensions.expected_errors((400, 404, 409))
-    @wsgi.response(201)
     @validation.schema(flavors_extraspecs.create)
     def create(self, req, flavor_id, body):
         context = req.environ['nova.context']
         authorize(context, action='create')
 
         specs = body['extra_specs']
+        self._check_extra_specs_value(specs)
         try:
             flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
             flavor.extra_specs = dict(flavor.extra_specs, **specs)
@@ -68,6 +85,7 @@ class FlavorExtraSpecsController(object):
         context = req.environ['nova.context']
         authorize(context, action='update')
 
+        self._check_extra_specs_value(body)
         if id not in body:
             expl = _('Request body and URI mismatch')
             raise webob.exc.HTTPBadRequest(explanation=expl)
@@ -98,7 +116,9 @@ class FlavorExtraSpecsController(object):
                                            key=id)
             raise webob.exc.HTTPNotFound(explanation=msg)
 
-    @wsgi.response(204)
+    # NOTE(gmann): Here should be 204(No Content) instead of 200 by v2.1
+    # +microversions because the flavor extra specs has been deleted
+    # completely when returning a response.
     @extensions.expected_errors(404)
     def delete(self, req, flavor_id, id):
         """Deletes an existing extra spec."""
@@ -126,7 +146,7 @@ class FlavorsExtraSpecs(extensions.V3APIExtensionBase):
 
     def get_resources(self):
         extra_specs = extensions.ResourceExtension(
-                ALIAS,
+                'os-extra_specs',
                 FlavorExtraSpecsController(),
                 parent=dict(member_name='flavor', collection_name='flavors'))
 
