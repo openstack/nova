@@ -56,7 +56,7 @@ class ShelveController(wsgi.Controller):
         return webob.Response(status_int=202)
 
     @exts.expected_errors((404, 409))
-    @wsgi.action('shelve_offload')
+    @wsgi.action('shelveOffload')
     def _shelve_offload(self, req, id, body):
         """Force removal of a shelved instance from the compute node."""
         context = req.environ["nova.context"]
@@ -70,7 +70,7 @@ class ShelveController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                                                              'shelve_offload')
+                                                              'shelveOffload')
 
         return webob.Response(status_int=202)
 
