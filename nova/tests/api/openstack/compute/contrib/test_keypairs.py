@@ -373,6 +373,7 @@ class KeypairPolicyTest(test.TestCase):
         self.assertIn('keypair', res)
 
     def test_keypair_create_fail_policy(self):
+        body = {'keypair': {'name': 'create_test'}}
         rules = {'compute_extension:keypairs:create':
                      common_policy.parse_rule('role:admin')}
         policy.set_rules(rules)
@@ -380,7 +381,7 @@ class KeypairPolicyTest(test.TestCase):
         req.method = 'POST'
         self.assertRaises(exception.Forbidden,
                           self.KeyPairController.create,
-                          req, {})
+                          req, body)
 
     def test_keypair_create_pass_policy(self):
         body = {'keypair': {'name': 'create_test'}}
