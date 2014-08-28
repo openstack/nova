@@ -40,10 +40,10 @@ CONF = cfg.CONF
 
 
 class ConfigDriveTestV21(test.TestCase):
-    base_url = '/v3/servers/'
+    base_url = '/v2/fake/servers/'
 
     def _setup_wsgi(self):
-        self.app = fakes.wsgi_app_v3(init_only=('servers', 'os-config-drive'))
+        self.app = fakes.wsgi_app_v21(init_only=('servers', 'os-config-drive'))
 
     def _get_config_drive_controller(self):
         return config_drive_v21.ConfigDriveController()
@@ -80,7 +80,6 @@ class ConfigDriveTestV21(test.TestCase):
 
 
 class ConfigDriveTestV2(ConfigDriveTestV21):
-    base_url = '/v2/fake/servers/'
 
     def _get_config_drive_controller(self):
         return config_drive_v2.Controller()
@@ -94,7 +93,7 @@ class ConfigDriveTestV2(ConfigDriveTestV21):
 
 
 class ServersControllerCreateTestV21(test.TestCase):
-    base_url = '/v3/'
+    base_url = '/v2/fake/'
     bad_request = exception.ValidationError
 
     def _set_up_controller(self):
@@ -239,7 +238,6 @@ class ServersControllerCreateTestV21(test.TestCase):
 
 
 class ServersControllerCreateTestV2(ServersControllerCreateTestV21):
-    base_url = '/v2/fake/'
     bad_request = webob.exc.HTTPBadRequest
 
     def _set_up_controller(self):

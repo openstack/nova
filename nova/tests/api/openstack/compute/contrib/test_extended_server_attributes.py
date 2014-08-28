@@ -57,7 +57,7 @@ def fake_compute_get_all(*args, **kwargs):
 class ExtendedServerAttributesTestV21(test.TestCase):
     content_type = 'application/json'
     prefix = 'OS-EXT-SRV-ATTR:'
-    fake_url = '/v3'
+    fake_url = '/v2/fake'
 
     def setUp(self):
         super(ExtendedServerAttributesTestV21, self).setUp()
@@ -70,8 +70,8 @@ class ExtendedServerAttributesTestV21(test.TestCase):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
         res = req.get_response(
-            fakes.wsgi_app_v3(init_only=('servers',
-                                         'os-extended-server-attributes')))
+            fakes.wsgi_app_v21(init_only=('servers',
+                                          'os-extended-server-attributes')))
         return res
 
     def _get_server(self, body):
@@ -121,7 +121,6 @@ class ExtendedServerAttributesTestV21(test.TestCase):
 
 
 class ExtendedServerAttributesTestV2(ExtendedServerAttributesTestV21):
-    fake_url = '/v2/fake'
 
     def setUp(self):
         super(ExtendedServerAttributesTestV2, self).setUp()

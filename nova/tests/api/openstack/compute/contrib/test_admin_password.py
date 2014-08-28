@@ -54,11 +54,11 @@ class AdminPasswordTestV21(test.NoDBTestCase):
         self.stubs.Set(compute_api.API, 'set_admin_password',
                        fake_set_admin_password)
         self.stubs.Set(compute_api.API, 'get', fake_get)
-        self.app = fakes.wsgi_app_v3(init_only=('servers',
-                                                self.plugin.ALIAS))
+        self.app = fakes.wsgi_app_v21(init_only=('servers',
+                                                 self.plugin.ALIAS))
 
     def _make_request(self, body):
-        req = webob.Request.blank('/v3/servers/1/action')
+        req = webob.Request.blank('/v2/fake/servers/1/action')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.content_type = 'application/json'

@@ -43,10 +43,10 @@ def fake_compute_get(*args, **kwargs):
 
 class HideServerAddressesTestV21(test.TestCase):
     content_type = 'application/json'
-    base_url = '/v3/servers'
+    base_url = '/v2/fake/servers'
 
     def _setup_wsgi(self):
-        self.wsgi_app = fakes.wsgi_app_v3(
+        self.wsgi_app = fakes.wsgi_app_v21(
             init_only=('servers', 'os-hide-server-addresses'))
 
     def setUp(self):
@@ -144,7 +144,6 @@ class HideServerAddressesTestV21(test.TestCase):
 
 
 class HideServerAddressesTestV2(HideServerAddressesTestV21):
-    base_url = '/v2/fake/servers'
 
     def _setup_wsgi(self):
         self.flags(
