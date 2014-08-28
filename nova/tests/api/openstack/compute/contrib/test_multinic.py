@@ -41,7 +41,8 @@ def compute_api_remove_fixed_ip(self, context, instance, address):
     last_remove_fixed_ip = (instance['uuid'], address)
 
 
-def compute_api_get(self, context, instance_id, want_objects=False):
+def compute_api_get(self, context, instance_id, want_objects=False,
+                    expected_attrs=None):
     instance = objects.Instance()
     instance.uuid = instance_id
     instance.id = 1
@@ -51,9 +52,9 @@ def compute_api_get(self, context, instance_id, want_objects=False):
     return instance
 
 
-class FixedIpTest(test.NoDBTestCase):
+class FixedIpTestV21(test.NoDBTestCase):
     def setUp(self):
-        super(FixedIpTest, self).setUp()
+        super(FixedIpTestV21, self).setUp()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         self.stubs.Set(compute.api.API, "add_fixed_ip",
@@ -61,18 +62,21 @@ class FixedIpTest(test.NoDBTestCase):
         self.stubs.Set(compute.api.API, "remove_fixed_ip",
                        compute_api_remove_fixed_ip)
         self.stubs.Set(compute.api.API, 'get', compute_api_get)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Multinic'])
-        self.app = fakes.wsgi_app(init_only=('servers',))
+        self.app = self._get_app()
+
+    def _get_app(self):
+        return fakes.wsgi_app_v3(init_only=('servers', 'os-multinic'))
+
+    def _get_url(self):
+        return '/v3'
 
     def test_add_fixed_ip(self):
         global last_add_fixed_ip
         last_add_fixed_ip = (None, None)
 
         body = dict(addFixedIp=dict(networkId='test_net'))
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID)
+        req = webob.Request.blank(
+            self._get_url() + '/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -82,7 +86,8 @@ class FixedIpTest(test.NoDBTestCase):
         self.assertEqual(last_add_fixed_ip, (UUID, 'test_net'))
 
     def _test_add_fixed_ip_bad_request(self, body):
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID)
+        req = webob.Request.blank(
+            self._get_url() + '/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -102,7 +107,8 @@ class FixedIpTest(test.NoDBTestCase):
         last_add_fixed_ip = (None, None)
 
         body = dict(addFixedIp=dict())
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID)
+        req = webob.Request.blank(
+            self._get_url() + '/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -116,7 +122,8 @@ class FixedIpTest(test.NoDBTestCase):
         mock_add_fixed_ip.side_effect = exception.NoMoreFixedIps
 
         body = dict(addFixedIp=dict(networkId='test_net'))
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID)
+        req = webob.Request.blank(
+            self._get_url() + '/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -129,7 +136,8 @@ class FixedIpTest(test.NoDBTestCase):
         last_remove_fixed_ip = (None, None)
 
         body = dict(removeFixedIp=dict(address='10.10.10.1'))
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID)
+        req = webob.Request.blank(
+            self._get_url() + '/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -143,7 +151,8 @@ class FixedIpTest(test.NoDBTestCase):
         last_remove_fixed_ip = (None, None)
 
         body = dict(removeFixedIp=dict())
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID)
+        req = webob.Request.blank(
+            self._get_url() + '/servers/%s/action' % UUID)
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -151,3 +160,33 @@ class FixedIpTest(test.NoDBTestCase):
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 400)
         self.assertEqual(last_remove_fixed_ip, (None, None))
+
+    def test_remove_fixed_ip_invalid_address(self):
+        body = {'remove_fixed_ip': {'address': ''}}
+        req = webob.Request.blank(
+            self._get_url() + '/servers/%s/action' % UUID)
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers['content-type'] = 'application/json'
+        resp = req.get_response(self.app)
+        self.assertEqual(400, resp.status_int)
+
+
+class FixedIpTestV2(FixedIpTestV21):
+    def setUp(self):
+        super(FixedIpTestV2, self).setUp()
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Multinic'])
+
+    def _get_app(self):
+        return fakes.wsgi_app(init_only=('servers',))
+
+    def _get_url(self):
+        return '/v2/fake'
+
+    def test_remove_fixed_ip_invalid_address(self):
+        # NOTE(cyeoh): This test is disabled for the V2 API because it is
+        # has poorer input validation.
+        pass

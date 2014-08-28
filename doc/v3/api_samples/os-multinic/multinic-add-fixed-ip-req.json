@@ -1,5 +1,5 @@
 {
-    "add_fixed_ip":{
+    "addFixedIp":{
         "network_id": 1
         }
 }

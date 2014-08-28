@@ -13,21 +13,21 @@
 add_fixed_ip = {
     'type': 'object',
     'properties': {
-        'add_fixed_ip': {
+        'addFixedIp': {
             'type': 'object',
             'properties': {
                 # The maxLength is from the column 'uuid' of the
                 # table 'networks'
-                'network_id': {
+                'networkId': {
                     'type': ['string', 'number'],
                     'minLength': 1, 'maxLength': 36,
                 },
             },
-            'required': ['network_id'],
+            'required': ['networkId'],
             'additionalProperties': False,
         },
     },
-    'required': ['add_fixed_ip'],
+    'required': ['addFixedIp'],
     'additionalProperties': False,
 }
 
@@ -35,7 +35,7 @@ add_fixed_ip = {
 remove_fixed_ip = {
     'type': 'object',
     'properties': {
-        'remove_fixed_ip': {
+        'removeFixedIp': {
             'type': 'object',
             'properties': {
                 'address': {
@@ -50,6 +50,6 @@ remove_fixed_ip = {
             'additionalProperties': False,
         },
     },
-    'required': ['remove_fixed_ip'],
+    'required': ['removeFixedIp'],
     'additionalProperties': False,
 }
