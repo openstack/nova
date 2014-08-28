@@ -104,6 +104,12 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
   ``max_instances_per_host`` setting. Maximum number of instances allowed to run on
   this host, the host will be ignored by scheduler if more than ``max_instances_per_host``
   are already existing on the host.
+* |AggregateNumInstancesFilter| - filters hosts by number of instances with
+  per-aggregate ``max_instances_per_host`` setting. If no per-aggregate value
+  is found, it will fall back to the global default ``max_instances_per_host``.
+  If more than one value is found for a host (meaning the host is in two or more
+  different aggregates with different max instances per host settings),
+  the minimum value will be used.
 * |IoOpsFilter| - filters hosts by concurrent I/O operations on it.
   hosts with too many concurrent I/O operations will be filtered.
   ``max_io_ops_per_host`` setting. Maximum number of I/O intensive instances allowed to
@@ -367,6 +373,7 @@ in :mod:``nova.tests.scheduler``.
 .. |DiskFilter| replace:: :class:`DiskFilter <nova.scheduler.filters.disk_filter.DiskFilter>`
 .. |AggregateDiskFilter| replace:: :class:`AggregateDiskFilter <nova.scheduler.filters.disk_filter.AggregateDiskFilter>`
 .. |NumInstancesFilter| replace:: :class:`NumInstancesFilter <nova.scheduler.filters.num_instances_filter.NumInstancesFilter>`
+.. |AggregateNumInstancesFilter| replace:: :class:`AggregateNumInstancesFilter <nova.scheduler.filters.numinstances_filter.AggregateNumInstancesFilter>`
 .. |IoOpsFilter| replace:: :class:`IoOpsFilter <nova.scheduler.filters.io_ops_filter.IoOpsFilter>`
 .. |AggregateIoOpsFilter| replace:: :class:`AggregateIoOpsFilter <nova.scheduler.filters.io_ops_filter.AggregateIoOpsFilter>`
 .. |PciPassthroughFilter| replace:: :class:`PciPassthroughFilter <nova.scheduler.filters.pci_passthrough_filter.PciPassthroughFilter>`

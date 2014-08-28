@@ -15,8 +15,10 @@
 
 from oslo.config import cfg
 
+from nova.i18n import _LW
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
+from nova.scheduler.filters import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -31,9 +33,13 @@ CONF.register_opt(max_instances_per_host_opt)
 class NumInstancesFilter(filters.BaseHostFilter):
     """Filter out hosts with too many instances."""
 
+    def _get_max_instances_per_host(self, host_state, filter_properties):
+        return CONF.max_instances_per_host
+
     def host_passes(self, host_state, filter_properties):
         num_instances = host_state.num_instances
-        max_instances = CONF.max_instances_per_host
+        max_instances = self._get_max_instances_per_host(
+            host_state, filter_properties)
         passes = num_instances < max_instances
         if not passes:
             LOG.debug("%(host_state)s fails num_instances check: Max "
@@ -41,3 +47,28 @@ class NumInstancesFilter(filters.BaseHostFilter):
                         {'host_state': host_state,
                          'max_instances': max_instances})
         return passes
+
+
+class AggregateNumInstancesFilter(NumInstancesFilter):
+    """AggregateNumInstancesFilter with per-aggregate the max num instances.
+
+    Fall back to global max_num_instances_per_host if no per-aggregate setting
+    found.
+    """
+
+    def _get_max_instances_per_host(self, host_state, filter_properties):
+        # TODO(uni): DB query in filter is a performance hit, especially for
+        # system with lots of hosts. Will need a general solutnumn here to fix
+        # all filters with aggregate DB call things.
+        aggregate_vals = utils.aggregate_values_from_db(
+            filter_properties['context'],
+            host_state.host,
+            'max_instances_per_host')
+        try:
+            value = utils.validate_num_values(
+                aggregate_vals, CONF.max_instances_per_host, cast_to=int)
+        except ValueError as e:
+            LOG.warn(_LW("Could not decode max_instances_per_host: '%s'"), e)
+            value = CONF.max_instances_per_host
+
+        return value
