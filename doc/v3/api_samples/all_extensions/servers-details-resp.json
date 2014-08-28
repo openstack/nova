@@ -47,8 +47,8 @@
                 "My Server Name": "Apache1"
             },
             "name": "new-server-test",
-            "os-access-ips:access_ip_v4": "",
-            "os-access-ips:access_ip_v6": "",
+            "accessIPv4": "",
+            "accessIPv6": "",
             "config_drive": "",
             "os-extended-availability-zone:availability_zone": "nova",
             "OS-EXT-SRV-ATTR:host": "c3f14e9812ad496baf92ccfb3c61e15f",

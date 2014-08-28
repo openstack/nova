@@ -12,7 +12,7 @@
                 "rel": "bookmark"
             }
         ],
-        "os-access-ips:access_ip_v4": "1.2.3.4",
-        "os-access-ips:access_ip_v6": "fe80::"
+        "accessIPv4": "1.2.3.4",
+        "accessIPv6": "fe80::"
     }
 }

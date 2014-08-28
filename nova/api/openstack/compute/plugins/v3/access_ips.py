@@ -28,9 +28,9 @@ class AccessIPsController(wsgi.Controller):
             db_instance = req.get_db_instance(server['id'])
             ip_v4 = db_instance.get('access_ip_v4')
             ip_v6 = db_instance.get('access_ip_v6')
-            server['%s:access_ip_v4' % ALIAS] = (
+            server['accessIPv4'] = (
                 str(ip_v4) if ip_v4 is not None else '')
-            server['%s:access_ip_v6' % ALIAS] = (
+            server['accessIPv6'] = (
                 str(ip_v6) if ip_v6 is not None else '')
 
     @wsgi.extends
@@ -76,8 +76,8 @@ class AccessIPs(extensions.V3APIExtensionBase):
     name = "AccessIPs"
     alias = ALIAS
     version = 1
-    v4_key = '%s:access_ip_v4' % ALIAS
-    v6_key = '%s:access_ip_v6' % ALIAS
+    v4_key = 'accessIPv4'
+    v6_key = 'accessIPv6'
 
     def get_controller_extensions(self):
         controller = AccessIPsController()
@@ -115,10 +115,10 @@ class AccessIPs(extensions.V3APIExtensionBase):
 
     def _validate_access_ipv4(self, address):
         if not utils.is_valid_ipv4(address):
-            expl = _('access_ip_v4 is not proper IPv4 format')
+            expl = _('%s is not proper IPv4 format') % AccessIPs.v4_key
             raise exc.HTTPBadRequest(explanation=expl)
 
     def _validate_access_ipv6(self, address):
         if not utils.is_valid_ipv6(address):
-            expl = _('access_ip_v6 is not proper IPv6 format')
+            expl = _('%s is not proper IPv6 format') % AccessIPs.v6_key
             raise exc.HTTPBadRequest(explanation=expl)

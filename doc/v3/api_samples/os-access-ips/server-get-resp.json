@@ -45,8 +45,8 @@
             "My Server Name": "Apache1"
         },
         "name": "new-server-test",
-        "os-access-ips:access_ip_v4": "1.2.3.4",
-        "os-access-ips:access_ip_v6": "fe80::",
+        "accessIPv4": "1.2.3.4",
+        "accessIPv6": "fe80::",
         "progress": 0,
         "status": "ACTIVE",
         "tenant_id": "openstack",

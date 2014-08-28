@@ -1,8 +1,8 @@
 {
     "servers": [
         {
-            "os-access-ips:access_ip_v4": "",
-            "os-access-ips:access_ip_v6": "",
+            "accessIPv4": "",
+            "accessIPv6": "",
             "addresses": {
                 "private": [
                     {

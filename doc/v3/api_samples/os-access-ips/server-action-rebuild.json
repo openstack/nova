@@ -1,7 +1,7 @@
 {
     "rebuild" : {
-        "os-access-ips:access_ip_v4": "4.3.2.1",
-        "os-access-ips:access_ip_v6": "80fe::",
+        "accessIPv4": "4.3.2.1",
+        "accessIPv6": "80fe::",
         "imageRef" : "http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
         "name" : "new-server-test",
         "metadata" : {
