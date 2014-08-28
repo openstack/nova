@@ -55,6 +55,7 @@ def fake_get_not_found(*args, **kwargs):
 
 
 class ConsoleOutputExtensionTest(test.NoDBTestCase):
+    application_type = "application/json"
 
     def setUp(self):
         super(ConsoleOutputExtensionTest, self).setUp()
@@ -67,77 +68,60 @@ class ConsoleOutputExtensionTest(test.NoDBTestCase):
             osapi_compute_ext_list=['Console_output'])
         self.app = fakes.wsgi_app(init_only=('servers',))
 
-    def test_get_text_console_instance_action(self):
-        body = {'os-getConsoleOutput': {}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
+    def _get_response(self, length_dict=None):
+        length_dict = length_dict or {}
+        body = {'os-getConsoleOutput': length_dict}
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         req.method = "POST"
         req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
+        req.headers["content-type"] = self.application_type
         res = req.get_response(self.app)
+        return res
+
+    def test_get_text_console_instance_action(self):
+        res = self._get_response()
         output = jsonutils.loads(res.body)
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual(output, {'output': '0\n1\n2\n3\n4'})
+        self.assertEqual(200, res.status_int)
+        self.assertEqual({'output': '0\n1\n2\n3\n4'}, output)
 
     def test_get_console_output_with_tail(self):
-        body = {'os-getConsoleOutput': {'length': 3}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = req.get_response(self.app)
+        res = self._get_response(length_dict={'length': 3})
         output = jsonutils.loads(res.body)
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual(output, {'output': '2\n3\n4'})
+        self.assertEqual(200, res.status_int)
+        self.assertEqual({'output': '2\n3\n4'}, output)
+
+    def test_get_console_output_with_none_length(self):
+        res = self._get_response(length_dict={'length': None})
+        output = jsonutils.loads(res.body)
+        self.assertEqual(200, res.status_int)
+        self.assertEqual({'output': '0\n1\n2\n3\n4'}, output)
 
     def test_get_console_output_with_length_as_str(self):
-        body = {'os-getConsoleOutput': {'length': '3'}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = req.get_response(self.app)
+        res = self._get_response(length_dict={'length': '3'})
         output = jsonutils.loads(res.body)
-        self.assertEqual(res.status_int, 200)
-        self.assertEqual(output, {'output': '2\n3\n4'})
+        self.assertEqual(200, res.status_int)
+        self.assertEqual({'output': '2\n3\n4'}, output)
 
     def test_get_console_output_filtered_characters(self):
         self.stubs.Set(compute_api.API, 'get_console_output',
                        fake_get_console_output_all_characters)
-        body = {'os-getConsoleOutput': {}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-        res = req.get_response(self.app)
+        res = self._get_response()
         output = jsonutils.loads(res.body)
-        self.assertEqual(res.status_int, 200)
+        self.assertEqual(200, res.status_int)
         expect = string.digits + string.letters + string.punctuation + ' \t\n'
-        self.assertEqual(output, {'output': expect})
+        self.assertEqual({'output': expect}, output)
 
     def test_get_text_console_no_instance(self):
         self.stubs.Set(compute_api.API, 'get', fake_get_not_found)
-        body = {'os-getConsoleOutput': {}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 404)
+        res = self._get_response()
+        self.assertEqual(404, res.status_int)
 
     def test_get_text_console_no_instance_on_get_output(self):
         self.stubs.Set(compute_api.API,
                        'get_console_output',
                        fake_get_not_found)
-        body = {'os-getConsoleOutput': {}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 404)
+        res = self._get_response()
+        self.assertEqual(404, res.status_int)
 
     def _get_console_output_bad_request_case(self, body):
         req = webob.Request.blank('/v2/fake/servers/1/action')
@@ -145,7 +129,7 @@ class ConsoleOutputExtensionTest(test.NoDBTestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
         res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 400)
+        self.assertEqual(400, res.status_int)
 
     def test_get_console_output_with_non_integer_length(self):
         body = {'os-getConsoleOutput': {'length': 'NaN'}}
@@ -162,23 +146,15 @@ class ConsoleOutputExtensionTest(test.NoDBTestCase):
     def test_get_console_output_not_ready(self):
         self.stubs.Set(compute_api.API, 'get_console_output',
                        fake_get_console_output_not_ready)
-        body = {'os-getConsoleOutput': {'length': 3}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
-
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 409)
+        res = self._get_response(length_dict={'length': 3})
+        self.assertEqual(409, res.status_int)
 
     def test_not_implemented(self):
         self.stubs.Set(compute_api.API, 'get_console_output',
                        fakes.fake_not_implemented)
-        body = {'os-getConsoleOutput': {}}
-        req = webob.Request.blank('/v2/fake/servers/1/action')
-        req.method = "POST"
-        req.body = jsonutils.dumps(body)
-        req.headers["content-type"] = "application/json"
+        res = self._get_response()
+        self.assertEqual(501, res.status_int)
 
-        res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 501)
+    def test_get_console_output_with_boolean_length(self):
+        res = self._get_response(length_dict={'length': True})
+        self.assertEqual(400, res.status_int)
