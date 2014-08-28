@@ -282,6 +282,8 @@ policy_data = """
     "compute_extension:v3:os-shelve:shelve_offload": "",
     "compute_extension:simple_tenant_usage:show": "",
     "compute_extension:simple_tenant_usage:list": "",
+    "compute_extension:v3:os-simple-tenant-usage:show": "",
+    "compute_extension:v3:os-simple-tenant-usage:list": "",
     "compute_extension:unshelve": "",
     "compute_extension:v3:os-shelve:unshelve": "",
     "compute_extension:v3:os-suspend-server:suspend": "",
