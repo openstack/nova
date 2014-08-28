@@ -417,6 +417,10 @@ class ComputeTaskAPI(object):
             admin_password, injected_files, requested_networks,
             security_groups, block_device_mapping, legacy_bdm=True):
         image_p = jsonutils.to_primitive(image)
+        if 'instance_type' in filter_properties:
+            flavor = filter_properties['instance_type']
+            flavor_p = objects_base.obj_to_primitive(flavor)
+            filter_properties = dict(filter_properties, instance_type=flavor_p)
         kw = {'instances': instances, 'image': image_p,
                'filter_properties': filter_properties,
                'admin_password': admin_password,

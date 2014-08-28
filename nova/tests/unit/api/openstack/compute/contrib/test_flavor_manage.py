@@ -425,8 +425,6 @@ class PrivateFlavorManageTestV21(test.TestCase):
 
     def test_create_public_flavor_should_not_create_flavor_access(self):
         self.expected["flavor"]["os-flavor-access:is_public"] = True
-        self.mox.StubOutWithMock(flavors, "add_flavor_access")
-        self.mox.ReplayAll()
         body = self._get_response()
         for key in self.expected["flavor"]:
             self.assertEqual(body["flavor"][key], self.expected["flavor"][key])

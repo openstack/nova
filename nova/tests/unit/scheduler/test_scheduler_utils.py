@@ -48,9 +48,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         instance_type = {'flavorid': 'fake-id'}
 
         self.mox.StubOutWithMock(flavors, 'extract_flavor')
-        self.mox.StubOutWithMock(db, 'flavor_extra_specs_get')
         flavors.extract_flavor(mox.IgnoreArg()).AndReturn(instance_type)
-        db.flavor_extra_specs_get(self.context, mox.IgnoreArg()).AndReturn([])
         self.mox.ReplayAll()
 
         request_spec = scheduler_utils.build_request_spec(self.context, image,
@@ -58,14 +56,11 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         self.assertEqual({}, request_spec['image'])
 
     @mock.patch.object(flavors, 'extract_flavor')
-    @mock.patch.object(db, 'flavor_extra_specs_get')
-    def test_build_request_spec_with_object(self, flavor_extra_specs_get,
-                                            extract_flavor):
+    def test_build_request_spec_with_object(self, extract_flavor):
         instance_type = {'flavorid': 'fake-id'}
         instance = fake_instance.fake_instance_obj(self.context)
 
         extract_flavor.return_value = instance_type
-        flavor_extra_specs_get.return_value = []
 
         request_spec = scheduler_utils.build_request_spec(self.context, None,
                                                           [instance])

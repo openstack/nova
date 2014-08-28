@@ -21,7 +21,6 @@ from oslo.serialization import jsonutils
 
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
-from nova import db
 from nova import exception
 from nova.i18n import _, _LE, _LW
 from nova import notifications
@@ -57,10 +56,10 @@ def build_request_spec(ctxt, image, instances, instance_type=None):
 
     if instance_type is None:
         instance_type = flavors.extract_flavor(instance)
-    # NOTE(comstud): This is a bit ugly, but will get cleaned up when
-    # we're passing an InstanceType internal object.
-    extra_specs = db.flavor_extra_specs_get(ctxt, instance_type['flavorid'])
-    instance_type['extra_specs'] = extra_specs
+
+    if isinstance(instance_type, objects.Flavor):
+        instance_type = obj_base.obj_to_primitive(instance_type)
+
     request_spec = {
             'image': image or {},
             'instance_properties': instance,

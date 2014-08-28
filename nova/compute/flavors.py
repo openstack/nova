@@ -22,7 +22,6 @@ import re
 import uuid
 
 from oslo.config import cfg
-from oslo.db import exception as db_exc
 from oslo.utils import strutils
 import six
 
@@ -31,6 +30,7 @@ from nova import db
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
+from nova import objects
 from nova.openstack.common import log as logging
 from nova import utils
 
@@ -170,11 +170,9 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
     except ValueError:
         raise exception.InvalidInput(reason=_("is_public must be a boolean"))
 
-    try:
-        return db.flavor_create(context.get_admin_context(), kwargs)
-    except db_exc.DBError as e:
-        LOG.exception(_LE('DB error: %s'), e)
-        raise exception.FlavorCreateFailed()
+    flavor = objects.Flavor(context=context.get_admin_context(), **kwargs)
+    flavor.create()
+    return flavor
 
 
 def destroy(name):
@@ -182,7 +180,9 @@ def destroy(name):
     try:
         if not name:
             raise ValueError()
-        db.flavor_destroy(context.get_admin_context(), name)
+        flavor = objects.Flavor(name=name)
+        ctxt = context.get_admin_context()
+        flavor.destroy(ctxt)
     except (ValueError, exception.NotFound):
         LOG.exception(_LE('Instance type %s not found for deletion'), name)
         raise exception.FlavorNotFoundByName(flavor_name=name)
@@ -191,32 +191,30 @@ def destroy(name):
 def get_all_flavors(ctxt=None, inactive=False, filters=None):
     """Get all non-deleted flavors as a dict.
 
-    Pass true as argument if you want deleted flavors returned also.
+    Pass inactive=True if you want deleted flavors returned also.
     """
     if ctxt is None:
         ctxt = context.get_admin_context()
 
-    inst_types = db.flavor_get_all(
-            ctxt, inactive=inactive, filters=filters)
+    inst_types = objects.FlavorList.get_all(ctxt, inactive=inactive,
+                                            filters=filters)
 
     inst_type_dict = {}
     for inst_type in inst_types:
-        inst_type_dict[inst_type['id']] = inst_type
+        inst_type_dict[inst_type.id] = inst_type
     return inst_type_dict
 
 
-def get_all_flavors_sorted_list(ctxt=None, inactive=False, filters=None,
-                                sort_key='flavorid', sort_dir='asc',
-                                limit=None, marker=None):
+def get_all_flavors_sorted_list(ctxt=None, filters=None, sort_key='flavorid',
+                                sort_dir='asc', limit=None, marker=None):
     """Get all non-deleted flavors as a sorted list.
-
-    Pass true as argument if you want deleted flavors returned also.
     """
     if ctxt is None:
         ctxt = context.get_admin_context()
 
-    return db.flavor_get_all(ctxt, filters=filters, sort_key=sort_key,
-                             sort_dir=sort_dir, limit=limit, marker=marker)
+    return objects.FlavorList.get_all(ctxt, filters=filters, sort_key=sort_key,
+                                      sort_dir=sort_dir, limit=limit,
+                                      marker=marker)
 
 
 def get_default_flavor():
@@ -236,7 +234,7 @@ def get_flavor(instance_type_id, ctxt=None, inactive=False):
     if inactive:
         ctxt = ctxt.elevated(read_deleted="yes")
 
-    return db.flavor_get(ctxt, instance_type_id)
+    return objects.Flavor.get_by_id(ctxt, instance_type_id)
 
 
 def get_flavor_by_name(name, ctxt=None):
@@ -247,7 +245,7 @@ def get_flavor_by_name(name, ctxt=None):
     if ctxt is None:
         ctxt = context.get_admin_context()
 
-    return db.flavor_get_by_name(ctxt, name)
+    return objects.Flavor.get_by_name(ctxt, name)
 
 
 # TODO(termie): flavor-specific code should probably be in the API that uses
@@ -260,8 +258,7 @@ def get_flavor_by_flavor_id(flavorid, ctxt=None, read_deleted="yes"):
     if ctxt is None:
         ctxt = context.get_admin_context(read_deleted=read_deleted)
 
-    # NOTE(melwitt): return a copy temporarily until conversion to object
-    return dict(db.flavor_get_by_flavor_id(ctxt, flavorid, read_deleted))
+    return objects.Flavor.get_by_flavor_id(ctxt, flavorid, read_deleted)
 
 
 def get_flavor_access_by_flavor_id(flavorid, ctxt=None):
@@ -269,35 +266,20 @@ def get_flavor_access_by_flavor_id(flavorid, ctxt=None):
     if ctxt is None:
         ctxt = context.get_admin_context()
 
-    return db.flavor_access_get_by_flavor_id(ctxt, flavorid)
-
-
-def add_flavor_access(flavorid, projectid, ctxt=None):
-    """Add flavor access for project."""
-    if ctxt is None:
-        ctxt = context.get_admin_context()
-
-    return db.flavor_access_add(ctxt, flavorid, projectid)
-
-
-def remove_flavor_access(flavorid, projectid, ctxt=None):
-    """Remove flavor access for project."""
-    if ctxt is None:
-        ctxt = context.get_admin_context()
-
-    return db.flavor_access_remove(ctxt, flavorid, projectid)
+    flavor = objects.Flavor.get_by_flavor_id(ctxt, flavorid)
+    return flavor.projects
 
 
 def extract_flavor(instance, prefix=''):
-    """Create an InstanceType-like object from instance's system_metadata
+    """Create a Flavor object from instance's system_metadata
     information.
     """
 
-    instance_type = {}
+    flavor = objects.Flavor()
     sys_meta = utils.instance_sys_meta(instance)
-    for key, type_fn in system_metadata_flavor_props.items():
+    for key in system_metadata_flavor_props.keys():
         type_key = '%sinstance_type_%s' % (prefix, key)
-        instance_type[key] = type_fn(sys_meta[type_key])
+        setattr(flavor, key, sys_meta[type_key])
 
     # NOTE(danms): We do NOT save all of extra_specs, but only the
     # NUMA-related ones that we need to avoid an uglier alternative. This
@@ -306,12 +288,12 @@ def extract_flavor(instance, prefix=''):
     extra_specs = [(k, v) for k, v in sys_meta.items()
                    if k.startswith('%sinstance_type_extra_' % prefix)]
     if extra_specs:
-        instance_type['extra_specs'] = {}
+        flavor.extra_specs = {}
         for key, value in extra_specs:
             extra_key = key[len('%sinstance_type_extra_' % prefix):]
-            instance_type['extra_specs'][extra_key] = value
+            flavor.extra_specs[extra_key] = value
 
-    return instance_type
+    return flavor
 
 
 def save_flavor_info(metadata, instance_type, prefix=''):
