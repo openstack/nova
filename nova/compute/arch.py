@@ -153,6 +153,9 @@ def canonicalize(name):
     if newname in ("x86_32", "x86_32p"):
         newname = I686
 
+    if newname == "amd64":
+        newname = X86_64
+
     if not is_valid(newname):
         raise exception.InvalidArchitectureName(arch=name)
 

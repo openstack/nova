@@ -47,6 +47,9 @@ class ArchTest(test.NoDBTestCase):
     def test_canonicalize_i386(self):
         self.assertEqual(arch.I686, arch.canonicalize("i386"))
 
+    def test_canonicalize_amd64(self):
+        self.assertEqual(arch.X86_64, arch.canonicalize("amd64"))
+
     def test_canonicalize_case(self):
         self.assertEqual(arch.X86_64, arch.canonicalize("X86_64"))
 
