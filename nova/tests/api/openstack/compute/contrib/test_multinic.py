@@ -81,6 +81,22 @@ class FixedIpTest(test.NoDBTestCase):
         self.assertEqual(resp.status_int, 202)
         self.assertEqual(last_add_fixed_ip, (UUID, 'test_net'))
 
+    def _test_add_fixed_ip_bad_request(self, body):
+        req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID)
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers['content-type'] = 'application/json'
+        resp = req.get_response(self.app)
+        self.assertEqual(400, resp.status_int)
+
+    def test_add_fixed_ip_empty_network_id(self):
+        body = {'addFixedIp': {'network_id': ''}}
+        self._test_add_fixed_ip_bad_request(body)
+
+    def test_add_fixed_ip_network_id_bigger_than_36(self):
+        body = {'addFixedIp': {'network_id': 'a' * 37}}
+        self._test_add_fixed_ip_bad_request(body)
+
     def test_add_fixed_ip_no_network(self):
         global last_add_fixed_ip
         last_add_fixed_ip = (None, None)
