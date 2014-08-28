@@ -133,12 +133,22 @@ def get_vm_create_spec(client_factory, instance, name, data_store_name,
     # Configure cpu information
     if (allocations is not None and
         ('cpu_limit' in allocations or
-         'cpu_reservation' in allocations)):
+         'cpu_reservation' in allocations or
+         'cpu_shares_level' in allocations)):
         allocation = client_factory.create('ns0:ResourceAllocationInfo')
         if 'cpu_limit' in allocations:
             allocation.limit = allocations['cpu_limit']
         if 'cpu_reservation' in allocations:
             allocation.reservation = allocations['cpu_reservation']
+        if 'cpu_shares_level' in allocations:
+            shares = client_factory.create('ns0:SharesInfo')
+            shares.level = allocations['cpu_shares_level']
+            if (shares.level == 'custom' and
+                'cpu_shares_share' in allocations):
+                shares.shares = allocations['cpu_shares_share']
+            else:
+                shares.shares = 0
+            allocation.shares = shares
         config_spec.cpuAllocation = allocation
 
     vif_spec_list = []

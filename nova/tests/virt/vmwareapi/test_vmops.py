@@ -865,3 +865,23 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         with mock.patch.object(db, 'flavor_get', _fake_flavor_get):
             self._test_spawn(allocations={'cpu_limit': 7,
                                           'cpu_reservation': 6})
+
+    def test_spawn_cpu_shares_level(self):
+        def _fake_flavor_get(context, id):
+            flavor = stubs._fake_flavor_get(context, id)
+            flavor['extra_specs'].update({'quota:cpu_shares_level': 'high'})
+            return flavor
+
+        with mock.patch.object(db, 'flavor_get', _fake_flavor_get):
+            self._test_spawn(allocations={'cpu_shares_level': 'high'})
+
+    def test_spawn_cpu_shares_custom(self):
+        def _fake_flavor_get(context, id):
+            flavor = stubs._fake_flavor_get(context, id)
+            flavor['extra_specs'].update({'quota:cpu_shares_level': 'custom',
+                                          'quota:cpu_shares_share': 1948})
+            return flavor
+
+        with mock.patch.object(db, 'flavor_get', _fake_flavor_get):
+            self._test_spawn(allocations={'cpu_shares_level': 'custom',
+                                          'cpu_shares_share': 1948})

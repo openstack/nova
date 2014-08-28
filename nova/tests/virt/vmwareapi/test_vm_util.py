@@ -626,6 +626,79 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         result = re.sub(r'\s+', '', repr(result))
         self.assertEqual(expected, result)
 
+    def test_get_vm_create_spec_with_share(self):
+        instance_uuid = uuidutils.generate_uuid()
+        fake_instance = {'id': 7, 'name': 'fake!',
+                         'uuid': instance_uuid,
+                         'vcpus': 2, 'memory_mb': 2048}
+        shares = {'cpu_shares_level': 'high'}
+        result = vm_util.get_vm_create_spec(fake.FakeFactory(),
+                                            fake_instance, instance_uuid,
+                                            'fake-datastore', [],
+                                            allocations=shares)
+        expected = """{
+            'files': {'vmPathName': '[fake-datastore]',
+            'obj_name': 'ns0:VirtualMachineFileInfo'},
+            'instanceUuid': '%(instance_uuid)s',
+            'name': '%(instance_uuid)s', 'deviceChange': [],
+            'extraConfig': [{'value': '%(instance_uuid)s',
+                             'key': 'nvp.vm-uuid',
+                             'obj_name': 'ns0:OptionValue'}],
+            'memoryMB': 2048,
+            'obj_name': 'ns0:VirtualMachineConfigSpec',
+            'guestId': 'otherGuest',
+            'tools': {'beforeGuestStandby': True,
+                      'beforeGuestReboot': True,
+                      'beforeGuestShutdown': True,
+                      'afterResume': True,
+                      'afterPowerOn': True,
+            'obj_name': 'ns0:ToolsConfigInfo'},
+            'cpuAllocation': {'shares': {'level': 'high',
+                                         'shares': 0,
+                                         'obj_name':'ns0:SharesInfo'},
+                              'obj_name':'ns0:ResourceAllocationInfo'},
+            'numCPUs': 2}""" % {'instance_uuid': instance_uuid}
+        expected = re.sub(r'\s+', '', expected)
+        result = re.sub(r'\s+', '', repr(result))
+        self.assertEqual(expected, result)
+
+    def test_get_vm_create_spec_with_share_custom(self):
+        instance_uuid = uuidutils.generate_uuid()
+        fake_instance = {'id': 7, 'name': 'fake!',
+                         'uuid': instance_uuid,
+                         'vcpus': 2, 'memory_mb': 2048}
+        shares = {'cpu_shares_level': 'custom',
+                  'cpu_shares_share': 1948}
+        result = vm_util.get_vm_create_spec(fake.FakeFactory(),
+                                            fake_instance, instance_uuid,
+                                            'fake-datastore', [],
+                                            allocations=shares)
+        expected = """{
+            'files': {'vmPathName': '[fake-datastore]',
+            'obj_name': 'ns0:VirtualMachineFileInfo'},
+            'instanceUuid': '%(instance_uuid)s',
+            'name': '%(instance_uuid)s', 'deviceChange': [],
+            'extraConfig': [{'value': '%(instance_uuid)s',
+                             'key': 'nvp.vm-uuid',
+                             'obj_name': 'ns0:OptionValue'}],
+            'memoryMB': 2048,
+            'obj_name': 'ns0:VirtualMachineConfigSpec',
+            'guestId': 'otherGuest',
+            'tools': {'beforeGuestStandby': True,
+                      'beforeGuestReboot': True,
+                      'beforeGuestShutdown': True,
+                      'afterResume': True,
+                      'afterPowerOn': True,
+            'obj_name': 'ns0:ToolsConfigInfo'},
+            'cpuAllocation': {'shares': {'level': 'custom',
+                                         'shares': 1948,
+                                         'obj_name':'ns0:SharesInfo'},
+                              'obj_name':'ns0:ResourceAllocationInfo'},
+            'numCPUs': 2}""" % {'instance_uuid': instance_uuid}
+        expected = re.sub(r'\s+', '', expected)
+        result = re.sub(r'\s+', '', repr(result))
+        self.assertEqual(expected, result)
+
     def test_create_vm(self):
 
         method_list = ['CreateVM_Task', 'get_dynamic_property']
