@@ -14,7 +14,7 @@
         ],
         "accessIPv4": "",
         "accessIPv6": "",
-        "os-security-groups:security_groups": [
+        "security_groups": [
             {
                 "name": "default"
             }

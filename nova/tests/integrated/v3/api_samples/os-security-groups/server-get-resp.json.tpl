@@ -50,7 +50,7 @@
         "tenant_id": "openstack",
         "updated": "%(isotime)s",
         "user_id": "fake",
-        "os-security-groups:security_groups": [{"name": "test"}],
+        "security_groups": [{"name": "test"}],
         "key_name": null
     }
 }

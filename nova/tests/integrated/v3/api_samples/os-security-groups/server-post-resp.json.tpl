@@ -12,6 +12,6 @@
                 "rel": "bookmark"
             }
         ],
-        "os-security-groups:security_groups": [{"name": "test"}]
+        "security_groups": [{"name": "test"}]
     }
 }

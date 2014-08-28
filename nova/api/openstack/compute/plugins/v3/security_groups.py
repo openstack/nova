@@ -29,7 +29,7 @@ from nova.openstack.common import jsonutils
 
 
 ALIAS = 'os-security-groups'
-ATTRIBUTE_NAME = '%s:security_groups' % ALIAS
+ATTRIBUTE_NAME = 'security_groups'
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 softauth = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
 

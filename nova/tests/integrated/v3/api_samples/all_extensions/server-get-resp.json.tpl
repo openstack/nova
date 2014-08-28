@@ -62,7 +62,7 @@
         "os-server-usage:launched_at": "%(strtime)s",
         "os-server-usage:terminated_at": null,
         "progress": 0,
-        "os-security-groups:security_groups": [
+        "security_groups": [
             {
                 "name": "default"
             }
