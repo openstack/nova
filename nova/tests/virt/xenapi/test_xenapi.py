@@ -206,6 +206,7 @@ def get_create_system_metadata(context, instance_type_id):
 def create_instance_with_system_metadata(context, instance_values):
     instance_values['system_metadata'] = get_create_system_metadata(
         context, instance_values['instance_type_id'])
+    instance_values['pci_devices'] = []
     return db.instance_create(context, instance_values)
 
 
