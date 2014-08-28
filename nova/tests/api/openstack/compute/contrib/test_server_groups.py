@@ -17,6 +17,7 @@ from lxml import etree
 import webob
 
 from nova.api.openstack.compute.contrib import server_groups
+from nova.api.openstack.compute.plugins.v3 import server_groups as sg_v3
 from nova.api.openstack import wsgi
 from nova import context
 import nova.db
@@ -78,20 +79,29 @@ def server_group_db(sg):
     return AttrDict(attrs)
 
 
-class ServerGroupTest(test.TestCase):
+class ServerGroupTestV21(test.TestCase):
+
+    sg_controller_cls = sg_v3.ServerGroupController
+
     def setUp(self):
-        super(ServerGroupTest, self).setUp()
-        self.controller = server_groups.ServerGroupController()
-        self.app = fakes.wsgi_app(init_only=('os-server-groups',))
+        super(ServerGroupTestV21, self).setUp()
+        self.controller = self.sg_controller_cls()
+        self.app = self._get_app()
+
+    def _get_app(self):
+        return fakes.wsgi_app_v3(init_only=('os-server-groups',))
+
+    def _get_url(self):
+        return '/v3'
 
     def test_create_server_group_with_no_policies(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
         sgroup = server_group_template()
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'server_group': sgroup})
 
     def test_create_server_group_normal(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
         sgroup = server_group_template()
         policies = ['anti-affinity']
         sgroup['policies'] = policies
@@ -123,7 +133,7 @@ class ServerGroupTest(test.TestCase):
     def test_display_members(self):
         ctx = context.RequestContext('fake_user', 'fake')
         (ig_uuid, instances, members) = self._create_groups_and_instances(ctx)
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
         res_dict = self.controller.show(req, ig_uuid)
         result_members = res_dict['server_group']['members']
         self.assertEqual(2, len(result_members))
@@ -133,7 +143,7 @@ class ServerGroupTest(test.TestCase):
     def test_display_active_members_only(self):
         ctx = context.RequestContext('fake_user', 'fake')
         (ig_uuid, instances, members) = self._create_groups_and_instances(ctx)
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
 
         # delete an instance
         instances[1].destroy(ctx)
@@ -150,66 +160,66 @@ class ServerGroupTest(test.TestCase):
     def test_create_server_group_with_illegal_name(self):
         # blank name
         sgroup = server_group_template(name='', policies=['test_policy'])
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'server_group': sgroup})
 
         # name with length 256
         sgroup = server_group_template(name='1234567890' * 26,
                                        policies=['test_policy'])
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'server_group': sgroup})
 
         # non-string name
         sgroup = server_group_template(name=12, policies=['test_policy'])
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'server_group': sgroup})
 
         # name with leading spaces
         sgroup = server_group_template(name='  leading spaces',
                                        policies=['test_policy'])
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'server_group': sgroup})
 
         # name with trailing spaces
         sgroup = server_group_template(name='trailing space ',
                                        policies=['test_policy'])
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'server_group': sgroup})
 
         # name with all spaces
         sgroup = server_group_template(name='    ',
                                        policies=['test_policy'])
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'server_group': sgroup})
 
     def test_create_server_group_with_illegal_policies(self):
         # blank policy
         sgroup = server_group_template(name='fake-name', policies='')
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'server_group': sgroup})
 
         # policy as integer
         sgroup = server_group_template(name='fake-name', policies=7)
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'server_group': sgroup})
 
         # policy as string
         sgroup = server_group_template(name='fake-name', policies='invalid')
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'server_group': sgroup})
 
         # policy as None
         sgroup = server_group_template(name='fake-name', policies=None)
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'server_group': sgroup})
 
@@ -217,7 +227,7 @@ class ServerGroupTest(test.TestCase):
         sgroup = server_group_template()
         policies = ['anti-affinity', 'affinity']
         sgroup['policies'] = policies
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'server_group': sgroup})
 
@@ -225,7 +235,7 @@ class ServerGroupTest(test.TestCase):
         sgroup = server_group_template()
         policies = ['affinity', 'affinity']
         sgroup['policies'] = policies
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'server_group': sgroup})
 
@@ -233,18 +243,18 @@ class ServerGroupTest(test.TestCase):
         sgroup = server_group_template()
         policies = ['storage-affinity', 'anti-affinity', 'rack-affinity']
         sgroup['policies'] = policies
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'server_group': sgroup})
 
     def test_create_server_group_with_no_body(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, None)
 
     def test_create_server_group_with_no_server_group(self):
         body = {'no-instanceGroup': None}
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, body)
 
@@ -273,7 +283,7 @@ class ServerGroupTest(test.TestCase):
         self.stubs.Set(nova.db, 'instance_group_get_all_by_project_id',
                        return_server_groups)
 
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
         res_dict = self.controller.index(req)
         self.assertEqual(res_dict, expected)
 
@@ -312,7 +322,7 @@ class ServerGroupTest(test.TestCase):
         self.stubs.Set(nova.db, 'instance_group_get_all_by_project_id',
                        return_tenant_server_groups)
 
-        path = '/v2/fake/os-server-groups?all_projects=True'
+        path = self._get_url() + '/os-server-groups?all_projects=True'
 
         req = fakes.HTTPRequest.blank(path, use_admin_context=True)
         res_dict = self.controller.index(req)
@@ -338,15 +348,27 @@ class ServerGroupTest(test.TestCase):
         self.stubs.Set(nova.db, 'instance_group_get',
                        return_server_group)
 
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups/123')
+        req = fakes.HTTPRequest.blank(self._get_url() +
+                                     '/os-server-groups/123')
         resp = self.controller.delete(req, '123')
         self.assertTrue(self.called)
         self.assertEqual(resp.status_int, 204)
 
     def test_delete_non_existing_server_group(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups/invalid')
+        req = fakes.HTTPRequest.blank(self._get_url() +
+                                     '/os-server-groups/invalid')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
                           req, 'invalid')
+
+
+class ServerGroupTestV2(ServerGroupTestV21):
+    sg_controller_cls = server_groups.ServerGroupController
+
+    def _get_app(self):
+        return fakes.wsgi_app(init_only=('os-server-groups',))
+
+    def _get_url(self):
+        return '/v2/fake'
 
 
 class TestServerGroupXMLDeserializer(test.TestCase):
