@@ -35,7 +35,8 @@ def fake_compute_api(*args, **kwargs):
     return True
 
 
-def fake_compute_api_get(self, context, instance_id, want_objects=False):
+def fake_compute_api_get(self, context, instance_id, want_objects=False,
+                         **kwargs):
     # BAD_UUID is something that does not exist
     if instance_id == 'BAD_UUID':
         raise exception.InstanceNotFound(instance_id=instance_id)
@@ -59,6 +60,7 @@ def fake_service_get_by_compute_host(self, context, host):
 class EvacuateTest(test.NoDBTestCase):
 
     _methods = ('resize', 'evacuate')
+    fake_url = '/v2/fake'
 
     def setUp(self):
         super(EvacuateTest, self).setUp()
@@ -68,270 +70,128 @@ class EvacuateTest(test.NoDBTestCase):
         self.UUID = uuid.uuid4()
         for _method in self._methods:
             self.stubs.Set(compute_api.API, _method, fake_compute_api)
-
         self.flags(
             osapi_compute_extension=[
                 'nova.api.openstack.compute.contrib.select_extensions'],
             osapi_compute_ext_list=['Evacuate'])
 
-    def _get_admin_context(self, user_id='fake', project_id='fake'):
-        ctxt = context.get_admin_context()
-        ctxt.user_id = user_id
-        ctxt.project_id = project_id
-        return ctxt
-
-    def test_evacuate_with_valid_instance(self):
-        ctxt = self._get_admin_context()
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
-        req.method = 'POST'
-        req.body = jsonutils.dumps({
-            'evacuate': {
-                'host': 'my-host',
-                'onSharedStorage': 'false',
-                'adminPass': 'MyNewPass'
-                }
-            })
-        req.content_type = 'application/json'
-        res = req.get_response(app)
-        self.assertEqual(res.status_int, 200)
-
-    def test_evacuate_with_underscore_in_hostname(self):
+    def _gen_resource_with_app(self, json_load, is_admin=True, uuid=None):
         ctxt = context.get_admin_context()
         ctxt.user_id = 'fake'
         ctxt.project_id = 'fake'
-        ctxt.is_admin = True
+        ctxt.is_admin = is_admin
         app = fakes.wsgi_app(fake_auth_context=ctxt)
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
+        req = webob.Request.blank('%s/servers/%s/action' % (self.fake_url,
+                                  uuid or self.UUID))
         req.method = 'POST'
-        req.body = jsonutils.dumps({
-            'evacuate': {
-                # NOTE: The hostname grammar in RFC952 does not allow for
-                # underscores in hostnames. However, we should test that it
-                # is supported because it sometimes occurs in real systems.
-                'host': 'underscore_hostname',
-                'onSharedStorage': 'false',
-                'adminPass': 'MyNewPass'
-                }
-            })
+        base_json_load = {'evacuate': json_load}
+        req.body = jsonutils.dumps(base_json_load)
         req.content_type = 'application/json'
-        res = req.get_response(app)
+
+        return req.get_response(app)
+
+    def _fake_update(self, inst, context, instance, task_state,
+                     expected_task_state):
+        return None
+
+    def test_evacuate_with_valid_instance(self):
+        res = self._gen_resource_with_app({'host': 'my-host',
+                                           'onSharedStorage': 'False',
+                                           'adminPass': 'MyNewPass'})
+
         self.assertEqual(res.status_int, 200)
 
     def test_evacuate_with_invalid_instance(self):
-        ctxt = self._get_admin_context()
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % 'BAD_UUID')
-        req.method = 'POST'
-        req.body = jsonutils.dumps({
-            'evacuate': {
-                'host': 'my-host',
-                'onSharedStorage': 'false',
-                'adminPass': 'MyNewPass'
-                }
-            })
-        req.content_type = 'application/json'
-        res = req.get_response(app)
+        res = self._gen_resource_with_app({'host': 'my-host',
+                                           'onSharedStorage': 'False',
+                                           'adminPass': 'MyNewPass'},
+                                           uuid='BAD_UUID')
+
         self.assertEqual(res.status_int, 404)
 
     def test_evacuate_with_active_service(self):
-        ctxt = self._get_admin_context()
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = jsonutils.dumps({
-            'evacuate': {
-                'host': 'my-host',
-                'onSharedStorage': 'false',
-                'adminPass': 'MyNewPass'
-                }
-            })
-
         def fake_evacuate(*args, **kwargs):
             raise exception.ComputeServiceInUse("Service still in use")
 
         self.stubs.Set(compute_api.API, 'evacuate', fake_evacuate)
-
-        res = req.get_response(app)
+        res = self._gen_resource_with_app({'host': 'my-host',
+                                           'onSharedStorage': 'False',
+                                           'adminPass': 'MyNewPass'})
         self.assertEqual(res.status_int, 400)
 
     def test_evacuate_instance_with_no_target(self):
-        ctxt = self._get_admin_context()
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
-        req.method = 'POST'
-        req.body = jsonutils.dumps({
-            'evacuate': {
-                'onSharedStorage': 'False',
-                'adminPass': 'MyNewPass'
-            }
-        })
-        req.content_type = 'application/json'
-        res = req.get_response(app)
-        self.assertEqual(res.status_int, 400)
+        res = self._gen_resource_with_app({'onSharedStorage': 'False',
+                                           'adminPass': 'MyNewPass'})
+        self.assertEqual(400, res.status_int)
 
     def test_evacuate_instance_without_on_shared_storage(self):
-        ctxt = context.get_admin_context()
-        ctxt.user_id = 'fake'
-        ctxt.project_id = 'fake'
-        ctxt.is_admin = True
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
-        req.method = 'POST'
-        req.body = jsonutils.dumps({
-            'evacuate': {
-                'host': 'my-host',
-                'adminPass': 'MyNewPass'
-            }
-        })
-        req.content_type = 'application/json'
-        res = req.get_response(app)
+        res = self._gen_resource_with_app({'host': 'my-host',
+                                           'adminPass': 'MyNewPass'})
         self.assertEqual(res.status_int, 400)
 
     def test_evacuate_instance_with_bad_target(self):
-        ctxt = self._get_admin_context()
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
-        req.method = 'POST'
-        req.body = jsonutils.dumps({
-            'evacuate': {
-                'host': 'bad-host',
-                'onSharedStorage': 'false',
-                'adminPass': 'MyNewPass'
-                }
-            })
-        req.content_type = 'application/json'
-        res = req.get_response(app)
+        res = self._gen_resource_with_app({'host': 'bad-host',
+                                           'onSharedStorage': 'False',
+                                           'adminPass': 'MyNewPass'})
         self.assertEqual(res.status_int, 404)
 
     def test_evacuate_instance_with_target(self):
-        ctxt = self._get_admin_context()
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
-        uuid1 = self.UUID
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % uuid1)
-        req.method = 'POST'
-        req.body = jsonutils.dumps({
-            'evacuate': {
-                'host': 'my-host',
-                'onSharedStorage': 'false',
-                'adminPass': 'MyNewPass'
-            }
-        })
-        req.content_type = 'application/json'
+        self.stubs.Set(compute_api.API, 'update', self._fake_update)
 
-        def fake_update(inst, context, instance,
-                        task_state, expected_task_state):
-            return None
-
-        self.stubs.Set(compute_api.API, 'update', fake_update)
-
-        resp = req.get_response(app)
-        self.assertEqual(resp.status_int, 200)
-        resp_json = jsonutils.loads(resp.body)
+        res = self._gen_resource_with_app({'host': 'my-host',
+                                           'onSharedStorage': 'False',
+                                           'adminPass': 'MyNewPass'})
+        self.assertEqual(res.status_int, 200)
+        resp_json = jsonutils.loads(res.body)
         self.assertEqual("MyNewPass", resp_json['adminPass'])
 
     def test_evacuate_shared_and_pass(self):
-        ctxt = self._get_admin_context()
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
-        uuid1 = self.UUID
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % uuid1)
-        req.method = 'POST'
-        req.body = jsonutils.dumps({
-            'evacuate': {
-                'host': 'my-host',
-                'onSharedStorage': 'True',
-                'adminPass': 'MyNewPass'
-            }
-        })
-        req.content_type = 'application/json'
-
-        def fake_update(inst, context, instance,
-                        task_state, expected_task_state):
-            return None
-
-        self.stubs.Set(compute_api.API, 'update', fake_update)
-
-        res = req.get_response(app)
+        self.stubs.Set(compute_api.API, 'update', self._fake_update)
+        res = self._gen_resource_with_app({'host': 'my-host',
+                                           'onSharedStorage': 'True',
+                                           'adminPass': 'MyNewPass'})
         self.assertEqual(res.status_int, 400)
 
     def test_evacuate_not_shared_pass_generated(self):
-        ctxt = self._get_admin_context()
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
-        uuid1 = self.UUID
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % uuid1)
-        req.method = 'POST'
-        req.body = jsonutils.dumps({
-            'evacuate': {
-                'host': 'my-host',
-                'onSharedStorage': 'False',
-            }
-        })
-
-        req.content_type = 'application/json'
-
-        def fake_update(inst, context, instance,
-                        task_state, expected_task_state):
-            return None
-
-        self.stubs.Set(compute_api.API, 'update', fake_update)
-
-        resp = req.get_response(app)
-        self.assertEqual(resp.status_int, 200)
-        resp_json = jsonutils.loads(resp.body)
+        self.stubs.Set(compute_api.API, 'update', self._fake_update)
+        res = self._gen_resource_with_app({'host': 'my-host',
+                                           'onSharedStorage': 'False'})
+        self.assertEqual(res.status_int, 200)
+        resp_json = jsonutils.loads(res.body)
         self.assertEqual(CONF.password_length, len(resp_json['adminPass']))
 
     def test_evacuate_shared(self):
-        ctxt = self._get_admin_context()
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
-        uuid1 = self.UUID
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % uuid1)
-        req.method = 'POST'
-        req.body = jsonutils.dumps({
-            'evacuate': {
-                'host': 'my-host',
-                'onSharedStorage': 'True',
-            }
-        })
-        req.content_type = 'application/json'
-
-        def fake_update(inst, context, instance,
-                        task_state, expected_task_state):
-            return None
-
-        self.stubs.Set(compute_api.API, 'update', fake_update)
-
-        res = req.get_response(app)
+        self.stubs.Set(compute_api.API, 'update', self._fake_update)
+        res = self._gen_resource_with_app({'host': 'my-host',
+                                           'onSharedStorage': 'True'})
         self.assertEqual(res.status_int, 200)
 
     def test_not_admin(self):
-        ctxt = context.RequestContext('fake', 'fake', is_admin=False)
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
-        uuid1 = self.UUID
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % uuid1)
-        req.method = 'POST'
-        req.body = jsonutils.dumps({
-            'evacuate': {
-                'host': 'my-host',
-                'onSharedStorage': 'True',
-            }
-        })
-        req.content_type = 'application/json'
-        res = req.get_response(app)
+        res = self._gen_resource_with_app({'host': 'my-host',
+                                           'onSharedStorage': 'True'},
+                                          is_admin=False)
         self.assertEqual(res.status_int, 403)
 
     def test_evacuate_to_same_host(self):
-        ctxt = self._get_admin_context()
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
-        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
-        req.method = 'POST'
-        req.body = jsonutils.dumps({
-            'evacuate': {
-                'host': 'host1',
-                'onSharedStorage': 'false',
-                'adminPass': 'MyNewPass'
-                }
-            })
-        req.content_type = 'application/json'
-        res = req.get_response(app)
+        res = self._gen_resource_with_app({'host': 'host1',
+                                           'onSharedStorage': 'False',
+                                           'adminPass': 'MyNewPass'})
         self.assertEqual(res.status_int, 400)
+
+    def test_evacuate_instance_with_empty_host(self):
+        res = self._gen_resource_with_app({'host': '',
+                                           'onSharedStorage': 'False',
+                                           'adminPass': 'MyNewPass'})
+        self.assertEqual(400, res.status_int)
+
+    def test_evacuate_instance_with_underscore_in_hostname(self):
+        # NOTE: The hostname grammar in RFC952 does not allow for
+        # underscores in hostnames. However, we should test that it
+        # is supported because it sometimes occurs in real systems.
+        self.stubs.Set(compute_api.API, 'update', self._fake_update)
+        res = self._gen_resource_with_app({'host': 'underscore_hostname',
+                                           'onSharedStorage': 'False',
+                                           'adminPass': 'MyNewPass'})
+        self.assertEqual(200, res.status_int)
+        resp_json = jsonutils.loads(res.body)
+        self.assertEqual("MyNewPass", resp_json['adminPass'])
