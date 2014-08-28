@@ -256,6 +256,11 @@ class HypervisorsTest(test.NoDBTestCase):
                                       use_admin_context=True)
         self.assertRaises(exc.HTTPNotFound, self.controller.show, req, '3')
 
+    def test_show_non_integer_id(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/abc',
+                                      use_admin_context=True)
+        self.assertRaises(exc.HTTPNotFound, self.controller.show, req, 'abc')
+
     def test_show_withid(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/1',
                                       use_admin_context=True)
@@ -319,6 +324,11 @@ class HypervisorsTest(test.NoDBTestCase):
                     hypervisor_hostname="hyper1",
                     uptime="fake uptime")))
 
+    def test_uptime_non_integer_id(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/abc/uptime',
+                                      use_admin_context=True)
+        self.assertRaises(exc.HTTPNotFound, self.controller.uptime, req, 'abc')
+
     def test_uptime_non_admin(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/1',
                                       use_admin_context=False)
@@ -333,6 +343,22 @@ class HypervisorsTest(test.NoDBTestCase):
         self.assertEqual(result, dict(hypervisors=[
                     dict(id=1, hypervisor_hostname="hyper1"),
                     dict(id=2, hypervisor_hostname="hyper2")]))
+
+    def test_search_non_admin(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/hyper/search',
+                                      use_admin_context=False)
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.search, req, '1')
+
+    def test_search_non_exist(self):
+        def fake_compute_node_search_by_hypervisor_return_empty(context,
+                                                                hypervisor_re):
+            return []
+        self.stubs.Set(db, 'compute_node_search_by_hypervisor',
+                       fake_compute_node_search_by_hypervisor_return_empty)
+        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/a/search',
+                                      use_admin_context=True)
+        self.assertRaises(exc.HTTPNotFound, self.controller.search, req, 'a')
 
     def test_servers(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/hyper/servers',
@@ -356,6 +382,44 @@ class HypervisorsTest(test.NoDBTestCase):
                                       use_admin_context=False)
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.controller.servers, req, '1')
+
+    def test_servers_non_id(self):
+        def fake_compute_node_search_by_hypervisor_return_empty(context,
+                                                                hypervisor_re):
+            return []
+        self.stubs.Set(db, 'compute_node_search_by_hypervisor',
+                       fake_compute_node_search_by_hypervisor_return_empty)
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/115/servers',
+                                      use_admin_context=True)
+        self.assertRaises(exc.HTTPNotFound,
+                          self.controller.servers,
+                          req, '115')
+
+    def test_servers_with_non_integer_hypervisor_id(self):
+        def fake_compute_node_search_by_hypervisor_return_empty(context,
+                                                                hypervisor_re):
+            return []
+        self.stubs.Set(db, 'compute_node_search_by_hypervisor',
+                       fake_compute_node_search_by_hypervisor_return_empty)
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/abc/servers',
+                                        use_admin_context=True)
+        self.assertRaises(exc.HTTPNotFound,
+                          self.controller.servers, req, 'abc')
+
+    def test_servers_with_no_server(self):
+        def fake_instance_get_all_by_host_return_empty(context, hypervisor_re):
+            return []
+        self.stubs.Set(db, 'instance_get_all_by_host',
+                       fake_instance_get_all_by_host_return_empty)
+        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/1/servers',
+                                      use_admin_context=True)
+        result = self.controller.servers(req, '1')
+        self.assertEqual(dict(hypervisors=[
+                    dict(id=1, hypervisor_hostname="hyper1"),
+                    dict(id=2, hypervisor_hostname="hyper2")]),
+                    result)
 
     def test_statistics(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/statistics',
