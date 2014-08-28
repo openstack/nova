@@ -1060,8 +1060,8 @@ class CloudController(object):
                 i['currentState'] = _state_description(instance['vm_state'],
                                             instance['shutdown_terminate'])
             except exception.NotFound:
-                i['currentState'] = _state_description(vm_states.DELETED,
-                                                        True)
+                i['currentState'] = _state_description(
+                                            inst_state.SHUTTING_DOWN, True)
             instances_set.append(i)
         return {'instancesSet': instances_set}
 
