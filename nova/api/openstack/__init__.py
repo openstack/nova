@@ -249,11 +249,13 @@ class APIRouter(base_wsgi.Router):
         raise NotImplementedError()
 
 
-class APIRouterV3(base_wsgi.Router):
-    """Routes requests on the OpenStack v3 API to the appropriate controller
+class APIRouterV21(base_wsgi.Router):
+    """Routes requests on the OpenStack v2.1 API to the appropriate controller
     and method.
     """
 
+    # TODO(oomichi): This namespace will be changed after moving all v3 APIs
+    # to v2.1.
     API_EXTENSION_NAMESPACE = 'nova.api.v3.extensions'
 
     @classmethod
@@ -261,10 +263,12 @@ class APIRouterV3(base_wsgi.Router):
         """Simple paste factory, :class:`nova.wsgi.Router` doesn't have one."""
         return cls()
 
-    def __init__(self, init_only=None):
+    def __init__(self, init_only=None, v3mode=False):
         # TODO(cyeoh): bp v3-api-extension-framework. Currently load
         # all extensions but eventually should be able to exclude
         # based on a config file
+        # TODO(oomichi): We can remove v3mode argument after moving all v3 APIs
+        # to v2.1.
         def _check_load_extension(ext):
             if (self.init_only is None or ext.obj.alias in
                 self.init_only) and isinstance(ext.obj,
@@ -313,7 +317,11 @@ class APIRouterV3(base_wsgi.Router):
             invoke_on_load=True,
             invoke_kwds={"extension_info": self.loaded_extension_info})
 
-        mapper = PlainMapper()
+        if v3mode:
+            mapper = PlainMapper()
+        else:
+            mapper = ProjectMapper()
+
         self.resources = {}
 
         # NOTE(cyeoh) Core API support is rewritten as extensions
@@ -333,7 +341,7 @@ class APIRouterV3(base_wsgi.Router):
             raise exception.CoreAPIMissing(
                 missing_apis=missing_core_extensions)
 
-        super(APIRouterV3, self).__init__(mapper)
+        super(APIRouterV21, self).__init__(mapper)
 
     @staticmethod
     def get_missing_core_extensions(extensions_loaded):

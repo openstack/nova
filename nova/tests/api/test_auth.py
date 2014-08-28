@@ -173,9 +173,9 @@ class TestPipeLineFactory(test.NoDBTestCase):
             TestPipeLineFactory.FakeLoader(), None, noauth=fake_pipeline)
         self._test_pipeline(fake_pipeline, app)
 
-    def test_pipeline_factory_v3(self):
+    def test_pipeline_factory_v21(self):
         fake_pipeline = 'test1 test2 test3'
-        app = nova.api.auth.pipeline_factory_v3(
+        app = nova.api.auth.pipeline_factory_v21(
             TestPipeLineFactory.FakeLoader(), None, noauth=fake_pipeline)
         self._test_pipeline(fake_pipeline, app)
 
