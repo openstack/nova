@@ -203,7 +203,7 @@ systool: CommandFilter, systool, root
 # nova/virt/libvirt/volume.py:
 sginfo: CommandFilter, sginfo, root
 sg_scan: CommandFilter, sg_scan, root
-ln: RegExpFilter, ln, root, ln, --symbolic, --force, /dev/mapper/ip-.*-iscsi-iqn.2010-10.org.openstack:volume-.*, /dev/disk/by-path/ip-.*-iscsi-iqn.2010-10.org.openstack:volume-.*
+ln: RegExpFilter, ln, root, ln, --symbolic, --force, /dev/mapper/ip-.*-iscsi-iqn.*, /dev/disk/by-path/ip-.*-iscsi-iqn.*
 
 # nova/volume/encryptors.py:
 # nova/virt/libvirt/dmcrypt.py:
