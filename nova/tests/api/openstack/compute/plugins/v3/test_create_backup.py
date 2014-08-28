@@ -50,7 +50,7 @@ class CreateBackupTests(admin_only_action_common.CommonMixin,
     def test_create_backup_with_metadata(self):
         metadata = {'123': 'asdf'}
         body = {
-            'create_backup': {
+            'createBackup': {
                 'name': 'Backup 1',
                 'backup_type': 'daily',
                 'rotation': 1,
@@ -76,7 +76,7 @@ class CreateBackupTests(admin_only_action_common.CommonMixin,
     def test_create_backup_no_name(self):
         # Name is required for backups.
         body = {
-            'create_backup': {
+            'createBackup': {
                 'backup_type': 'daily',
                 'rotation': 1,
             },
@@ -87,7 +87,7 @@ class CreateBackupTests(admin_only_action_common.CommonMixin,
     def test_create_backup_no_rotation(self):
         # Rotation is required for backup requests.
         body = {
-            'create_backup': {
+            'createBackup': {
                 'name': 'Backup 1',
                 'backup_type': 'daily',
             },
@@ -100,7 +100,7 @@ class CreateBackupTests(admin_only_action_common.CommonMixin,
         for backup requests
         """
         body = {
-            'create_backup': {
+            'createBackup': {
                 'name': 'Backup 1',
                 'backup_type': 'daily',
                 'rotation': -1,
@@ -111,7 +111,7 @@ class CreateBackupTests(admin_only_action_common.CommonMixin,
 
     def test_create_backup_negative_rotation_with_string_number(self):
         body = {
-            'create_backup': {
+            'createBackup': {
                 'name': 'Backup 1',
                 'backup_type': 'daily',
                 'rotation': '-1',
@@ -123,7 +123,7 @@ class CreateBackupTests(admin_only_action_common.CommonMixin,
     def test_create_backup_no_backup_type(self):
         # Backup Type (daily or weekly) is required for backup requests.
         body = {
-            'create_backup': {
+            'createBackup': {
                 'name': 'Backup 1',
                 'rotation': 1,
             },
@@ -133,7 +133,7 @@ class CreateBackupTests(admin_only_action_common.CommonMixin,
 
     def test_create_backup_non_dict_metadata(self):
         body = {
-            'create_backup': {
+            'createBackup': {
                 'name': 'Backup 1',
                 'backup_type': 'daily',
                 'rotation': 1,
@@ -144,14 +144,14 @@ class CreateBackupTests(admin_only_action_common.CommonMixin,
         self.assertEqual(400, res.status_int)
 
     def test_create_backup_bad_entity(self):
-        body = {'create_backup': 'go'}
+        body = {'createBackup': 'go'}
         res = self._make_request(self._make_url(), body)
         self.assertEqual(400, res.status_int)
 
     def test_create_backup_rotation_is_zero(self):
         # The happy path for creating backups if rotation is zero.
         body = {
-            'create_backup': {
+            'createBackup': {
                 'name': 'Backup 1',
                 'backup_type': 'daily',
                 'rotation': 0,
@@ -175,7 +175,7 @@ class CreateBackupTests(admin_only_action_common.CommonMixin,
     def test_create_backup_rotation_is_positive(self):
         # The happy path for creating backups if rotation is positive.
         body = {
-            'create_backup': {
+            'createBackup': {
                 'name': 'Backup 1',
                 'backup_type': 'daily',
                 'rotation': 1,
@@ -198,7 +198,7 @@ class CreateBackupTests(admin_only_action_common.CommonMixin,
 
     def test_create_backup_rotation_is_string_number(self):
         body = {
-            'create_backup': {
+            'createBackup': {
                 'name': 'Backup 1',
                 'backup_type': 'daily',
                 'rotation': '1',
@@ -221,37 +221,37 @@ class CreateBackupTests(admin_only_action_common.CommonMixin,
 
     def test_create_backup_raises_conflict_on_invalid_state(self):
         body_map = {
-            'create_backup': {
+            'createBackup': {
                 'name': 'Backup 1',
                 'backup_type': 'daily',
                 'rotation': 1,
             },
         }
         args_map = {
-            'create_backup': (
+            'createBackup': (
                 ('Backup 1', 'daily', 1), {'extra_properties': {}}
             ),
         }
         common.check_img_metadata_properties_quota(self.context, {})
-        self._test_invalid_state('create_backup', method='backup',
+        self._test_invalid_state('createBackup', method='backup',
                                  body_map=body_map,
                                  compute_api_args_map=args_map)
 
     def test_create_backup_with_non_existed_instance(self):
         body_map = {
-            'create_backup': {
+            'createBackup': {
                 'name': 'Backup 1',
                 'backup_type': 'daily',
                 'rotation': 1,
             },
         }
         common.check_img_metadata_properties_quota(self.context, {})
-        self._test_non_existing_instance('create_backup',
+        self._test_non_existing_instance('createBackup',
                                          body_map=body_map)
 
     def test_create_backup_with_invalid_create_backup(self):
         body = {
-            'create_backupup': {
+            'createBackupup': {
                 'name': 'Backup 1',
                 'backup_type': 'daily',
                 'rotation': 1,

@@ -18,7 +18,7 @@ from nova.api.validation import parameter_types
 create_backup = {
     'type': 'object',
     'properties': {
-        'create_backup': {
+        'createBackup': {
             'type': 'object',
             'properties': {
                 'name': parameter_types.name,
@@ -39,6 +39,6 @@ create_backup = {
             'additionalProperties': False,
         },
     },
-    'required': ['create_backup'],
+    'required': ['createBackup'],
     'additionalProperties': False,
 }
