@@ -142,14 +142,11 @@ class Image(object):
         tune_items = ['disk_read_bytes_sec', 'disk_read_iops_sec',
             'disk_write_bytes_sec', 'disk_write_iops_sec',
             'disk_total_bytes_sec', 'disk_total_iops_sec']
-        # Note(yaguang): Currently, the only tuning available is Block I/O
-        # throttling for qemu.
-        if self.source_type in ['file', 'block']:
-            for key, value in extra_specs.iteritems():
-                scope = key.split(':')
-                if len(scope) > 1 and scope[0] == 'quota':
-                    if scope[1] in tune_items:
-                        setattr(info, scope[1], value)
+        for key, value in extra_specs.iteritems():
+            scope = key.split(':')
+            if len(scope) > 1 and scope[0] == 'quota':
+                if scope[1] in tune_items:
+                    setattr(info, scope[1], value)
         return info
 
     def check_image_exists(self):
