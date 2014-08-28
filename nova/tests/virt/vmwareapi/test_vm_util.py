@@ -558,6 +558,74 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         result = re.sub(r'\s+', '', repr(result))
         self.assertEqual(expected, result)
 
+    def test_get_vm_create_spec_with_allocations(self):
+        instance_uuid = uuidutils.generate_uuid()
+        fake_instance = {'id': 7, 'name': 'fake!',
+                         'uuid': instance_uuid,
+                         'vcpus': 2, 'memory_mb': 2048}
+        result = vm_util.get_vm_create_spec(fake.FakeFactory(),
+                                            fake_instance, instance_uuid,
+                                            'fake-datastore', [],
+                                            allocations={'cpu_limit': 7,
+                                                         'cpu_reservation': 6})
+        expected = """{
+            'files': {'vmPathName': '[fake-datastore]',
+            'obj_name': 'ns0:VirtualMachineFileInfo'},
+            'instanceUuid': '%(instance_uuid)s',
+            'name': '%(instance_uuid)s', 'deviceChange': [],
+            'extraConfig': [{'value': '%(instance_uuid)s',
+                             'key': 'nvp.vm-uuid',
+                             'obj_name': 'ns0:OptionValue'}],
+            'memoryMB': 2048,
+            'obj_name': 'ns0:VirtualMachineConfigSpec',
+            'guestId': 'otherGuest',
+            'tools': {'beforeGuestStandby': True,
+                      'beforeGuestReboot': True,
+                      'beforeGuestShutdown': True,
+                      'afterResume': True,
+                      'afterPowerOn': True,
+            'obj_name': 'ns0:ToolsConfigInfo'},
+            'cpuAllocation': {'reservation': 6,
+                              'limit': 7,
+                              'obj_name': 'ns0:ResourceAllocationInfo'},
+            'numCPUs': 2}""" % {'instance_uuid': instance_uuid}
+        expected = re.sub(r'\s+', '', expected)
+        result = re.sub(r'\s+', '', repr(result))
+        self.assertEqual(expected, result)
+
+    def test_get_vm_create_spec_with_limit(self):
+        instance_uuid = uuidutils.generate_uuid()
+        fake_instance = {'id': 7, 'name': 'fake!',
+                         'uuid': instance_uuid,
+                         'vcpus': 2, 'memory_mb': 2048}
+        result = vm_util.get_vm_create_spec(fake.FakeFactory(),
+                                            fake_instance, instance_uuid,
+                                            'fake-datastore', [],
+                                            allocations={'cpu_limit': 7})
+        expected = """{
+            'files': {'vmPathName': '[fake-datastore]',
+            'obj_name': 'ns0:VirtualMachineFileInfo'},
+            'instanceUuid': '%(instance_uuid)s',
+            'name': '%(instance_uuid)s', 'deviceChange': [],
+            'extraConfig': [{'value': '%(instance_uuid)s',
+                             'key': 'nvp.vm-uuid',
+                             'obj_name': 'ns0:OptionValue'}],
+            'memoryMB': 2048,
+            'obj_name': 'ns0:VirtualMachineConfigSpec',
+            'guestId': 'otherGuest',
+            'tools': {'beforeGuestStandby': True,
+                      'beforeGuestReboot': True,
+                      'beforeGuestShutdown': True,
+                      'afterResume': True,
+                      'afterPowerOn': True,
+            'obj_name': 'ns0:ToolsConfigInfo'},
+            'cpuAllocation': {'limit': 7,
+                              'obj_name': 'ns0:ResourceAllocationInfo'},
+            'numCPUs': 2}""" % {'instance_uuid': instance_uuid}
+        expected = re.sub(r'\s+', '', expected)
+        result = re.sub(r'\s+', '', repr(result))
+        self.assertEqual(expected, result)
+
     def test_create_vm(self):
 
         method_list = ['CreateVM_Task', 'get_dynamic_property']

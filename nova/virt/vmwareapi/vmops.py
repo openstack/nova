@@ -33,6 +33,7 @@ from nova.compute import vm_states
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _, _LE
+from nova import objects
 from nova.openstack.common import excutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
@@ -188,6 +189,8 @@ class VMwareVMOps(object):
                                            image_info.vif_model,
                                            network_info)
 
+        allocations = self._get_cpu_allocations(instance.instance_type_id)
+
         # Get the create vm config spec
         client_factory = self._session._get_vim().client.factory
         config_spec = vm_util.get_vm_create_spec(client_factory,
@@ -195,11 +198,24 @@ class VMwareVMOps(object):
                                                  instance_name,
                                                  datastore.name,
                                                  vif_infos,
-                                                 image_info.os_type)
+                                                 image_info.os_type,
+                                                 allocations=allocations)
         # Create the VM
         vm_ref = vm_util.create_vm(self._session, instance, dc_info.vmFolder,
                                    config_spec, res_pool_ref)
         return vm_ref
+
+    def _get_cpu_allocations(self, instance_type_id):
+        # Read flavors for allocations
+        flavor = objects.Flavor.get_by_id(
+            nova_context.get_admin_context(read_deleted='yes'),
+            instance_type_id)
+        allocations = {}
+        for key in ('cpu_limit', 'cpu_reservation'):
+            value = flavor.extra_specs.get('quota:' + key)
+            if value:
+                allocations[key] = int(value)
+        return allocations
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None,

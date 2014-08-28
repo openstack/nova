@@ -66,6 +66,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
             'mac_addresses': [{'address': 'de:ad:be:ef:be:ef'}],
             'memory_mb': 8192,
             'flavor': 'm1.large',
+            'instance_type_id': 0,
             'vcpus': 4,
             'root_gb': 80,
             'image_ref': image_ref,

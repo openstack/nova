@@ -100,7 +100,8 @@ def _iface_id_option_value(client_factory, iface_id, port_index):
 
 
 def get_vm_create_spec(client_factory, instance, name, data_store_name,
-                       vif_infos, os_type=constants.DEFAULT_OS_TYPE):
+                       vif_infos, os_type=constants.DEFAULT_OS_TYPE,
+                       allocations=None):
     """Builds the VM Create spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
     config_spec.name = name
@@ -128,6 +129,17 @@ def get_vm_create_spec(client_factory, instance, name, data_store_name,
     config_spec.tools = tools_info
     config_spec.numCPUs = int(instance['vcpus'])
     config_spec.memoryMB = int(instance['memory_mb'])
+
+    # Configure cpu information
+    if (allocations is not None and
+        ('cpu_limit' in allocations or
+         'cpu_reservation' in allocations)):
+        allocation = client_factory.create('ns0:ResourceAllocationInfo')
+        if 'cpu_limit' in allocations:
+            allocation.limit = allocations['cpu_limit']
+        if 'cpu_reservation' in allocations:
+            allocation.reservation = allocations['cpu_reservation']
+        config_spec.cpuAllocation = allocation
 
     vif_spec_list = []
     for vif_info in vif_infos:
