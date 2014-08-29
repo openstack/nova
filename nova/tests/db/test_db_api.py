@@ -2192,29 +2192,17 @@ class InstanceExtraTestCase(test.TestCase):
         self.ctxt = context.get_admin_context()
         self.instance = db.instance_create(self.ctxt, {})
 
-    def test_instance_extra_create(self):
-        inst_extra = db.instance_extra_create(
-                self.ctxt, {'instance_uuid': self.instance['uuid'],
-                            'numa_topology': '{"fake": "topology"}'})
-        self.assertIsNotNone(inst_extra)
-
-    def test_instance_extra_create_none(self):
-        inst_extra = db.instance_extra_create(
-                self.ctxt, {'instance_uuid': self.instance['uuid']})
-        self.assertIsNotNone(inst_extra)
-
-    def test_instance_extra_get_by_uuid(self):
-        db.instance_extra_create(
-                self.ctxt, {'instance_uuid': self.instance['uuid'],
-                            'numa_topology': '{"fake": "topology"}'})
+    def test_instance_extra_get_by_uuid_instance_create(self):
         inst_extra = db.instance_extra_get_by_instance_uuid(
                 self.ctxt, self.instance['uuid'])
-        self.assertEqual('{"fake": "topology"}', inst_extra['numa_topology'])
+        self.assertIsNotNone(inst_extra)
 
-    def test_instance_extra_get_by_uuid_none(self):
+    def test_instance_extra_update_by_uuid(self):
+        db.instance_extra_update_by_uuid(self.ctxt, self.instance['uuid'],
+                                         {'numa_topology': 'changed'})
         inst_extra = db.instance_extra_get_by_instance_uuid(
-                self.ctxt, self.instance['uuid'])
-        self.assertIsNone(inst_extra)
+            self.ctxt, self.instance['uuid'])
+        self.assertEqual('changed', inst_extra.numa_topology)
 
 
 class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
