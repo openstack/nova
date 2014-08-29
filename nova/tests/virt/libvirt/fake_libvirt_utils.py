@@ -196,3 +196,7 @@ def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
 
 def get_arch(image_meta):
     pass
+
+
+def is_valid_hostname(name):
+    return True

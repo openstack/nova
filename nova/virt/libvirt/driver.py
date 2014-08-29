@@ -4825,6 +4825,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
         """
 
+        # 'dest' will be substituted into 'migration_uri' so ensure
+        # it does't contain any characters that could be used to
+        # exploit the URI accepted by libivrt
+        if not libvirt_utils.is_valid_hostname(dest):
+            raise exception.InvalidHostname(hostname=dest)
+
         greenthread.spawn(self._live_migration, context, instance, dest,
                           post_method, recover_method, block_migration,
                           migrate_data)

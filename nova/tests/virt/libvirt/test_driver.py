@@ -8726,6 +8726,27 @@ Active:          8381604 kB
                                                   dstfile, "qcow2")
             mock_define.assert_called_once_with(xmldoc)
 
+    @mock.patch.object(greenthread, "spawn")
+    def test_live_migration_hostname_valid(self, mock_spawn):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr.live_migration(self.context, self.test_instance,
+                            "host1.example.com",
+                            lambda x: x,
+                            lambda x: x)
+        mock_spawn.assert_called_once()
+
+    @mock.patch.object(greenthread, "spawn")
+    @mock.patch.object(fake_libvirt_utils, "is_valid_hostname")
+    def test_live_migration_hostname_invalid(self, mock_hostname, mock_spawn):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        mock_hostname.return_value = False
+        self.assertRaises(exception.InvalidHostname,
+                          drvr.live_migration,
+                          self.context, self.test_instance,
+                          "foo/?com=/bin/sh",
+                          lambda x: x,
+                          lambda x: x)
+
 
 class HostStateTestCase(test.TestCase):
 
