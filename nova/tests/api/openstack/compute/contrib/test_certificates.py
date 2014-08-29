@@ -19,7 +19,9 @@ import mock
 import mox
 from webob import exc
 
-from nova.api.openstack.compute.contrib import certificates
+from nova.api.openstack.compute.contrib import certificates as certificates_v2
+from nova.api.openstack.compute.plugins.v3 import certificates \
+    as certificates_v21
 from nova.cert import rpcapi
 from nova import context
 from nova import exception
@@ -29,15 +31,21 @@ from nova import test
 from nova.tests.api.openstack import fakes
 
 
-class CertificatesTest(test.NoDBTestCase):
+class CertificatesTestV21(test.NoDBTestCase):
+    certificates = certificates_v21
+    url = '/v3/os-certificates'
+    certificate_show_extension = 'compute_extension:v3:os-certificates:show'
+    certificate_create_extension = \
+        'compute_extension:v3:os-certificates:create'
+
     def setUp(self):
-        super(CertificatesTest, self).setUp()
+        super(CertificatesTestV21, self).setUp()
         self.context = context.RequestContext('fake', 'fake')
-        self.controller = certificates.CertificatesController()
+        self.controller = self.certificates.CertificatesController()
 
     def test_translate_certificate_view(self):
         pk, cert = 'fakepk', 'fakecert'
-        view = certificates._translate_certificate_view(cert, pk)
+        view = self.certificates._translate_certificate_view(cert, pk)
         self.assertEqual(view['data'], cert)
         self.assertEqual(view['private_key'], pk)
 
@@ -49,7 +57,7 @@ class CertificatesTest(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        req = fakes.HTTPRequest.blank('/v2/fake/os-certificates/root')
+        req = fakes.HTTPRequest.blank(self.url + '/root')
         res_dict = self.controller.show(req, 'root')
 
         response = {'certificate': {'data': 'fakeroot', 'private_key': None}}
@@ -57,14 +65,14 @@ class CertificatesTest(test.NoDBTestCase):
 
     def test_certificates_show_policy_failed(self):
         rules = {
-            "compute_extension:certificates":
+            self.certificate_show_extension:
             common_policy.parse_rule("!")
         }
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('/v2/fake/os-certificates/root')
+        req = fakes.HTTPRequest.blank(self.url + '/root')
         exc = self.assertRaises(exception.PolicyNotAuthorized,
                                 self.controller.show, req, 'root')
-        self.assertIn("compute_extension:certificates",
+        self.assertIn(self.certificate_show_extension,
                       exc.format_message())
 
     def test_certificates_create_certificate(self):
@@ -78,7 +86,7 @@ class CertificatesTest(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        req = fakes.HTTPRequest.blank('/v2/fake/os-certificates/')
+        req = fakes.HTTPRequest.blank(self.url)
         res_dict = self.controller.create(req)
 
         response = {
@@ -89,29 +97,36 @@ class CertificatesTest(test.NoDBTestCase):
 
     def test_certificates_create_policy_failed(self):
         rules = {
-            "compute_extension:certificates":
+            self.certificate_create_extension:
             common_policy.parse_rule("!")
         }
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('/v2/fake/os-certificates/')
+        req = fakes.HTTPRequest.blank(self.url)
         exc = self.assertRaises(exception.PolicyNotAuthorized,
                                 self.controller.create, req)
-        self.assertIn("compute_extension:certificates",
+        self.assertIn(self.certificate_create_extension,
                       exc.format_message())
 
     @mock.patch.object(rpcapi.CertAPI, 'fetch_ca',
                 side_effect=exception.CryptoCAFileNotFound(project='fake'))
     def test_non_exist_certificates_show(self, mock_fetch_ca):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-certificates/root')
+        req = fakes.HTTPRequest.blank(self.url + '/root')
         self.assertRaises(
             exc.HTTPNotFound,
             self.controller.show,
             req, 'root')
 
 
+class CertificatesTestV2(CertificatesTestV21):
+    certificates = certificates_v2
+    url = '/v2/fake/os-certificates'
+    certificate_show_extension = 'compute_extension:certificates'
+    certificate_create_extension = 'compute_extension:certificates'
+
+
 class CertificatesSerializerTest(test.NoDBTestCase):
     def test_index_serializer(self):
-        serializer = certificates.CertificateTemplate()
+        serializer = certificates_v2.CertificateTemplate()
         text = serializer.serialize(dict(
                 certificate=dict(
                     data='fakecert',
