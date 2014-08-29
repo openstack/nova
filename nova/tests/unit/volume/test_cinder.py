@@ -93,26 +93,22 @@ class CinderApiTestCase(test.NoDBTestCase):
                           self.api.get, self.ctx, volume_id)
 
     def test_create(self):
-        cinder.get_cinder_client_version(self.ctx).AndReturn('2')
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
         cinder._untranslate_volume_summary_view(self.ctx, {'id': 'created_id'})
         self.mox.ReplayAll()
 
         self.api.create(self.ctx, 1, '', '')
 
-    def test_create_failed(self):
-        cinder.get_cinder_client_version(self.ctx).AndReturn('2')
-        cinder.cinderclient(self.ctx).AndRaise(cinder_exception.BadRequest(''))
-        self.mox.ReplayAll()
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_create_failed(self, mock_cinderclient):
+        mock_cinderclient.return_value.volumes.create.side_effect = (
+            cinder_exception.BadRequest(''))
 
         self.assertRaises(exception.InvalidInput,
                           self.api.create, self.ctx, 1, '', '')
 
-    @mock.patch('nova.volume.cinder.get_cinder_client_version')
     @mock.patch('nova.volume.cinder.cinderclient')
-    def test_create_over_quota_failed(self, mock_cinderclient,
-                                      mock_get_version):
-        mock_get_version.return_value = '2'
+    def test_create_over_quota_failed(self, mock_cinderclient):
         mock_cinderclient.return_value.volumes.create.side_effect = (
             cinder_exception.OverLimit(413))
         self.assertRaises(exception.OverQuota, self.api.create, self.ctx,

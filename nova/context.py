@@ -19,6 +19,8 @@
 
 import copy
 
+from keystoneclient import auth
+from keystoneclient import service_catalog
 from oslo.utils import timeutils
 import six
 
@@ -33,6 +35,32 @@ from nova import policy
 LOG = logging.getLogger(__name__)
 
 
+class _ContextAuthPlugin(auth.BaseAuthPlugin):
+    """A keystoneclient auth plugin that uses the values from the Context.
+
+    Ideally we would use the plugin provided by auth_token middleware however
+    this plugin isn't serialized yet so we construct one from the serialized
+    auth data.
+    """
+
+    def __init__(self, auth_token, sc):
+        super(_ContextAuthPlugin, self).__init__()
+
+        self.auth_token = auth_token
+        sc = {'serviceCatalog': sc}
+        self.service_catalog = service_catalog.ServiceCatalogV2(sc)
+
+    def get_token(self, *args, **kwargs):
+        return self.auth_token
+
+    def get_endpoint(self, session, service_type=None, interface=None,
+                     region_name=None, service_name=None, **kwargs):
+        return self.service_catalog.url_for(service_type=service_type,
+                                            service_name=service_name,
+                                            endpoint_type=interface,
+                                            region_name=region_name)
+
+
 class RequestContext(object):
     """Security context and request information.
 
@@ -44,14 +72,17 @@ class RequestContext(object):
                  roles=None, remote_address=None, timestamp=None,
                  request_id=None, auth_token=None, overwrite=True,
                  quota_class=None, user_name=None, project_name=None,
-                 service_catalog=None, instance_lock_checked=False, **kwargs):
+                 service_catalog=None, instance_lock_checked=False,
+                 user_auth_plugin=None, **kwargs):
         """:param read_deleted: 'no' indicates deleted records are hidden,
                 'yes' indicates deleted records are visible,
                 'only' indicates that *only* deleted records are visible.
 
-
            :param overwrite: Set to False to ensure that the greenthread local
                 copy of the index is not overwritten.
+
+           :param user_auth_plugin: The auth plugin for the current request's
+                authentication data.
 
            :param kwargs: Extra arguments that might be present, but we ignore
                 because they possibly came in from older rpc messages.
@@ -92,10 +123,17 @@ class RequestContext(object):
         self.user_name = user_name
         self.project_name = project_name
         self.is_admin = is_admin
+        self.user_auth_plugin = user_auth_plugin
         if self.is_admin is None:
             self.is_admin = policy.check_is_admin(self)
         if overwrite or not hasattr(local.store, 'context'):
             self.update_store()
+
+    def get_auth_plugin(self):
+        if self.user_auth_plugin:
+            return self.user_auth_plugin
+        else:
+            return _ContextAuthPlugin(self.auth_token, self.service_catalog)
 
     def _get_read_deleted(self):
         return self._read_deleted

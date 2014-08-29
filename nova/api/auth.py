@@ -139,6 +139,10 @@ class NovaKeystoneContext(wsgi.Middleware):
                 raise webob.exc.HTTPInternalServerError(
                           _('Invalid service catalog json.'))
 
+        # NOTE(jamielennox): This is a full auth plugin set by auth_token
+        # middleware in newer versions.
+        user_auth_plugin = req.environ.get('keystone.token_auth')
+
         ctx = context.RequestContext(user_id,
                                      project_id,
                                      user_name=user_name,
@@ -147,7 +151,8 @@ class NovaKeystoneContext(wsgi.Middleware):
                                      auth_token=auth_token,
                                      remote_address=remote_address,
                                      service_catalog=service_catalog,
-                                     request_id=req_id)
+                                     request_id=req_id,
+                                     user_auth_plugin=user_auth_plugin)
 
         req.environ['nova.context'] = ctx
         return self.application

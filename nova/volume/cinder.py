@@ -23,7 +23,9 @@ import sys
 
 from cinderclient import client as cinder_client
 from cinderclient import exceptions as cinder_exception
-from cinderclient import service_catalog
+from cinderclient.v1 import client as v1_client
+from keystoneclient import exceptions as keystone_exception
+from keystoneclient import session
 from oslo.config import cfg
 from oslo.utils import strutils
 import six.moves.urllib.parse as urlparse
@@ -45,17 +47,9 @@ cinder_opts = [
                     'endpoint e.g. http://localhost:8776/v1/%(project_id)s'),
     cfg.StrOpt('os_region_name',
                help='Region name of this node'),
-    cfg.StrOpt('ca_certificates_file',
-               help='Location of ca certificates file to use for cinder '
-                    'client requests.'),
     cfg.IntOpt('http_retries',
                default=3,
                help='Number of cinderclient retries on failed http calls'),
-    cfg.IntOpt('http_timeout',
-               help='HTTP inactivity timeout (in seconds)'),
-    cfg.BoolOpt('api_insecure',
-                default=False,
-                help='Allow to perform insecure SSL requests to cinder'),
     cfg.BoolOpt('cross_az_attach',
                 default=True,
                 help='Allow attach between instance and volume in different '
@@ -63,30 +57,81 @@ cinder_opts = [
 ]
 
 CONF = cfg.CONF
-CONF.register_opts(cinder_opts, group='cinder')
+CINDER_OPT_GROUP = 'cinder'
+
+# cinder_opts options in the DEFAULT group were deprecated in Juno
+CONF.register_opts(cinder_opts, group=CINDER_OPT_GROUP)
+
+
+deprecated = {'timeout': [cfg.DeprecatedOpt('http_timeout',
+                                            group=CINDER_OPT_GROUP)],
+              'cafile': [cfg.DeprecatedOpt('ca_certificates_file',
+                                           group=CINDER_OPT_GROUP)],
+              'insecure': [cfg.DeprecatedOpt('api_insecure',
+                                             group=CINDER_OPT_GROUP)]}
+
+session.Session.register_conf_options(CONF,
+                                      CINDER_OPT_GROUP,
+                                      deprecated_opts=deprecated)
 
 LOG = logging.getLogger(__name__)
 
-CINDER_URL = None
+_SESSION = None
+_V1_ERROR_RAISED = False
+
+
+def reset_globals():
+    """Testing method to reset globals.
+    """
+    global _SESSION
+    _SESSION = None
 
 
 def cinderclient(context):
-    global CINDER_URL
-    version = get_cinder_client_version(context)
-    c = cinder_client.Client(version,
-                             context.user_id,
-                             context.auth_token,
-                             project_id=context.project_id,
-                             auth_url=CINDER_URL,
-                             insecure=CONF.cinder.api_insecure,
-                             retries=CONF.cinder.http_retries,
-                             timeout=CONF.cinder.http_timeout,
-                             cacert=CONF.cinder.ca_certificates_file)
-    # noauth extracts user_id:project_id from auth_token
-    c.client.auth_token = context.auth_token or '%s:%s' % (context.user_id,
-                                                           context.project_id)
-    c.client.management_url = CINDER_URL
-    return c
+    global _SESSION
+    global _V1_ERROR_RAISED
+
+    if not _SESSION:
+        _SESSION = session.Session.load_from_conf_options(CONF,
+                                                          CINDER_OPT_GROUP)
+
+    url = None
+    endpoint_override = None
+    version = None
+
+    auth = context.get_auth_plugin()
+    service_type, service_name, interface = CONF.cinder.catalog_info.split(':')
+
+    service_parameters = {'service_type': service_type,
+                          'service_name': service_name,
+                          'interface': interface,
+                          'region_name': CONF.cinder.os_region_name}
+
+    if CONF.cinder.endpoint_template:
+        url = CONF.cinder.endpoint_template % context.to_dict()
+        endpoint_override = url
+    else:
+        url = _SESSION.get_endpoint(auth, **service_parameters)
+
+    # TODO(jamielennox): This should be using proper version discovery from
+    # the cinder service rather than just inspecting the URL for certain string
+    # values.
+    version = get_cinder_client_version(url)
+
+    if version == '1' and not _V1_ERROR_RAISED:
+        msg = _LW('Cinder V1 API is deprecated as of the Juno '
+                  'release, and Nova is still configured to use it. '
+                  'Enable the V2 API in Cinder and set '
+                  'cinder_catalog_info in nova.conf to use it.')
+        LOG.warn(msg)
+        _V1_ERROR_RAISED = True
+
+    return cinder_client.Client(version,
+                                session=_SESSION,
+                                auth=auth,
+                                endpoint_override=endpoint_override,
+                                connect_retries=CONF.cinder.http_retries,
+                                **service_parameters)
 
 
 def _untranslate_volume_summary_view(context, vol):
@@ -166,14 +211,18 @@ def translate_volume_exception(method):
     def wrapper(self, ctx, volume_id, *args, **kwargs):
         try:
             res = method(self, ctx, volume_id, *args, **kwargs)
-        except cinder_exception.ClientException:
+        except (cinder_exception.ClientException,
+                keystone_exception.ClientException):
             exc_type, exc_value, exc_trace = sys.exc_info()
-            if isinstance(exc_value, cinder_exception.NotFound):
+            if isinstance(exc_value, (keystone_exception.NotFound,
+                                      cinder_exception.NotFound)):
                 exc_value = exception.VolumeNotFound(volume_id=volume_id)
-            elif isinstance(exc_value, cinder_exception.BadRequest):
+            elif isinstance(exc_value, (keystone_exception.BadRequest,
+                                        cinder_exception.BadRequest)):
                 exc_value = exception.InvalidInput(reason=exc_value.message)
             raise exc_value, None, exc_trace
-        except cinder_exception.ConnectionError:
+        except (cinder_exception.ConnectionError,
+                keystone_exception.ConnectionError):
             exc_type, exc_value, exc_trace = sys.exc_info()
             exc_value = exception.CinderConnectionFailed(
                                                    reason=exc_value.message)
@@ -189,12 +238,15 @@ def translate_snapshot_exception(method):
     def wrapper(self, ctx, snapshot_id, *args, **kwargs):
         try:
             res = method(self, ctx, snapshot_id, *args, **kwargs)
-        except cinder_exception.ClientException:
+        except (cinder_exception.ClientException,
+                keystone_exception.ClientException):
             exc_type, exc_value, exc_trace = sys.exc_info()
-            if isinstance(exc_value, cinder_exception.NotFound):
+            if isinstance(exc_value, (keystone_exception.NotFound,
+                                      cinder_exception.NotFound)):
                 exc_value = exception.SnapshotNotFound(snapshot_id=snapshot_id)
             raise exc_value, None, exc_trace
-        except cinder_exception.ConnectionError:
+        except (cinder_exception.ConnectionError,
+                keystone_exception.ConnectionError):
             exc_type, exc_value, exc_trace = sys.exc_info()
             exc_value = exception.CinderConnectionFailed(
                                                   reason=exc_value.message)
@@ -203,58 +255,24 @@ def translate_snapshot_exception(method):
     return wrapper
 
 
-def get_cinder_client_version(context):
+def get_cinder_client_version(url):
     """Parse cinder client version by endpoint url.
 
-    :param context: Nova auth context.
+    :param url: URL for cinder.
     :return: str value(1 or 2).
     """
-    global CINDER_URL
-    # FIXME: the cinderclient ServiceCatalog object is mis-named.
-    #        It actually contains the entire access blob.
-    # Only needed parts of the service catalog are passed in, see
-    # nova/context.py.
-    compat_catalog = {
-        'access': {'serviceCatalog': context.service_catalog or []}
-    }
-    sc = service_catalog.ServiceCatalog(compat_catalog)
-    if CONF.cinder.endpoint_template:
-        url = CONF.cinder.endpoint_template % context.to_dict()
-    else:
-        info = CONF.cinder.catalog_info
-        service_type, service_name, endpoint_type = info.split(':')
-        # extract the region if set in configuration
-        if CONF.cinder.os_region_name:
-            attr = 'region'
-            filter_value = CONF.cinder.os_region_name
-        else:
-            attr = None
-            filter_value = None
-        url = sc.url_for(attr=attr,
-                         filter_value=filter_value,
-                         service_type=service_type,
-                         service_name=service_name,
-                         endpoint_type=endpoint_type)
-    LOG.debug('Cinderclient connection created using URL: %s', url)
-
+    # FIXME(jamielennox): Use cinder_client.get_volume_api_from_url when
+    # bug #1386232 is fixed.
     valid_versions = ['v1', 'v2']
-    magic_tuple = urlparse.urlsplit(url)
-    scheme, netloc, path, query, frag = magic_tuple
+    scheme, netloc, path, query, frag = urlparse.urlsplit(url)
     components = path.split("/")
+
     for version in valid_versions:
-        if version in components[1]:
-            version = version[1:]
+        if version in components:
+            return version[1:]
 
-            if not CINDER_URL and version == '1':
-                msg = _LW('Cinder V1 API is deprecated as of the Juno '
-                          'release, and Nova is still configured to use it. '
-                          'Enable the V2 API in Cinder and set '
-                          'cinder_catalog_info in nova.conf to use it.')
-                LOG.warn(msg)
-
-            CINDER_URL = url
-            return version
-    msg = _("Invalid client version, must be one of: %s") % valid_versions
+    msg = "Invalid client version '%s'. must be one of: %s" % (
+        (version, ', '.join(valid_versions)))
     raise cinder_exception.UnsupportedVersion(msg)
 
 
@@ -350,6 +368,7 @@ class API(object):
     def create(self, context, size, name, description, snapshot=None,
                image_id=None, volume_type=None, metadata=None,
                availability_zone=None):
+        client = cinderclient(context)
 
         if snapshot is not None:
             snapshot_id = snapshot['id']
@@ -364,20 +383,20 @@ class API(object):
                       metadata=metadata,
                       imageRef=image_id)
 
-        version = get_cinder_client_version(context)
-        if version == '1':
+        if isinstance(client, v1_client.Client):
             kwargs['display_name'] = name
             kwargs['display_description'] = description
-        elif version == '2':
+        else:
             kwargs['name'] = name
             kwargs['description'] = description
 
         try:
-            item = cinderclient(context).volumes.create(size, **kwargs)
+            item = client.volumes.create(size, **kwargs)
             return _untranslate_volume_summary_view(context, item)
         except cinder_exception.OverLimit:
             raise exception.OverQuota(overs='volumes')
-        except cinder_exception.BadRequest as e:
+        except (cinder_exception.BadRequest,
+                keystone_exception.BadRequest) as e:
             raise exception.InvalidInput(reason=e)
 
     @translate_volume_exception
