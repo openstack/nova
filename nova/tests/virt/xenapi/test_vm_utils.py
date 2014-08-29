@@ -21,6 +21,7 @@ import fixtures
 import mock
 import mox
 from oslo.config import cfg
+import six
 
 from nova.compute import flavors
 from nova.compute import power_state
@@ -802,7 +803,7 @@ class VMRefOrRaiseVMNotFoundTestCase(VMUtilsTestBase):
         try:
             vm_utils.vm_ref_or_raise('session', 'somename')
         except exception.InstanceNotFound as e:
-            self.assertIn('somename', str(e))
+            self.assertIn('somename', six.text_type(e))
         mock.VerifyAll()
 
 

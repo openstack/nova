@@ -34,6 +34,7 @@ from lxml import etree
 import mock
 import mox
 from oslo.config import cfg
+import six
 
 from nova.api.ec2 import cloud
 from nova.api.metadata import base as instance_metadata
@@ -4334,7 +4335,7 @@ class LibvirtConnTestCase(test.TestCase,
         except exception.NovaException as e:
             msg = ('The firewall filter for %s does not exist' %
                    instance_ref['name'])
-            c1 = (0 <= str(e).find(msg))
+            c1 = (0 <= six.text_type(e).find(msg))
         self.assertTrue(c1)
 
         self.assertEqual(29, fake_timer.counter, "Didn't wait the expected "

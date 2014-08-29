@@ -20,6 +20,7 @@
 
 import uuid
 
+import six
 from sqlalchemy.sql.expression import asc
 from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.sql import null
@@ -294,7 +295,7 @@ def bm_interface_set_vif_uuid(context, if_id, vif_uuid):
             session.flush()
         except db_exc.DBError as e:
             # TODO(deva): clean up when db layer raises DuplicateKeyError
-            if str(e).find('IntegrityError') != -1:
+            if six.text_type(e).find('IntegrityError') != -1:
                 raise exception.NovaException(_("Baremetal interface %s "
                         "already in use") % vif_uuid)
             raise

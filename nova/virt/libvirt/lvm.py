@@ -20,6 +20,7 @@
 #
 
 from oslo.config import cfg
+import six
 
 from nova import exception
 from nova.i18n import _
@@ -232,6 +233,6 @@ def remove_volumes(paths):
         try:
             utils.execute(*lvremove, attempts=3, run_as_root=True)
         except processutils.ProcessExecutionError as exp:
-            errors.append(str(exp))
+            errors.append(six.text_type(exp))
     if errors:
         raise exception.VolumesNotRemoved(reason=(', ').join(errors))

@@ -419,7 +419,7 @@ class Controller(object):
             try:
                 deleted = strutils.bool_from_string(deleted, strict=True)
             except ValueError as err:
-                raise exc.HTTPBadRequest(explanation=str(err))
+                raise exc.HTTPBadRequest(explanation=six.text_type(err))
         if updated_since:
             try:
                 timeutils.parse_isotime(updated_since)

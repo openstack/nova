@@ -14,6 +14,7 @@
 
 import netaddr
 from oslo.config import cfg
+import six
 import webob.exc
 
 from nova.api.openstack import extensions
@@ -147,7 +148,7 @@ class FloatingIPBulkController(object):
             else:
                 return net.iter_hosts()
         except netaddr.AddrFormatError as exc:
-            raise exception.InvalidInput(reason=str(exc))
+            raise exception.InvalidInput(reason=six.text_type(exc))
 
 
 class Floating_ips_bulk(extensions.ExtensionDescriptor):

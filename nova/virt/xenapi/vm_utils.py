@@ -28,6 +28,7 @@ from xml.parsers import expat
 
 from eventlet import greenthread
 from oslo.config import cfg
+import six
 import six.moves.urllib.parse as urlparse
 
 from nova.api.metadata import base as instance_metadata
@@ -2377,7 +2378,7 @@ def _resize_part_and_fs(dev, start, old_sectors, new_sectors, flags):
             utils.execute('resize2fs', partition_path, '%ds' % size,
                           run_as_root=True)
         except processutils.ProcessExecutionError as exc:
-            LOG.error(str(exc))
+            LOG.error(six.text_type(exc))
             reason = _("Shrinking the filesystem down with resize2fs "
                        "has failed, please check if you have "
                        "enough free space on your disk.")
@@ -2495,7 +2496,7 @@ def _mount_filesystem(dev_path, dir):
                                  '-t', 'ext2,ext3,ext4,reiserfs',
                                  dev_path, dir, run_as_root=True)
     except processutils.ProcessExecutionError as e:
-        err = str(e)
+        err = six.text_type(e)
     return err
 
 

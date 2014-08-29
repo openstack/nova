@@ -28,6 +28,7 @@ import time
 import mock
 import mox
 from oslo.config import cfg
+import six
 import suds
 
 from nova import block_device
@@ -254,7 +255,7 @@ class VMwareSessionTestCase(test.NoDBTestCase):
             details = {'privilegeId': 'Resource.AssignVMToPool',
                        'object': 'domain-c7'}
             exception_string = '%s %s' % (fault_string, details)
-            self.assertEqual(exception_string, str(e))
+            self.assertEqual(exception_string, six.text_type(e))
 
 
 class VMwareAPIConfTestCase(test.NoDBTestCase):

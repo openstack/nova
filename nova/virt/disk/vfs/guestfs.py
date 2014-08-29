@@ -13,6 +13,7 @@
 # under the License.
 
 from eventlet import tpool
+import six
 
 from nova import exception
 from nova.i18n import _, _LI
@@ -122,7 +123,8 @@ class VFSGuestFS(vfs.VFS):
                 guestfs.GuestFS(python_return_dict=False,
                                 close_on_exit=False))
         except TypeError as e:
-            if 'close_on_exit' in str(e) or 'python_return_dict' in str(e):
+            if ('close_on_exit' in six.text_type(e) or
+                'python_return_dict' in six.text_type(e)):
                 # NOTE(russellb) In case we're not using a version of
                 # libguestfs new enough to support parameters close_on_exit
                 # and python_return_dict which were added in libguestfs 1.20.

@@ -1129,7 +1129,7 @@ class VMwareVMOps(object):
             LOG.debug("Destroyed the VM", instance=instance)
         except Exception as excep:
             LOG.warn(_("In vmwareapi:vmops:confirm_migration, got this "
-                     "exception while destroying the VM: %s") % str(excep))
+                     "exception while destroying the VM: %s"), excep)
 
     def finish_revert_migration(self, context, instance, network_info,
                                 block_device_info, power_on=True):

@@ -24,6 +24,7 @@ import urllib2
 
 import decorator
 from oslo.config import cfg
+import six
 import suds
 
 from nova.i18n import _
@@ -236,13 +237,14 @@ class Vim:
             except Exception as excep:
                 # Socket errors which need special handling for they
                 # might be caused by ESX API call overload
-                if (str(excep).find(ADDRESS_IN_USE_ERROR) != -1 or
-                        str(excep).find(CONN_ABORT_ERROR)) != -1:
+                msg_excep = six.text_type(excep)
+                if (msg_excep.find(ADDRESS_IN_USE_ERROR) != -1 or
+                        msg_excep.find(CONN_ABORT_ERROR)) != -1:
                     raise error_util.SessionOverLoadException(_("Socket "
                                 "error in %s: ") % (attr_name), excep)
                 # Type error that needs special handling for it might be
                 # caused by ESX host API call overload
-                elif str(excep).find(RESP_NOT_XML_ERROR) != -1:
+                elif six.text_type(excep).find(RESP_NOT_XML_ERROR) != -1:
                     raise error_util.SessionOverLoadException(_("Type "
                                 "error in  %s: ") % (attr_name), excep)
                 else:

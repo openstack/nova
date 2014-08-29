@@ -2674,17 +2674,17 @@ class LibvirtDriver(driver.ComputeDriver):
         except OSError as e:
             if e.errno == errno.EINVAL:
                 LOG.debug("Path '%(path)s' does not support direct I/O: "
-                          "'%(ex)s'", {'path': dirpath, 'ex': str(e)})
+                          "'%(ex)s'", {'path': dirpath, 'ex': e})
                 hasDirectIO = False
             else:
                 with excutils.save_and_reraise_exception():
                     LOG.error(_LE("Error on '%(path)s' while checking "
                                   "direct I/O: '%(ex)s'"),
-                              {'path': dirpath, 'ex': str(e)})
+                              {'path': dirpath, 'ex': e})
         except Exception as e:
             with excutils.save_and_reraise_exception():
                 LOG.error(_LE("Error on '%(path)s' while checking direct I/O: "
-                              "'%(ex)s'"), {'path': dirpath, 'ex': str(e)})
+                              "'%(ex)s'"), {'path': dirpath, 'ex': e})
         finally:
             try:
                 os.unlink(testfile)
@@ -3028,7 +3028,7 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.PciDevicePrepareFailed(id=dev['id'],
                                                    instance_uuid=
                                                    dev['instance_uuid'],
-                                                   reason=str(exc))
+                                                   reason=six.text_type(exc))
 
     def _detach_pci_devices(self, dom, pci_devs):
 

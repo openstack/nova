@@ -16,6 +16,8 @@
 """
 Exception classes and SOAP response error checking module.
 """
+import six
+
 from nova import exception
 from nova.i18n import _
 from nova.openstack.common import log as logging
@@ -45,11 +47,12 @@ class VimException(Exception):
             # this method like VimFaultException
             raise ValueError(_("exception_summary must not be a list"))
 
-        self.exception_summary = str(exception_summary)
+        self.exception_summary = six.text_type(exception_summary)
         self.exception_obj = excep
 
     def __str__(self):
-        return self.exception_summary + ": " + str(self.exception_obj)
+        return (self.exception_summary + ": " +
+                six.text_type(self.exception_obj))
 
 
 class SessionOverLoadException(VimException):

@@ -240,7 +240,7 @@ class GlanceClientWrapper(object):
                 LOG.exception(error_msg)
                 if attempt == num_attempts:
                     raise exception.GlanceConnectionFailed(
-                            host=host, port=port, reason=str(e))
+                            host=host, port=port, reason=six.text_type(e))
                 time.sleep(1)
 
 

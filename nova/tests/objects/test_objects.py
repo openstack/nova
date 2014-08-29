@@ -496,7 +496,7 @@ class _TestObject(object):
         except NotImplementedError as ex:
             raised = True
         self.assertTrue(raised)
-        self.assertIn('foobar', str(ex))
+        self.assertIn('foobar', six.text_type(ex))
 
     def test_loaded_in_primitive(self):
         obj = MyObj(foo=1)
