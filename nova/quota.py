@@ -778,7 +778,7 @@ class NoopQuotaDriver(object):
         """
         quotas = {}
         for resource in resources.values():
-            quotas[resource.name].update(minimum=0, maximum=-1)
+            quotas[resource.name] = {'minimum': 0, 'maximum': -1}
         return quotas
 
     def limit_check(self, context, resources, values, project_id=None,

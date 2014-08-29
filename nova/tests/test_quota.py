@@ -2562,12 +2562,14 @@ class NoopQuotaDriverTestCase(test.TestCase):
         self.expected_with_usages = {}
         self.expected_without_usages = {}
         self.expected_without_dict = {}
+        self.expected_settable_quotas = {}
         for r in quota.QUOTAS._resources:
             self.expected_with_usages[r] = dict(limit=-1,
                                                 in_use=-1,
                                                 reserved=-1)
             self.expected_without_usages[r] = dict(limit=-1)
             self.expected_without_dict[r] = -1
+            self.expected_settable_quotas[r] = dict(minimum=0, maximum=-1)
 
         self.driver = quota.NoopQuotaDriver()
 
@@ -2631,3 +2633,16 @@ class NoopQuotaDriverTestCase(test.TestCase):
                                              'fake_user',
                                              usages=False)
         self.assertEqual(self.expected_without_usages, result)
+
+    def test_get_settable_quotas_with_user(self):
+        result = self.driver.get_settable_quotas(None,
+                                                 quota.QUOTAS._resources,
+                                                 'test_project',
+                                                 'fake_user')
+        self.assertEqual(self.expected_settable_quotas, result)
+
+    def test_get_settable_quotas_without_user(self):
+        result = self.driver.get_settable_quotas(None,
+                                                 quota.QUOTAS._resources,
+                                                 'test_project')
+        self.assertEqual(self.expected_settable_quotas, result)
