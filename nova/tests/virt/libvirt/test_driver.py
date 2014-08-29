@@ -377,7 +377,7 @@ class FakeVolumeDriver(object):
     def get_xml(self, *args):
         return ""
 
-    def connect_volume(self, *args):
+    def get_config(self, *args):
         """Connect the volume to a fake device."""
         conf = vconfig.LibvirtConfigGuestDisk()
         conf.source_type = "network"
@@ -386,6 +386,10 @@ class FakeVolumeDriver(object):
         conf.target_dev = "fake"
         conf.target_bus = "fake"
         return conf
+
+    def connect_volume(self, *args):
+        """Connect the volume to a fake device."""
+        return self.get_config()
 
 
 class FakeConfigGuestDisk(object):
@@ -4471,6 +4475,26 @@ class LibvirtConnTestCase(test.TestCase,
         expected['container_format'] = base.get('container_format', 'bare')
         ret = conn._create_snapshot_metadata(base, instance, img_fmt, snp_name)
         self.assertEqual(ret, expected)
+
+    @mock.patch('nova.virt.libvirt.volume.LibvirtFakeVolumeDriver.'
+                'connect_volume')
+    @mock.patch('nova.virt.libvirt.volume.LibvirtFakeVolumeDriver.get_config')
+    def test_get_volume_config(self, get_config, connect_volume):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        connection_info = {'driver_volume_type': 'fake',
+                           'data': {'device_path': '/fake',
+                                    'access_mode': 'rw'}}
+        bdm = {'device_name': 'vdb',
+               'disk_bus': 'fake-bus',
+               'device_type': 'fake-type'}
+        disk_info = {'bus': bdm['disk_bus'], 'type': bdm['device_type'],
+                     'dev': 'vdb'}
+        mock_config = mock.MagicMock()
+
+        get_config.return_value = mock_config
+        config = conn._get_volume_config(connection_info, disk_info)
+        get_config.assert_called_once_with(connection_info, disk_info)
+        self.assertEqual(mock_config, config)
 
     def test_attach_invalid_volume_type(self):
         self.create_fake_libvirt_mock()
