@@ -1387,13 +1387,15 @@ class ComputeTestCase(BaseTestCase):
         def fake_is_neutron():
             return True
         self.stubs.Set(utils, 'is_neutron', fake_is_neutron)
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id='adadds')])
         self.assertRaises(exception.MultiplePortsNotApplicable,
                           self.compute_api.create,
                           self.context,
                           instance_type=instance_type,
                           image_href=None,
                           max_count=2,
-                          requested_networks=[(None, None, 'adadds')])
+                          requested_networks=requested_networks)
 
     def test_create_instance_with_oversubscribed_ram(self):
         # Test passing of oversubscribed ram policy from the scheduler.

@@ -823,7 +823,7 @@ class Controller(wsgi.Controller):
                 expl = _('Bad networks format')
                 raise exc.HTTPBadRequest(explanation=expl)
             requested_networks = self._get_requested_networks(
-                requested_networks).as_tuples()
+                requested_networks)
 
         (access_ip_v4, ) = server_dict.get('accessIPv4'),
         if access_ip_v4 is not None:

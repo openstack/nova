@@ -2160,7 +2160,7 @@ class ServersControllerCreateTest(test.TestCase):
         def create(*args, **kwargs):
             result = [('76fa36fc-c930-4bf3-8c8a-ea2a2420deb6', None,
                        None)]
-            self.assertEqual(kwargs['requested_networks'], result)
+            self.assertEqual(result, kwargs['requested_networks'].as_tuples())
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)

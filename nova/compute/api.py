@@ -442,6 +442,9 @@ class API(base.Base):
         and the fixed IP address for each network provided is within
         same the network block
         """
+        if requested_networks is not None:
+            # NOTE(danms): Temporary transition
+            requested_networks = requested_networks.as_tuples()
         return self.network_api.validate_networks(context, requested_networks,
                                                   max_count)
 
@@ -995,6 +998,9 @@ class API(base.Base):
             self._record_action_start(context, instance,
                                       instance_actions.CREATE)
 
+        if requested_networks is not None:
+            # NOTE(danms): Temporary transition
+            requested_networks = requested_networks.as_tuples()
         self.compute_task_api.build_instances(context,
                 instances=instances, image=boot_meta,
                 filter_properties=filter_properties,
@@ -1264,7 +1270,7 @@ class API(base.Base):
                   'availability_zone': availability_zone}
         check_policy(context, 'create', target)
 
-        if requested_networks:
+        if requested_networks and len(requested_networks):
             check_policy(context, 'create:attach_network', target)
 
         if block_device_mapping:
@@ -1272,8 +1278,8 @@ class API(base.Base):
 
     def _check_multiple_instances_neutron_ports(self, requested_networks):
         """Check whether multiple instances are created from port id(s)."""
-        for net, ip, port in requested_networks:
-            if port:
+        for requested_net in requested_networks:
+            if requested_net.port_id:
                 msg = _("Unable to launch multiple instances with"
                         " a single configured port ID. Please launch your"
                         " instance one by one with different ports.")
@@ -1282,22 +1288,11 @@ class API(base.Base):
     def _check_multiple_instances_and_specified_ip(self, requested_networks):
         """Check whether multiple instances are created with specified ip."""
 
-        error = False
-        if utils.is_neutron():
-            for net, ip, port in requested_networks:
-                if net and ip:
-                    error = True
-                    break
-        else:
-            # nova-network case
-            for id, ip in requested_networks:
-                if id and ip:
-                    error = True
-                    break
-        if error:
-            msg = _("max_count cannot be greater than 1 if an fixed_ip "
-                    "is specified.")
-            raise exception.InvalidFixedIpAndMaxCountRequest(reason=msg)
+        for requested_net in requested_networks:
+            if requested_net.network_id and requested_net.address:
+                msg = _("max_count cannot be greater than 1 if an fixed_ip "
+                        "is specified.")
+                raise exception.InvalidFixedIpAndMaxCountRequest(reason=msg)
 
     @hooks.add_hook("create_instance")
     def create(self, context, instance_type,
