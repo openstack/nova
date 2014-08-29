@@ -68,6 +68,7 @@ from nova.openstack.common import uuidutils
 from nova import policy
 from nova import quota
 from nova import test
+from nova.tests.compute import eventlet_utils
 from nova.tests.compute import fake_resource_tracker
 from nova.tests.db import fakes as db_fakes
 from nova.tests import fake_block_device
@@ -170,6 +171,8 @@ class BaseTestCase(test.TestCase):
         self.addCleanup(fake_notifier.reset)
 
         self.compute = importutils.import_object(CONF.compute_manager)
+        # execute power syncing synchronously for testing:
+        self.compute._sync_power_pool = eventlet_utils.SyncPool()
 
         # override tracker with a version that doesn't need the database:
         fake_rt = fake_resource_tracker.FakeResourceTracker(self.compute.host,

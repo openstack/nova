@@ -598,6 +598,8 @@ class ComputeManager(manager.Manager):
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
         self._resource_tracker_dict = {}
         self.instance_events = InstanceEvents()
+        self._sync_power_pool = eventlet.GreenPool()
+        self._syncs_in_progress = {}
 
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
@@ -5512,7 +5514,7 @@ class ComputeManager(manager.Manager):
                      {'num_db_instances': num_db_instances,
                       'num_vm_instances': num_vm_instances})
 
-        for db_instance in db_instances:
+        def _sync(db_instance):
             # NOTE(melwitt): This must be synchronized as we query state from
             #                two separate sources, the driver and the database.
             #                They are set (in stop_instance) and read, in sync.
@@ -5526,6 +5528,19 @@ class ComputeManager(manager.Manager):
                 LOG.exception(_LE("Periodic sync_power_state task had an "
                                   "error while processing an instance."),
                               instance=db_instance)
+
+            self._syncs_in_progress.pop(db_instance.uuid)
+
+        for db_instance in db_instances:
+            # process syncs asynchronously - don't want instance locking to
+            # block entire periodic task thread
+            uuid = db_instance.uuid
+            if uuid in self._syncs_in_progress:
+                LOG.debug('Sync already in progress for %s' % uuid)
+            else:
+                LOG.debug('Triggering sync for uuid %s' % uuid)
+                self._syncs_in_progress[uuid] = True
+                self._sync_power_pool.spawn_n(_sync, db_instance)
 
     def _query_driver_power_state_and_sync(self, context, db_instance):
         if db_instance.task_state is not None:

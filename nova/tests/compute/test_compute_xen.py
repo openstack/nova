@@ -19,6 +19,7 @@ from nova import context
 from nova import objects
 from nova.objects import instance as instance_obj
 from nova.openstack.common import importutils
+from nova.tests.compute import eventlet_utils
 from nova.tests import fake_instance
 from nova.tests.virt.xenapi import stubs
 from nova.virt.xenapi import vm_utils
@@ -38,6 +39,8 @@ class ComputeXenTestCase(stubs.XenAPITestBaseNoDB):
 
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.compute = importutils.import_object(CONF.compute_manager)
+        # execute power syncing synchronously for testing:
+        self.compute._sync_power_pool = eventlet_utils.SyncPool()
 
     def test_sync_power_states_instance_not_found(self):
         db_instance = fake_instance.fake_db_instance()
