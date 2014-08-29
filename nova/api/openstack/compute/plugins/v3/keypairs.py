@@ -27,7 +27,7 @@ from nova import exception
 from nova.i18n import _
 
 
-ALIAS = 'keypairs'
+ALIAS = 'os-keypairs'
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 soft_authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
 
@@ -48,8 +48,10 @@ class KeypairController(object):
             clean[attr] = keypair[attr]
         return clean
 
+    # TODO(oomichi): Here should be 201(Created) instead of 200 by v2.1
+    # +microversions because the keypair creation finishes when returning
+    # a response.
     @extensions.expected_errors((400, 403, 409))
-    @wsgi.response(201)
     @validation.schema(keypairs.create)
     def create(self, req, body):
         """Create or import keypair.
@@ -92,7 +94,10 @@ class KeypairController(object):
         except exception.KeyPairExists as exc:
             raise webob.exc.HTTPConflict(explanation=exc.format_message())
 
-    @wsgi.response(204)
+    # TODO(oomichi): Here should be 204(No Content) instead of 202 by v2.1
+    # +microversions because the resource keypair has been deleted completely
+    # when returning a response.
+    @wsgi.response(202)
     @extensions.expected_errors(404)
     def delete(self, req, id):
         """Delete a keypair with a given name."""
@@ -113,7 +118,10 @@ class KeypairController(object):
             keypair = self.api.get_key_pair(context, context.user_id, id)
         except exception.KeypairNotFound as exc:
             raise webob.exc.HTTPNotFound(explanation=exc.format_message())
-        return {'keypair': self._filter_keypair(keypair)}
+        # TODO(oomichi): It is necessary to filter a response of keypair with
+        # _filter_keypair() when v2.1+microversions for implementing consistent
+        # behaviors in this keypair resource.
+        return {'keypair': keypair}
 
     @extensions.expected_errors(())
     def index(self, req):
@@ -165,7 +173,7 @@ class Keypairs(extensions.V3APIExtensionBase):
 
     def get_resources(self):
         resources = [
-            extensions.ResourceExtension('keypairs',
+            extensions.ResourceExtension(ALIAS,
                                          KeypairController())]
         return resources
 

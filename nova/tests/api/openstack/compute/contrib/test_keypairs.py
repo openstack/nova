@@ -16,7 +16,8 @@
 from lxml import etree
 import webob
 
-from nova.api.openstack.compute.contrib import keypairs
+from nova.api.openstack.compute.contrib import keypairs as keypairs_v2
+from nova.api.openstack.compute.plugins.v3 import keypairs as keypairs_v21
 from nova.api.openstack import wsgi
 from nova import db
 from nova import exception
@@ -60,11 +61,15 @@ def db_key_pair_create_duplicate(context, keypair):
     raise exception.KeyPairExists(key_name=keypair.get('name', ''))
 
 
-class KeypairsTest(test.TestCase):
+class KeypairsTestV21(test.TestCase):
+    base_url = '/v3'
+
+    def _setup_app(self):
+        self.app = fakes.wsgi_app_v3(init_only=('os-keypairs', 'servers'))
+        self.app_server = self.app
 
     def setUp(self):
-        super(KeypairsTest, self).setUp()
-        self.Controller = keypairs.Controller()
+        super(KeypairsTestV21, self).setUp()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
 
@@ -78,10 +83,10 @@ class KeypairsTest(test.TestCase):
             osapi_compute_extension=[
                 'nova.api.openstack.compute.contrib.select_extensions'],
             osapi_compute_ext_list=['Keypairs'])
-        self.app = fakes.wsgi_app(init_only=('os-keypairs',))
+        self._setup_app()
 
     def test_keypair_list(self):
-        req = webob.Request.blank('/v2/fake/os-keypairs')
+        req = webob.Request.blank(self.base_url + '/os-keypairs')
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 200)
         res_dict = jsonutils.loads(res.body)
@@ -90,7 +95,7 @@ class KeypairsTest(test.TestCase):
 
     def test_keypair_create(self):
         body = {'keypair': {'name': 'create_test'}}
-        req = webob.Request.blank('/v2/fake/os-keypairs')
+        req = webob.Request.blank(self.base_url + '/os-keypairs')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
@@ -101,7 +106,7 @@ class KeypairsTest(test.TestCase):
         self.assertTrue(len(res_dict['keypair']['private_key']) > 0)
 
     def _test_keypair_create_bad_request_case(self, body):
-        req = webob.Request.blank('/v2/fake/os-keypairs')
+        req = webob.Request.blank(self.base_url + '/os-keypairs')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
@@ -157,7 +162,7 @@ class KeypairsTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v2/fake/os-keypairs')
+        req = webob.Request.blank(self.base_url + '/os-keypairs')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
@@ -190,7 +195,7 @@ class KeypairsTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v2/fake/os-keypairs')
+        req = webob.Request.blank(self.base_url + '/os-keypairs')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
@@ -214,7 +219,7 @@ class KeypairsTest(test.TestCase):
             },
         }
 
-        req = webob.Request.blank('/v2/fake/os-keypairs')
+        req = webob.Request.blank(self.base_url + '/os-keypairs')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
@@ -228,7 +233,7 @@ class KeypairsTest(test.TestCase):
     def test_keypair_create_duplicate(self):
         self.stubs.Set(db, "key_pair_create", db_key_pair_create_duplicate)
         body = {'keypair': {'name': 'create_duplicate'}}
-        req = webob.Request.blank('/v2/fake/os-keypairs')
+        req = webob.Request.blank(self.base_url + '/os-keypairs')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
@@ -240,14 +245,14 @@ class KeypairsTest(test.TestCase):
             res_dict['conflictingRequest']['message'])
 
     def test_keypair_delete(self):
-        req = webob.Request.blank('/v2/fake/os-keypairs/FAKE')
+        req = webob.Request.blank(self.base_url + '/os-keypairs/FAKE')
         req.method = 'DELETE'
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 202)
 
     def test_keypair_get_keypair_not_found(self):
-        req = webob.Request.blank('/v2/fake/os-keypairs/DOESNOTEXIST')
+        req = webob.Request.blank(self.base_url + '/os-keypairs/DOESNOTEXIST')
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 404)
 
@@ -258,7 +263,7 @@ class KeypairsTest(test.TestCase):
 
         self.stubs.Set(db, "key_pair_get",
                        db_key_pair_get_not_found)
-        req = webob.Request.blank('/v2/fake/os-keypairs/WHAT')
+        req = webob.Request.blank(self.base_url + '/os-keypairs/WHAT')
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 404)
 
@@ -270,7 +275,7 @@ class KeypairsTest(test.TestCase):
 
         self.stubs.Set(db, "key_pair_get", _db_key_pair_get)
 
-        req = webob.Request.blank('/v2/fake/os-keypairs/FAKE')
+        req = webob.Request.blank(self.base_url + '/os-keypairs/FAKE')
         req.method = 'GET'
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
@@ -287,7 +292,7 @@ class KeypairsTest(test.TestCase):
 
         self.stubs.Set(db, "key_pair_get", _db_key_pair_get)
 
-        req = webob.Request.blank('/v2/fake/os-keypairs/FAKE')
+        req = webob.Request.blank(self.base_url + '/os-keypairs/FAKE')
         req.method = 'GET'
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
@@ -298,9 +303,9 @@ class KeypairsTest(test.TestCase):
                         fakes.fake_instance_get())
         self.stubs.Set(db, 'instance_get_by_uuid',
                         fakes.fake_instance_get())
-        req = webob.Request.blank('/v2/fake/servers/1')
+        req = webob.Request.blank(self.base_url + '/servers/1')
         req.headers['Content-Type'] = 'application/json'
-        response = req.get_response(fakes.wsgi_app(init_only=('servers',)))
+        response = req.get_response(self.app_server)
         self.assertEqual(response.status_int, 200)
         res_dict = jsonutils.loads(response.body)
         self.assertIn('key_name', res_dict['server'])
@@ -309,8 +314,8 @@ class KeypairsTest(test.TestCase):
     def test_detail_servers(self):
         self.stubs.Set(db, 'instance_get_all_by_filters',
                         fakes.fake_instance_get_all_by_filters())
-        req = fakes.HTTPRequest.blank('/v2/fake/servers/detail')
-        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
+        req = fakes.HTTPRequest.blank(self.base_url + '/servers/detail')
+        res = req.get_response(self.app_server)
         server_dicts = jsonutils.loads(res.body)['servers']
         self.assertEqual(len(server_dicts), 5)
 
@@ -319,11 +324,13 @@ class KeypairsTest(test.TestCase):
             self.assertEqual(server_dict['key_name'], '')
 
 
-class KeypairPolicyTest(test.TestCase):
+class KeypairPolicyTestV21(test.TestCase):
+    KeyPairController = keypairs_v21.KeypairController()
+    policy_path = 'compute_extension:v3:os-keypairs'
+    base_url = '/v3'
 
     def setUp(self):
-        super(KeypairPolicyTest, self).setUp()
-        self.KeyPairController = keypairs.KeypairController()
+        super(KeypairPolicyTestV21, self).setUp()
 
         def _db_key_pair_get(context, user_id, name):
             return dict(test_keypair.fake_keypair,
@@ -339,78 +346,85 @@ class KeypairPolicyTest(test.TestCase):
                        db_key_pair_destroy)
 
     def test_keypair_list_fail_policy(self):
-        rules = {'compute_extension:keypairs:index':
+        rules = {self.policy_path + ':index':
                      common_policy.parse_rule('role:admin')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs')
+        req = fakes.HTTPRequest.blank(self.base_url + '/os-keypairs')
         self.assertRaises(exception.Forbidden,
                           self.KeyPairController.index,
                           req)
 
     def test_keypair_list_pass_policy(self):
-        rules = {'compute_extension:keypairs:index':
+        rules = {self.policy_path + ':index':
                      common_policy.parse_rule('')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs')
+        req = fakes.HTTPRequest.blank(self.base_url + '/os-keypairs')
         res = self.KeyPairController.index(req)
         self.assertIn('keypairs', res)
 
     def test_keypair_show_fail_policy(self):
-        rules = {'compute_extension:keypairs:show':
+        rules = {self.policy_path + ':show':
                      common_policy.parse_rule('role:admin')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs/FAKE')
+        req = fakes.HTTPRequest.blank(self.base_url + '/os-keypairs/FAKE')
         self.assertRaises(exception.Forbidden,
                           self.KeyPairController.show,
                           req, 'FAKE')
 
     def test_keypair_show_pass_policy(self):
-        rules = {'compute_extension:keypairs:show':
+        rules = {self.policy_path + ':show':
                      common_policy.parse_rule('')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs/FAKE')
+        req = fakes.HTTPRequest.blank(self.base_url + '/os-keypairs/FAKE')
         res = self.KeyPairController.show(req, 'FAKE')
         self.assertIn('keypair', res)
 
     def test_keypair_create_fail_policy(self):
         body = {'keypair': {'name': 'create_test'}}
-        rules = {'compute_extension:keypairs:create':
+        rules = {self.policy_path + ':create':
                      common_policy.parse_rule('role:admin')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs')
+        req = fakes.HTTPRequest.blank(self.base_url + '/os-keypairs')
         req.method = 'POST'
         self.assertRaises(exception.Forbidden,
                           self.KeyPairController.create,
-                          req, body)
+                          req, body=body)
 
     def test_keypair_create_pass_policy(self):
         body = {'keypair': {'name': 'create_test'}}
-        rules = {'compute_extension:keypairs:create':
+        rules = {self.policy_path + ':create':
                      common_policy.parse_rule('')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs')
+        req = fakes.HTTPRequest.blank(self.base_url + '/os-keypairs')
         req.method = 'POST'
-        res = self.KeyPairController.create(req, body)
+        res = self.KeyPairController.create(req, body=body)
         self.assertIn('keypair', res)
 
     def test_keypair_delete_fail_policy(self):
-        rules = {'compute_extension:keypairs:delete':
+        rules = {self.policy_path + ':delete':
                      common_policy.parse_rule('role:admin')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs/FAKE')
+        req = fakes.HTTPRequest.blank(self.base_url + '/os-keypairs/FAKE')
         req.method = 'DELETE'
         self.assertRaises(exception.Forbidden,
                           self.KeyPairController.delete,
                           req, 'FAKE')
 
     def test_keypair_delete_pass_policy(self):
-        rules = {'compute_extension:keypairs:delete':
+        rules = {self.policy_path + ':delete':
                      common_policy.parse_rule('')}
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs/FAKE')
+        req = fakes.HTTPRequest.blank(self.base_url + '/os-keypairs/FAKE')
         req.method = 'DELETE'
         res = self.KeyPairController.delete(req, 'FAKE')
-        self.assertEqual(res.status_int, 202)
+
+        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # method instead of status_int in a response object.
+        if isinstance(self.KeyPairController, keypairs_v21.KeypairController):
+            status_int = self.KeyPairController.delete.wsgi_code
+        else:
+            status_int = res.status_int
+        self.assertEqual(202, status_int)
 
 
 class KeypairsXMLSerializerTest(test.TestCase):
@@ -425,7 +439,7 @@ class KeypairsXMLSerializerTest(test.TestCase):
                 fingerprint='fake_fingerprint',
                 user_id='fake_user_id',
                 name='fake_key_name'))
-        serializer = keypairs.KeypairTemplate()
+        serializer = keypairs_v2.KeypairTemplate()
         text = serializer.serialize(exemplar)
 
         tree = etree.fromstring(text)
@@ -445,7 +459,7 @@ class KeypairsXMLSerializerTest(test.TestCase):
                         name='key2_name',
                         public_key='key2_key',
                         fingerprint='key2_fingerprint'))])
-        serializer = keypairs.KeypairsTemplate()
+        serializer = keypairs_v2.KeypairsTemplate()
         text = serializer.serialize(exemplar)
 
         tree = etree.fromstring(text)
@@ -469,3 +483,17 @@ class KeypairsXMLSerializerTest(test.TestCase):
 
         result = self.deserializer.deserialize(intext)['body']
         self.assertEqual(result, exemplar)
+
+
+class KeypairsTestV2(KeypairsTestV21):
+    base_url = '/v2/fake'
+
+    def _setup_app(self):
+        self.app = fakes.wsgi_app(init_only=('os-keypairs',))
+        self.app_server = fakes.wsgi_app(init_only=('servers',))
+
+
+class KeypairPolicyTestV2(KeypairPolicyTestV21):
+    KeyPairController = keypairs_v2.KeypairController()
+    policy_path = 'compute_extension:keypairs'
+    base_url = '/v2/fake'

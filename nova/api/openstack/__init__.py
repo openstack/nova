@@ -69,7 +69,7 @@ API_V3_CORE_EXTENSIONS = set(['consoles',
                               'flavor-manage',
                               'flavors',
                               'ips',
-                              'keypairs',
+                              'os-keypairs',
                               'server-metadata',
                               'servers',
                               'versions'])
