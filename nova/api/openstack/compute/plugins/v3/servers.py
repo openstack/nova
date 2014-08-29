@@ -336,61 +336,61 @@ class ServersController(wsgi.Controller):
     def _get_requested_networks(self, requested_networks):
         """Create a list of requested networks from the networks attribute."""
         networks = []
+        network_uuids = []
         for network in requested_networks:
+            request = objects.NetworkRequest()
             try:
                 # fixed IP address is optional
                 # if the fixed IP address is not provided then
                 # it will use one of the available IP address from the network
-                address = network.get('fixed_ip', None)
-                if address is not None and not utils.is_valid_ip_address(
-                        address):
-                    msg = _("Invalid fixed IP address (%s)") % address
+                try:
+                    request.address = network.get('fixed_ip', None)
+                except ValueError:
+                    msg = (_("Invalid fixed IP address (%s)") %
+                           networks.get('fixed_ip'))
                     raise exc.HTTPBadRequest(explanation=msg)
 
-                port_id = network.get('port', None)
-                if port_id:
-                    network_uuid = None
+                try:
+                    request.port_id = network.get('port', None)
+                except ValueError:
+                    msg = _("Bad port format: port uuid is "
+                            "not in proper format "
+                            "(%s)") % network.get('port')
+                    raise exc.HTTPBadRequest(explanation=msg)
+
+                if request.port_id:
+                    request.network_id = None
                     if not utils.is_neutron():
                         # port parameter is only for neutron v2.0
                         msg = _("Unknown argument: port")
                         raise exc.HTTPBadRequest(explanation=msg)
-                    if not uuidutils.is_uuid_like(port_id):
-                        msg = _("Bad port format: port uuid is "
-                                "not in proper format "
-                                "(%s)") % port_id
-                        raise exc.HTTPBadRequest(explanation=msg)
-                    if address is not None:
+                    if request.address is not None:
                         msg = _("Specified Fixed IP '%(addr)s' cannot be used "
                                 "with port '%(port)s': port already has "
-                                "a Fixed IP allocated.") % {"addr": address,
-                                                            "port": port_id}
+                                "a Fixed IP allocated.") % {
+                                    "addr": request.address,
+                                    "port": request.port_id}
                         raise exc.HTTPBadRequest(explanation=msg)
                 else:
-                    network_uuid = network['uuid']
+                    request.network_id = network['uuid']
 
-                if not port_id and not uuidutils.is_uuid_like(network_uuid):
-                    br_uuid = network_uuid.split('-', 1)[-1]
+                if (not request.port_id and
+                        not uuidutils.is_uuid_like(request.network_id)):
+                    br_uuid = request.network_id.split('-', 1)[-1]
                     if not uuidutils.is_uuid_like(br_uuid):
                         msg = _("Bad networks format: network uuid is "
                                 "not in proper format "
-                                "(%s)") % network_uuid
+                                "(%s)") % request.network_id
                         raise exc.HTTPBadRequest(explanation=msg)
 
-                # For neutronv2, requested_networks
-                # should be tuple of (network_uuid, fixed_ip, port_id)
-                if utils.is_neutron():
-                    networks.append((network_uuid, address, port_id))
-                else:
-                    # check if the network id is already present in the list,
-                    # we don't want duplicate networks to be passed
-                    # at the boot time
-                    for id, ip in networks:
-                        if id == network_uuid:
-                            expl = (_("Duplicate networks"
-                                      " (%s) are not allowed") %
-                                    network_uuid)
-                            raise exc.HTTPBadRequest(explanation=expl)
-                    networks.append((network_uuid, address))
+                if (request.network_id and
+                        request.network_id in network_uuids):
+                    expl = (_("Duplicate networks"
+                              " (%s) are not allowed") %
+                            request.network_id)
+                    raise exc.HTTPBadRequest(explanation=expl)
+                network_uuids.append(request.network_id)
+                networks.append(request)
             except KeyError as key:
                 expl = _('Bad network format: missing %s') % key
                 raise exc.HTTPBadRequest(explanation=expl)
@@ -398,7 +398,7 @@ class ServersController(wsgi.Controller):
                 expl = _('Bad networks format')
                 raise exc.HTTPBadRequest(explanation=expl)
 
-        return networks
+        return objects.NetworkRequestList(objects=networks)
 
     # NOTE(vish): Without this regex, b64decode will happily
     #             ignore illegal bytes in the base64 encoded
@@ -483,7 +483,7 @@ class ServersController(wsgi.Controller):
             requested_networks = server_dict.get('networks')
         if requested_networks is not None:
             requested_networks = self._get_requested_networks(
-                requested_networks)
+                requested_networks).as_tuples()
 
         try:
             flavor_id = self._flavor_id_from_req_data(body)
