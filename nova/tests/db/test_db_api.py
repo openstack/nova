@@ -4075,7 +4075,9 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'interface': 'some_interface',
             'pool': 'some_pool'
         }
-        db.floating_ip_update(self.ctxt, float_ip['address'], values)
+        floating_ref = db.floating_ip_update(self.ctxt, float_ip['address'],
+                                             values)
+        self.assertIsNot(floating_ref, None)
         updated_float_ip = db.floating_ip_get(self.ctxt, float_ip['id'])
         self._assertEqualObjects(updated_float_ip, values,
                                  ignored_keys=['id', 'address', 'updated_at',

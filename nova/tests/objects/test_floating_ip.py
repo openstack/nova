@@ -16,6 +16,7 @@ import mock
 import netaddr
 
 from nova import exception
+from nova.objects import fixed_ip
 from nova.objects import floating_ip
 from nova.tests.objects import test_fixed_ip
 from nova.tests.objects import test_network
@@ -129,12 +130,31 @@ class _TestFloatingIPObject(object):
         floatingip = floating_ip.FloatingIP(context=self.context,
                                             id=123, address='1.2.3.4',
                                             host='foo')
-        self.assertRaises(exception.ObjectActionError, floatingip.save)
         floatingip.obj_reset_changes(['address', 'id'])
         floatingip.save()
         self.assertEqual(set(), floatingip.obj_what_changed())
         update.assert_called_with(self.context, '1.2.3.4',
                                   {'host': 'foo'})
+
+    def test_save_errors(self):
+        floatingip = floating_ip.FloatingIP(context=self.context,
+                                            id=123, host='foo')
+        floatingip.obj_reset_changes()
+        floating_ip.address = '1.2.3.4'
+        self.assertRaises(exception.ObjectActionError, floatingip.save)
+
+        floatingip.obj_reset_changes()
+        floatingip.fixed_ip_id = 1
+        self.assertRaises(exception.ObjectActionError, floatingip.save)
+
+    @mock.patch('nova.db.floating_ip_update')
+    def test_save_no_fixedip(self, update):
+        update.return_value = fake_floating_ip
+        floatingip = floating_ip.FloatingIP(context=self.context,
+                                            id=123)
+        floatingip.fixed_ip = fixed_ip.FixedIP(context=self.context,
+                                              id=456)
+        self.assertNotIn('fixed_ip', update.calls[1])
 
     @mock.patch('nova.db.floating_ip_get_all')
     def test_get_all(self, get):
