@@ -12,17 +12,43 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.api.validation import parameter_types
+
+
 base_create = {
     'type': 'object',
     'properties': {
         'server': {
             'type': 'object',
             'properties': {
-                # TODO(oomichi): To focus the schema extension, now these
-                # properties are not defined. After it, we need to define
-                # them.
-                # 'name': ...
+                'name': parameter_types.name,
+                'imageRef': parameter_types.image_ref,
+                'flavorRef': parameter_types.flavor_ref,
+                'adminPass': parameter_types.admin_password,
+                'metadata': parameter_types.metadata,
+                'networks': {
+                    'type': 'array',
+                    'items': {
+                        'type': 'object',
+                        'properties': {
+                            'fixed_ip': {
+                                'type': ['string', 'null'],
+                                'oneOf': [
+                                    {'format': 'ipv4'},
+                                    {'format': 'ipv6'}
+                                ]
+                            },
+                            'port': {
+                                'type': ['string', 'null'],
+                                'format': 'uuid'
+                            },
+                            'uuid': {'type': 'string'},
+                        },
+                        'additionalProperties': False,
+                    }
+                }
             },
+            'required': ['name', 'flavorRef'],
             # TODO(oomichi): After all extension schema patches are merged,
             # this code should be enabled. If enabling before merger, API
             # extension parameters would be considered as bad parameters.
@@ -30,7 +56,7 @@ base_create = {
         },
     },
     'required': ['server'],
-    # TODO(oomichi): ditto, enable here after all extension schema
-    # patches are merged.
+    # TODO(oomichi): Now v3 code will be used for v2.1 only and v2.1 needs
+    # to allow additionalProperties for some extensions.
     # 'additionalProperties': False,
 }
