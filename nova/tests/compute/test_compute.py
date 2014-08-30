@@ -2282,43 +2282,38 @@ class ComputeTestCase(BaseTestCase):
 
     def test_suspend_error(self):
         # Ensure vm_state is ERROR when suspend error occurs.
-        def fake(*args, **kwargs):
-            raise test.TestingException()
-        self.stubs.Set(self.compute.driver, 'suspend', fake)
-
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance, {}, {}, [], None,
                 None, True, None, False)
-        self.assertRaises(test.TestingException,
-                          self.compute.suspend_instance,
-                          self.context,
-                          instance=instance)
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['vm_state'], vm_states.ERROR)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        instance = self._objectify(instance)
+
+        with mock.patch.object(self.compute.driver, 'suspend',
+                               side_effect=test.TestingException):
+            self.assertRaises(test.TestingException,
+                              self.compute.suspend_instance,
+                              self.context,
+                              instance=instance)
+
+            instance = db.instance_get_by_uuid(self.context, instance.uuid)
+            self.assertEqual(vm_states.ERROR, instance.vm_state)
 
     def test_suspend_not_implemented(self):
         # Ensure expected exception is raised and the vm_state of instance
         # restore to original value if suspend is not implemented by driver
-        def fake(*args, **kwargs):
-            raise NotImplementedError('suspend test')
-        self.stubs.Set(self.compute.driver, 'suspend', fake)
-
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_state = instance['vm_state']
-
         self.compute.run_instance(self.context, instance, {}, {}, [], None,
                 None, True, None, False)
-        self.assertRaises(NotImplementedError,
-                          self.compute.suspend_instance,
-                          self.context,
-                          instance=instance)
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        self.assertEqual(instance_state, instance['vm_state'])
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        instance = self._objectify(instance)
+
+        with mock.patch.object(self.compute.driver, 'suspend',
+                           side_effect=NotImplementedError('suspend test')):
+            self.assertRaises(NotImplementedError,
+                              self.compute.suspend_instance,
+                              self.context,
+                              instance=instance)
+
+            instance = db.instance_get_by_uuid(self.context, instance.uuid)
+            self.assertEqual(vm_states.ACTIVE, instance.vm_state)
 
     def test_rebuild(self):
         # Ensure instance can be rebuilt.
