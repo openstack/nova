@@ -4430,6 +4430,25 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return jsonutils.dumps(pci_info)
 
+    def _get_host_numa_topology(self):
+        caps = self._get_host_capabilities()
+        topology = caps.host.topology
+
+        if topology is None or not topology.cells:
+            return
+
+        topology = hardware.VirtNUMAHostTopology(
+                cells=[hardware.VirtNUMATopologyCellUsage(
+                            cell.id, set(cpu.id for cpu in cell.cpus),
+                            cell.memory)
+                       for cell in topology.cells])
+
+        allowed_cpus = hardware.get_vcpu_pin_set()
+        if allowed_cpus:
+            for cell in topology.cells:
+                cell.cpuset &= allowed_cpus
+        return topology
+
     def get_all_volume_usage(self, context, compute_host_bdms):
         """Return usage info for volumes attached to vms on
            a given host.
