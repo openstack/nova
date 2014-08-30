@@ -117,54 +117,54 @@ class UrlmapTest(test.NoDBTestCase):
         self.assertEqual(body['image']['id'],
                          'cedef40a-ed67-4d10-800e-17455edce175')
 
-    def test_path_version_v3(self):
-        # Test URL path specifying v3 returns v3 content.
-        req = webob.Request.blank('/v3/')
+    def test_path_version_v21(self):
+        # Test URL path specifying v2.1 returns v2.1 content.
+        req = webob.Request.blank('/v2.1/')
         req.accept = "application/json"
-        res = req.get_response(fakes.wsgi_app_v3(init_only=('versions',)))
+        res = req.get_response(fakes.wsgi_app_v21(init_only=('versions',)))
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         body = jsonutils.loads(res.body)
-        self.assertEqual(body['version']['id'], 'v3.0')
+        self.assertEqual(body['version']['id'], 'v2.1')
 
-    def test_content_type_version_v3(self):
-        # Test Content-Type specifying v3 returns v3 content.
+    def test_content_type_version_v21(self):
+        # Test Content-Type specifying v2.1 returns v2 content.
         req = webob.Request.blank('/')
-        req.content_type = "application/json;version=3"
+        req.content_type = "application/json;version=2.1"
         req.accept = "application/json"
-        res = req.get_response(fakes.wsgi_app_v3(init_only=('versions',)))
+        res = req.get_response(fakes.wsgi_app_v21(init_only=('versions',)))
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         body = jsonutils.loads(res.body)
-        self.assertEqual(body['version']['id'], 'v3.0')
+        self.assertEqual(body['version']['id'], 'v2.1')
 
-    def test_accept_version_v3(self):
-        # Test Accept header specifying v3 returns v3 content.
+    def test_accept_version_v21(self):
+        # Test Accept header specifying v2.1 returns v2.1 content.
         req = webob.Request.blank('/')
-        req.accept = "application/json;version=3"
-        res = req.get_response(fakes.wsgi_app_v3(init_only=('versions',)))
+        req.accept = "application/json;version=2.1"
+        res = req.get_response(fakes.wsgi_app_v21(init_only=('versions',)))
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         body = jsonutils.loads(res.body)
-        self.assertEqual(body['version']['id'], 'v3.0')
+        self.assertEqual(body['version']['id'], 'v2.1')
 
-    def test_path_content_type_v3(self):
+    def test_path_content_type_v21(self):
         # Test URL path specifying JSON returns JSON content.
-        url = '/v3/extensions/extensions.json'
+        url = '/v2.1/fake/extensions/extensions.json'
         req = webob.Request.blank(url)
         req.accept = "application/xml"
-        res = req.get_response(fakes.wsgi_app_v3())
+        res = req.get_response(fakes.wsgi_app_v21())
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         body = jsonutils.loads(res.body)
         self.assertEqual(body['extension']['name'], 'Extensions')
 
-    def test_accept_content_type_v3(self):
+    def test_accept_content_type_v21(self):
         # Test Accept header specifying JSON returns JSON content.
-        url = '/v3/extensions/extensions'
+        url = '/v2.1/fake/extensions/extensions'
         req = webob.Request.blank(url)
         req.accept = "application/xml;q=0.8, application/json"
-        res = req.get_response(fakes.wsgi_app_v3(init_only=('extensions',)))
+        res = req.get_response(fakes.wsgi_app_v21(init_only=('extensions',)))
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         body = jsonutils.loads(res.body)

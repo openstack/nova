@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import uuid as stdlib_uuid
 
 import feedparser
@@ -38,6 +39,9 @@ NS = {
 EXP_LINKS = {
    'v2.0': {
        'html': 'http://docs.openstack.org/',
+    },
+   'v2.1': {
+       'html': 'http://docs.openstack.org/'
     },
 }
 
@@ -65,21 +69,32 @@ EXP_VERSIONS = {
             },
         ],
     },
-    "v3.0": {
-        "id": "v3.0",
+    "v2.1": {
+        "id": "v2.1",
         "status": "EXPERIMENTAL",
         "updated": "2013-07-23T11:33:21Z",
+        "links": [
+            {
+                "rel": "self",
+                "href": "http://localhost/v2.1/",
+            },
+            {
+                "rel": "describedby",
+                "type": "text/html",
+                "href": EXP_LINKS['v2.1']['html'],
+            },
+        ],
         "media-types": [
             {
                 "base": "application/json",
-                "type": "application/vnd.openstack.compute+json;version=3",
+                "type": "application/vnd.openstack.compute+json;version=2.1",
             }
         ],
     }
 }
 
 
-class VersionsTest(test.NoDBTestCase):
+class VersionsTestV20(test.NoDBTestCase):
 
     def test_get_version_list(self):
         req = webob.Request.blank('/')
@@ -100,13 +115,13 @@ class VersionsTest(test.NoDBTestCase):
                     }],
             },
             {
-                "id": "v3.0",
+                "id": "v2.1",
                 "status": "EXPERIMENTAL",
                 "updated": "2013-07-23T11:33:21Z",
                 "links": [
                     {
                         "rel": "self",
-                        "href": "http://localhost/v3/",
+                        "href": "http://localhost/v2/",
                     }],
             },
         ]
@@ -211,7 +226,7 @@ class VersionsTest(test.NoDBTestCase):
         versions = root.xpath('ns:version', namespaces=NS)
         self.assertEqual(len(versions), 2)
 
-        for i, v in enumerate(['v2.0', 'v3.0']):
+        for i, v in enumerate(['v2.0', 'v2.1']):
             version = versions[i]
             expected = EXP_VERSIONS[v]
             for key in ['id', 'status', 'updated']:
@@ -285,14 +300,14 @@ class VersionsTest(test.NoDBTestCase):
         self.assertEqual(entry.links[0]['rel'], 'self')
 
         entry = f.entries[1]
-        self.assertEqual(entry.id, 'http://localhost/v3/')
-        self.assertEqual(entry.title, 'Version v3.0')
+        self.assertEqual(entry.id, 'http://localhost/v2/')
+        self.assertEqual(entry.title, 'Version v2.1')
         self.assertEqual(entry.updated, '2013-07-23T11:33:21Z')
         self.assertEqual(len(entry.content), 1)
         self.assertEqual(entry.content[0].value,
-            'Version v3.0 EXPERIMENTAL (2013-07-23T11:33:21Z)')
+            'Version v2.1 EXPERIMENTAL (2013-07-23T11:33:21Z)')
         self.assertEqual(len(entry.links), 1)
-        self.assertEqual(entry.links[0]['href'], 'http://localhost/v3/')
+        self.assertEqual(entry.links[0]['href'], 'http://localhost/v2/')
         self.assertEqual(entry.links[0]['rel'], 'self')
 
     def test_multi_choice_image(self):
@@ -327,11 +342,11 @@ class VersionsTest(test.NoDBTestCase):
                 ],
             },
             {
-                "id": "v3.0",
+                "id": "v2.1",
                 "status": "EXPERIMENTAL",
                 "links": [
                     {
-                        "href": "http://localhost/v3/images/1",
+                        "href": "http://localhost/v2/images/1",
                         "rel": "self",
                     },
                 ],
@@ -339,7 +354,7 @@ class VersionsTest(test.NoDBTestCase):
                     {
                         "base": "application/json",
                         "type":
-                        "application/vnd.openstack.compute+json;version=3",
+                        "application/vnd.openstack.compute+json;version=2.1",
                     }
                 ],
             },
@@ -375,18 +390,18 @@ class VersionsTest(test.NoDBTestCase):
             [{'rel': 'self', 'href': 'http://localhost/v2/images/1'}]))
 
         version = versions[1]
-        self.assertEqual(version.get('id'), 'v3.0')
+        self.assertEqual(version.get('id'), 'v2.1')
         self.assertEqual(version.get('status'), 'EXPERIMENTAL')
         media_types = version.xpath('ns:media-types/ns:media-type',
                                     namespaces=NS)
         self.assertTrue(common.
                         compare_media_types(media_types,
-                                            EXP_VERSIONS['v3.0']['media-types']
+                                            EXP_VERSIONS['v2.1']['media-types']
                                             ))
 
         links = version.xpath('atom:link', namespaces=NS)
         self.assertTrue(common.compare_links(links,
-            [{'rel': 'self', 'href': 'http://localhost/v3/images/1'}]))
+            [{'rel': 'self', 'href': 'http://localhost/v2/images/1'}]))
 
     def test_multi_choice_server_atom(self):
         """Make sure multi choice responses do not have content-type
@@ -431,11 +446,11 @@ class VersionsTest(test.NoDBTestCase):
                 ],
             },
             {
-                "id": "v3.0",
+                "id": "v2.1",
                 "status": "EXPERIMENTAL",
                 "links": [
                     {
-                        "href": "http://localhost/v3/servers/" + uuid,
+                        "href": "http://localhost/v2/servers/" + uuid,
                         "rel": "self",
                     },
                 ],
@@ -443,7 +458,7 @@ class VersionsTest(test.NoDBTestCase):
                     {
                         "base": "application/json",
                         "type":
-                        "application/vnd.openstack.compute+json;version=3",
+                        "application/vnd.openstack.compute+json;version=2.1",
                     }
                 ],
             },
@@ -496,13 +511,13 @@ class VersionsViewBuilderTests(test.NoDBTestCase):
 
         self.assertEqual(actual, expected)
 
-    def test_generate_href_v3(self):
+    def test_generate_href_v21(self):
         base_url = "http://example.org/app/"
 
-        expected = "http://example.org/app/v3/"
+        expected = "http://example.org/app/v2/"
 
         builder = views.versions.ViewBuilder(base_url)
-        actual = builder.generate_href('v3.0')
+        actual = builder.generate_href('v2.1')
 
         self.assertEqual(actual, expected)
 
@@ -717,3 +732,66 @@ class VersionsSerializerTests(test.NoDBTestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, res.status_int)
         self.assertEqual("application/json", res.content_type)
+
+
+# NOTE(oomichi): Now version API of v2.0 covers "/"(root).
+# So this class tests "/v2.1" only for v2.1 API.
+class VersionsTestV21(test.NoDBTestCase):
+    exp_versions = copy.deepcopy(EXP_VERSIONS)
+    exp_versions['v2.0']['links'].insert(0,
+        {'href': 'http://localhost/v2.1/', 'rel': 'self'},
+    )
+
+    def test_get_version_list_302(self):
+        req = webob.Request.blank('/v2.1')
+        req.accept = "application/json"
+        res = req.get_response(fakes.wsgi_app_v21())
+        self.assertEqual(res.status_int, 302)
+        redirect_req = webob.Request.blank('/v2.1/')
+        self.assertEqual(res.location, redirect_req.url)
+
+    def test_get_version_21_detail(self):
+        req = webob.Request.blank('/v2.1/')
+        req.accept = "application/json"
+        res = req.get_response(fakes.wsgi_app_v21())
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.content_type, "application/json")
+        version = jsonutils.loads(res.body)
+        expected = {"version": self.exp_versions['v2.1']}
+        self.assertEqual(expected, version)
+
+    def test_get_version_21_versions_v21_detail(self):
+        req = webob.Request.blank('/v2.1/fake/versions/v2.1')
+        req.accept = "application/json"
+        res = req.get_response(fakes.wsgi_app_v21())
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.content_type, "application/json")
+        version = jsonutils.loads(res.body)
+        expected = {"version": self.exp_versions['v2.1']}
+        self.assertEqual(expected, version)
+
+    def test_get_version_21_versions_v20_detail(self):
+        req = webob.Request.blank('/v2.1/fake/versions/v2.0')
+        req.accept = "application/json"
+        res = req.get_response(fakes.wsgi_app_v21())
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.content_type, "application/json")
+        version = jsonutils.loads(res.body)
+        expected = {"version": self.exp_versions['v2.0']}
+        self.assertEqual(expected, version)
+
+    def test_get_version_21_versions_invalid(self):
+        req = webob.Request.blank('/v2.1/versions/1234')
+        req.accept = "application/json"
+        res = req.get_response(fakes.wsgi_app_v21())
+        self.assertEqual(res.status_int, 404)
+
+    def test_get_version_21_detail_content_type(self):
+        req = webob.Request.blank('/')
+        req.accept = "application/json;version=2.1"
+        res = req.get_response(fakes.wsgi_app_v21())
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.content_type, "application/json")
+        version = jsonutils.loads(res.body)
+        expected = {"version": self.exp_versions['v2.1']}
+        self.assertEqual(expected, version)

@@ -29,7 +29,7 @@ LINKS = {
    'v2.0': {
        'html': 'http://docs.openstack.org/'
     },
-   'v3.0': {
+   'v2.1': {
        'html': 'http://docs.openstack.org/'
     },
 }
@@ -58,21 +58,21 @@ VERSIONS = {
             }
         ],
     },
-    "v3.0": {
-        "id": "v3.0",
+    "v2.1": {
+        "id": "v2.1",
         "status": "EXPERIMENTAL",
         "updated": "2013-07-23T11:33:21Z",
         "links": [
             {
                 "rel": "describedby",
                 "type": "text/html",
-                "href": LINKS['v3.0']['html'],
+                "href": LINKS['v2.1']['html'],
             },
         ],
         "media-types": [
             {
                 "base": "application/json",
-                "type": "application/vnd.openstack.compute+json;version=3",
+                "type": "application/vnd.openstack.compute+json;version=2.1",
             }
         ],
     }
@@ -221,7 +221,7 @@ class Versions(wsgi.Resource):
     def __init__(self):
         super(Versions, self).__init__(None)
         if not CONF.osapi_v3.enabled:
-            del VERSIONS["v3.0"]
+            del VERSIONS["v2.1"]
 
     @wsgi.serializers(xml=VersionsTemplate,
                       atom=VersionsAtomSerializer)
