@@ -27,6 +27,7 @@ from nova.network import model as network_model
 from nova import notifications
 from nova.objects import instance
 from nova.objects import instance_info_cache
+from nova.objects import instance_numa_topology
 from nova.objects import pci_device
 from nova.objects import security_group
 from nova.openstack.common import timeutils
@@ -35,6 +36,7 @@ from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance
 from nova.tests.objects import test_instance_fault
 from nova.tests.objects import test_instance_info_cache
+from nova.tests.objects import test_instance_numa_topology
 from nova.tests.objects import test_objects
 from nova.tests.objects import test_security_group
 from nova import utils
@@ -70,7 +72,7 @@ class _TestInstanceObject(object):
         primitive = inst.obj_to_primitive()
         expected = {'nova_object.name': 'Instance',
                     'nova_object.namespace': 'nova',
-                    'nova_object.version': '1.13',
+                    'nova_object.version': '1.14',
                     'nova_object.data':
                         {'uuid': 'fake-uuid',
                          'launched_at': '1955-11-05T00:00:00Z'},
@@ -86,7 +88,7 @@ class _TestInstanceObject(object):
         primitive = inst.obj_to_primitive()
         expected = {'nova_object.name': 'Instance',
                     'nova_object.namespace': 'nova',
-                    'nova_object.version': '1.13',
+                    'nova_object.version': '1.14',
                     'nova_object.data':
                         {'uuid': 'fake-uuid',
                          'access_ip_v4': '1.2.3.4',
@@ -116,9 +118,12 @@ class _TestInstanceObject(object):
     def test_get_with_expected(self):
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         self.mox.StubOutWithMock(db, 'instance_fault_get_by_instance_uuids')
+        self.mox.StubOutWithMock(
+                db, 'instance_extra_get_by_instance_uuid')
 
         exp_cols = instance.INSTANCE_OPTIONAL_ATTRS[:]
         exp_cols.remove('fault')
+        exp_cols.remove('numa_topology')
 
         db.instance_get_by_uuid(
             self.context, 'uuid',
@@ -129,6 +134,10 @@ class _TestInstanceObject(object):
         db.instance_fault_get_by_instance_uuids(
                 self.context, [self.fake_instance['uuid']]
                 ).AndReturn(fake_faults)
+        fake_topology = test_instance_numa_topology.fake_db_topology
+        db.instance_extra_get_by_instance_uuid(
+                self.context, self.fake_instance['uuid']
+                ).AndReturn(fake_topology)
 
         self.mox.ReplayAll()
         inst = instance.Instance.get_by_uuid(
@@ -659,6 +668,19 @@ class _TestInstanceObject(object):
         self.assertEqual(inst1.host, 'foo-host')
         inst2 = instance.Instance.get_by_uuid(self.context, inst1.uuid)
         self.assertEqual(inst2.host, 'foo-host')
+
+    def test_create_with_numa_topology(self):
+        inst = instance.Instance(uuid=self.fake_instance['uuid'],
+                numa_topology=instance_numa_topology.InstanceNUMATopology
+                        .obj_from_topology(
+                            test_instance_numa_topology.fake_numa_topology))
+
+        inst.create(self.context)
+        self.assertIsNotNone(inst.numa_topology)
+        got_numa_topo = (
+                instance_numa_topology.InstanceNUMATopology
+                .get_by_instance_uuid(self.context, inst.uuid))
+        self.assertEqual(inst.numa_topology.id, got_numa_topo.id)
 
     def test_recreate_fails(self):
         inst = instance.Instance(user_id=self.context.user_id,

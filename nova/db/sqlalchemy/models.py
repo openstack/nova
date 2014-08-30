@@ -314,6 +314,21 @@ class InstanceInfoCache(BASE, NovaBase):
                             primaryjoin=instance_uuid == Instance.uuid)
 
 
+class InstanceExtra(BASE, NovaBase):
+    __tablename__ = 'instance_extra'
+    __table_args__ = (
+        Index('instance_extra_idx', 'instance_uuid'),)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    instance_uuid = Column(String(36), ForeignKey('instances.uuid'),
+                           nullable=False)
+    numa_topology = Column(Text)
+    instance = orm.relationship(Instance,
+                            backref=orm.backref('numa_topology',
+                                                uselist=False),
+                            foreign_keys=instance_uuid,
+                            primaryjoin=instance_uuid == Instance.uuid)
+
+
 class InstanceTypes(BASE, NovaBase):
     """Represents possible flavors for instances.
 
