@@ -15,40 +15,64 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-Setting Up a Development Environment
-====================================
+==============================================
+Setting Up and Using a Development Environment
+==============================================
 
-This page describes how to setup a working Python development
+This page describes how to setup and use a working Python development
 environment that can be used in developing nova on Ubuntu, Fedora or
-Mac OS X. These instructions assume you're already familiar with
-git.
+Mac OS X. These instructions assume you're already familiar with git.
 
-Following these instructions will allow you to run the nova unit
-tests. If you want to be able to run nova (i.e., launch VM instances),
-you will also need to install libvirt and at least one of the
-`supported hypervisors`_. Running nova is currently only supported on
-Linux, although you can run the unit tests on Mac OS X.
+Following these instructions will allow you to build the documentation
+and run the nova unit tests. If you want to be able to run nova (i.e.,
+launch VM instances), you will also need to --- either manually or by
+letting DevStack do it for you --- install libvirt and at least one of
+the `supported hypervisors`_. Running nova is currently only supported
+on Linux, although you can run the unit tests on Mac OS X.
 
 .. _supported hypervisors: http://wiki.openstack.org/HypervisorSupportMatrix
 
-Virtual environments
---------------------
 
-Nova development uses a set of shell scripts in DevStack. Virtual
-environments with venv are also available with the source code.
+Setup
+=====
+
+There are two ways to create a development environment: using
+DevStack, or explicitly installing and cloning just what you need.
+
+
+Using DevStack
+--------------
 
 The easiest way to build a fully functional development environment is
-with DevStack. Create a machine (such as a VM or Vagrant box) running a
-distribution supported by DevStack and install DevStack there. For
-example, there is a Vagrant script for DevStack at http://git.openstack.org/cgit/openstack-dev/devstack-vagrant/.
+with DevStack. DevStack will hack your machine pretty hard, and so we
+recommend that you create a machine (such as a VM or Vagrant box)
+running a distribution supported by DevStack and run DevStack
+there. For example, there is a Vagrant script for DevStack at
+http://git.openstack.org/cgit/openstack-dev/devstack-vagrant/ .
 
- .. note::
+Include the line
 
-    If you prefer not to use devstack, you can still check out source code on your local
-    machine and develop from there.
+.. code-block:: bash
+
+  INSTALL_TESTONLY_PACKAGES=True
+
+in the ``localrc`` file you use to control DevStack.  This will cause
+DevStack to install what you need for testing and documentation
+building as well as running the system.
+
+Explicit Install/Clone
+----------------------
+
+DevStack installs a complete OpenStack environment.  Alternatively,
+you can explicitly install and clone just what you need for Nova
+development.
+
+The first step of this process is to install the system (not Python)
+packages that are required.  Following are instructions on how to do
+this on Linux and on the Mac.
 
 Linux Systems
--------------
+`````````````
 
 .. note::
 
@@ -77,7 +101,7 @@ On Fedora-based distributions (e.g., Fedora/RHEL/CentOS/Scientific Linux)::
 
 
 Mac OS X Systems
-----------------
+````````````````
 
 Install virtualenv::
 
@@ -96,21 +120,74 @@ or Mac OS X 10.7 (OpenSSL 0.9.8r) works fine with nova.
 
 
 Getting the code
-----------------
+````````````````
+
+Once you have the prerequisite system packages installed, the next
+step is to clone the code.
+
 Grab the code from GitHub::
 
     git clone https://github.com/openstack/nova.git
     cd nova
 
 
+Building the Documentation
+==========================
+
+To do a full documentation build, issue the following command while
+the nova directory is current.
+
+.. code-block:: bash
+
+  tox -edocs
+
+That will create a Python virtual environment, install the needed
+Python prerequisites in that environment, and build all the
+documentation in that environment.
+
+The following variant will do the first two steps but not build any
+documentation.
+
+.. code-block:: bash
+
+  tox --notest -edocs
+
+The virtual environment built by ``tox`` for documentation building
+will be found in ``.tox/docs``.  You can enter that virtual
+environment in the usual way, as follows.
+
+.. code-block:: bash
+
+  source .tox/docs/bin/activate
+
+To build just the man pages, enter that virtual environment and issue
+the following command while the nova directory is current.
+
+.. code-block:: bash
+
+  python setup.py build_sphinx -b man
+
+After building the man pages, they can be found in ``doc/build/man/``.
+A sufficiently authorized user can install the man page onto the
+system by following steps like the following, which are for the
+``nova-scheduler`` man page.
+
+.. code-block:: bash
+
+  mkdir /usr/local/man/man1
+  install -g 0 -o 0 -m 0644 doc/build/man/nova-scheduler.1  /usr/local/man/man1/nova-scheduler.1
+  gzip /usr/local/man/man1/nova-scheduler.1
+  man nova-scheduler
+
+
 Running unit tests
-------------------
+==================
 
 See :doc:`unit_tests` for details.
 
 
 Using a remote debugger
------------------------
+=======================
 
 Some modern IDE such as pycharm (commercial) or Eclipse (open source) support remote debugging.  In order to run nova with remote debugging, start the nova process
 with the following parameters
@@ -124,7 +201,7 @@ For Eclipse - http://pydev.org/manual_adv_remote_debugger.html
 More detailed instructions are located here - http://novaremotedebug.blogspot.com
 
 Using fake computes for tests
------------------------------
+=============================
 
 The number of instances supported by fake computes is not limited by physical
 constraints. It allows you to perform stress tests on a deployment with few
@@ -144,7 +221,7 @@ Fake computes can be used for testing Nova itself but also applications on top
 of it.
 
 Contributing Your Work
-----------------------
+======================
 
 Once your work is complete you may wish to contribute it to the project. 
 Refer to HowToContribute_ for information.
