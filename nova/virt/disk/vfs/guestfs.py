@@ -16,7 +16,8 @@ from eventlet import tpool
 import six
 
 from nova import exception
-from nova.i18n import _, _LI
+from nova.i18n import _
+from nova.i18n import _LW
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.virt.disk.vfs import api as vfs
@@ -138,7 +139,7 @@ class VFSGuestFS(vfs.VFS):
         except AttributeError as ex:
             # set_backend_settings method doesn't exist in older
             # libguestfs versions, so nothing we can do but ignore
-            LOG.info(_LI("Unable to force TCG mode, libguestfs too old?"),
+            LOG.warn(_LW("Unable to force TCG mode, libguestfs too old? %s"),
                      ex)
             pass
 
