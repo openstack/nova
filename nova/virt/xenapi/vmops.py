@@ -382,8 +382,8 @@ class VMOps(object):
                 self._resize_up_vdis(instance, vdis)
 
             self._attach_disks(instance, vm_ref, name_label, vdis,
-                               disk_image_type, network_info, admin_password,
-                               injected_files)
+                               disk_image_type, network_info, rescue,
+                               admin_password, injected_files)
             if not first_boot:
                 self._attach_mapped_block_devices(instance,
                                                   block_device_info)
@@ -440,19 +440,20 @@ class VMOps(object):
             attach_pci_devices(undo_mgr, vm_ref)
 
         if rescue:
-            # NOTE(johannes): Attach root disk to rescue VM now, before
-            # booting the VM, since we can't hotplug block devices
+            # NOTE(johannes): Attach disks from original VM to rescue VM now,
+            # before booting the VM, since we can't hotplug block devices
             # on non-PV guests
             @step
-            def attach_root_disk_step(undo_mgr, vm_ref):
-                vbd_ref = self._attach_orig_disk_for_rescue(instance, vm_ref)
+            def attach_orig_disks_step(undo_mgr, vm_ref):
+                vbd_refs = self._attach_orig_disks(instance, vm_ref)
 
-                def undo_attach_root_disk():
-                    # destroy the vbd in preparation to re-attach the VDI
+                def undo_attach_orig_disks():
+                    # Destroy the VBDs in preparation to re-attach the VDIs
                     # to its original VM.  (does not delete VDI)
-                    vm_utils.destroy_vbd(self._session, vbd_ref)
+                    for vbd_ref in vbd_refs:
+                        vm_utils.destroy_vbd(self._session, vbd_ref)
 
-                undo_mgr.undo_with(undo_attach_root_disk)
+                undo_mgr.undo_with(undo_attach_orig_disks)
 
         @step
         def inject_instance_data_step(undo_mgr, vm_ref, vdis):
@@ -508,7 +509,7 @@ class VMOps(object):
             setup_network_step(undo_mgr, vm_ref)
 
             if rescue:
-                attach_root_disk_step(undo_mgr, vm_ref)
+                attach_orig_disks_step(undo_mgr, vm_ref)
 
             boot_instance_step(undo_mgr, vm_ref)
 
@@ -521,11 +522,35 @@ class VMOps(object):
             msg = _("Failed to spawn, rolling back")
             undo_mgr.rollback_and_reraise(msg=msg, instance=instance)
 
-    def _attach_orig_disk_for_rescue(self, instance, vm_ref):
+    def _attach_orig_disks(self, instance, vm_ref):
         orig_vm_ref = vm_utils.lookup(self._session, instance['name'])
-        vdi_ref = self._find_root_vdi_ref(orig_vm_ref)
-        return vm_utils.create_vbd(self._session, vm_ref, vdi_ref,
-                                   DEVICE_RESCUE, bootable=False)
+        orig_vdi_refs = self._find_vdi_refs(orig_vm_ref,
+                                            exclude_volumes=True)
+
+        # Attach original root disk
+        root_vdi_ref = orig_vdi_refs.get(DEVICE_ROOT)
+        if not root_vdi_ref:
+            raise exception.NotFound(_("Unable to find root VBD/VDI for VM"))
+
+        vbd_ref = vm_utils.create_vbd(self._session, vm_ref, root_vdi_ref,
+                                      DEVICE_RESCUE, bootable=False)
+        vbd_refs = [vbd_ref]
+
+        # Attach original swap disk
+        swap_vdi_ref = orig_vdi_refs.get(DEVICE_SWAP)
+        if swap_vdi_ref:
+            vbd_ref = vm_utils.create_vbd(self._session, vm_ref, swap_vdi_ref,
+                                          DEVICE_SWAP, bootable=False)
+            vbd_refs.append(vbd_ref)
+
+        # Attach original ephemeral disks
+        for userdevice, vdi_ref in orig_vdi_refs.iteritems():
+            if userdevice >= DEVICE_EPHEMERAL:
+                vbd_ref = vm_utils.create_vbd(self._session, vm_ref, vdi_ref,
+                                              userdevice, bootable=False)
+                vbd_refs.append(vbd_ref)
+
+        return vbd_refs
 
     def _file_inject_vm_settings(self, instance, vm_ref, vdis, network_info):
         if CONF.flat_injected:
@@ -565,7 +590,7 @@ class VMOps(object):
         return vm_ref
 
     def _attach_disks(self, instance, vm_ref, name_label, vdis,
-                      disk_image_type, network_info,
+                      disk_image_type, network_info, rescue=False,
                       admin_password=None, files=None):
         flavor = flavors.extract_flavor(instance)
 
@@ -607,14 +632,17 @@ class VMOps(object):
                                 userdevice, bootable=False,
                                 osvol=vdi_info.get('osvol'))
 
+        # For rescue, swap and ephemeral disks get attached in
+        # _attach_orig_disks
+
         # Attach (optional) swap disk
         swap_mb = flavor['swap']
-        if swap_mb:
+        if not rescue and swap_mb:
             vm_utils.generate_swap(self._session, instance, vm_ref,
                                    DEVICE_SWAP, name_label, swap_mb)
 
         ephemeral_gb = flavor['ephemeral_gb']
-        if ephemeral_gb:
+        if not rescue and ephemeral_gb:
             ephemeral_vdis = vdis.get('ephemerals')
             if ephemeral_vdis:
                 # attach existing (migrated) ephemeral disks
@@ -1247,19 +1275,18 @@ class VMOps(object):
                 process_change(location, change)
         update_meta()
 
-    def _find_root_vdi_ref(self, vm_ref):
-        """Find and return the root vdi ref for a VM."""
+    def _find_vdi_refs(self, vm_ref, exclude_volumes=False):
+        """Find and return the root and ephemeral vdi refs for a VM."""
         if not vm_ref:
-            return None
+            return {}
 
-        vbd_refs = self._session.call_xenapi("VM.get_VBDs", vm_ref)
+        vdi_refs = {}
+        for vbd_ref in self._session.call_xenapi("VM.get_VBDs", vm_ref):
+            vbd = self._session.call_xenapi("VBD.get_record", vbd_ref)
+            if not exclude_volumes or 'osvol' not in vbd['other_config']:
+                vdi_refs[vbd['userdevice']] = vbd['VDI']
 
-        for vbd_uuid in vbd_refs:
-            vbd = self._session.call_xenapi("VBD.get_record", vbd_uuid)
-            if vbd["userdevice"] == DEVICE_ROOT:
-                return vbd["VDI"]
-
-        raise exception.NotFound(_("Unable to find root VBD/VDI for VM"))
+        return vdi_refs
 
     def _destroy_vdis(self, instance, vm_ref):
         """Destroys all VDIs associated with a VM."""
@@ -1316,8 +1343,11 @@ class VMOps(object):
 
         # Destroy Rescue VDIs
         vdi_refs = vm_utils.lookup_vm_vdis(self._session, rescue_vm_ref)
-        root_vdi_ref = self._find_root_vdi_ref(original_vm_ref)
-        vdi_refs = [vdi_ref for vdi_ref in vdi_refs if vdi_ref != root_vdi_ref]
+
+        # Don't destroy any VDIs belonging to the original VM
+        orig_vdi_refs = self._find_vdi_refs(original_vm_ref)
+        vdi_refs = set(vdi_refs) - set(orig_vdi_refs.values())
+
         vm_utils.safe_destroy_vdis(self._session, vdi_refs)
 
         # Destroy Rescue VM

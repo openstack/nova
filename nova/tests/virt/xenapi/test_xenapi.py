@@ -1231,9 +1231,16 @@ iface eth0 inet6 static
 
         swap_vdi_ref = xenapi_fake.create_vdi('swap', None)
         root_vdi_ref = xenapi_fake.create_vdi('root', None)
+        eph1_vdi_ref = xenapi_fake.create_vdi('eph', None)
+        eph2_vdi_ref = xenapi_fake.create_vdi('eph', None)
+        vol_vdi_ref = xenapi_fake.create_vdi('volume', None)
 
-        xenapi_fake.create_vbd(vm_ref, swap_vdi_ref, userdevice=1)
+        xenapi_fake.create_vbd(vm_ref, swap_vdi_ref, userdevice=2)
         xenapi_fake.create_vbd(vm_ref, root_vdi_ref, userdevice=0)
+        xenapi_fake.create_vbd(vm_ref, eph1_vdi_ref, userdevice=4)
+        xenapi_fake.create_vbd(vm_ref, eph2_vdi_ref, userdevice=5)
+        xenapi_fake.create_vbd(vm_ref, vol_vdi_ref, userdevice=6,
+                               other_config={'osvol': True})
 
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         image_meta = {'id': IMAGE_VHD,
@@ -1245,11 +1252,16 @@ iface eth0 inet6 static
         rescue_ref = vm_utils.lookup(session, rescue_name)
         rescue_vm = xenapi_fake.get_record('VM', rescue_ref)
 
-        vdi_refs = []
+        vdi_refs = {}
         for vbd_ref in rescue_vm['VBDs']:
-            vdi_refs.append(xenapi_fake.get_record('VBD', vbd_ref)['VDI'])
-        self.assertNotIn(swap_vdi_ref, vdi_refs)
-        self.assertIn(root_vdi_ref, vdi_refs)
+            vbd = xenapi_fake.get_record('VBD', vbd_ref)
+            vdi_refs[vbd['VDI']] = vbd['userdevice']
+
+        self.assertEqual('1', vdi_refs[root_vdi_ref])
+        self.assertEqual('2', vdi_refs[swap_vdi_ref])
+        self.assertEqual('4', vdi_refs[eph1_vdi_ref])
+        self.assertEqual('5', vdi_refs[eph2_vdi_ref])
+        self.assertNotIn(vol_vdi_ref, vdi_refs)
 
     def test_rescue_preserve_disk_on_failure(self):
         # test that the original disk is preserved if rescue setup fails

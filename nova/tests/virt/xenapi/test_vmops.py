@@ -224,7 +224,7 @@ class SpawnTestCase(VMOpsTestBase):
         self.mox.StubOutWithMock(self.vmops, '_attach_disks')
         self.mox.StubOutWithMock(pci_manager, 'get_instance_pci_devs')
         self.mox.StubOutWithMock(vm_utils, 'set_other_config_pci')
-        self.mox.StubOutWithMock(self.vmops, '_attach_orig_disk_for_rescue')
+        self.mox.StubOutWithMock(self.vmops, '_attach_orig_disks')
         self.mox.StubOutWithMock(self.vmops, 'inject_network_info')
         self.mox.StubOutWithMock(self.vmops, '_inject_hostname')
         self.mox.StubOutWithMock(self.vmops, '_inject_instance_metadata')
@@ -300,7 +300,7 @@ class SpawnTestCase(VMOpsTestBase):
         self.vmops._update_instance_progress(context, instance, step, steps)
 
         self.vmops._attach_disks(instance, vm_ref, name_label, vdis, di_type,
-                          network_info, admin_password, injected_files)
+                          network_info, rescue, admin_password, injected_files)
         if attach_pci_dev:
             fake_dev = {
                 'created_at': None,
@@ -346,7 +346,7 @@ class SpawnTestCase(VMOpsTestBase):
         self.vmops._update_instance_progress(context, instance, step, steps)
 
         if rescue:
-            self.vmops._attach_orig_disk_for_rescue(instance, vm_ref)
+            self.vmops._attach_orig_disks(instance, vm_ref)
             step += 1
             self.vmops._update_instance_progress(context, instance, step,
                                                  steps)
@@ -435,7 +435,7 @@ class SpawnTestCase(VMOpsTestBase):
         if resize_instance:
             self.vmops._resize_up_vdis(instance, vdis)
         self.vmops._attach_disks(instance, vm_ref, name_label, vdis, di_type,
-                                 network_info, None, None)
+                                 network_info, False, None, None)
         self.vmops._attach_mapped_block_devices(instance, block_device_info)
         pci_manager.get_instance_pci_devs(instance).AndReturn([])
 
@@ -569,21 +569,23 @@ class SpawnTestCase(VMOpsTestBase):
         self.mox.ReplayAll()
         self.vmops._wait_for_instance_to_start(instance, vm_ref)
 
-    def test_attach_orig_disk_for_rescue(self):
+    def test_attach_orig_disks(self):
         instance = {"name": "dummy"}
         vm_ref = "vm_ref"
+        vbd_refs = {vmops.DEVICE_ROOT: "vdi_ref"}
 
         self.mox.StubOutWithMock(vm_utils, 'lookup')
-        self.mox.StubOutWithMock(self.vmops, '_find_root_vdi_ref')
+        self.mox.StubOutWithMock(self.vmops, '_find_vdi_refs')
         self.mox.StubOutWithMock(vm_utils, 'create_vbd')
 
         vm_utils.lookup(self.vmops._session, "dummy").AndReturn("ref")
-        self.vmops._find_root_vdi_ref("ref").AndReturn("vdi_ref")
+        self.vmops._find_vdi_refs("ref", exclude_volumes=True).AndReturn(
+                vbd_refs)
         vm_utils.create_vbd(self.vmops._session, vm_ref, "vdi_ref",
                             vmops.DEVICE_RESCUE, bootable=False)
 
         self.mox.ReplayAll()
-        self.vmops._attach_orig_disk_for_rescue(instance, vm_ref)
+        self.vmops._attach_orig_disks(instance, vm_ref)
 
     def test_agent_update_setup(self):
         # agent updates need to occur after networking is configured
