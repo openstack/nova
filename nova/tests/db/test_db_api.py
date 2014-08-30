@@ -578,6 +578,18 @@ class AggregateDBApiTestCase(test.TestCase):
         expected = db.aggregate_metadata_get(ctxt, result['id'])
         self.assertThat(metadata, matchers.DictMatches(expected))
 
+    def test_aggregate_metadata_add_and_update(self):
+        ctxt = context.get_admin_context()
+        result = _create_aggregate(context=ctxt)
+        metadata = _get_fake_aggr_metadata()
+        key = metadata.keys()[0]
+        new_metadata = {key: 'foo',
+                        'fake_new_key': 'fake_new_value'}
+        metadata.update(new_metadata)
+        db.aggregate_metadata_add(ctxt, result['id'], new_metadata)
+        expected = db.aggregate_metadata_get(ctxt, result['id'])
+        self.assertThat(metadata, matchers.DictMatches(expected))
+
     def test_aggregate_metadata_add_retry(self):
         ctxt = context.get_admin_context()
         result = _create_aggregate(context=ctxt, metadata=None)
