@@ -169,11 +169,6 @@ class ComputeValidateDeviceTestCase(test.TestCase):
         device = self._validate_device('/dev/xvdc')
         self.assertEqual(device, '/dev/vdc')
 
-    def test_invalid_bdms(self):
-        self.instance['root_device_name'] = "baddata"
-        self.assertRaises(exception.InvalidDevicePath,
-                          self._validate_device)
-
     def test_invalid_device_prefix(self):
         self.assertRaises(exception.InvalidDevicePath,
                           self._validate_device, '/baddata/vdc')
@@ -236,6 +231,11 @@ class ComputeValidateDeviceTestCase(test.TestCase):
         self.data.append(self._fake_bdm(device))
         device = self._validate_device()
         self.assertEqual(device, '/dev/xvdd')
+
+    def test_no_dev_root_device_name_get_next_name(self):
+        self.instance['root_device_name'] = 'vda'
+        device = self._validate_device()
+        self.assertEqual('/dev/vdc', device)
 
 
 class DefaultDeviceNamesForInstanceTestCase(test.NoDBTestCase):

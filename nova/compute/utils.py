@@ -148,7 +148,8 @@ def get_next_device_name(instance, device_name_list,
         root_device_name = block_device.DEFAULT_ROOT_DEV_NAME
 
     try:
-        prefix = block_device.match_device(root_device_name)[0]
+        prefix = block_device.match_device(
+                block_device.prepend_dev(root_device_name))[0]
     except (TypeError, AttributeError, ValueError):
         raise exception.InvalidDevicePath(path=root_device_name)
 
