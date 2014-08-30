@@ -12,10 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import traceback
-
-import six
-
 from nova import db
 from nova import objects
 from nova.objects import base
@@ -112,19 +108,6 @@ class InstanceActionList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(), InstanceAction, db_actions)
 
 
-def serialize_args(fn):
-    def wrapper(cls, *args, **kwargs):
-        exc_val = kwargs.get('exc_val')
-        exc_tb = kwargs.get('exc_tb')
-        if exc_val is not None:
-            kwargs['exc_val'] = six.text_type(exc_val)
-        if not isinstance(exc_tb, six.string_types) and exc_tb is not None:
-            kwargs['exc_tb'] = ''.join(traceback.format_tb(exc_tb))
-        # NOTE(danms): We wrap a descriptor, so use that protocol
-        return fn.__get__(None, cls)(*args, **kwargs)
-    return classmethod(wrapper)
-
-
 class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: event_finish_with_failure decorated with serialize_args
@@ -183,7 +166,7 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject):
         if want_result:
             return cls._from_db_object(context, cls(), db_event)
 
-    @serialize_args
+    @base.serialize_args
     @base.remotable_classmethod
     def event_finish_with_failure(cls, context, instance_uuid, event_name,
                                   exc_val=None, exc_tb=None, want_result=None):

@@ -17,6 +17,7 @@
 import collections
 import copy
 import functools
+import traceback
 
 import netaddr
 from oslo import messaging
@@ -704,3 +705,22 @@ def obj_make_list(context, list_obj, item_cls, db_list, **extra_args):
     list_obj._context = context
     list_obj.obj_reset_changes()
     return list_obj
+
+
+def serialize_args(fn):
+    """Decorator that will do the arguments serialization before remoting."""
+    def wrapper(cls, *args, **kwargs):
+        for kw in kwargs:
+            value_arg = kwargs.get(kw)
+            if kw == 'exc_val' and value_arg:
+                kwargs[kw] = str(value_arg)
+            if kw == 'exc_tb' and (
+                    not isinstance(value_arg, six.string_types) and value_arg):
+                kwargs[kw] = ''.join(traceback.format_tb(value_arg))
+        # NOTE(danms): We wrap a descriptor, so use that protocol
+        return fn.__get__(None, cls)(*args, **kwargs)
+
+    # NOTE(danms): Make this discoverable
+    wrapper.remotable = getattr(fn, 'remotable', False)
+    wrapper.original_fn = fn
+    return classmethod(wrapper)

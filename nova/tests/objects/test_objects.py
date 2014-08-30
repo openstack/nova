@@ -950,7 +950,7 @@ object_data = {
     'FloatingIPList': '1.3-bbc671d6259032ee362ff6ee3600d749',
     'Instance': '1.14-1154dc29398bc3c57f053b8e449bb03d',
     'InstanceAction': '1.1-6b1d0a6dbd522b5a83c20757ec659663',
-    'InstanceActionEvent': '1.1-f144eaa9fb22f248fc41ed8401a3a1be',
+    'InstanceActionEvent': '1.1-42dbdba74bd06e0619ca75cd3397cd1b',
     'InstanceActionEventList': '1.0-1d5cc958171d6ce07383c2ad6208318e',
     'InstanceActionList': '1.0-368410fdb8d69ae20c495308535d6266',
     'InstanceExternalEvent': '1.0-f1134523654407a875fd59b80f759ee7',
@@ -1008,6 +1008,21 @@ class TestObjectVersions(test.TestCase):
     def setUp(self):
         super(TestObjectVersions, self).setUp()
 
+    def _find_remotable_method(self, cls, thing, parent_was_remotable=False):
+        """Follow a chain of remotable things down to the original function."""
+        if isinstance(thing, classmethod):
+            return self._find_remotable_method(cls, thing.__get__(None, cls))
+        elif inspect.ismethod(thing) and hasattr(thing, 'remotable'):
+            return self._find_remotable_method(cls, thing.original_fn,
+                                               parent_was_remotable=True)
+        elif parent_was_remotable:
+            # We must be the first non-remotable thing underneath a stack of
+            # remotable things (i.e. the actual implementation method)
+            return thing
+        else:
+            # This means the top-level thing never hit a remotable layer
+            return None
+
     def _get_fingerprint(self, obj_name):
         obj_class = base.NovaObject._obj_classes[obj_name][0]
         fields = obj_class.fields.items()
@@ -1015,8 +1030,10 @@ class TestObjectVersions(test.TestCase):
         methods = []
         for name in dir(obj_class):
             thing = getattr(obj_class, name)
-            if inspect.ismethod(thing) and hasattr(thing, 'remotable'):
-                methods.append((name, inspect.getargspec(thing.original_fn)))
+            if inspect.ismethod(thing) or isinstance(thing, classmethod):
+                method = self._find_remotable_method(obj_class, thing)
+                if method:
+                    methods.append((name, inspect.getargspec(method)))
         methods.sort()
         # NOTE(danms): Things that need a version bump are any fields
         # and their types, or the signatures of any remotable methods.
