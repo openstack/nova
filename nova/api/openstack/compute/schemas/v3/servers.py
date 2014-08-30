@@ -77,3 +77,25 @@ base_update = {
     'required': ['server'],
     'additionalProperties': False,
 }
+
+base_rebuild = {
+    'type': 'object',
+    'properties': {
+        'rebuild': {
+            'type': 'object',
+            'properties': {
+                'name': parameter_types.name,
+                'imageRef': parameter_types.image_ref,
+                'adminPass': parameter_types.admin_password,
+                'metadata': parameter_types.metadata,
+                'preserve_ephemeral': parameter_types.boolean,
+            },
+            'required': ['imageRef'],
+            # TODO(oomichi): ditto, enable here after all extension schema
+            # patches are merged.
+            # 'additionalProperties': False,
+        },
+    },
+    'required': ['rebuild'],
+    'additionalProperties': False,
+}

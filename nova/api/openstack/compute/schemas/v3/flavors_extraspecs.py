@@ -16,17 +16,22 @@ import copy
 
 from nova.api.validation import parameter_types
 
+# NOTE(oomichi): The metadata of flavor_extraspecs should accept numbers
+# as its values.
+metadata = copy.deepcopy(parameter_types.metadata)
+metadata['patternProperties']['^[a-zA-Z0-9-_:. ]{1,255}$']['type'] = \
+    ['string', 'number']
 create = {
     'type': 'object',
     'properties': {
-        'extra_specs': parameter_types.metadata
+        'extra_specs': metadata
     },
     'required': ['extra_specs'],
     'additionalProperties': False,
 }
 
 
-update = copy.deepcopy(parameter_types.metadata)
+update = copy.deepcopy(metadata)
 update.update({
      'minProperties': 1,
      'maxProperties': 1

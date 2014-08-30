@@ -1395,7 +1395,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
     def test_rebuild_instance_with_blank_metadata_key(self):
         self.body['rebuild']['metadata'][''] = 'world'
         self.req.body = jsonutils.dumps(self.body)
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.controller._action_rebuild,
                           self.req, FAKE_UUID, body=self.body)
 
@@ -1403,7 +1403,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         self.body['rebuild']['metadata'][('a' * 260)] = 'world'
 
         self.req.body = jsonutils.dumps(self.body)
-        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
+        self.assertRaises(exception.ValidationError,
                           self.controller._action_rebuild,
                           self.req, FAKE_UUID, body=self.body)
 
@@ -1411,7 +1411,15 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         self.body['rebuild']['metadata']['key1'] = ('a' * 260)
 
         self.req.body = jsonutils.dumps(self.body)
-        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
+        self.assertRaises(exception.ValidationError,
+                          self.controller._action_rebuild, self.req,
+                          FAKE_UUID, body=self.body)
+
+    def test_rebuild_instance_with_metadata_value_not_string(self):
+        self.body['rebuild']['metadata']['key1'] = 1
+
+        self.req.body = jsonutils.dumps(self.body)
+        self.assertRaises(exception.ValidationError,
                           self.controller._action_rebuild, self.req,
                           FAKE_UUID, body=self.body)
 
@@ -1467,7 +1475,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         self.stubs.Set(fake._FakeImageService, 'show', fake_get_image)
         self.body['rebuild']['name'] = '     '
         self.req.body = jsonutils.dumps(self.body)
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.controller._action_rebuild,
                           self.req, FAKE_UUID, body=self.body)
 
@@ -3210,4 +3218,12 @@ class TestServersExtensionSchema(test.NoDBTestCase):
         expected_schema = copy.deepcopy(servers_schema.base_update)
 
         actual_schema = self._test_load_extension_schema('update')
+        self.assertEqual(expected_schema, actual_schema)
+
+    def test_load_rebuild_extension_point(self):
+        # keypair extension does not contain rebuild_server() and
+        # here checks that any extension is not added to the schema.
+        expected_schema = copy.deepcopy(servers_schema.base_rebuild)
+
+        actual_schema = self._test_load_extension_schema('rebuild')
         self.assertEqual(expected_schema, actual_schema)

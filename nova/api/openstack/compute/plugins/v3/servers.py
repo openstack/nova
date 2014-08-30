@@ -74,6 +74,7 @@ class ServersController(wsgi.Controller):
 
     schema_server_create = schema_servers.base_create
     schema_server_update = schema_servers.base_update
+    schema_server_rebuild = schema_servers.base_rebuild
 
     @staticmethod
     def _add_location(robj):
@@ -199,6 +200,20 @@ class ServersController(wsgi.Controller):
                                            self.schema_server_update)
         else:
             LOG.debug("Did not find any server update schemas")
+
+        # Look for API schema of server rebuild extension
+        self.rebuild_schema_manager = \
+            stevedore.enabled.EnabledExtensionManager(
+                namespace=self.EXTENSION_REBUILD_NAMESPACE,
+                check_func=_check_load_extension('get_server_rebuild_schema'),
+                invoke_on_load=True,
+                invoke_kwds={"extension_info": self.extension_info},
+                propagate_map_exceptions=True)
+        if list(self.rebuild_schema_manager):
+            self.rebuild_schema_manager.map(self._rebuild_extension_schema,
+                                            self.schema_server_rebuild)
+        else:
+            LOG.debug("Did not find any server rebuild schemas")
 
     @extensions.expected_errors((400, 403))
     def index(self, req):
@@ -344,9 +359,6 @@ class ServersController(wsgi.Controller):
                                       max_length=max_length)
         except exception.InvalidInput as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
-
-    def _validate_server_name(self, value):
-        self._check_string_length(value, 'Server name', max_length=255)
 
     def _get_requested_networks(self, requested_networks):
         """Create a list of requested networks from the networks attribute."""
@@ -611,6 +623,13 @@ class ServersController(wsgi.Controller):
         schema = handler.get_server_update_schema()
         update_schema['properties']['server']['properties'].update(schema)
 
+    def _rebuild_extension_schema(self, ext, rebuild_schema):
+        handler = ext.obj
+        LOG.debug("Running _rebuild_extension_schema for %s", ext.obj)
+
+        schema = handler.get_server_rebuild_schema()
+        rebuild_schema['properties']['rebuild']['properties'].update(schema)
+
     def _delete(self, context, req, instance_uuid):
         instance = self._get_server(context, req, instance_uuid)
         if CONF.reclaim_instance_interval:
@@ -837,16 +856,12 @@ class ServersController(wsgi.Controller):
     @extensions.expected_errors((400, 403, 404, 409, 413))
     @wsgi.response(202)
     @wsgi.action('rebuild')
+    @validation.schema(schema_server_rebuild)
     def _action_rebuild(self, req, id, body):
         """Rebuild an instance with the given attributes."""
         rebuild_dict = body['rebuild']
 
-        try:
-            image_href = rebuild_dict["imageRef"]
-        except (KeyError, TypeError):
-            msg = _("Could not parse imageRef from request.")
-            raise exc.HTTPBadRequest(explanation=msg)
-
+        image_href = rebuild_dict["imageRef"]
         image_href = self._image_uuid_from_href(image_href)
 
         password = self._get_server_admin_password(rebuild_dict)
@@ -860,9 +875,6 @@ class ServersController(wsgi.Controller):
         }
 
         rebuild_kwargs = {}
-
-        if 'name' in rebuild_dict:
-            self._validate_server_name(rebuild_dict['name'])
 
         if 'preserve_ephemeral' in rebuild_dict:
             rebuild_kwargs['preserve_ephemeral'] = strutils.bool_from_string(
@@ -893,9 +905,6 @@ class ServersController(wsgi.Controller):
         except exception.InstanceNotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
-        except exception.InvalidMetadataSize as error:
-            raise exc.HTTPRequestEntityTooLarge(
-                explanation=error.format_message())
         except exception.ImageNotFound:
             msg = _("Cannot find image for rebuild")
             raise exc.HTTPBadRequest(explanation=msg)
@@ -989,17 +998,9 @@ class ServersController(wsgi.Controller):
         """Determine the admin password for a server on creation."""
         try:
             password = server['adminPass']
-            self._validate_admin_password(password)
         except KeyError:
             password = utils.generate_password()
-        except ValueError:
-            raise exc.HTTPBadRequest(explanation=_("Invalid adminPass"))
-
         return password
-
-    def _validate_admin_password(self, password):
-        if not isinstance(password, six.string_types):
-            raise ValueError()
 
     def _get_server_search_options(self):
         """Return server search options allowed by non-admin."""
