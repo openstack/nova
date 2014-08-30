@@ -1640,8 +1640,8 @@ class ServersControllerUpdateTest(ControllerTest):
     def test_update_server_name_too_long(self):
         body = {'server': {'name': 'x' * 256}}
         req = self._get_request(body, {'name': 'server_test'})
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                            req, FAKE_UUID, body=body)
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, FAKE_UUID, body=body)
 
     def test_update_server_name_all_blank_spaces(self):
         self.stubs.Set(db, 'instance_get',
@@ -1651,7 +1651,7 @@ class ServersControllerUpdateTest(ControllerTest):
         req.content_type = 'application/json'
         body = {'server': {'name': ' ' * 64}}
         req.body = jsonutils.dumps(body)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+        self.assertRaises(exception.ValidationError, self.controller.update,
                           req, FAKE_UUID, body=body)
 
     def test_update_server_admin_password_ignored(self):
@@ -3202,4 +3202,12 @@ class TestServersExtensionSchema(test.NoDBTestCase):
             keypairs_schema.server_create)
 
         actual_schema = self._test_load_extension_schema('create')
+        self.assertEqual(expected_schema, actual_schema)
+
+    def test_load_update_extension_point(self):
+        # keypair extension does not contain update_server() and
+        # here checks that any extension is not added to the schema.
+        expected_schema = copy.deepcopy(servers_schema.base_update)
+
+        actual_schema = self._test_load_extension_schema('update')
         self.assertEqual(expected_schema, actual_schema)

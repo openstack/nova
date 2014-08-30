@@ -73,6 +73,7 @@ class ServersController(wsgi.Controller):
     _view_builder_class = views_servers.ViewBuilderV3
 
     schema_server_create = schema_servers.base_create
+    schema_server_update = schema_servers.base_update
 
     @staticmethod
     def _add_location(robj):
@@ -184,6 +185,20 @@ class ServersController(wsgi.Controller):
                                            self.schema_server_create)
         else:
             LOG.debug("Did not find any server create schemas")
+
+        # Look for API schema of server update extension
+        self.update_schema_manager = \
+            stevedore.enabled.EnabledExtensionManager(
+                namespace=self.EXTENSION_UPDATE_NAMESPACE,
+                check_func=_check_load_extension('get_server_update_schema'),
+                invoke_on_load=True,
+                invoke_kwds={"extension_info": self.extension_info},
+                propagate_map_exceptions=True)
+        if list(self.update_schema_manager):
+            self.update_schema_manager.map(self._update_extension_schema,
+                                           self.schema_server_update)
+        else:
+            LOG.debug("Did not find any server update schemas")
 
     @extensions.expected_errors((400, 403))
     def index(self, req):
@@ -589,6 +604,13 @@ class ServersController(wsgi.Controller):
         schema = handler.get_server_create_schema()
         create_schema['properties']['server']['properties'].update(schema)
 
+    def _update_extension_schema(self, ext, update_schema):
+        handler = ext.obj
+        LOG.debug("Running _update_extension_schema for %s", ext.obj)
+
+        schema = handler.get_server_update_schema()
+        update_schema['properties']['server']['properties'].update(schema)
+
     def _delete(self, context, req, instance_uuid):
         instance = self._get_server(context, req, instance_uuid)
         if CONF.reclaim_instance_interval:
@@ -603,19 +625,18 @@ class ServersController(wsgi.Controller):
             self.compute_api.delete(context, instance)
 
     @extensions.expected_errors((400, 404))
+    @validation.schema(schema_server_update)
     def update(self, req, id, body):
         """Update server then pass on to version-specific controller."""
-        if not self.is_valid_body(body, 'server'):
-            raise exc.HTTPBadRequest(_("The request body is invalid"))
 
         ctxt = req.environ['nova.context']
         update_dict = {}
 
         if 'name' in body['server']:
-            name = body['server']['name']
-            self._validate_server_name(name)
-            update_dict['display_name'] = name.strip()
+            update_dict['display_name'] = body['server']['name']
 
+        # TODO(oomichi): The following host_id validation code can be removed
+        # when setting "'additionalProperties': False" in base_update schema.
         if 'host_id' in body['server']:
             msg = _("host_id cannot be updated.")
             raise exc.HTTPBadRequest(explanation=msg)

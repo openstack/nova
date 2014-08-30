@@ -60,3 +60,20 @@ base_create = {
     # to allow additionalProperties for some extensions.
     # 'additionalProperties': False,
 }
+
+base_update = {
+    'type': 'object',
+    'properties': {
+        'server': {
+            'type': 'object',
+            'properties': {
+                'name': parameter_types.name,
+            },
+            # TODO(oomichi): ditto, enable here after all extension schema
+            # patches are merged.
+            # 'additionalProperties': False,
+        },
+    },
+    'required': ['server'],
+    'additionalProperties': False,
+}
