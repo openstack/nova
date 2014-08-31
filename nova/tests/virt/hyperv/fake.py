@@ -85,3 +85,6 @@ class PathUtils(object):
 
     def vhd_exists(self, path):
         return False
+
+    def get_vm_console_log_paths(self, vm_name, remote_server=None):
+        return 'fake_vm_log_path'
