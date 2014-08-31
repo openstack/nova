@@ -842,6 +842,11 @@ class ComputeHostNotFound(HostNotFound):
     msg_fmt = _("Compute host %(host)s could not be found.")
 
 
+class ComputeHostNotCreated(HostNotFound):
+    msg_fmt = _("Compute host %(name)s needs to be created first"
+                " before updating.")
+
+
 class HostBinaryNotFound(NotFound):
     msg_fmt = _("Could not find binary %(binary)s on host %(host)s.")
 

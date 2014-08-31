@@ -408,6 +408,7 @@ class MissingComputeNodeTestCase(BaseTestCase):
                 self._fake_service_get_by_compute_host)
         self.stubs.Set(db, 'compute_node_create',
                 self._fake_create_compute_node)
+        self.tracker.scheduler_client.update_resource_stats = mock.Mock()
 
     def _fake_create_compute_node(self, context, values):
         self.created = True
@@ -552,6 +553,39 @@ class TrackerTestCase(BaseTrackerTestCase):
         self.assertEqual(0, self.tracker.compute_node['current_workload'])
         self.assertEqual(driver.pci_stats,
             jsonutils.loads(self.tracker.compute_node['pci_stats']))
+
+
+class SchedulerClientTrackerTestCase(BaseTrackerTestCase):
+
+    def setUp(self):
+        super(SchedulerClientTrackerTestCase, self).setUp()
+        self.tracker.scheduler_client.update_resource_stats = mock.Mock()
+
+    def test_create_resource(self):
+        self.tracker._write_ext_resources = mock.Mock()
+        self.tracker.conductor_api.compute_node_create = mock.Mock(
+            return_value=dict(id=1))
+        values = {'stats': {}, 'foo': 'bar', 'baz_count': 0}
+        self.tracker._create(self.context, values)
+
+        expected = {'stats': '{}', 'foo': 'bar', 'baz_count': 0,
+                    'id': 1}
+        self.tracker.scheduler_client.update_resource_stats.\
+            assert_called_once_with(self.context,
+                                    ("fakehost", "fakenode"),
+                                    expected)
+
+    def test_update_resource(self):
+        self.tracker._write_ext_resources = mock.Mock()
+        values = {'stats': {}, 'foo': 'bar', 'baz_count': 0}
+        self.tracker._update(self.context, values)
+
+        expected = {'stats': '{}', 'foo': 'bar', 'baz_count': 0,
+                    'id': 1}
+        self.tracker.scheduler_client.update_resource_stats.\
+            assert_called_once_with(self.context,
+                                    ("fakehost", "fakenode"),
+                                    expected)
 
 
 class TrackerPciStatsTestCase(BaseTrackerTestCase):

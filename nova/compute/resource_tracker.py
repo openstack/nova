@@ -18,6 +18,7 @@ Track resources like memory and disk for a compute host.  Provides the
 scheduler with useful information about availability through the ComputeNode
 model.
 """
+import copy
 
 from oslo.config import cfg
 
@@ -38,6 +39,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.pci import pci_manager
 from nova import rpc
+from nova.scheduler import client as scheduler_client
 from nova import utils
 
 resource_tracker_opts = [
@@ -83,6 +85,7 @@ class ResourceTracker(object):
             ext_resources.ResourceHandler(CONF.compute_resources)
         self.notifier = rpc.get_notifier()
         self.old_resources = {}
+        self.scheduler_client = scheduler_client.SchedulerClient()
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def instance_claim(self, context, instance_ref, limits=None):
@@ -397,6 +400,8 @@ class ResourceTracker(object):
 
         self.compute_node = self.conductor_api.compute_node_create(context,
                                                                    values)
+        # NOTE(sbauza): We don't want to miss the first creation event
+        self._update_resource_stats(context, values)
 
     def _get_service(self, context):
         try:
@@ -463,12 +468,12 @@ class ResourceTracker(object):
     def _resource_change(self, resources):
         """Check to see if any resouces have changed."""
         if cmp(resources, self.old_resources) != 0:
-            self.old_resources = resources
+            self.old_resources = copy.deepcopy(resources)
             return True
         return False
 
     def _update(self, context, values):
-        """Persist the compute node updates to the DB."""
+        """Update partial stats locally and populate them to Scheduler."""
         self._write_ext_resources(values)
         # NOTE(pmurray): the stats field is stored as a json string. The
         # json conversion will be done automatically by the ComputeNode object
@@ -479,10 +484,19 @@ class ResourceTracker(object):
             return
         if "service" in self.compute_node:
             del self.compute_node['service']
-        self.compute_node = self.conductor_api.compute_node_update(
-            context, self.compute_node, values)
+        # NOTE(sbauza): Now the DB update is asynchronous, we need to locally
+        #               update the values
+        self.compute_node.update(values)
+        # Persist the stats to the Scheduler
+        self._update_resource_stats(context, values)
         if self.pci_tracker:
             self.pci_tracker.save(context)
+
+    def _update_resource_stats(self, context, values):
+        stats = values.copy()
+        stats['id'] = self.compute_node['id']
+        self.scheduler_client.update_resource_stats(
+            context, (self.host, self.nodename), stats)
 
     def _update_usage(self, resources, usage, sign=1):
         mem_usage = usage['memory_mb']
