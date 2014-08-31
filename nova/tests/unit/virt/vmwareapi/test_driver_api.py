@@ -198,7 +198,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     REQUIRES_LOCKING = True
 
     @mock.patch.object(driver.VMwareVCDriver, '_register_openstack_extension')
-    def setUp(self, mock_register, create_connection=True):
+    def setUp(self, mock_register):
         super(VMwareAPIVMTestCase, self).setUp()
         vm_util.vm_refs_cache_reset()
         self.context = context.RequestContext('fake', 'fake', is_admin=False)
@@ -219,15 +219,14 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         stubs.set_stubs(self.stubs)
         vmwareapi_fake.reset()
         nova.tests.unit.image.fake.stub_out_image_service(self.stubs)
-        if create_connection:
-            self.conn = driver.VMwareVCDriver(None, False)
-            self._set_exception_vars()
-            self.node_name = self.conn._resources.keys()[0]
-            self.node_name2 = self.conn._resources.keys()[1]
-            if cluster_name2 in self.node_name2:
-                self.ds = 'ds1'
-            else:
-                self.ds = 'ds2'
+        self.conn = driver.VMwareVCDriver(None, False)
+        self._set_exception_vars()
+        self.node_name = self.conn._resources.keys()[0]
+        self.node_name2 = self.conn._resources.keys()[1]
+        if cluster_name2 in self.node_name2:
+            self.ds = 'ds1'
+        else:
+            self.ds = 'ds2'
 
         self.vim = vmwareapi_fake.FakeVim()
 
@@ -511,10 +510,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertTrue(self.conn.instance_exists(self.instance))
         invalid_instance = dict(uuid='foo', name='bar', node=self.node_name)
         self.assertFalse(self.conn.instance_exists(invalid_instance))
-
-    def test_list_instances(self):
-        instances = self.conn.list_instances()
-        self.assertEqual(len(instances), 0)
 
     def test_list_instances_1(self):
         self._create_vm()
@@ -1738,27 +1733,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertRaises(NotImplementedError, self.conn.get_console_output,
             None, None)
 
-    def _test_finish_migration(self, power_on, resize_instance=False):
-        self._create_vm()
-        self.conn.finish_migration(context=self.context,
-                                   migration=None,
-                                   instance=self.instance,
-                                   disk_info=None,
-                                   network_info=None,
-                                   block_device_info=None,
-                                   resize_instance=resize_instance,
-                                   image_meta=None,
-                                   power_on=power_on)
-
-    def _test_finish_revert_migration(self, power_on):
-        self._create_vm()
-        # Ensure ESX driver throws an error
-        self.assertRaises(NotImplementedError,
-                          self.conn.finish_revert_migration,
-                          self.context,
-                          instance=self.instance,
-                          network_info=None)
-
     def test_get_vnc_console_non_existent(self):
         self._create_instance()
         self.assertRaises(exception.InstanceNotFound,
@@ -2095,34 +2069,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._image_aging_aged()
         self._cached_files_exist()
 
-
-class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
-
-    @mock.patch.object(driver.VMwareVCDriver, '_register_openstack_extension')
-    def setUp(self, mock_register):
-        super(VMwareAPIVCDriverTestCase, self).setUp(create_connection=False)
-        cluster_name = 'test_cluster'
-        cluster_name2 = 'test_cluster2'
-        self.flags(cluster_name=[cluster_name, cluster_name2],
-                   api_retry_count=1,
-                   task_poll_interval=10, datastore_regex='.*', group='vmware')
-        self.flags(vnc_enabled=False,
-                   image_cache_subdirectory_name='vmware_base')
-        vmwareapi_fake.reset()
-        self.conn = driver.VMwareVCDriver(None, False)
-        self._set_exception_vars()
-        self.node_name = self.conn._resources.keys()[0]
-        self.node_name2 = self.conn._resources.keys()[1]
-        if cluster_name2 in self.node_name2:
-            self.ds = 'ds1'
-        else:
-            self.ds = 'ds2'
-        self.vnc_host = 'ha-host'
-
-    def tearDown(self):
-        super(VMwareAPIVCDriverTestCase, self).tearDown()
-        vmwareapi_fake.cleanup()
-
     def test_public_api_signatures(self):
         self.assertPublicAPISignatures(v_driver.ComputeDriver(None), self.conn)
 
@@ -2241,10 +2187,6 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         info = self.conn.get_info({'uuid': uuid2,
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
-
-    def test_snapshot(self):
-        self._create_vm()
-        self._test_snapshot()
 
     def test_snapshot_using_file_manager(self):
         self._create_vm()
@@ -2544,52 +2486,6 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         except NotImplementedError:
             self.fail("test_get_instance_disk_info() should not raise "
                       "NotImplementedError")
-
-    def test_destroy(self):
-        self._create_vm()
-        info = self.conn.get_info({'uuid': self.uuid,
-                                   'node': self.instance_node})
-        self._check_vm_info(info, power_state.RUNNING)
-        instances = self.conn.list_instances()
-        self.assertEqual(1, len(instances))
-        self.conn.destroy(self.context, self.instance, self.network_info)
-        instances = self.conn.list_instances()
-        self.assertEqual(0, len(instances))
-        self.assertIsNone(vm_util.vm_ref_cache_get(self.uuid))
-
-    def test_destroy_no_datastore(self):
-        self._create_vm()
-        info = self.conn.get_info({'uuid': self.uuid,
-                                   'node': self.instance_node})
-        self._check_vm_info(info, power_state.RUNNING)
-        instances = self.conn.list_instances()
-        self.assertEqual(1, len(instances))
-        # Overwrite the vmPathName
-        vm = self._get_vm_record()
-        vm.set("config.files.vmPathName", None)
-        self.conn.destroy(self.context, self.instance, self.network_info)
-        instances = self.conn.list_instances()
-        self.assertEqual(0, len(instances))
-
-    def test_destroy_non_existent(self):
-        self.destroy_disks = True
-        with mock.patch.object(self.conn._vmops,
-                               "destroy") as mock_destroy:
-            self._create_instance()
-            self.conn.destroy(self.context, self.instance,
-                              self.network_info,
-                              None, self.destroy_disks)
-            mock_destroy.assert_called_once_with(self.instance,
-                                                 self.destroy_disks)
-
-    def test_destroy_instance_without_compute(self):
-        self.destroy_disks = True
-        with mock.patch.object(self.conn._vmops,
-                               "destroy") as mock_destroy:
-            self.conn.destroy(self.context, self.instance_without_compute,
-                              self.network_info,
-                              None, self.destroy_disks)
-            self.assertFalse(mock_destroy.called)
 
     def test_get_host_uptime(self):
         self.assertRaises(NotImplementedError,
