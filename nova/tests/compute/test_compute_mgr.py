@@ -433,17 +433,32 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def test_init_instance_reverts_crashed_migration_no_old_state(self):
         self._test_init_instance_reverts_crashed_migrations(old_vm_state=None)
 
-    def test_init_instance_sets_building_error(self):
+    def _test_init_instance_sets_building_error(self, vm_state,
+                                                task_state=None):
         instance = fake_instance.fake_instance_obj(
                 self.context,
                 uuid='foo',
-                vm_state=vm_states.BUILDING,
-                task_state=None)
+                vm_state=vm_state,
+                task_state=task_state)
         with mock.patch.object(instance, 'save') as save:
             self.compute._init_instance(self.context, instance)
             save.assert_called_once_with()
         self.assertIsNone(instance.task_state)
         self.assertEqual(vm_states.ERROR, instance.vm_state)
+
+    def test_init_instance_sets_building_error(self):
+        self._test_init_instance_sets_building_error(vm_states.BUILDING)
+
+    def test_init_instance_sets_rebuilding_errors(self):
+        tasks = [task_states.REBUILDING,
+                 task_states.REBUILD_BLOCK_DEVICE_MAPPING,
+                 task_states.REBUILD_SPAWNING]
+        vms = [vm_states.ACTIVE, vm_states.STOPPED]
+
+        for vm_state in vms:
+            for task_state in tasks:
+                self._test_init_instance_sets_building_error(
+                    vm_state, task_state)
 
     def _test_init_instance_sets_building_tasks_error(self, instance):
         with mock.patch.object(instance, 'save') as save:
