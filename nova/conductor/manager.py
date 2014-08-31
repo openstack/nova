@@ -44,8 +44,8 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import quota
+from nova.scheduler import client as scheduler_client
 from nova.scheduler import driver as scheduler_driver
-from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova.scheduler import utils as scheduler_utils
 
 LOG = logging.getLogger(__name__)
@@ -453,8 +453,8 @@ class ComputeTaskManager(base.Base):
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
-        self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
         self.image_api = image.API()
+        self.scheduler_client = scheduler_client.SchedulerClient()
 
     @messaging.expected_exceptions(exception.NoValidHost,
                                    exception.ComputeServiceUnavailable,
@@ -504,7 +504,7 @@ class ComputeTaskManager(base.Base):
                                                   instance=instance)
         try:
             scheduler_utils.populate_retry(filter_properties, instance['uuid'])
-            hosts = self.scheduler_rpcapi.select_destinations(
+            hosts = self.scheduler_client.select_destinations(
                     context, request_spec, filter_properties)
             host_state = hosts[0]
         except exception.NoValidHost as ex:
@@ -598,7 +598,7 @@ class ComputeTaskManager(base.Base):
             # have a single instance.
             scheduler_utils.populate_retry(filter_properties,
                 instances[0].uuid)
-            hosts = self.scheduler_rpcapi.select_destinations(context,
+            hosts = self.scheduler_client.select_destinations(context,
                     request_spec, filter_properties)
         except Exception as exc:
             for instance in instances:
@@ -639,7 +639,7 @@ class ComputeTaskManager(base.Base):
             *instances):
         request_spec = scheduler_utils.build_request_spec(context, image,
                 instances)
-        hosts = self.scheduler_rpcapi.select_destinations(context,
+        hosts = self.scheduler_client.select_destinations(context,
                 request_spec, filter_properties)
         return hosts
 
@@ -720,7 +720,7 @@ class ComputeTaskManager(base.Base):
                                                                   image_ref,
                                                                   [instance])
                 try:
-                    hosts = self.scheduler_rpcapi.select_destinations(context,
+                    hosts = self.scheduler_client.select_destinations(context,
                                                             request_spec,
                                                             filter_properties)
                     host = hosts.pop(0)['host']
