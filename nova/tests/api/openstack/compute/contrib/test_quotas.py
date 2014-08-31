@@ -154,43 +154,32 @@ class QuotaSetsTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.update,
                           req, 'update_me', body)
 
-    def test_quotas_update_invalid_key(self):
+    def _quotas_update_bad_request_case(self, body):
         self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
         self.ext_mgr.is_loaded('os-user-quotas').AndReturn(True)
         self.mox.ReplayAll()
+        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
+                                      use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          req, 'update_me', body)
+
+    def test_quotas_update_invalid_key(self):
         body = {'quota_set': {'instances2': -2, 'cores': -2,
                               'ram': -2, 'floating_ips': -2,
                               'metadata_items': -2, 'injected_files': -2,
                               'injected_file_content_bytes': -2}}
-
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
-                                      use_admin_context=True)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 'update_me', body)
+        self._quotas_update_bad_request_case(body)
 
     def test_quotas_update_invalid_limit(self):
-        self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
-        self.ext_mgr.is_loaded('os-user-quotas').AndReturn(True)
-        self.mox.ReplayAll()
         body = {'quota_set': {'instances': -2, 'cores': -2,
                               'ram': -2, 'floating_ips': -2, 'fixed_ips': -2,
                               'metadata_items': -2, 'injected_files': -2,
                               'injected_file_content_bytes': -2}}
-
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
-                                      use_admin_context=True)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 'update_me', body)
+        self._quotas_update_bad_request_case(body)
 
     def test_quotas_update_empty_body(self):
-        self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
-        self.ext_mgr.is_loaded('os-user-quotas').AndReturn(True)
-        self.mox.ReplayAll()
         body = {}
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
-                                      use_admin_context=True)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 'update_me', body)
+        self._quotas_update_bad_request_case(body)
 
     def test_quotas_update_invalid_value_json_fromat_empty_string(self):
         self.default_quotas.update({
@@ -234,13 +223,7 @@ class QuotaSetsTest(test.TestCase):
             'instances': 'test'
         })
         body = {'quota_set': self.default_quotas}
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
-                                      use_admin_context=True)
-        self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
-        self.ext_mgr.is_loaded('os-user-quotas').AndReturn(True)
-        self.mox.ReplayAll()
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 'update_me', body)
+        self._quotas_update_bad_request_case(body)
 
     def test_quotas_update_invalid_value_with_float(self):
         # when PUT non integer value
@@ -248,13 +231,7 @@ class QuotaSetsTest(test.TestCase):
             'instances': 50.5
         })
         body = {'quota_set': self.default_quotas}
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
-                                      use_admin_context=True)
-        self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
-        self.ext_mgr.is_loaded('os-user-quotas').AndReturn(True)
-        self.mox.ReplayAll()
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 'update_me', body)
+        self._quotas_update_bad_request_case(body)
 
     def test_quotas_update_invalid_value_with_unicode(self):
         # when PUT non integer value
@@ -262,13 +239,7 @@ class QuotaSetsTest(test.TestCase):
             'instances': u'\u30aa\u30fc\u30d7\u30f3'
         })
         body = {'quota_set': self.default_quotas}
-        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
-                                      use_admin_context=True)
-        self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
-        self.ext_mgr.is_loaded('os-user-quotas').AndReturn(True)
-        self.mox.ReplayAll()
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 'update_me', body)
+        self._quotas_update_bad_request_case(body)
 
     def test_delete_quotas_when_extension_not_loaded(self):
         self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(False)
