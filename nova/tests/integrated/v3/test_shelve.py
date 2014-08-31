@@ -42,7 +42,7 @@ class ShelveJsonTest(test_servers.ServersSampleBase):
     def test_shelve_offload(self):
         uuid = self._post_server()
         self._test_server_action(uuid, 'os-shelve', 'shelve')
-        self._test_server_action(uuid, 'os-shelve-offload', 'shelve_offload')
+        self._test_server_action(uuid, 'os-shelve-offload', 'shelveOffload')
 
     def test_unshelve(self):
         uuid = self._post_server()

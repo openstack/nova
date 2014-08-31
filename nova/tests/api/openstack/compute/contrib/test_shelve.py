@@ -16,7 +16,8 @@ import uuid
 
 import webob
 
-from nova.api.openstack.compute.contrib import shelve
+from nova.api.openstack.compute.contrib import shelve as shelve_v2
+from nova.api.openstack.compute.plugins.v3 import shelve as shelve_v21
 from nova.compute import api as compute_api
 from nova import db
 from nova import exception
@@ -37,94 +38,111 @@ def fake_auth_context(context):
     return True
 
 
-class ShelvePolicyTest(test.NoDBTestCase):
+class ShelvePolicyTestV21(test.NoDBTestCase):
+    plugin = shelve_v21
+    prefix = 'v3:os-shelve:'
+    offload = 'shelve_offload'
+
     def setUp(self):
-        super(ShelvePolicyTest, self).setUp()
-        self.controller = shelve.ShelveController()
+        super(ShelvePolicyTestV21, self).setUp()
+        self.controller = self.plugin.ShelveController()
+
+    def _fake_request(self):
+        return fakes.HTTPRequestV3.blank('/servers/12/os-shelve')
 
     def test_shelve_restricted_by_role(self):
-        rules = {'compute_extension:shelve':
+        rules = {'compute_extension:%sshelve' % self.prefix:
                      common_policy.parse_rule('role:admin')}
         policy.set_rules(rules)
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
+        req = self._fake_request()
         self.assertRaises(exception.Forbidden, self.controller._shelve,
                 req, str(uuid.uuid4()), {})
 
     def test_shelve_allowed(self):
         rules = {'compute:get': common_policy.parse_rule(''),
-                 'compute_extension:shelve':
+                 'compute_extension:%sshelve' % self.prefix:
                      common_policy.parse_rule('')}
         policy.set_rules(rules)
 
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
+        req = self._fake_request()
         self.assertRaises(exception.Forbidden, self.controller._shelve,
                 req, str(uuid.uuid4()), {})
 
     def test_shelve_locked_server(self):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        self.stubs.Set(shelve, 'auth_shelve', fake_auth_context)
+        self.stubs.Set(self.plugin, 'auth_shelve', fake_auth_context)
         self.stubs.Set(compute_api.API, 'shelve',
                        fakes.fake_actions_to_locked_server)
-        req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
+        req = self._fake_request()
         self.assertRaises(webob.exc.HTTPConflict, self.controller._shelve,
                           req, str(uuid.uuid4()), {})
 
     def test_unshelve_restricted_by_role(self):
-        rules = {'compute_extension:unshelve':
+        rules = {'compute_extension:%sunshelve' % self.prefix:
                      common_policy.parse_rule('role:admin')}
         policy.set_rules(rules)
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
+        req = self._fake_request()
         self.assertRaises(exception.Forbidden, self.controller._unshelve,
                 req, str(uuid.uuid4()), {})
 
     def test_unshelve_allowed(self):
         rules = {'compute:get': common_policy.parse_rule(''),
-                 'compute_extension:unshelve': common_policy.parse_rule('')}
+                 'compute_extension:%sunshelve' % self.prefix:
+                 common_policy.parse_rule('')}
         policy.set_rules(rules)
 
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
+        req = self._fake_request()
         self.assertRaises(exception.Forbidden, self.controller._unshelve,
                 req, str(uuid.uuid4()), {})
 
     def test_unshelve_locked_server(self):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        self.stubs.Set(shelve, 'auth_unshelve', fake_auth_context)
+        self.stubs.Set(self.plugin, 'auth_unshelve', fake_auth_context)
         self.stubs.Set(compute_api.API, 'unshelve',
                        fakes.fake_actions_to_locked_server)
-        req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
+        req = self._fake_request()
         self.assertRaises(webob.exc.HTTPConflict, self.controller._unshelve,
                           req, str(uuid.uuid4()), {})
 
     def test_shelve_offload_restricted_by_role(self):
-        rules = {'compute_extension:shelveOffload':
-                     common_policy.parse_rule('role:admin')}
+        rules = {'compute_extension:%s%s' % (self.prefix, self.offload):
+                  common_policy.parse_rule('role:admin')}
         policy.set_rules(rules)
 
-        req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
+        req = self._fake_request()
         self.assertRaises(exception.Forbidden,
                 self.controller._shelve_offload, req, str(uuid.uuid4()), {})
 
     def test_shelve_offload_allowed(self):
         rules = {'compute:get': common_policy.parse_rule(''),
-                 'compute_extension:shelveOffload':
+                 'compute_extension:%s%s' % (self.prefix, self.offload):
                      common_policy.parse_rule('')}
         policy.set_rules(rules)
 
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
+        req = self._fake_request()
         self.assertRaises(exception.Forbidden,
                 self.controller._shelve_offload, req, str(uuid.uuid4()), {})
 
     def test_shelve_offload_locked_server(self):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        self.stubs.Set(shelve, 'auth_shelve_offload', fake_auth_context)
+        self.stubs.Set(self.plugin, 'auth_shelve_offload', fake_auth_context)
         self.stubs.Set(compute_api.API, 'shelve_offload',
                        fakes.fake_actions_to_locked_server)
-        req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
+        req = self._fake_request()
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._shelve_offload,
                           req, str(uuid.uuid4()), {})
+
+
+class ShelvePolicyTestV2(ShelvePolicyTestV21):
+    plugin = shelve_v2
+    prefix = ''
+    offload = 'shelveOffload'
+
+    def _fake_request(self):
+        return fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
