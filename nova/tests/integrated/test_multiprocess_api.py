@@ -102,6 +102,8 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
             # Make sure all processes are stopped
             os.kill(self.pid, signal.SIGTERM)
 
+            self._terminate_workers()
+
             try:
                 # Make sure we reap our test process
                 self._reap_test()
@@ -183,10 +185,13 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
         flavors = self.api.get_flavors()
         self.assertTrue(len(flavors) > 0, 'Num of flavors > 0.')
 
-        worker_pids = self._get_workers()
-
         LOG.info("sent launcher_process pid: %r signal: %r" % (self.pid, sig))
         os.kill(self.pid, sig)
+
+        self._terminate_workers()
+
+    def _terminate_workers(self):
+        worker_pids = self._get_workers()
 
         # did you know the test framework has a timeout of its own?
         # if a test takes too long, the test will be killed.
