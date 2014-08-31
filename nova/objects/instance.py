@@ -210,7 +210,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                               'default_swap_device', 'config_drive',
                               'cell_name']
         if target_version < (1, 14) and 'numa_topology' in primitive:
-                del primitive['numa_topology']
+            del primitive['numa_topology']
         if target_version < (1, 10) and 'info_cache' in primitive:
             # NOTE(danms): Instance <= 1.9 (havana) had info_cache 1.4
             self.info_cache.obj_make_compatible(primitive['info_cache'],
