@@ -998,9 +998,6 @@ class API(base.Base):
             self._record_action_start(context, instance,
                                       instance_actions.CREATE)
 
-        if requested_networks is not None:
-            # NOTE(danms): Temporary transition
-            requested_networks = requested_networks.as_tuples()
         self.compute_task_api.build_instances(context,
                 instances=instances, image=boot_meta,
                 filter_properties=filter_properties,

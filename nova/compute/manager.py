@@ -570,7 +570,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.32')
+    target = messaging.Target(version='3.33')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to a instance during power off.  The overall
@@ -1906,6 +1906,14 @@ class ComputeManager(manager.Manager):
                      security_groups=None, block_device_mapping=None,
                      node=None, limits=None):
 
+        # NOTE(danms): Remove this in v4.0 of the RPC API
+        if (requested_networks and
+                not isinstance(requested_networks,
+                               objects.NetworkRequestList)):
+            requested_networks = objects.NetworkRequestList(
+                objects=[objects.NetworkRequest.from_tuple(t)
+                         for t in requested_networks])
+
         @utils.synchronized(instance.uuid)
         def do_build_and_run_instance(context, instance, image, request_spec,
                 filter_properties, admin_password, injected_files,
@@ -1939,6 +1947,9 @@ class ComputeManager(manager.Manager):
                           instance=instance)
 
             try:
+                # NOTE(danms): Temporary and transitional
+                if requested_networks:
+                    requested_networks = requested_networks.as_tuples()
                 self._build_and_run_instance(context, instance, image,
                         decoded_files, admin_password, requested_networks,
                         security_groups, block_device_mapping, node, limits,

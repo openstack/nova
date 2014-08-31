@@ -448,7 +448,7 @@ class ComputeTaskManager(base.Base):
     may involve coordinating activities on multiple compute nodes.
     """
 
-    target = messaging.Target(namespace='compute_task', version='1.8')
+    target = messaging.Target(namespace='compute_task', version='1.9')
 
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
@@ -592,6 +592,14 @@ class ComputeTaskManager(base.Base):
         #                 2.0 of the RPC API.
         request_spec = scheduler_utils.build_request_spec(context, image,
                                                           instances)
+        # TODO(danms): Remove this in version 2.0 of the RPC API
+        if (requested_networks and
+                not isinstance(requested_networks,
+                               objects.NetworkRequestList)):
+            requested_networks = objects.NetworkRequestList(
+                objects=[objects.NetworkRequest.from_tuple(t)
+                         for t in requested_networks])
+
         try:
             # check retry policy. Rather ugly use of instances[0]...
             # but if we've exceeded max retries... then we really only
