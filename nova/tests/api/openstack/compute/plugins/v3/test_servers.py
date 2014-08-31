@@ -2345,7 +2345,7 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create, self.req, body=self.body)
 
     def test_create_user_data_malformed_bad_request(self):
-        params = {'os-user-data:user_data': 'u1234'}
+        params = {'user_data': 'u1234'}
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra, params)
 
