@@ -20,6 +20,7 @@ import itertools
 
 import mock
 import mox
+from oslo.config import cfg
 
 from nova.compute import flavors
 from nova import context
@@ -39,6 +40,8 @@ from nova.tests.objects import test_fixed_ip
 from nova.tests.objects import test_flavor
 from nova.tests.objects import test_virtual_interface
 from nova import utils
+
+CONF = cfg.CONF
 
 FAKE_UUID = 'a47ae74e-ab08-547f-9eee-ffd23fc46c16'
 
@@ -81,6 +84,15 @@ class ApiTestCase(test.TestCase):
                          self.network_api.get_all(self.context))
         mock_get_all.assert_called_once_with(self.context,
                                              project_only=True)
+
+    @mock.patch('nova.objects.NetworkList.get_all')
+    def test_get_all_liberal(self, mock_get_all):
+        self.flags(network_manager='nova.network.manager.FlatDHCPManaager')
+        mock_get_all.return_value = mock.sentinel.get_all
+        self.assertEqual(mock.sentinel.get_all,
+                         self.network_api.get_all(self.context))
+        mock_get_all.assert_called_once_with(self.context,
+                                             project_only="allow_none")
 
     @mock.patch('nova.objects.NetworkList.get_all')
     def test_get_all_no_networks(self, mock_get_all):
