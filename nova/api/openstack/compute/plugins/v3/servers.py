@@ -546,7 +546,12 @@ class ServersController(wsgi.Controller):
                 exception.PortRequiresFixedIP,
                 exception.NetworkRequiresSubnet,
                 exception.NetworkNotFound,
-                exception.InvalidBDMVolumeNotBootable) as error:
+                exception.InvalidBDMVolumeNotBootable,
+                exception.InvalidBDMSnapshot,
+                exception.InvalidBDMVolume,
+                exception.InvalidBDMImage,
+                exception.InvalidBDMBootSequence,
+                exception.InvalidBDMLocalsLimit) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except (exception.PortInUse,
                 exception.NetworkAmbiguous,

@@ -26,6 +26,7 @@ from nova.api.openstack.compute import servers as servers_v2
 from nova import block_device
 from nova.compute import api as compute_api
 from nova import exception
+from nova import objects
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -290,6 +291,39 @@ class BlockDeviceMappingTestV21(test.TestCase):
         fake_bdm_meta.side_effect = exception.InvalidBDMVolumeNotBootable(id=1)
         self.assertRaises(exc.HTTPBadRequest, self._test_create, params,
                           no_image=True)
+
+    def test_create_instance_bdm_api_validation_fails(self):
+        self.validation_fail_test_validate_called = False
+        self.validation_fail_instance_destroy_called = False
+
+        bdm_exceptions = ((exception.InvalidBDMSnapshot, {'id': 'fake'}),
+                          (exception.InvalidBDMVolume, {'id': 'fake'}),
+                          (exception.InvalidBDMImage, {'id': 'fake'}),
+                          (exception.InvalidBDMBootSequence, {}),
+                          (exception.InvalidBDMLocalsLimit, {}))
+
+        ex_iter = iter(bdm_exceptions)
+
+        def _validate_bdm(*args, **kwargs):
+            self.validation_fail_test_validate_called = True
+            ex, kargs = ex_iter.next()
+            raise ex(**kargs)
+
+        def _instance_destroy(*args, **kwargs):
+            self.validation_fail_instance_destroy_called = True
+
+        self.stubs.Set(compute_api.API, '_validate_bdm', _validate_bdm)
+        self.stubs.Set(objects.Instance, 'destroy', _instance_destroy)
+
+        for _unused in xrange(len(bdm_exceptions)):
+            params = {block_device_mapping.ATTRIBUTE_NAME:
+                      [self.bdm[0].copy()]}
+            self.assertRaises(exc.HTTPBadRequest,
+                              self._test_create, params)
+            self.assertTrue(self.validation_fail_test_validate_called)
+            self.assertTrue(self.validation_fail_instance_destroy_called)
+            self.validation_fail_test_validate_called = False
+            self.validation_fail_instance_destroy_called = False
 
 
 class BlockDeviceMappingTestV2(BlockDeviceMappingTestV21):
