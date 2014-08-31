@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack.compute.plugins.v3 import flavor_rxtx
 from nova.api.validation import parameter_types
 
 create = {
@@ -55,7 +54,7 @@ create = {
                     'pattern': '^[0-9]*$', 'minimum': 0
                 },
                 # positive ( > 0) float
-                '%s:rxtx_factor' % flavor_rxtx.ALIAS: {
+                'rxtx_factor': {
                     'type': ['number', 'string'],
                     'pattern': '^[0-9]+(\.[0-9]+)?$',
                     'minimum': 0, 'exclusiveMinimum': True
