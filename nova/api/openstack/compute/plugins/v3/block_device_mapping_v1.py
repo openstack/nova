@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""The block device mappings extension."""
+"""The legacy block device mappings extension."""
 
 from webob import exc
 
@@ -21,16 +21,17 @@ from nova.api.openstack import extensions
 from nova import block_device
 from nova import exception
 from nova.i18n import _
+from nova.openstack.common import strutils
 
-ALIAS = "os-block-device-mapping"
-ATTRIBUTE_NAME = "block_device_mapping_v2"
-LEGACY_ATTRIBUTE_NAME = "block_device_mapping"
+ALIAS = "os-block-device-mapping-v1"
+ATTRIBUTE_NAME = "block_device_mapping"
+ATTRIBUTE_NAME_V2 = "block_device_mapping_v2"
 
 
-class BlockDeviceMapping(extensions.V3APIExtensionBase):
+class BlockDeviceMappingV1(extensions.V3APIExtensionBase):
     """Block device mapping boot support."""
 
-    name = "BlockDeviceMapping"
+    name = "BlockDeviceMappingV1"
     alias = ALIAS
     version = 1
 
@@ -45,23 +46,26 @@ class BlockDeviceMapping(extensions.V3APIExtensionBase):
     # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
     # parameter as this is placed to handle scheduler_hint extension for V2.1.
     def server_create(self, server_dict, create_kwargs, body_deprecated_param):
-        bdm = server_dict.get(ATTRIBUTE_NAME, [])
-        legacy_bdm = server_dict.get(LEGACY_ATTRIBUTE_NAME, [])
+        block_device_mapping = server_dict.get(ATTRIBUTE_NAME, [])
+        block_device_mapping_v2 = server_dict.get(ATTRIBUTE_NAME_V2, [])
 
-        if bdm and legacy_bdm:
+        if block_device_mapping and block_device_mapping_v2:
             expl = _('Using different block_device_mapping syntaxes '
                      'is not allowed in the same request.')
             raise exc.HTTPBadRequest(explanation=expl)
 
-        try:
-            block_device_mapping = [
-                block_device.BlockDeviceDict.from_api(bdm_dict)
-                for bdm_dict in bdm]
-        except (exception.InvalidBDMFormat,
-                exception.InvalidBDMVolumeNotBootable) as e:
-            raise exc.HTTPBadRequest(explanation=e.format_message())
+        for bdm in block_device_mapping:
+            try:
+                block_device.validate_device_name(bdm.get("device_name"))
+                block_device.validate_and_default_volume_size(bdm)
+            except exception.InvalidBDMFormat as e:
+                raise exc.HTTPBadRequest(explanation=e.format_message())
+
+            if 'delete_on_termination' in bdm:
+                bdm['delete_on_termination'] = strutils.bool_from_string(
+                    bdm['delete_on_termination'])
 
         if block_device_mapping:
             create_kwargs['block_device_mapping'] = block_device_mapping
-            # Unset the legacy_bdm flag if we got a block device mapping.
-            create_kwargs['legacy_bdm'] = False
+            # Sets the legacy_bdm flag if we got a legacy block device mapping.
+            create_kwargs['legacy_bdm'] = True
