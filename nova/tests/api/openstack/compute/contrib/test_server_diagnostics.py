@@ -38,24 +38,26 @@ def fake_instance_get(self, _context, instance_uuid, want_objects=False):
     return {'uuid': instance_uuid}
 
 
-class ServerDiagnosticsTest(test.NoDBTestCase):
+class ServerDiagnosticsTestV21(test.NoDBTestCase):
+
+    def _setup_router(self):
+        self.router = compute.APIRouterV3(init_only=('servers',
+                                                     'os-server-diagnostics'))
+
+    def _get_request(self):
+        return fakes.HTTPRequestV3.blank(
+                   '/servers/%s/diagnostics' % UUID)
 
     def setUp(self):
-        super(ServerDiagnosticsTest, self).setUp()
-        self.flags(verbose=True,
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Server_diagnostics'])
-
-        self.router = compute.APIRouter(init_only=('servers', 'diagnostics'))
+        super(ServerDiagnosticsTestV21, self).setUp()
+        self._setup_router()
 
     @mock.patch.object(compute_api.API, 'get_diagnostics',
                        fake_get_diagnostics)
     @mock.patch.object(compute_api.API, 'get',
                        fake_instance_get)
     def test_get_diagnostics(self):
-        req = fakes.HTTPRequest.blank(
-                    '/fake/servers/%s/diagnostics' % UUID)
+        req = self._get_request()
         res = req.get_response(self.router)
         output = jsonutils.loads(res.body)
         self.assertEqual(output, {'data': 'Some diagnostic info'})
@@ -65,8 +67,7 @@ class ServerDiagnosticsTest(test.NoDBTestCase):
     @mock.patch.object(compute_api.API, 'get',
                 side_effect=exception.InstanceNotFound(instance_id=UUID))
     def test_get_diagnostics_with_non_existed_instance(self, mock_get):
-        req = fakes.HTTPRequest.blank(
-                    '/fake/servers/%s/diagnostics' % UUID)
+        req = self._get_request()
         res = req.get_response(self.router)
         self.assertEqual(res.status_int, 404)
 
@@ -75,8 +76,7 @@ class ServerDiagnosticsTest(test.NoDBTestCase):
     @mock.patch.object(compute_api.API, 'get', fake_instance_get)
     def test_get_diagnostics_raise_conflict_on_invalid_state(self,
                                                   mock_get_diagnostics):
-        req = fakes.HTTPRequest.blank(
-                    '/fake/servers/%s/diagnostics' % UUID)
+        req = self._get_request()
         res = req.get_response(self.router)
         self.assertEqual(409, res.status_int)
 
@@ -85,10 +85,24 @@ class ServerDiagnosticsTest(test.NoDBTestCase):
     @mock.patch.object(compute_api.API, 'get', fake_instance_get)
     def test_get_diagnostics_raise_no_notimplementederror(self,
                       mock_get_diagnostics):
-        req = fakes.HTTPRequest.blank(
-            '/fake/servers/%s/diagnostics' % UUID)
+        req = self._get_request()
         res = req.get_response(self.router)
         self.assertEqual(501, res.status_int)
+
+
+class ServerDiagnosticsTestV2(ServerDiagnosticsTestV21):
+
+    def _setup_router(self):
+        self.flags(verbose=True,
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Server_diagnostics'])
+
+        self.router = compute.APIRouter(init_only=('servers', 'diagnostics'))
+
+    def _get_request(self):
+        return fakes.HTTPRequest.blank(
+                   '/fake/servers/%s/diagnostics' % UUID)
 
 
 class TestServerDiagnosticsXMLSerializer(test.NoDBTestCase):

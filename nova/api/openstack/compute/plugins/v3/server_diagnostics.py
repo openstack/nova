@@ -41,7 +41,12 @@ class ServerDiagnosticsController(object):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         try:
-            return self.compute_api.get_instance_diagnostics(context, instance)
+            # NOTE(gmann): To make V21 same as V2 API, this method will call
+            # 'get_diagnostics' instead of 'get_instance_diagnostics'.
+            # In future, 'get_instance_diagnostics' needs to be called to
+            # provide VM diagnostics in a defined format for all driver.
+            # BP - https://blueprints.launchpad.net/nova/+spec/v3-diagnostics.
+            return self.compute_api.get_diagnostics(context, instance)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'get_diagnostics')
@@ -60,7 +65,7 @@ class ServerDiagnostics(extensions.V3APIExtensionBase):
     def get_resources(self):
         parent_def = {'member_name': 'server', 'collection_name': 'servers'}
         resources = [
-            extensions.ResourceExtension(ALIAS,
+            extensions.ResourceExtension('diagnostics',
                                          ServerDiagnosticsController(),
                                          parent=parent_def)]
         return resources
