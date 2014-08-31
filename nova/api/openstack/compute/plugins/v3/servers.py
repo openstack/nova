@@ -545,7 +545,8 @@ class ServersController(wsgi.Controller):
                 exception.SecurityGroupNotFound,
                 exception.PortRequiresFixedIP,
                 exception.NetworkRequiresSubnet,
-                exception.NetworkNotFound) as error:
+                exception.NetworkNotFound,
+                exception.InvalidBDMVolumeNotBootable) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except (exception.PortInUse,
                 exception.NetworkAmbiguous,
