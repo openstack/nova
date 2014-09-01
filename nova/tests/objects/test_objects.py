@@ -961,7 +961,7 @@ object_data = {
     'InstanceInfoCache': '1.5-ef64b604498bfa505a8c93747a9d8b2f',
     'InstanceList': '1.8-16db4c93fe5b80564413b9a4f547e0d1',
     'InstanceNUMACell': '1.0-17e6ee0a24cb6651d1b084efa3027bda',
-    'InstanceNUMATopology': '1.0-a4264388d42c21a692cb74ed8fa8bb4d',
+    'InstanceNUMATopology': '1.0-86b95d263c4c68411d44c6741b8d2bb0',
     'KeyPair': '1.1-3410f51950d052d861c11946a6ae621a',
     'KeyPairList': '1.0-71132a568cc5d078ba1748a9c02c87b8',
     'Migration': '1.1-67c47726c2c71422058cd9d149d6d3ed',

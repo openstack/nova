@@ -350,7 +350,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         db_inst = db.instance_create(context, updates)
         if numa_topology:
             expected_attrs.append('numa_topology')
-            numa_topology.create(context, db_inst['uuid'])
+            numa_topology.instance_uuid = db_inst['uuid']
+            numa_topology.create(context)
         self._from_db_object(context, self, db_inst, expected_attrs)
 
     @base.remotable
