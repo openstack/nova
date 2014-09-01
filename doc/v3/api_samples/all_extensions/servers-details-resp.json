@@ -50,7 +50,7 @@
             "accessIPv4": "",
             "accessIPv6": "",
             "config_drive": "",
-            "os-extended-availability-zone:availability_zone": "nova",
+            "OS-EXT-AZ:availability_zone": "nova",
             "OS-EXT-SRV-ATTR:host": "c3f14e9812ad496baf92ccfb3c61e15f",
             "OS-EXT-SRV-ATTR:hypervisor_hostname": "fake-mini",
             "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",

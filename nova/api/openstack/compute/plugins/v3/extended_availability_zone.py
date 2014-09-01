@@ -22,11 +22,12 @@ from nova import availability_zones as avail_zone
 ALIAS = "os-extended-availability-zone"
 authorize = extensions.soft_extension_authorizer('compute',
                                                  'v3:' + ALIAS)
+PREFIX = "OS-EXT-AZ"
 
 
 class ExtendedAZController(wsgi.Controller):
     def _extend_server(self, context, server, instance):
-        key = "%s:availability_zone" % ExtendedAvailabilityZone.alias
+        key = "%s:availability_zone" % PREFIX
         az = avail_zone.get_instance_availability_zone(context, instance)
         if not az and instance.get('availability_zone'):
             # Likely hasn't reached a viable compute node yet so give back the
