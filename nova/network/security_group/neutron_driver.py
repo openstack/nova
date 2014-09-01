@@ -123,8 +123,12 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         neutron = neutronv2.get_client(context)
         try:
             if not id and name:
+                # NOTE(flwang): The project id should be honoured so as to get
+                # the correct security group id when user(with admin role but
+                # non-admin project) try to query by name, so as to avoid
+                # getting more than duplicated records with the same name.
                 id = neutronv20.find_resourceid_by_name_or_id(
-                    neutron, 'security_group', name)
+                    neutron, 'security_group', name, context.project_id)
             group = neutron.show_security_group(id).get('security_group')
         except n_exc.NeutronClientNoUniqueMatch as e:
             raise exception.NoUniqueMatch(six.text_type(e))
@@ -393,7 +397,9 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         neutron = neutronv2.get_client(context)
         try:
             security_group_id = neutronv20.find_resourceid_by_name_or_id(
-                neutron, 'security_group', security_group_name)
+                neutron, 'security_group',
+                security_group_name,
+                context.project_id)
         except n_exc.NeutronClientNoUniqueMatch as e:
             raise exception.NoUniqueMatch(six.text_type(e))
         except n_exc.NeutronClientException as e:
@@ -446,7 +452,9 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         neutron = neutronv2.get_client(context)
         try:
             security_group_id = neutronv20.find_resourceid_by_name_or_id(
-                neutron, 'security_group', security_group_name)
+                neutron, 'security_group',
+                security_group_name,
+                context.project_id)
         except n_exc.NeutronClientException as e:
             exc_info = sys.exc_info()
             if e.status_code == 404:

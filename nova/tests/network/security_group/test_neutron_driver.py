@@ -47,6 +47,33 @@ class TestNeutronDriver(test.NoDBTestCase):
         sg_api = neutron_driver.SecurityGroupAPI()
         sg_api.list(self.context, project=project_id)
 
+    def test_get_with_name_duplicated(self):
+        sg_name = 'web_server'
+        expected_sg_id = '85cc3048-abc3-43cc-89b3-377341426ac5'
+        list_security_groups = {'security_groups':
+                                [{'name': sg_name,
+                                  'id': expected_sg_id,
+                                  'tenant_id': self.context.tenant,
+                                  'description': 'server',
+                                  'rules': []}
+                                ]}
+        self.moxed_client.list_security_groups(name=sg_name, fields='id',
+            tenant_id=self.context.tenant).AndReturn(list_security_groups)
+
+        expected_sg = {'security_group': {'name': sg_name,
+                                 'id': expected_sg_id,
+                                 'tenant_id': self.context.tenant,
+                                 'description': 'server', 'rules': []}}
+        self.moxed_client.show_security_group(expected_sg_id).AndReturn(
+            expected_sg)
+        self.mox.ReplayAll()
+
+        sg_api = neutron_driver.SecurityGroupAPI()
+        observed_sg = sg_api.get(self.context, name=sg_name)
+        expected_sg['security_group']['project_id'] = self.context.tenant
+        del expected_sg['security_group']['tenant_id']
+        self.assertEqual(expected_sg['security_group'], observed_sg)
+
     def test_create_security_group_exceed_quota(self):
         name = 'test-security-group'
         description = 'test-security-group'

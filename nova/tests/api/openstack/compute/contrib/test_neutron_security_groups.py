@@ -142,7 +142,7 @@ class TestNeutronSecurityGroups(
         self._create_port(
             network_id=net['network']['id'], security_groups=[sg['id']],
             device_id=test_security_groups.FAKE_UUID1)
-        expected = [{'rules': [], 'tenant_id': 'fake_tenant', 'id': sg['id'],
+        expected = [{'rules': [], 'tenant_id': 'fake', 'id': sg['id'],
                     'name': 'test', 'description': 'test-description'}]
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
                        test_security_groups.return_server_by_uuid)
@@ -303,8 +303,8 @@ class TestNeutronSecurityGroups(
 
     def test_get_raises_no_unique_match_error(self):
 
-        def fake_find_resourceid_by_name_or_id(client, param, name):
-
+        def fake_find_resourceid_by_name_or_id(client, param, name,
+                                               project_id=None):
             raise n_exc.NeutronClientNoUniqueMatch()
 
         self.stubs.Set(neutronv20, 'find_resourceid_by_name_or_id',
@@ -672,7 +672,7 @@ class MockClient(object):
             msg = 'Security Group name great than 255'
             raise n_exc.NeutronClientException(message=msg, status_code=401)
         ret = {'name': s.get('name'), 'description': s.get('description'),
-               'tenant_id': 'fake_tenant', 'security_group_rules': [],
+               'tenant_id': 'fake', 'security_group_rules': [],
                'id': str(uuid.uuid4())}
 
         self._fake_security_groups[ret['id']] = ret
