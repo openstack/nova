@@ -1,5 +1,5 @@
 {
-    "get_spice_console": {
+    "os-getSPICEConsole": {
         "type": "spice-html5"
     }
 }

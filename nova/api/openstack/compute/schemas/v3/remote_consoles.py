@@ -15,7 +15,7 @@
 get_vnc_console = {
     'type': 'object',
     'properties': {
-        'get_vnc_console': {
+        'os-getVNCConsole': {
             'type': 'object',
             'properties': {
                 'type': {
@@ -27,14 +27,14 @@ get_vnc_console = {
             'additionalProperties': False,
         },
     },
-    'required': ['get_vnc_console'],
+    'required': ['os-getVNCConsole'],
     'additionalProperties': False,
 }
 
 get_spice_console = {
     'type': 'object',
     'properties': {
-        'get_spice_console': {
+        'os-getSPICEConsole': {
             'type': 'object',
             'properties': {
                 'type': {
@@ -46,14 +46,14 @@ get_spice_console = {
             'additionalProperties': False,
         },
     },
-    'required': ['get_spice_console'],
+    'required': ['os-getSPICEConsole'],
     'additionalProperties': False,
 }
 
 get_rdp_console = {
     'type': 'object',
     'properties': {
-        'get_rdp_console': {
+        'os-getRDPConsole': {
             'type': 'object',
             'properties': {
                 'type': {
@@ -65,6 +65,6 @@ get_rdp_console = {
             'additionalProperties': False,
         },
     },
-    'required': ['get_rdp_console'],
+    'required': ['os-getRDPConsole'],
     'additionalProperties': False,
 }

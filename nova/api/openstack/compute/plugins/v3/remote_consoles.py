@@ -34,7 +34,7 @@ class RemoteConsolesController(wsgi.Controller):
         super(RemoteConsolesController, self).__init__(*args, **kwargs)
 
     @extensions.expected_errors((400, 404, 409, 501))
-    @wsgi.action('get_vnc_console')
+    @wsgi.action('os-getVNCConsole')
     @validation.schema(remote_consoles.get_vnc_console)
     def get_vnc_console(self, req, id, body):
         """Get text console output."""
@@ -42,7 +42,7 @@ class RemoteConsolesController(wsgi.Controller):
         authorize(context)
 
         # If type is not supplied or unknown, get_vnc_console below will cope
-        console_type = body['get_vnc_console'].get('type')
+        console_type = body['os-getVNCConsole'].get('type')
 
         try:
             instance = common.get_instance(self.compute_api, context, id,
@@ -63,7 +63,7 @@ class RemoteConsolesController(wsgi.Controller):
         return {'console': {'type': console_type, 'url': output['url']}}
 
     @extensions.expected_errors((400, 404, 409, 501))
-    @wsgi.action('get_spice_console')
+    @wsgi.action('os-getSPICEConsole')
     @validation.schema(remote_consoles.get_spice_console)
     def get_spice_console(self, req, id, body):
         """Get text console output."""
@@ -71,7 +71,7 @@ class RemoteConsolesController(wsgi.Controller):
         authorize(context)
 
         # If type is not supplied or unknown, get_spice_console below will cope
-        console_type = body['get_spice_console'].get('type')
+        console_type = body['os-getSPICEConsole'].get('type')
 
         try:
             instance = common.get_instance(self.compute_api, context, id,
@@ -93,7 +93,7 @@ class RemoteConsolesController(wsgi.Controller):
         return {'console': {'type': console_type, 'url': output['url']}}
 
     @extensions.expected_errors((400, 404, 409, 501))
-    @wsgi.action('get_rdp_console')
+    @wsgi.action('os-getRDPConsole')
     @validation.schema(remote_consoles.get_rdp_console)
     def get_rdp_console(self, req, id, body):
         """Get text console output."""
@@ -101,7 +101,7 @@ class RemoteConsolesController(wsgi.Controller):
         authorize(context)
 
         # If type is not supplied or unknown, get_rdp_console below will cope
-        console_type = body['get_rdp_console'].get('type')
+        console_type = body['os-getRDPConsole'].get('type')
 
         instance = common.get_instance(self.compute_api, context, id,
                                        want_objects=True)
