@@ -46,4 +46,5 @@ Reference
    nova-scheduler
    nova-spicehtml5proxy
    nova-xvpvncproxy
+   nova-serialproxy
 
