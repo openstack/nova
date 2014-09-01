@@ -49,6 +49,21 @@ def fake_get_rdp_console_invalid_type(self, _context,
     raise exception.ConsoleTypeInvalid(console_type=_console_type)
 
 
+def fake_get_vnc_console_type_unavailable(self, _context,
+                                          _instance, _console_type):
+    raise exception.ConsoleTypeUnavailable(console_type=_console_type)
+
+
+def fake_get_spice_console_type_unavailable(self, _context,
+                                            _instance, _console_type):
+    raise exception.ConsoleTypeUnavailable(console_type=_console_type)
+
+
+def fake_get_rdp_console_type_unavailable(self, _context,
+                                            _instance, _console_type):
+    raise exception.ConsoleTypeUnavailable(console_type=_console_type)
+
+
 def fake_get_vnc_console_not_ready(self, _context, instance, _console_type):
     raise exception.InstanceNotReady(instance_id=instance["uuid"])
 
@@ -171,6 +186,18 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
 
+    def test_get_vnc_console_type_unavailable(self):
+        body = {'get_vnc_console': {'type': 'unavailable'}}
+        self.stubs.Set(compute_api.API, 'get_vnc_console',
+                       fake_get_vnc_console_type_unavailable)
+        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(self.app)
+        self.assertEqual(400, res.status_int)
+
     def test_get_vnc_console_not_implemented(self):
         self.stubs.Set(compute_api.API, 'get_vnc_console',
                        fakes.fake_not_implemented)
@@ -269,6 +296,18 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 501)
 
+    def test_get_spice_console_type_unavailable(self):
+        body = {'get_spice_console': {'type': 'unavailable'}}
+        self.stubs.Set(compute_api.API, 'get_spice_console',
+                       fake_get_spice_console_type_unavailable)
+        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(self.app)
+        self.assertEqual(400, res.status_int)
+
     def test_get_rdp_console(self):
         body = {'os-getRDPConsole': {'type': 'rdp-html5'}}
         req = webob.Request.blank('/v2/fake/servers/1/action')
@@ -341,3 +380,15 @@ class ConsolesExtensionTest(test.NoDBTestCase):
 
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
+
+    def test_get_rdp_console_type_unavailable(self):
+        body = {'get_rdp_console': {'type': 'unavailable'}}
+        self.stubs.Set(compute_api.API, 'get_rdp_console',
+                       fake_get_rdp_console_type_unavailable)
+        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(self.app)
+        self.assertEqual(400, res.status_int)
