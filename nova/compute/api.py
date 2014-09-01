@@ -587,7 +587,6 @@ class API(base.Base):
 
     def _check_requested_image(self, context, image_id, image, instance_type):
         if not image:
-            # Image checks don't apply when building from volume
             return
 
         if image['status'] != 'active':
@@ -681,9 +680,7 @@ class API(base.Base):
                                        files_to_inject):
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, files_to_inject)
-        if image_id is not None:
-            self._check_requested_image(context, image_id,
-                    image, instance_type)
+        self._check_requested_image(context, image_id, image, instance_type)
 
     def _validate_and_build_base_options(self, context, instance_type,
                                          boot_meta, image_href, image_id,
@@ -862,7 +859,7 @@ class API(base.Base):
                 try:
                     image_id = bdm['image_id']
                     image_meta = self.image_api.get(context, image_id)
-                    return image_meta.get('properties', {})
+                    return image_meta
                 except Exception:
                     raise exception.InvalidBDMImage(id=image_id)
             elif bdm.get('volume_id'):
@@ -876,7 +873,18 @@ class API(base.Base):
 
                 if not volume.get('bootable', True):
                     raise exception.InvalidBDMVolumeNotBootable(id=volume_id)
-                return volume.get('volume_image_metadata', {})
+
+                properties = volume.get('volume_image_metadata', {})
+                image_meta = {'properties': properties}
+                # NOTE(yjiang5): restore the basic attributes
+                image_meta['min_ram'] = properties.get('min_ram', 0)
+                image_meta['min_disk'] = properties.get('min_disk', 0)
+                image_meta['size'] = properties.get('size', 0)
+                # NOTE(yjiang5): Always set the image status as 'active'
+                # and depends on followed volume_api.check_attach() to
+                # verify it. This hack should be harmless with that check.
+                image_meta['status'] = 'active'
+                return image_meta
         return {}
 
     @staticmethod
@@ -947,10 +955,8 @@ class API(base.Base):
             image_id, boot_meta = self._get_image(context, image_href)
         else:
             image_id = None
-            boot_meta = {}
-            boot_meta['properties'] = \
-                self._get_bdm_image_metadata(context,
-                    block_device_mapping, legacy_bdm)
+            boot_meta = self._get_bdm_image_metadata(
+                context, block_device_mapping, legacy_bdm)
 
         self._check_auto_disk_config(image=boot_meta,
                                      auto_disk_config=auto_disk_config)
