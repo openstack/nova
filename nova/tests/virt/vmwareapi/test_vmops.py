@@ -40,39 +40,6 @@ from nova.virt.vmwareapi import vmops
 from nova.virt.vmwareapi import vmware_images
 
 
-class VMwareVMOpsSimpleTestCase(test.NoDBTestCase):
-    @mock.patch.object(vm_util, 'get_res_pool_ref')
-    @mock.patch.object(ds_util, 'get_datastore')
-    @mock.patch.object(vmops.VMwareVMOps, 'get_datacenter_ref_and_name')
-    def test_spawn_disk_invalid_disk_size(self,
-                                          mock_get_datacenter_ref_and_name,
-                                          mock_get_datastore,
-                                          mock_get_res_pool_ref):
-        image = {
-            'id': 'c1c8ce3d-c2e0-4247-890c-ccf5cc1c004c',
-            'disk_format': 'vmdk',
-            'size': 999999999 * units.Gi,
-        }
-        self._context = context.RequestContext('fake_user', 'fake_project')
-        instance = fake_instance.fake_instance_obj(self._context,
-            image_ref=nova.tests.image.fake.get_valid_image_id(),
-            uuid='fake_uuid',
-            root_gb=1,
-            node='respool-1001(MyResPoolName)'
-        )
-
-        ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
-        self.assertRaises(exception.InstanceUnacceptable,
-                          ops.spawn,
-                          mock.Mock(),
-                          instance,
-                          image,
-                          injected_files=[],
-                          admin_password=None,
-                          network_info=None,
-                          block_device_info=None)
-
-
 class VMwareVMOpsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(VMwareVMOpsTestCase, self).setUp()
@@ -770,6 +737,59 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                                           source_file,
                                                           dest_file,
                                                           None)
+
+    @mock.patch.object(vmops.VMwareVCVMOps, 'get_copy_virtual_disk_spec',
+                       return_value=None)
+    @mock.patch.object(ds_util, 'get_datastore')
+    @mock.patch.object(vmops.VMwareVCVMOps, 'get_datacenter_ref_and_name')
+    def _test_get_spawn_vm_config_info(self,
+                                       mock_get_datacenter_ref_and_name,
+                                       mock_get_datastore,
+                                       mock_get_copy_virtual_disk_spec,
+                                       image_size_bytes=0,
+                                       instance_name=None):
+        image_info = vmware_images.VMwareImage(
+                image_id=self._image_id,
+                file_size=image_size_bytes,
+                linked_clone=True)
+
+        mock_get_datastore.return_value = self._ds
+        mock_get_datacenter_ref_and_name.return_value = self._dc_info
+
+        vi = self._vmops._get_vm_config_info(
+                self._instance, image_info, instance_name=instance_name)
+        self.assertEqual(image_info, vi.ii)
+        self.assertEqual(self._ds, vi.datastore)
+        self.assertEqual(vi.root_gb, self._instance.root_gb)
+        self.assertEqual(vi.instance, self._instance)
+        if instance_name:
+            self.assertEqual(vi.instance_name, instance_name)
+        else:
+            self.assertEqual(vi.instance_name, self._instance['uuid'])
+
+        cache_image_path = '[%s] vmware_base/%s/%s.vmdk' % (
+            self._ds.name, self._image_id, self._image_id)
+        self.assertEqual(str(vi.cache_image_path), cache_image_path)
+
+        cache_image_folder = '[%s] vmware_base/%s' % (
+            self._ds.name, self._image_id)
+        self.assertEqual(str(vi.cache_image_folder), cache_image_folder)
+
+    def test_get_spawn_vm_config_info(self):
+        image_size = (self._instance.root_gb) * units.Gi / 2
+        self._test_get_spawn_vm_config_info(image_size_bytes=image_size)
+
+    def test_get_spawn_vm_config_info_image_too_big(self):
+        image_size = (self._instance.root_gb + 1) * units.Gi
+        self.assertRaises(exception.InstanceUnacceptable,
+                          self._test_get_spawn_vm_config_info,
+                          image_size_bytes=image_size)
+
+    def test_get_spawn_vm_config_info_with_instance_name(self):
+        image_size = (self._instance.root_gb) * units.Gi / 2
+        self._test_get_spawn_vm_config_info(
+                image_size_bytes=image_size,
+                instance_name="foo_instance_name")
 
     def test_spawn(self):
         self._test_spawn()
