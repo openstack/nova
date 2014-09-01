@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.api.openstack.compute.schemas.v3 import user_data as schema_user_data
 from nova.api.openstack import extensions
 
 
@@ -36,3 +37,6 @@ class UserData(extensions.V3APIExtensionBase):
     # parameter as this is placed to handle scheduler_hint extension for V2.1.
     def server_create(self, server_dict, create_kwargs, body_deprecated_param):
         create_kwargs['user_data'] = server_dict.get(ATTRIBUTE_NAME)
+
+    def get_server_create_schema(self):
+        return schema_user_data.server_create

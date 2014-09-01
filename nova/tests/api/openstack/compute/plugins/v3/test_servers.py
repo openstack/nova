@@ -2346,7 +2346,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_user_data_malformed_bad_request(self):
         params = {'user_data': 'u1234'}
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self._test_create_extra, params)
 
     def test_create_instance_invalid_key_name(self):
