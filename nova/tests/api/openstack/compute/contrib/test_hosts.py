@@ -17,7 +17,8 @@ from lxml import etree
 import testtools
 import webob.exc
 
-from nova.api.openstack.compute.contrib import hosts as os_hosts
+from nova.api.openstack.compute.contrib import hosts as os_hosts_v2
+from nova.api.openstack.compute.plugins.v3 import hosts as os_hosts_v3
 from nova.compute import power_state
 from nova.compute import vm_states
 from nova import context as context_maker
@@ -127,15 +128,23 @@ class FakeRequestWithNovaZone(object):
     GET = {"zone": "nova"}
 
 
-class HostTestCase(test.TestCase):
+class FakeRequestWithNovaService(object):
+    environ = {"nova.context": context_maker.get_admin_context()}
+    GET = {"service": "compute"}
+
+
+class FakeRequestWithInvalidNovaService(object):
+    environ = {"nova.context": context_maker.get_admin_context()}
+    GET = {"service": "invalid"}
+
+
+class HostTestCaseV21(test.TestCase):
     """Test Case for hosts."""
+    validation_ex = exception.ValidationError
+    Controller = os_hosts_v3.HostController
+    policy_ex = exception.PolicyNotAuthorized
 
-    def setUp(self):
-        super(HostTestCase, self).setUp()
-        self.controller = os_hosts.HostController()
-        self.hosts_api = self.controller.api
-        self.req = FakeRequest()
-
+    def _setup_stubs(self):
         # Pretend we have fake_hosts.HOST_LIST in the DB
         self.stubs.Set(db, 'service_get_all',
                        stub_service_get_all)
@@ -151,9 +160,17 @@ class HostTestCase(test.TestCase):
         self.stubs.Set(self.hosts_api, 'host_power_action',
                        stub_host_power_action)
 
+    def setUp(self):
+        super(HostTestCaseV21, self).setUp()
+        self.controller = self.Controller()
+        self.hosts_api = self.controller.api
+        self.req = FakeRequest()
+
+        self._setup_stubs()
+
     def _test_host_update(self, host, key, val, expected_value):
         body = {key: val}
-        result = self.controller.update(self.req, host, body)
+        result = self.controller.update(self.req, host, body=body)
         self.assertEqual(result[key], expected_value)
 
     def test_list_hosts(self):
@@ -162,12 +179,6 @@ class HostTestCase(test.TestCase):
         self.assertIn('hosts', result)
         hosts = result['hosts']
         self.assertEqual(fake_hosts.HOST_LIST, hosts)
-
-    def test_list_hosts_with_zone(self):
-        result = self.controller.index(FakeRequestWithNovaZone())
-        self.assertIn('hosts', result)
-        hosts = result['hosts']
-        self.assertEqual(fake_hosts.HOST_LIST_NOVA_ZONE, hosts)
 
     def test_disable_host(self):
         self._test_host_update('host_c1', 'status', 'disable', 'disabled')
@@ -254,25 +265,25 @@ class HostTestCase(test.TestCase):
 
     def test_bad_status_value(self):
         bad_body = {"status": "bad"}
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                self.req, "host_c1", bad_body)
+        self.assertRaises(self.validation_ex, self.controller.update,
+                self.req, "host_c1", body=bad_body)
         bad_body2 = {"status": "disablabc"}
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                self.req, "host_c1", bad_body2)
+        self.assertRaises(self.validation_ex, self.controller.update,
+                self.req, "host_c1", body=bad_body2)
 
     def test_bad_update_key(self):
         bad_body = {"crazy": "bad"}
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                self.req, "host_c1", bad_body)
+        self.assertRaises(self.validation_ex, self.controller.update,
+                self.req, "host_c1", body=bad_body)
 
     def test_bad_update_key_and_correct_update_key(self):
         bad_body = {"status": "disable", "crazy": "bad"}
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                self.req, "host_c1", bad_body)
+        self.assertRaises(self.validation_ex, self.controller.update,
+                self.req, "host_c1", body=bad_body)
 
     def test_good_update_keys(self):
         body = {"status": "disable", "maintenance_mode": "enable"}
-        result = self.controller.update(self.req, 'host_c1', body)
+        result = self.controller.update(self.req, 'host_c1', body=body)
         self.assertEqual(result["host"], "host_c1")
         self.assertEqual(result["status"], "disabled")
         self.assertEqual(result["maintenance_mode"], "on_maintenance")
@@ -280,7 +291,7 @@ class HostTestCase(test.TestCase):
     def test_show_forbidden(self):
         self.req.environ["nova.context"].is_admin = False
         dest = 'dummydest'
-        self.assertRaises(webob.exc.HTTPForbidden,
+        self.assertRaises(self.policy_ex,
                           self.controller.show,
                           self.req, dest)
         self.req.environ["nova.context"].is_admin = True
@@ -346,14 +357,41 @@ class HostTestCase(test.TestCase):
         db.instance_destroy(ctxt, i_ref1['uuid'])
         db.instance_destroy(ctxt, i_ref2['uuid'])
 
+    def test_list_hosts_with_zone(self):
+        result = self.controller.index(FakeRequestWithNovaZone())
+        self.assertIn('hosts', result)
+        hosts = result['hosts']
+        self.assertEqual(fake_hosts.HOST_LIST_NOVA_ZONE, hosts)
+
+    def test_list_hosts_with_service(self):
+        result = self.controller.index(FakeRequestWithNovaService())
+        self.assertEqual(fake_hosts.HOST_LIST_NOVA_ZONE, result['hosts'])
+
+    def test_list_hosts_with_invalid_service(self):
+        result = self.controller.index(FakeRequestWithInvalidNovaService())
+        self.assertEqual([], result['hosts'])
+
+
+class HostTestCaseV20(HostTestCaseV21):
+    validation_ex = webob.exc.HTTPBadRequest
+    policy_ex = webob.exc.HTTPForbidden
+    Controller = os_hosts_v2.HostController
+
+    # Note: V2 api don't support list with services
+    def test_list_hosts_with_service(self):
+        pass
+
+    def test_list_hosts_with_invalid_service(self):
+        pass
+
 
 class HostSerializerTest(test.TestCase):
     def setUp(self):
         super(HostSerializerTest, self).setUp()
-        self.deserializer = os_hosts.HostUpdateDeserializer()
+        self.deserializer = os_hosts_v2.HostUpdateDeserializer()
 
     def test_index_serializer(self):
-        serializer = os_hosts.HostIndexTemplate()
+        serializer = os_hosts_v2.HostIndexTemplate()
         text = serializer.serialize(fake_hosts.OS_API_HOST_LIST)
 
         tree = etree.fromstring(text)
@@ -371,7 +409,7 @@ class HostSerializerTest(test.TestCase):
 
     def test_update_serializer_with_status(self):
         exemplar = dict(host='host_c1', status='enabled')
-        serializer = os_hosts.HostUpdateTemplate()
+        serializer = os_hosts_v2.HostUpdateTemplate()
         text = serializer.serialize(exemplar)
 
         tree = etree.fromstring(text)
@@ -382,7 +420,7 @@ class HostSerializerTest(test.TestCase):
 
     def test_update_serializer_with_maintenance_mode(self):
         exemplar = dict(host='host_c1', maintenance_mode='enabled')
-        serializer = os_hosts.HostUpdateTemplate()
+        serializer = os_hosts_v2.HostUpdateTemplate()
         text = serializer.serialize(exemplar)
 
         tree = etree.fromstring(text)
@@ -395,7 +433,7 @@ class HostSerializerTest(test.TestCase):
         exemplar = dict(host='host_c1',
                         maintenance_mode='enabled',
                         status='enabled')
-        serializer = os_hosts.HostUpdateTemplate()
+        serializer = os_hosts_v2.HostUpdateTemplate()
         text = serializer.serialize(exemplar)
 
         tree = etree.fromstring(text)
@@ -406,7 +444,7 @@ class HostSerializerTest(test.TestCase):
 
     def test_action_serializer(self):
         exemplar = dict(host='host_c1', power_action='reboot')
-        serializer = os_hosts.HostActionTemplate()
+        serializer = os_hosts_v2.HostActionTemplate()
         text = serializer.serialize(exemplar)
 
         tree = etree.fromstring(text)

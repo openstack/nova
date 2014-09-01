@@ -15,29 +15,22 @@
 update = {
     'type': 'object',
     'properties': {
-        'host': {
-            'type': 'object',
-            'properties': {
-                 'status': {
-                     'type': 'string',
-                     'enum': ['enable', 'disable',
-                              'Enable', 'Disable',
-                              'ENABLE', 'DISABLE'],
-                 },
-                 'maintenance_mode': {
-                     'type': 'string',
-                     'enum': ['enable', 'disable',
-                              'Enable', 'Disable',
-                              'ENABLE', 'DISABLE'],
-                 },
-            },
-            'anyOf': [
-                {'required': ['status']},
-                {'required': ['maintenance_mode']}
-            ],
-            'additionalProperties': False,
+        'status': {
+             'type': 'string',
+             'enum': ['enable', 'disable',
+                      'Enable', 'Disable',
+                      'ENABLE', 'DISABLE'],
         },
+        'maintenance_mode': {
+             'type': 'string',
+             'enum': ['enable', 'disable',
+                      'Enable', 'Disable',
+                      'ENABLE', 'DISABLE'],
+        },
+        'anyOf': [
+            {'required': ['status']},
+            {'required': ['maintenance_mode']}
+        ],
     },
-    'required': ['host'],
-    'additionalProperties': False,
+    'additionalProperties': False
 }

@@ -1,6 +1,4 @@
 {
-    "host": {
-        "host": "4b392b27930343bbaa27fd5d8328a564",
-        "power_action": "startup"
-    }
+    "host": "4b392b27930343bbaa27fd5d8328a564",
+    "power_action": "startup"
 }

@@ -97,8 +97,8 @@ class HostController(wsgi.Controller):
     @extensions.expected_errors((400, 404, 501))
     @validation.schema(hosts.update)
     def update(self, req, id, body):
-        """:param body: example format {'host': {'status': 'enable',
-                                     'maintenance_mode': 'enable'}}
+        """:param body: example format {'status': 'enable',
+                                     'maintenance_mode': 'enable'}
            :returns:
         """
         def read_enabled(orig_val):
@@ -112,8 +112,8 @@ class HostController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context)
         # See what the user wants to 'update'
-        status = body['host'].get('status')
-        maint_mode = body['host'].get('maintenance_mode')
+        status = body.get('status')
+        maint_mode = body.get('maintenance_mode')
         if status is not None:
             status = read_enabled(status)
         if maint_mode is not None:
@@ -126,7 +126,7 @@ class HostController(wsgi.Controller):
             result['maintenance_mode'] = self._set_host_maintenance(context,
                                                                     id,
                                                                     maint_mode)
-        return {'host': result}
+        return result
 
     def _set_host_maintenance(self, context, host_name, mode=True):
         """Start/Stop host maintenance window. On start, it triggers
@@ -185,8 +185,7 @@ class HostController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.ComputeServiceUnavailable as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
-        return {"host": {"host": host_name,
-                         "power_action": result}}
+        return {"host": host_name, "power_action": result}
 
     @extensions.expected_errors((400, 404, 501))
     def startup(self, req, id):

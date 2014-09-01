@@ -1,6 +1,4 @@
 {
-    "host": {
-        "status": "enable",
-        "maintenance_mode": "disable"
-    }
+    "status": "enable",
+    "maintenance_mode": "disable"
 }
