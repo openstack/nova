@@ -136,7 +136,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         super(InterfaceAttachTestsV21, self).setUp()
         self.flags(auth_strategy=None, group='neutron')
         self.flags(url='http://anyhost/', group='neutron')
-        self.flags(url_timeout=30, group='neutron')
+        self.flags(timeout=30, group='neutron')
         self.stubs.Set(network_api.API, 'show_port', fake_show_port)
         self.stubs.Set(network_api.API, 'list_ports', fake_list_ports)
         self.stubs.Set(compute_api.API, 'get', fake_get_instance)
