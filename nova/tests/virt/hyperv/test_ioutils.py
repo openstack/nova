@@ -15,6 +15,8 @@
 
 import mock
 
+import os
+
 from nova import test
 from nova.virt.hyperv import ioutils
 
@@ -45,10 +47,11 @@ class IOThreadTestCase(test.NoDBTestCase):
         mock_context_manager = mock.MagicMock()
         fake_open.return_value = mock_context_manager
         mock_context_manager.__enter__.side_effect = [fake_src, fake_dest]
-        self._iothread._stopped.isSet = mock.Mock(side_effect = [False, True])
+        self._iothread._stopped.isSet = mock.Mock(side_effect=[False, True])
 
         self._iothread._copy(self._FAKE_SRC, self._FAKE_DEST)
 
+        fake_dest.seek.assert_called_once_with(0, os.SEEK_END)
         fake_dest.write.assert_called_once_with(fake_data)
         fake_dest.close.assert_called_once_with()
         fake_rename.assert_called_once_with(

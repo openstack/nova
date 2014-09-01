@@ -111,7 +111,9 @@ class VMOps(object):
         'nova.virt.hyperv.vif.HyperVNovaNetworkVIFDriver',
     }
 
-    _MAX_CONSOLE_BYTES = units.Mi
+    # The console log is stored in two files, each should have at most half of
+    # the maximum console log size.
+    _MAX_CONSOLE_LOG_FILE_SIZE = units.Mi / 2
 
     def __init__(self):
         self._vmutils = utilsfactory.get_vmutils()
@@ -586,7 +588,7 @@ class VMOps(object):
         pipe_path = r'\\.\pipe\%s' % instance_uuid
 
         vm_log_writer = ioutils.IOThread(pipe_path, console_log_path,
-                                         self._MAX_CONSOLE_BYTES)
+                                         self._MAX_CONSOLE_LOG_FILE_SIZE)
         self._vm_log_writers[instance_uuid] = vm_log_writer
 
         vm_log_writer.start()
@@ -597,7 +599,8 @@ class VMOps(object):
 
         try:
             instance_log = ''
-            for console_log_path in console_log_paths:
+            # Start with the oldest console log file.
+            for console_log_path in console_log_paths[::-1]:
                 if os.path.exists(console_log_path):
                     with open(console_log_path, 'rb') as fp:
                         instance_log += fp.read()
@@ -648,5 +651,5 @@ class VMOps(object):
             vm_serial_conn = self._vmutils.get_vm_serial_port_connection(
                 instance_name)
             if vm_serial_conn:
-                instance_uuid = os.path.basename(vm_serial_conn[0])
+                instance_uuid = os.path.basename(vm_serial_conn)
                 self.log_vm_serial_output(instance_name, instance_uuid)
