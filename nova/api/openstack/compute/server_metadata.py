@@ -56,6 +56,9 @@ class Controller(object):
         except (KeyError, TypeError):
             msg = _("Malformed request body")
             raise exc.HTTPBadRequest(explanation=msg)
+        if not isinstance(metadata, dict):
+            msg = _("Malformed request body. metadata must be object")
+            raise exc.HTTPBadRequest(explanation=msg)
 
         context = req.environ['nova.context']
 
@@ -74,6 +77,10 @@ class Controller(object):
         except (TypeError, KeyError):
             expl = _('Malformed request body')
             raise exc.HTTPBadRequest(explanation=expl)
+
+        if not isinstance(meta_item, dict):
+            msg = _("Malformed request body. meta item must be object")
+            raise exc.HTTPBadRequest(explanation=msg)
 
         if id not in meta_item:
             expl = _('Request body and URI mismatch')
@@ -99,6 +106,10 @@ class Controller(object):
         except (TypeError, KeyError):
             expl = _('Malformed request body')
             raise exc.HTTPBadRequest(explanation=expl)
+
+        if not isinstance(metadata, dict):
+            msg = _("Malformed request body. metadata must be object")
+            raise exc.HTTPBadRequest(explanation=msg)
 
         context = req.environ['nova.context']
         new_metadata = self._update_instance_metadata(context,
