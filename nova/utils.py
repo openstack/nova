@@ -1162,3 +1162,101 @@ else:
         for x, y in zip(first, second):
             result |= ord(x) ^ ord(y)
         return result == 0
+
+
+def filter_and_format_resource_metadata(resource_type, resource_list,
+        search_filts, metadata_type=None):
+    """Get all metadata for a list of resources after filtering.
+
+    Search_filts is a list of dictionaries, where the values in the dictionary
+    can be string or regex string, or a list of strings/regex strings.
+
+    Let's call a dict a 'filter block' and an item in the dict
+    a 'filter'. A tag is returned if it matches ALL the filters in
+    a filter block. If more than one values are specified for a
+    filter, a tag is returned if it matches ATLEAST ONE value of the filter. If
+    more than one filter blocks are specified, the tag should match ALL the
+    filter blocks.
+
+    For example:
+
+        search_filts = [{'key': ['key1', 'key2'], 'value': 'val1'},
+                        {'value': 'val2'}]
+
+    The filter translates to 'match any tag for which':
+        ((key=key1 AND value=val1) OR (key=key2 AND value=val1)) AND
+            (value=val2)
+
+    This example filter will never match a tag.
+
+        :param resource_type: The resource type as a string, e.g. 'instance'
+        :param resource_list: List of resource objects
+        :param search_filts: Filters to filter metadata to be returned. Can be
+            dict (e.g. {'key': 'env', 'value': 'prod'}, or a list of dicts
+            (e.g. [{'key': 'env'}, {'value': 'beta'}]. Note that the values
+            of the dict can be regular expressions.
+        :param metadata_type: Provided to search for a specific metadata type
+            (e.g. 'system_metadata')
+
+        :returns: List of dicts where each dict is of the form {'key':
+            'somekey', 'value': 'somevalue', 'instance_id':
+            'some-instance-uuid-aaa'} if resource_type is 'instance'.
+    """
+
+    if isinstance(search_filts, dict):
+        search_filts = [search_filts]
+
+    def _get_id(resource):
+        if resource_type == 'instance':
+            return resource.get('uuid')
+
+    def _match_any(pattern_list, string):
+        if isinstance(pattern_list, str):
+            pattern_list = [pattern_list]
+        return any([re.match(pattern, string)
+                    for pattern in pattern_list])
+
+    def _filter_metadata(resource, search_filt, input_metadata):
+        ids = search_filt.get('resource_id', [])
+        keys_filter = search_filt.get('key', [])
+        values_filter = search_filt.get('value', [])
+        output_metadata = {}
+
+        if ids and _get_id(resource) not in ids:
+            return {}
+
+        for k, v in six.iteritems(input_metadata):
+            # Both keys and value defined -- AND
+            if (keys_filter and values_filter and
+               not _match_any(keys_filter, k) and
+               not _match_any(values_filter, v)):
+                continue
+            # Only keys or value is defined
+            elif ((keys_filter and not _match_any(keys_filter, k)) or
+                  (values_filter and not _match_any(values_filter, v))):
+                continue
+
+            output_metadata[k] = v
+        return output_metadata
+
+    formatted_metadata_list = []
+    for res in resource_list:
+
+        if resource_type == 'instance':
+            # NOTE(rushiagr): metadata_type should be 'metadata' or
+            # 'system_metadata' if resource_type is instance. Defaulting to
+            # 'metadata' if not specified.
+            if metadata_type is None:
+                metadata_type = 'metadata'
+            metadata = res.get(metadata_type, {})
+
+        for filt in search_filts:
+            # By chaining the input to the output, the filters are
+            # ANDed together
+            metadata = _filter_metadata(res, filt, metadata)
+
+        for (k, v) in metadata.items():
+            formatted_metadata_list.append({'key': k, 'value': v,
+                             '%s_id' % resource_type: _get_id(res)})
+
+    return formatted_metadata_list
