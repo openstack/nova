@@ -2328,6 +2328,44 @@ class ComputeTestCase(BaseTestCase):
             instance = db.instance_get_by_uuid(self.context, instance.uuid)
             self.assertEqual(vm_states.ACTIVE, instance.vm_state)
 
+    def test_suspend_rescued(self):
+        # ensure rescued instance can be suspended and resumed.
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance, {}, {}, [], None,
+                None, True, None, False)
+        instance = self._objectify(instance)
+
+        instance.vm_state = vm_states.RESCUED
+        instance.task_state = task_states.SUSPENDING
+        instance.save()
+
+        self.compute.suspend_instance(self.context, instance)
+        self.assertEqual(instance.vm_state, vm_states.SUSPENDED)
+
+        instance.task_state = task_states.RESUMING
+        instance.save()
+        self.compute.resume_instance(self.context, instance)
+        self.assertEqual(instance.vm_state, vm_states.RESCUED)
+
+        self.compute.terminate_instance(self.context, instance, [], [])
+
+    def test_resume_no_old_state(self):
+        # ensure a suspended instance with no old_vm_state is resumed to the
+        # ACTIVE state
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        self.compute.run_instance(self.context, instance, {}, {}, [], None,
+                None, True, None, False)
+        instance = self._objectify(instance)
+
+        instance.vm_state = vm_states.SUSPENDED
+        instance.task_state = task_states.RESUMING
+        instance.save()
+
+        self.compute.resume_instance(self.context, instance)
+        self.assertEqual(instance.vm_state, vm_states.ACTIVE)
+
+        self.compute.terminate_instance(self.context, instance, [], [])
+
     def test_rebuild(self):
         # Ensure instance can be rebuilt.
         instance = jsonutils.to_primitive(self._create_fake_instance())

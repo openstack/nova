@@ -3946,6 +3946,9 @@ class ComputeManager(manager.Manager):
         """Suspend the given instance."""
         context = context.elevated()
 
+        # Store the old state
+        instance.system_metadata['old_vm_state'] = instance.vm_state
+
         with self._error_out_instance_on_exception(context, instance,
              instance_state=instance['vm_state']):
             self.driver.suspend(instance)
@@ -3973,7 +3976,11 @@ class ComputeManager(manager.Manager):
                            block_device_info)
 
         instance.power_state = self._get_power_state(context, instance)
-        instance.vm_state = vm_states.ACTIVE
+
+        # We default to the ACTIVE state for backwards compatibility
+        instance.vm_state = instance.system_metadata.pop('old_vm_state',
+                                                         vm_states.ACTIVE)
+
         instance.task_state = None
         instance.save(expected_task_state=task_states.RESUMING)
         self._notify_about_instance_usage(context, instance, 'resume')
