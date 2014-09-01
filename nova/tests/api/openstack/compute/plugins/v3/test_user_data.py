@@ -19,7 +19,6 @@ import datetime
 import uuid
 
 from oslo.config import cfg
-import webob
 
 from nova.api.openstack.compute import plugins
 from nova.api.openstack.compute.plugins.v3 import servers
@@ -27,6 +26,7 @@ from nova.api.openstack.compute.plugins.v3 import user_data
 from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova import db
+from nova import exception
 from nova.network import manager
 from nova.openstack.common import jsonutils
 from nova import test
@@ -191,5 +191,5 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_with_bad_user_data(self):
         value = "A random string"
         params = {user_data.ATTRIBUTE_NAME: value}
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self._test_create_extra, params)

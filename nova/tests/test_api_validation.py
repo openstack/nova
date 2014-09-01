@@ -837,3 +837,36 @@ class Ipv6TestCase(APIValidationTestCase):
                   " Value: 192.168.0.100. '192.168.0.100' is not a 'ipv6'")
         self.check_validation_error(self.post, body={'foo': '192.168.0.100'},
                                     expected_detail=detail)
+
+
+class Base64TestCase(APIValidationTestCase):
+
+    def setUp(self):
+        super(APIValidationTestCase, self).setUp()
+        schema = {
+            'type': 'object',
+            'properties': {
+                'foo': {
+                    'type': 'string',
+                    'format': 'base64',
+                },
+            },
+        }
+
+        @validation.schema(request_body_schema=schema)
+        def post(body):
+            return 'Validation succeeded.'
+
+        self.post = post
+
+    def test_validate_base64(self):
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': 'aGVsbG8gd29ybGQ='}))
+        # 'aGVsbG8gd29ybGQ=' is the base64 code of 'hello world'
+
+    def test_validate_base64_fails(self):
+        value = 'A random string'
+        detail = ("Invalid input for field/attribute foo. "
+                  "Value: %s. '%s' is not a 'base64'") % (value, value)
+        self.check_validation_error(self.post, body={'foo': value},
+                                    expected_detail=detail)

@@ -16,6 +16,8 @@ Internal implementation of request Body validating middleware.
 
 """
 
+import base64
+
 import jsonschema
 import rfc3986
 import six
@@ -34,6 +36,16 @@ def _validate_datetime_format(instance):
         return False
     else:
         return True
+
+
+@jsonschema.FormatChecker.cls_checks('base64')
+def _validate_base64_format(instance):
+    try:
+        base64.decodestring(instance)
+    except base64.binascii.Error:
+        return False
+
+    return True
 
 
 @jsonschema.FormatChecker.cls_checks('uuid')
