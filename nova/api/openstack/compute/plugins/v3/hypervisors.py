@@ -62,7 +62,7 @@ class HypervisorsController(object):
                 }
 
         if servers is not None:
-            hyp_dict['servers'] = [dict(name=serv['name'], id=serv['uuid'])
+            hyp_dict['servers'] = [dict(name=serv['name'], uuid=serv['uuid'])
                                    for serv in servers]
 
         # Add any additional info
@@ -123,33 +123,35 @@ class HypervisorsController(object):
         return dict(hypervisor=self._view_hypervisor(hyp, False,
                                                      uptime=uptime))
 
-    @extensions.expected_errors(400)
-    def search(self, req):
+    @extensions.expected_errors(404)
+    def search(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
-        query = req.GET.get('query', None)
-        if not query:
-            msg = _("Need parameter 'query' to specify "
-                    "which hypervisor to filter on")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
         hypervisors = self.host_api.compute_node_search_by_hypervisor(
-            context, query)
-        return dict(hypervisors=[self._view_hypervisor(hyp, False)
-                                 for hyp in hypervisors])
+                context, id)
+        if hypervisors:
+            return dict(hypervisors=[self._view_hypervisor(hyp, False)
+                                     for hyp in hypervisors])
+        else:
+            msg = _("No hypervisor matching '%s' could be found.") % id
+            raise webob.exc.HTTPNotFound(explanation=msg)
 
     @extensions.expected_errors(404)
     def servers(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
-        try:
-            compute_node = self.host_api.compute_node_get(context, id)
-        except (ValueError, exception.ComputeHostNotFound):
-            msg = _("Hypervisor with ID '%s' could not be found.") % id
+        compute_nodes = self.host_api.compute_node_search_by_hypervisor(
+                context, id)
+        if not compute_nodes:
+            msg = _("No hypervisor matching '%s' could be found.") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
-        instances = self.host_api.instance_get_all_by_host(context,
-            compute_node['service']['host'])
-        return dict(hypervisor=self._view_hypervisor(compute_node, False,
-            instances))
+        hypervisors = []
+        for compute_node in compute_nodes:
+            instances = self.host_api.instance_get_all_by_host(context,
+                    compute_node['service']['host'])
+            hyp = self._view_hypervisor(compute_node, False, instances)
+            hypervisors.append(hyp)
+        return dict(hypervisors=hypervisors)
 
     @extensions.expected_errors(())
     def statistics(self, req):
@@ -170,9 +172,9 @@ class Hypervisors(extensions.V3APIExtensionBase):
         resources = [extensions.ResourceExtension(ALIAS,
                 HypervisorsController(),
                 collection_actions={'detail': 'GET',
-                                    'search': 'GET',
                                     'statistics': 'GET'},
                 member_actions={'uptime': 'GET',
+                                'search': 'GET',
                                 'servers': 'GET'})]
 
         return resources

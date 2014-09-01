@@ -12,105 +12,94 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack.compute.contrib import hypervisors
+import copy
+
+import mock
+
+from nova.api.openstack.compute.contrib import hypervisors as hypervisors_v2
+from nova.api.openstack.compute.plugins.v3 import hypervisors \
+    as hypervisors_v21
+from nova.api.openstack import extensions
+from nova import db
+from nova import exception
+from nova import test
 from nova.tests.api.openstack.compute.contrib import test_hypervisors
 from nova.tests.api.openstack import fakes
 
 
-class ExtendedHypervisorsTest(test_hypervisors.HypervisorsTest):
+def fake_compute_node_get(context, compute_id):
+    for hyper in test_hypervisors.TEST_HYPERS:
+        if hyper['id'] == compute_id:
+            return hyper
+    raise exception.ComputeHostNotFound(host=compute_id)
+
+
+def fake_compute_node_get_all(context):
+    return test_hypervisors.TEST_HYPERS
+
+
+class ExtendedHypervisorsTestV21(test.NoDBTestCase):
+    DETAIL_HYPERS_DICTS = copy.deepcopy(test_hypervisors.TEST_HYPERS)
+    del DETAIL_HYPERS_DICTS[0]['service_id']
+    del DETAIL_HYPERS_DICTS[1]['service_id']
+    DETAIL_HYPERS_DICTS[0].update({'state': 'up',
+                           'status': 'enabled',
+                           'service': dict(id=1, host='compute1',
+                                        disabled_reason=None)})
+    DETAIL_HYPERS_DICTS[1].update({'state': 'up',
+                           'status': 'enabled',
+                           'service': dict(id=2, host='compute2',
+                                        disabled_reason=None)})
+
+    def _set_up_controller(self):
+        self.controller = hypervisors_v21.HypervisorsController()
+        self.controller.servicegroup_api.service_is_up = mock.MagicMock(
+            return_value=True)
+
+    def _get_request(self):
+        return fakes.HTTPRequestV3.blank('/os-hypervisors',
+                                         use_admin_context=True)
+
     def setUp(self):
-        super(ExtendedHypervisorsTest, self).setUp()
-        self.ext_mgr.extensions['os-extended-hypervisors'] = True
-        self.controller = hypervisors.HypervisorsController(self.ext_mgr)
+        super(ExtendedHypervisorsTestV21, self).setUp()
+        self._set_up_controller()
+
+        self.stubs.Set(db, 'compute_node_get_all', fake_compute_node_get_all)
+        self.stubs.Set(db, 'compute_node_get',
+                       fake_compute_node_get)
 
     def test_view_hypervisor_detail_noservers(self):
         result = self.controller._view_hypervisor(
                                    test_hypervisors.TEST_HYPERS[0], True)
 
-        self.assertEqual(result, dict(
-                id=1,
-                hypervisor_hostname="hyper1",
-                vcpus=4,
-                memory_mb=10 * 1024,
-                local_gb=250,
-                vcpus_used=2,
-                memory_mb_used=5 * 1024,
-                local_gb_used=125,
-                hypervisor_type="xen",
-                hypervisor_version=3,
-                free_ram_mb=5 * 1024,
-                free_disk_gb=125,
-                current_workload=2,
-                running_vms=2,
-                cpu_info='cpu_info',
-                disk_available_least=100,
-                host_ip='1.1.1.1',
-                service=dict(id=1, host='compute1')))
+        self.assertEqual(result, self.DETAIL_HYPERS_DICTS[0])
 
     def test_detail(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/detail',
-                                      use_admin_context=True)
+        req = self._get_request()
         result = self.controller.detail(req)
 
-        self.assertEqual(result, dict(hypervisors=[
-                    dict(id=1,
-                         service=dict(id=1, host="compute1"),
-                         vcpus=4,
-                         memory_mb=10 * 1024,
-                         local_gb=250,
-                         vcpus_used=2,
-                         memory_mb_used=5 * 1024,
-                         local_gb_used=125,
-                         hypervisor_type="xen",
-                         hypervisor_version=3,
-                         hypervisor_hostname="hyper1",
-                         free_ram_mb=5 * 1024,
-                         free_disk_gb=125,
-                         current_workload=2,
-                         running_vms=2,
-                         cpu_info='cpu_info',
-                         disk_available_least=100,
-                         host_ip='1.1.1.1'),
-                    dict(id=2,
-                         service=dict(id=2, host="compute2"),
-                         vcpus=4,
-                         memory_mb=10 * 1024,
-                         local_gb=250,
-                         vcpus_used=2,
-                         memory_mb_used=5 * 1024,
-                         local_gb_used=125,
-                         hypervisor_type="xen",
-                         hypervisor_version=3,
-                         hypervisor_hostname="hyper2",
-                         free_ram_mb=5 * 1024,
-                         free_disk_gb=125,
-                         current_workload=2,
-                         running_vms=2,
-                         cpu_info='cpu_info',
-                         disk_available_least=100,
-                         host_ip='2.2.2.2')]))
+        self.assertEqual(result, dict(hypervisors=self.DETAIL_HYPERS_DICTS))
 
     def test_show_withid(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/1',
-                                      use_admin_context=True)
+        req = self._get_request()
         result = self.controller.show(req, '1')
 
-        self.assertEqual(result, dict(hypervisor=dict(
-                    id=1,
-                    service=dict(id=1, host="compute1"),
-                    vcpus=4,
-                    memory_mb=10 * 1024,
-                    local_gb=250,
-                    vcpus_used=2,
-                    memory_mb_used=5 * 1024,
-                    local_gb_used=125,
-                    hypervisor_type="xen",
-                    hypervisor_version=3,
-                    hypervisor_hostname="hyper1",
-                    free_ram_mb=5 * 1024,
-                    free_disk_gb=125,
-                    current_workload=2,
-                    running_vms=2,
-                    cpu_info='cpu_info',
-                    disk_available_least=100,
-                    host_ip='1.1.1.1')))
+        self.assertEqual(result, dict(hypervisor=self.DETAIL_HYPERS_DICTS[0]))
+
+
+class ExtendedHypervisorsTestV2(ExtendedHypervisorsTestV21):
+    DETAIL_HYPERS_DICTS = copy.deepcopy(test_hypervisors.TEST_HYPERS)
+    del DETAIL_HYPERS_DICTS[0]['service_id']
+    del DETAIL_HYPERS_DICTS[1]['service_id']
+    DETAIL_HYPERS_DICTS[0].update({'service': dict(id=1, host='compute1')})
+    DETAIL_HYPERS_DICTS[1].update({'service': dict(id=2, host='compute2')})
+
+    def _set_up_controller(self):
+        self.ext_mgr = extensions.ExtensionManager()
+        self.ext_mgr.extensions = {}
+        self.ext_mgr.extensions['os-extended-hypervisors'] = True
+        self.controller = hypervisors_v2.HypervisorsController(self.ext_mgr)
+
+    def _get_request(self):
+        return fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/detail',
+                                       use_admin_context=True)

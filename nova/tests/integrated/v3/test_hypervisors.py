@@ -25,11 +25,11 @@ class HypervisorsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
         self._verify_response('hypervisors-list-resp', {}, response, 200)
 
     def test_hypervisors_search(self):
-        response = self._do_get('os-hypervisors/search?query=fake')
+        response = self._do_get('os-hypervisors/fake/search')
         self._verify_response('hypervisors-search-resp', {}, response, 200)
 
     def test_hypervisors_servers(self):
-        response = self._do_get('os-hypervisors/1/servers')
+        response = self._do_get('os-hypervisors/fake/servers')
         self._verify_response('hypervisors-servers-resp', {}, response, 200)
 
     def test_hypervisors_detail(self):
