@@ -1,9 +1,9 @@
 {
-    "availability_zone_info": [
+    "availabilityZoneInfo": [
         {
             "hosts": null,
-            "zone_name": "nova",
-            "zone_state": {
+            "zoneName": "nova",
+            "zoneState": {
                 "available": true
             }
         }

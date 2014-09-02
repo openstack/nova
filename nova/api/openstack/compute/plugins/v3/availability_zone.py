@@ -22,7 +22,7 @@ from nova import servicegroup
 
 CONF = cfg.CONF
 ALIAS = "os-availability-zone"
-ATTRIBUTE_NAME = "%s:availability_zone" % ALIAS
+ATTRIBUTE_NAME = "availability_zone"
 authorize_list = extensions.extension_authorizer('compute',
                                                  'v3:' + ALIAS + ':list')
 authorize_detail = extensions.extension_authorizer('compute',
@@ -42,8 +42,8 @@ class AvailabilityZoneController(wsgi.Controller):
             # Hide internal_service_availability_zone
             if zone == CONF.internal_service_availability_zone:
                 continue
-            result.append({'zone_name': zone,
-                           'zone_state': {'available': is_available},
+            result.append({'zoneName': zone,
+                           'zoneState': {'available': is_available},
                            "hosts": None})
         return result
 
@@ -56,7 +56,7 @@ class AvailabilityZoneController(wsgi.Controller):
             self._get_filtered_availability_zones(available_zones, True)
         filtered_not_available_zones = \
             self._get_filtered_availability_zones(not_available_zones, False)
-        return {'availability_zone_info': filtered_available_zones +
+        return {'availabilityZoneInfo': filtered_available_zones +
                                         filtered_not_available_zones}
 
     def _describe_availability_zones_verbose(self, context, **kwargs):
@@ -91,15 +91,15 @@ class AvailabilityZoneController(wsgi.Controller):
                     hosts[host][service['binary']] = {'available': alive,
                                       'active': True != service['disabled'],
                                       'updated_at': service['updated_at']}
-            result.append({'zone_name': zone,
-                           'zone_state': {'available': True},
+            result.append({'zoneName': zone,
+                           'zoneState': {'available': True},
                            "hosts": hosts})
 
         for zone in not_available_zones:
-            result.append({'zone_name': zone,
-                           'zone_state': {'available': False},
+            result.append({'zoneName': zone,
+                           'zoneState': {'available': False},
                            "hosts": None})
-        return {'availability_zone_info': result}
+        return {'availabilityZoneInfo': result}
 
     @extensions.expected_errors(())
     def index(self, req):

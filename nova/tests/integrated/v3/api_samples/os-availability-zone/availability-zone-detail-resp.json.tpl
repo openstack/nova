@@ -1,5 +1,5 @@
 {
-    "availability_zone_info": [
+    "availabilityZoneInfo": [
         {
             "hosts": {
                 "consoleauth": {
@@ -45,8 +45,8 @@
                     }
                 }
             },
-            "zone_name": "internal",
-            "zone_state": {
+            "zoneName": "internal",
+            "zoneState": {
                 "available": true
             }
         },
@@ -60,8 +60,8 @@
                     }
                 }
             },
-            "zone_name": "nova",
-            "zone_state": {
+            "zoneName": "nova",
+            "zoneState": {
                 "available": true
             }
         }
