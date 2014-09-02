@@ -85,11 +85,10 @@ class VMwareVIMUtilTestCase(test.NoDBTestCase):
         retrievePropertiesEx.return_value = result
 
         calls = {'RetrievePropertiesEx': retrievePropertiesEx}
-
         with stubs.fake_suds_context(calls):
-            session = driver.VMwareAPISession()
+            session = driver.VMwareAPISession(host_ip='localhost')
 
-            service_content = session.vim.get_service_content()
+            service_content = session.vim.service_content
             props = session._call_method(vim_util, "get_dynamic_properties",
                                          service_content.propertyCollector,
                                         'fake_type', None)

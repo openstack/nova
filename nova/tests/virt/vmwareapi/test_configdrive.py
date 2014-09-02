@@ -13,10 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import contextlib
-
 import fixtures
-import mock
 import mox
 
 from nova import context
@@ -29,7 +26,6 @@ from nova.tests.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.virt.vmwareapi import stubs
 from nova.virt import fake
 from nova.virt.vmwareapi import driver
-from nova.virt.vmwareapi import read_write_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
 from nova.virt.vmwareapi import vmware_images
@@ -123,42 +119,11 @@ class ConfigDriveTestCase(test.NoDBTestCase):
                   block_device_info=None):
 
         injected_files = injected_files or []
-        read_file_handle = mock.MagicMock()
-        write_file_handle = mock.MagicMock()
-        self.image_ref = self.test_instance.image_ref
-
-        def fake_read_handle(read_iter):
-            return read_file_handle
-
-        def fake_write_handle(host, dc_name, ds_name, cookies,
-                 file_path, file_size, scheme="https"):
-            self.assertEqual('dc1', dc_name)
-            self.assertEqual('ds1', ds_name)
-            self.assertEqual('Fake-CookieJar', cookies)
-            split_file_path = file_path.split('/')
-            self.assertEqual('vmware_temp', split_file_path[0])
-            self.assertEqual(self.image_ref, split_file_path[2])
-            self.assertEqual(('%s-flat.vmdk' % self.image_ref),
-                             split_file_path[3])
-            self.assertEqual(int(self.image['size']), file_size)
-
-            return write_file_handle
-
-        with contextlib.nested(
-             mock.patch.object(read_write_util, 'VMwareHTTPWriteFile',
-                               side_effect=fake_write_handle),
-             mock.patch.object(read_write_util, 'GlanceFileRead',
-                                side_effect=fake_read_handle),
-             mock.patch.object(vmware_images, 'start_transfer')
-        ) as (fake_http_write, fake_glance_read, fake_start_transfer):
-            self.conn.spawn(self.context, self.test_instance, self.image,
+        self.conn.spawn(self.context, self.test_instance, self.image,
                         injected_files=injected_files,
                         admin_password=admin_password,
                         network_info=self.network_info,
                         block_device_info=block_device_info)
-            fake_start_transfer.assert_called_once_with(self.context,
-                read_file_handle, self.image['size'],
-                write_file_handle=write_file_handle)
 
     def test_create_vm_with_config_drive_verify_method_invocation(self):
         self.test_instance.config_drive = 'True'

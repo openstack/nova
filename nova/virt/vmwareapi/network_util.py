@@ -17,11 +17,11 @@
 """
 Utility functions for ESX Networking.
 """
+from oslo.vmware import exceptions as vexc
 
 from nova import exception
 from nova.i18n import _
 from nova.openstack.common import log as logging
-from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 
@@ -162,7 +162,7 @@ def create_port_group(session, pg_name, vswitch_name, vlan_id=0, cluster=None):
         session._call_method(session._get_vim(),
                 "AddPortGroup", network_system_mor,
                 portgrp=add_prt_grp_spec)
-    except error_util.AlreadyExistsException:
+    except vexc.AlreadyExistsException:
         # There can be a race condition when two instances try
         # adding port groups at the same time. One succeeds, then
         # the other one will get an exception. Since we are

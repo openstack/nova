@@ -16,11 +16,11 @@
 """VIF drivers for VMware."""
 
 from oslo.config import cfg
+from oslo.vmware import exceptions as vexc
 
 from nova import exception
 from nova.i18n import _
 from nova.openstack.common import log as logging
-from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import network_util
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
@@ -126,7 +126,7 @@ def get_neutron_network(session, network_name, cluster, vif):
         opaque = session._call_method(vim_util, "get_dynamic_property", host,
                                       "HostSystem",
                                       "config.network.opaqueNetwork")
-    except error_util.InvalidPropertyException:
+    except vexc.InvalidPropertyException:
         opaque = None
     if opaque:
         bridge = vif['network']['id']
