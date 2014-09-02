@@ -1529,6 +1529,221 @@ class LibvirtConnTestCase(test.TestCase,
         self.assertEqual(cfg.devices[5].type, "spice")
         self.assertEqual(cfg.devices[6].type, "qxl")
 
+    @mock.patch('nova.console.serial.acquire_port')
+    def test_get_guest_config_serial_console(self, acquire_port):
+        self.flags(enabled=True, group='serial_console')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        acquire_port.return_value = 11111
+
+        cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+        self.assertEqual(7, len(cfg.devices))
+        self.assertIsInstance(cfg.devices[0],
+                              vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(cfg.devices[1],
+                              vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(cfg.devices[2],
+                              vconfig.LibvirtConfigGuestSerial)
+        self.assertIsInstance(cfg.devices[3],
+                              vconfig.LibvirtConfigGuestSerial)
+        self.assertIsInstance(cfg.devices[4],
+                              vconfig.LibvirtConfigGuestInput)
+        self.assertIsInstance(cfg.devices[5],
+                              vconfig.LibvirtConfigGuestGraphics)
+        self.assertIsInstance(cfg.devices[6],
+                              vconfig.LibvirtConfigGuestVideo)
+
+        self.assertEqual("tcp", cfg.devices[2].type)
+        self.assertEqual(11111, cfg.devices[2].listen_port)
+
+    def test_get_guest_config_serial_console_through_flavor(self):
+        self.flags(enabled=True, group='serial_console')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        fake_flavor = objects.Flavor.get_by_id(
+                self.context, self.test_instance['instance_type_id'])
+        fake_flavor.extra_specs = {'hw:serial_port_count': 3}
+
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        with mock.patch.object(objects.Flavor, 'get_by_id',
+                               return_value=fake_flavor):
+            cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+            self.assertEqual(9, len(cfg.devices))
+            self.assertIsInstance(cfg.devices[0],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertIsInstance(cfg.devices[1],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertIsInstance(cfg.devices[2],
+                                  vconfig.LibvirtConfigGuestSerial)
+            self.assertIsInstance(cfg.devices[3],
+                                  vconfig.LibvirtConfigGuestSerial)
+            self.assertIsInstance(cfg.devices[4],
+                                  vconfig.LibvirtConfigGuestSerial)
+            self.assertIsInstance(cfg.devices[5],
+                                  vconfig.LibvirtConfigGuestSerial)
+            self.assertIsInstance(cfg.devices[6],
+                                  vconfig.LibvirtConfigGuestInput)
+            self.assertIsInstance(cfg.devices[7],
+                                  vconfig.LibvirtConfigGuestGraphics)
+            self.assertIsInstance(cfg.devices[8],
+                                  vconfig.LibvirtConfigGuestVideo)
+
+            self.assertEqual("tcp", cfg.devices[2].type)
+            self.assertEqual("tcp", cfg.devices[3].type)
+            self.assertEqual("tcp", cfg.devices[4].type)
+
+    def test_get_guest_config_serial_console_through_invalid_flavor(self):
+        self.flags(enabled=True, group='serial_console')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        fake_flavor = objects.Flavor.get_by_id(
+                self.context, self.test_instance['instance_type_id'])
+        fake_flavor.extra_specs = {'hw:serial_port_count': "a"}
+
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        with mock.patch.object(objects.Flavor, 'get_by_id',
+                               return_value=fake_flavor):
+            self.assertRaises(
+                exception.ImageSerialPortNumberInvalid,
+                conn._get_guest_config, instance_ref, [], {}, disk_info)
+
+    def test_get_guest_config_serial_console_image_meta_and_flavor(self):
+        self.flags(enabled=True, group='serial_console')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        fake_flavor = objects.Flavor.get_by_id(
+                self.context, self.test_instance['instance_type_id'])
+        fake_flavor.extra_specs = {'hw:serial_port_count': 4}
+
+        image_meta = {"properties": {"hw_serial_port_count": "3"}}
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        with mock.patch.object(objects.Flavor, 'get_by_id',
+                               return_value=fake_flavor):
+            cfg = conn._get_guest_config(instance_ref, [], image_meta,
+                                         disk_info)
+            self.assertEqual(9, len(cfg.devices), cfg.devices)
+            self.assertIsInstance(cfg.devices[0],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertIsInstance(cfg.devices[1],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertIsInstance(cfg.devices[2],
+                                  vconfig.LibvirtConfigGuestSerial)
+            self.assertIsInstance(cfg.devices[3],
+                                  vconfig.LibvirtConfigGuestSerial)
+            self.assertIsInstance(cfg.devices[4],
+                                  vconfig.LibvirtConfigGuestSerial)
+            self.assertIsInstance(cfg.devices[5],
+                                  vconfig.LibvirtConfigGuestSerial)
+            self.assertIsInstance(cfg.devices[6],
+                                  vconfig.LibvirtConfigGuestInput)
+            self.assertIsInstance(cfg.devices[7],
+                                  vconfig.LibvirtConfigGuestGraphics)
+            self.assertIsInstance(cfg.devices[8],
+                                  vconfig.LibvirtConfigGuestVideo)
+
+            self.assertEqual("tcp", cfg.devices[2].type)
+            self.assertEqual("tcp", cfg.devices[3].type)
+            self.assertEqual("tcp", cfg.devices[4].type)
+
+    def test_get_guest_config_serial_console_through_invalid_img_meta(self):
+        self.flags(enabled=True, group='serial_console')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        image_meta = {"properties": {"hw_serial_port_count": "fail"}}
+        self.assertRaises(
+            exception.ImageSerialPortNumberInvalid,
+            conn._get_guest_config, instance_ref, [], image_meta, disk_info)
+
+    @mock.patch('nova.console.serial.acquire_port')
+    def test_get_guest_config_serial_console_through_port_rng_exhausted(
+            self, acquire_port):
+        self.flags(enabled=True, group='serial_console')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        acquire_port.side_effect = exception.SocketPortRangeExhaustedException(
+            '127.0.0.1')
+        self.assertRaises(
+            exception.SocketPortRangeExhaustedException,
+            conn._get_guest_config, instance_ref, [], {}, disk_info)
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._lookup_by_name')
+    def test_get_serial_ports_from_instance(self, _lookup_by_name):
+        i = self._test_get_serial_ports_from_instance(_lookup_by_name)
+        self.assertEqual([
+            ('127.0.0.1', 100),
+            ('127.0.0.1', 101),
+            ('127.0.0.2', 100),
+            ('127.0.0.2', 101)], list(i))
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._lookup_by_name')
+    def test_get_serial_ports_from_instance_bind_only(self, _lookup_by_name):
+        i = self._test_get_serial_ports_from_instance(
+            _lookup_by_name, mode='bind')
+        self.assertEqual([
+            ('127.0.0.1', 101),
+            ('127.0.0.2', 100)], list(i))
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._lookup_by_name')
+    def test_get_serial_ports_from_instance_connect_only(self,
+                                                         _lookup_by_name):
+        i = self._test_get_serial_ports_from_instance(
+            _lookup_by_name, mode='connect')
+        self.assertEqual([
+            ('127.0.0.1', 100),
+            ('127.0.0.2', 101)], list(i))
+
+    def _test_get_serial_ports_from_instance(self, _lookup_by_name, mode=None):
+        xml = """
+        <domain type='kvm'>
+          <devices>
+            <serial type="tcp">
+              <source host="127.0.0.1" service="100" mode="connect"/>
+            </serial>
+            <serial type="tcp">
+              <source host="127.0.0.1" service="101" mode="bind"/>
+            </serial>
+            <serial type="tcp">
+              <source host="127.0.0.2" service="100" mode="bind"/>
+            </serial>
+            <serial type="tcp">
+              <source host="127.0.0.2" service="101" mode="connect"/>
+            </serial>
+          </devices>
+        </domain>"""
+
+        dom = mock.MagicMock()
+        dom.XMLDesc.return_value = xml
+        _lookup_by_name.return_value = dom
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        return conn._get_serial_ports_from_instance(
+            {'name': 'fake_instance'}, mode=mode)
+
     def test_get_guest_config_with_type_xen(self):
         self.flags(vnc_enabled=True)
         self.flags(virt_type='xen',

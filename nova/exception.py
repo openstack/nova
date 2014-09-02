@@ -1717,3 +1717,13 @@ class SocketPortRangeExhaustedException(NovaException):
 
 class SocketPortInUseException(NovaException):
     msg_fmt = _("Not able to bind %(host)s:%(port)d, %(error)s")
+
+
+class ImageSerialPortNumberInvalid(Invalid):
+    msg_fmt = _("Number of serial ports '%(num_ports)s' specified in "
+                "'%(property)s' isn't valid.")
+
+
+class ImageSerialPortNumberExceedFlavorValue(Invalid):
+    msg_fmt = _("Forbidden to exceed flavor value of number of serial "
+                "ports passed in image meta.")
