@@ -52,10 +52,12 @@ class Backend(object):
 
         return FakeImage(instance, name)
 
-    def snapshot(self, path, image_type=''):
+    def snapshot(self, instance, disk_path, image_type=''):
         # NOTE(bfilippov): this is done in favor for
         # snapshot tests in test_libvirt.LibvirtConnTestCase
-        return imagebackend.Backend(True).snapshot(path, image_type)
+        return imagebackend.Backend(True).snapshot(instance,
+            disk_path,
+            image_type=image_type)
 
 
 class Raw(imagebackend.Image):

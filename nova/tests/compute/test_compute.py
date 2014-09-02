@@ -7313,6 +7313,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance.update(base_options)
         inst_type = flavors.get_flavor_by_name("m1.tiny")
         instance = self.compute_api._populate_instance_for_create(
+                                                    self.context,
                                                     instance,
                                                     self.fake_image,
                                                     1,
@@ -7331,9 +7332,9 @@ class ComputeAPITestCase(BaseTestCase):
 
         orig_populate = self.compute_api._populate_instance_for_create
 
-        def _fake_populate(base_options, *args, **kwargs):
+        def _fake_populate(context, base_options, *args, **kwargs):
             base_options['uuid'] = fake_uuids.pop(0)
-            return orig_populate(base_options, *args, **kwargs)
+            return orig_populate(context, base_options, *args, **kwargs)
 
         self.stubs.Set(self.compute_api,
                 '_populate_instance_for_create',

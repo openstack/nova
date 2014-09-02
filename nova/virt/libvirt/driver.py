@@ -92,6 +92,7 @@ from nova.virt import firewall
 from nova.virt import hardware
 from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
+from nova.virt.libvirt import dmcrypt
 from nova.virt.libvirt import firewall as libvirt_firewall
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import imagecache
@@ -243,6 +244,12 @@ CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
 CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
 CONF.import_opt('use_cow_images', 'nova.virt.driver')
+CONF.import_opt('enabled', 'nova.compute.api',
+                group='ephemeral_storage_encryption')
+CONF.import_opt('cipher', 'nova.compute.api',
+                group='ephemeral_storage_encryption')
+CONF.import_opt('key_size', 'nova.compute.api',
+                group='ephemeral_storage_encryption')
 CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')
 CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc')
 CONF.import_opt('server_proxyclient_address', 'nova.spice', group='spice')
@@ -1045,7 +1052,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def cleanup(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True, migrate_data=None, destroy_vifs=True):
-        self._undefine_domain(instance)
         if destroy_vifs:
             self._unplug_vifs(instance, network_info, True)
 
@@ -1119,16 +1125,27 @@ class LibvirtDriver(driver.ComputeDriver):
                                  {'vol_id': vol.get('volume_id'), 'exc': exc},
                                  instance=instance)
 
+        if destroy_disks:
+            # NOTE(haomai): destroy volumes if needed
+            if CONF.libvirt.images_type == 'lvm':
+                self._cleanup_lvm(instance)
+            if CONF.libvirt.images_type == 'rbd':
+                self._cleanup_rbd(instance)
+
         if destroy_disks or (
                 migrate_data and migrate_data.get('is_shared_block_storage',
                                                   False)):
             self._delete_instance_files(instance)
 
-        if destroy_disks:
-            self._cleanup_lvm(instance)
-            # NOTE(haomai): destroy volumes if needed
-            if CONF.libvirt.images_type == 'rbd':
-                self._cleanup_rbd(instance)
+        self._undefine_domain(instance)
+
+    def _detach_encrypted_volumes(self, instance):
+        """Detaches encrypted volumes attached to instance."""
+        disks = jsonutils.loads(self.get_instance_disk_info(instance['name']))
+        encrypted_volumes = filter(dmcrypt.is_encrypted,
+                                   [disk['path'] for disk in disks])
+        for path in encrypted_volumes:
+            dmcrypt.delete_volume(path)
 
         if CONF.serial_console.enabled:
             for host, port in self._get_serial_ports_from_instance(instance):
@@ -1162,6 +1179,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _cleanup_lvm(self, instance):
         """Delete all LVM disks for given instance object."""
+        if instance.get('ephemeral_key_uuid') is not None:
+            self._detach_encrypted_volumes(instance)
+
         disks = self._lvm_disks(instance)
         if disks:
             lvm.remove_volumes(disks)
@@ -1593,10 +1613,16 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE(rmk): Live snapshots require QEMU 1.3 and Libvirt 1.0.0.
         #            These restrictions can be relaxed as other configurations
         #            can be validated.
-        if self._has_min_version(MIN_LIBVIRT_LIVESNAPSHOT_VERSION,
-                                 MIN_QEMU_LIVESNAPSHOT_VERSION,
-                                 REQ_HYPERVISOR_LIVESNAPSHOT) \
-                and not source_format == "lvm" and not source_format == 'rbd':
+        # NOTE(dgenin): Instances with LVM encrypted ephemeral storage require
+        #               cold snapshots. Currently, checking for encryption is
+        #               redundant because LVM supports only cold snapshots.
+        #               It is necessary in case this situation changes in the
+        #               future.
+        if (self._has_min_version(MIN_LIBVIRT_LIVESNAPSHOT_VERSION,
+                                  MIN_QEMU_LIVESNAPSHOT_VERSION,
+                                  REQ_HYPERVISOR_LIVESNAPSHOT)
+             and source_format not in ('lvm', 'rbd')
+             and not CONF.ephemeral_storage_encryption.enabled):
             live_snapshot = True
             # Abort is an idempotent operation, so make sure any block
             # jobs which may have failed are ended. This operation also
@@ -1626,7 +1652,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     pci_manager.get_instance_pci_devs(instance))
                 virt_dom.managedSave(0)
 
-        snapshot_backend = self.image_backend.snapshot(disk_path,
+        snapshot_backend = self.image_backend.snapshot(instance,
+                disk_path,
                 image_type=source_format)
 
         if live_snapshot:
@@ -2732,7 +2759,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _create_ephemeral(self, target, ephemeral_size,
                           fs_label, os_type, is_block_dev=False,
-                          max_size=None, specified_fs=None):
+                          max_size=None, context=None, specified_fs=None):
         if not is_block_dev:
             self._create_local(target, ephemeral_size)
 
@@ -2741,7 +2768,7 @@ class LibvirtDriver(driver.ComputeDriver):
                   specified_fs=specified_fs)
 
     @staticmethod
-    def _create_swap(target, swap_mb, max_size=None):
+    def _create_swap(target, swap_mb, max_size=None, context=None):
         """Create a swap file of specified size."""
         libvirt_utils.create_image('raw', target, '%dM' % swap_mb)
         utils.mkfs('swap', target)
@@ -2961,6 +2988,7 @@ class LibvirtDriver(driver.ComputeDriver):
             fname = "ephemeral_%s_%s" % (ephemeral_gb, os_type_with_default)
             size = ephemeral_gb * units.Gi
             disk_image.cache(fetch_func=fn,
+                             context=context,
                              filename=fname,
                              size=size,
                              ephemeral_size=ephemeral_gb)
@@ -2980,8 +3008,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                    is_block_dev=disk_image.is_block_dev)
             size = eph['size'] * units.Gi
             fname = "ephemeral_%s_%s" % (eph['size'], os_type_with_default)
-            disk_image.cache(
-                             fetch_func=fn,
+            disk_image.cache(fetch_func=fn,
+                             context=context,
                              filename=fname,
                              size=size,
                              ephemeral_size=eph['size'],
@@ -3002,6 +3030,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if swap_mb > 0:
                 size = swap_mb * units.Mi
                 image('disk.swap').cache(fetch_func=self._create_swap,
+                                         context=context,
                                          filename="swap_%s" % swap_mb,
                                          size=size,
                                          swap_mb=swap_mb)
@@ -5281,7 +5310,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         for cnt, path_node in enumerate(path_nodes):
             disk_type = disk_nodes[cnt].get('type')
-            path = path_node.get('file')
+            path = path_node.get('file') or path_node.get('dev')
             target = target_nodes[cnt].attrib['dev']
 
             if not path:
@@ -5289,8 +5318,8 @@ class LibvirtDriver(driver.ComputeDriver):
                           instance_name)
                 continue
 
-            if disk_type != 'file':
-                LOG.debug('skipping %s since it looks like volume', path)
+            if disk_type not in ['file', 'block']:
+                LOG.debug('skipping disk because it looks like a volume', path)
                 continue
 
             if target in volume_devices:
@@ -5300,7 +5329,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
             # get the real disk size or
             # raise a localized error if image is unavailable
-            dk_size = int(os.path.getsize(path))
+            if disk_type == 'file':
+                dk_size = int(os.path.getsize(path))
+            elif disk_type == 'block':
+                dk_size = lvm.get_volume_size(path)
 
             disk_type = driver_nodes[cnt].get('type')
             if disk_type == "qcow2":
