@@ -17,8 +17,8 @@
         "ram": 1024,
         "rxtx_factor": 2.0,
         "vcpus": 2,
-        "disabled": false,
-        "ephemeral": 0,
-        "swap": 0
+        "OS-FLV-DISABLED:disabled": false,
+        "OS-FLV-EXT-DATA:ephemeral": 0,
+        "swap": ""
     }
 }

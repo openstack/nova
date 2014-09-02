@@ -74,9 +74,9 @@ class V3ViewBuilder(ViewBuilder):
     def show(self, request, flavor):
         flavor_dict = super(V3ViewBuilder, self).show(request, flavor)
         flavor_dict['flavor'].update({
-            "swap": flavor["swap"],
-            "ephemeral": flavor["ephemeral_gb"],
-            "disabled": flavor["disabled"],
+            "swap": flavor["swap"] or "",
+            "OS-FLV-EXT-DATA:ephemeral": flavor["ephemeral_gb"],
+            "OS-FLV-DISABLED:disabled": flavor["disabled"],
             "vcpus": flavor["vcpus"],
         })
         return flavor_dict

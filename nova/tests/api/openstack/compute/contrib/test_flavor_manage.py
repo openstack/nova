@@ -19,7 +19,9 @@ import mock
 import webob
 
 from nova.api.openstack.compute.contrib import flavor_access
-from nova.api.openstack.compute.contrib import flavormanage
+from nova.api.openstack.compute.contrib import flavormanage as flavormanage_v2
+from nova.api.openstack.compute.plugins.v3 import flavor_manage as \
+    flavormanage_v21
 from nova.compute import flavors
 from nova import context
 from nova import db
@@ -76,26 +78,26 @@ def fake_create(context, kwargs):
     newflavor["swap"] = kwargs.get('swap')
     newflavor["rxtx_factor"] = float(kwargs.get('rxtx_factor'))
     newflavor["is_public"] = bool(kwargs.get('is_public'))
+    newflavor["disabled"] = bool(kwargs.get('disabled'))
 
     return newflavor
 
 
-class FlavorManageTest(test.NoDBTestCase):
+class FlavorManageTestV21(test.NoDBTestCase):
+    controller = flavormanage_v21.FlavorManageController()
+    validation_error = exception.ValidationError
+    base_url = '/v3/flavors'
+
     def setUp(self):
-        super(FlavorManageTest, self).setUp()
+        super(FlavorManageTestV21, self).setUp()
         self.stubs.Set(flavors,
                        "get_flavor_by_flavor_id",
                        fake_get_flavor_by_flavor_id)
         self.stubs.Set(flavors, "destroy", fake_destroy)
         self.stubs.Set(db, "flavor_create", fake_create)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Flavormanage', 'Flavorextradata',
-                'Flavor_access', 'Flavor_rxtx', 'Flavor_swap'])
-
-        self.controller = flavormanage.FlavorManageController()
-        self.app = fakes.wsgi_app(init_only=('flavors',))
+        self.ctxt = context.RequestContext('fake', 'fake',
+                                           is_admin=True, auth_token=True)
+        self.app = self._setup_app()
 
         self.request_body = {
             "flavor": {
@@ -112,8 +114,13 @@ class FlavorManageTest(test.NoDBTestCase):
         }
         self.expected_flavor = self.request_body
 
+    def _setup_app(self):
+        return fakes.wsgi_app_v3(init_only=('flavor-manage', 'os-flavor-rxtx',
+                                            'os-flavor-access', 'flavors',
+                                            'os-flavor-extra-data'))
+
     def test_delete(self):
-        req = fakes.HTTPRequest.blank('/v2/123/flavors/1234')
+        req = fakes.HTTPRequest.blank(self.base_url + '/1234')
         res = self.controller._delete(req, 1234)
         self.assertEqual(res.status_int, 202)
 
@@ -138,9 +145,9 @@ class FlavorManageTest(test.NoDBTestCase):
 
         del body['flavor'][parameter]
 
-        req = fakes.HTTPRequest.blank('/v2/123/flavors')
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller._create,
-                          req, body)
+        req = fakes.HTTPRequest.blank(self.base_url)
+        self.assertRaises(self.validation_error, self.controller._create,
+                          req, body=body)
 
     def test_create_missing_name(self):
         self._test_create_missing_parameter('name')
@@ -155,8 +162,7 @@ class FlavorManageTest(test.NoDBTestCase):
         self._test_create_missing_parameter('disk')
 
     def _create_flavor_success_case(self, body):
-        url = '/v2/fake/flavors'
-        req = webob.Request.blank(url)
+        req = webob.Request.blank(self.base_url)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
@@ -177,11 +183,6 @@ class FlavorManageTest(test.NoDBTestCase):
             self.assertEqual(body["flavor"][key],
                              self.expected_flavor["flavor"][key])
 
-    def test_create_flavor_name_with_leading_trailing_whitespace(self):
-        self.request_body['flavor']['name'] = " test "
-        body = self._create_flavor_success_case(self.request_body)
-        self.assertEqual("test", body["flavor"]["name"])
-
     def test_create_without_flavorid(self):
         del self.request_body['flavor']['id']
         body = self._create_flavor_success_case(self.request_body)
@@ -192,8 +193,7 @@ class FlavorManageTest(test.NoDBTestCase):
     def _create_flavor_bad_request_case(self, body):
         self.stubs.UnsetAll()
 
-        url = '/v2/fake/flavors'
-        req = webob.Request.blank(url)
+        req = webob.Request.blank(self.base_url)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
@@ -305,8 +305,7 @@ class FlavorManageTest(test.NoDBTestCase):
             raise exception.FlavorExists(name=name)
 
         self.stubs.Set(flavors, "create", fake_create)
-        url = '/v2/fake/flavors'
-        req = webob.Request.blank(url)
+        req = webob.Request.blank(self.base_url)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = jsonutils.dumps(expected)
@@ -318,7 +317,7 @@ class FlavorManageTest(test.NoDBTestCase):
     def test_flavor_create_db_failed(self, mock_create):
         request_dict = {
             "flavor": {
-                "name": " test ",
+                "name": "test",
                 'id': "12345",
                 "ram": 512,
                 "vcpus": 2,
@@ -329,8 +328,7 @@ class FlavorManageTest(test.NoDBTestCase):
                 "os-flavor-access:is_public": True,
             }
         }
-        url = '/v2/fake/flavors'
-        req = webob.Request.blank(url)
+        req = webob.Request.blank(self.base_url)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = jsonutils.dumps(request_dict)
@@ -358,21 +356,16 @@ class FakeRequest(object):
     environ = {"nova.context": context.get_admin_context()}
 
 
-class PrivateFlavorManageTest(test.TestCase):
-    def setUp(self):
-        super(PrivateFlavorManageTest, self).setUp()
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Flavormanage', 'Flavorextradata',
-                'Flavor_access', 'Flavor_rxtx', 'Flavor_swap'])
+class PrivateFlavorManageTestV21(test.TestCase):
+    controller = flavormanage_v21.FlavorManageController()
+    base_url = '/v3/flavors'
 
-        self.controller = flavormanage.FlavorManageController()
+    def setUp(self):
+        super(PrivateFlavorManageTestV21, self).setUp()
         self.flavor_access_controller = flavor_access.FlavorAccessController()
         self.ctxt = context.RequestContext('fake', 'fake',
                                            is_admin=True, auth_token=True)
-        self.app = fakes.wsgi_app(init_only=('flavors',),
-                                  fake_auth_context=self.ctxt)
+        self.app = self._setup_app()
         self.expected = {
             "flavor": {
                 "name": "test",
@@ -385,9 +378,15 @@ class PrivateFlavorManageTest(test.TestCase):
             }
         }
 
+    def _setup_app(self):
+        return fakes.wsgi_app_v3(init_only=('flavor-manage',
+                                            'os-flavor-access',
+                                            'os-flavor-rxtx', 'flavors',
+                                            'os-flavor-extra-data'),
+                                 fake_auth_context=self.ctxt)
+
     def _get_response(self):
-        url = '/v2/fake/flavors'
-        req = webob.Request.blank(url)
+        req = webob.Request.blank(self.base_url)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = jsonutils.dumps(self.expected)
@@ -415,3 +414,38 @@ class PrivateFlavorManageTest(test.TestCase):
         body = self._get_response()
         for key in self.expected["flavor"]:
             self.assertEqual(body["flavor"][key], self.expected["flavor"][key])
+
+
+class FlavorManageTestV2(FlavorManageTestV21):
+    controller = flavormanage_v2.FlavorManageController()
+    validation_error = webob.exc.HTTPBadRequest
+    base_url = '/v2/fake/flavors'
+
+    def setUp(self):
+        super(FlavorManageTestV2, self).setUp()
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Flavormanage', 'Flavorextradata',
+                'Flavor_access', 'Flavor_rxtx', 'Flavor_swap'])
+
+    def _setup_app(self):
+        return fakes.wsgi_app(init_only=('flavors',),
+                              fake_auth_context=self.ctxt)
+
+
+class PrivateFlavorManageTestV2(PrivateFlavorManageTestV21):
+    controller = flavormanage_v2.FlavorManageController()
+    base_url = '/v2/fake/flavors'
+
+    def setUp(self):
+        super(PrivateFlavorManageTestV2, self).setUp()
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Flavormanage', 'Flavorextradata',
+                'Flavor_access', 'Flavor_rxtx', 'Flavor_swap'])
+
+    def _setup_app(self):
+        return fakes.wsgi_app(init_only=('flavors',),
+                              fake_auth_context=self.ctxt)

@@ -46,9 +46,13 @@ class FlavorManageController(wsgi.Controller):
 
         flavors.destroy(flavor['name'])
 
-        return webob.Response(status_int=204)
+        # NOTE(oomichi): Return 202 for backwards compatibility but should be
+        # 204 as this operation complete the deletion of aggregate resource and
+        # return no response body.
+        return webob.Response(status_int=202)
 
-    @wsgi.response(201)
+    # NOTE(oomichi): Return 200 for backwards compatibility but should be 201
+    # as this operation complete the creation of flavor resource.
     @wsgi.action("create")
     @extensions.expected_errors((400, 409, 500))
     @validation.schema(flavor_manage.create)
@@ -63,7 +67,7 @@ class FlavorManageController(wsgi.Controller):
         memory = vals['ram']
         vcpus = vals['vcpus']
         root_gb = vals['disk']
-        ephemeral_gb = vals.get('ephemeral', 0)
+        ephemeral_gb = vals.get('OS-FLV-EXT-DATA:ephemeral', 0)
         swap = vals.get('swap', 0)
         rxtx_factor = vals.get('rxtx_factor', 1.0)
         is_public = vals.get('os-flavor-access:is_public', True)
@@ -74,9 +78,8 @@ class FlavorManageController(wsgi.Controller):
                                     flavorid=flavorid, swap=swap,
                                     rxtx_factor=rxtx_factor,
                                     is_public=is_public)
-            if not flavor['is_public']:
-                flavors.add_flavor_access(flavor['flavorid'],
-                                          context.project_id, context)
+            # NOTE(gmann): For backward compatibility, non public flavor
+            # access is not being added for created tenant. Ref -bug/1209101
             req.cache_db_flavor(flavor)
         except (exception.FlavorExists,
                 exception.FlavorIdExists) as err:

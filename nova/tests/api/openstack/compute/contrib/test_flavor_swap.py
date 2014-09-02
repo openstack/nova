@@ -27,6 +27,9 @@ FAKE_FLAVORS = {
         "memory_mb": '256',
         "root_gb": '10',
         "swap": 512,
+        "vcpus": 1,
+        "ephemeral_gb": 1,
+        "disabled": False,
     },
     'flavor 2': {
         "flavorid": '2',
@@ -34,6 +37,9 @@ FAKE_FLAVORS = {
         "memory_mb": '512',
         "root_gb": '10',
         "swap": None,
+        "vcpus": 1,
+        "ephemeral_gb": 1,
+        "disabled": False,
     },
 }
 
@@ -52,12 +58,13 @@ def fake_get_all_flavors_sorted_list(context=None, inactive=False,
     ]
 
 
-class FlavorSwapTest(test.NoDBTestCase):
+class FlavorSwapTestV21(test.NoDBTestCase):
+    base_url = '/v3/flavors'
     content_type = 'application/json'
     prefix = ''
 
     def setUp(self):
-        super(FlavorSwapTest, self).setUp()
+        super(FlavorSwapTestV21, self).setUp()
         ext = ('nova.api.openstack.compute.contrib'
               '.flavor_swap.Flavor_swap')
         self.flags(osapi_compute_extension=[ext])
@@ -71,7 +78,7 @@ class FlavorSwapTest(test.NoDBTestCase):
     def _make_request(self, url):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app_v3(init_only=('flavors')))
         return res
 
     def _get_flavor(self, body):
@@ -84,14 +91,14 @@ class FlavorSwapTest(test.NoDBTestCase):
         self.assertEqual(str(flavor.get('%sswap' % self.prefix)), swap)
 
     def test_show(self):
-        url = '/v2/fake/flavors/1'
+        url = self.base_url + '/1'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
         self.assertFlavorSwap(self._get_flavor(res.body), '512')
 
     def test_detail(self):
-        url = '/v2/fake/flavors/detail'
+        url = self.base_url + '/detail'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
@@ -100,7 +107,17 @@ class FlavorSwapTest(test.NoDBTestCase):
         self.assertFlavorSwap(flavors[1], '')
 
 
-class FlavorSwapXmlTest(FlavorSwapTest):
+class FlavorSwapTestV2(FlavorSwapTestV21):
+    base_url = '/v2/fake/flavors'
+
+    def _make_request(self, url):
+        req = webob.Request.blank(url)
+        req.headers['Accept'] = self.content_type
+        res = req.get_response(fakes.wsgi_app())
+        return res
+
+
+class FlavorSwapXmlTest(FlavorSwapTestV2):
     content_type = 'application/xml'
 
     def _get_flavor(self, body):
