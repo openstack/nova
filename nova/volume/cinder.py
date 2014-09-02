@@ -35,35 +35,52 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 
 cinder_opts = [
-    cfg.StrOpt('cinder_catalog_info',
+    cfg.StrOpt('catalog_info',
             default='volume:cinder:publicURL',
             help='Info to match when looking for cinder in the service '
                  'catalog. Format is: separated values of the form: '
-                 '<service_type>:<service_name>:<endpoint_type>'),
-    cfg.StrOpt('cinder_endpoint_template',
+                 '<service_type>:<service_name>:<endpoint_type>',
+            deprecated_group='DEFAULT',
+            deprecated_name='cinder_catalog_info'),
+    cfg.StrOpt('endpoint_template',
                help='Override service catalog lookup with template for cinder '
-                    'endpoint e.g. http://localhost:8776/v1/%(project_id)s'),
+                    'endpoint e.g. http://localhost:8776/v1/%(project_id)s',
+               deprecated_group='DEFAULT',
+               deprecated_name='cinder_endpoint_template'),
     cfg.StrOpt('os_region_name',
-                help='Region name of this node'),
-    cfg.StrOpt('cinder_ca_certificates_file',
-                help='Location of ca certificates file to use for cinder '
-                     'client requests.'),
-    cfg.IntOpt('cinder_http_retries',
+               help='Region name of this node',
+               deprecated_group='DEFAULT',
+               deprecated_name='os_region_name'),
+    cfg.StrOpt('ca_certificates_file',
+               help='Location of ca certificates file to use for cinder '
+                    'client requests.',
+               deprecated_group='DEFAULT',
+               deprecated_name='cinder_ca_certificates_file'),
+    cfg.IntOpt('http_retries',
                default=3,
-               help='Number of cinderclient retries on failed http calls'),
-    cfg.IntOpt('cinder_http_timeout', default=None,
-               help='HTTP inactivity timeout (in seconds)'),
-    cfg.BoolOpt('cinder_api_insecure',
-               default=False,
-               help='Allow to perform insecure SSL requests to cinder'),
-    cfg.BoolOpt('cinder_cross_az_attach',
+               help='Number of cinderclient retries on failed http calls',
+            deprecated_group='DEFAULT',
+            deprecated_name='cinder_http_retries'),
+    cfg.IntOpt('http_timeout', default=None,
+               help='HTTP inactivity timeout (in seconds)',
+               deprecated_group='DEFAULT',
+               deprecated_name='cinder_http_timeout'),
+    cfg.BoolOpt('api_insecure',
+                default=False,
+                help='Allow to perform insecure SSL requests to cinder',
+                deprecated_group='DEFAULT',
+                deprecated_name='cinder_api_insecure'),
+    cfg.BoolOpt('cross_az_attach',
                 default=True,
                 help='Allow attach between instance and volume in different '
-                     'availability zones.'),
+                     'availability zones.',
+                deprecated_group='DEFAULT',
+                deprecated_name='cinder_cross_az_attach'),
 ]
 
 CONF = cfg.CONF
-CONF.register_opts(cinder_opts)
+# cinder_opts options in the DEFAULT group were deprecated in Juno
+CONF.register_opts(cinder_opts, group='cinder')
 
 LOG = logging.getLogger(__name__)
 
@@ -78,10 +95,10 @@ def cinderclient(context):
                              context.auth_token,
                              project_id=context.project_id,
                              auth_url=CINDER_URL,
-                             insecure=CONF.cinder_api_insecure,
-                             retries=CONF.cinder_http_retries,
-                             timeout=CONF.cinder_http_timeout,
-                             cacert=CONF.cinder_ca_certificates_file)
+                             insecure=CONF.cinder.api_insecure,
+                             retries=CONF.cinder.http_retries,
+                             timeout=CONF.cinder.http_timeout,
+                             cacert=CONF.cinder.ca_certificates_file)
     # noauth extracts user_id:project_id from auth_token
     c.client.auth_token = context.auth_token or '%s:%s' % (context.user_id,
                                                            context.project_id)
@@ -218,15 +235,15 @@ def get_cinder_client_version(context):
         'access': {'serviceCatalog': context.service_catalog or []}
     }
     sc = service_catalog.ServiceCatalog(compat_catalog)
-    if CONF.cinder_endpoint_template:
-        url = CONF.cinder_endpoint_template % context.to_dict()
+    if CONF.cinder.endpoint_template:
+        url = CONF.cinder.endpoint_template % context.to_dict()
     else:
-        info = CONF.cinder_catalog_info
+        info = CONF.cinder.catalog_info
         service_type, service_name, endpoint_type = info.split(':')
         # extract the region if set in configuration
-        if CONF.os_region_name:
+        if CONF.cinder.os_region_name:
             attr = 'region'
-            filter_value = CONF.os_region_name
+            filter_value = CONF.cinder.os_region_name
         else:
             attr = None
             filter_value = None
@@ -289,7 +306,7 @@ class API(object):
         if volume['attach_status'] == "attached":
             msg = _("already attached")
             raise exception.InvalidVolume(reason=msg)
-        if instance and not CONF.cinder_cross_az_attach:
+        if instance and not CONF.cinder.cross_az_attach:
             # NOTE(sorrison): If instance is on a host we match against it's AZ
             #                 else we check the intended AZ
             if instance.get('host'):

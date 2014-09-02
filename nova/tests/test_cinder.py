@@ -275,7 +275,8 @@ class CinderTestCase(test.NoDBTestCase):
 
     def test_cinder_endpoint_template(self):
         self.flags(
-            cinder_endpoint_template='http://other_host:8776/v1/%(project_id)s'
+            endpoint_template='http://other_host:8776/v1/%(project_id)s',
+            group='cinder'
         )
         self.api.get(self.context, '1234')
         self.assert_called('GET', '/volumes/1234')
@@ -296,7 +297,7 @@ class CinderTestCase(test.NoDBTestCase):
     def test_cinder_api_insecure(self):
         # The True/False negation is awkward, but better for the client
         # to pass us insecure=True and we check verify_cert == False
-        self.flags(cinder_api_insecure=True)
+        self.flags(api_insecure=True, group='cinder')
         self.api.get(self.context, '1234')
         self.assert_called('GET', '/volumes/1234')
         self.assertEqual(
@@ -304,7 +305,7 @@ class CinderTestCase(test.NoDBTestCase):
 
     def test_cinder_api_cacert_file(self):
         cacert = "/etc/ssl/certs/ca-certificates.crt"
-        self.flags(cinder_ca_certificates_file=cacert)
+        self.flags(ca_certificates_file=cacert, group='cinder')
         self.api.get(self.context, '1234')
         self.assert_called('GET', '/volumes/1234')
         self.assertEqual(
@@ -312,7 +313,7 @@ class CinderTestCase(test.NoDBTestCase):
 
     def test_cinder_http_retries(self):
         retries = 42
-        self.flags(cinder_http_retries=retries)
+        self.flags(http_retries=retries, group='cinder')
         self.api.get(self.context, '1234')
         self.assert_called('GET', '/volumes/1234')
         self.assertEqual(
@@ -330,8 +331,8 @@ class CinderV2TestCase(test.NoDBTestCase):
             "name": "cinderv2",
             "endpoints": [{"publicURL": "http://localhost:8776/v2/project_id"}]
         }]
-        cinder.CONF.set_override('cinder_catalog_info',
-                                 'volumev2:cinder:publicURL')
+        cinder.CONF.set_override('catalog_info',
+                                 'volumev2:cinder:publicURL', group='cinder')
         self.context = context.RequestContext('username', 'project_id',
                                               service_catalog=catalog)
 
@@ -354,7 +355,8 @@ class CinderV2TestCase(test.NoDBTestCase):
 
     def test_cinder_endpoint_template(self):
         self.flags(
-            cinder_endpoint_template='http://other_host:8776/v2/%(project_id)s'
+            endpoint_template='http://other_host:8776/v2/%(project_id)s',
+            group='cinder'
         )
         self.api.get(self.context, '1234')
         self.assert_called('GET', '/volumes/1234')
@@ -375,14 +377,14 @@ class CinderV2TestCase(test.NoDBTestCase):
     def test_cinder_api_insecure(self):
         # The True/False negation is awkward, but better for the client
         # to pass us insecure=True and we check verify_cert == False
-        self.flags(cinder_api_insecure=True)
+        self.flags(api_insecure=True, group='cinder')
         self.api.get(self.context, '1234')
         self.assert_called('GET', '/volumes/1234')
         self.assertFalse(fake_client_v2_factory.client.client.verify_cert)
 
     def test_cinder_api_cacert_file(self):
         cacert = "/etc/ssl/certs/ca-certificates.crt"
-        self.flags(cinder_ca_certificates_file=cacert)
+        self.flags(ca_certificates_file=cacert, group='cinder')
         self.api.get(self.context, '1234')
         self.assert_called('GET', '/volumes/1234')
         self.assertEqual(cacert,
@@ -390,14 +392,14 @@ class CinderV2TestCase(test.NoDBTestCase):
 
     def test_cinder_http_retries(self):
         retries = 42
-        self.flags(cinder_http_retries=retries)
+        self.flags(http_retries=retries, group='cinder')
         self.api.get(self.context, '1234')
         self.assert_called('GET', '/volumes/1234')
         self.assertEqual(retries, fake_client_v2_factory.client.client.retries)
 
     def test_cinder_http_timeout(self):
         timeout = 123
-        self.flags(cinder_http_timeout=timeout)
+        self.flags(http_timeout=timeout, group='cinder')
         self.api.get(self.context, '1234')
         self.assertEqual(timeout,
                          fake_client_v2_factory.client.client.timeout)
