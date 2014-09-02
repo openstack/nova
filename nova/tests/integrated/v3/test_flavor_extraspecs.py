@@ -23,15 +23,15 @@ class FlavorExtraSpecsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
         subs = {'value1': 'value1',
                 'value2': 'value2'
         }
-        response = self._do_post('flavors/1/flavor-extra-specs',
+        response = self._do_post('flavors/1/os-extra_specs',
                                  'flavor-extra-specs-create-req', subs)
         self._verify_response('flavor-extra-specs-create-resp',
-                              subs, response, 201)
+                              subs, response, 200)
 
     def test_flavor_extra_specs_get(self):
         subs = {'value1': 'value1'}
         self._flavor_extra_specs_create()
-        response = self._do_get('flavors/1/flavor-extra-specs/key1')
+        response = self._do_get('flavors/1/os-extra_specs/key1')
         self._verify_response('flavor-extra-specs-get-resp',
                               subs, response, 200)
 
@@ -40,7 +40,7 @@ class FlavorExtraSpecsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
                 'value2': 'value2'
         }
         self._flavor_extra_specs_create()
-        response = self._do_get('flavors/1/flavor-extra-specs')
+        response = self._do_get('flavors/1/os-extra_specs')
         self._verify_response('flavor-extra-specs-list-resp',
                               subs, response, 200)
 
@@ -50,13 +50,13 @@ class FlavorExtraSpecsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
     def test_flavor_extra_specs_update(self):
         subs = {'value1': 'new_value1'}
         self._flavor_extra_specs_create()
-        response = self._do_put('flavors/1/flavor-extra-specs/key1',
+        response = self._do_put('flavors/1/os-extra_specs/key1',
                                 'flavor-extra-specs-update-req', subs)
         self._verify_response('flavor-extra-specs-update-resp',
                               subs, response, 200)
 
     def test_flavor_extra_specs_delete(self):
         self._flavor_extra_specs_create()
-        response = self._do_delete('flavors/1/flavor-extra-specs/key1')
-        self.assertEqual(response.status, 204)
+        response = self._do_delete('flavors/1/os-extra_specs/key1')
+        self.assertEqual(response.status, 200)
         self.assertEqual(response.read(), '')
