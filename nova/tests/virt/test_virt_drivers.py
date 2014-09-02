@@ -22,6 +22,7 @@ import netaddr
 import six
 
 from nova.compute import manager
+from nova.console import type as ctype
 from nova import exception
 from nova import objects
 from nova.openstack.common import importutils
@@ -539,27 +540,20 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     def test_get_vnc_console(self):
         instance, network_info = self._get_running_instance(obj=True)
         vnc_console = self.connection.get_vnc_console(self.ctxt, instance)
-        self.assertIn('internal_access_path', vnc_console)
-        self.assertIn('host', vnc_console)
-        self.assertIn('port', vnc_console)
+        self.assertIsInstance(vnc_console, ctype.ConsoleVNC)
 
     @catch_notimplementederror
     def test_get_spice_console(self):
         instance_ref, network_info = self._get_running_instance()
         spice_console = self.connection.get_spice_console(self.ctxt,
-                instance_ref)
-        self.assertIn('internal_access_path', spice_console)
-        self.assertIn('host', spice_console)
-        self.assertIn('port', spice_console)
-        self.assertIn('tlsPort', spice_console)
+                                                          instance_ref)
+        self.assertIsInstance(spice_console, ctype.ConsoleSpice)
 
     @catch_notimplementederror
     def test_get_rdp_console(self):
         instance_ref, network_info = self._get_running_instance()
         rdp_console = self.connection.get_rdp_console(self.ctxt, instance_ref)
-        self.assertIn('internal_access_path', rdp_console)
-        self.assertIn('host', rdp_console)
-        self.assertIn('port', rdp_console)
+        self.assertIsInstance(rdp_console, ctype.ConsoleRDP)
 
     @catch_notimplementederror
     def test_get_console_pool_info(self):

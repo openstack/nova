@@ -4240,9 +4240,8 @@ class ComputeManager(manager.Manager):
         try:
             # Retrieve connect info from driver, and then decorate with our
             # access info token
-            connect_info = self.driver.get_vnc_console(context, instance)
-            connect_info['token'] = token
-            connect_info['access_url'] = access_url
+            console = self.driver.get_vnc_console(context, instance)
+            connect_info = console.get_connection_info(token, access_url)
         except exception.InstanceNotFound:
             if instance['vm_state'] != vm_states.BUILDING:
                 raise
@@ -4277,9 +4276,8 @@ class ComputeManager(manager.Manager):
         try:
             # Retrieve connect info from driver, and then decorate with our
             # access info token
-            connect_info = self.driver.get_spice_console(context, instance)
-            connect_info['token'] = token
-            connect_info['access_url'] = access_url
+            console = self.driver.get_spice_console(context, instance)
+            connect_info = console.get_connection_info(token, access_url)
         except exception.InstanceNotFound:
             if instance['vm_state'] != vm_states.BUILDING:
                 raise
@@ -4313,9 +4311,8 @@ class ComputeManager(manager.Manager):
         try:
             # Retrieve connect info from driver, and then decorate with our
             # access info token
-            connect_info = self.driver.get_rdp_console(context, instance)
-            connect_info['token'] = token
-            connect_info['access_url'] = access_url
+            console = self.driver.get_rdp_console(context, instance)
+            connect_info = console.get_connection_info(token, access_url)
         except exception.InstanceNotFound:
             if instance['vm_state'] != vm_states.BUILDING:
                 raise
@@ -4337,7 +4334,7 @@ class ComputeManager(manager.Manager):
         else:
             console_info = self.driver.get_vnc_console(ctxt, instance)
 
-        return console_info['port'] == port
+        return console_info.port == port
 
     @object_compat
     @wrap_exception()

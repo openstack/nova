@@ -33,6 +33,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
 from nova.compute import vm_states
+from nova.console import type as ctype
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
@@ -1664,8 +1665,10 @@ class VMOps(object):
         path = "/console?ref=%s&session_id=%s" % (str(vm_ref), session_id)
 
         # NOTE: XS5.6sp2+ use http over port 80 for xenapi com
-        return {'host': CONF.vncserver_proxyclient_address, 'port': 80,
-                'internal_access_path': path}
+        return ctype.ConsoleVNC(
+            host=CONF.vncserver_proxyclient_address,
+            port=80,
+            internal_access_path=path)
 
     def _vif_xenstore_data(self, vif):
         """convert a network info vif to injectable instance data."""

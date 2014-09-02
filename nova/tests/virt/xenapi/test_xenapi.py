@@ -443,7 +443,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
         # Note(sulo): We don't care about session id in test
         # they will always differ so strip that out
-        actual_path = console['internal_access_path'].split('&')[0]
+        actual_path = console.internal_access_path.split('&')[0]
         expected_path = "/console?ref=%s" % str(vm_ref)
 
         self.assertEqual(expected_path, actual_path)
@@ -460,7 +460,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
         # Note(sulo): We don't care about session id in test
         # they will always differ so strip that out
-        actual_path = console['internal_access_path'].split('&')[0]
+        actual_path = console.internal_access_path.split('&')[0]
         expected_path = "/console?ref=%s" % str(rescue_vm)
 
         self.assertEqual(expected_path, actual_path)

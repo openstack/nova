@@ -29,6 +29,7 @@ from oslo.config import cfg
 
 from nova.compute import power_state
 from nova.compute import task_states
+from nova.console import type as ctype
 from nova import db
 from nova import exception
 from nova.i18n import _
@@ -337,20 +338,20 @@ class FakeDriver(driver.ComputeDriver):
         return 'FAKE CONSOLE OUTPUT\nANOTHER\nLAST LINE'
 
     def get_vnc_console(self, context, instance):
-        return {'internal_access_path': 'FAKE',
-                'host': 'fakevncconsole.com',
-                'port': 6969}
+        return ctype.ConsoleVNC(internal_access_path='FAKE',
+                                host='fakevncconsole.com',
+                                port=6969)
 
     def get_spice_console(self, context, instance):
-        return {'internal_access_path': 'FAKE',
-                'host': 'fakespiceconsole.com',
-                'port': 6969,
-                'tlsPort': 6970}
+        return ctype.ConsoleSpice(internal_access_path='FAKE',
+                                  host='fakespiceconsole.com',
+                                  port=6969,
+                                  tlsPort=6970)
 
     def get_rdp_console(self, context, instance):
-        return {'internal_access_path': 'FAKE',
-                'host': 'fakerdpconsole.com',
-                'port': 6969}
+        return ctype.ConsoleRDP(internal_access_path='FAKE',
+                                host='fakerdpconsole.com',
+                                port=6969)
 
     def get_console_pool_info(self, console_type):
         return {'address': '127.0.0.1',

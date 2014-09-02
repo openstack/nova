@@ -56,6 +56,7 @@ from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_mode
 from nova.console import serial as serial_console
+from nova.console import type as ctype
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
@@ -2652,7 +2653,7 @@ class LibvirtDriver(driver.ComputeDriver):
         port = get_vnc_port_for_instance(instance.name)
         host = CONF.vncserver_proxyclient_address
 
-        return {'host': host, 'port': port, 'internal_access_path': None}
+        return ctype.ConsoleVNC(host=host, port=port)
 
     def get_spice_console(self, context, instance):
         def get_spice_ports_for_instance(instance_name):
@@ -2672,8 +2673,7 @@ class LibvirtDriver(driver.ComputeDriver):
         ports = get_spice_ports_for_instance(instance['name'])
         host = CONF.spice.server_proxyclient_address
 
-        return {'host': host, 'port': ports[0],
-                'tlsPort': ports[1], 'internal_access_path': None}
+        return ctype.ConsoleSpice(host=host, port=ports[0], tlsPort=ports[1])
 
     @staticmethod
     def _supports_direct_io(dirpath):

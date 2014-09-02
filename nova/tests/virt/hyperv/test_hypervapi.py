@@ -1832,9 +1832,9 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase,
         connect_info = self._conn.get_rdp_console(self._context, instance)
         self._mox.VerifyAll()
 
-        self.assertEqual(CONF.my_ip, connect_info['host'])
-        self.assertEqual(fake_port, connect_info['port'])
-        self.assertEqual(fake_vm_id, connect_info['internal_access_path'])
+        self.assertEqual(CONF.my_ip, connect_info.host)
+        self.assertEqual(fake_port, connect_info.port)
+        self.assertEqual(fake_vm_id, connect_info.internal_access_path)
 
 
 class VolumeOpsTestCase(HyperVAPIBaseTestCase):

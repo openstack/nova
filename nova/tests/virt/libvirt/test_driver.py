@@ -8294,7 +8294,7 @@ Active:          8381604 kB
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         vnc_dict = conn.get_vnc_console(self.context, instance)
-        self.assertEqual(vnc_dict['port'], '5900')
+        self.assertEqual(vnc_dict.port, '5900')
 
     def test_get_vnc_console_unavailable(self):
         instance = self.create_instance_obj(self.context)
@@ -8334,7 +8334,7 @@ Active:          8381604 kB
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         spice_dict = conn.get_spice_console(self.context, instance)
-        self.assertEqual(spice_dict['port'], '5950')
+        self.assertEqual(spice_dict.port, '5950')
 
     def test_get_spice_console_unavailable(self):
         instance = self.create_instance_obj(self.context)
