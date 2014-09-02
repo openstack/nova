@@ -32,7 +32,6 @@ import six
 import six.moves.urllib.parse as urlparse
 
 from nova.api.metadata import base as instance_metadata
-from nova import block_device
 from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
@@ -58,7 +57,6 @@ from nova.virt import hardware
 from nova.virt import netutils
 from nova.virt.xenapi import agent
 from nova.virt.xenapi.image import utils as image_utils
-from nova.virt.xenapi import volume_utils
 
 
 LOG = logging.getLogger(__name__)
@@ -507,74 +505,6 @@ def create_vdi(session, sr_ref, instance, name_label, disk_type, virtual_size,
                'virtual_size': virtual_size, 'read_only': read_only,
                'sr_ref': sr_ref})
     return vdi_ref
-
-
-def get_vdi_uuid_for_volume(session, connection_data):
-    sr_uuid, label, sr_params = volume_utils.parse_sr_info(connection_data)
-    sr_ref = volume_utils.find_sr_by_uuid(session, sr_uuid)
-
-    if not sr_ref:
-        sr_ref = volume_utils.introduce_sr(session, sr_uuid, label, sr_params)
-
-    if sr_ref is None:
-        raise exception.NovaException(_('SR not present and could not be '
-                                        'introduced'))
-
-    vdi_uuid = None
-
-    if 'vdi_uuid' in connection_data:
-        _scan_sr(session, sr_ref)
-        vdi_uuid = connection_data['vdi_uuid']
-    else:
-        try:
-            vdi_ref = volume_utils.introduce_vdi(session, sr_ref)
-            vdi_uuid = session.call_xenapi("VDI.get_uuid", vdi_ref)
-        except exception.StorageError as exc:
-            LOG.exception(exc)
-            volume_utils.forget_sr(session, sr_ref)
-
-    return vdi_uuid
-
-
-def get_vdis_for_instance(context, session, instance, name_label, image,
-                          image_type, block_device_info=None):
-    vdis = {}
-
-    if block_device_info:
-        msg = "block device info: %s" % block_device_info
-        # NOTE(mriedem): block_device_info can contain an auth_password
-        # so we have to scrub the message before logging it.
-        LOG.debug(logging.mask_password(msg), instance=instance)
-        root_device_name = block_device_info['root_device_name']
-
-        for bdm in block_device_info['block_device_mapping']:
-            if (block_device.strip_prefix(bdm['mount_device']) ==
-                    block_device.strip_prefix(root_device_name)):
-                # If we're a root-device, record that fact so we don't download
-                # a root image via Glance
-                type_ = 'root'
-            else:
-                # Otherwise, use mount_device as `type_` so that we have easy
-                # access to it in _attach_disks to create the VBD
-                type_ = bdm['mount_device']
-
-            connection_data = bdm['connection_info']['data']
-            vdi_uuid = get_vdi_uuid_for_volume(session, connection_data)
-            if vdi_uuid:
-                vdis[type_] = dict(uuid=vdi_uuid, file=None, osvol=True)
-
-    # If we didn't get a root VDI from volumes, then use the Glance image as
-    # the root device
-    if 'root' not in vdis:
-        create_image_vdis = _create_image(
-                context, session, instance, name_label, image, image_type)
-        vdis.update(create_image_vdis)
-
-    # Just get the VDI ref once
-    for vdi in vdis.itervalues():
-        vdi['ref'] = session.call_xenapi('VDI.get_by_uuid', vdi['uuid'])
-
-    return vdis
 
 
 @contextlib.contextmanager
@@ -1348,8 +1278,8 @@ def _create_cached_image(context, session, instance, name_label,
     return downloaded, vdis
 
 
-def _create_image(context, session, instance, name_label, image_id,
-                  image_type):
+def create_image(context, session, instance, name_label, image_id,
+                 image_type):
     """Creates VDI from the image stored in the local cache. If the image
     is not present in the cache, it streams it from glance.
 
