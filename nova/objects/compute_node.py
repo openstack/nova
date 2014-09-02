@@ -142,7 +142,8 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     # Version 1.2 Add get_by_service()
     # Version 1.3 ComputeNode version 1.4
     # Version 1.4 ComputeNode version 1.5
-    VERSION = '1.4'
+    # Version 1.5 Add use_slave to get_by_service
+    VERSION = '1.5'
     fields = {
         'objects': fields.ListOfObjectsField('ComputeNode'),
         }
@@ -153,6 +154,7 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
         '1.2': '1.3',
         '1.3': '1.4',
         '1.4': '1.5',
+        '1.5': '1.5',
         }
 
     @base.remotable_classmethod
@@ -169,12 +171,13 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
                                   db_computes)
 
     @base.remotable_classmethod
-    def _get_by_service(cls, context, service_id):
+    def _get_by_service(cls, context, service_id, use_slave=False):
         db_service = db.service_get(context, service_id,
-                                    with_compute_node=True)
+                                    with_compute_node=True,
+                                    use_slave=use_slave)
         return base.obj_make_list(context, cls(context), objects.ComputeNode,
                                   db_service['compute_node'])
 
     @classmethod
-    def get_by_service(cls, context, service):
-        return cls._get_by_service(context, service.id)
+    def get_by_service(cls, context, service, use_slave=False):
+        return cls._get_by_service(context, service.id, use_slave=use_slave)

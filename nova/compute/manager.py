@@ -5773,7 +5773,8 @@ class ComputeManager(manager.Manager):
             new_resource_tracker_dict[nodename] = rt
 
         # Delete orphan compute node not reported by driver but still in db
-        compute_nodes_in_db = self._get_compute_nodes_in_db(context)
+        compute_nodes_in_db = self._get_compute_nodes_in_db(context,
+                                                            use_slave=True)
 
         for cn in compute_nodes_in_db:
             if cn.hypervisor_hostname not in nodenames:
@@ -5782,12 +5783,15 @@ class ComputeManager(manager.Manager):
 
         self._resource_tracker_dict = new_resource_tracker_dict
 
-    def _get_compute_nodes_in_db(self, context):
-        service = objects.Service.get_by_compute_host(context, self.host)
+    def _get_compute_nodes_in_db(self, context, use_slave=False):
+        service = objects.Service.get_by_compute_host(context, self.host,
+                                                        use_slave=use_slave)
         if not service:
             LOG.error(_("No service record for host %s"), self.host)
             return []
-        return objects.ComputeNodeList.get_by_service(context, service)
+        return objects.ComputeNodeList.get_by_service(context,
+                                                      service,
+                                                      use_slave=use_slave)
 
     @periodic_task.periodic_task(
         spacing=CONF.running_deleted_instance_poll_interval)

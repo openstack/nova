@@ -430,8 +430,10 @@ def service_destroy(context, service_id):
                     soft_delete(synchronize_session=False)
 
 
-def _service_get(context, service_id, with_compute_node=True, session=None):
-    query = model_query(context, models.Service, session=session).\
+def _service_get(context, service_id, with_compute_node=True, session=None,
+                 use_slave=False):
+    query = model_query(context, models.Service, session=session,
+                        use_slave=use_slave).\
                      filter_by(id=service_id)
 
     if with_compute_node:
@@ -445,9 +447,11 @@ def _service_get(context, service_id, with_compute_node=True, session=None):
 
 
 @require_admin_context
-def service_get(context, service_id, with_compute_node=False):
+def service_get(context, service_id, with_compute_node=False,
+                use_slave=False):
     return _service_get(context, service_id,
-                        with_compute_node=with_compute_node)
+                        with_compute_node=with_compute_node,
+                        use_slave=use_slave)
 
 
 @require_admin_context
@@ -485,8 +489,9 @@ def service_get_all_by_host(context, host):
 
 
 @require_admin_context
-def service_get_by_compute_host(context, host):
-    result = model_query(context, models.Service, read_deleted="no").\
+def service_get_by_compute_host(context, host, use_slave=False):
+    result = model_query(context, models.Service, read_deleted="no",
+                         use_slave=use_slave).\
                 options(joinedload('compute_node')).\
                 filter_by(host=host).\
                 filter_by(topic=CONF.compute_topic).\
