@@ -1872,6 +1872,41 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             exception.UnexpectedDeletingTaskStateError(expected='foo',
                                                        actual='bar'))
 
+    def test_stop_instance_task_state_none_power_state_shutdown(self):
+        # Tests that stop_instance doesn't puke when the instance power_state
+        # is shutdown and the task_state is None.
+        instance = fake_instance.fake_instance_obj(
+            self.context, vm_state=vm_states.ACTIVE,
+            task_state=None, power_state=power_state.SHUTDOWN)
+
+        @mock.patch.object(objects.InstanceActionEvent, 'event_start')
+        @mock.patch.object(objects.InstanceActionEvent,
+                           'event_finish_with_failure')
+        @mock.patch.object(self.compute, '_get_power_state',
+                           return_value=power_state.SHUTDOWN)
+        @mock.patch.object(self.compute, '_notify_about_instance_usage')
+        @mock.patch.object(self.compute, '_power_off_instance')
+        @mock.patch.object(instance, 'save')
+        def do_test(save_mock, power_off_mock, notify_mock, get_state_mock,
+                    event_finish_mock, event_start_mock):
+            # run the code
+            self.compute.stop_instance(self.context, instance)
+            # assert the calls
+            self.assertEqual(2, get_state_mock.call_count)
+            notify_mock.assert_has_calls([
+                mock.call(self.context, instance, 'power_off.start'),
+                mock.call(self.context, instance, 'power_off.end')
+            ])
+            power_off_mock.assert_called_once_with(
+                self.context, instance, True)
+            save_mock.assert_called_once_with(
+                expected_task_state=[task_states.POWERING_OFF, None])
+            self.assertEqual(power_state.SHUTDOWN, instance.power_state)
+            self.assertIsNone(instance.task_state)
+            self.assertEqual(vm_states.STOPPED, instance.vm_state)
+
+        do_test()
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):
