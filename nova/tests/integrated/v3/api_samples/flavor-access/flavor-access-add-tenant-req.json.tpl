@@ -1,5 +1,5 @@
 {
-    "add_tenant_access": {
-        "tenant_id": "%(tenant_id)s"
+    "addTenantAccess": {
+        "tenant": "%(tenant_id)s"
     }
 }

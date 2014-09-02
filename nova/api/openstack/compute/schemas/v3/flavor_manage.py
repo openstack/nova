@@ -59,7 +59,7 @@ create = {
                     'pattern': '^[0-9]+(\.[0-9]+)?$',
                     'minimum': 0, 'exclusiveMinimum': True
                 },
-                'flavor-access:is_public': parameter_types.boolean,
+                'os-flavor-access:is_public': parameter_types.boolean,
             },
             # TODO(oomichi): 'id' should be required with v2.1+microversions.
             # On v2.0 API, nova-api generates a flavor-id automatically if

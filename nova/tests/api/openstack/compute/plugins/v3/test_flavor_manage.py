@@ -94,7 +94,7 @@ class FlavorManageTest(test.NoDBTestCase):
         self.app = fakes.wsgi_app_v3(init_only=('servers', 'flavors',
                                                 'flavor-manage',
                                                 'os-flavor-rxtx',
-                                                'flavor-access'))
+                                                'os-flavor-access'))
 
         self.base_request_dict = {
             "flavor": {
@@ -106,7 +106,7 @@ class FlavorManageTest(test.NoDBTestCase):
                 "id": unicode('1234'),
                 "swap": 512,
                 "rxtx_factor": 1,
-                "flavor-access:is_public": True,
+                "os-flavor-access:is_public": True,
             }
         }
 
@@ -120,7 +120,7 @@ class FlavorManageTest(test.NoDBTestCase):
                 "id": unicode('1234'),
                 "swap": 512,
                 "rxtx_factor": 1,
-                "flavor-access:is_public": True,
+                "os-flavor-access:is_public": True,
             }
         }
 
@@ -232,7 +232,7 @@ class FlavorManageTest(test.NoDBTestCase):
                 "id": unicode('1234'),
                 "swap": 512,
                 "rxtx_factor": 1,
-                "flavor-access:is_public": True,
+                "os-flavor-access:is_public": True,
             }
         }
         url = '/v3/flavors'
@@ -308,7 +308,8 @@ class FlavorManageTest(test.NoDBTestCase):
 
     def test_create_with_non_boolean_is_public(self):
         is_public = 1234
-        self.base_request_dict['flavor']['flavor-access:is_public'] = is_public
+        self.base_request_dict['flavor']['os-flavor-access:is_public'] =\
+             is_public
         self._test_create_bad_request(self.base_request_dict)
 
 
@@ -339,7 +340,7 @@ class PrivateFlavorManageTest(test.TestCase):
                 "id": unicode('1234'),
                 "swap": 512,
                 "rxtx_factor": 1,
-                "flavor-access:is_public": False
+                "os-flavor-access:is_public": False
             }
         }
 
@@ -371,7 +372,7 @@ class PrivateFlavorManageTest(test.TestCase):
                       flavor_access_body["flavor_access"])
 
     def test_create_public_flavor_should_not_create_flavor_access(self):
-        self.base_request_dict['flavor']['flavor-access:is_public'] = True
+        self.base_request_dict['flavor']['os-flavor-access:is_public'] = True
         expected = {
             "flavor": {
                 "name": "test",
