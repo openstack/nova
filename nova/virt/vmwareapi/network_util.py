@@ -60,7 +60,9 @@ def get_network_with_the_name(session, network_name="vmnet0", cluster=None):
                         "DistributedVirtualPortgroup", "config")
             # NOTE(asomya): This only works on ESXi if the port binding is
             # set to ephemeral
-            if props.name == network_name:
+            # For a VLAN the network name will be the UUID. For a VXLAN
+            # network this will have a VXLAN prefix and then the network name.
+            if network_name in props.name:
                 network_obj['type'] = 'DistributedVirtualPortgroup'
                 network_obj['dvpg'] = props.key
                 dvs_props = session._call_method(vim_util,
