@@ -507,7 +507,7 @@ class NovaObject(object):
 
 class NovaPersistentObject(object):
     """Mixin class for Persistent objects.
-    This adds the fields that we use in common for all persisent objects.
+    This adds the fields that we use in common for all persistent objects.
     """
     fields = {
         'created_at': fields.DateTimeField(nullable=True),
@@ -680,7 +680,7 @@ def obj_make_list(context, list_obj, item_cls, db_list, **extra_args):
     This calls item_cls._from_db_object() on each item of db_list, and
     adds the resulting object to list_obj.
 
-    :param:context: Request contextr
+    :param:context: Request context
     :param:list_obj: An ObjectListBase object
     :param:item_cls: The NovaObject class of the objects within the list
     :param:db_list: The list of primitives to convert to objects
