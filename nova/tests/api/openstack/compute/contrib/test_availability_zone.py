@@ -29,6 +29,7 @@ from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova import context
 from nova import db
+from nova import exception
 from nova.openstack.common import jsonutils
 from nova import servicegroup
 from nova import test
@@ -326,8 +327,7 @@ class ServersControllerCreateTestV21(test.TestCase):
         server = controller.create(req, body=body).obj['server']
 
     def test_create_instance_with_availability_zone_disabled(self):
-        availability_zone = [{'availability_zone': 'foo'}]
-        params = {'availability_zone': availability_zone}
+        params = {'availability_zone': 'foo'}
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
@@ -337,7 +337,7 @@ class ServersControllerCreateTestV21(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
         self._test_create_extra(params, self.no_availability_zone_controller)
 
-    def test_create_instance_with_availability_zone(self):
+    def _create_instance_with_availability_zone(self, zone_name):
         def create(*args, **kwargs):
             self.assertIn('availability_zone', kwargs)
             self.assertEqual('nova', kwargs['availability_zone'])
@@ -356,7 +356,7 @@ class ServersControllerCreateTestV21(test.TestCase):
                     'hello': 'world',
                     'open': 'stack',
                 },
-                'availability_zone': 'nova',
+                'availability_zone': zone_name,
             },
         }
 
@@ -372,9 +372,32 @@ class ServersControllerCreateTestV21(test.TestCase):
         agg = db.aggregate_create(admin_context,
                 {'name': 'agg1'}, {'availability_zone': 'nova'})
         db.aggregate_host_add(admin_context, agg['id'], 'host1_zones')
+        return req, body
+
+    def test_create_instance_with_availability_zone(self):
+        zone_name = 'nova'
+        req, body = self._create_instance_with_availability_zone(zone_name)
         res = self.controller.create(req, body=body).obj
         server = res['server']
         self.assertEqual(fakes.FAKE_UUID, server['id'])
+
+    def test_create_instance_with_invalid_availability_zone_too_long(self):
+        zone_name = 'a' * 256
+        req, body = self._create_instance_with_availability_zone(zone_name)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create, req, body=body)
+
+    def test_create_instance_with_invalid_availability_zone_too_short(self):
+        zone_name = ''
+        req, body = self._create_instance_with_availability_zone(zone_name)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create, req, body=body)
+
+    def test_create_instance_with_invalid_availability_zone_not_str(self):
+        zone_name = 111
+        req, body = self._create_instance_with_availability_zone(zone_name)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create, req, body=body)
 
     def test_create_instance_without_availability_zone(self):
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
@@ -414,6 +437,21 @@ class ServersControllerCreateTestV2(ServersControllerCreateTestV21):
 
     def _verify_no_availability_zone(self, **kwargs):
         self.assertIsNone(kwargs['availability_zone'])
+
+    def test_create_instance_with_invalid_availability_zone_too_long(self):
+        # NOTE: v2.0 API does not check this bad request case.
+        # So we skip this test for v2.0 API.
+        pass
+
+    def test_create_instance_with_invalid_availability_zone_too_short(self):
+        # NOTE: v2.0 API does not check this bad request case.
+        # So we skip this test for v2.0 API.
+        pass
+
+    def test_create_instance_with_invalid_availability_zone_not_str(self):
+        # NOTE: v2.0 API does not check this bad request case.
+        # So we skip this test for v2.0 API.
+        pass
 
 
 class AvailabilityZoneSerializerTest(test.NoDBTestCase):

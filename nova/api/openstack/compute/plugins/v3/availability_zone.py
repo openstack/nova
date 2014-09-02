@@ -14,6 +14,7 @@
 
 from oslo.config import cfg
 
+from nova.api.openstack.compute.schemas.v3 import availability_zone as schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import availability_zones
@@ -143,3 +144,6 @@ class AvailabilityZone(extensions.V3APIExtensionBase):
     # parameter as this is placed to handle scheduler_hint extension for V2.1.
     def server_create(self, server_dict, create_kwargs, body_deprecated_param):
         create_kwargs['availability_zone'] = server_dict.get(ATTRIBUTE_NAME)
+
+    def get_server_create_schema(self):
+        return schema.server_create
