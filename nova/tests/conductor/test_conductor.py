@@ -1712,7 +1712,9 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 self.context, 'method', 'updates', 'ex', 'request_spec')
 
     def test_cold_migrate_no_valid_host_back_in_active_state(self):
-        inst = fake_instance.fake_db_instance(image_ref='fake-image_ref')
+        flavor = flavors.get_flavor_by_name('m1.tiny')
+        inst = fake_instance.fake_db_instance(image_ref='fake-image_ref',
+                                              instance_type_id=flavor['id'])
         inst_obj = objects.Instance._from_db_object(
                 self.context, objects.Instance(), inst,
                 expected_attrs=[])
@@ -1736,7 +1738,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         scheduler_utils.build_request_spec(
                 self.context, image, [inst_obj],
-                instance_type='flavor').AndReturn(request_spec)
+                instance_type=flavor).AndReturn(request_spec)
 
         exc_info = exc.NoValidHost(reason="")
 
@@ -1763,11 +1765,13 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.assertRaises(exc.NoValidHost,
                           self.conductor._cold_migrate,
                           self.context, inst_obj,
-                          'flavor', filter_props, [resvs])
+                          flavor, filter_props, [resvs])
 
     def test_cold_migrate_no_valid_host_back_in_stopped_state(self):
+        flavor = flavors.get_flavor_by_name('m1.tiny')
         inst = fake_instance.fake_db_instance(image_ref='fake-image_ref',
-                                              vm_state=vm_states.STOPPED)
+                                              vm_state=vm_states.STOPPED,
+                                              instance_type_id=flavor['id'])
         inst_obj = objects.Instance._from_db_object(
                 self.context, objects.Instance(), inst,
                 expected_attrs=[])
@@ -1791,7 +1795,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         scheduler_utils.build_request_spec(
                 self.context, image, [inst_obj],
-                instance_type='flavor').AndReturn(request_spec)
+                instance_type=flavor).AndReturn(request_spec)
 
         exc_info = exc.NoValidHost(reason="")
 
@@ -1817,7 +1821,35 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         self.assertRaises(exc.NoValidHost,
                           self.conductor._cold_migrate, self.context,
-                          inst_obj, 'flavor', filter_props, [resvs])
+                          inst_obj, flavor, filter_props, [resvs])
+
+    def test_cold_migrate_no_valid_host_error_msg(self):
+        flavor = flavors.get_flavor_by_name('m1.tiny')
+        inst = fake_instance.fake_db_instance(image_ref='fake-image_ref',
+                                              vm_state=vm_states.STOPPED,
+                                              instance_type_id=flavor['id'])
+        inst_obj = objects.Instance._from_db_object(
+                self.context, objects.Instance(), inst,
+                expected_attrs=[])
+        request_spec = dict(instance_type=dict(extra_specs=dict()),
+                            instance_properties=dict())
+        filter_props = dict(context=None)
+        resvs = 'fake-resvs'
+        image = 'fake-image'
+
+        with contextlib.nested(
+            mock.patch.object(compute_utils, 'get_image_metadata',
+                              return_value=image),
+            mock.patch.object(scheduler_utils, 'build_request_spec',
+                              return_value=request_spec),
+            mock.patch.object(self.conductor.scheduler_client,
+                              'select_destinations',
+                              side_effect=exc.NoValidHost(reason=""))
+        ) as (image_mock, brs_mock, select_dest_mock):
+            nvh = self.assertRaises(exc.NoValidHost,
+                                    self.conductor._cold_migrate, self.context,
+                                    inst_obj, flavor, filter_props, [resvs])
+            self.assertIn('cold migrate', nvh.message)
 
     def test_cold_migrate_exception_host_in_error_state_and_raise(self):
         inst = fake_instance.fake_db_instance(image_ref='fake-image_ref',
@@ -1893,6 +1925,36 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                           self.conductor._cold_migrate,
                           self.context, inst_obj, 'flavor',
                           filter_props, [resvs])
+
+    def test_resize_no_valid_host_error_msg(self):
+        flavor = flavors.get_flavor_by_name('m1.tiny')
+        flavor_new = flavors.get_flavor_by_name('m1.small')
+        inst = fake_instance.fake_db_instance(image_ref='fake-image_ref',
+                                              vm_state=vm_states.STOPPED,
+                                              instance_type_id=flavor['id'])
+        inst_obj = objects.Instance._from_db_object(
+                self.context, objects.Instance(), inst,
+                expected_attrs=[])
+        request_spec = dict(instance_type=dict(extra_specs=dict()),
+                            instance_properties=dict())
+        filter_props = dict(context=None)
+        resvs = 'fake-resvs'
+        image = 'fake-image'
+
+        with contextlib.nested(
+            mock.patch.object(compute_utils, 'get_image_metadata',
+                              return_value=image),
+            mock.patch.object(scheduler_utils, 'build_request_spec',
+                              return_value=request_spec),
+            mock.patch.object(self.conductor.scheduler_client,
+                              'select_destinations',
+                              side_effect=exc.NoValidHost(reason=""))
+        ) as (image_mock, brs_mock, select_dest_mock):
+            nvh = self.assertRaises(exc.NoValidHost,
+                                    self.conductor._cold_migrate, self.context,
+                                    inst_obj, flavor_new, filter_props,
+                                    [resvs])
+            self.assertIn('resize', nvh.message)
 
     def test_build_instances_instance_not_found(self):
         instances = [fake_instance.fake_instance_obj(self.context)
