@@ -25,6 +25,7 @@ import mock
 import webob
 
 from nova.api.openstack.compute import images
+from nova.api.openstack.compute.plugins.v3 import images as images_v21
 from nova.api.openstack.compute.views import images as images_view
 from nova.api.openstack import xmlutil
 from nova import exception
@@ -40,27 +41,34 @@ NOW_API_FORMAT = "2010-10-11T10:30:22Z"
 IMAGE_FIXTURES = image_fixtures.get_image_fixtures()
 
 
-class ImagesControllerTest(test.NoDBTestCase):
+class ImagesControllerTestV21(test.NoDBTestCase):
     """Test of the OpenStack API /images application controller w/Glance.
     """
+    image_controller_class = images_v21.ImagesController
+    url_base = '/v3'
+    bookmark_base = ''
+    http_request = fakes.HTTPRequestV3
 
     def setUp(self):
         """Run before each test."""
-        super(ImagesControllerTest, self).setUp()
+        super(ImagesControllerTestV21, self).setUp()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         fakes.stub_out_compute_api_snapshot(self.stubs)
         fakes.stub_out_compute_api_backup(self.stubs)
 
-        self.controller = images.Controller()
+        self.controller = self.image_controller_class()
+        self.url_prefix = "http://localhost%s/images" % self.url_base
+        self.bookmark_prefix = "http://localhost%s/images" % self.bookmark_base
         self.uuid = 'fa95aaf5-ab3b-4cd8-88c0-2be7dd051aaf'
-        self.url = '/v2/fake/images/detail?server=' + self.uuid
         self.server_uuid = "aa640691-d1a7-4a67-9d3c-d35ee6b3cc74"
         self.server_href = (
-            "http://localhost/v2/fake/servers/" + self.server_uuid)
+            "http://localhost%s/servers/%s" % (self.url_base,
+                                               self.server_uuid))
         self.server_bookmark = (
-            "http://localhost/fake/servers/" + self.server_uuid)
+             "http://localhost%s/servers/%s" % (self.bookmark_base,
+                                                self.server_uuid))
         self.alternate = "%s/fake/images/%s"
 
         self.expected_image_123 = {
@@ -75,13 +83,12 @@ class ImagesControllerTest(test.NoDBTestCase):
                       'minRam': 128,
                       "links": [{
                                     "rel": "self",
-                                    "href":
-                                        "http://localhost/v2/fake/images/123",
+                                    "href": "%s/123" % self.url_prefix
                                 },
                                 {
                                     "rel": "bookmark",
                                     "href":
-                                        "http://localhost/fake/images/123",
+                                        "%s/123" % self.bookmark_prefix
                                 },
                                 {
                                     "rel": "alternate",
@@ -119,13 +126,12 @@ class ImagesControllerTest(test.NoDBTestCase):
                       },
                       "links": [{
                                     "rel": "self",
-                                    "href":
-                                        "http://localhost/v2/fake/images/124",
+                                    "href": "%s/124" % self.url_prefix
                                 },
                                 {
                                     "rel": "bookmark",
                                     "href":
-                                        "http://localhost/fake/images/124",
+                                        "%s/124" % self.bookmark_prefix
                                 },
                                 {
                                     "rel": "alternate",
@@ -140,7 +146,7 @@ class ImagesControllerTest(test.NoDBTestCase):
 
     @mock.patch('nova.image.api.API.get', return_value=IMAGE_FIXTURES[0])
     def test_get_image(self, get_mocked):
-        request = fakes.HTTPRequest.blank('/v2/fake/images/123')
+        request = self.http_request.blank(self.url_base + 'images/123')
         actual_image = self.controller.show(request, '123')
         self.assertThat(actual_image,
                         matchers.DictMatches(self.expected_image_123))
@@ -150,32 +156,34 @@ class ImagesControllerTest(test.NoDBTestCase):
     def test_get_image_with_custom_prefix(self, _get_mocked):
         self.flags(osapi_compute_link_prefix='https://zoo.com:42',
                    osapi_glance_link_prefix='http://circus.com:34')
-        fake_req = fakes.HTTPRequest.blank('/v2/fake/images/124')
+        fake_req = self.http_request.blank(self.url_base + 'images/124')
         actual_image = self.controller.show(fake_req, '124')
 
         expected_image = self.expected_image_124
         expected_image["image"]["links"][0]["href"] = (
-            "https://zoo.com:42/v2/fake/images/124")
+            "https://zoo.com:42%s/images/124" % self.url_base)
         expected_image["image"]["links"][1]["href"] = (
-            "https://zoo.com:42/fake/images/124")
+            "https://zoo.com:42%s/images/124" % self.bookmark_base)
         expected_image["image"]["links"][2]["href"] = (
             "http://circus.com:34/fake/images/124")
         expected_image["image"]["server"]["links"][0]["href"] = (
-            "https://zoo.com:42/v2/fake/servers/" + self.server_uuid)
+            "https://zoo.com:42%s/servers/%s" % (self.url_base,
+                                                 self.server_uuid))
         expected_image["image"]["server"]["links"][1]["href"] = (
-            "https://zoo.com:42/fake/servers/" + self.server_uuid)
+            "https://zoo.com:42%s/servers/%s" % (self.bookmark_base,
+                                                 self.server_uuid))
 
         self.assertThat(actual_image, matchers.DictMatches(expected_image))
 
     @mock.patch('nova.image.api.API.get', side_effect=exception.NotFound)
     def test_get_image_404(self, _get_mocked):
-        fake_req = fakes.HTTPRequest.blank('/v2/fake/images/unknown')
+        fake_req = self.http_request.blank(self.url_base + 'images/unknown')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.show, fake_req, 'unknown')
 
     @mock.patch('nova.image.api.API.get_all', return_value=IMAGE_FIXTURES)
     def test_get_image_details(self, get_all_mocked):
-        request = fakes.HTTPRequest.blank('/v2/fake/images/detail')
+        request = self.http_request.blank(self.url_base + 'images/detail')
         response = self.controller.detail(request)
 
         get_all_mocked.assert_called_once_with(mock.ANY, filters={})
@@ -185,8 +193,8 @@ class ImagesControllerTest(test.NoDBTestCase):
         image_125['id'] = '125'
         image_125['name'] = 'saving snapshot'
         image_125['progress'] = 50
-        image_125["links"][0]["href"] = "http://localhost/v2/fake/images/125"
-        image_125["links"][1]["href"] = "http://localhost/fake/images/125"
+        image_125["links"][0]["href"] = "%s/125" % self.url_prefix
+        image_125["links"][1]["href"] = "%s/125" % self.bookmark_prefix
         image_125["links"][2]["href"] = (
             "%s/fake/images/125" % glance.generate_glance_url())
 
@@ -195,8 +203,8 @@ class ImagesControllerTest(test.NoDBTestCase):
         image_126['name'] = 'active snapshot'
         image_126['status'] = 'ACTIVE'
         image_126['progress'] = 100
-        image_126["links"][0]["href"] = "http://localhost/v2/fake/images/126"
-        image_126["links"][1]["href"] = "http://localhost/fake/images/126"
+        image_126["links"][0]["href"] = "%s/126" % self.url_prefix
+        image_126["links"][1]["href"] = "%s/126" % self.bookmark_prefix
         image_126["links"][2]["href"] = (
             "%s/fake/images/126" % glance.generate_glance_url())
 
@@ -205,8 +213,8 @@ class ImagesControllerTest(test.NoDBTestCase):
         image_127['name'] = 'killed snapshot'
         image_127['status'] = 'ERROR'
         image_127['progress'] = 0
-        image_127["links"][0]["href"] = "http://localhost/v2/fake/images/127"
-        image_127["links"][1]["href"] = "http://localhost/fake/images/127"
+        image_127["links"][0]["href"] = "%s/127" % self.url_prefix
+        image_127["links"][1]["href"] = "%s/127" % self.bookmark_prefix
         image_127["links"][2]["href"] = (
             "%s/fake/images/127" % glance.generate_glance_url())
 
@@ -215,8 +223,8 @@ class ImagesControllerTest(test.NoDBTestCase):
         image_128['name'] = 'deleted snapshot'
         image_128['status'] = 'DELETED'
         image_128['progress'] = 0
-        image_128["links"][0]["href"] = "http://localhost/v2/fake/images/128"
-        image_128["links"][1]["href"] = "http://localhost/fake/images/128"
+        image_128["links"][0]["href"] = "%s/128" % self.url_prefix
+        image_128["links"][1]["href"] = "%s/128" % self.bookmark_prefix
         image_128["links"][2]["href"] = (
             "%s/fake/images/128" % glance.generate_glance_url())
 
@@ -225,8 +233,8 @@ class ImagesControllerTest(test.NoDBTestCase):
         image_129['name'] = 'pending_delete snapshot'
         image_129['status'] = 'DELETED'
         image_129['progress'] = 0
-        image_129["links"][0]["href"] = "http://localhost/v2/fake/images/129"
-        image_129["links"][1]["href"] = "http://localhost/fake/images/129"
+        image_129["links"][0]["href"] = "%s/129" % self.url_prefix
+        image_129["links"][1]["href"] = "%s/129" % self.bookmark_prefix
         image_129["links"][2]["href"] = (
             "%s/fake/images/129" % glance.generate_glance_url())
 
@@ -236,8 +244,8 @@ class ImagesControllerTest(test.NoDBTestCase):
         image_130['metadata'] = {}
         image_130['minDisk'] = 0
         image_130['minRam'] = 0
-        image_130["links"][0]["href"] = "http://localhost/v2/fake/images/130"
-        image_130["links"][1]["href"] = "http://localhost/fake/images/130"
+        image_130["links"][0]["href"] = "%s/130" % self.url_prefix
+        image_130["links"][1]["href"] = "%s/130" % self.bookmark_prefix
         image_130["links"][2]["href"] = (
             "%s/fake/images/130" % glance.generate_glance_url())
 
@@ -247,8 +255,8 @@ class ImagesControllerTest(test.NoDBTestCase):
         image_131['metadata'] = {}
         image_131['minDisk'] = 0
         image_131['minRam'] = 0
-        image_131["links"][0]["href"] = "http://localhost/v2/fake/images/131"
-        image_131["links"][1]["href"] = "http://localhost/fake/images/131"
+        image_131["links"][0]["href"] = "%s/131" % self.url_prefix
+        image_131["links"][1]["href"] = "%s/131" % self.bookmark_prefix
         image_131["links"][2]["href"] = (
             "%s/fake/images/131" % glance.generate_glance_url())
 
@@ -262,14 +270,15 @@ class ImagesControllerTest(test.NoDBTestCase):
 
     @mock.patch('nova.image.api.API.get_all')
     def test_get_image_details_with_limit(self, get_all_mocked):
-        request = fakes.HTTPRequest.blank('/v2/fake/images/detail?limit=2')
+        request = self.http_request.blank(self.url_base +
+                                          'images/detail?limit=2')
         self.controller.detail(request)
         get_all_mocked.assert_called_once_with(mock.ANY, limit=2, filters={})
 
     @mock.patch('nova.image.api.API.get_all')
     def test_get_image_details_with_limit_and_page_size(self, get_all_mocked):
-        request = fakes.HTTPRequest.blank(
-            '/v2/fake/images/detail?limit=2&page_size=1')
+        request = self.http_request.blank(
+            self.url_base + 'images/detail?limit=2&page_size=1')
         self.controller.detail(request)
         get_all_mocked.assert_called_once_with(mock.ANY, limit=2, filters={},
                                                page_size=1)
@@ -281,80 +290,87 @@ class ImagesControllerTest(test.NoDBTestCase):
 
     def test_image_detail_filter_with_name(self):
         filters = {'name': 'testname'}
-        request = fakes.HTTPRequest.blank('/v2/fake/images/detail'
+        request = self.http_request.blank(self.url_base + 'images/detail'
                                           '?name=testname')
         self._detail_request(filters, request)
 
     def test_image_detail_filter_with_status(self):
         filters = {'status': 'active'}
-        request = fakes.HTTPRequest.blank('/v2/fake/images/detail'
+        request = self.http_request.blank(self.url_base + 'images/detail'
                                           '?status=ACTIVE')
         self._detail_request(filters, request)
 
     def test_image_detail_filter_with_property(self):
         filters = {'property-test': '3'}
-        request = fakes.HTTPRequest.blank('/v2/fake/images/detail'
+        request = self.http_request.blank(self.url_base + 'images/detail'
                                           '?property-test=3')
         self._detail_request(filters, request)
 
     def test_image_detail_filter_server_href(self):
         filters = {'property-instance_uuid': self.uuid}
-        request = fakes.HTTPRequest.blank(self.url)
+        request = self.http_request.blank(
+            self.url_base + 'images/detail?server=' + self.uuid)
         self._detail_request(filters, request)
 
     def test_image_detail_filter_server_uuid(self):
         filters = {'property-instance_uuid': self.uuid}
-        request = fakes.HTTPRequest.blank(self.url)
+        request = self.http_request.blank(
+            self.url_base + 'images/detail?server=' + self.uuid)
         self._detail_request(filters, request)
 
     def test_image_detail_filter_changes_since(self):
         filters = {'changes-since': '2011-01-24T17:08Z'}
-        request = fakes.HTTPRequest.blank('/v2/fake/images/detail'
+        request = self.http_request.blank(self.url_base + 'images/detail'
                                           '?changes-since=2011-01-24T17:08Z')
         self._detail_request(filters, request)
 
     def test_image_detail_filter_with_type(self):
         filters = {'property-image_type': 'BASE'}
-        request = fakes.HTTPRequest.blank('/v2/fake/images/detail?type=BASE')
+        request = self.http_request.blank(
+            self.url_base + 'images/detail?type=BASE')
         self._detail_request(filters, request)
 
     def test_image_detail_filter_not_supported(self):
         filters = {'status': 'active'}
-        request = fakes.HTTPRequest.blank('/v2/fake/images/detail?status='
-                                          'ACTIVE&UNSUPPORTEDFILTER=testname')
+        request = self.http_request.blank(
+            self.url_base + 'images/detail?status='
+            'ACTIVE&UNSUPPORTEDFILTER=testname')
         self._detail_request(filters, request)
 
     def test_image_detail_no_filters(self):
         filters = {}
-        request = fakes.HTTPRequest.blank('/v2/fake/images/detail')
+        request = self.http_request.blank(self.url_base + 'images/detail')
         self._detail_request(filters, request)
 
     @mock.patch('nova.image.api.API.get_all', side_effect=exception.Invalid)
     def test_image_detail_invalid_marker(self, _get_all_mocked):
-        request = fakes.HTTPRequest.blank('/v2/images?marker=invalid')
+        request = self.http_request.blank(self.url_base + '?marker=invalid')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.detail,
                           request)
 
     def test_generate_alternate_link(self):
         view = images_view.ViewBuilder()
-        request = fakes.HTTPRequest.blank('/v2/fake/images/1')
+        request = self.http_request.blank(self.url_base + 'images/1')
         generated_url = view._get_alternate_link(request, 1)
         actual_url = "%s/fake/images/1" % glance.generate_glance_url()
         self.assertEqual(generated_url, actual_url)
 
+    def _check_response(self, controller_method, response, expected_code):
+        self.assertEqual(expected_code, controller_method.wsgi_code)
+
     @mock.patch('nova.image.api.API.delete')
     def test_delete_image(self, delete_mocked):
-        request = fakes.HTTPRequest.blank('/v2/fake/images/124')
+        request = self.http_request.blank(self.url_base + 'images/124')
         request.method = 'DELETE'
         response = self.controller.delete(request, '124')
-        self.assertEqual(response.status_int, 204)
+        self._check_response(self.controller.delete, response, 204)
         delete_mocked.assert_called_once_with(mock.ANY, '124')
 
     @mock.patch('nova.image.api.API.delete',
                 side_effect=exception.ImageNotAuthorized(image_id='123'))
     def test_delete_deleted_image(self, _delete_mocked):
         # If you try to delete a deleted image, you get back 403 Forbidden.
-        request = fakes.HTTPRequest.blank('/v2/fake/images/123')
+        request = self.http_request.blank(self.url_base + 'images/123')
         request.method = 'DELETE'
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.delete,
                           request, '123')
@@ -362,10 +378,20 @@ class ImagesControllerTest(test.NoDBTestCase):
     @mock.patch('nova.image.api.API.delete',
                 side_effect=exception.ImageNotFound(image_id='123'))
     def test_delete_image_not_found(self, _delete_mocked):
-        request = fakes.HTTPRequest.blank('/v2/fake/images/300')
+        request = self.http_request.blank(self.url_base + 'images/300')
         request.method = 'DELETE'
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.delete, request, '300')
+
+
+class ImagesControllerTestV2(ImagesControllerTestV21):
+    image_controller_class = images.Controller
+    url_base = '/v2/fake'
+    bookmark_base = '/fake'
+    http_request = fakes.HTTPRequest
+
+    def _check_response(self, controller_method, response, expected_code):
+        self.assertEqual(expected_code, response.status_int)
 
 
 class ImageXMLSerializationTest(test.NoDBTestCase):
