@@ -416,6 +416,14 @@ class AggregateTestCase(test.NoDBTestCase):
         self.assertRaises(KeyError, self.controller.action, self.req, "1",
                          body={"add_host": {"host": "host1"}})
 
+    def test_add_host_with_invalid_request(self):
+        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+                self.req, "1", body={"add_host": "1"})
+
+    def test_add_host_with_non_string(self):
+        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+                self.req, "1", body={"add_host": {"host": 1}})
+
     def test_remove_host(self):
         def stub_remove_host_from_aggregate(context, aggregate, host):
             self.assertEqual(context, self.context, "context")
@@ -484,6 +492,16 @@ class AggregateTestCase(test.NoDBTestCase):
                 self.req, "1", body={"remove_host": {"asdf": "asdf",
                                                      "host": "asdf"}})
 
+    def test_remove_host_with_invalid_request(self):
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.controller.action,
+                self.req, "1", body={"remove_host": "1"})
+
+    def test_remove_host_with_missing_host_empty(self):
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.controller.action,
+                self.req, "1", body={"remove_host": {}})
+
     def test_set_metadata(self):
         body = {"set_metadata": {"metadata": {"foo": "bar"}}}
 
@@ -539,6 +557,11 @@ class AggregateTestCase(test.NoDBTestCase):
 
     def test_set_metadata_with_extra_params(self):
         body = {"metadata": {"foo": "bar"}, "asdf": {"foo": "bar"}}
+        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+                          self.req, "1", body=body)
+
+    def test_set_metadata_without_dict(self):
+        body = {"set_metadata": {'metadata': 1}}
         self.assertRaises(exc.HTTPBadRequest, self.controller.action,
                           self.req, "1", body=body)
 
