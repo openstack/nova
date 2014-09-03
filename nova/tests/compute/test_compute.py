@@ -315,7 +315,7 @@ class BaseTestCase(test.TestCase):
         inst.update(params)
         if services:
             _create_service_entries(self.context.elevated(),
-                    {'fake_zone': [inst['host']]})
+                                    [['fake_zone', [inst['host']]]])
         return db.instance_create(self.context, inst)
 
     def _objectify(self, db_inst):
@@ -9536,10 +9536,10 @@ def fake_rpc_method(context, method, **kwargs):
     pass
 
 
-def _create_service_entries(context, values={'avail_zone1': ['fake_host1',
-                                                             'fake_host2'],
-                                             'avail_zone2': ['fake_host3'], }):
-    for avail_zone, hosts in values.iteritems():
+def _create_service_entries(context, values=[['avail_zone1', ['fake_host1',
+                                                             'fake_host2']],
+                                             ['avail_zone2', ['fake_host3']]]):
+    for (avail_zone, hosts) in values:
         for host in hosts:
             db.service_create(context,
                               {'host': host,
@@ -9574,9 +9574,9 @@ class ComputeAPIAggrTestCase(BaseTestCase):
     def test_check_az_for_aggregate(self):
         # Ensure all conflict hosts can be returned
         values = _create_service_entries(self.context)
-        fake_zone = values.keys()[0]
-        fake_host1 = values[fake_zone][0]
-        fake_host2 = values[fake_zone][1]
+        fake_zone = values[0][0]
+        fake_host1 = values[0][1][0]
+        fake_host2 = values[0][1][1]
         aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
                                                fake_zone, fake_host1)
         aggr1 = self._init_aggregate_with_host(aggr1, None, None, fake_host2)
@@ -9609,8 +9609,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         # updated,even the aggregate contains hosts belong
         # to another availability zone
         values = _create_service_entries(self.context)
-        fake_zone = values.keys()[0]
-        fake_host = values[fake_zone][0]
+        fake_zone = values[0][0]
+        fake_host = values[0][1][0]
         self._init_aggregate_with_host(None, 'fake_aggregate1',
                                        fake_zone, fake_host)
         aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
@@ -9632,8 +9632,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         # when the aggregate is the only one with
         # availability zone
         values = _create_service_entries(self.context)
-        fake_zone = values.keys()[0]
-        fake_host = values[fake_zone][0]
+        fake_zone = values[0][0]
+        fake_host = values[0][1][0]
         aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
                                                fake_zone, fake_host)
         self._init_aggregate_with_host(None, 'fake_aggregate2', None,
@@ -9655,8 +9655,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         # when aggregate has hosts in other availability zone
         fake_notifier.NOTIFICATIONS = []
         values = _create_service_entries(self.context)
-        fake_zone = values.keys()[0]
-        fake_host = values[fake_zone][0]
+        fake_zone = values[0][0]
+        fake_host = values[0][1][0]
         self._init_aggregate_with_host(None, 'fake_aggregate1',
                                        fake_zone, fake_host)
         aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
@@ -9665,7 +9665,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertRaises(exception.InvalidAggregateAction,
                           self.api.update_aggregate,
                           self.context, aggr2['id'], metadata)
-        fake_host2 = values[fake_zone][1]
+        fake_host2 = values[0][1][1]
         aggr3 = self._init_aggregate_with_host(None, 'fake_aggregate3',
                                                None, fake_host2)
         metadata = {'availability_zone': fake_zone}
@@ -9684,8 +9684,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         # when aggregate has hosts in other availability zone
         fake_notifier.NOTIFICATIONS = []
         values = _create_service_entries(self.context)
-        fake_zone = values.keys()[0]
-        fake_host = values[fake_zone][0]
+        fake_host = values[0][1][0]
         self._init_aggregate_with_host(None, 'fake_aggregate1',
                                        CONF.default_availability_zone,
                                        fake_host)
@@ -9738,8 +9737,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         # updated,even the aggregate contains hosts belong
         # to another availability zone
         values = _create_service_entries(self.context)
-        fake_zone = values.keys()[0]
-        fake_host = values[fake_zone][0]
+        fake_zone = values[0][0]
+        fake_host = values[0][1][0]
         self._init_aggregate_with_host(None, 'fake_aggregate1',
                                        fake_zone, fake_host)
         aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
@@ -9763,8 +9762,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         # when the aggregate is the only one with
         # availability zone
         values = _create_service_entries(self.context)
-        fake_zone = values.keys()[0]
-        fake_host = values[fake_zone][0]
+        fake_zone = values[0][0]
+        fake_host = values[0][1][0]
         aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
                                                fake_zone, fake_host)
         self._init_aggregate_with_host(None, 'fake_aggregate2', None,
@@ -9802,8 +9801,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         # when aggregate has hosts in other availability zone
         fake_notifier.NOTIFICATIONS = []
         values = _create_service_entries(self.context)
-        fake_zone = values.keys()[0]
-        fake_host = values[fake_zone][0]
+        fake_zone = values[0][0]
+        fake_host = values[0][1][0]
         self._init_aggregate_with_host(None, 'fake_aggregate1',
                                        fake_zone, fake_host)
         aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
@@ -9855,7 +9854,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
     def test_delete_non_empty_aggregate(self):
         # Ensure InvalidAggregateAction is raised when non empty aggregate.
         _create_service_entries(self.context,
-                                {'fake_availability_zone': ['fake_host']})
+                                [['fake_availability_zone', ['fake_host']]])
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_availability_zone')
         self.api.add_host_to_aggregate(self.context, aggr['id'], 'fake_host')
@@ -9865,8 +9864,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
     def test_add_host_to_aggregate(self):
         # Ensure we can add a host to an aggregate.
         values = _create_service_entries(self.context)
-        fake_zone = values.keys()[0]
-        fake_host = values[fake_zone][0]
+        fake_zone = values[0][0]
+        fake_host = values[0][1][0]
         aggr = self.api.create_aggregate(self.context,
                                          'fake_aggregate', fake_zone)
 
@@ -9888,7 +9887,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                 availability_zones.update_host_availability_zone_cache(
                     self.context, host)
 
-        for avail_zone, hosts in six.iteritems(values):
+        for (avail_zone, hosts) in values:
             for host in hosts:
                 _stub_update_host_avail_zone_cache(
                     host, CONF.default_availability_zone)
@@ -9909,8 +9908,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
 
     def test_add_host_to_aggr_with_no_az(self):
         values = _create_service_entries(self.context)
-        fake_zone = values.keys()[0]
-        fake_host = values[fake_zone][0]
+        fake_zone = values[0][0]
+        fake_host = values[0][1][0]
         aggr = self.api.create_aggregate(self.context,
                                          'fake_aggregate', fake_zone)
         aggr = self.api.add_host_to_aggregate(self.context, aggr['id'],
@@ -9935,8 +9934,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                        'aggregate_metadata_get_by_metadata_key',
                        fake_aggregate_metadata_get_by_metadata_key)
         values = _create_service_entries(self.context)
-        fake_zone = values.keys()[0]
-        fake_host = values[fake_zone][0]
+        fake_zone = values[0][0]
+        fake_host = values[0][1][0]
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          fake_zone)
         aggr = self.api.add_host_to_aggregate(self.context, aggr['id'],
@@ -9946,8 +9945,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
     def test_add_host_to_multi_az(self):
         # Ensure we can't add a host to different availability zone
         values = _create_service_entries(self.context)
-        fake_zone = values.keys()[0]
-        fake_host = values[fake_zone][0]
+        fake_zone = values[0][0]
+        fake_host = values[0][1][0]
         aggr = self.api.create_aggregate(self.context,
                                          'fake_aggregate', fake_zone)
         aggr = self.api.add_host_to_aggregate(self.context,
@@ -9964,8 +9963,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         # Ensure we can't add a host if already existing in an agg with AZ set
         #  to default
         values = _create_service_entries(self.context)
-        fake_zone = values.keys()[0]
-        fake_host = values[fake_zone][0]
+        fake_host = values[0][1][0]
         aggr = self.api.create_aggregate(self.context,
                                          'fake_aggregate',
                                          CONF.default_availability_zone)
@@ -9982,13 +9980,13 @@ class ComputeAPIAggrTestCase(BaseTestCase):
     def test_add_host_to_aggregate_multiple(self):
         # Ensure we can add multiple hosts to an aggregate.
         values = _create_service_entries(self.context)
-        fake_zone = values.keys()[0]
+        fake_zone = values[0][0]
         aggr = self.api.create_aggregate(self.context,
                                          'fake_aggregate', fake_zone)
-        for host in values[fake_zone]:
+        for host in values[0][1]:
             aggr = self.api.add_host_to_aggregate(self.context,
                                                   aggr['id'], host)
-        self.assertEqual(len(aggr['hosts']), len(values[fake_zone]))
+        self.assertEqual(len(aggr['hosts']), len(values[0][1]))
 
     def test_add_host_to_aggregate_raise_not_found(self):
         # Ensure ComputeHostNotFound is raised when adding invalid host.
@@ -10005,13 +10003,13 @@ class ComputeAPIAggrTestCase(BaseTestCase):
     def test_remove_host_from_aggregate_active(self):
         # Ensure we can remove a host from an aggregate.
         values = _create_service_entries(self.context)
-        fake_zone = values.keys()[0]
+        fake_zone = values[0][0]
         aggr = self.api.create_aggregate(self.context,
                                          'fake_aggregate', fake_zone)
-        for host in values[fake_zone]:
+        for host in values[0][1]:
             aggr = self.api.add_host_to_aggregate(self.context,
                                                   aggr['id'], host)
-        host_to_remove = values[fake_zone][0]
+        host_to_remove = values[0][1][0]
 
         def fake_remove_aggregate_host(*args, **kwargs):
             hosts = kwargs["aggregate"]["hosts"]
@@ -10041,7 +10039,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
 
     def test_remove_host_from_aggregate_raise_not_found(self):
         # Ensure ComputeHostNotFound is raised when removing invalid host.
-        _create_service_entries(self.context, {'fake_zone': ['fake_host']})
+        _create_service_entries(self.context, [['fake_zone', ['fake_host']]])
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_zone')
         self.assertRaises(exception.ComputeHostNotFound,
@@ -10082,15 +10080,15 @@ class ComputeAPIAggrTestCase(BaseTestCase):
 
     def test_aggregate_list_with_hosts(self):
         values = _create_service_entries(self.context)
-        fake_zone = values.keys()[0]
+        fake_zone = values[0][0]
         host_aggregate = self.api.create_aggregate(self.context,
                                                    'fake_aggregate',
                                                    fake_zone)
         self.api.add_host_to_aggregate(self.context, host_aggregate['id'],
-                                       values[fake_zone][0])
+                                       values[0][1][0])
         aggregate_list = self.api.get_aggregate_list(self.context)
         aggregate = aggregate_list[0]
-        self.assertIn(values[fake_zone][0], aggregate.get('hosts'))
+        self.assertIn(values[0][1][0], aggregate.get('hosts'))
 
 
 class ComputeAggrTestCase(BaseTestCase):
