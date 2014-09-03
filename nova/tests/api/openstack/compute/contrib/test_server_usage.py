@@ -57,12 +57,13 @@ def fake_compute_get_all(*args, **kwargs):
                                             db_list, fields)
 
 
-class ServerUsageTest(test.TestCase):
+class ServerUsageTestV21(test.TestCase):
     content_type = 'application/json'
     prefix = 'OS-SRV-USG:'
+    _prefix = "/v3"
 
     def setUp(self):
-        super(ServerUsageTest, self).setUp()
+        super(ServerUsageTestV21, self).setUp()
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
@@ -76,8 +77,11 @@ class ServerUsageTest(test.TestCase):
     def _make_request(self, url):
         req = fakes.HTTPRequest.blank(url)
         req.accept = self.content_type
-        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
+        res = req.get_response(self._get_app())
         return res
+
+    def _get_app(self):
+        return fakes.wsgi_app_v3(init_only=('servers', 'os-server-usage'))
 
     def _get_server(self, body):
         return jsonutils.loads(body).get('server')
@@ -96,7 +100,7 @@ class ServerUsageTest(test.TestCase):
                          terminated_at)
 
     def test_show(self):
-        url = '/v2/fake/servers/%s' % UUID3
+        url = self._prefix + ('/servers/%s' % UUID3)
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
@@ -107,7 +111,7 @@ class ServerUsageTest(test.TestCase):
                                terminated_at=DATE2)
 
     def test_detail(self):
-        url = '/v2/fake/servers/detail'
+        url = self._prefix + '/servers/detail'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
@@ -125,13 +129,27 @@ class ServerUsageTest(test.TestCase):
             raise exception.InstanceNotFound(instance_id='fake')
 
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
-        url = '/v2/fake/servers/70f6db34-de8d-4fbd-aafb-4065bdfa6115'
+        url = self._prefix + '/servers/70f6db34-de8d-4fbd-aafb-4065bdfa6115'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 404)
 
 
-class ServerUsageXmlTest(ServerUsageTest):
+class ServerUsageTestV20(ServerUsageTestV21):
+    _prefix = "/v2/fake"
+
+    def setUp(self):
+        super(ServerUsageTestV20, self).setUp()
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Server_usage'])
+
+    def _get_app(self):
+        return fakes.wsgi_app(init_only=('servers',))
+
+
+class ServerUsageXmlTest(ServerUsageTestV20):
     content_type = 'application/xml'
     prefix = '{%s}' % server_usage.Server_usage.namespace
 

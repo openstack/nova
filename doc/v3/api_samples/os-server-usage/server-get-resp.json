@@ -46,8 +46,8 @@
             "My Server Name": "Apache1"
         },
         "name": "new-server-test",
-        "os-server-usage:launched_at": "2013-08-15T08:12:40.108903",
-        "os-server-usage:terminated_at": null,
+        "OS-SRV-USG:launched_at": "2013-08-15T08:12:40.108903",
+        "OS-SRV-USG:terminated_at": null,
         "progress": 0,
         "status": "ACTIVE",
         "tenant_id": "openstack",
