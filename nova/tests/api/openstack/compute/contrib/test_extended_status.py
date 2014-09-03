@@ -55,7 +55,7 @@ def fake_compute_get_all(*args, **kwargs):
 class ExtendedStatusTestV21(test.TestCase):
     content_type = 'application/json'
     prefix = 'OS-EXT-STS:'
-    fake_url = '/v3'
+    fake_url = '/v2/fake'
 
     def _set_flags(self):
         pass
@@ -63,7 +63,7 @@ class ExtendedStatusTestV21(test.TestCase):
     def _make_request(self, url):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app_v3(
+        res = req.get_response(fakes.wsgi_app_v21(
             init_only=('servers',
                        'os-extended-status')))
         return res
@@ -123,7 +123,6 @@ class ExtendedStatusTestV21(test.TestCase):
 
 
 class ExtendedStatusTestV2(ExtendedStatusTestV21):
-    fake_url = '/v2/fake'
 
     def _set_flags(self):
         self.flags(
