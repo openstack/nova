@@ -343,20 +343,8 @@ class ServersController(wsgi.Controller):
                 # fixed IP address is optional
                 # if the fixed IP address is not provided then
                 # it will use one of the available IP address from the network
-                try:
-                    request.address = network.get('fixed_ip', None)
-                except ValueError:
-                    msg = (_("Invalid fixed IP address (%s)") %
-                           networks.get('fixed_ip'))
-                    raise exc.HTTPBadRequest(explanation=msg)
-
-                try:
-                    request.port_id = network.get('port', None)
-                except ValueError:
-                    msg = _("Bad port format: port uuid is "
-                            "not in proper format "
-                            "(%s)") % network.get('port')
-                    raise exc.HTTPBadRequest(explanation=msg)
+                request.address = network.get('fixed_ip', None)
+                request.port_id = network.get('port', None)
 
                 if request.port_id:
                     request.network_id = None
@@ -435,14 +423,7 @@ class ServersController(wsgi.Controller):
         context = req.environ['nova.context']
         server_dict = body['server']
         password = self._get_server_admin_password(server_dict)
-
-        if 'name' not in server_dict:
-            msg = _("Server name is not defined")
-            raise exc.HTTPBadRequest(explanation=msg)
-
         name = server_dict['name']
-        self._validate_server_name(name)
-        name = name.strip()
 
         # Arguments to be passed to instance create function
         create_kwargs = {}
@@ -509,9 +490,6 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPForbidden(
                 explanation=error.format_message(),
                 headers={'Retry-After': 0})
-        except exception.InvalidMetadataSize as error:
-            raise exc.HTTPRequestEntityTooLarge(
-                explanation=error.format_message())
         except exception.ImageNotFound as error:
             msg = _("Can not find requested image")
             raise exc.HTTPBadRequest(explanation=msg)
@@ -813,12 +791,7 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
 
     def _flavor_id_from_req_data(self, data):
-        try:
-            flavor_ref = data['server']['flavorRef']
-        except (TypeError, KeyError):
-            msg = _("Missing flavorRef attribute")
-            raise exc.HTTPBadRequest(explanation=msg)
-
+        flavor_ref = data['server']['flavorRef']
         return common.get_id_from_href(flavor_ref)
 
     @extensions.expected_errors((400, 401, 403, 404, 409))

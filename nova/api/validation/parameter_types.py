@@ -86,6 +86,11 @@ image_ref = {
 }
 
 
+flavor_ref = {
+    'type': ['string', 'integer'],
+}
+
+
 metadata = {
     'type': 'object',
     'patternProperties': {
