@@ -50,8 +50,9 @@ class AggregateController(wsgi.Controller):
         return {'aggregates': [self._marshall_aggregate(a)['aggregate']
                                for a in aggregates]}
 
+    # NOTE(gmann): Returns 200 for backwards compatibility but should be 201
+    # as this operation complete the creation of aggregates resource.
     @extensions.expected_errors((400, 409))
-    @wsgi.response(201)
     @validation.schema(aggregates.create)
     def create(self, req, body):
         """Creates an aggregate, given its name and
@@ -101,8 +102,10 @@ class AggregateController(wsgi.Controller):
 
         return self._marshall_aggregate(aggregate)
 
+    # NOTE(gmann): Returns 200 for backwards compatibility but should be 204
+    # as this operation complete the deletion of aggregate resource and return
+    # no response body.
     @extensions.expected_errors((400, 404))
-    @wsgi.response(204)
     def delete(self, req, id):
         """Removes an aggregate by id."""
         context = _get_context(req)
@@ -114,9 +117,11 @@ class AggregateController(wsgi.Controller):
         except exception.InvalidAggregateAction as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
+    # NOTE(gmann): Returns 200 for backwards compatibility but should be 202
+    # for representing async API as this API just accepts the request and
+    # request hypervisor driver to complete the same in async mode.
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('add_host')
-    @wsgi.response(202)
     @validation.schema(aggregates.add_host)
     def _add_host(self, req, id, body):
         """Adds a host to the specified aggregate."""
@@ -134,9 +139,11 @@ class AggregateController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         return self._marshall_aggregate(aggregate)
 
+    # NOTE(gmann): Returns 200 for backwards compatibility but should be 202
+    # for representing async API as this API just accepts the request and
+    # request hypervisor driver to complete the same in async mode.
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('remove_host')
-    @wsgi.response(202)
     @validation.schema(aggregates.remove_host)
     def _remove_host(self, req, id, body):
         """Removes a host from the specified aggregate."""
