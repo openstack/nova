@@ -1375,7 +1375,6 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def _test_resize(self, flavor_id_passed=True,
                      same_host=False, allow_same_host=False,
-                     allow_mig_same_host=False,
                      project_id=None,
                      extra_kwargs=None,
                      same_flavor=False,
@@ -1383,8 +1382,7 @@ class _ComputeAPIUnitTestMixIn(object):
         if extra_kwargs is None:
             extra_kwargs = {}
 
-        self.flags(allow_resize_to_same_host=allow_same_host,
-                   allow_migrate_to_same_host=allow_mig_same_host)
+        self.flags(allow_resize_to_same_host=allow_same_host)
 
         params = {}
         if project_id is not None:
@@ -1441,8 +1439,6 @@ class _ComputeAPIUnitTestMixIn(object):
             else:
                 filter_properties = {'ignore_hosts': [fake_inst['host']]}
 
-            if not flavor_id_passed and not allow_mig_same_host:
-                filter_properties['ignore_hosts'].append(fake_inst['host'])
             if flavor_id_passed:
                 expected_reservations = fake_quotas.reservations
             else:
