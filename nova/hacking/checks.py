@@ -102,6 +102,13 @@ class BaseASTChecker(ast.NodeVisitor):
         error = (node.lineno, node.col_offset, message, self.__class__)
         self._errors.append(error)
 
+    def _check_call_names(self, call_node, names):
+        if isinstance(call_node, ast.Call):
+            if isinstance(call_node.func, ast.Name):
+                if call_node.func.id in names:
+                    return True
+        return False
+
 
 def import_no_db_in_virt(logical_line, filename):
     """Check for db calls from nova/virt
@@ -367,14 +374,35 @@ class CheckForStrExc(BaseASTChecker):
                 super(CheckForStrExc, self).generic_visit(node)
 
     def visit_Call(self, node):
-        if isinstance(node.func, ast.Name):
-            if node.func.id == 'str':
-                if node not in self.already_checked:
-                    self.already_checked.append(node)
-                    if isinstance(node.args[0], ast.Name):
-                        if node.args[0].id in self.name:
-                            self.add_error(node.args[0])
+        if self._check_call_names(node, ['str']):
+            if node not in self.already_checked:
+                self.already_checked.append(node)
+                if isinstance(node.args[0], ast.Name):
+                    if node.args[0].id in self.name:
+                        self.add_error(node.args[0])
         super(CheckForStrExc, self).generic_visit(node)
+
+
+class CheckForTransAdd(BaseASTChecker):
+    """Checks for the use of concatenation on a translated string.
+
+    Translations should not be concatenated with other strings, but
+    should instead include the string being added to the translated
+    string to give the translators the most information.
+    """
+
+    CHECK_DESC = ('N326 Translated messages cannot be concatenated.  '
+                  'String should be included in translated message.')
+
+    TRANS_FUNC = ['_', '_LI', '_LW', '_LE', '_LC']
+
+    def visit_BinOp(self, node):
+        if isinstance(node.op, ast.Add):
+            if self._check_call_names(node.left, self.TRANS_FUNC):
+                self.add_error(node.left)
+            elif self._check_call_names(node.right, self.TRANS_FUNC):
+                self.add_error(node.right)
+        super(CheckForTransAdd, self).generic_visit(node)
 
 
 def factory(register):
@@ -396,3 +424,4 @@ def factory(register):
     register(check_explicit_underscore_import)
     register(use_jsonutils)
     register(CheckForStrExc)
+    register(CheckForTransAdd)
