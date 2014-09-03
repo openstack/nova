@@ -5029,6 +5029,27 @@ class NetworkTestCase(test.TestCase, ModelsObjectComparatorMixin):
             network.id)
         return network, instance
 
+    def test_network_get_associated_default_route(self):
+        network, instance = self._get_associated_fixed_ip('host.net',
+            '192.0.2.0/30', '192.0.2.1')
+        network2 = db.network_create_safe(self.ctxt,
+            {'project_id': 'project1', 'cidr': '192.0.3.0/30'})
+        ip = '192.0.3.1'
+        virtual_interface = db.virtual_interface_create(self.ctxt,
+            {'instance_uuid': instance.uuid, 'network_id': network2.id,
+            'address': ip})
+        db.fixed_ip_create(self.ctxt, {'address': ip,
+            'network_id': network2.id, 'allocated': True,
+            'virtual_interface_id': virtual_interface.id})
+        db.fixed_ip_associate(self.ctxt, ip, instance.uuid,
+            network2.id)
+        data = db.network_get_associated_fixed_ips(self.ctxt, network.id)
+        self.assertEqual(1, len(data))
+        self.assertTrue(data[0]['default_route'])
+        data = db.network_get_associated_fixed_ips(self.ctxt, network2.id)
+        self.assertEqual(1, len(data))
+        self.assertFalse(data[0]['default_route'])
+
     def test_network_get_associated_fixed_ips(self):
         network, instance = self._get_associated_fixed_ip('host.net',
             '192.0.2.0/30', '192.0.2.1')

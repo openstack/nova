@@ -2715,6 +2715,14 @@ def network_get_associated_fixed_ips(context, network_id, host=None):
     inst_and = and_(models.Instance.uuid == models.FixedIp.instance_uuid,
                     models.Instance.deleted == 0)
     session = get_session()
+    # NOTE(vish): This subquery left joins the minimum interface id for each
+    #             instance. If the join succeeds (i.e. the 11th column is not
+    #             null), then the fixed ip is on the first interface.
+    subq = session.query(func.min(models.VirtualInterface.id).label("id"),
+                         models.VirtualInterface.instance_uuid).\
+            group_by(models.VirtualInterface.instance_uuid).subquery()
+    subq_and = and_(subq.c.id == models.FixedIp.virtual_interface_id,
+            subq.c.instance_uuid == models.VirtualInterface.instance_uuid)
     query = session.query(models.FixedIp.address,
                           models.FixedIp.instance_uuid,
                           models.FixedIp.network_id,
@@ -2724,11 +2732,13 @@ def network_get_associated_fixed_ips(context, network_id, host=None):
                           models.Instance.updated_at,
                           models.Instance.created_at,
                           models.FixedIp.allocated,
-                          models.FixedIp.leased).\
+                          models.FixedIp.leased,
+                          subq.c.id).\
                           filter(models.FixedIp.deleted == 0).\
                           filter(models.FixedIp.network_id == network_id).\
                           join((models.VirtualInterface, vif_and)).\
                           join((models.Instance, inst_and)).\
+                          outerjoin((subq, subq_and)).\
                           filter(models.FixedIp.instance_uuid != null()).\
                           filter(models.FixedIp.virtual_interface_id != null())
     if host:
@@ -2747,6 +2757,9 @@ def network_get_associated_fixed_ips(context, network_id, host=None):
         cleaned['instance_created'] = datum[7]
         cleaned['allocated'] = datum[8]
         cleaned['leased'] = datum[9]
+        # NOTE(vish): default_route is True if this fixed ip is on the first
+        #             interface its instance.
+        cleaned['default_route'] = datum[10] is not None
         data.append(cleaned)
     return data
 

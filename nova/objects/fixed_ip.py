@@ -29,7 +29,8 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
     # Version 1.1: Added virtual_interface field
     # Version 1.2: Instance version 1.14
     # Version 1.3: Instance 1.15
-    VERSION = '1.3'
+    # Version 1.4: Added default_route field
+    VERSION = '1.4'
 
     fields = {
         'id': fields.IntegerField(),
@@ -41,6 +42,7 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
         'leased': fields.BooleanField(),
         'reserved': fields.BooleanField(),
         'host': fields.StringField(nullable=True),
+        'default_route': fields.BooleanField(),
         'instance': fields.ObjectField('Instance', nullable=True),
         'network': fields.ObjectField('Network', nullable=True),
         'virtual_interface': fields.ObjectField('VirtualInterface',
@@ -49,6 +51,11 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
 
     def obj_make_compatible(self, primitive, target_version):
         target_version = utils.convert_version_to_tuple(target_version)
+        if target_version < (1, 4) and 'default_route' in primitive:
+            del primitive['default_route']
+        if target_version < (1, 3) and 'instance' in primitive:
+            self.instance.obj_make_compatible(primitive['instance'], '1.14')
+            primitive['instance']['nova_object.version'] = '1.14'
         if target_version < (1, 2) and 'instance' in primitive:
             self.instance.obj_make_compatible(primitive['instance'], '1.13')
             primitive['instance']['nova_object.version'] = '1.13'
@@ -63,10 +70,10 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
         if expected_attrs is None:
             expected_attrs = []
         for field in fixedip.fields:
-            if field == 'virtual_interface':
-                # NOTE(danms): This field is only set when doing a
+            if field in ('virtual_interface', 'default_route'):
+                # NOTE(danms): These fields are only set when doing a
                 # FixedIPList.get_by_network() because it's a relatively
-                # special-case thing, so skip it here
+                # special-case thing, so skip them here
                 continue
             if field not in FIXED_IP_OPTIONAL_ATTRS:
                 fixedip[field] = db_fixedip[field]
@@ -175,7 +182,8 @@ class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     # Version 1.1: Added get_by_network()
     # Version 1.2: FixedIP <= version 1.2
     # Version 1.3: FixedIP <= version 1.3
-    VERSION = '1.3'
+    # Version 1.4: FixedIP <= version 1.4
+    VERSION = '1.4'
 
     fields = {
         'objects': fields.ListOfObjectsField('FixedIP'),
@@ -185,6 +193,7 @@ class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
         '1.1': '1.1',
         '1.2': '1.2',
         '1.3': '1.3',
+        '1.4': '1.4',
         }
 
     @obj_base.remotable_classmethod
@@ -237,6 +246,7 @@ class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
                                   virtual_interface_id=info['vif_id'],
                                   allocated=info['allocated'],
                                   leased=info['leased'],
+                                  default_route=info['default_route'],
                                   instance=inst,
                                   virtual_interface=vif)
             fips.objects.append(fip)
