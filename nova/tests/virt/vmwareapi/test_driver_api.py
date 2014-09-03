@@ -1667,9 +1667,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         OptionValue = collections.namedtuple('OptionValue', ['key', 'value'])
         opt_val = OptionValue(key='', value=5906)
         fake_vm.set(vm_util.VNC_CONFIG_KEY, opt_val)
-        vnc_dict = self.conn.get_vnc_console(self.context, self.instance)
-        self.assertEqual(vnc_dict['host'], self.vnc_host)
-        self.assertEqual(vnc_dict['port'], 5906)
+        vnc_console = self.conn.get_vnc_console(self.context, self.instance)
+        self.assertEqual(self.vnc_host, vnc_console.host)
+        self.assertEqual(5906, vnc_console.port)
 
     def test_get_vnc_console(self):
         self._test_get_vnc_console()

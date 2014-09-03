@@ -33,6 +33,7 @@ from nova import compute
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova.console import type as ctype
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _, _LE
@@ -1654,4 +1655,4 @@ class VMwareVMOps(object):
         LOG.debug("VM %(uuid)s is currently on host %(host_name)s",
                   {'uuid': instance.name, 'host_name': host_name},
                   instance=instance)
-        return vnc_console
+        return ctype.ConsoleVNC(**vnc_console)
