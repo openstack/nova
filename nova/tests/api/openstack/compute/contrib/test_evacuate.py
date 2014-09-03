@@ -57,30 +57,29 @@ def fake_service_get_by_compute_host(self, context, host):
             }
 
 
-class EvacuateTest(test.NoDBTestCase):
+class EvacuateTestV21(test.NoDBTestCase):
 
     _methods = ('resize', 'evacuate')
-    fake_url = '/v2/fake'
+    fake_url = '/v3'
 
     def setUp(self):
-        super(EvacuateTest, self).setUp()
+        super(EvacuateTestV21, self).setUp()
         self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
         self.stubs.Set(compute_api.HostAPI, 'service_get_by_compute_host',
                        fake_service_get_by_compute_host)
         self.UUID = uuid.uuid4()
         for _method in self._methods:
             self.stubs.Set(compute_api.API, _method, fake_compute_api)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Evacuate'])
+
+    def _fake_wsgi_app(self, ctxt):
+        return fakes.wsgi_app_v3(fake_auth_context=ctxt)
 
     def _gen_resource_with_app(self, json_load, is_admin=True, uuid=None):
         ctxt = context.get_admin_context()
         ctxt.user_id = 'fake'
         ctxt.project_id = 'fake'
         ctxt.is_admin = is_admin
-        app = fakes.wsgi_app(fake_auth_context=ctxt)
+        app = self._fake_wsgi_app(ctxt)
         req = webob.Request.blank('%s/servers/%s/action' % (self.fake_url,
                                   uuid or self.UUID))
         req.method = 'POST'
@@ -122,12 +121,32 @@ class EvacuateTest(test.NoDBTestCase):
     def test_evacuate_instance_with_no_target(self):
         res = self._gen_resource_with_app({'onSharedStorage': 'False',
                                            'adminPass': 'MyNewPass'})
-        self.assertEqual(400, res.status_int)
+        self.assertEqual(200, res.status_int)
 
     def test_evacuate_instance_without_on_shared_storage(self):
         res = self._gen_resource_with_app({'host': 'my-host',
                                            'adminPass': 'MyNewPass'})
         self.assertEqual(res.status_int, 400)
+
+    def test_evacuate_instance_with_invalid_characters_host(self):
+        host = 'abc!#'
+        res = self._gen_resource_with_app({'host': host,
+                                           'onSharedStorage': 'False',
+                                           'adminPass': 'MyNewPass'})
+        self.assertEqual(400, res.status_int)
+
+    def test_evacuate_instance_with_too_long_host(self):
+        host = 'a' * 256
+        res = self._gen_resource_with_app({'host': host,
+                                           'onSharedStorage': 'False',
+                                           'adminPass': 'MyNewPass'})
+        self.assertEqual(400, res.status_int)
+
+    def test_evacuate_instance_with_invalid_on_shared_storage(self):
+        res = self._gen_resource_with_app({'host': 'my-host',
+                                           'onSharedStorage': 'foo',
+                                           'adminPass': 'MyNewPass'})
+        self.assertEqual(400, res.status_int)
 
     def test_evacuate_instance_with_bad_target(self):
         res = self._gen_resource_with_app({'host': 'bad-host',
@@ -195,3 +214,56 @@ class EvacuateTest(test.NoDBTestCase):
         self.assertEqual(200, res.status_int)
         resp_json = jsonutils.loads(res.body)
         self.assertEqual("MyNewPass", resp_json['adminPass'])
+
+    def test_evacuate_disable_password_return(self):
+        self._test_evacuate_enable_instance_password_conf(False)
+
+    def test_evacuate_enable_password_return(self):
+        self._test_evacuate_enable_instance_password_conf(True)
+
+    def _test_evacuate_enable_instance_password_conf(self, enable_pass):
+        self.flags(enable_instance_password=enable_pass)
+        self.stubs.Set(compute_api.API, 'update', self._fake_update)
+
+        res = self._gen_resource_with_app({'host': 'my_host',
+                                           'onSharedStorage': 'False'})
+        self.assertEqual(res.status_int, 200)
+        resp_json = jsonutils.loads(res.body)
+        if enable_pass:
+            self.assertIn('adminPass', resp_json)
+        else:
+            self.assertIsNone(resp_json.get('adminPass'))
+
+
+class EvacuateTestV2(EvacuateTestV21):
+    fake_url = '/v2/fake'
+
+    def setUp(self):
+        super(EvacuateTestV2, self).setUp()
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Evacuate'])
+
+    def _fake_wsgi_app(self, ctxt):
+        return fakes.wsgi_app(fake_auth_context=ctxt)
+
+    def test_evacuate_instance_with_no_target(self):
+        res = self._gen_resource_with_app({'onSharedStorage': 'False',
+                                               'adminPass': 'MyNewPass'})
+        self.assertEqual(400, res.status_int)
+
+    def test_evacuate_instance_with_too_long_host(self):
+        pass
+
+    def test_evacuate_instance_with_invalid_characters_host(self):
+        pass
+
+    def test_evacuate_instance_with_invalid_on_shared_storage(self):
+        pass
+
+    def test_evacuate_disable_password_return(self):
+        pass
+
+    def test_evacuate_enable_password_return(self):
+        pass

@@ -22,10 +22,10 @@ evacuate = {
             'type': 'object',
             'properties': {
                 'host': parameter_types.hostname,
-                'on_shared_storage': parameter_types.boolean,
-                'admin_password': parameter_types.admin_password,
+                'onSharedStorage': parameter_types.boolean,
+                'adminPass': parameter_types.admin_password,
             },
-            'required': ['on_shared_storage'],
+            'required': ['onSharedStorage'],
             'additionalProperties': False,
         },
     },

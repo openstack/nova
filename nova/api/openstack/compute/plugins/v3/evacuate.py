@@ -41,7 +41,9 @@ class EvacuateController(wsgi.Controller):
         self.compute_api = compute.API()
         self.host_api = compute.HostAPI()
 
-    @wsgi.response(202)
+    # TODO(eliqiao): Should be responding here with 202 Accept
+    # because evacuate is an async call, but keep to 200 for
+    # backwards compatibility reasons.
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('evacuate')
     @validation.schema(evacuate.evacuate)
@@ -55,17 +57,17 @@ class EvacuateController(wsgi.Controller):
         evacuate_body = body["evacuate"]
         host = evacuate_body.get("host")
         on_shared_storage = strutils.bool_from_string(
-                                        evacuate_body["on_shared_storage"])
+                                        evacuate_body["onSharedStorage"])
 
         password = None
-        if 'admin_password' in evacuate_body:
+        if 'adminPass' in evacuate_body:
             # check that if requested to evacuate server on shared storage
             # password not specified
             if on_shared_storage:
                 msg = _("admin password can't be changed on existing disk")
                 raise exc.HTTPBadRequest(explanation=msg)
 
-            password = evacuate_body['admin_password']
+            password = evacuate_body['adminPass']
         elif not on_shared_storage:
             password = utils.generate_password()
 
@@ -92,7 +94,7 @@ class EvacuateController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
         if CONF.enable_instance_password:
-            return {'admin_password': password}
+            return {'adminPass': password}
         else:
             return {}
 
