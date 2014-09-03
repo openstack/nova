@@ -1441,6 +1441,46 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                               None, self.destroy_disks)
             self.assertFalse(mock_destroy.called)
 
+    def _destroy_instance_without_vm_ref(self, resize_exists=False,
+                                         task_state=None):
+
+        def fake_vm_ref_from_name(session, vm_name):
+            if resize_exists:
+                return 'fake-ref'
+
+        self._create_instance()
+        with contextlib.nested(
+             mock.patch.object(vm_util, 'get_vm_ref_from_name',
+                               fake_vm_ref_from_name),
+             mock.patch.object(self.conn._session,
+                               '_call_method'),
+             mock.patch.object(self.conn._vmops,
+                               '_destroy_instance')
+        ) as (mock_get, mock_call, mock_destroy):
+            self.instance.task_state = task_state
+            self.conn.destroy(self.context, self.instance,
+                              self.network_info,
+                              None, True)
+            if resize_exists:
+                if task_state == task_states.RESIZE_REVERTING:
+                    expected = 1
+                else:
+                    expected = 2
+            else:
+                expected = 1
+            self.assertEqual(expected, mock_destroy.call_count)
+            self.assertFalse(mock_call.called)
+
+    def test_destroy_instance_without_vm_ref(self):
+        self._destroy_instance_without_vm_ref()
+
+    def test_destroy_instance_without_vm_ref_with_resize(self):
+        self._destroy_instance_without_vm_ref(resize_exists=True)
+
+    def test_destroy_instance_without_vm_ref_with_resize_revert(self):
+        self._destroy_instance_without_vm_ref(resize_exists=True,
+            task_state=task_states.RESIZE_REVERTING)
+
     def _rescue(self, config_drive=False):
         def fake_attach_disk_to_vm(vm_ref, instance,
                                    adapter_type, disk_type, vmdk_path=None,
