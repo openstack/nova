@@ -62,14 +62,14 @@ class InstanceNUMATopology(base.NovaObject):
         return hardware.VirtNUMAInstanceTopology(cells=cells)
 
     @base.remotable
-    def create(self, context, instance_uuid):
+    def create(self, context):
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
         topology = self.topology_from_obj()
         if not topology:
             return
-        values = {'instance_uuid': instance_uuid,
+        values = {'instance_uuid': self.instance_uuid,
                    'numa_topology': topology.to_json()}
         db_object = db.instance_extra_create(context, values)
         self.instance_uuid = db_object['instance_uuid']

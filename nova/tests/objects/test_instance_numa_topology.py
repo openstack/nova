@@ -38,7 +38,8 @@ class _TestInstanceNUMATopology(object):
     def test_create(self):
         topo_obj = objects.InstanceNUMATopology.obj_from_topology(
                fake_numa_topology)
-        topo_obj.create(self.context, fake_db_topology['instance_uuid'])
+        topo_obj.instance_uuid = fake_db_topology['instance_uuid']
+        topo_obj.create(self.context)
         got = objects.InstanceNUMATopology.get_by_instance_uuid(
                 self.context, fake_db_topology['instance_uuid'])
         self.assertIsNotNone(got)
