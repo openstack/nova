@@ -50,8 +50,7 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
     def obj_make_compatible(self, primitive, target_version):
         target_version = utils.convert_version_to_tuple(target_version)
         if target_version < (1, 2) and 'instance' in primitive:
-            self.instance.obj_make_compatible(
-                primitive['instance']['nova_object.data'], '1.13')
+            self.instance.obj_make_compatible(primitive['instance'], '1.13')
             primitive['instance']['nova_object.version'] = '1.13'
 
     @property

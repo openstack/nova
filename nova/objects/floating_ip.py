@@ -43,8 +43,7 @@ class FloatingIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
     def obj_make_compatible(self, primitive, target_version):
         target_version = utils.convert_version_to_tuple(target_version)
         if target_version < (1, 2) and 'fixed_ip' in primitive:
-            self.instance.obj_make_compatible(
-                primitive['fixed_ip']['nova_object.data'], '1.1')
+            self.fixed_ip.obj_make_compatible(primitive['fixed_ip'], '1.1')
             primitive['fixed_ip']['nova_object.version'] = '1.1'
 
     @staticmethod
