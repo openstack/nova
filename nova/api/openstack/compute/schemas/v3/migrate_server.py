@@ -12,23 +12,31 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 from nova.api.validation import parameter_types
 
+
+host = copy.deepcopy(parameter_types.hostname)
+host['type'] = ['string', 'null']
 
 migrate_live = {
     'type': 'object',
     'properties': {
-        'migrate_live': {
+        'os-migrateLive': {
             'type': 'object',
             'properties': {
                 'block_migration': parameter_types.boolean,
                 'disk_over_commit': parameter_types.boolean,
-                'host': parameter_types.hostname,
+                'host': host
             },
             'required': ['block_migration', 'disk_over_commit', 'host'],
             'additionalProperties': False,
         },
     },
-    'required': ['migrate_live'],
+    'required': ['os-migrateLive'],
     'additionalProperties': False,
 }
+
+host = copy.deepcopy(parameter_types.hostname)
+host['type'] = ['string', 'null']
