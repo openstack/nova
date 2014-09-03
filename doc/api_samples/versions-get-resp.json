@@ -12,10 +12,10 @@
             "updated": "2011-01-21T11:33:21Z"
         },
         {
-            "id": "v3.0",
+            "id": "v2.1",
             "links": [
                 {
-                    "href": "http://openstack.example.com/v3/",
+                    "href": "http://openstack.example.com/v2/",
                     "rel": "self"
                 }
             ],

@@ -25,7 +25,7 @@ ALIAS = "versions"
 
 class VersionsController(object):
     @extensions.expected_errors(404)
-    def show(self, req, id='v3.0'):
+    def show(self, req, id='v2.1'):
         builder = views_versions.get_view_builder(req)
         if id not in versions.VERSIONS:
             raise webob.exc.HTTPNotFound()
