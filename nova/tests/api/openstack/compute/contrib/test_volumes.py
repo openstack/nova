@@ -25,6 +25,7 @@ from webob import exc
 from nova.api.openstack.compute.contrib import assisted_volume_snapshots as \
         assisted_snaps
 from nova.api.openstack.compute.contrib import volumes
+from nova.api.openstack.compute.plugins.v3 import volumes as volumes_v3
 from nova.api.openstack import extensions
 from nova.compute import api as compute_api
 from nova.compute import flavors
@@ -217,9 +218,11 @@ class BootFromVolumeTest(test.TestCase):
                 '/dev/vda')
 
 
-class VolumeApiTest(test.TestCase):
+class VolumeApiTestV21(test.TestCase):
+    url_prefix = '/v3'
+
     def setUp(self):
-        super(VolumeApiTest, self).setUp()
+        super(VolumeApiTestV21, self).setUp()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
 
@@ -232,7 +235,10 @@ class VolumeApiTest(test.TestCase):
             osapi_compute_ext_list=['Volumes'])
 
         self.context = context.get_admin_context()
-        self.app = fakes.wsgi_app(init_only=('os-volumes',))
+        self.app = self._get_app()
+
+    def _get_app(self):
+        return fakes.wsgi_app_v3()
 
     def test_volume_create(self):
         self.stubs.Set(cinder.API, "create", fakes.stub_volume_create)
@@ -242,7 +248,7 @@ class VolumeApiTest(test.TestCase):
                "display_description": "Volume Test Desc",
                "availability_zone": "zone1:host1"}
         body = {"volume": vol}
-        req = webob.Request.blank('/v2/fake/os-volumes')
+        req = webob.Request.blank(self.url_prefix + '/os-volumes')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -274,35 +280,35 @@ class VolumeApiTest(test.TestCase):
                "availability_zone": "zone1:host1"}
         body = {"volume": vol}
 
-        req = fakes.HTTPRequest.blank('/v2/fake/os-volumes')
+        req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes')
         self.assertRaises(webob.exc.HTTPBadRequest,
                           volumes.VolumeController().create, req, body)
 
     def test_volume_index(self):
-        req = webob.Request.blank('/v2/fake/os-volumes')
+        req = webob.Request.blank(self.url_prefix + '/os-volumes')
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 200)
 
     def test_volume_detail(self):
-        req = webob.Request.blank('/v2/fake/os-volumes/detail')
+        req = webob.Request.blank(self.url_prefix + '/os-volumes/detail')
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 200)
 
     def test_volume_show(self):
-        req = webob.Request.blank('/v2/fake/os-volumes/123')
+        req = webob.Request.blank(self.url_prefix + '/os-volumes/123')
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 200)
 
     def test_volume_show_no_volume(self):
         self.stubs.Set(cinder.API, "get", fakes.stub_volume_notfound)
 
-        req = webob.Request.blank('/v2/fake/os-volumes/456')
+        req = webob.Request.blank(self.url_prefix + '/os-volumes/456')
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 404)
         self.assertIn('Volume 456 could not be found.', resp.body)
 
     def test_volume_delete(self):
-        req = webob.Request.blank('/v2/fake/os-volumes/123')
+        req = webob.Request.blank(self.url_prefix + '/os-volumes/123')
         req.method = 'DELETE'
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 202)
@@ -310,11 +316,28 @@ class VolumeApiTest(test.TestCase):
     def test_volume_delete_no_volume(self):
         self.stubs.Set(cinder.API, "delete", fakes.stub_volume_notfound)
 
-        req = webob.Request.blank('/v2/fake/os-volumes/456')
+        req = webob.Request.blank(self.url_prefix + '/os-volumes/456')
         req.method = 'DELETE'
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 404)
         self.assertIn('Volume 456 could not be found.', resp.body)
+
+
+class VolumeApiTestV2(VolumeApiTestV21):
+    url_prefix = '/v2/fake'
+
+    def setUp(self):
+        super(VolumeApiTestV2, self).setUp()
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Volumes'])
+
+        self.context = context.get_admin_context()
+        self.app = self._get_app()
+
+    def _get_app(self):
+        return fakes.wsgi_app()
 
 
 class VolumeAttachTests(test.TestCase):
@@ -879,24 +902,27 @@ class CommonBadRequestTestCase(object):
         self._bad_request_create(body=body)
 
 
-class BadRequestVolumeTestCase(CommonBadRequestTestCase,
-                               test.TestCase):
+class BadRequestVolumeTestCaseV21(CommonBadRequestTestCase,
+                                  test.TestCase):
 
     resource = 'os-volumes'
     entity_name = 'volume'
+    controller_cls = volumes_v3.VolumeController
+
+
+class BadRequestVolumeTestCaseV2(BadRequestVolumeTestCaseV21):
     controller_cls = volumes.VolumeController
 
 
 class BadRequestAttachmentTestCase(CommonBadRequestTestCase,
                                    test.TestCase):
-
     resource = 'servers/' + FAKE_UUID + '/os-volume_attachments'
     entity_name = 'volumeAttachment'
     controller_cls = volumes.VolumeAttachmentController
     kwargs = {'server_id': FAKE_UUID}
 
 
-class BadRequestSnapshotTestCase(CommonBadRequestTestCase,
+class BadRequestSnapshotTestCaseV21(CommonBadRequestTestCase,
                                     test.TestCase):
 
     resource = 'os-snapshots'
@@ -904,10 +930,16 @@ class BadRequestSnapshotTestCase(CommonBadRequestTestCase,
     controller_cls = volumes.SnapshotController
 
 
-class ShowSnapshotTestCase(test.TestCase):
+class BadRequestSnapshotTestCaseV2(BadRequestSnapshotTestCaseV21):
+    controller_cls = volumes_v3.SnapshotController
+
+
+class ShowSnapshotTestCaseV21(test.TestCase):
+    snapshot_cls = volumes_v3.SnapshotController
+
     def setUp(self):
-        super(ShowSnapshotTestCase, self).setUp()
-        self.controller = volumes.SnapshotController()
+        super(ShowSnapshotTestCaseV21, self).setUp()
+        self.controller = self.snapshot_cls()
         self.req = fakes.HTTPRequest.blank('/v2/fake/os-snapshots')
         self.req.method = 'GET'
 
@@ -919,10 +951,16 @@ class ShowSnapshotTestCase(test.TestCase):
                           self.controller.show, self.req, FAKE_UUID_A)
 
 
-class CreateSnapshotTestCase(test.TestCase):
+class ShowSnapshotTestCaseV2(ShowSnapshotTestCaseV21):
+    snapshot_cls = volumes.SnapshotController
+
+
+class CreateSnapshotTestCaseV21(test.TestCase):
+    snapshot_cls = volumes_v3.SnapshotController
+
     def setUp(self):
-        super(CreateSnapshotTestCase, self).setUp()
-        self.controller = volumes.SnapshotController()
+        super(CreateSnapshotTestCaseV21, self).setUp()
+        self.controller = self.snapshot_cls()
         self.stubs.Set(cinder.API, 'get', fake_get_volume)
         self.stubs.Set(cinder.API, 'create_snapshot_force',
                        fake_create_snapshot)
@@ -945,10 +983,16 @@ class CreateSnapshotTestCase(test.TestCase):
                           self.controller.create, self.req, body=self.body)
 
 
-class DeleteSnapshotTestCase(test.TestCase):
+class CreateSnapshotTestCaseV2(CreateSnapshotTestCaseV21):
+    snapshot_cls = volumes.SnapshotController
+
+
+class DeleteSnapshotTestCaseV21(test.TestCase):
+    snapshot_cls = volumes_v3.SnapshotController
+
     def setUp(self):
-        super(DeleteSnapshotTestCase, self).setUp()
-        self.controller = volumes.SnapshotController()
+        super(DeleteSnapshotTestCaseV21, self).setUp()
+        self.controller = self.snapshot_cls()
         self.stubs.Set(cinder.API, 'get', fake_get_volume)
         self.stubs.Set(cinder.API, 'create_snapshot_force',
                        fake_create_snapshot)
@@ -978,6 +1022,10 @@ class DeleteSnapshotTestCase(test.TestCase):
         self.req.method = 'DELETE'
         self.assertRaises(exc.HTTPNotFound, self.controller.delete,
                 self.req, result['snapshot']['id'])
+
+
+class DeleteSnapshotTestCaseV2(DeleteSnapshotTestCaseV21):
+    snapshot_cls = volumes.SnapshotController
 
 
 class AssistedSnapshotCreateTestCase(test.TestCase):

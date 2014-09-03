@@ -297,6 +297,7 @@ policy_data = """
     "compute_extension:volume_attachments:create": "",
     "compute_extension:volume_attachments:update": "",
     "compute_extension:volume_attachments:delete": "",
+    "compute_extension:v3:os-volumes": "",
     "compute_extension:volumetypes": "",
     "compute_extension:zones": "",
     "compute_extension:availability_zone:list": "",
