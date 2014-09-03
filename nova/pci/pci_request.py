@@ -43,10 +43,10 @@ from oslo.config import cfg
 import six
 
 from nova import exception
+from nova import objects
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.pci import pci_utils
-from nova import utils
 
 pci_alias_opts = [
     cfg.MultiStrOpt('pci_alias',
@@ -141,9 +141,10 @@ def _translate_alias_to_requests(alias_spec):
         if name not in pci_aliases:
             raise exception.PciRequestAliasNotDefined(alias=name)
         else:
-            request = {'count': int(count),
-                       'spec': copy.deepcopy(pci_aliases[name]),
-                       'alias_name': name}
+            request = objects.InstancePCIRequest(
+                count=int(count),
+                spec=copy.deepcopy(pci_aliases[name]),
+                alias_name=name)
             pci_requests.append(request)
     return pci_requests
 
@@ -182,57 +183,9 @@ def get_pci_requests_from_flavor(flavor):
     :param flavor: the flavor to be checked
     :returns: a list of pci requests
     """
-    if 'extra_specs' not in flavor:
-        return []
-
     pci_requests = []
-    if 'pci_passthrough:alias' in flavor['extra_specs']:
+    if ('extra_specs' in flavor and
+            'pci_passthrough:alias' in flavor['extra_specs']):
         pci_requests = _translate_alias_to_requests(
             flavor['extra_specs']['pci_passthrough:alias'])
-    return pci_requests
-
-
-def get_instance_pci_requests(instance, prefix=""):
-    """Get instance's pci allocation requirement.
-
-    After a flavor's pci requirement is translated into pci requests,
-    the requests are kept in instance's system metadata to avoid
-    future flavor access and translation. This function get the
-    pci requests from instance system metadata directly.
-
-    As save_flavor_pci_info(), the prefix can be used to stash
-    information about another flavor for later use, like in resize.
-    """
-
-    if 'system_metadata' not in instance:
-        return []
-    system_metadata = utils.instance_sys_meta(instance)
-    pci_requests = system_metadata.get('%spci_requests' % prefix)
-
-    if not pci_requests:
-        return []
-    return jsonutils.loads(pci_requests)
-
-
-def save_flavor_pci_info(metadata, instance_type, prefix=''):
-    """Save flavor's pci information to metadata.
-
-    To reduce flavor access and pci request translation, the
-    translated pci requests are saved into instance's system
-    metadata.
-
-    As save_flavor_info(), the prefix can be used to stash information
-    about another flavor for later use, like in resize.
-    """
-    pci_requests = get_pci_requests_from_flavor(instance_type)
-    if pci_requests:
-        to_key = '%spci_requests' % prefix
-        metadata[to_key] = jsonutils.dumps(pci_requests)
-
-
-def delete_flavor_pci_info(metadata, *prefixes):
-    """Delete pci requests information from instance's system_metadata."""
-    for prefix in prefixes:
-        to_key = '%spci_requests' % prefix
-        if to_key in metadata:
-            del metadata[to_key]
+    return objects.InstancePCIRequests(requests=pci_requests)

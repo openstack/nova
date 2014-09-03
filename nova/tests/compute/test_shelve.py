@@ -206,7 +206,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
         def fake_claim(context, instance, limits):
             instance.host = self.compute.host
-            return claims.Claim(db_instance, self.rt, _fake_resources())
+            return claims.Claim(context, db_instance,
+                                self.rt, _fake_resources())
 
         fake_image.stub_out_image_service(self.stubs)
         self.stubs.Set(fake_image._FakeImageService, 'delete', fake_delete)
@@ -294,7 +295,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 self.context, instance, {'source_compute': '',
                                          'dest_compute': self.compute.host})
         self.rt.instance_claim(self.context, instance, limits).AndReturn(
-                claims.Claim(db_instance, self.rt, _fake_resources()))
+                claims.Claim(self.context, db_instance, self.rt,
+                             _fake_resources()))
         self.compute.driver.spawn(self.context, instance, None,
                 injected_files=[], admin_password=None,
                 network_info=[],

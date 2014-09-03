@@ -25,6 +25,7 @@ import stubout
 from nova.compute import arch
 from nova import context
 from nova import db
+from nova import objects
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova.pci import pci_stats
@@ -1755,7 +1756,9 @@ class HostFiltersTestCase(test.NoDBTestCase):
 
     def test_pci_passthrough_pass(self):
         filt_cls = self.class_map['PciPassthroughFilter']()
-        requests = [{'count': 1, 'spec': [{'vendor_id': '8086'}]}]
+        request = objects.InstancePCIRequest(count=1,
+            spec=[{'vendor_id': '8086'}])
+        requests = objects.InstancePCIRequests(requests=[request])
         filter_properties = {'pci_requests': requests}
         self.stubs.Set(pci_stats.PciDeviceStats, 'support_requests',
                        self._fake_pci_support_requests)
@@ -1764,11 +1767,13 @@ class HostFiltersTestCase(test.NoDBTestCase):
             attribute_dict={'pci_stats': pci_stats.PciDeviceStats()})
         self.pci_request_result = True
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
-        self.assertEqual(self.pci_requests, requests)
+        self.assertEqual(self.pci_requests, requests.requests)
 
     def test_pci_passthrough_fail(self):
         filt_cls = self.class_map['PciPassthroughFilter']()
-        requests = [{'count': 1, 'spec': [{'vendor_id': '8086'}]}]
+        request = objects.InstancePCIRequest(count=1,
+            spec=[{'vendor_id': '8086'}])
+        requests = objects.InstancePCIRequests(requests=[request])
         filter_properties = {'pci_requests': requests}
         self.stubs.Set(pci_stats.PciDeviceStats, 'support_requests',
                        self._fake_pci_support_requests)
@@ -1777,7 +1782,7 @@ class HostFiltersTestCase(test.NoDBTestCase):
             attribute_dict={'pci_stats': pci_stats.PciDeviceStats()})
         self.pci_request_result = False
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
-        self.assertEqual(self.pci_requests, requests)
+        self.assertEqual(self.pci_requests, requests.requests)
 
     def test_pci_passthrough_no_pci_request(self):
         filt_cls = self.class_map['PciPassthroughFilter']()
