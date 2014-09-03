@@ -26,6 +26,7 @@ from nova.api.openstack.compute.plugins.v3 import servers
 from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova import db
+from nova import exception
 from nova.network import manager
 from nova.openstack.common import jsonutils
 from nova import test
@@ -226,7 +227,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.controller.create,
                           req,
                           body=body)
@@ -247,7 +248,49 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create,
+                          req,
+                          body=body)
+
+    def test_create_instance_with_blank_min(self):
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+
+        body = {
+            'server': {
+                multiple_create.MIN_ATTRIBUTE_NAME: '',
+                'name': 'server_test',
+                'image_ref': image_href,
+                'flavor_ref': flavor_ref,
+            }
+        }
+        req = fakes.HTTPRequestV3.blank('/servers')
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create,
+                          req,
+                          body=body)
+
+    def test_create_instance_with_blank_max(self):
+        image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        flavor_ref = 'http://localhost/123/flavors/3'
+
+        body = {
+            'server': {
+                multiple_create.MAX_ATTRIBUTE_NAME: '',
+                'name': 'server_test',
+                'image_ref': image_href,
+                'flavor_ref': flavor_ref,
+            }
+        }
+        req = fakes.HTTPRequestV3.blank('/servers')
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(exception.ValidationError,
                           self.controller.create,
                           req,
                           body=body)
@@ -290,7 +333,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.controller.create,
                           req,
                           body=body)
@@ -311,7 +354,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.controller.create,
                           req,
                           body=body)
@@ -479,7 +522,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.controller.create, req, body=body)
 
     def test_create_multiple_instance_with_non_integer_min_count(self):
@@ -500,5 +543,5 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.controller.create, req, body=body)
