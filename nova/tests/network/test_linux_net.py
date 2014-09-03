@@ -652,6 +652,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             '--dhcp-lease-max=256',
             '--dhcp-hostsfile=%s' % linux_net._dhcp_file(dev, 'conf'),
             '--dhcp-script=%s' % CONF.dhcpbridge,
+            '--no-hosts',
             '--leasefile-ro']
 
             if CONF.dhcp_domain:
@@ -667,7 +668,6 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
     def test_dnsmasq_execute_dns_servers(self):
         self.flags(dns_server=['1.1.1.1', '2.2.2.2'])
         expected = [
-            '--no-hosts',
             '--no-resolv',
             '--server=1.1.1.1',
             '--server=2.2.2.2',
@@ -677,7 +677,6 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
     def test_dnsmasq_execute_use_network_dns_servers(self):
         self.flags(use_network_dns_servers=True)
         expected = [
-            '--no-hosts',
             '--no-resolv',
             '--server=8.8.4.4',
         ]

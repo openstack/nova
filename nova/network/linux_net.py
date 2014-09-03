@@ -1111,6 +1111,7 @@ def restart_dhcp(context, dev, network_ref):
            '--dhcp-lease-max=%s' % len(netaddr.IPNetwork(network_ref['cidr'])),
            '--dhcp-hostsfile=%s' % _dhcp_file(dev, 'conf'),
            '--dhcp-script=%s' % CONF.dhcpbridge,
+           '--no-hosts',
            '--leasefile-ro']
 
     # dnsmasq currently gives an error for an empty domain,
@@ -1124,8 +1125,6 @@ def restart_dhcp(context, dev, network_ref):
             dns_servers.add(network_ref.get('dns1'))
         if network_ref.get('dns2'):
             dns_servers.add(network_ref.get('dns2'))
-    if network_ref['multi_host'] or dns_servers:
-        cmd.append('--no-hosts')
     if network_ref['multi_host']:
         cmd.append('--addn-hosts=%s' % _dhcp_file(dev, 'hosts'))
     if dns_servers:
