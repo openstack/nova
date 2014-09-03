@@ -110,8 +110,7 @@ class HyperVDriver(driver.ComputeDriver):
         self._vmops.resume(instance)
 
     def power_off(self, instance, timeout=0, retry_interval=0):
-        # TODO(PhilDay): Add support for timeout (clean shutdown)
-        self._vmops.power_off(instance)
+        self._vmops.power_off(instance, timeout, retry_interval)
 
     def power_on(self, context, instance, network_info,
                  block_device_info=None):
@@ -189,12 +188,13 @@ class HyperVDriver(driver.ComputeDriver):
                                    flavor, network_info,
                                    block_device_info=None,
                                    timeout=0, retry_interval=0):
-        # TODO(PhilDay): Add support for timeout (clean shutdown)
         return self._migrationops.migrate_disk_and_power_off(context,
                                                              instance, dest,
                                                              flavor,
                                                              network_info,
-                                                             block_device_info)
+                                                             block_device_info,
+                                                             timeout,
+                                                             retry_interval)
 
     def confirm_migration(self, migration, instance, network_info):
         self._migrationops.confirm_migration(migration, instance, network_info)

@@ -113,12 +113,13 @@ class MigrationOps(object):
 
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    flavor, network_info,
-                                   block_device_info=None):
+                                   block_device_info=None, timeout=0,
+                                   retry_interval=0):
         LOG.debug("migrate_disk_and_power_off called", instance=instance)
 
         self._check_target_flavor(instance, flavor)
 
-        self._vmops.power_off(instance)
+        self._vmops.power_off(instance, timeout, retry_interval)
 
         instance_name = instance["name"]
 

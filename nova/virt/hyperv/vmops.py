@@ -19,6 +19,7 @@ Management class for basic VM operations.
 """
 import functools
 import os
+import time
 
 from eventlet import timeout as etimeout
 from oslo.config import cfg
@@ -421,7 +422,8 @@ class VMOps(object):
                            constants.HYPERV_VM_STATE_REBOOT)
 
     def _soft_shutdown(self, instance,
-                       timeout=CONF.hyperv.wait_soft_reboot_seconds):
+                       timeout=CONF.hyperv.wait_soft_reboot_seconds,
+                       retry_interval=SHUTDOWN_TIME_INCREMENT):
         """Perform a soft shutdown on the VM.
 
            :return: True if the instance was shutdown within time limit,
@@ -429,16 +431,26 @@ class VMOps(object):
         """
         LOG.debug("Performing Soft shutdown on instance", instance=instance)
 
-        try:
-            self._vmutils.soft_shutdown_vm(instance.name)
-            if self._wait_for_power_off(instance.name, timeout):
-                LOG.info(_LI("Soft shutdown succeded."), instance=instance)
-                return True
-        except vmutils.HyperVException as e:
-            # Exception is raised when trying to shutdown the instance
-            # while it is still booting.
-            LOG.warning(_LW("Soft shutdown failed: %s"), e, instance=instance)
-            return False
+        while timeout > 0:
+            # Perform a soft shutdown on the instance.
+            # Wait maximum timeout for the instance to be shutdown.
+            # If it was not shutdown, retry until it succeded or a maximum of
+            # time waited is equal to timeout.
+            wait_time = min(retry_interval, timeout)
+            try:
+                LOG.debug("Soft shutdown instance, timeout remaining: %d",
+                          timeout, instance=instance)
+                self._vmutils.soft_shutdown_vm(instance.name)
+                if self._wait_for_power_off(instance.name, wait_time):
+                    LOG.info(_LI("Soft shutdown succeded."), instance=instance)
+                    return True
+            except vmutils.HyperVException as e:
+                # Exception is raised when trying to shutdown the instance
+                # while it is still booting.
+                LOG.debug("Soft shutdown failed: %s", e, instance=instance)
+                time.sleep(wait_time)
+
+            timeout -= retry_interval
 
         LOG.warning(_LW("Timed out while waiting for soft shutdown."),
                     instance=instance)
@@ -468,9 +480,14 @@ class VMOps(object):
         self._set_vm_state(instance,
                            constants.HYPERV_VM_STATE_ENABLED)
 
-    def power_off(self, instance):
+    def power_off(self, instance, timeout=0, retry_interval=0):
         """Power off the specified instance."""
         LOG.debug("Power off instance", instance=instance)
+        if retry_interval <= 0:
+            retry_interval = SHUTDOWN_TIME_INCREMENT
+        if timeout and self._soft_shutdown(instance, timeout, retry_interval):
+            return
+
         self._set_vm_state(instance,
                            constants.HYPERV_VM_STATE_DISABLED)
 
