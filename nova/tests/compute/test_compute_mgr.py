@@ -433,6 +433,23 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def test_init_instance_reverts_crashed_migration_no_old_state(self):
         self._test_init_instance_reverts_crashed_migrations(old_vm_state=None)
 
+    def test_init_instance_resets_crashed_live_migration(self):
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid='foo',
+                vm_state=vm_states.ACTIVE,
+                task_state=task_states.MIGRATING)
+        with contextlib.nested(
+            mock.patch.object(instance, 'save'),
+            mock.patch('nova.compute.utils.get_nw_info_for_instance',
+                       return_value=network_model.NetworkInfo())
+        ) as (save, get_nw_info):
+            self.compute._init_instance(self.context, instance)
+            save.assert_called_once_with(expected_task_state=['migrating'])
+            get_nw_info.assert_called_once_with(instance)
+        self.assertIsNone(instance.task_state)
+        self.assertEqual(vm_states.ACTIVE, instance.vm_state)
+
     def _test_init_instance_sets_building_error(self, vm_state,
                                                 task_state=None):
         instance = fake_instance.fake_instance_obj(
