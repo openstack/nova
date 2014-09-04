@@ -54,12 +54,18 @@ class APITestCase(test.NoDBTestCase):
 
         def fake_returns_true(*args, **kwargs):
             return True
+
+        def fake_returns_nothing(*args, **kwargs):
+            return ''
         self.useFixture(fixtures.MonkeyPatch(
                 'nova.virt.disk.mount.nbd.NbdMount.get_dev',
                 fake_returns_true))
         self.useFixture(fixtures.MonkeyPatch(
                 'nova.virt.disk.mount.nbd.NbdMount.map_dev',
                 fake_returns_true))
+        self.useFixture(fixtures.MonkeyPatch(
+                'nova.virt.disk.vfs.localfs.VFSLocalFS.get_image_fs',
+                fake_returns_nothing))
 
         # Force the use of localfs, which is what was used during the failure
         # reported in the bug
@@ -71,7 +77,7 @@ class APITestCase(test.NoDBTestCase):
 
         imgfile = tempfile.NamedTemporaryFile()
         self.addCleanup(imgfile.close)
-        self.assertFalse(api.is_image_partitionless(imgfile, use_cow=True))
+        self.assertFalse(api.is_image_extendable(imgfile, use_cow=True))
 
     def test_resize2fs_success(self):
         imgfile = tempfile.NamedTemporaryFile()
@@ -116,7 +122,7 @@ class APITestCase(test.NoDBTestCase):
 
         self.mox.StubOutWithMock(api, 'can_resize_image')
         self.mox.StubOutWithMock(utils, 'execute')
-        self.mox.StubOutWithMock(api, 'is_image_partitionless')
+        self.mox.StubOutWithMock(api, 'is_image_extendable')
         self.mox.StubOutWithMock(mounter, 'get_dev')
         self.mox.StubOutWithMock(mounter, 'unget_dev')
         self.mox.StubOutWithMock(api, 'resize2fs')
@@ -125,7 +131,7 @@ class APITestCase(test.NoDBTestCase):
 
         api.can_resize_image(imgfile, imgsize).AndReturn(True)
         utils.execute('qemu-img', 'resize', imgfile, imgsize)
-        api.is_image_partitionless(imgfile, use_cow).AndReturn(True)
+        api.is_image_extendable(imgfile, use_cow).AndReturn(True)
         mount.Mount.instance_for_format(
             imgfile, None, None, 'qcow2').AndReturn(mounter)
         mounter.get_dev().AndReturn(True)
@@ -142,12 +148,12 @@ class APITestCase(test.NoDBTestCase):
 
         self.mox.StubOutWithMock(api, 'can_resize_image')
         self.mox.StubOutWithMock(utils, 'execute')
-        self.mox.StubOutWithMock(api, 'is_image_partitionless')
+        self.mox.StubOutWithMock(api, 'is_image_extendable')
         self.mox.StubOutWithMock(api, 'resize2fs')
 
         api.can_resize_image(imgfile, imgsize).AndReturn(True)
         utils.execute('qemu-img', 'resize', imgfile, imgsize)
-        api.is_image_partitionless(imgfile, use_cow).AndReturn(True)
+        api.is_image_extendable(imgfile, use_cow).AndReturn(True)
         api.resize2fs(imgfile, run_as_root=False, check_exit_code=[0])
 
         self.mox.ReplayAll()
