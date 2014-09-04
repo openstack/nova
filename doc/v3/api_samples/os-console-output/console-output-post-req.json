@@ -1,5 +1,5 @@
 {
-    "get_console_output": {
+    "os-getConsoleOutput": {
         "length": 50
     }
 }
