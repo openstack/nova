@@ -557,3 +557,74 @@ class VMUtilsTestCase(test.NoDBTestCase):
 
     def test_get_vm_serial_port_connection(self):
         self._test_get_vm_serial_port_connection()
+
+    def test_list_instance_notes(self):
+        vs = mock.MagicMock()
+        attrs = {'ElementName': 'fake_name',
+                 'Notes': '4f54fb69-d3a2-45b7-bb9b-b6e6b3d893b3'}
+        vs.configure_mock(**attrs)
+        self._vmutils._conn.Msvm_VirtualSystemSettingData.return_value = [vs]
+        response = self._vmutils.list_instance_notes()
+
+        self.assertEqual([(attrs['ElementName'], [attrs['Notes']])], response)
+        self._vmutils._conn.Msvm_VirtualSystemSettingData.assert_called_with(
+            ['ElementName', 'Notes'],
+            SettingType=self._vmutils._VIRTUAL_SYSTEM_CURRENT_SETTINGS)
+
+    @mock.patch('nova.virt.hyperv.vmutils.VMUtils.check_ret_val')
+    def test_modify_virtual_system(self, mock_check_ret_val):
+        mock_vs_man_svc = mock.MagicMock()
+        mock_vmsetting = mock.MagicMock()
+        fake_path = 'fake path'
+        fake_job_path = 'fake job path'
+        fake_ret_val = 'fake return value'
+
+        mock_vs_man_svc.ModifyVirtualSystem.return_value = (0, fake_job_path,
+                                                            fake_ret_val)
+
+        self._vmutils._modify_virtual_system(vs_man_svc=mock_vs_man_svc,
+                                             vm_path=fake_path,
+                                             vmsetting=mock_vmsetting)
+
+        mock_vs_man_svc.ModifyVirtualSystem.assert_called_once_with(
+            ComputerSystem=fake_path,
+            SystemSettingData=mock_vmsetting.GetText_(1))
+        mock_check_ret_val.assert_called_once_with(fake_ret_val, fake_job_path)
+
+    @mock.patch('nova.virt.hyperv.vmutils.VMUtils.check_ret_val')
+    @mock.patch('nova.virt.hyperv.vmutils.VMUtils._get_wmi_obj')
+    @mock.patch('nova.virt.hyperv.vmutils.VMUtils._modify_virtual_system')
+    @mock.patch('nova.virt.hyperv.vmutils.VMUtils._get_vm_setting_data')
+    def test_create_vm_obj(self, mock_get_vm_setting_data,
+                           mock_modify_virtual_system,
+                           mock_get_wmi_obj, mock_check_ret_val):
+        mock_vs_man_svc = mock.MagicMock()
+        mock_vs_gs_data = mock.MagicMock()
+        fake_vm_path = 'fake vm path'
+        fake_job_path = 'fake job path'
+        fake_ret_val = 'fake return value'
+        _conn = self._vmutils._conn.Msvm_VirtualSystemGlobalSettingData
+
+        _conn.new.return_value = mock_vs_gs_data
+        mock_vs_man_svc.DefineVirtualSystem.return_value = (fake_vm_path,
+                                                            fake_job_path,
+                                                            fake_ret_val)
+
+        response = self._vmutils._create_vm_obj(vs_man_svc=mock_vs_man_svc,
+                                                vm_name='fake vm',
+                                                notes='fake notes')
+
+        _conn.new.assert_called_once_with()
+        self.assertEqual(mock_vs_gs_data.ElementName, 'fake vm')
+        mock_vs_man_svc.DefineVirtualSystem.assert_called_once_with(
+            [], None, mock_vs_gs_data.GetText_(1))
+        mock_check_ret_val.assert_called_once_with(fake_ret_val, fake_job_path)
+
+        mock_get_wmi_obj.assert_called_with(fake_vm_path)
+        mock_get_vm_setting_data.assert_called_once_with(mock_get_wmi_obj())
+        mock_modify_virtual_system.assert_called_once_with(
+            mock_vs_man_svc, fake_vm_path, mock_get_vm_setting_data())
+
+        self.assertEqual(mock_get_vm_setting_data().Notes,
+                         '\n'.join('fake notes'))
+        self.assertEqual(response, mock_get_wmi_obj())

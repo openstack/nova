@@ -972,7 +972,8 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase,
                                      ephemeral_storage=False):
         vmutils.VMUtils.create_vm(mox.Func(self._check_vm_name), mox.IsA(int),
                                   mox.IsA(int), mox.IsA(bool),
-                                  CONF.hyperv.dynamic_memory_ratio)
+                                  CONF.hyperv.dynamic_memory_ratio,
+                                  mox.IsA(list))
 
         if not boot_from_volume:
             m = vmutils.VMUtils.attach_ide_drive(mox.Func(self._check_vm_name),

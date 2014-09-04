@@ -118,3 +118,60 @@ class VMUtilsV2TestCase(test_vmutils.VMUtilsTestCase):
     def _assert_remove_resources(self, mock_svc):
         getattr(mock_svc, self._REMOVE_RESOURCE).assert_called_with(
             [self._FAKE_RES_PATH])
+
+    def test_list_instance_notes(self):
+        vs = mock.MagicMock()
+        attrs = {'ElementName': 'fake_name',
+                 'Notes': ['4f54fb69-d3a2-45b7-bb9b-b6e6b3d893b3']}
+        vs.configure_mock(**attrs)
+        self._vmutils._conn.Msvm_VirtualSystemSettingData.return_value = [vs]
+        response = self._vmutils.list_instance_notes()
+
+        self.assertEqual([(attrs['ElementName'], attrs['Notes'])], response)
+        self._vmutils._conn.Msvm_VirtualSystemSettingData.assert_called_with(
+            ['ElementName', 'Notes'],
+            VirtualSystemType=self._vmutils._VIRTUAL_SYSTEM_TYPE_REALIZED)
+
+    @mock.patch('nova.virt.hyperv.vmutilsv2.VMUtilsV2.check_ret_val')
+    @mock.patch('nova.virt.hyperv.vmutilsv2.VMUtilsV2._get_wmi_obj')
+    def _test_create_vm_obj(self, mock_get_wmi_obj, mock_check_ret_val,
+                            vm_path):
+        mock_vs_man_svc = mock.MagicMock()
+        mock_vs_data = mock.MagicMock()
+        mock_job = mock.MagicMock()
+        fake_job_path = 'fake job path'
+        fake_ret_val = 'fake return value'
+        _conn = self._vmutils._conn.Msvm_VirtualSystemSettingData
+
+        mock_check_ret_val.return_value = mock_job
+        _conn.new.return_value = mock_vs_data
+        mock_vs_man_svc.DefineSystem.return_value = (fake_job_path,
+                                                     vm_path,
+                                                     fake_ret_val)
+        mock_job.associators.return_value = ['fake vm path']
+
+        response = self._vmutils._create_vm_obj(vs_man_svc=mock_vs_man_svc,
+                                                vm_name='fake vm',
+                                                notes='fake notes')
+
+        if not vm_path:
+            mock_job.associators.assert_called_once_with(
+                self._vmutils._AFFECTED_JOB_ELEMENT_CLASS)
+
+        _conn.new.assert_called_once_with()
+        self.assertEqual(mock_vs_data.ElementName, 'fake vm')
+        mock_vs_man_svc.DefineSystem.assert_called_once_with(
+            ResourceSettings=[], ReferenceConfiguration=None,
+            SystemSettings=mock_vs_data.GetText_(1))
+        mock_check_ret_val.assert_called_once_with(fake_ret_val, fake_job_path)
+
+        mock_get_wmi_obj.assert_called_with('fake vm path')
+
+        self.assertEqual(mock_vs_data.Notes, 'fake notes')
+        self.assertEqual(response, mock_get_wmi_obj())
+
+    def test_create_vm_obj(self):
+        self._test_create_vm_obj(vm_path='fake vm path')
+
+    def test_create_vm_obj_no_vm_path(self):
+        self._test_create_vm_obj(vm_path=None)
