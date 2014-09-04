@@ -26,6 +26,7 @@ def register_all():
     # need to receive it via RPC.
     __import__('nova.objects.agent')
     __import__('nova.objects.aggregate')
+    __import__('nova.objects.bandwidth_usage')
     __import__('nova.objects.block_device')
     __import__('nova.objects.compute_node')
     __import__('nova.objects.dns_domain')
