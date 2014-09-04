@@ -2075,7 +2075,7 @@ class API(base.Base):
                 attr='vm_state',
                 instance_uuid=instance['uuid'],
                 state=instance['vm_state'],
-                method='reboot')
+                method='soft reboot')
         if ((reboot_type == 'SOFT' and
                 instance['task_state'] in
                 (task_states.REBOOTING, task_states.REBOOTING_HARD)) or
