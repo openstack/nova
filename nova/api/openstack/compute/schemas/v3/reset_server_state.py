@@ -15,7 +15,7 @@
 reset_state = {
     'type': 'object',
     'properties': {
-        'reset_state': {
+        'os-resetState': {
             'type': 'object',
             'properties': {
                 'state': {
@@ -27,6 +27,6 @@ reset_state = {
             'additionalProperties': False,
         },
     },
-    'required': ['reset_state'],
+    'required': ['os-resetState'],
     'additionalProperties': False,
 }

@@ -43,7 +43,7 @@ class AdminActionsController(wsgi.Controller):
         self.compute_api = compute.API()
 
     @extensions.expected_errors((404, 409))
-    @wsgi.action('reset_network')
+    @wsgi.action('resetNetwork')
     def _reset_network(self, req, id, body):
         """Permit admins to reset networking on a server."""
         context = req.environ['nova.context']
@@ -57,7 +57,7 @@ class AdminActionsController(wsgi.Controller):
         return webob.Response(status_int=202)
 
     @extensions.expected_errors((404, 409))
-    @wsgi.action('inject_network_info')
+    @wsgi.action('injectNetworkInfo')
     def _inject_network_info(self, req, id, body):
         """Permit admins to inject network info into a server."""
         context = req.environ['nova.context']
@@ -71,7 +71,7 @@ class AdminActionsController(wsgi.Controller):
         return webob.Response(status_int=202)
 
     @extensions.expected_errors((400, 404))
-    @wsgi.action('reset_state')
+    @wsgi.action('os-resetState')
     @validation.schema(reset_server_state.reset_state)
     def _reset_state(self, req, id, body):
         """Permit admins to reset the state of a server."""
@@ -79,7 +79,7 @@ class AdminActionsController(wsgi.Controller):
         authorize(context, 'reset_state')
 
         # Identify the desired state from the body
-        state = state_map[body["reset_state"]["state"]]
+        state = state_map[body["os-resetState"]["state"]]
 
         instance = common.get_instance(self.compute_api, context, id,
                                        want_objects=True)

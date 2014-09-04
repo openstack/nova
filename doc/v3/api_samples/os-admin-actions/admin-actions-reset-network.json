@@ -1,3 +1,3 @@
 {
-    "reset_network": null
+    "resetNetwork": null
 }
