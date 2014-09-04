@@ -262,3 +262,10 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         self.assertTrue(vfs.handle.trace_enabled)
         self.assertTrue(vfs.handle.verbose_enabled)
         self.assertIsNotNone(vfs.handle.event_callback)
+
+    def test_get_format_fs(self):
+        vfs = vfsimpl.VFSGuestFS("dummy.img")
+        vfs.setup()
+        self.assertIsNotNone(vfs.handle)
+        self.assertTrue('ext3', vfs.get_image_fs())
+        vfs.teardown()

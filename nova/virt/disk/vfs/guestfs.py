@@ -302,3 +302,6 @@ class VFSGuestFS(vfs.VFS):
         LOG.debug("chown uid=%(uid)d gid=%(gid)s",
                   {'uid': uid, 'gid': gid})
         self.handle.chown(uid, gid, path)
+
+    def get_image_fs(self):
+        return self.handle.vfs_type('/dev/sda')
