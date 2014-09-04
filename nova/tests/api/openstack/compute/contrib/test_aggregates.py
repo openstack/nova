@@ -351,6 +351,14 @@ class AggregateTestCaseV21(test.NoDBTestCase):
         self.assertRaises(self.bad_request,
                           eval(self.add_host), self.req, "1", body=body)
 
+    def test_update_with_invalid_action(self):
+        with mock.patch.object(self.controller.api, "update_aggregate",
+            side_effect=exception.InvalidAggregateAction(
+                action='invalid', aggregate_id='agg1', reason= "not empty")):
+            body = {"aggregate": {"availability_zone": "nova"}}
+            self.assertRaises(exc.HTTPBadRequest, self.controller.update,
+                              self.req, "1", body=body)
+
     def test_add_host(self):
         def stub_add_host_to_aggregate(context, aggregate, host):
             self.assertEqual(context, self.context, "context")
