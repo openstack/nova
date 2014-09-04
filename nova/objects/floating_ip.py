@@ -240,7 +240,8 @@ class FloatingIPList(obj_base.ObjectListBase, obj_base.NovaObject):
 
     @obj_base.remotable_classmethod
     def create(cls, context, ip_info, want_result=False):
-        db_floatingips = db.floating_ip_bulk_create(context, ip_info)
+        db_floatingips = db.floating_ip_bulk_create(context, ip_info,
+                                                    want_result=want_result)
         if want_result:
             return obj_base.obj_make_list(context, cls(), FloatingIP,
                                           db_floatingips)

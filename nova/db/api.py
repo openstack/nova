@@ -304,9 +304,11 @@ def floating_ip_allocate_address(context, project_id, pool,
                                              auto_assigned)
 
 
-def floating_ip_bulk_create(context, ips):
-    """Create a lot of floating ips from the values dictionary."""
-    return IMPL.floating_ip_bulk_create(context, ips)
+def floating_ip_bulk_create(context, ips, want_result=True):
+    """Create a lot of floating ips from the values dictionary.
+        :param want_result: If set to True, return floating ips inserted
+    """
+    return IMPL.floating_ip_bulk_create(context, ips, want_result=want_result)
 
 
 def floating_ip_bulk_destroy(context, ips):

@@ -438,10 +438,10 @@ class FloatingIpCommands(object):
         if not interface:
             interface = CONF.public_interface
 
-        ips = ({'address': str(address), 'pool': pool, 'interface': interface}
-               for address in self.address_to_hosts(ip_range))
+        ips = [{'address': str(address), 'pool': pool, 'interface': interface}
+               for address in self.address_to_hosts(ip_range)]
         try:
-            db.floating_ip_bulk_create(admin_context, ips)
+            db.floating_ip_bulk_create(admin_context, ips, want_result=False)
         except exception.FloatingIpExists as exc:
             # NOTE(simplylizz): Maybe logging would be better here
             # instead of printing, but logging isn't used here and I
