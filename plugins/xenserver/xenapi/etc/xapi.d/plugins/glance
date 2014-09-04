@@ -200,14 +200,12 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
 
         compression_level = properties.get('xenapi_image_compression_level')
 
-        utils.create_tarball(
-                None, staging_path, callback=send_chunked_transfer_encoded,
-                compression_level=compression_level)
-
         try:
-            conn.send("0\r\n\r\n")  # Chunked-Transfer terminator
-        except Exception, error:
-            raise RetryableError(error)
+            utils.create_tarball(
+                    None, staging_path, callback=send_chunked_transfer_encoded,
+                    compression_level=compression_level)
+        finally:
+            send_chunked_transfer_encoded('') # Chunked-Transfer terminator
 
         bytes_written = callback_data['bytes_written']
         logging.info("Wrote %d bytes to %s" % (bytes_written, url))
