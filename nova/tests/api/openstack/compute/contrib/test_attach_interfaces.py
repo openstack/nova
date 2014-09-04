@@ -128,6 +128,7 @@ def fake_get_instance(self, *args, **kwargs):
 class InterfaceAttachTestsV21(test.NoDBTestCase):
     url = '/v3/os-interfaces'
     controller_cls = attach_interfaces_v3.InterfaceAttachmentController
+    validate_exc = exception.ValidationError
 
     def setUp(self):
         super(InterfaceAttachTestsV21, self).setUp()
@@ -368,6 +369,22 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
                           FAKE_UUID1,
                           FAKE_NET_ID1)
 
+    def test_attach_interface_invalid_fixed_ip(self):
+        req = webob.Request.blank(self.url + '/attach')
+        req.method = 'POST'
+        body = {
+            'interfaceAttachment': {
+                'net_id': FAKE_NET_ID1,
+                'fixed_ips': [{'ip_address': 'invalid_ip'}]
+            }
+        }
+        req.body = jsonutils.dumps(body)
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+        self.assertRaises(self.validate_exc,
+                          self.attachments.create, req, FAKE_UUID1,
+                          body=jsonutils.loads(req.body))
+
     @mock.patch.object(compute_api.API, 'get')
     @mock.patch.object(compute_api.API, 'attach_interface')
     def test_attach_interface_fixed_ip_already_in_use(self,
@@ -419,6 +436,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
 class InterfaceAttachTestsV2(InterfaceAttachTestsV21):
     url = '/v2/fake/os-interfaces'
     controller_cls = attach_interfaces_v2.InterfaceAttachmentController
+    validate_exc = exc.HTTPBadRequest
 
     def test_attach_interface_instance_with_non_uuid_net_id(self):
         pass
