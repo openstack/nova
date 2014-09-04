@@ -19,7 +19,9 @@ import urllib
 from lxml import etree
 import webob
 
-from nova.api.openstack.compute.contrib import floating_ip_dns
+from nova.api.openstack.compute.contrib import floating_ip_dns as fipdns_v2
+from nova.api.openstack.compute.plugins.v3 import floating_ip_dns as \
+                                                        fipdns_v21
 from nova import context
 from nova import db
 from nova import exception
@@ -92,7 +94,9 @@ def network_create_public_dns_domain(self, context, domain, project):
     pass
 
 
-class FloatingIpDNSTest(test.TestCase):
+class FloatingIpDNSTestV21(test.TestCase):
+    floating_ip_dns = fipdns_v21
+
     def _create_floating_ip(self):
         """Create a floating ip object."""
         host = "fake_host"
@@ -107,8 +111,11 @@ class FloatingIpDNSTest(test.TestCase):
         db.floating_ip_destroy(self.context, test_ipv4_address)
         db.floating_ip_destroy(self.context, test_ipv6_address)
 
+    def _check_status(self, expected_status, res, controller_methord):
+        self.assertEqual(expected_status, controller_methord.wsgi_code)
+
     def setUp(self):
-        super(FloatingIpDNSTest, self).setUp()
+        super(FloatingIpDNSTestV21, self).setUp()
         self.stubs.Set(network.api.API, "get_dns_domains",
                        network_get_dns_domains)
         self.stubs.Set(network.api.API, "get_dns_entries_by_address",
@@ -129,13 +136,14 @@ class FloatingIpDNSTest(test.TestCase):
         self.context = context.get_admin_context()
 
         self._create_floating_ip()
-        temp = floating_ip_dns.FloatingIPDNSDomainController()
+        temp = self.floating_ip_dns.FloatingIPDNSDomainController()
         self.domain_controller = temp
-        self.entry_controller = floating_ip_dns.FloatingIPDNSEntryController()
+        self.entry_controller = self.floating_ip_dns.\
+                                FloatingIPDNSEntryController()
 
     def tearDown(self):
         self._delete_floating_ip()
-        super(FloatingIpDNSTest, self).tearDown()
+        super(FloatingIpDNSTestV21, self).tearDown()
 
     def test_dns_domains_list(self):
         req = fakes.HTTPRequest.blank('/v2/123/os-floating-ip-dns')
@@ -283,7 +291,7 @@ class FloatingIpDNSTest(test.TestCase):
               (_quote_domain(domain), name))
         res = self.entry_controller.delete(req, _quote_domain(domain), name)
 
-        self.assertEqual(202, res.status_int)
+        self._check_status(202, res, self.entry_controller.delete)
         self.assertEqual([(name, domain)], calls)
 
     def test_delete_entry_notfound(self):
@@ -312,7 +320,7 @@ class FloatingIpDNSTest(test.TestCase):
                                       _quote_domain(domain))
         res = self.domain_controller.delete(req, _quote_domain(domain))
 
-        self.assertEqual(202, res.status_int)
+        self._check_status(202, res, self.domain_controller.delete)
         self.assertEqual([domain], calls)
 
     def test_delete_domain_notfound(self):
@@ -338,9 +346,18 @@ class FloatingIpDNSTest(test.TestCase):
         self.assertEqual(entry['dns_entry']['ip'], test_ipv4_address2)
 
 
-class FloatingIpDNSSerializerTest(test.TestCase):
+class FloatingIpDNSTestV2(FloatingIpDNSTestV21):
+    floating_ip_dns = fipdns_v2
+
+    def _check_status(self, expected_status, res, controller_methord):
+        self.assertEqual(expected_status, res.status_int)
+
+
+class FloatingIpDNSSerializerTestV2(test.TestCase):
+    floating_ip_dns = fipdns_v2
+
     def test_domains(self):
-        serializer = floating_ip_dns.DomainsTemplate()
+        serializer = self.floating_ip_dns.DomainsTemplate()
         text = serializer.serialize(dict(
                 domain_entries=[
                     dict(domain=domain, scope='public', project='testproject'),
@@ -355,7 +372,7 @@ class FloatingIpDNSSerializerTest(test.TestCase):
         self.assertEqual('avzone', tree[1].get('availability_zone'))
 
     def test_domain_serializer(self):
-        serializer = floating_ip_dns.DomainTemplate()
+        serializer = self.floating_ip_dns.DomainTemplate()
         text = serializer.serialize(dict(
                 domain_entry=dict(domain=domain,
                                   scope='public',
@@ -367,7 +384,7 @@ class FloatingIpDNSSerializerTest(test.TestCase):
         self.assertEqual('testproject', tree.get('project'))
 
     def test_entries_serializer(self):
-        serializer = floating_ip_dns.FloatingIPDNSsTemplate()
+        serializer = self.floating_ip_dns.FloatingIPDNSsTemplate()
         text = serializer.serialize(dict(
                 dns_entries=[
                     dict(ip=test_ipv4_address,
@@ -394,7 +411,7 @@ class FloatingIpDNSSerializerTest(test.TestCase):
         self.assertEqual(name2, tree[1].get('name'))
 
     def test_entry_serializer(self):
-        serializer = floating_ip_dns.FloatingIPDNSTemplate()
+        serializer = self.floating_ip_dns.FloatingIPDNSTemplate()
         text = serializer.serialize(dict(
                 dns_entry=dict(
                     ip=test_ipv4_address,

@@ -214,6 +214,7 @@ policy_data = """
     "compute_extension:v3:flavor-manage": "",
     "compute_extension:v3:flavors:discoverable": "",
     "compute_extension:floating_ip_dns": "",
+    "compute_extension:v3:os-floating-ip-dns": "",
     "compute_extension:floating_ip_pools": "",
     "compute_extension:v3:os-floating-ip-pools": "",
     "compute_extension:floating_ips": "",
