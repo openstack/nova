@@ -377,7 +377,7 @@ class VMwareVMOps(object):
             raise exception.InstanceUnacceptable(instance_id=instance.uuid,
                                                  reason=reason)
         datastore = ds_util.get_datastore(
-                self._session, self._cluster, None, self._datastore_regex)
+                self._session, self._cluster, self._datastore_regex)
         dc_info = self.get_datacenter_ref_and_name(datastore.ref)
 
         return VirtualMachineInstanceConfigInfo(instance,
@@ -1014,7 +1014,7 @@ class VMwareVMOps(object):
                                        total_steps=RESIZE_TOTAL_STEPS)
 
         ds_ref = ds_util.get_datastore(
-                            self._session, self._cluster, host_ref,
+                            self._session, self._cluster,
                             datastore_regex=self._datastore_regex).ref
         dc_info = self.get_datacenter_ref_and_name(ds_ref)
         # 3. Clone the VM for instance

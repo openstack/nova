@@ -161,6 +161,51 @@ class DsUtilTestCase(test.NoDBTestCase):
                     'fake-browser', ds_path, 'fake-file')
             self.assertFalse(file_exists)
 
+    def _mock_get_datastore_calls(self, *datastores):
+        """Mock vim_util calls made by get_datastore."""
+
+        datastores_i = [None]
+
+        # For the moment, at least, this list of datastores is simply passed to
+        # get_properties_for_a_collection_of_objects, which we mock below. We
+        # don't need to over-complicate the fake function by worrying about its
+        # contents.
+        fake_ds_list = ['fake-ds']
+
+        def fake_call_method(module, method, *args, **kwargs):
+            # Mock the call which returns a list of datastores for the cluster
+            if (module == ds_util.vim_util and
+                    method == 'get_dynamic_property' and
+                    args == ('fake-cluster', 'ClusterComputeResource',
+                             'datastore')):
+                fake_ds_mor = fake.DataObject()
+                fake_ds_mor.ManagedObjectReference = fake_ds_list
+                return fake_ds_mor
+
+            # Return the datastore result sets we were passed in, in the order
+            # given
+            if (module == ds_util.vim_util and
+                    method == 'get_properties_for_a_collection_of_objects' and
+                    args[0] == 'Datastore' and
+                    args[1] == fake_ds_list):
+                # Start a new iterator over given datastores
+                datastores_i[0] = iter(datastores)
+                return datastores_i[0].next()
+
+            # Continue returning results from the current iterator.
+            if (module == ds_util.vim_util and
+                    method == 'continue_to_get_objects'):
+                try:
+                    return datastores_i[0].next()
+                except StopIteration:
+                    return None
+
+            # Sentinel that get_datastore's use of vim has changed
+            self.fail('Unexpected vim call in get_datastore: %s' % method)
+
+        return mock.patch.object(self.session, '_call_method',
+                                 side_effect=fake_call_method)
+
     def test_get_datastore(self):
         fake_objects = fake.FakeRetrieveResult()
         fake_objects.add_object(fake.Datastore())
@@ -168,9 +213,9 @@ class DsUtilTestCase(test.NoDBTestCase):
                                                False, "normal"))
         fake_objects.add_object(fake.Datastore("fake-ds-3", 4096, 2000,
                                                True, "inMaintenance"))
-        result = ds_util.get_datastore(
-            fake.FakeObjectRetrievalSession(fake_objects))
 
+        with self._mock_get_datastore_calls(fake_objects):
+            result = ds_util.get_datastore(self.session, 'fake-cluster')
         self.assertEqual("fake-ds", result.name)
         self.assertEqual(units.Ti, result.capacity)
         self.assertEqual(500 * units.Gi, result.freespace)
@@ -182,9 +227,10 @@ class DsUtilTestCase(test.NoDBTestCase):
         fake_objects.add_object(fake.Datastore("openstack-ds0"))
         fake_objects.add_object(fake.Datastore("fake-ds0"))
         fake_objects.add_object(fake.Datastore("fake-ds1"))
-        result = ds_util.get_datastore(
-            fake.FakeObjectRetrievalSession(fake_objects), None, None,
-            datastore_valid_regex)
+
+        with self._mock_get_datastore_calls(fake_objects):
+            result = ds_util.get_datastore(self.session, 'fake-cluster',
+                                           datastore_valid_regex)
         self.assertEqual("openstack-ds0", result.name)
 
     def test_get_datastore_with_token(self):
@@ -196,8 +242,9 @@ class DsUtilTestCase(test.NoDBTestCase):
         fake1 = fake.FakeRetrieveResult()
         fake1.add_object(fake.Datastore("ds2", 10 * units.Gi, 8 * units.Gi))
         fake1.add_object(fake.Datastore("ds3", 10 * units.Gi, 1 * units.Gi))
-        result = ds_util.get_datastore(
-            fake.FakeObjectRetrievalSession(fake0, fake1), None, None, regex)
+
+        with self._mock_get_datastore_calls(fake0, fake1):
+            result = ds_util.get_datastore(self.session, 'fake-cluster', regex)
         self.assertEqual("ds2", result.name)
 
     def test_get_datastore_with_list(self):
@@ -207,9 +254,10 @@ class DsUtilTestCase(test.NoDBTestCase):
         fake_objects.add_object(fake.Datastore("openstack-ds0"))
         fake_objects.add_object(fake.Datastore("openstack-ds1"))
         fake_objects.add_object(fake.Datastore("openstack-ds2"))
-        result = ds_util.get_datastore(
-            fake.FakeObjectRetrievalSession(fake_objects), None, None,
-            datastore_valid_regex)
+
+        with self._mock_get_datastore_calls(fake_objects):
+            result = ds_util.get_datastore(self.session, 'fake-cluster',
+                                           datastore_valid_regex)
         self.assertNotEqual("openstack-ds1", result.name)
 
     def test_get_datastore_with_regex_error(self):
@@ -224,9 +272,9 @@ class DsUtilTestCase(test.NoDBTestCase):
         # assertRaisesRegExp would have been a good choice instead of
         # try/catch block, but it's available only from Py 2.7.
         try:
-            ds_util.get_datastore(
-                fake.FakeObjectRetrievalSession(fake_objects), None, None,
-                datastore_invalid_regex)
+            with self._mock_get_datastore_calls(fake_objects):
+                ds_util.get_datastore(self.session, 'fake-cluster',
+                                      datastore_invalid_regex)
         except exception.DatastoreNotFound as e:
             self.assertEqual(exp_message, e.args[0])
         else:
@@ -234,19 +282,9 @@ class DsUtilTestCase(test.NoDBTestCase):
                       "message: %s" % exp_message)
 
     def test_get_datastore_without_datastore(self):
-
-        self.assertRaises(exception.DatastoreNotFound,
-                ds_util.get_datastore,
-                fake.FakeObjectRetrievalSession(None), host="fake-host")
-
         self.assertRaises(exception.DatastoreNotFound,
                 ds_util.get_datastore,
                 fake.FakeObjectRetrievalSession(None), cluster="fake-cluster")
-
-    def test_get_datastore_no_host_in_cluster(self):
-        self.assertRaises(exception.DatastoreNotFound,
-                          ds_util.get_datastore,
-                          fake.FakeObjectRetrievalSession(""), 'fake_cluster')
 
     def test_get_datastore_inaccessible_ds(self):
         data_store = fake.Datastore()
@@ -255,9 +293,10 @@ class DsUtilTestCase(test.NoDBTestCase):
         fake_objects = fake.FakeRetrieveResult()
         fake_objects.add_object(data_store)
 
-        self.assertRaises(exception.DatastoreNotFound,
-                ds_util.get_datastore,
-                fake.FakeObjectRetrievalSession(fake_objects))
+        with self._mock_get_datastore_calls(fake_objects):
+            self.assertRaises(exception.DatastoreNotFound,
+                              ds_util.get_datastore,
+                              self.session, 'fake-cluster')
 
     def test_get_datastore_ds_in_maintenance(self):
         data_store = fake.Datastore()
@@ -266,9 +305,10 @@ class DsUtilTestCase(test.NoDBTestCase):
         fake_objects = fake.FakeRetrieveResult()
         fake_objects.add_object(data_store)
 
-        self.assertRaises(exception.DatastoreNotFound,
-                ds_util.get_datastore,
-                fake.FakeObjectRetrievalSession(fake_objects))
+        with self._mock_get_datastore_calls(fake_objects):
+            self.assertRaises(exception.DatastoreNotFound,
+                              ds_util.get_datastore,
+                              self.session, 'fake-cluster')
 
     def _test_is_datastore_valid(self, accessible=True,
                                  maintenance_mode="normal",

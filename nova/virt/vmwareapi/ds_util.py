@@ -235,36 +235,24 @@ def _is_datastore_valid(propdict, datastore_regex):
              datastore_regex.match(propdict['summary.name'])))
 
 
-def get_datastore(session, cluster=None, host=None, datastore_regex=None):
+def get_datastore(session, cluster, datastore_regex=None):
     """Get the datastore list and choose the most preferable one."""
-    if cluster is None and host is None:
-        data_stores = session._call_method(vim_util, "get_objects",
-                    "Datastore", ["summary.type", "summary.name",
-                                  "summary.capacity", "summary.freeSpace",
-                                  "summary.accessible",
-                                  "summary.maintenanceMode"])
-    else:
-        if cluster is not None:
-            datastore_ret = session._call_method(
-                                        vim_util,
-                                        "get_dynamic_property", cluster,
-                                        "ClusterComputeResource", "datastore")
-        else:
-            datastore_ret = session._call_method(
-                                        vim_util,
-                                        "get_dynamic_property", host,
-                                        "HostSystem", "datastore")
+    datastore_ret = session._call_method(
+                                vim_util,
+                                "get_dynamic_property", cluster,
+                                "ClusterComputeResource", "datastore")
+    if datastore_ret is None:
+        raise exception.DatastoreNotFound()
 
-        if not datastore_ret:
-            raise exception.DatastoreNotFound()
-        data_store_mors = datastore_ret.ManagedObjectReference
-        data_stores = session._call_method(vim_util,
-                                "get_properties_for_a_collection_of_objects",
-                                "Datastore", data_store_mors,
-                                ["summary.type", "summary.name",
-                                 "summary.capacity", "summary.freeSpace",
-                                 "summary.accessible",
-                                 "summary.maintenanceMode"])
+    data_store_mors = datastore_ret.ManagedObjectReference
+    data_stores = session._call_method(vim_util,
+                            "get_properties_for_a_collection_of_objects",
+                            "Datastore", data_store_mors,
+                            ["summary.type", "summary.name",
+                             "summary.capacity", "summary.freeSpace",
+                             "summary.accessible",
+                             "summary.maintenanceMode"])
+
     best_match = None
     while data_stores:
         best_match = _select_datastore(data_stores, best_match,
