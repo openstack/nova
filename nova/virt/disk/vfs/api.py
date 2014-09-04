@@ -76,7 +76,7 @@ class VFS(object):
         self.imgfmt = imgfmt
         self.partition = partition
 
-    def setup(self):
+    def setup(self, mount=True):
         """Performs any one-time setup.
 
         Perform any one-time setup tasks to make the virtual filesystem

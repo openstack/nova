@@ -14,6 +14,8 @@
 
 import sys
 
+import mock
+
 from nova import exception
 from nova import test
 from nova.tests.unit.virt.disk.vfs import fakeguestfs
@@ -269,3 +271,15 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         self.assertIsNotNone(vfs.handle)
         self.assertTrue('ext3', vfs.get_image_fs())
         vfs.teardown()
+
+    @mock.patch.object(vfsimpl.VFSGuestFS, 'setup_os')
+    def test_setup_mount(self, setup_os):
+        vfs = vfsimpl.VFSGuestFS("img.qcow2", imgfmt='qcow2')
+        vfs.setup()
+        self.assertTrue(setup_os.called)
+
+    @mock.patch.object(vfsimpl.VFSGuestFS, 'setup_os')
+    def test_setup_mount_false(self, setup_os):
+        vfs = vfsimpl.VFSGuestFS("img.qcow2", imgfmt='qcow2')
+        vfs.setup(mount=False)
+        self.assertFalse(setup_os.called)

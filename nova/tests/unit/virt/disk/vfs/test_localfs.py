@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import tempfile
+
 import mock
 from oslo.config import cfg
 from oslo_concurrency import processutils
@@ -415,3 +417,35 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
                                         'value', '-s',
                                         'TYPE', '/dev/xyz',
                                         run_as_root=True)
+
+    @mock.patch.object(tempfile, 'mkdtemp')
+    @mock.patch.object(nova.virt.disk.mount.nbd, 'NbdMount')
+    def test_setup_mount(self, NbdMount, mkdtemp):
+        vfs = vfsimpl.VFSLocalFS("img.qcow2", imgfmt='qcow2')
+
+        mounter = mock.MagicMock()
+        mkdtemp.return_value = 'tmp/'
+        NbdMount.return_value = mounter
+
+        vfs.setup()
+
+        self.assertTrue(mkdtemp.called)
+        NbdMount.assert_called_once_with(
+            'img.qcow2', 'tmp/', None)
+        mounter.do_mount.assert_called_once_with()
+
+    @mock.patch.object(tempfile, 'mkdtemp')
+    @mock.patch.object(nova.virt.disk.mount.nbd, 'NbdMount')
+    def test_setup_mount_false(self, NbdMount, mkdtemp):
+        vfs = vfsimpl.VFSLocalFS("img.qcow2", imgfmt='qcow2')
+
+        mounter = mock.MagicMock()
+        mkdtemp.return_value = 'tmp/'
+        NbdMount.return_value = mounter
+
+        vfs.setup(mount=False)
+
+        self.assertTrue(mkdtemp.called)
+        NbdMount.assert_called_once_with(
+            'img.qcow2', 'tmp/', None)
+        self.assertFalse(mounter.do_mount.called)

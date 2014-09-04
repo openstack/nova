@@ -60,22 +60,23 @@ class VFSLocalFS(vfs.VFS):
         self.imgdir = imgdir
         self.mount = None
 
-    def setup(self):
+    def setup(self, mount=True):
         self.imgdir = tempfile.mkdtemp(prefix="openstack-vfs-localfs")
         try:
             if self.imgfmt == "raw":
                 LOG.debug("Using LoopMount")
-                mount = loop.LoopMount(self.imgfile,
-                                       self.imgdir,
-                                       self.partition)
-            else:
-                LOG.debug("Using NbdMount")
-                mount = nbd.NbdMount(self.imgfile,
+                mnt = loop.LoopMount(self.imgfile,
                                      self.imgdir,
                                      self.partition)
-            if not mount.do_mount():
-                raise exception.NovaException(mount.error)
-            self.mount = mount
+            else:
+                LOG.debug("Using NbdMount")
+                mnt = nbd.NbdMount(self.imgfile,
+                                   self.imgdir,
+                                   self.partition)
+            if mount:
+                if not mnt.do_mount():
+                    raise exception.NovaException(mnt.error)
+            self.mount = mnt
         except Exception as e:
             with excutils.save_and_reraise_exception():
                 LOG.debug("Failed to mount image %(ex)s)", {'ex': e})
