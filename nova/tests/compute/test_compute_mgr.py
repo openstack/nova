@@ -145,6 +145,48 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertEqual(vm_states.BUILDING, instance.vm_state)
         self.assertEqual(task_states.BLOCK_DEVICE_MAPPING, instance.task_state)
 
+    def test_reschedule_maintains_context(self):
+        # override tracker with a version that causes a reschedule
+        class FakeResourceTracker(object):
+            def instance_claim(self, context, instance, limits):
+                raise test.TestingException()
+
+        self.mox.StubOutWithMock(self.compute, '_get_resource_tracker')
+        self.mox.StubOutWithMock(self.compute, '_reschedule_or_error')
+        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
+                                 'get_by_instance_uuid')
+        instance = fake_instance.fake_instance_obj(self.context)
+
+        objects.BlockDeviceMappingList.get_by_instance_uuid(
+                mox.IgnoreArg(), instance.uuid).AndReturn([])
+
+        node = 'fake_node'
+        self.compute._get_resource_tracker(node).AndReturn(
+            FakeResourceTracker())
+
+        self.admin_context = False
+
+        def fake_retry_or_error(context, *args, **kwargs):
+            if context.is_admin:
+                self.admin_context = True
+
+        # NOTE(vish): we could use a mos parameter matcher here but it leads
+        #             to a very cryptic error message, so use the same method
+        #             as the allocate_network_maintains_context test.
+        self.compute._reschedule_or_error(mox.IgnoreArg(), instance,
+                mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg()).WithSideEffects(fake_retry_or_error)
+
+        self.mox.ReplayAll()
+
+        self.assertRaises(test.TestingException,
+                          self.compute._build_instance, self.context, {}, {},
+                          None, None, None, True, node, instance, {}, False)
+        self.assertFalse(self.admin_context,
+                         "_reschedule_or_error called with admin context")
+
     def test_allocate_network_fails(self):
         self.flags(network_allocate_retries=0)
 
