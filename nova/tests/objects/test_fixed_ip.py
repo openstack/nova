@@ -40,13 +40,16 @@ fake_fixed_ip = {
     'leased': False,
     'reserved': False,
     'host': None,
+    'network': None,
+    'virtual_interface': None,
+    'floating_ips': [],
     }
 
 
 class _TestFixedIPObject(object):
     def _compare(self, obj, db_obj):
         for field in obj.fields:
-            if field in ('virtual_interface', 'default_route'):
+            if field in ('default_route', 'floating_ips'):
                 continue
             if field in fixed_ip.FIXED_IP_OPTIONAL_ATTRS:
                 if obj.obj_attr_is_set(field) and db_obj[field] is not None:
@@ -256,6 +259,10 @@ class _TestFixedIPObject(object):
         self.assertEqual(1, len(fixedips))
         get.assert_called_once_with(self.context, 123)
         self._compare(fixedips[0], fake_fixed_ip)
+
+    def test_floating_ips_do_not_lazy_load(self):
+        fixedip = fixed_ip.FixedIP()
+        self.assertRaises(NotImplementedError, lambda: fixedip.floating_ips)
 
     @mock.patch('nova.db.fixed_ip_bulk_create')
     def test_bulk_create(self, bulk):

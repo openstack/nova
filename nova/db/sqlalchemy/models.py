@@ -891,6 +891,14 @@ class FixedIp(BASE, NovaBase):
                                 'FixedIp.instance_uuid == Instance.uuid,'
                                 'FixedIp.deleted == 0,'
                                 'Instance.deleted == 0)')
+    virtual_interface = orm.relationship(VirtualInterface,
+                           backref=orm.backref('fixed_ips'),
+                           foreign_keys=virtual_interface_id,
+                           primaryjoin='and_('
+                                'FixedIp.virtual_interface_id == '
+                                'VirtualInterface.id,'
+                                'FixedIp.deleted == 0,'
+                                'VirtualInterface.deleted == 0)')
 
 
 class FloatingIp(BASE, NovaBase):
