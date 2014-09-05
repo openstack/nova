@@ -624,7 +624,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                               'gateway': '192.168.1.1',
                               'gateway_v6': '2001:db8:0:1::1',
                               'ip6s': [{'enabled': '1',
-                                        'ip': '2001:db8:0:1::1',
+                                        'ip': '2001:db8:0:1:dcad:beff:feef:1',
                                         'netmask': 64,
                                         'gateway': '2001:db8:0:1::1'}],
                               'ips': [{'enabled': '1',
@@ -934,7 +934,7 @@ iface eth0 inet static
     gateway 192.168.1.1
     dns-nameservers 192.168.1.3 192.168.1.4
 iface eth0 inet6 static
-    address 2001:db8:0:1::1
+    address 2001:db8:0:1:dcad:beff:feef:1
     netmask 64
     gateway 2001:db8:0:1::1
 """

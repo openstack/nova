@@ -1648,7 +1648,8 @@ class ComputeTestCase(BaseTestCase):
             instance = instances[0]
 
             self.assertEqual(instance['access_ip_v4'], '192.168.1.100')
-            self.assertEqual(instance['access_ip_v6'], '2001:db8:0:1::1')
+            self.assertEqual(instance['access_ip_v6'],
+                             '2001:db8:0:1:dcad:beff:feef:1')
         finally:
             db.instance_destroy(self.context, instance['uuid'])
 

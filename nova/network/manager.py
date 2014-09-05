@@ -275,10 +275,6 @@ class NetworkManager(manager.Manager):
 
         self.servicegroup_api = servicegroup.API()
 
-        # NOTE(tr3buchet: unless manager subclassing NetworkManager has
-        #                 already imported ipam, import nova ipam here
-        if not hasattr(self, 'ipam'):
-            self._import_ipam_lib('nova.network.nova_ipam_lib')
         l3_lib = kwargs.get("l3_lib", CONF.l3_lib)
         self.l3driver = importutils.import_object(l3_lib)
 
@@ -286,9 +282,6 @@ class NetworkManager(manager.Manager):
 
         super(NetworkManager, self).__init__(service_name='network',
                                              *args, **kwargs)
-
-    def _import_ipam_lib(self, ipam_lib):
-        self.ipam = importutils.import_module(ipam_lib).get_ipam_lib(self)
 
     @staticmethod
     def _uses_shared_ip(network):
@@ -583,105 +576,76 @@ class NetworkManager(manager.Manager):
         where network = dict containing pertinent data from a network db object
         and info = dict containing pertinent networking data
         """
-        use_slave = kwargs.get('use_slave') or False
-
         if not uuidutils.is_uuid_like(instance_id):
             instance_id = instance_uuid
         instance_uuid = instance_id
         LOG.debug('Get instance network info', instance_uuid=instance_uuid)
 
-        vifs = objects.VirtualInterfaceList.get_by_instance_uuid(
-                context, instance_uuid, use_slave=use_slave)
-        networks = {}
+        try:
+            fixed_ips = objects.FixedIPList.get_by_instance_uuid(
+                    context, instance_uuid)
+        except exception.FixedIpNotFoundForInstance:
+            fixed_ips = []
 
-        for vif in vifs:
-            if vif.network_id is not None:
-                network = self._get_network_by_id(context, vif.network_id)
-                networks[vif.uuid] = network
-
-        nw_info = self.build_network_info_model(context, vifs, networks,
-                                                         rxtx_factor, host)
-        return nw_info
-
-    def build_network_info_model(self, context, vifs, networks,
-                                 rxtx_factor, instance_host):
-        """Builds a NetworkInfo object containing all network information
-        for an instance.
-        """
         nw_info = network_model.NetworkInfo()
-        for vif in vifs:
-            vif_dict = {'id': vif.uuid,
-                        'type': network_model.VIF_TYPE_BRIDGE,
-                        'address': vif.address}
 
-            # handle case where vif doesn't have a network
-            if not networks.get(vif.uuid):
-                vif = network_model.VIF(**vif_dict)
-                nw_info.append(vif)
+        vifs = {}
+        for fixed_ip in fixed_ips:
+            vif = fixed_ip.virtual_interface
+            if not vif:
                 continue
 
-            # get network dict for vif from args and build the subnets
-            network = networks[vif.uuid]
-            subnets = self._get_subnets_from_network(context, network, vif,
-                                                     instance_host)
+            if not fixed_ip.network:
+                continue
 
-            # if rxtx_cap data are not set everywhere, set to none
-            try:
-                rxtx_cap = network['rxtx_base'] * rxtx_factor
-            except (TypeError, KeyError):
-                rxtx_cap = None
+            if vif.uuid in vifs:
+                current = vifs[vif.uuid]
+            else:
+                current = {
+                    'id': vif.uuid,
+                    'type': network_model.VIF_TYPE_BRIDGE,
+                    'address': vif.address,
+                }
+                vifs[vif.uuid] = current
 
-            # get fixed_ips
-            v4_IPs = self.ipam.get_v4_ips_by_interface(context,
-                                                       network['uuid'],
-                                                       vif.uuid,
-                                                       network['project_id'])
-            v6_IPs = self.ipam.get_v6_ips_by_interface(context,
-                                                       network['uuid'],
-                                                       vif.uuid,
-                                                       network['project_id'])
+                net_dict = self._get_network_dict(fixed_ip.network)
+                network = network_model.Network(**net_dict)
+                subnets = self._get_subnets_from_network(context,
+                                                         fixed_ip.network,
+                                                         host)
+                network['subnets'] = subnets
+                current['network'] = network
+                try:
+                    current['rxtx_cap'] = (fixed_ip.network['rxtx_base'] *
+                                            rxtx_factor)
+                except (TypeError, KeyError):
+                    pass
+                if fixed_ip.network.cidr_v6 and vif.address:
+                    # NOTE(vish): I strongy suspect the v6 subnet is not used
+                    #             anywhere, but support it just in case
+                    # add the v6 address to the v6 subnet
+                    address = ipv6.to_global(fixed_ip.network.cidr_v6,
+                                             vif.address,
+                                             fixed_ip.network.project_id)
+                    model_ip = network_model.FixedIP(address=address)
+                    current['network']['subnets'][1]['ips'].append(model_ip)
 
-            # create model FixedIPs from these fixed_ips
-            network_IPs = [network_model.FixedIP(address=ip_address)
-                           for ip_address in v4_IPs + v6_IPs]
+            # add the v4 address to the v4 subnet
+            model_ip = network_model.FixedIP(address=str(fixed_ip.address))
+            for ip in fixed_ip.floating_ips:
+                floating_ip = network_model.IP(address=str(ip['address']),
+                                               type='floating')
+                model_ip.add_floating_ip(floating_ip)
+            current['network']['subnets'][0]['ips'].append(model_ip)
 
-            # get floating_ips for each fixed_ip
-            # add them to the fixed ip
-            for fixed_ip in network_IPs:
-                if fixed_ip['version'] == 6:
-                    continue
-                gfipbfa = self.ipam.get_floating_ips_by_fixed_address
-                floating_ips = gfipbfa(context, fixed_ip['address'])
-                floating_ips = [network_model.IP(address=str(ip['address']),
-                                                 type='floating')
-                                for ip in floating_ips]
-                for ip in floating_ips:
-                    fixed_ip.add_floating_ip(ip)
-
-            # add ips to subnets they belong to
-            for subnet in subnets:
-                subnet['ips'] = [fixed_ip for fixed_ip in network_IPs
-                                 if fixed_ip.is_in_subnet(subnet)]
-
-            # convert network into a Network model object
-            network = network_model.Network(**self._get_network_dict(network))
-
-            # since network currently has no subnets, easily add them all
-            network['subnets'] = subnets
-
-            # add network and rxtx cap to vif_dict
-            vif_dict['network'] = network
-            if rxtx_cap:
-                vif_dict['rxtx_cap'] = rxtx_cap
-
-            # create the vif model and add to network_info
-            vif = network_model.VIF(**vif_dict)
-            nw_info.append(vif)
+        for vif in vifs.values():
+            nw_info.append(network_model.VIF(**vif))
 
         LOG.debug('Built network info: |%s|', nw_info)
         return nw_info
 
-    def _get_network_dict(self, network):
+    @staticmethod
+    def _get_network_dict(network):
         """Returns the dict representing necessary and meta network fields."""
         # get generic network fields
         network_dict = {'id': network['uuid'],
@@ -695,15 +659,48 @@ class NetworkManager(manager.Manager):
 
         return network_dict
 
-    def _get_subnets_from_network(self, context, network,
-                                  vif, instance_host=None):
-        """Returns the 1 or 2 possible subnets for a nova network."""
-        # get subnets
-        ipam_subnets = self.ipam.get_subnets_by_net_id(context,
-                           network['project_id'], network['uuid'], vif.uuid)
+    @staticmethod
+    def _extract_subnets(network):
+        """Returns information about the IPv4 and IPv6 subnets
+           associated with a Neutron Network UUID.
+        """
+        subnet_v4 = {
+            'network_id': network.uuid,
+            'cidr': network.cidr,
+            'gateway': network.gateway,
+            'dhcp_server': getattr(network, 'dhcp_server'),
+            'broadcast': network.broadcast,
+            'netmask': network.netmask,
+            'version': 4,
+            'dns1': network.dns1,
+            'dns2': network.dns2}
+        # TODO(tr3buchet): I'm noticing we've assumed here that all dns is v4.
+        #                  this is probably bad as there is no way to add v6
+        #                  dns to nova
+        subnet_v6 = {
+            'network_id': network.uuid,
+            'cidr': network.cidr_v6,
+            'gateway': network.gateway_v6,
+            'dhcp_server': None,
+            'broadcast': None,
+            'netmask': network.netmask_v6,
+            'version': 6,
+            'dns1': None,
+            'dns2': None}
 
+        def ips_to_strs(net):
+            for key, value in net.items():
+                if isinstance(value, netaddr.ip.BaseIP):
+                    net[key] = str(value)
+            return net
+
+        return [ips_to_strs(subnet_v4), ips_to_strs(subnet_v6)]
+
+    def _get_subnets_from_network(self, context, network, instance_host=None):
+        """Returns the 1 or 2 possible subnets for a nova network."""
+        extracted_subnets = self._extract_subnets(network)
         subnets = []
-        for subnet in ipam_subnets:
+        for subnet in extracted_subnets:
             subnet_dict = {'cidr': subnet['cidr'],
                            'gateway': network_model.IP(
                                              address=subnet['gateway'],
@@ -725,19 +722,7 @@ class NetworkManager(manager.Manager):
                     subnet_object.add_dns(
                          network_model.IP(address=subnet[k], type='dns'))
 
-            # get the routes for this subnet
-            # NOTE(tr3buchet): default route comes from subnet gateway
-            if subnet.get('id'):
-                routes = self.ipam.get_routes_by_ip_block(context,
-                                         subnet['id'], network['project_id'])
-                for route in routes:
-                    cidr = netaddr.IPNetwork('%s/%s' % (route['destination'],
-                                                        route['netmask'])).cidr
-                    subnet_object.add_route(
-                            network_model.Route(cidr=str(cidr),
-                                                gateway=network_model.IP(
-                                                    address=route['gateway'],
-                                                    type='gateway')))
+            subnet_object['ips'] = []
 
             subnets.append(subnet_object)
 
