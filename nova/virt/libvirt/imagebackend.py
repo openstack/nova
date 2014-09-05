@@ -506,7 +506,7 @@ class Rbd(Image):
     SUPPORTS_CLONE = True
 
     def __init__(self, instance=None, disk_name=None, path=None, **kwargs):
-        super(Rbd, self).__init__("block", "rbd", is_block_dev=True)
+        super(Rbd, self).__init__("block", "rbd", is_block_dev=False)
         if path:
             try:
                 self.rbd_name = path.split('/')[1]
