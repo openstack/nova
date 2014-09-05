@@ -22,7 +22,7 @@ import six
 
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LE
+from nova.i18n import _LE, _LI
 from nova import image
 from nova import keymgr
 from nova.openstack.common import excutils
@@ -355,8 +355,15 @@ class Raw(Image):
         self.correct_format()
 
     def _get_driver_format(self):
-        data = images.qemu_img_info(self.path)
-        return data.file_format or 'raw'
+        try:
+            data = images.qemu_img_info(self.path)
+            return data.file_format
+        except exception.InvalidDiskInfo as e:
+            LOG.info(_LI('Failed to get image info from %(path)s, '
+                          'error was %(error)s'),
+                      {'path': self.path,
+                       'error': e})
+            return 'raw'
 
     def _supports_encryption(self):
         # NOTE(dgenin): Kernel, ramdisk and disk.config are fetched using

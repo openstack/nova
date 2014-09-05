@@ -49,10 +49,16 @@ def qemu_img_info(path):
     # TODO(mikal): this code should not be referring to a libvirt specific
     # flag.
     if not os.path.exists(path) and CONF.libvirt.images_type != 'rbd':
-        return imageutils.QemuImgInfo()
+        msg = (_("Path does not exist %(path)s") % {'path': path})
+        raise exception.InvalidDiskInfo(reason=msg)
 
     out, err = utils.execute('env', 'LC_ALL=C', 'LANG=C',
                              'qemu-img', 'info', path)
+    if not out:
+        msg = (_("Failed to run qemu-img info on %(path)s : %(error)s") %
+               {'path': path, 'error': err})
+        raise exception.InvalidDiskInfo(reason=msg)
+
     return imageutils.QemuImgInfo(out)
 
 

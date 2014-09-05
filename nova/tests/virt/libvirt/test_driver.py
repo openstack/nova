@@ -10691,7 +10691,7 @@ class LibvirtUtilsTestCase(test.TestCase):
     def test_create_cow_image(self):
         self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(utils, 'execute')
-        rval = ('', '')
+        rval = ('stdout', None)
         os.path.exists('/some/path').AndReturn(True)
         utils.execute('env', 'LC_ALL=C', 'LANG=C',
                       'qemu-img', 'info', '/some/path').AndReturn(rval)
