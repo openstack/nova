@@ -2138,3 +2138,19 @@ class LibvirtConfigGuestIDMap(LibvirtConfigBaseTest):
         self.assertEqual(2, obj.start)
         self.assertEqual(20000, obj.target)
         self.assertEqual(5, obj.count)
+
+
+class LibvirtConfigMemoryBalloonTest(LibvirtConfigBaseTest):
+
+    def test_config_memory_balloon_period(self):
+        balloon = config.LibvirtConfigMemoryBalloon()
+        balloon.model = 'fake_virtio'
+        balloon.period = 11
+
+        xml = balloon.to_xml()
+        expected_xml = """
+        <memballoon model='fake_virtio'>
+            <stats period='11'/>
+        </memballoon>"""
+
+        self.assertXmlEqual(expected_xml, xml)

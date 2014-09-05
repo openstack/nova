@@ -230,6 +230,11 @@ libvirt_opts = [
                     'UUID exposed to guest in the virtual BIOS. Permitted '
                     'options are "hardware", "os", "none" or "auto" '
                     '(default).'),
+    cfg.IntOpt('mem_stats_period_seconds',
+                default=10,
+                help='A number of seconds to memory usage statistics period. '
+                     'Zero or negative value mean to disable memory usage '
+                     'statistics.')
     ]
 
 CONF = cfg.CONF
@@ -3828,6 +3833,17 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest.add_device(bark)
             else:
                 raise exception.InvalidWatchdogAction(action=watchdog_action)
+
+        # Memory balloon device only support 'qemu/kvm' and 'xen' hypervisor
+        if (CONF.libvirt.virt_type in ('xen', 'qemu', 'kvm') and
+                CONF.libvirt.mem_stats_period_seconds > 0):
+            balloon = vconfig.LibvirtConfigMemoryBalloon()
+            if CONF.libvirt.virt_type in ('qemu', 'kvm'):
+                balloon.model = 'virtio'
+            else:
+                balloon.model = 'xen'
+            balloon.period = CONF.libvirt.mem_stats_period_seconds
+            guest.add_device(balloon)
 
         return guest
 

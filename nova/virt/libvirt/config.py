@@ -1237,6 +1237,21 @@ class LibvirtConfigGuestVideo(LibvirtConfigGuestDevice):
         return dev
 
 
+class LibvirtConfigMemoryBalloon(LibvirtConfigGuestDevice):
+    def __init__(self, **kwargs):
+        super(LibvirtConfigMemoryBalloon, self).__init__(
+            root_name='memballoon',
+            **kwargs)
+        self.model = None
+        self.period = None
+
+    def format_dom(self):
+        dev = super(LibvirtConfigMemoryBalloon, self).format_dom()
+        dev.set('model', str(self.model))
+        dev.append(etree.Element('stats', period=str(self.period)))
+        return dev
+
+
 class LibvirtConfigGuestController(LibvirtConfigGuestDevice):
 
     def __init__(self, **kwargs):
