@@ -21,14 +21,12 @@ from nova.api.openstack import extensions
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.openstack.common import log as logging
 
 CONF = cfg.CONF
 CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
 CONF.import_opt('public_interface', 'nova.network.linux_net')
 
 
-LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'floating_ips_bulk')
 
 
