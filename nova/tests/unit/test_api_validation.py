@@ -562,33 +562,63 @@ class NameTestCase(APIValidationTestCase):
                                    req=FakeRequest()))
         self.assertEqual('Validation succeeded.',
                          self.post(body={'foo': 'a'}, req=FakeRequest()))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': u'\u0434'}, req=FakeRequest()))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': u'\u0434\u2006\ufffd'},
+                                   req=FakeRequest()))
 
     def test_validate_name_fails(self):
-        pattern = "'^(?! )[a-zA-Z0-9. _-]*(?<! )$'"
-        detail = ("Invalid input for field/attribute foo. Value:  ."
-                  " ' ' does not match %s") % pattern
+        detail = (u"Invalid input for field/attribute foo. Value:  ."
+                  " ' ' does not match .*")
         self.check_validation_error(self.post, body={'foo': ' '},
                                     expected_detail=detail)
 
         detail = ("Invalid input for field/attribute foo. Value:  server."
-                  " ' server' does not match %s") % pattern
+                  " ' server' does not match .*")
         self.check_validation_error(self.post, body={'foo': ' server'},
                                     expected_detail=detail)
 
         detail = ("Invalid input for field/attribute foo. Value: server ."
-                  " 'server ' does not match %s") % pattern
+                  " 'server ' does not match .*")
         self.check_validation_error(self.post, body={'foo': 'server '},
                                     expected_detail=detail)
 
         detail = ("Invalid input for field/attribute foo. Value:  a."
-                  " ' a' does not match %s") % pattern
+                  " ' a' does not match .*")
         self.check_validation_error(self.post, body={'foo': ' a'},
                                     expected_detail=detail)
 
         detail = ("Invalid input for field/attribute foo. Value: a ."
-                  " 'a ' does not match %s") % pattern
+                  " 'a ' does not match .*")
         self.check_validation_error(self.post, body={'foo': 'a '},
                                     expected_detail=detail)
+
+        # NOTE(stpierre): Quoting for the unicode values in the error
+        # messages below gets *really* messy, so we just wildcard it
+        # out. (e.g., '.* does not match'). In practice, we don't
+        # particularly care about that part of the error message.
+
+        # trailing unicode space
+        detail = (u"Invalid input for field/attribute foo. Value: a\xa0."
+                  u' .* does not match .*')
+        self.check_validation_error(self.post, body={'foo': u'a\xa0'},
+                                    expected_detail=detail)
+
+        # non-printable unicode
+        detail = (u"Invalid input for field/attribute foo. Value: \uffff."
+                  u" .* does not match .*")
+        self.check_validation_error(self.post, body={'foo': u'\uffff'},
+                                    expected_detail=detail)
+
+        # four-byte unicode, if supported by this python build
+        try:
+            detail = (u"Invalid input for field/attribute foo. Value: "
+                      u"\U00010000. .* does not match .*")
+            self.check_validation_error(self.post, body={'foo': u'\U00010000'},
+                                        expected_detail=detail)
+        except ValueError:
+            pass
 
 
 class TcpUdpPortTestCase(APIValidationTestCase):

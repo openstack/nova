@@ -25,6 +25,7 @@ from oslo.config import cfg
 from oslo.utils import strutils
 import six
 
+from nova.api.validation import parameter_types
 from nova import context
 from nova import db
 from nova import exception
@@ -50,7 +51,8 @@ LOG = logging.getLogger(__name__)
 # create flavor names in locales that use them, however flavor IDs are limited
 # to ascii characters.
 VALID_ID_REGEX = re.compile("^[\w\.\- ]*$")
-VALID_NAME_REGEX = re.compile("^[\w\.\- ]*$", re.UNICODE)
+VALID_NAME_REGEX = re.compile(parameter_types.valid_name_regex, re.UNICODE)
+
 # NOTE(dosaboy): This is supposed to represent the maximum value that we can
 # place into a SQL single precision float so that we can check whether values
 # are oversize. Postgres and MySQL both define this as their max whereas Sqlite
@@ -111,8 +113,8 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
     # ensure name does not contain any special characters
     valid_name = VALID_NAME_REGEX.search(name)
     if not valid_name:
-        msg = _("Flavor names can only contain alphanumeric characters, "
-                "periods, dashes, underscores and spaces.")
+        msg = _("Flavor names can only contain printable characters "
+                "and horizontal spaces.")
         raise exception.InvalidInput(reason=msg)
 
     # NOTE(vish): Internally, flavorid is stored as a string but it comes

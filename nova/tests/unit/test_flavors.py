@@ -381,14 +381,15 @@ class CreateInstanceTypeTest(test.TestCase):
         flavors.create(u'm1.\u5DE8\u5927', 6400, 100, 12000)
 
     def test_name_with_special_characters(self):
-        # Names can contain alphanumeric and [_.- ]
+        # Names can contain all printable characters
         flavors.create('_foo.bar-123', 64, 1, 120)
 
         # Ensure instance types raises InvalidInput for invalid characters.
-        self.assertInvalidInput('foobar#', 64, 1, 120)
+        self.assertInvalidInput('foobar\x00', 64, 1, 120)
 
-    def test_non_ascii_name_with_special_characters(self):
-        self.assertInvalidInput(u'm1.\u5DE8\u5927 #', 64, 1, 120)
+    def test_name_with_non_printable_characters(self):
+        # Names cannot contain printable characters
+        self.assertInvalidInput(u'm1.\u0868 #', 64, 1, 120)
 
     def test_name_length_checks(self):
         MAX_LEN = 255
