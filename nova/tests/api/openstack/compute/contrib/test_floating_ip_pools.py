@@ -15,7 +15,9 @@
 
 from lxml import etree
 
-from nova.api.openstack.compute.contrib import floating_ip_pools
+from nova.api.openstack.compute.contrib import floating_ip_pools as fipp_v2
+from nova.api.openstack.compute.plugins.v3 import floating_ip_pools as\
+                                                      fipp_v21
 from nova import context
 from nova import network
 from nova import test
@@ -26,18 +28,21 @@ def fake_get_floating_ip_pools(self, context):
     return ['nova', 'other']
 
 
-class FloatingIpPoolTest(test.NoDBTestCase):
+class FloatingIpPoolTestV21(test.NoDBTestCase):
+    floating_ip_pools = fipp_v21
+    url = '/v2/fake/os-floating-ip-pools'
+
     def setUp(self):
-        super(FloatingIpPoolTest, self).setUp()
+        super(FloatingIpPoolTestV21, self).setUp()
         self.stubs.Set(network.api.API, "get_floating_ip_pools",
                        fake_get_floating_ip_pools)
 
         self.context = context.RequestContext('fake', 'fake')
-        self.controller = floating_ip_pools.FloatingIPPoolsController()
+        self.controller = self.floating_ip_pools.FloatingIPPoolsController()
 
     def test_translate_floating_ip_pools_view(self):
         pools = fake_get_floating_ip_pools(None, self.context)
-        view = floating_ip_pools._translate_floating_ip_pools_view(pools)
+        view = self.floating_ip_pools._translate_floating_ip_pools_view(pools)
         self.assertIn('floating_ip_pools', view)
         self.assertEqual(view['floating_ip_pools'][0]['name'],
                          pools[0])
@@ -45,7 +50,7 @@ class FloatingIpPoolTest(test.NoDBTestCase):
                          pools[1])
 
     def test_floating_ips_pools_list(self):
-        req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ip-pools')
+        req = fakes.HTTPRequest.blank(self.url)
         res_dict = self.controller.index(req)
 
         pools = fake_get_floating_ip_pools(None, self.context)
@@ -53,9 +58,15 @@ class FloatingIpPoolTest(test.NoDBTestCase):
         self.assertEqual(res_dict, response)
 
 
-class FloatingIpPoolSerializerTest(test.NoDBTestCase):
+class FloatingIpPoolTestV2(FloatingIpPoolTestV21):
+    floating_ip_pools = fipp_v2
+
+
+class FloatingIpPoolSerializerTestV2(test.NoDBTestCase):
+    floating_ip_pools = fipp_v2
+
     def test_index_serializer(self):
-        serializer = floating_ip_pools.FloatingIPPoolsTemplate()
+        serializer = self.floating_ip_pools.FloatingIPPoolsTemplate()
         text = serializer.serialize(dict(
                 floating_ip_pools=[
                     dict(name='nova'),
