@@ -173,18 +173,14 @@ class FloatingIPController(object):
 
         # get the associated instance object (if any)
         instance = get_instance_by_floating_ip_addr(self, context, address)
-
-        # disassociate if associated
-        if floating_ip.get('fixed_ip_id'):
-            try:
-                disassociate_floating_ip(self, context, instance, address)
-            except exception.FloatingIpNotAssociated:
-                msg = ("Floating ip %s has already been disassociated, "
-                       "perhaps by another concurrent action.") % address
-                LOG.debug(msg)
-
-        # release ip from project
-        self.network_api.release_floating_ip(context, address)
+        try:
+            self.network_api.disassociate_and_release_floating_ip(
+                context, instance, floating_ip)
+        except exception.Forbidden:
+            raise webob.exc.HTTPForbidden()
+        except exception.CannotDisassociateAutoAssignedFloatingIP:
+            msg = _('Cannot disassociate auto assigned floating ip')
+            raise webob.exc.HTTPForbidden(explanation=msg)
         return webob.Response(status_int=202)
 
 
