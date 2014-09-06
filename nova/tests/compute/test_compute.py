@@ -11189,6 +11189,19 @@ class CheckRequestedImageTestCase(test.TestCase):
         self.compute_api._check_requested_image(self.context, image['id'],
                 image, self.instance_type)
 
+    def test_config_drive_option(self):
+        image = {'id': 1, 'status': 'active'}
+        image['properties'] = {'img_config_drive': 'optional'}
+        self.compute_api._check_requested_image(self.context, image['id'],
+                image, self.instance_type)
+        image['properties'] = {'img_config_drive': 'mandatory'}
+        self.compute_api._check_requested_image(self.context, image['id'],
+                image, self.instance_type)
+        image['properties'] = {'img_config_drive': 'bar'}
+        self.assertRaises(exception.InvalidImageConfigDrive,
+                          self.compute_api._check_requested_image,
+                          self.context, image['id'], image, self.instance_type)
+
 
 class ComputeHooksTestCase(test.BaseHookTestCase):
     def test_delete_instance_has_hook(self):
