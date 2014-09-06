@@ -372,11 +372,6 @@ class VMwareVMOps(object):
             upload_name = instance.image_ref
             upload_folder = '%s/%s' % (self._base_folder, upload_name)
 
-            # The vmdk meta-data file
-            uploaded_file_path = str(datastore.build_path(
-                    upload_folder,
-                    "%s.%s" % (upload_name, image_info.file_type)))
-
             session_vim = self._session._get_vim()
             cookies = session_vim.client.options.transport.cookiejar
 
@@ -493,129 +488,11 @@ class VMwareVMOps(object):
                                             dc_info.ref)
 
             if image_info.is_iso:
-                if instance.root_gb != 0:
-                    dest_vmdk_path = self._get_vmdk_path(datastore.name,
-                                                         instance.uuid,
-                                                         instance_name)
-                    # Create the blank virtual disk for the VM
-                    LOG.debug("Create blank virtual disk on %s",
-                              datastore.name, instance=instance)
-                    vm_util.create_virtual_disk(self._session,
-                                                dc_info.ref,
-                                                image_info.adapter_type,
-                                                image_info.disk_type,
-                                                dest_vmdk_path,
-                                                image_info.file_size_in_kb)
-                    LOG.debug("Blank virtual disk created on %s.",
-                              datastore.name, instance=instance)
-                    root_vmdk_path = dest_vmdk_path
-                else:
-                    root_vmdk_path = None
+                self._use_iso_image(vm_ref, vi)
+            elif image_info.linked_clone:
+                self._use_disk_image_as_linked_clone(vm_ref, vi)
             else:
-                # Extend the disk size if necessary
-                if not image_info.linked_clone:
-                    # If we are not using linked_clone, copy the image from
-                    # the cache into the instance directory.  If we are using
-                    # linked clone it is references from the cache directory
-                    dest_vmdk_path = self._get_vmdk_path(datastore.name,
-                            instance_name, instance_name)
-                    copy_spec = self.get_copy_virtual_disk_spec(
-                                        client_factory,
-                                        image_info.adapter_type,
-                                        image_info.disk_type)
-                    vm_util.copy_virtual_disk(self._session,
-                                              dc_info.ref,
-                                              uploaded_file_path,
-                                              dest_vmdk_path, copy_spec)
-
-                    root_vmdk_path = dest_vmdk_path
-                    self._extend_if_required(dc_info, image_info, instance,
-                                             root_vmdk_path)
-                else:
-                    upload_folder = '%s/%s' % (self._base_folder, upload_name)
-                    if instance.root_gb:
-                        root_vmdk_name = "%s.%s.vmdk" % (upload_name,
-                                                         instance.root_gb)
-                    else:
-                        root_vmdk_name = "%s.vmdk" % upload_name
-                    root_vmdk_path = str(datastore.build_path(
-                            upload_folder, root_vmdk_name))
-
-                    # Ensure only a single thread extends the image at once.
-                    # We do this by taking a lock on the name of the extended
-                    # image. This allows multiple threads to create resized
-                    # copies simultaneously, as long as they are different
-                    # sizes. Threads attempting to create the same resized copy
-                    # will be serialized, with only the first actually creating
-                    # the copy.
-                    #
-                    # Note that the object is in a per-nova cache directory,
-                    # so inter-nova locking is not a concern. Consequently we
-                    # can safely use simple thread locks.
-
-                    with lockutils.lock(root_vmdk_path,
-                                        lock_file_prefix='nova-vmware-image'):
-                        if not self._check_if_folder_file_exists(
-                                ds_browser,
-                                datastore.ref, datastore.name,
-                                upload_folder,
-                                root_vmdk_name):
-                            LOG.debug("Copying root disk of size %sGb",
-                                      instance.root_gb)
-
-                            copy_spec = self.get_copy_virtual_disk_spec(
-                                                client_factory,
-                                                image_info.adapter_type,
-                                                image_info.disk_type)
-
-                            # Create a copy of the base image, ensuring we
-                            # clean up on failure
-                            try:
-                                vm_util.copy_virtual_disk(self._session,
-                                                          dc_info.ref,
-                                                          uploaded_file_path,
-                                                          root_vmdk_path,
-                                                          copy_spec)
-                            except Exception as e:
-                                with excutils.save_and_reraise_exception():
-                                    LOG.error(_LE('Failed to copy cached '
-                                                  'image %(source)s to '
-                                                  '%(dest)s for resize: '
-                                                  '%(error)s'),
-                                              {'source': uploaded_file_path,
-                                               'dest': root_vmdk_path,
-                                               'error': e.message})
-                                    try:
-                                        ds_util.file_delete(self._session,
-                                                            root_vmdk_path,
-                                                            dc_info.ref)
-                                    except vexc.FileNotFoundException:
-                                        # File was never created: cleanup not
-                                        # required
-                                        pass
-
-                            # Resize the copy to the appropriate size. No need
-                            # for cleanup up here, as _extend_virtual_disk
-                            # already does it
-                            self._extend_if_required(dc_info, image_info,
-                                                     instance, root_vmdk_path)
-
-            # Attach the root disk to the VM.
-            if root_vmdk_path is not None:
-                self._volumeops.attach_disk_to_vm(
-                                    vm_ref,
-                                    instance,
-                                    image_info.adapter_type,
-                                    image_info.disk_type,
-                                    root_vmdk_path,
-                                    instance.root_gb * units.Mi,
-                                    image_info.linked_clone)
-
-            if image_info.is_iso:
-                self._attach_cdrom_to_vm(
-                    vm_ref, instance,
-                    datastore.ref,
-                    uploaded_file_path)
+                self._use_disk_image_as_full_clone(vm_ref, vi)
 
             if configdrive.required_by(instance):
                 self._configure_config_drive(
@@ -1481,9 +1358,8 @@ class VMwareVMOps(object):
         self.check_cache_folder(ds_name, ds_ref)
         # Check if the file exists or not.
         folder_ds_path = ds_util.DatastorePath(ds_name, folder_name)
-        file_exists = ds_util.file_exists(self._session, ds_browser,
-                                          folder_ds_path, file_name)
-        return file_exists
+        return ds_util.file_exists(
+                self._session, ds_browser, folder_ds_path, file_name)
 
     def inject_network_info(self, instance, network_info):
         """inject network info for specified instance."""
@@ -1605,6 +1481,142 @@ class VMwareVMOps(object):
                 raise exception.InterfaceDetachFailed(
                         instance_uuid=instance['uuid'])
         LOG.debug("Reconfigured VM to detach interface", instance=instance)
+
+    def _use_disk_image_as_full_clone(self, vm_ref, vi):
+        """Uses cached image disk by copying it into the VM directory."""
+
+        instance_folder = vi.instance_name
+        root_disk_name = "%s.vmdk" % vi.instance_name
+        root_disk_ds_loc = vi.datastore.build_path(instance_folder,
+                                                   root_disk_name)
+
+        client_factory = self._session._get_vim().client.factory
+        copy_spec = self.get_copy_virtual_disk_spec(
+                client_factory, vi.ii.adapter_type, vi.ii.disk_type)
+
+        vm_util.copy_virtual_disk(
+                self._session,
+                vi.dc_info.ref,
+                str(vi.cache_image_path),
+                str(root_disk_ds_loc),
+                copy_spec)
+
+        self._extend_if_required(
+                vi.dc_info, vi.ii, vi.instance, str(root_disk_ds_loc))
+
+        self._volumeops.attach_disk_to_vm(
+                vm_ref, vi.instance,
+                vi.ii.adapter_type, vi.ii.disk_type,
+                str(root_disk_ds_loc),
+                vi.root_gb * units.Mi, False)
+
+    def _sized_image_exists(self, sized_disk_ds_loc, ds_ref):
+        ds_browser = self._get_ds_browser(ds_ref)
+        return ds_util.file_exists(
+                self._session, ds_browser, sized_disk_ds_loc.parent,
+                sized_disk_ds_loc.basename)
+
+    def _use_disk_image_as_linked_clone(self, vm_ref, vi):
+        """Uses cached image as parent of a COW child in the VM directory."""
+
+        sized_image_disk_name = "%s.vmdk" % vi.ii.image_id
+        if vi.root_gb > 0:
+            sized_image_disk_name = "%s.%s.vmdk" % (vi.ii.image_id, vi.root_gb)
+        sized_disk_ds_loc = vi.cache_image_folder.join(sized_image_disk_name)
+
+        # Ensure only a single thread extends the image at once.
+        # We do this by taking a lock on the name of the extended
+        # image. This allows multiple threads to create resized
+        # copies simultaneously, as long as they are different
+        # sizes. Threads attempting to create the same resized copy
+        # will be serialized, with only the first actually creating
+        # the copy.
+        #
+        # Note that the object is in a per-nova cache directory,
+        # so inter-nova locking is not a concern. Consequently we
+        # can safely use simple thread locks.
+
+        with lockutils.lock(str(sized_disk_ds_loc),
+                            lock_file_prefix='nova-vmware-image'):
+
+            if not self._sized_image_exists(sized_disk_ds_loc,
+                                            vi.datastore.ref):
+                LOG.debug("Copying root disk of size %sGb", vi.root_gb)
+                try:
+                    client_factory = self._session._get_vim().client.factory
+                    copy_spec = self.get_copy_virtual_disk_spec(
+                            client_factory, vi.ii.adapter_type,
+                            vi.ii.disk_type)
+
+                    vm_util.copy_virtual_disk(
+                            self._session,
+                            vi.dc_info.ref,
+                            str(vi.cache_image_path),
+                            str(sized_disk_ds_loc),
+                            copy_spec)
+                except Exception as e:
+                    LOG.warning(_("Root disk file creation "
+                                  "failed - %s"), e)
+                    with excutils.save_and_reraise_exception():
+                        LOG.error(_LE('Failed to copy cached '
+                                      'image %(source)s to '
+                                      '%(dest)s for resize: '
+                                      '%(error)s'),
+                                  {'source': vi.cache_image_path,
+                                   'dest': sized_disk_ds_loc,
+                                   'error': e.message})
+                        try:
+                            ds_util.file_delete(self._session,
+                                                sized_disk_ds_loc,
+                                                vi.dc_info.ref)
+                        except vexc.FileNotFoundException:
+                            # File was never created: cleanup not
+                            # required
+                            pass
+
+                # Resize the copy to the appropriate size. No need
+                # for cleanup up here, as _extend_virtual_disk
+                # already does it
+                self._extend_if_required(
+                        vi.dc_info, vi.ii, vi.instance, str(sized_disk_ds_loc))
+
+        # Associate the sized image disk to the VM by attaching to the VM a
+        # COW child of said disk.
+        self._volumeops.attach_disk_to_vm(
+                vm_ref, vi.instance,
+                vi.ii.adapter_type, vi.ii.disk_type,
+                str(sized_disk_ds_loc),
+                vi.root_gb * units.Mi, vi.ii.linked_clone)
+
+    def _use_iso_image(self, vm_ref, vi):
+        """Uses cached image as a bootable virtual cdrom."""
+
+        self._attach_cdrom_to_vm(
+                vm_ref, vi.instance, vi.datastore.ref,
+                str(vi.cache_image_path))
+
+        # Optionally create and attach blank disk
+        if vi.root_gb > 0:
+            instance_folder = vi.instance_name
+            root_disk_name = "%s.vmdk" % vi.instance_name
+            root_disk_ds_loc = vi.datastore.build_path(instance_folder,
+                                                       root_disk_name)
+
+            # It is pointless to COW a blank disk
+            linked_clone = False
+
+            vm_util.create_virtual_disk(
+                    self._session, vi.dc_info.ref,
+                    vi.ii.adapter_type,
+                    vi.ii.disk_type,
+                    str(root_disk_ds_loc),
+                    vi.root_gb * units.Mi)
+
+            self._volumeops.attach_disk_to_vm(
+                    vm_ref, vi.instance,
+                    vi.ii.adapter_type, vi.ii.disk_type,
+                    str(root_disk_ds_loc),
+                    vi.root_gb * units.Mi, linked_clone)
 
 
 class VMwareVCVMOps(VMwareVMOps):
