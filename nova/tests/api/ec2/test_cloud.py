@@ -3199,3 +3199,54 @@ class CloudTestCaseNeutronProxy(test.NoDBTestCase):
         self.assertEqual(descript, group_descript)
         delete = self.cloud.delete_security_group
         self.assertTrue(delete(self.context, 'testgrp'))
+
+
+class FormatMappingTestCase(test.TestCase):
+
+    def test_format_mapping(self):
+        properties = {'block_device_mapping':
+                [{'guest_format': None, 'boot_index': 0,
+                  'no_device': None, 'volume_id': None,
+                  'volume_size': None, 'disk_bus': 'virtio',
+                  'image_id': None, 'source_type': 'snapshot',
+                  'device_type': 'disk',
+                  'snapshot_id': '993b31ac-452e-4fed-b745-7718385f1811',
+                  'destination_type': 'volume',
+                  'delete_on_termination': None},
+                 {'guest_format': None, 'boot_index': None,
+                  'no_device': None, 'volume_id': None,
+                  'volume_size': None, 'disk_bus': None,
+                  'image_id': None, 'source_type': 'snapshot',
+                  'device_type': None,
+                  'snapshot_id': 'b409a2de-1c79-46bf-aa7e-ebdb4bf427ef',
+                  'destination_type': 'volume',
+                  'delete_on_termination': None}],
+                 'checksum': '50bdc35edb03a38d91b1b071afb20a3c',
+                 'min_ram': '0', 'disk_format': 'qcow2',
+                 'image_name': 'cirros-0.3.0-x86_64-disk', 'bdm_v2': 'True',
+                 'image_id': '4fce9db9-d89e-4eea-8d20-e2bae15292c1',
+                 'root_device_name': '/dev/vda', 'container_format': 'bare',
+                 'min_disk': '0', 'size': '9761280'}
+        result = {'description': None,
+                  'imageOwnerId': '9fd1513f52f14fe49fa1c83e40c63541',
+                  'isPublic': False, 'imageId': 'ami-00000002',
+                  'imageState': 'available', 'architecture': None,
+                  'imageLocation': 'None (xb)',
+                  'rootDeviceType': 'instance-store',
+                  'rootDeviceName': '/dev/vda',
+                  'imageType': 'machine', 'name': 'xb'}
+        cloud._format_mappings(properties, result)
+        expected = {'architecture': None,
+                    'blockDeviceMapping':
+                    [{'ebs': {'snapshotId': 'snap-00000002'}}],
+                    'description': None,
+                    'imageId': 'ami-00000002',
+                    'imageLocation': 'None (xb)',
+                    'imageOwnerId': '9fd1513f52f14fe49fa1c83e40c63541',
+                    'imageState': 'available',
+                    'imageType': 'machine',
+                    'isPublic': False,
+                    'name': 'xb',
+                    'rootDeviceName': '/dev/vda',
+                    'rootDeviceType': 'instance-store'}
+        self.assertEqual(expected, result)
