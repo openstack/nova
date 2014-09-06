@@ -398,6 +398,16 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def get_serial_console(self, context, instance):
+        """Get connection info for a serial console.
+
+        :param context: security context
+        :param instance: nova.objects.instance.Instance
+
+        :returns an instance of console.type.ConsoleSerial
+        """
+        raise NotImplementedError()
+
     def get_diagnostics(self, instance):
         """Return data about VM diagnostics.
 

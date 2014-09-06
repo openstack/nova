@@ -2680,6 +2680,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return ctype.ConsoleSpice(host=host, port=ports[0], tlsPort=ports[1])
 
+    def get_serial_console(self, context, instance):
+        for host, port in self._get_serial_ports_from_instance(
+                instance, mode='bind'):
+            return ctype.ConsoleSerial(host=host, port=port)
+        raise exception.ConsoleTypeUnavailable(console_type='serial')
+
     @staticmethod
     def _supports_direct_io(dirpath):
 

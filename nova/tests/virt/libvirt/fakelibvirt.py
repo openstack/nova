@@ -537,6 +537,9 @@ class Domain(object):
       <source pty='/dev/pts/27'/>
       <target port='1'/>
     </serial>
+    <serial type='tcp'>
+      <source host="-1" service="-1" mode="bind"/>
+    </serial>
     <console type='file'>
       <source path='dummy.log'/>
       <target port='0'/>

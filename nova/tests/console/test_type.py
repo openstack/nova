@@ -57,3 +57,8 @@ class TypeTestCase(test.TestCase):
         self.assertEqual(6547, c.tlsPort)
         self.assertEqual(
             6547, c.get_connection_info('a-token', 'an-url')['tlsPort'])
+
+    def test_console_serial(self):
+        c = ctype.ConsoleSerial(host='127.0.0.1', port=8945)
+
+        self.assertIsInstance(c, ctype.Console)
