@@ -2577,8 +2577,6 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
                 'ram': {'reserved': 0, 'in_use': 10240},
                 'fixed_ips': {'reserved': 0, 'in_use': 4},
                 'cores': {'reserved': 0, 'in_use': 8}},
-                'headroom': {'cores': 2, 'ram': 0, 'fixed_ips': 1,
-                             'instances': 1},
                 'overs': ['cores', 'fixed_ips', 'instances', 'ram'],
                 'quotas': {'cores': 10, 'ram': 10240,
                            'fixed_ips': 5, 'instances': 5}}

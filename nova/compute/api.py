@@ -351,6 +351,30 @@ class API(base.Base):
             else:
                 raise exception.OnsetFileContentLimitExceeded()
 
+    def _get_headroom(self, quotas, usages, deltas):
+        headroom = dict((res, quotas[res] -
+                         (usages[res]['in_use'] + usages[res]['reserved']))
+                        for res in quotas.keys())
+        # If quota_cores is unlimited [-1]:
+        # - set cores headroom based on instances headroom:
+        if quotas.get('cores') == -1:
+            if deltas.get('cores'):
+                hc = headroom['instances'] * deltas['cores']
+                headroom['cores'] = hc / deltas.get('instances', 1)
+            else:
+                headroom['cores'] = headroom['instances']
+
+        # If quota_ram is unlimited [-1]:
+        # - set ram headroom based on instances headroom:
+        if quotas.get('ram') == -1:
+            if deltas.get('ram'):
+                hr = headroom['instances'] * deltas['ram']
+                headroom['ram'] = hr / deltas.get('instances', 1)
+            else:
+                headroom['ram'] = headroom['instances']
+
+        return headroom
+
     def _check_num_instances_quota(self, context, instance_type, min_count,
                                    max_count):
         """Enforce quota limits on number of instances created."""
@@ -369,7 +393,10 @@ class API(base.Base):
             # OK, we exceeded quota; let's figure out why...
             quotas = exc.kwargs['quotas']
             overs = exc.kwargs['overs']
-            headroom = exc.kwargs['headroom']
+            usages = exc.kwargs['usages']
+            deltas = {'instances': max_count,
+                      'cores': req_cores, 'ram': req_ram}
+            headroom = self._get_headroom(quotas, usages, deltas)
 
             allowed = headroom['instances']
             # Reduce 'allowed' instances in line with the cores & ram headroom
@@ -2555,7 +2582,8 @@ class API(base.Base):
         except exception.OverQuota as exc:
             quotas = exc.kwargs['quotas']
             overs = exc.kwargs['overs']
-            headroom = exc.kwargs['headroom']
+            usages = exc.kwargs['usages']
+            headroom = self._get_headroom(quotas, usages, deltas)
 
             resource = overs[0]
             used = quotas[resource] - headroom[resource]
