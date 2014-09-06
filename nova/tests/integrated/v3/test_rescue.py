@@ -25,7 +25,7 @@ class RescueJsonTest(test_servers.ServersSampleBase):
         }
         response = self._do_post('servers/%s/action' % uuid,
                                  'server-rescue-req', req_subs)
-        self._verify_response('server-rescue', req_subs, response, 202)
+        self._verify_response('server-rescue', req_subs, response, 200)
 
     def _unrescue(self, uuid):
         response = self._do_post('servers/%s/action' % uuid,
@@ -55,7 +55,7 @@ class RescueJsonTest(test_servers.ServersSampleBase):
         }
         response = self._do_post('servers/%s/action' % uuid,
                                  'server-rescue-req-with-image-ref', req_subs)
-        self._verify_response('server-rescue', req_subs, response, 202)
+        self._verify_response('server-rescue', req_subs, response, 200)
 
         # Do a server get to make sure that the 'RESCUE' state is set
         response = self._do_get('servers/%s' % uuid)

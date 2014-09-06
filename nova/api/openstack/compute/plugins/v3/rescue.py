@@ -41,7 +41,9 @@ class RescueController(wsgi.Controller):
         super(RescueController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    @wsgi.response(202)
+    # TODO(cyeoh): Should be responding here with 202 Accept
+    # because rescue is an async call, but keep to 200
+    # for backwards compatibility reasons.
     @extensions.expected_errors((400, 404, 409, 501))
     @wsgi.action('rescue')
     @validation.schema(rescue.rescue)
@@ -50,16 +52,16 @@ class RescueController(wsgi.Controller):
         context = req.environ["nova.context"]
         authorize(context)
 
-        if body['rescue'] and 'admin_password' in body['rescue']:
-            password = body['rescue']['admin_password']
+        if body['rescue'] and 'adminPass' in body['rescue']:
+            password = body['rescue']['adminPass']
         else:
             password = utils.generate_password()
 
         instance = common.get_instance(self.compute_api, context, id,
                                        want_objects=True)
         rescue_image_ref = None
-        if body['rescue'] and 'image_ref' in body['rescue']:
-            rescue_image_ref = body['rescue']['image_ref']
+        if body['rescue'] and 'rescue_image_ref' in body['rescue']:
+            rescue_image_ref = body['rescue']['rescue_image_ref']
 
         try:
             self.compute_api.rescue(context, instance,
@@ -77,10 +79,13 @@ class RescueController(wsgi.Controller):
                 explanation=non_rescuable.format_message())
 
         if CONF.enable_instance_password:
-            return {'admin_password': password}
+            return {'adminPass': password}
         else:
             return {}
 
+    # TODO(cyeoh): Should be responding here with 202 Accept
+    # because unrescue is an async call, but keep to 200
+    # for backwards compatibility reasons.
     @extensions.expected_errors((404, 409, 501))
     @wsgi.action('unrescue')
     def _unrescue(self, req, id, body):
