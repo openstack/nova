@@ -1329,6 +1329,15 @@ class ComputeManager(manager.Manager):
         original_context = context
         context = context.elevated()
 
+        # NOTE(danms): This method is deprecated, but could be called,
+        # and if it is, it will have an old megatuple for requested_networks.
+        if requested_networks is not None:
+            requested_networks_obj = objects.NetworkRequestList(
+                objects=[objects.NetworkRequest.from_tuple(t)
+                         for t in requested_networks])
+        else:
+            requested_networks_obj = None
+
         # If neutron security groups pass requested security
         # groups to allocate_for_instance()
         if request_spec and self.is_neutron_security_groups:
@@ -1361,8 +1370,8 @@ class ComputeManager(manager.Manager):
                 dhcp_options = self.driver.dhcp_options_for_instance(instance)
 
                 network_info = self._allocate_network(original_context,
-                        instance, requested_networks, macs, security_groups,
-                        dhcp_options)
+                        instance, requested_networks_obj, macs,
+                        security_groups, dhcp_options)
 
                 instance.vm_state = vm_states.BUILDING
                 instance.task_state = task_states.BLOCK_DEVICE_MAPPING
@@ -1952,9 +1961,6 @@ class ComputeManager(manager.Manager):
                           instance=instance)
 
             try:
-                # NOTE(danms): Temporary and transitional
-                if requested_networks:
-                    requested_networks = requested_networks.as_tuples()
                 self._build_and_run_instance(context, instance, image,
                         decoded_files, admin_password, requested_networks,
                         security_groups, block_device_mapping, node, limits,

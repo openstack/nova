@@ -89,7 +89,8 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(rpcapi, 'client')
 
         version_check = [
-            'deallocate_for_instance', 'deallocate_fixed_ip'
+            'deallocate_for_instance', 'deallocate_fixed_ip',
+            'allocate_for_instance',
         ]
         if method in version_check:
             rpcapi.client.can_send_version(mox.IgnoreArg()).AndReturn(True)
@@ -185,7 +186,7 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
         self._test_network_api('allocate_for_instance', rpc_method='call',
                 instance_id='fake_id', project_id='fake_id', host='fake_host',
                 rxtx_factor='fake_factor', vpn=False, requested_networks={},
-                macs=[], version='1.9')
+                macs=[], version='1.13')
 
     def test_deallocate_for_instance(self):
         instance = fake_instance.fake_instance_obj(context.get_admin_context())

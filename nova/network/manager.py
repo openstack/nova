@@ -161,14 +161,16 @@ class RPCAllocateFixedIP(object):
 
         vpn = kwargs.get('vpn')
         requested_networks = kwargs.get('requested_networks')
+        addresses_by_network = {}
+        if requested_networks is not None:
+            for request in requested_networks:
+                addresses_by_network[request.network_id] = request.address
 
         for network in networks:
-            address = None
-            if requested_networks is not None:
-                for address in (fixed_ip for (uuid, fixed_ip) in
-                                requested_networks if network['uuid'] == uuid):
-                    break
-
+            if 'uuid' in network and network['uuid'] in addresses_by_network:
+                address = addresses_by_network[network['uuid']]
+            else:
+                address = None
             # NOTE(vish): if we are not multi_host pass to the network host
             # NOTE(tr3buchet): but if we are, host came from instance['host']
             if not network['multi_host']:
@@ -245,7 +247,7 @@ class NetworkManager(manager.Manager):
         The one at a time part is to flatten the layout to help scale
     """
 
-    target = messaging.Target(version='1.12')
+    target = messaging.Target(version='1.13')
 
     # If True, this manager requires VIF to create a bridge.
     SHOULD_CREATE_BRIDGE = False
@@ -452,7 +454,8 @@ class NetworkManager(manager.Manager):
         #                 there is a better way to determine which networks
         #                 a non-vlan instance should connect to
         if requested_networks is not None and len(requested_networks) != 0:
-            network_uuids = [uuid for (uuid, fixed_ip) in requested_networks]
+            network_uuids = [request.network_id
+                             for request in requested_networks]
             networks = self._get_networks_by_uuids(context, network_uuids)
         else:
             try:
@@ -474,6 +477,12 @@ class NetworkManager(manager.Manager):
         project_id = kwargs['project_id']
         rxtx_factor = kwargs['rxtx_factor']
         requested_networks = kwargs.get('requested_networks')
+        if (requested_networks and
+                not isinstance(requested_networks,
+                               objects.NetworkRequestList)):
+            requested_networks = objects.NetworkRequestList(
+                objects=[objects.NetworkRequest.from_tuple(t)
+                         for t in requested_networks])
         vpn = kwargs['vpn']
         macs = kwargs['macs']
         admin_context = context.elevated()
@@ -1631,13 +1640,15 @@ class FlatManager(NetworkManager):
                             **kwargs):
         """Calls allocate_fixed_ip once for each network."""
         requested_networks = kwargs.get('requested_networks')
+        addresses_by_network = {}
+        if requested_networks is not None:
+            for request in requested_networks:
+                addresses_by_network[request.network_id] = request.address
         for network in networks:
-            address = None
-            if requested_networks is not None:
-                for address in (fixed_ip for (uuid, fixed_ip) in
-                                requested_networks if network['uuid'] == uuid):
-                    break
-
+            if network['uuid'] in addresses_by_network:
+                address = addresses_by_network[network['uuid']]
+            else:
+                address = None
             self.allocate_fixed_ip(context, instance_id,
                                    network, address=address)
 
@@ -1969,7 +1980,8 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
         """Determine which networks an instance should connect to."""
         # get networks associated with project
         if requested_networks is not None and len(requested_networks) != 0:
-            network_uuids = [uuid for (uuid, fixed_ip) in requested_networks]
+            network_uuids = [request.network_id
+                             for request in requested_networks]
             networks = self._get_networks_by_uuids(context, network_uuids)
         else:
             # NOTE(vish): Allocates network on demand so requires admin.
