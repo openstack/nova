@@ -378,20 +378,9 @@ class VMwareVMOps(object):
             ds_browser = self._get_ds_browser(datastore.ref)
             upload_file_name = upload_name + ".%s" % image_info.file_type
 
-            # Check if the timestamp file exists - if so then delete it. This
-            # will ensure that the aging will not delete a cache image if it
-            # is going to be used now.
             if CONF.remove_unused_base_images:
-                ds_path = datastore.build_path(self._base_folder)
-                path = self._imagecache.timestamp_folder_get(ds_path,
-                                                             upload_name)
-                # Lock to ensure that the spawn will not try and access a image
-                # that is currently being deleted on the datastore.
-                with lockutils.lock(str(path),
-                                    lock_file_prefix='nova-vmware-ts',
-                                    external=True):
-                    self._imagecache.timestamp_cleanup(dc_info.ref, ds_browser,
-                                                       path)
+                self._imagecache.enlist_image(
+                        image_info.image_id, datastore, dc_info.ref)
 
             # Check if the image exists in the datastore cache. If not the
             # image will be uploaded and cached.

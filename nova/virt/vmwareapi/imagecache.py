@@ -76,6 +76,21 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         except vexc.FileNotFoundException:
             LOG.debug("File not found: %s", ds_path)
 
+    def enlist_image(self, image_id, datastore, dc_ref):
+        ds_browser = self._get_ds_browser(datastore.ref)
+        cache_root_folder = datastore.build_path(self._base_folder)
+
+        # Check if the timestamp file exists - if so then delete it. This
+        # will ensure that the aging will not delete a cache image if it
+        # is going to be used now.
+        path = self.timestamp_folder_get(cache_root_folder, image_id)
+
+        # Lock to ensure that the spawn will not try and access a image
+        # that is currently being deleted on the datastore.
+        with lockutils.lock(str(path), lock_file_prefix='nova-vmware-ts',
+                            external=True):
+            self.timestamp_cleanup(dc_ref, ds_browser, path)
+
     def timestamp_folder_get(self, ds_path, image_id):
         """Returns the timestamp folder."""
         return ds_path.join(image_id)
