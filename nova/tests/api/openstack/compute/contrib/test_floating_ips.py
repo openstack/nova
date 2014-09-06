@@ -14,9 +14,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import contextlib
 import uuid
 
 from lxml import etree
+import mock
 import webob
 
 from nova.api.openstack.compute.contrib import floating_ips
@@ -102,6 +104,38 @@ def get_instance_by_floating_ip_addr(self, context, address):
     return None
 
 
+class FloatingIpTestNeutron(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FloatingIpTestNeutron, self).setUp()
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        self.controller = floating_ips.FloatingIPController()
+
+    def test_floatingip_delete(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips/1')
+        fip_val = {'address': '1.1.1.1', 'fixed_ip_id': '192.168.1.2'}
+        with contextlib.nested(
+            mock.patch.object(self.controller.network_api,
+                              'disassociate_floating_ip'),
+            mock.patch.object(self.controller.network_api,
+                              'disassociate_and_release_floating_ip'),
+            mock.patch.object(self.controller.network_api,
+                              'release_floating_ip'),
+            mock.patch.object(self.controller.network_api,
+                             'get_instance_id_by_floating_address',
+                              return_value=None),
+            mock.patch.object(self.controller.network_api,
+                              'get_floating_ip',
+                              return_value=fip_val)) as (
+                disoc_fip, dis_and_del, rel_fip, _, _):
+            self.controller.delete(req, 1)
+            self.assertFalse(disoc_fip.called)
+            self.assertFalse(rel_fip.called)
+            # Only disassociate_and_release_floating_ip is
+            # called if using neutron
+            self.assertTrue(dis_and_del.called)
+
+
 class FloatingIpTest(test.TestCase):
     floating_ip = "10.10.10.10"
     floating_ip_2 = "10.10.10.11"
@@ -163,6 +197,25 @@ class FloatingIpTest(test.TestCase):
     def tearDown(self):
         self._delete_floating_ip()
         super(FloatingIpTest, self).tearDown()
+
+    def test_floatingip_delete(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips/1')
+        fip_val = {'address': '1.1.1.1', 'fixed_ip_id': '192.168.1.2'}
+        with contextlib.nested(
+            mock.patch.object(self.controller.network_api,
+                              'disassociate_floating_ip'),
+            mock.patch.object(self.controller.network_api,
+                              'release_floating_ip'),
+            mock.patch.object(self.controller.network_api,
+                             'get_instance_id_by_floating_address',
+                              return_value=None),
+            mock.patch.object(self.controller.network_api,
+                              'get_floating_ip',
+                              return_value=fip_val)) as (
+                disoc_fip, rel_fip, _, _):
+            self.controller.delete(req, 1)
+            self.assertTrue(disoc_fip.called)
+            self.assertTrue(rel_fip.called)
 
     def test_translate_floating_ip_view(self):
         floating_ip_address = self.floating_ip
