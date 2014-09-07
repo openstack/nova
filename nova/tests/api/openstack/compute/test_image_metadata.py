@@ -19,6 +19,8 @@ import mock
 import webob
 
 from nova.api.openstack.compute import image_metadata
+from nova.api.openstack.compute.plugins.v3 import image_metadata \
+     as image_metadata_v21
 from nova import exception
 from nova.openstack.common import jsonutils
 from nova import test
@@ -33,11 +35,12 @@ def get_image_123():
     return copy.deepcopy(IMAGE_FIXTURES)[0]
 
 
-class ImageMetaDataTest(test.NoDBTestCase):
+class ImageMetaDataTestV21(test.NoDBTestCase):
+    controller_class = image_metadata_v21.ImageMetadataController
 
     def setUp(self):
-        super(ImageMetaDataTest, self).setUp()
-        self.controller = image_metadata.Controller()
+        super(ImageMetaDataTestV21, self).setUp()
+        self.controller = self.controller_class()
 
     @mock.patch('nova.image.api.API.get', return_value=get_image_123())
     def test_index(self, get_all_mocked):
@@ -243,7 +246,7 @@ class ImageMetaDataTest(test.NoDBTestCase):
         expected = copy.deepcopy(get_image_123())
         expected['properties'] = {}
         update_mocked.assert_called_once_with(mock.ANY, '123', expected,
-                                              data=None, purge_props=True)
+                                             data=None, purge_props=True)
 
         self.assertIsNone(res)
 
@@ -342,3 +345,22 @@ class ImageMetaDataTest(test.NoDBTestCase):
 
         self.assertRaises(webob.exc.HTTPForbidden,
                           self.controller.create, req, image_id, body)
+
+
+class ImageMetaDataTestV2(ImageMetaDataTestV21):
+    controller_class = image_metadata.Controller
+
+    # NOTE(cyeoh): This duplicate unittest is necessary for a race condition
+    # with the V21 unittests. It's mock issue.
+    @mock.patch('nova.image.api.API.update')
+    @mock.patch('nova.image.api.API.get', return_value=get_image_123())
+    def test_delete(self, _get_mocked, update_mocked):
+        req = fakes.HTTPRequest.blank('/v2/fake/images/123/metadata/key1')
+        req.method = 'DELETE'
+        res = self.controller.delete(req, '123', 'key1')
+        expected = copy.deepcopy(get_image_123())
+        expected['properties'] = {}
+        update_mocked.assert_called_once_with(mock.ANY, '123', expected,
+                                             data=None, purge_props=True)
+
+        self.assertIsNone(res)
