@@ -3277,8 +3277,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
-
-        if CONF.libvirt.virt_type == "lxc":
+        mount_rootfs = CONF.libvirt.virt_type == "lxc"
+        if mount_rootfs:
             fs = vconfig.LibvirtConfigGuestFilesys()
             fs.source_type = "mount"
             fs.source_dir = os.path.join(
@@ -3335,15 +3335,6 @@ class LibvirtDriver(driver.ComputeDriver):
                         block_device.prepend_dev(diskswap.target_dev))
                     instance.save()
 
-                for vol in block_device_mapping:
-                    connection_info = vol['connection_info']
-                    vol_dev = block_device.prepend_dev(vol['mount_device'])
-                    info = disk_mapping[vol_dev]
-                    cfg = self._connect_volume(connection_info, info)
-                    devices.append(cfg)
-                    vol['connection_info'] = connection_info
-                    vol.save()
-
             if 'disk.config' in disk_mapping:
                 image_type = self._get_configdrive_image_type()
                 diskconfig = self._get_guest_disk_config(instance,
@@ -3352,6 +3343,16 @@ class LibvirtDriver(driver.ComputeDriver):
                                                          inst_type,
                                                          image_type)
                 devices.append(diskconfig)
+
+        for vol in block_device.get_bdms_to_connect(block_device_mapping,
+                                                   mount_rootfs):
+            connection_info = vol['connection_info']
+            vol_dev = block_device.prepend_dev(vol['mount_device'])
+            info = disk_mapping[vol_dev]
+            cfg = self._connect_volume(connection_info, info)
+            devices.append(cfg)
+            vol['connection_info'] = connection_info
+            vol.save(nova_context.get_admin_context())
 
         for d in devices:
             self._set_cache_mode(d)

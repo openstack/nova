@@ -1323,6 +1323,46 @@ class LibvirtConnTestCase(test.TestCase,
             self.assertTrue(info['block_device_mapping'][0].save.called)
             self.assertTrue(info['block_device_mapping'][1].save.called)
 
+    def test_get_guest_config_lxc_with_attached_volume(self):
+        self.flags(virt_type='lxc', group='libvirt')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        conn_info = {'driver_volume_type': 'fake'}
+        info = {'block_device_mapping': driver_block_device.convert_volumes([
+                  fake_block_device.FakeDbBlockDeviceDict(
+                        {'id': 1,
+                         'source_type': 'volume', 'destination_type': 'volume',
+                         'boot_index': 0}),
+                  fake_block_device.FakeDbBlockDeviceDict(
+                        {'id': 2,
+                         'source_type': 'volume', 'destination_type': 'volume',
+                        }),
+                  fake_block_device.FakeDbBlockDeviceDict(
+                        {'id': 3,
+                         'source_type': 'volume', 'destination_type': 'volume',
+                        }),
+               ])}
+
+        info['block_device_mapping'][0]['connection_info'] = conn_info
+        info['block_device_mapping'][1]['connection_info'] = conn_info
+        info['block_device_mapping'][2]['connection_info'] = conn_info
+        info['block_device_mapping'][0]['mount_device'] = '/dev/vda'
+        info['block_device_mapping'][1]['mount_device'] = '/dev/vdc'
+        info['block_device_mapping'][2]['mount_device'] = '/dev/vdd'
+        with mock.patch.object(
+                driver_block_device.DriverVolumeBlockDevice, 'save'):
+            disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                                instance_ref, info)
+            cfg = conn._get_guest_config(instance_ref, [], {}, disk_info,
+                                        None, info)
+            self.assertIsInstance(cfg.devices[1],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertEqual(cfg.devices[1].target_dev, 'vdc')
+            self.assertIsInstance(cfg.devices[2],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertEqual(cfg.devices[2].target_dev, 'vdd')
+
     def test_get_guest_config_with_configdrive(self):
         # It's necessary to check if the architecture is power, because
         # power doesn't have support to ide, and so libvirt translate
