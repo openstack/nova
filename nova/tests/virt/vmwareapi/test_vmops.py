@@ -53,7 +53,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._session = driver.VMwareAPISession()
 
         self._virtapi = mock.Mock()
-        self._vmops = vmops.VMwareVCVMOps(self._session, self._virtapi, None)
+        self._vmops = vmops.VMwareVMOps(self._session, self._virtapi, None)
 
         self._image_id = nova.tests.image.fake.get_valid_image_id()
         self._instance_values = {
@@ -291,7 +291,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def _test_get_datacenter_ref_and_name(self, ds_ref_exists=False):
         instance_ds_ref = mock.Mock()
         instance_ds_ref.value = "ds-1"
-        _vcvmops = vmops.VMwareVCVMOps(self._session, None, None)
+        _vcvmops = vmops.VMwareVMOps(self._session, None, None)
         if ds_ref_exists:
             ds_ref = mock.Mock()
             ds_ref.value = "ds-1"
@@ -735,7 +735,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.virt.vmwareapi.ds_util.get_datastore')
     @mock.patch(
-        'nova.virt.vmwareapi.vmops.VMwareVCVMOps.get_datacenter_ref_and_name')
+        'nova.virt.vmwareapi.vmops.VMwareVMOps.get_datacenter_ref_and_name')
     @mock.patch('nova.virt.vmwareapi.vm_util.get_mo_id_from_instance',
                 return_value='fake_node_mo_id')
     @mock.patch('nova.virt.vmwareapi.vm_util.get_res_pool_ref',
@@ -893,10 +893,10 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                                           dest_file,
                                                           None)
 
-    @mock.patch.object(vmops.VMwareVCVMOps, 'get_copy_virtual_disk_spec',
+    @mock.patch.object(vmops.VMwareVMOps, 'get_copy_virtual_disk_spec',
                        return_value=None)
     @mock.patch.object(ds_util, 'get_datastore')
-    @mock.patch.object(vmops.VMwareVCVMOps, 'get_datacenter_ref_and_name')
+    @mock.patch.object(vmops.VMwareVMOps, 'get_datacenter_ref_and_name')
     def _test_get_spawn_vm_config_info(self,
                                        mock_get_datacenter_ref_and_name,
                                        mock_get_datastore,

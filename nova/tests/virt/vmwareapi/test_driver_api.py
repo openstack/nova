@@ -2114,9 +2114,9 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase,
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_snapshot(self):
-        # Ensure VMwareVCVMOps's get_copy_virtual_disk_spec is getting called
+        # Ensure VMwareVMOps's get_copy_virtual_disk_spec is getting called
         # two times
-        self.mox.StubOutWithMock(vmops.VMwareVCVMOps,
+        self.mox.StubOutWithMock(vmops.VMwareVMOps,
                                  'get_copy_virtual_disk_spec')
         self.conn._vmops.get_copy_virtual_disk_spec(
                 mox.IgnoreArg(), mox.IgnoreArg(),
@@ -2162,7 +2162,7 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase,
 
     @mock.patch.object(nova.virt.vmwareapi.vmware_images.VMwareImage,
                        'from_image')
-    @mock.patch.object(vmops.VMwareVCVMOps, 'get_copy_virtual_disk_spec')
+    @mock.patch.object(vmops.VMwareVMOps, 'get_copy_virtual_disk_spec')
     def test_spawn_with_sparse_image(self, mock_get_copy_virtual_disk_spec,
                                      mock_from_image):
         img_info = vmware_images.VMwareImage(

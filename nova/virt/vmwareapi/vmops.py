@@ -33,7 +33,6 @@ from nova import compute
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova.console import type as ctype
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _, _LE
@@ -163,17 +162,6 @@ class VMwareVMOps(object):
         self._datastore_browser_mapping = {}
         self._imagecache = imagecache.ImageCacheManager(self._session,
                                                         self._base_folder)
-
-    def list_instances(self):
-        """Lists the VM instances that are registered with the ESX host."""
-        LOG.debug("Getting list of instances")
-        vms = self._session._call_method(vim_util, "get_objects",
-                     "VirtualMachine",
-                     ["name", "runtime.connectionState"])
-        lst_vm_names = self._get_valid_vms_from_retrieve_result(vms)
-
-        LOG.debug("Got total of %s instances", str(len(lst_vm_names)))
-        return lst_vm_names
 
     def _extend_virtual_disk(self, instance, requested_size, name, dc_ref):
         service_content = self._session._get_vim().service_content
@@ -546,12 +534,6 @@ class VMwareVMOps(object):
         vm_util.reconfigure_vm(self._session, vm_ref, cdrom_attach_config_spec)
         LOG.debug("Reconfigured VM instance to attach cdrom %s",
                   file_path, instance=instance)
-
-    def get_copy_virtual_disk_spec(self, client_factory, adapter_type,
-                                   disk_type):
-        return vm_util.get_copy_virtual_disk_spec(client_factory,
-                                                  adapter_type,
-                                                  disk_type)
 
     def _create_vm_snapshot(self, instance, vm_ref):
         LOG.debug("Creating Snapshot of the VM instance", instance=instance)
@@ -1200,12 +1182,6 @@ class VMwareVMOps(object):
         return {'port': port,
                 'internal_access_path': None}
 
-    def get_vnc_console(self, instance):
-        """Return connection info for a vnc console using ESX logic."""
-        vnc_console = self._get_vnc_console_connection(instance)
-        vnc_console['host'] = CONF.vmware.host_ip
-        return ctype.ConsoleVNC(**vnc_console)
-
     @staticmethod
     def _get_machine_id_str(network_info):
         machine_id_str = ''
@@ -1273,19 +1249,6 @@ class VMwareVMOps(object):
                 "browser")
             self._datastore_browser_mapping[ds_ref.value] = ds_browser
         return ds_browser
-
-    def get_datacenter_ref_and_name(self, ds_ref):
-        """Get the datacenter name and the reference."""
-        map = self._datastore_dc_mapping.get(ds_ref.value)
-        if not map:
-            dc_obj = self._session._call_method(vim_util, "get_objects",
-                    "Datacenter", ["name"])
-            vm_util._cancel_retrieve_if_necessary(self._session, dc_obj)
-            map = DcInfo(ref=dc_obj.objects[0].obj,
-                         name=dc_obj.objects[0].propSet[0].val,
-                         vmFolder=self._get_vmfolder_ref())
-            self._datastore_dc_mapping[ds_ref.value] = map
-        return map
 
     def _get_host_ref_from_name(self, host_name):
         """Get reference to the host with the name specified."""
@@ -1603,14 +1566,6 @@ class VMwareVMOps(object):
                     vi.ii.adapter_type, vi.ii.disk_type,
                     str(root_disk_ds_loc),
                     vi.root_gb * units.Mi, linked_clone)
-
-
-class VMwareVCVMOps(VMwareVMOps):
-    """Management class for VM-related tasks.
-
-    Contains specializations to account for differences in vSphere API behavior
-    when invoked on Virtual Center instead of ESX host.
-    """
 
     def get_copy_virtual_disk_spec(self, client_factory, adapter_type,
                                    disk_type):
