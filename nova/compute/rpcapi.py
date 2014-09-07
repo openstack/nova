@@ -19,7 +19,6 @@ Client side of the compute RPC API.
 from oslo.config import cfg
 from oslo import messaging
 
-from nova import block_device
 from nova import exception
 from nova.i18n import _
 from nova.objects import base as objects_base
@@ -272,12 +271,6 @@ class ComputeAPI(object):
     '''
 
     VERSION_ALIASES = {
-        'grizzly': '2.27',
-        'havana': '2.47',
-        # NOTE(russellb) 'icehouse-compat' is the version that is supported by
-        # both havana and icehouse.  Later, 'icehouse' will be added that lists
-        # the maximum version supported by icehouse.
-        'icehouse-compat': '3.0',
         'icehouse': '3.23',
     }
 
@@ -294,11 +287,6 @@ class ComputeAPI(object):
         return rpc.get_client(target,
                               version_cap=version_cap,
                               serializer=serializer)
-
-    def _get_compat_version(self, current, havana_compat):
-        if not self.client.can_send_version(current):
-            return havana_compat
-        return current
 
     def _check_live_migration_api_version(self, server):
         # NOTE(angdraug): live migration involving a compute host running Nova
@@ -317,27 +305,14 @@ class ComputeAPI(object):
                            parameter for the remote method.
         :param host: This is the host to send the message to.
         '''
-        if self.client.can_send_version('3.0'):
-            version = '3.0'
-        elif self.client.can_send_version('2.48'):
-            version = '2.48'
-        else:
-            # NOTE(russellb) Havana compat
-            version = '2.14'
-            aggregate = jsonutils.to_primitive(aggregate)
-
+        version = '3.0'
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'add_aggregate_host',
                    aggregate=aggregate, host=host_param,
                    slave_info=slave_info)
 
     def add_fixed_ip_to_instance(self, ctxt, instance, network_id):
-        if self.client.can_send_version('3.12'):
-            version = '3.12'
-        else:
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.0')
-            instance = jsonutils.to_primitive(instance)
+        version = '3.12'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'add_fixed_ip_to_instance',
@@ -345,12 +320,7 @@ class ComputeAPI(object):
 
     def attach_interface(self, ctxt, instance, network_id, port_id,
                          requested_ip):
-        # NOTE(russellb) Havana compat
-        if self.client.can_send_version('3.17'):
-            version = '3.17'
-        else:
-            version = self._get_compat_version('3.0', '2.25')
-            instance = jsonutils.to_primitive(instance)
+        version = '3.17'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'attach_interface',
@@ -363,23 +333,12 @@ class ComputeAPI(object):
         version = '3.16'
         kw = {'instance': instance, 'volume_id': volume_id,
               'mountpoint': mountpoint, 'bdm': bdm}
-        if not self.client.can_send_version(version):
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.0')
-            kw['instance'] = jsonutils.to_primitive(
-                    objects_base.obj_to_primitive(instance))
-            del kw['bdm']
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'attach_volume', **kw)
 
     def change_instance_metadata(self, ctxt, instance, diff):
-        if self.client.can_send_version('3.7'):
-            version = '3.7'
-        else:
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.0')
-            instance = jsonutils.to_primitive(instance)
+        version = '3.7'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'change_instance_metadata',
@@ -406,8 +365,7 @@ class ComputeAPI(object):
         if self.client.can_send_version('3.29'):
             version = '3.29'
         else:
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.28')
+            version = '3.0'
             instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
@@ -417,8 +375,7 @@ class ComputeAPI(object):
 
     def confirm_resize(self, ctxt, instance, migration, host,
             reservations=None, cast=True):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.39')
+        version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(host, instance),
                 version=version)
         rpc_method = cctxt.cast if cast else cctxt.call
@@ -427,12 +384,7 @@ class ComputeAPI(object):
                           reservations=reservations)
 
     def detach_interface(self, ctxt, instance, port_id):
-        # NOTE(russellb) Havana compat
-        if self.client.can_send_version('3.17'):
-            version = '3.17'
-        else:
-            version = self._get_compat_version('3.0', '2.25')
-            instance = jsonutils.to_primitive(instance)
+        version = '3.17'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'detach_interface',
@@ -442,8 +394,7 @@ class ComputeAPI(object):
         if self.client.can_send_version('3.25'):
             version = '3.25'
         else:
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.0')
+            version = '3.0'
             instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
@@ -452,8 +403,7 @@ class ComputeAPI(object):
 
     def finish_resize(self, ctxt, instance, migration, image, disk_info,
             host, reservations=None):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.46')
+        version = '3.0'
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'finish_resize',
                    instance=instance, migration=migration,
@@ -461,8 +411,7 @@ class ComputeAPI(object):
 
     def finish_revert_resize(self, ctxt, instance, migration, host,
                              reservations=None):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.47')
+        version = '3.0'
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'finish_revert_resize',
                    instance=instance, migration=migration,
@@ -472,8 +421,7 @@ class ComputeAPI(object):
         if self.client.can_send_version('3.28'):
             version = '3.28'
         else:
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.0')
+            version = '3.0'
             instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
@@ -481,25 +429,18 @@ class ComputeAPI(object):
                           instance=instance, tail_length=tail_length)
 
     def get_console_pool_info(self, ctxt, console_type, host):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
+        version = '3.0'
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'get_console_pool_info',
                           console_type=console_type)
 
     def get_console_topic(self, ctxt, host):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
+        version = '3.0'
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'get_console_topic')
 
     def get_diagnostics(self, ctxt, instance):
-        if self.client.can_send_version('3.18'):
-            version = '3.18'
-        else:
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.0')
-            instance = jsonutils.to_primitive(instance)
+        version = '3.18'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'get_diagnostics', instance=instance)
@@ -513,24 +454,14 @@ class ComputeAPI(object):
         return cctxt.call(ctxt, 'get_instance_diagnostics', **kwargs)
 
     def get_vnc_console(self, ctxt, instance, console_type):
-        if self.client.can_send_version('3.2'):
-            version = '3.2'
-        else:
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.0')
-            instance = jsonutils.to_primitive(instance)
+        version = '3.2'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'get_vnc_console',
                           instance=instance, console_type=console_type)
 
     def get_spice_console(self, ctxt, instance, console_type):
-        if self.client.can_send_version('3.1'):
-            version = '3.1'
-        else:
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.24')
-            instance = jsonutils.to_primitive(instance)
+        version = '3.1'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'get_spice_console',
@@ -544,12 +475,7 @@ class ComputeAPI(object):
                           instance=instance, console_type=console_type)
 
     def validate_console_port(self, ctxt, instance, port, console_type):
-        if self.client.can_send_version('3.3'):
-            version = '3.3'
-        else:
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.26')
-            instance = jsonutils.to_primitive(instance)
+        version = '3.3'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'validate_console_port',
@@ -565,21 +491,18 @@ class ComputeAPI(object):
         :param mode:
         :param host: This is the host to send the message to.
         '''
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
+        version = '3.0'
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'host_maintenance_mode',
                           host=host_param, mode=mode)
 
     def host_power_action(self, ctxt, action, host):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
+        version = '3.0'
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'host_power_action', action=action)
 
     def inject_network_info(self, ctxt, instance):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.41')
+        version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'inject_network_info', instance=instance)
@@ -589,8 +512,7 @@ class ComputeAPI(object):
         if self.client.can_send_version('3.26'):
             version = '3.26'
         else:
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.0')
+            version = '3.0'
             instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'live_migration', instance=instance,
@@ -598,32 +520,21 @@ class ComputeAPI(object):
                    migrate_data=migrate_data)
 
     def pause_instance(self, ctxt, instance):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.36')
+        version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'pause_instance', instance=instance)
 
     def post_live_migration_at_destination(self, ctxt, instance,
             block_migration, host):
-        if self.client.can_send_version('3.14'):
-            version = '3.14'
-        else:
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.0')
-            instance = jsonutils.to_primitive(instance)
+        version = '3.14'
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'post_live_migration_at_destination',
             instance=instance, block_migration=block_migration)
 
     def pre_live_migration(self, ctxt, instance, block_migration, disk,
             host, migrate_data=None):
-        if self.client.can_send_version('3.19'):
-            version = '3.19'
-        else:
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.21')
-            instance = jsonutils.to_primitive(instance)
+        version = '3.19'
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'pre_live_migration',
                           instance=instance,
@@ -633,8 +544,7 @@ class ComputeAPI(object):
     def prep_resize(self, ctxt, image, instance, instance_type, host,
                     reservations=None, request_spec=None,
                     filter_properties=None, node=None):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.43')
+        version = '3.0'
         instance_type_p = jsonutils.to_primitive(instance_type)
         image_p = jsonutils.to_primitive(image)
         cctxt = self.client.prepare(server=host, version=version)
@@ -648,8 +558,7 @@ class ComputeAPI(object):
 
     def reboot_instance(self, ctxt, instance, block_device_info,
                         reboot_type):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.32')
+        version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'reboot_instance',
@@ -664,22 +573,7 @@ class ComputeAPI(object):
         # NOTE(danms): kwargs is only here for cells compatibility, don't
         # actually send it to compute
         extra = {'preserve_ephemeral': preserve_ephemeral}
-        if self.client.can_send_version('3.21'):
-            version = '3.21'
-        else:
-            bdms = block_device.legacy_mapping(bdms)
-            bdms = jsonutils.to_primitive(objects_base.obj_to_primitive(bdms))
-            if self.client.can_send_version('3.5'):
-                version = '3.5'
-            elif self.client.can_send_version('3.4'):
-                version = '3.4'
-                extra = {}
-            else:
-                # NOTE(russellb) Havana compat
-                version = self._get_compat_version('3.0', '2.22')
-                instance = jsonutils.to_primitive(instance)
-                extra = {}
-
+        version = '3.21'
         cctxt = self.client.prepare(server=_compute_host(host, instance),
                 version=version)
         cctxt.cast(ctxt, 'rebuild_instance',
@@ -691,8 +585,7 @@ class ComputeAPI(object):
                    **extra)
 
     def refresh_provider_fw_rules(self, ctxt, host):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
+        version = '3.0'
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'refresh_provider_fw_rules')
 
@@ -706,27 +599,14 @@ class ComputeAPI(object):
                            parameter for the remote method.
         :param host: This is the host to send the message to.
         '''
-        if self.client.can_send_version('3.0'):
-            version = '3.0'
-        elif self.client.can_send_version('2.48'):
-            version = '2.48'
-        else:
-            # NOTE(russellb) Havana compat
-            version = '2.15'
-            aggregate = jsonutils.to_primitive(aggregate)
-
+        version = '3.0'
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'remove_aggregate_host',
                    aggregate=aggregate, host=host_param,
                    slave_info=slave_info)
 
     def remove_fixed_ip_from_instance(self, ctxt, instance, address):
-        if self.client.can_send_version('3.13'):
-            version = '3.13'
-        else:
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.0')
-            instance = jsonutils.to_primitive(instance)
+        version = '3.13'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'remove_fixed_ip_from_instance',
@@ -736,8 +616,7 @@ class ComputeAPI(object):
         if self.client.can_send_version('3.30'):
             version = '3.30'
         else:
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.0')
+            version = '3.0'
             instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'remove_volume_connection',
@@ -749,28 +628,22 @@ class ComputeAPI(object):
         if self.client.can_send_version('3.24'):
             version = '3.24'
             msg_args['rescue_image_ref'] = rescue_image_ref
-        elif self.client.can_send_version('3.9'):
-            version = '3.9'
         else:
-            # NOTE(russellb) Havana compat
-            instance = jsonutils.to_primitive(instance)
-            version = self._get_compat_version('3.0', '2.44')
+            version = '3.9'
         msg_args['instance'] = instance
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'rescue_instance', **msg_args)
 
     def reset_network(self, ctxt, instance):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.40')
+        version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'reset_network', instance=instance)
 
     def resize_instance(self, ctxt, instance, migration, image, instance_type,
                         reservations=None):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.45')
+        version = '3.0'
         instance_type_p = jsonutils.to_primitive(instance_type)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
@@ -780,16 +653,14 @@ class ComputeAPI(object):
                    instance_type=instance_type_p)
 
     def resume_instance(self, ctxt, instance):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.33')
+        version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'resume_instance', instance=instance)
 
     def revert_resize(self, ctxt, instance, migration, host,
                       reservations=None):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.39')
+        version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(host, instance),
                 version=version)
         cctxt.cast(ctxt, 'revert_resize',
@@ -814,8 +685,7 @@ class ComputeAPI(object):
         if self.client.can_send_version('3.27'):
             version = '3.27'
         else:
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.37')
+            version = '3.0'
             instance = jsonutils.to_primitive(instance)
         msg_kwargs = {'instance': instance, 'request_spec': request_spec,
                       'filter_properties': filter_properties,
@@ -829,26 +699,19 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'run_instance', **msg_kwargs)
 
     def set_admin_password(self, ctxt, instance, new_pass):
-        if self.client.can_send_version('3.8'):
-            version = '3.8'
-        else:
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.0')
-            instance = jsonutils.to_primitive(instance)
+        version = '3.8'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'set_admin_password',
                           instance=instance, new_pass=new_pass)
 
     def set_host_enabled(self, ctxt, enabled, host):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
+        version = '3.0'
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'set_host_enabled', enabled=enabled)
 
     def swap_volume(self, ctxt, instance, old_volume_id, new_volume_id):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.34')
+        version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'swap_volume',
@@ -856,8 +719,7 @@ class ComputeAPI(object):
                    new_volume_id=new_volume_id)
 
     def get_host_uptime(self, ctxt, host):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
+        version = '3.0'
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'get_host_uptime')
 
@@ -867,23 +729,13 @@ class ComputeAPI(object):
         kw = {'instance': instance, 'device': device,
               'volume_id': volume_id, 'disk_bus': disk_bus,
               'device_type': device_type}
-
-        if not self.client.can_send_version(version):
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.3')
-            kw['instance'] = jsonutils.to_primitive(
-                    objects_base.obj_to_primitive(instance))
-            del kw['disk_bus']
-            del kw['device_type']
-
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'reserve_block_device_name', **kw)
 
     def backup_instance(self, ctxt, instance, image_id, backup_type,
                         rotation):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.42')
+        version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'backup_instance',
@@ -893,8 +745,7 @@ class ComputeAPI(object):
                    rotation=rotation)
 
     def snapshot_instance(self, ctxt, instance, image_id):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.42')
+        version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'snapshot_instance',
@@ -902,35 +753,26 @@ class ComputeAPI(object):
                    image_id=image_id)
 
     def start_instance(self, ctxt, instance):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.29')
+        version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'start_instance', instance=instance)
 
     def stop_instance(self, ctxt, instance, do_cast=True):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.29')
+        version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         rpc_method = cctxt.cast if do_cast else cctxt.call
         return rpc_method(ctxt, 'stop_instance', instance=instance)
 
     def suspend_instance(self, ctxt, instance):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.33')
+        version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'suspend_instance', instance=instance)
 
     def terminate_instance(self, ctxt, instance, bdms, reservations=None):
-        # NOTE(russellb) Havana compat
-        if self.client.can_send_version('3.22'):
-            version = '3.22'
-        else:
-            version = self._get_compat_version('3.0', '2.35')
-            bdms = block_device.legacy_mapping(bdms)
-            bdms = jsonutils.to_primitive(objects_base.obj_to_primitive(bdms))
+        version = '3.22'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'terminate_instance',
@@ -938,78 +780,58 @@ class ComputeAPI(object):
                    reservations=reservations)
 
     def unpause_instance(self, ctxt, instance):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.36')
+        version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'unpause_instance', instance=instance)
 
     def unrescue_instance(self, ctxt, instance):
-        if self.client.can_send_version('3.11'):
-            version = '3.11'
-        else:
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.0')
-            instance = jsonutils.to_primitive(instance)
+        version = '3.11'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'unrescue_instance', instance=instance)
 
     def soft_delete_instance(self, ctxt, instance, reservations=None):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.35')
+        version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'soft_delete_instance',
                    instance=instance, reservations=reservations)
 
     def restore_instance(self, ctxt, instance):
-        if self.client.can_send_version('3.18'):
-            version = '3.20'
-        else:
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.0')
-            instance = jsonutils.to_primitive(instance)
+        version = '3.20'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'restore_instance', instance=instance)
 
     def shelve_instance(self, ctxt, instance, image_id=None):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.31')
+        version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'shelve_instance',
                    instance=instance, image_id=image_id)
 
     def shelve_offload_instance(self, ctxt, instance):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.31')
+        version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'shelve_offload_instance', instance=instance)
 
     def unshelve_instance(self, ctxt, instance, host, image=None,
                           filter_properties=None, node=None):
-        msg_kwargs = {'instance': instance, 'image': image}
-        if self.client.can_send_version('3.15'):
-            version = '3.15'
-            msg_kwargs['filter_properties'] = filter_properties
-            msg_kwargs['node'] = node
-        else:
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.31')
+        version = '3.15'
+        msg_kwargs = {
+            'instance': instance,
+            'image': image,
+            'filter_properties': filter_properties,
+            'node': node,
+        }
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'unshelve_instance', **msg_kwargs)
 
     def volume_snapshot_create(self, ctxt, instance, volume_id,
                                create_info):
         version = '3.6'
-        if not self.client.can_send_version(version):
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.44')
-            instance = jsonutils.to_primitive(
-                    objects_base.obj_to_primitive(instance))
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'volume_snapshot_create', instance=instance,
@@ -1018,11 +840,6 @@ class ComputeAPI(object):
     def volume_snapshot_delete(self, ctxt, instance, volume_id, snapshot_id,
                                delete_info):
         version = '3.6'
-        if not self.client.can_send_version(version):
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.44')
-            instance = jsonutils.to_primitive(
-                    objects_base.obj_to_primitive(instance))
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'volume_snapshot_delete', instance=instance,
@@ -1079,29 +896,21 @@ class SecurityGroupAPI(object):
                 CONF.upgrade_levels.compute, CONF.upgrade_levels.compute)
         self.client = rpc.get_client(target, version_cap)
 
-    def _get_compat_version(self, current, havana_compat):
-        if not self.client.can_send_version(current):
-            return havana_compat
-        return current
-
     def refresh_security_group_rules(self, ctxt, security_group_id, host):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
+        version = '3.0'
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'refresh_security_group_rules',
                    security_group_id=security_group_id)
 
     def refresh_security_group_members(self, ctxt, security_group_id,
             host):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
+        version = '3.0'
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'refresh_security_group_members',
                    security_group_id=security_group_id)
 
     def refresh_instance_security_rules(self, ctxt, host, instance):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
+        version = '3.0'
         instance_p = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
