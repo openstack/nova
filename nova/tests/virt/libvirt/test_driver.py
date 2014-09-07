@@ -6771,6 +6771,7 @@ class LibvirtConnTestCase(test.TestCase,
     def _test_clean_shutdown(self, seconds_to_shutdown,
                              timeout, retry_interval,
                              shutdown_attempts, succeeds):
+        self.stubs.Set(time, 'sleep', lambda x: None)
         info_tuple = ('fake', 'fake', 'fake', 'also_fake')
         shutdown_count = []
 
