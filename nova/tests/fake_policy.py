@@ -48,6 +48,7 @@ policy_data = """
     "compute:get_vnc_console": "",
     "compute:get_spice_console": "",
     "compute:get_rdp_console": "",
+    "compute:get_serial_console": "",
     "compute:get_console_output": "",
 
     "compute:associate_floating_ip": "",

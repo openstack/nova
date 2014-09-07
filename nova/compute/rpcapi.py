@@ -267,7 +267,7 @@ class ComputeAPI(object):
         * 3.32 - Add destroy_disks and migrate_data optional parameters to
                  rollback_live_migration_at_destination()
         * 3.33 - Make build_and_run_instance() take a NetworkRequestList object
-
+        * 3.34 - Add get_serial_console method
     '''
 
     VERSION_ALIASES = {
@@ -472,6 +472,13 @@ class ComputeAPI(object):
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'get_rdp_console',
+                          instance=instance, console_type=console_type)
+
+    def get_serial_console(self, ctxt, instance, console_type):
+        version = '3.34'
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                                    version=version)
+        return cctxt.call(ctxt, 'get_serial_console',
                           instance=instance, console_type=console_type)
 
     def validate_console_port(self, ctxt, instance, port, console_type):

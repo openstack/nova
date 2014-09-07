@@ -207,6 +207,11 @@ class ComputeRpcAPITestCase(test.TestCase):
                 instance=self.fake_instance_obj, console_type='type',
                 version='3.10')
 
+    def test_get_serial_console(self):
+        self._test_compute_api('get_serial_console', 'call',
+                instance=self.fake_instance, console_type='serial',
+                version='3.34')
+
     def test_validate_console_port(self):
         self._test_compute_api('validate_console_port', 'call',
                 instance=self.fake_instance_obj, port="5900",
