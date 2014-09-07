@@ -22,6 +22,7 @@ import mox
 from oslo import messaging
 
 from nova.api.ec2 import ec2utils
+from nova.compute import arch
 from nova.compute import flavors
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
@@ -108,7 +109,7 @@ class _BaseTestCase(object):
         inst['vcpus'] = 0
         inst['root_gb'] = 0
         inst['ephemeral_gb'] = 0
-        inst['architecture'] = 'x86_64'
+        inst['architecture'] = arch.X86_64
         inst['os_type'] = 'Linux'
         inst['availability_zone'] = 'fake-az'
         inst.update(params)

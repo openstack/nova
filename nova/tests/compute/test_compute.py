@@ -41,6 +41,7 @@ from nova import availability_zones
 from nova import block_device
 from nova import compute
 from nova.compute import api as compute_api
+from nova.compute import arch
 from nova.compute import flavors
 from nova.compute import manager as compute_manager
 from nova.compute import power_state
@@ -306,7 +307,7 @@ class BaseTestCase(test.TestCase):
         inst['vcpus'] = 0
         inst['root_gb'] = 0
         inst['ephemeral_gb'] = 0
-        inst['architecture'] = 'x86_64'
+        inst['architecture'] = arch.X86_64
         inst['os_type'] = 'Linux'
         inst['system_metadata'] = make_fake_sys_meta()
         inst['locked'] = False
@@ -8646,7 +8647,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_instance_architecture(self):
         # Test the instance architecture.
         i_ref = self._create_fake_instance()
-        self.assertEqual(i_ref['architecture'], 'x86_64')
+        self.assertEqual(i_ref['architecture'], arch.X86_64)
         db.instance_destroy(self.context, i_ref['uuid'])
 
     def test_instance_unknown_architecture(self):
@@ -9530,7 +9531,7 @@ class ComputeAPITestCase(BaseTestCase):
         inst['vcpus'] = 0
         inst['root_gb'] = 0
         inst['ephemeral_gb'] = 0
-        inst['architecture'] = 'x86_64'
+        inst['architecture'] = arch.X86_64
         inst['os_type'] = 'Linux'
         instance = self._create_fake_instance_obj(inst)
 

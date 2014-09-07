@@ -38,6 +38,7 @@ import six
 
 from nova.api.ec2 import cloud
 from nova.api.metadata import base as instance_metadata
+from nova.compute import arch
 from nova.compute import flavors
 from nova.compute import manager
 from nova.compute import power_state
@@ -499,7 +500,7 @@ class LibvirtConnTestCase(test.TestCase,
                 return []
 
             def getInfo(self):
-                return ["x86_64", 123456, 2, 2000,
+                return [arch.X86_64, 123456, 2, 2000,
                         2, 1, 1, 1]
 
         self.conn = FakeConn()
@@ -813,7 +814,7 @@ class LibvirtConnTestCase(test.TestCase,
 
         def fake_get_host_capabilities(**args):
             cpu = vconfig.LibvirtConfigGuestCPU()
-            cpu.arch = "armv7l"
+            cpu.arch = arch.ARMV7
 
             caps = vconfig.LibvirtConfigCaps()
             caps.host = vconfig.LibvirtConfigCapsHost()
@@ -1153,18 +1154,18 @@ class LibvirtConnTestCase(test.TestCase,
                                             instance_ref)
         image_meta = {}
         hpet_map = {
-            "x86_64": True,
-            "i686": True,
-            "ppc": False,
-            "ppc64": False,
-            "armv7": False,
-            "aarch64": False,
+            arch.X86_64: True,
+            arch.I686: True,
+            arch.PPC: False,
+            arch.PPC64: False,
+            arch.ARMV7: False,
+            arch.AARCH64: False,
             }
 
-        for arch, expect_hpet in hpet_map.items():
+        for guestarch, expect_hpet in hpet_map.items():
             with mock.patch.object(libvirt_driver.libvirt_utils,
                                    'get_arch',
-                                   return_value=arch):
+                                   return_value=guestarch):
                 cfg = conn._get_guest_config(instance_ref, [],
                                              image_meta,
                                              disk_info)
@@ -2757,7 +2758,7 @@ class LibvirtConnTestCase(test.TestCase,
     def test_get_guest_config_armv7(self):
         def get_host_capabilities_stub(self):
             cpu = vconfig.LibvirtConfigGuestCPU()
-            cpu.arch = "armv7l"
+            cpu.arch = arch.ARMV7
 
             caps = vconfig.LibvirtConfigCaps()
             caps.host = vconfig.LibvirtConfigCapsHost()
@@ -2784,7 +2785,7 @@ class LibvirtConnTestCase(test.TestCase,
     def test_get_guest_config_aarch64(self):
         def get_host_capabilities_stub(self):
             cpu = vconfig.LibvirtConfigGuestCPU()
-            cpu.arch = "aarch64"
+            cpu.arch = arch.AARCH64
 
             caps = vconfig.LibvirtConfigCaps()
             caps.host = vconfig.LibvirtConfigCapsHost()
@@ -2880,11 +2881,11 @@ class LibvirtConnTestCase(test.TestCase,
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref)
         image_meta = {}
-        expected = ('ppc64', 'ppc')
-        for arch in expected:
+        expected = (arch.PPC64, arch.PPC)
+        for guestarch in expected:
             with mock.patch.object(libvirt_driver.libvirt_utils,
                                    'get_arch',
-                                   return_value=arch):
+                                   return_value=guestarch):
                 cfg = conn._get_guest_config(instance_ref, [],
                                             image_meta,
                                             disk_info)
@@ -3242,8 +3243,8 @@ class LibvirtConnTestCase(test.TestCase,
         # power doesn't have support to ide, and so libvirt translate
         # all ide calls to scsi
 
-        expected = {"ppc": ("cdrom", "scsi", "sda"),
-                "ppc64": ("cdrom", "scsi", "sda")}
+        expected = {arch.PPC: ("cdrom", "scsi", "sda"),
+                    arch.PPC64: ("cdrom", "scsi", "sda")}
 
         expec_val = expected.get(blockinfo.libvirt_utils.get_arch({}),
                                   ("cdrom", "ide", "hda"))
@@ -3256,8 +3257,8 @@ class LibvirtConnTestCase(test.TestCase,
         # power doesn't have support to ide, and so libvirt translate
         # all ide calls to scsi
 
-        expected = {"ppc": ("cdrom", "scsi", "sda"),
-                "ppc64": ("cdrom", "scsi", "sda")}
+        expected = {arch.PPC: ("cdrom", "scsi", "sda"),
+                    arch.PPC64: ("cdrom", "scsi", "sda")}
 
         swap = {'device_name': '/dev/vdc',
                 'swap_size': 1}
@@ -7171,7 +7172,7 @@ class LibvirtConnTestCase(test.TestCase,
             cpu = vconfig.LibvirtConfigCPU()
             cpu.model = "Opteron_G4"
             cpu.vendor = "AMD"
-            cpu.arch = "x86_64"
+            cpu.arch = arch.X86_64
 
             cpu.cores = 2
             cpu.threads = 1
@@ -7186,13 +7187,13 @@ class LibvirtConnTestCase(test.TestCase,
 
             guest = vconfig.LibvirtConfigGuest()
             guest.ostype = vm_mode.HVM
-            guest.arch = "x86_64"
+            guest.arch = arch.X86_64
             guest.domtype = ["kvm"]
             caps.guests.append(guest)
 
             guest = vconfig.LibvirtConfigGuest()
             guest.ostype = vm_mode.HVM
-            guest.arch = "i686"
+            guest.arch = arch.I686
             guest.domtype = ["kvm"]
             caps.guests.append(guest)
 
@@ -7205,7 +7206,7 @@ class LibvirtConnTestCase(test.TestCase,
         want = {"vendor": "AMD",
                 "features": ["extapic", "3dnow"],
                 "model": "Opteron_G4",
-                "arch": "x86_64",
+                "arch": arch.X86_64,
                 "topology": {"cores": 2, "threads": 1, "sockets": 4}}
         got = jsonutils.loads(conn._get_cpu_info())
         self.assertEqual(want, got)
@@ -8037,7 +8038,7 @@ Active:          8381604 kB
                 mock.patch('sys.platform', 'linux2'),
                 ) as (mock_file, mock_conn, mock_platform):
             mock_conn.getInfo.return_value = [
-                'x86_64', 15814L, 8, 1208, 1, 1, 4, 2]
+                arch.X86_64, 15814L, 8, 1208, 1, 1, 4, 2]
 
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
@@ -8088,7 +8089,7 @@ Active:          8381604 kB
                 DiagFakeDomain(1, 750),
                 DiagFakeDomain(2, 1042)]
             mock_conn.getInfo.return_value = [
-                'x86_64', 15814L, 8, 1208, 1, 1, 4, 2]
+                arch.X86_64, 15814L, 8, 1208, 1, 1, 4, 2]
 
             self.assertEqual(8657, drvr._get_memory_mb_used())
             mock_list.assert_called_with(only_guests=False)
@@ -8101,13 +8102,13 @@ Active:          8381604 kB
 
             guest = vconfig.LibvirtConfigGuest()
             guest.ostype = 'hvm'
-            guest.arch = 'x86_64'
+            guest.arch = arch.X86_64
             guest.domtype = ['kvm', 'qemu']
             caps.guests.append(guest)
 
             guest = vconfig.LibvirtConfigGuest()
             guest.ostype = 'hvm'
-            guest.arch = 'i686'
+            guest.arch = arch.I686
             guest.domtype = ['kvm']
             caps.guests.append(guest)
 
@@ -8117,9 +8118,9 @@ Active:          8381604 kB
                        '_get_host_capabilities',
                        get_host_capabilities_stub)
 
-        want = [('x86_64', 'kvm', 'hvm'),
-                ('x86_64', 'qemu', 'hvm'),
-                ('i686', 'kvm', 'hvm')]
+        want = [(arch.X86_64, 'kvm', 'hvm'),
+                (arch.X86_64, 'qemu', 'hvm'),
+                (arch.I686, 'kvm', 'hvm')]
         got = conn._get_instance_capabilities()
         self.assertEqual(want, got)
 
@@ -9248,7 +9249,8 @@ class HostStateTestCase(test.TestCase):
                  '"fxsr", "clflush", "pse36", "pat", "cmov", "mca", "pge", '
                  '"mtrr", "sep", "apic"], '
                  '"topology": {"cores": "1", "threads": "1", "sockets": "1"}}')
-    instance_caps = [("x86_64", "kvm", "hvm"), ("i686", "kvm", "hvm")]
+    instance_caps = [(arch.X86_64, "kvm", "hvm"),
+                     (arch.I686, "kvm", "hvm")]
     pci_devices = [{
         "dev_id": "pci_0000_04_00_3",
         "address": "0000:04:10.3",
@@ -9316,7 +9318,8 @@ class HostStateTestCase(test.TestCase):
         self.assertEqual(stats["hypervisor_version"], 13091)
         self.assertEqual(stats["hypervisor_hostname"], 'compute1')
         self.assertEqual(jsonutils.loads(stats["cpu_info"]),
-                {"vendor": "Intel", "model": "pentium", "arch": "i686",
+                {"vendor": "Intel", "model": "pentium",
+                 "arch": arch.I686,
                  "features": ["ssse3", "monitor", "pni", "sse2", "sse",
                               "fxsr", "clflush", "pse36", "pat", "cmov",
                               "mca", "pge", "mtrr", "sep", "apic"],

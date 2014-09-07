@@ -75,6 +75,7 @@ import operator
 from oslo.config import cfg
 
 from nova import block_device
+from nova.compute import arch
 from nova.compute import flavors
 from nova import exception
 from nova.i18n import _
@@ -247,8 +248,8 @@ def get_disk_bus_for_device_type(virt_type,
             return "xen"
     elif virt_type in ("qemu", "kvm"):
         if device_type == "cdrom":
-            arch = libvirt_utils.get_arch(image_meta)
-            if arch in ("ppc", "ppc64"):
+            guestarch = libvirt_utils.get_arch(image_meta)
+            if guestarch in (arch.PPC, arch.PPC64):
                 return "scsi"
             else:
                 return "ide"

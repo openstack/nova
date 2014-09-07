@@ -21,6 +21,7 @@ import re
 
 from oslo.config import cfg
 
+from nova.compute import arch
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
@@ -276,8 +277,15 @@ def to_supported_instances(host_capabilities):
     result = []
     for capability in host_capabilities:
         try:
-            ostype, _version, arch = capability.split("-")
-            result.append((arch, 'xapi', ostype))
+            # 'capability'is unicode but we want arch/ostype
+            # to be strings to match the standard constants
+            capability = str(capability)
+
+            ostype, _version, guestarch = capability.split("-")
+
+            guestarch = arch.canonicalize(guestarch)
+
+            result.append((guestarch, 'xapi', ostype))
         except ValueError:
             LOG.warning(
                 _("Failed to extract instance support from %s"), capability)

@@ -14,6 +14,7 @@
 Unit Tests for instance types extra specs code
 """
 
+from nova.compute import arch
 from nova import context
 from nova import db
 from nova import exception
@@ -31,7 +32,7 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
                       root_gb=1690,
                       ephemeral_gb=2000,
                       flavorid=105)
-        self.specs = dict(cpu_arch="x86_64",
+        self.specs = dict(cpu_arch=arch.X86_64,
                           cpu_model="Nehalem",
                           xpu_arch="fermi",
                           xpus="2",
@@ -75,7 +76,7 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
         self.assertEqual(self.specs, actual_specs)
 
     def test_instance_type_extra_specs_update_with_nonexisting_flavor(self):
-        extra_specs = dict(cpu_arch="x86_64")
+        extra_specs = dict(cpu_arch=arch.X86_64)
         nonexisting_flavorid = "some_flavor_that_doesnt_exists"
         self.assertRaises(exception.FlavorNotFound,
                           db.flavor_extra_specs_update_or_create,

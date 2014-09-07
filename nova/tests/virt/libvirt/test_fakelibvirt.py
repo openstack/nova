@@ -16,6 +16,7 @@ from nova import test
 
 from lxml import etree
 
+from nova.compute import arch
 import nova.tests.virt.libvirt.fakelibvirt as libvirt
 
 
@@ -95,7 +96,7 @@ class FakeLibvirtTests(test.NoDBTestCase):
     def test_getInfo(self):
         conn_method = self.get_openAuth_curry_func(readOnly=True)
         res = conn_method(None).getInfo()
-        self.assertIn(res[0], ('i686', 'x86_64'))
+        self.assertIn(res[0], (arch.I686, arch.X86_64))
         self.assertTrue(1024 <= res[1] <= 16384,
                         "Memory unusually high or low.")
         self.assertTrue(1 <= res[2] <= 32,

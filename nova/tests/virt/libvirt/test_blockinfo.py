@@ -18,6 +18,7 @@ import copy
 import mock
 
 from nova import block_device
+from nova.compute import arch
 from nova.compute import flavors
 from nova import context
 from nova import db
@@ -575,18 +576,18 @@ class LibvirtBlockInfoTest(test.TestCase):
 
     def test_get_disk_bus(self):
         expected = (
-                ('x86_64', 'disk', 'virtio'),
-                ('x86_64', 'cdrom', 'ide'),
-                ('x86_64', 'floppy', 'fdc'),
-                ('ppc', 'disk', 'virtio'),
-                ('ppc', 'cdrom', 'scsi'),
-                ('ppc64', 'disk', 'virtio'),
-                ('ppc64', 'cdrom', 'scsi')
+                (arch.X86_64, 'disk', 'virtio'),
+                (arch.X86_64, 'cdrom', 'ide'),
+                (arch.X86_64, 'floppy', 'fdc'),
+                (arch.PPC, 'disk', 'virtio'),
+                (arch.PPC, 'cdrom', 'scsi'),
+                (arch.PPC64, 'disk', 'virtio'),
+                (arch.PPC64, 'cdrom', 'scsi')
                 )
-        for arch, dev, res in expected:
+        for guestarch, dev, res in expected:
             with mock.patch.object(blockinfo.libvirt_utils,
                                    'get_arch',
-                                   return_value=arch):
+                                   return_value=guestarch):
                 bus = blockinfo.get_disk_bus_for_device_type('kvm',
                             device_type=dev)
                 self.assertEqual(res, bus)

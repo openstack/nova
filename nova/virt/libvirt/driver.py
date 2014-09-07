@@ -50,6 +50,7 @@ import six
 
 from nova.api.metadata import base as instance_metadata
 from nova import block_device
+from nova.compute import arch
 from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
@@ -645,15 +646,15 @@ class LibvirtDriver(driver.ComputeDriver):
         is tested upstream.
         """
         caps = self._get_host_capabilities()
-        arch = caps.host.cpu.arch
+        hostarch = caps.host.cpu.arch
         if (CONF.libvirt.virt_type not in ('qemu', 'kvm') or
-                arch not in ('i686', 'x86_64')):
+            hostarch not in (arch.I686, arch.X86_64)):
             LOG.warn(_LW('The libvirt driver is not tested on '
                          '%(type)s/%(arch)s by the OpenStack project and '
                          'thus its quality can not be ensured. For more '
                          'information, see: https://wiki.openstack.org/wiki/'
                          'HypervisorSupportMatrix'),
-                        {'type': CONF.libvirt.virt_type, 'arch': arch})
+                        {'type': CONF.libvirt.virt_type, 'arch': hostarch})
 
     def init_host(self, host):
         # NOTE(dkliban): Error handler needs to be registered before libvirt
@@ -3485,10 +3486,10 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             # For ARM systems we will default to vexpress-a15 for armv7
             # and virt for aarch64
-            if caps.host.cpu.arch == "armv7l":
+            if caps.host.cpu.arch == arch.ARMV7:
                 mach_type = "vexpress-a15"
 
-            if caps.host.cpu.arch == "aarch64":
+            if caps.host.cpu.arch == arch.AARCH64:
                 mach_type = "virt"
 
             # If set in the config, use that as the default.
@@ -3570,7 +3571,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if CONF.libvirt.virt_type in ("kvm", "qemu"):
             caps = self._get_host_capabilities()
-            if caps.host.cpu.arch in ("i686", "x86_64"):
+            if caps.host.cpu.arch in (arch.I686, arch.X86_64):
                 guest.sysinfo = self._get_guest_config_sysinfo(instance)
                 guest.os_smbios = vconfig.LibvirtConfigGuestSMBIOS()
             guest.os_mach_type = self._get_machine_type(image_meta, caps)
@@ -3648,8 +3649,8 @@ class LibvirtDriver(driver.ComputeDriver):
             clk.add_timer(tmpit)
             clk.add_timer(tmrtc)
 
-            arch = libvirt_utils.get_arch(image_meta)
-            if arch in ("i686", "x86_64"):
+            guestarch = libvirt_utils.get_arch(image_meta)
+            if guestarch in (arch.I686, arch.X86_64):
                 # NOTE(rfolco): HPET is a hardware timer for x86 arch.
                 # qemu -no-hpet is not supported on non-x86 targets.
                 tmhpet = vconfig.LibvirtConfigGuestTimer()
@@ -3758,10 +3759,10 @@ class LibvirtDriver(driver.ComputeDriver):
             # virtualization type, and features. The video.type attribute can
             # be overridden by the user with image_meta['properties'], which
             # is carried out in the next if statement below this one.
-            arch = libvirt_utils.get_arch(image_meta)
+            guestarch = libvirt_utils.get_arch(image_meta)
             if guest.os_type == vm_mode.XEN:
                 video.type = 'xen'
-            elif arch in ('ppc', 'ppc64'):
+            elif guestarch in (arch.PPC, arch.PPC64):
                 # NOTE(ldbragst): PowerKVM doesn't support 'cirrus' be default
                 # so use 'vga' instead when running on Power hardware.
                 video.type = 'vga'
@@ -4350,7 +4351,10 @@ class LibvirtDriver(driver.ComputeDriver):
         instance_caps = list()
         for g in caps.guests:
             for dt in g.domtype:
-                instance_cap = (g.arch, dt, g.ostype)
+                instance_cap = (
+                    arch.canonicalize(g.arch),
+                    dt,
+                    g.ostype)
                 instance_caps.append(instance_cap)
 
         return instance_caps
