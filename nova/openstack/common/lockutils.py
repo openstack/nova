@@ -16,6 +16,7 @@
 import contextlib
 import errno
 import functools
+import logging
 import os
 import shutil
 import subprocess
@@ -29,7 +30,6 @@ from oslo.config import cfg
 
 from nova.openstack.common import fileutils
 from nova.openstack.common.gettextutils import _, _LE, _LI
-from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)
@@ -101,10 +101,8 @@ class _FileLock(object):
                     raise threading.ThreadError(_("Unable to acquire lock on"
                                                   " `%(filename)s` due to"
                                                   " %(exception)s") %
-                                                {
-                                                    'filename': self.fname,
-                                                    'exception': e,
-                                                })
+                                                {'filename': self.fname,
+                                                    'exception': e})
 
     def __enter__(self):
         self.acquire()
@@ -148,58 +146,12 @@ class _FcntlLock(_FileLock):
         fcntl.lockf(self.lockfile, fcntl.LOCK_UN)
 
 
-class _PosixLock(object):
-    def __init__(self, name):
-        # Hash the name because it's not valid to have POSIX semaphore
-        # names with things like / in them. Then use base64 to encode
-        # the digest() instead taking the hexdigest() because the
-        # result is shorter and most systems can't have shm sempahore
-        # names longer than 31 characters.
-        h = hashlib.sha1()
-        h.update(name.encode('ascii'))
-        self.name = str((b'/' + base64.urlsafe_b64encode(
-            h.digest())).decode('ascii'))
-
-    def acquire(self, timeout=None):
-        self.semaphore = posix_ipc.Semaphore(self.name,
-                                             flags=posix_ipc.O_CREAT,
-                                             initial_value=1)
-        self.semaphore.acquire(timeout)
-        return self
-
-    def __enter__(self):
-        self.acquire()
-        return self
-
-    def release(self):
-        self.semaphore.release()
-        self.semaphore.close()
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.release()
-
-    def exists(self):
-        try:
-            semaphore = posix_ipc.Semaphore(self.name)
-        except posix_ipc.ExistentialError:
-            return False
-        else:
-            semaphore.close()
-        return True
-
-
 if os.name == 'nt':
     import msvcrt
     InterProcessLock = _WindowsLock
-    FileLock = _WindowsLock
 else:
-    import base64
     import fcntl
-    import hashlib
-
-    import posix_ipc
-    InterProcessLock = _PosixLock
-    FileLock = _FcntlLock
+    InterProcessLock = _FcntlLock
 
 _semaphores = weakref.WeakValueDictionary()
 _semaphores_lock = threading.Lock()
@@ -216,11 +168,7 @@ def _get_lock_path(name, lock_file_prefix, lock_path=None):
     local_lock_path = lock_path or CONF.lock_path
 
     if not local_lock_path:
-        # NOTE(bnemec): Create a fake lock path for posix locks so we don't
-        # unnecessarily raise the RequiredOptError below.
-        if InterProcessLock is not _PosixLock:
-            raise cfg.RequiredOptError('lock_path')
-        local_lock_path = 'posixlock:/'
+        raise cfg.RequiredOptError('lock_path')
 
     return os.path.join(local_lock_path, name)
 
@@ -231,11 +179,6 @@ def external_lock(name, lock_file_prefix=None, lock_path=None):
 
     lock_file_path = _get_lock_path(name, lock_file_prefix, lock_path)
 
-    # NOTE(bnemec): If an explicit lock_path was passed to us then it
-    # means the caller is relying on file-based locking behavior, so
-    # we can't use posix locks for those calls.
-    if lock_path:
-        return FileLock(lock_file_path)
     return InterProcessLock(lock_file_path)
 
 
@@ -335,7 +278,7 @@ def synchronized_with_prefix(lock_file_prefix):
 
     Redefine @synchronized in each project like so::
 
-        (in nova/utils.py)
+        (in oslo.utils.py)
         from nova.openstack.common import lockutils
 
         synchronized = lockutils.synchronized_with_prefix('nova-')
