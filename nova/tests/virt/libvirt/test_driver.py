@@ -1424,8 +1424,7 @@ class LibvirtConnTestCase(test.TestCase):
     def test_get_guest_config_bug_1118829(self):
         self.flags(virt_type='uml', group='libvirt')
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = db.instance_create(self.context, self.test_instance)
-
+        instance_ref = self.create_instance_obj(self.context)
         disk_info = {'disk_bus': 'virtio',
                      'cdrom_bus': 'ide',
                      'mapping': {u'vda': {'bus': 'virtio',
@@ -1441,7 +1440,6 @@ class LibvirtConnTestCase(test.TestCase):
         block_device_info = {}
         conn._get_guest_config(instance_ref, [], {}, disk_info,
                                None, block_device_info)
-        instance_ref = db.instance_get(self.context, instance_ref['id'])
         self.assertEqual(instance_ref['root_device_name'], '/dev/vda')
 
     def test_get_guest_config_with_root_device_name(self):
@@ -8867,7 +8865,7 @@ Active:          8381604 kB
                                             mock_instance, [])
 
         self.assertEqual('/dev/nbd0', inst_sys_meta['rootfs_device_name'])
-        mock_instance.save.assert_has_calls([mock.call()])
+        mock_instance.save.assert_not_called()
         mock_get_inst_path.assert_has_calls([mock.call(mock_instance)])
         mock_ensure_tree.assert_has_calls([mock.call('/tmp/rootfs')])
         conn.image_backend.image.assert_has_calls([mock.call(mock_instance,
@@ -8929,7 +8927,7 @@ Active:          8381604 kB
                                             mock_instance, [])
 
         self.assertEqual('/dev/nbd0', inst_sys_meta['rootfs_device_name'])
-        mock_instance.save.assert_has_calls([mock.call()])
+        mock_instance.save.assert_not_called()
         mock_get_inst_path.assert_has_calls([mock.call(mock_instance)])
         mock_ensure_tree.assert_has_calls([mock.call('/tmp/rootfs')])
         conn.image_backend.image.assert_has_calls([mock.call(mock_instance,
@@ -8977,7 +8975,7 @@ Active:          8381604 kB
                                             mock_instance, [])
 
         self.assertEqual('/dev/nbd0', inst_sys_meta['rootfs_device_name'])
-        mock_instance.save.assert_has_calls([mock.call()])
+        mock_instance.save.assert_not_called()
         mock_get_inst_path.assert_has_calls([mock.call(mock_instance)])
         mock_ensure_tree.assert_has_calls([mock.call('/tmp/rootfs')])
         conn.image_backend.image.assert_has_calls([mock.call(mock_instance,
