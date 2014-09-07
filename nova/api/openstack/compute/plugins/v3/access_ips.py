@@ -12,12 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from webob import exc
-
+from nova.api.openstack.compute.schemas.v3 import access_ips
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.i18n import _
-from nova import utils
 
 ALIAS = "os-access-ips"
 authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
@@ -97,28 +94,21 @@ class AccessIPs(extensions.V3APIExtensionBase):
         if AccessIPs.v4_key in server_dict:
             access_ip_v4 = server_dict.get(AccessIPs.v4_key)
             if access_ip_v4:
-                self._validate_access_ipv4(access_ip_v4)
                 create_kwargs['access_ip_v4'] = access_ip_v4
             else:
                 create_kwargs['access_ip_v4'] = None
         if AccessIPs.v6_key in server_dict:
             access_ip_v6 = server_dict.get(AccessIPs.v6_key)
             if access_ip_v6:
-                self._validate_access_ipv6(access_ip_v6)
                 create_kwargs['access_ip_v6'] = access_ip_v6
             else:
                 create_kwargs['access_ip_v6'] = None
 
     server_update = server_create
-
     server_rebuild = server_create
 
-    def _validate_access_ipv4(self, address):
-        if not utils.is_valid_ipv4(address):
-            expl = _('%s is not proper IPv4 format') % AccessIPs.v4_key
-            raise exc.HTTPBadRequest(explanation=expl)
+    def get_server_create_schema(self):
+        return access_ips.server_create
 
-    def _validate_access_ipv6(self, address):
-        if not utils.is_valid_ipv6(address):
-            expl = _('%s is not proper IPv6 format') % AccessIPs.v6_key
-            raise exc.HTTPBadRequest(explanation=expl)
+    get_server_update_schema = get_server_create_schema
+    get_server_rebuild_schema = get_server_create_schema
