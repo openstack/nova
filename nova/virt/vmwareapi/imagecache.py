@@ -30,7 +30,7 @@ That effectively ages the cached image.
 If an image is used then the timestamps will be deleted.
 
 When accessing a timestamp we make use of locking. This ensure that aging
-will not delete an image during the spawn operiation. When spawning
+will not delete an image during the spawn operation. When spawning
 the timestamp folder will be locked  and the timestamps will be purged.
 This will ensure that a image is not deleted during the spawn.
 """

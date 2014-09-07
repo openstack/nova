@@ -218,7 +218,7 @@ class SimpleTenantUsageTestV21(test.TestCase):
             self.assertEqual(int(servers[j]['hours']), HOURS)
             self.assertIn(servers[j]['instance_id'], uuids)
 
-    def test_verify_show_cant_view_other_tenant(self):
+    def test_verify_show_cannot_view_other_tenant(self):
         req = webob.Request.blank(
                   self.alt_url + '/faketenant_0?start=%s&end=%s' %
                   (START.isoformat(), STOP.isoformat()))

@@ -77,7 +77,7 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
 
     def test_instance_type_extra_specs_update_with_nonexisting_flavor(self):
         extra_specs = dict(cpu_arch=arch.X86_64)
-        nonexisting_flavorid = "some_flavor_that_doesnt_exists"
+        nonexisting_flavorid = "some_flavor_that_does_not_exist"
         self.assertRaises(exception.FlavorNotFound,
                           db.flavor_extra_specs_update_or_create,
                           self.context, nonexisting_flavorid, extra_specs)

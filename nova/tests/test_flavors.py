@@ -124,7 +124,7 @@ class InstanceTypeTestCase(test.TestCase):
                                                                  ctxt)
         self.assertEqual([], projects)
 
-    def test_remove_flavor_access_doesnt_exists(self):
+    def test_remove_flavor_access_does_not_exist(self):
         user_id = 'fake'
         project_id = 'fake'
         ctxt = context.RequestContext(user_id, project_id, is_admin=True)
@@ -141,7 +141,7 @@ class InstanceTypeTestCase(test.TestCase):
         inst_types = flavors.get_all_flavors()
         self.assertEqual(total_instance_types, len(inst_types))
 
-    def test_non_existent_inst_type_shouldnt_delete(self):
+    def test_non_existent_inst_type_should_not_delete(self):
         # Ensures that flavor creation fails with invalid args.
         self.assertRaises(exception.FlavorNotFoundByName,
                           flavors.destroy,

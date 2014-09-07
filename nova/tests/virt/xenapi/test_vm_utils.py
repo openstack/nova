@@ -433,7 +433,7 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
 
         self.mox.VerifyAll()
 
-    def test_default_handler_doesnt_fallback_to_itself(self):
+    def test_default_handler_does_not_fallback_to_itself(self):
         cfg.CONF.import_opt('torrent_base_url',
                             'nova.virt.xenapi.image.bittorrent',
                             group='xenserver')

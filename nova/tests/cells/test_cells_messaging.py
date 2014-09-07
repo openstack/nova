@@ -1536,7 +1536,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
     def test_instance_update_at_top_netinfo_model(self):
         self._test_instance_update_at_top(network_model.NetworkInfo())
 
-    def test_instance_update_at_top_doesnt_already_exist(self):
+    def test_instance_update_at_top_does_not_already_exist(self):
         self._test_instance_update_at_top([], exists=False)
 
     def test_instance_update_at_top_with_building_state(self):
