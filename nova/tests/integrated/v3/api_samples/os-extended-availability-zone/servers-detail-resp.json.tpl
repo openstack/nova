@@ -3,7 +3,7 @@
         {
             "updated": "%(isotime)s",
             "created": "%(isotime)s",
-            "os-extended-availability-zone:availability_zone": "nova",
+            "OS-EXT-AZ:availability_zone": "nova",
             "addresses": {
                 "private": [
                     {

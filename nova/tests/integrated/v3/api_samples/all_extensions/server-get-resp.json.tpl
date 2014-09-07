@@ -49,7 +49,7 @@
         },
         "name": "new-server-test",
         "config_drive": "",
-        "os-extended-availability-zone:availability_zone": "nova",
+        "OS-EXT-AZ:availability_zone": "nova",
         "OS-EXT-SRV-ATTR:host": "%(compute_host)s",
         "OS-EXT-SRV-ATTR:hypervisor_hostname": "%(hypervisor_hostname)s",
         "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",

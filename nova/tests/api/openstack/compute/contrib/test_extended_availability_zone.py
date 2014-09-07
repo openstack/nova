@@ -74,12 +74,13 @@ def fake_get_no_host_availability_zone(context, host):
     return None
 
 
-class ExtendedAvailabilityZoneTest(test.TestCase):
+class ExtendedAvailabilityZoneTestV21(test.TestCase):
     content_type = 'application/json'
     prefix = 'OS-EXT-AZ:'
+    base_url = '/v3/servers/'
 
     def setUp(self):
-        super(ExtendedAvailabilityZoneTest, self).setUp()
+        super(ExtendedAvailabilityZoneTestV21, self).setUp()
         availability_zones.reset_cache()
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
@@ -89,15 +90,10 @@ class ExtendedAvailabilityZoneTest(test.TestCase):
         return_server = fakes.fake_instance_get()
         self.stubs.Set(db, 'instance_get_by_uuid', return_server)
 
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Extended_availability_zone'])
-
     def _make_request(self, url):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
+        res = req.get_response(fakes.wsgi_app_v3(init_only=None))
         return res
 
     def _get_server(self, body):
@@ -115,7 +111,7 @@ class ExtendedAvailabilityZoneTest(test.TestCase):
         self.stubs.Set(availability_zones, 'get_host_availability_zone',
                        fake_get_no_host_availability_zone)
 
-        url = '/v2/fake/servers/%s' % UUID3
+        url = self.base_url + UUID3
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
@@ -126,21 +122,21 @@ class ExtendedAvailabilityZoneTest(test.TestCase):
         self.stubs.Set(availability_zones, 'get_host_availability_zone',
                        fake_get_no_host_availability_zone)
 
-        url = '/v2/fake/servers/%s' % UUID3
+        url = self.base_url + UUID3
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
         self.assertAvailabilityZone(self._get_server(res.body), 'fakeaz')
 
     def test_show(self):
-        url = '/v2/fake/servers/%s' % UUID3
+        url = self.base_url + UUID3
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
         self.assertAvailabilityZone(self._get_server(res.body), 'get-host')
 
     def test_detail(self):
-        url = '/v2/fake/servers/detail'
+        url = self.base_url + 'detail'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
@@ -153,13 +149,32 @@ class ExtendedAvailabilityZoneTest(test.TestCase):
             raise exception.InstanceNotFound(instance_id='fake')
 
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
-        url = '/v2/fake/servers/70f6db34-de8d-4fbd-aafb-4065bdfa6115'
+        url = self.base_url + '70f6db34-de8d-4fbd-aafb-4065bdfa6115'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 404)
 
 
-class ExtendedAvailabilityZoneXmlTest(ExtendedAvailabilityZoneTest):
+class ExtendedAvailabilityZoneTestV2(ExtendedAvailabilityZoneTestV21):
+
+    base_url = '/v2/fake/servers/'
+
+    def setUp(self):
+        super(ExtendedAvailabilityZoneTestV2, self).setUp()
+
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Extended_availability_zone'])
+
+    def _make_request(self, url):
+        req = webob.Request.blank(url)
+        req.headers['Accept'] = self.content_type
+        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
+        return res
+
+
+class ExtendedAvailabilityZoneXmlTestV2(ExtendedAvailabilityZoneTestV2):
     content_type = 'application/xml'
     prefix = '{%s}' % extended_availability_zone.\
                         Extended_availability_zone.namespace
