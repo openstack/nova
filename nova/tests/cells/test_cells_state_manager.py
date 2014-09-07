@@ -20,13 +20,13 @@ import time
 
 import mock
 from oslo.config import cfg
+from oslo.db import exception as db_exc
 import six
 
 from nova.cells import state
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
-from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import fileutils
 from nova import test
 

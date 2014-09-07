@@ -22,11 +22,11 @@ import os
 
 import mox
 from oslo.config import cfg
+from oslo.db import exception as db_exc
 from testtools import matchers
 
 from nova import exception
 from nova import objects
-from nova.openstack.common.db import exception as db_exc
 from nova.tests.image import fake as fake_image
 from nova.tests import utils
 from nova.tests.virt.baremetal.db import base as bm_db_base

@@ -47,6 +47,8 @@ import glob
 import os
 
 from migrate.versioning import repository
+from oslo.db.sqlalchemy import session
+from oslo.db.sqlalchemy import utils as oslodbutils
 import six.moves.urllib.parse as urlparse
 import sqlalchemy
 import sqlalchemy.exc
@@ -54,7 +56,6 @@ import sqlalchemy.exc
 import nova.db.sqlalchemy.migrate_repo
 from nova.db.sqlalchemy import utils as db_utils
 from nova.i18n import _
-from nova.openstack.common.db.sqlalchemy import utils as oslodbutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova import test
@@ -216,7 +217,7 @@ class BaseMigrationTestCase(test.NoDBTestCase):
 
         self.engines = {}
         for key, value in self.test_databases.items():
-            self.engines[key] = sqlalchemy.create_engine(value)
+            self.engines[key] = session.create_engine(value)
 
         # NOTE(jhesketh): We only need to make sure the databases are created
         # not necessarily clean of tables.
@@ -370,7 +371,7 @@ class BaseWalkMigrationTestCase(BaseMigrationTestCase):
 
         self.engines = {}
         for key, value in self.test_databases.items():
-            self.engines[key] = sqlalchemy.create_engine(value)
+            self.engines[key] = session.create_engine(value)
 
         self._create_databases()
 
@@ -384,7 +385,7 @@ class BaseWalkMigrationTestCase(BaseMigrationTestCase):
             "mysql+mysqldb", self.DATABASE, self.USER, self.PASSWD)
         (user, password, database, host) = \
                 get_mysql_connection_info(urlparse.urlparse(connect_string))
-        engine = sqlalchemy.create_engine(connect_string)
+        engine = session.create_engine(connect_string)
         self.engines[database] = engine
         self.test_databases[database] = connect_string
 
@@ -421,7 +422,7 @@ class BaseWalkMigrationTestCase(BaseMigrationTestCase):
         # automatically in tearDown so no need to clean it up here.
         connect_string = oslodbutils.get_connect_string(
             "postgresql+psycopg2", self.DATABASE, self.USER, self.PASSWD)
-        engine = sqlalchemy.create_engine(connect_string)
+        engine = session.create_engine(connect_string)
         (user, password, database, host) = \
                 get_pgsql_connection_info(urlparse.urlparse(connect_string))
         self.engines[database] = engine

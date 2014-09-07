@@ -22,13 +22,13 @@ import functools
 import time
 
 from oslo.config import cfg
+from oslo.db import exception as db_exc
 
 from nova.cells import rpc_driver
 from nova import context
 from nova.db import base
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import fileutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging

@@ -13,8 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.db import exception as db_exc
+from oslo.db.sqlalchemy import utils as oslodbutils
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy import MetaData
 from sqlalchemy.sql.expression import UpdateBase
@@ -24,7 +25,6 @@ from sqlalchemy.types import NullType
 from nova.db.sqlalchemy import api as db
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common.db.sqlalchemy import utils as oslodbutils
 from nova.openstack.common import log as logging
 
 
@@ -124,7 +124,10 @@ def create_shadow_table(migrate_engine, table_name=None, table=None,
     try:
         shadow_table.create()
         return shadow_table
-    except (OperationalError, ProgrammingError):
+    except (db_exc.DBError, OperationalError):
+        # NOTE(ekudryashova): At the moment there is a case in oslo.db code,
+        # which raises unwrapped OperationalError, so we should catch it until
+        # oslo.db would wraps all such exceptions
         LOG.info(repr(shadow_table))
         LOG.exception(_('Exception while creating table.'))
         raise exception.ShadowTableExists(name=shadow_table_name)

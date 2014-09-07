@@ -12,10 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.openstack.common import log as logging
+from oslo.db import exception as db_exc
 from sqlalchemy import MetaData, Table, exists
-from sqlalchemy import exc
 from sqlalchemy import sql
+
+from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 
@@ -40,7 +41,9 @@ def upgrade(migrate_engine):
     for node_id, address in node_address.iteritems():
         try:
             i.execute({'bm_node_id': node_id, 'address': address})
-        except exc.IntegrityError:
+        except db_exc.DBError:
+            # TODO(ekudryashova): replace by DBReferenceError when db layer
+            # raise it.
             # The address is registered in both bm_nodes and bm_interfaces.
             # It is expected.
             pass

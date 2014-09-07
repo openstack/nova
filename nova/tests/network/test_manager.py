@@ -22,6 +22,7 @@ import mock
 import mox
 import netaddr
 from oslo.config import cfg
+from oslo.db import exception as db_exc
 from oslo import messaging
 import six
 
@@ -37,7 +38,6 @@ from nova.network import model as net_model
 from nova import objects
 from nova.objects import quotas as quotas_obj
 from nova.objects import virtual_interface as vif_obj
-from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils

@@ -16,23 +16,26 @@
 #    under the License.
 
 from oslo.config import cfg
+from oslo.db import options
 
 from nova import debugger
-from nova.openstack.common.db import options
 from nova import paths
 from nova import rpc
 from nova import version
+
+
+CONF = cfg.CONF
 
 _DEFAULT_SQL_CONNECTION = 'sqlite:///' + paths.state_path_def('nova.sqlite')
 
 
 def parse_args(argv, default_config_files=None):
-    options.set_defaults(sql_connection=_DEFAULT_SQL_CONNECTION,
+    options.set_defaults(CONF, connection=_DEFAULT_SQL_CONNECTION,
                          sqlite_db='nova.sqlite')
     rpc.set_defaults(control_exchange='nova')
     debugger.register_cli_opts()
-    cfg.CONF(argv[1:],
-             project='nova',
-             version=version.version_string(),
-             default_config_files=default_config_files)
-    rpc.init(cfg.CONF)
+    CONF(argv[1:],
+         project='nova',
+         version=version.version_string(),
+         default_config_files=default_config_files)
+    rpc.init(CONF)
