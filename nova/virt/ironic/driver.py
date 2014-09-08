@@ -23,7 +23,6 @@ bare metal resources.
 import logging as py_logging
 import time
 
-from ironicclient import exc as ironic_exception
 from oslo.config import cfg
 import six
 
@@ -37,6 +36,7 @@ from nova.i18n import _LE
 from nova.i18n import _LW
 from nova.objects import instance as instance_obj
 from nova.openstack.common import excutils
+from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
@@ -46,6 +46,8 @@ from nova.virt.ironic import client_wrapper
 from nova.virt.ironic import ironic_states
 from nova.virt.ironic import patcher
 
+
+ironic = None
 
 LOG = logging.getLogger(__name__)
 
@@ -110,7 +112,7 @@ def _validate_instance_and_node(icli, instance):
         # TODO(mrda): Bug ID 1365228 icli should be renamed ironicclient
         # throughout
         return icli.call("node.get_by_instance_uuid", instance['uuid'])
-    except ironic_exception.NotFound:
+    except ironic.exc.NotFound:
         raise exception.InstanceNotFound(instance_id=instance['uuid'])
 
 
@@ -144,6 +146,15 @@ class IronicDriver(virt_driver.ComputeDriver):
 
     def __init__(self, virtapi, read_only=False):
         super(IronicDriver, self).__init__(virtapi)
+        global ironic
+        if ironic is None:
+            ironic = importutils.import_module('ironicclient')
+            # NOTE(deva): work around a lack of symbols in the current version.
+            if not hasattr(ironic, 'exc'):
+                ironic.exc = importutils.import_module('ironicclient.exc')
+            if not hasattr(ironic, 'client'):
+                ironic.client = importutils.import_module(
+                                                    'ironicclient.client')
 
         self.firewall_driver = firewall.load_driver(
             default='nova.virt.firewall.NoopFirewallDriver')
@@ -270,7 +281,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                       'value': instance['uuid']})
         try:
             icli.call('node.update', node.uuid, patch)
-        except ironic_exception.BadRequest:
+        except ironic.exc.BadRequest:
             msg = (_("Failed to add deploy parameters on node %(node)s "
                      "when provisioning the instance %(instance)s")
                    % {'node': node.uuid, 'instance': instance['uuid']})
@@ -287,7 +298,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         patch.append({'op': 'remove', 'path': '/instance_uuid'})
         try:
             icli.call('node.update', node.uuid, patch)
-        except ironic_exception.BadRequest:
+        except ironic.exc.BadRequest:
             LOG.error(_LE("Failed to clean up the parameters on node %(node)s "
                           "when unprovisioning the instance %(instance)s"),
                          {'node': node.uuid, 'instance': instance['uuid']})
@@ -403,7 +414,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         try:
             icli.call("node.get", nodename)
             return True
-        except ironic_exception.NotFound:
+        except ironic.exc.NotFound:
             return False
 
     def _refresh_cache(self):
@@ -536,7 +547,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         icli = client_wrapper.IronicClientWrapper()
         try:
             node = icli.call("node.get", instance['node'])
-        except ironic_exception.NotFound:
+        except ironic.exc.NotFound:
             return None
         ports = icli.call("node.list_ports", node.uuid)
         return set([p.address for p in ports])
@@ -562,7 +573,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         # is a significant issue. It may mean we've been passed the wrong data.
         node_uuid = instance.get('node')
         if not node_uuid:
-            raise ironic_exception.BadRequest(
+            raise ironic.exc.BadRequest(
                 _("Ironic node uuid not supplied to "
                   "driver for instance %s.") % instance['uuid'])
 
@@ -875,7 +886,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                 patch = [{'op': 'remove', 'path': '/extra/vif_port_id'}]
                 try:
                     icli.call("port.update", pif.uuid, patch)
-                except ironic_exception.BadRequest:
+                except ironic.exc.BadRequest:
                     pass
 
     def plug_vifs(self, instance, network_info):
@@ -958,9 +969,9 @@ class IronicDriver(virt_driver.ComputeDriver):
         try:
             icli.call("node.set_provision_state",
                       node_uuid, ironic_states.REBUILD)
-        except (exception.NovaException,               # Retry failed
-                ironic_exception.InternalServerError,  # Validations
-                ironic_exception.BadRequest) as e:     # Maintenance
+        except (exception.NovaException,         # Retry failed
+                ironic.exc.InternalServerError,  # Validations
+                ironic.exc.BadRequest) as e:     # Maintenance
             msg = (_("Failed to request Ironic to rebuild instance "
                      "%(inst)s: %(reason)s") % {'inst': instance['uuid'],
                                                 'reason': six.text_type(e)})
