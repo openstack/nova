@@ -26,6 +26,7 @@ fake_pci_1 = {
     'vendor_id': 'v1',
     'status': 'available',
     'extra_k1': 'v1',
+    'request_id': None,
     }
 
 

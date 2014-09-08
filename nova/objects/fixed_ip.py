@@ -28,7 +28,8 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added virtual_interface field
     # Version 1.2: Instance version 1.14
-    VERSION = '1.2'
+    # Version 1.3: Instance 1.15
+    VERSION = '1.3'
 
     fields = {
         'id': fields.IntegerField(),
@@ -49,9 +50,9 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
     def obj_make_compatible(self, primitive, target_version):
         target_version = utils.convert_version_to_tuple(target_version)
         if target_version < (1, 2) and 'instance' in primitive:
-            primitive['instance'] = (
-                    objects.Instance().object_make_compatible(
-                        primitive['instance']['nova_object.data'], '1.13'))
+            self.instance.obj_make_compatible(
+                primitive['instance']['nova_object.data'], '1.13')
+            primitive['instance']['nova_object.version'] = '1.13'
 
     @property
     def floating_ips(self):
@@ -174,7 +175,8 @@ class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added get_by_network()
     # Version 1.2: FixedIP <= version 1.2
-    VERSION = '1.2'
+    # Version 1.3: FixedIP <= version 1.3
+    VERSION = '1.3'
 
     fields = {
         'objects': fields.ListOfObjectsField('FixedIP'),
@@ -183,6 +185,7 @@ class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
         '1.0': '1.0',
         '1.1': '1.1',
         '1.2': '1.2',
+        '1.3': '1.3',
         }
 
     @obj_base.remotable_classmethod

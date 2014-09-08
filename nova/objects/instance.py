@@ -73,7 +73,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
     # Version 1.12: Added ephemeral_key_uuid
     # Version 1.13: Added delete_metadata_key()
     # Version 1.14: Added numa_topology
-    VERSION = '1.14'
+    # Version 1.15: PciDeviceList 1.1
+    VERSION = '1.15'
 
     fields = {
         'id': fields.IntegerField(),
@@ -222,6 +223,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             for field in [x for x in unicode_attributes if x in primitive
                           and primitive[x] is not None]:
                 primitive[field] = primitive[field].encode('ascii', 'replace')
+        if target_version < (1, 15) and 'pci_devices' in primitive:
+            # NOTE(baoli): Instance <= 1.14 (icehouse) had PciDeviceList 1.0
+            self.pci_devices.obj_make_compatible(
+                primitive['pci_devices']['nova_object.data'], '1.0')
+            primitive['pci_devices']['nova_object.version'] = '1.0'
         if target_version < (1, 6):
             # NOTE(danms): Before 1.6 there was no pci_devices list
             if 'pci_devices' in primitive:
@@ -652,7 +658,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.6: Instance <= version 1.13
     # Version 1.7: Added use_slave to get_active_by_window_joined
     # Version 1.8: Instance <= version 1.14
-    VERSION = '1.8'
+    # Version 1.9: Instance <= version 1.15
+    VERSION = '1.9'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -667,6 +674,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         '1.6': '1.13',
         '1.7': '1.13',
         '1.8': '1.14',
+        '1.9': '1.15',
         }
 
     @base.remotable_classmethod

@@ -35,6 +35,7 @@ fake_db_dev_1 = {
     'dev_id': 'pci_0000_04_10_0',
     'label': 'label_8086_1520',
     'instance_uuid': '69ba1044-0766-4ec0-b60d-09595de034a1',
+    'request_id': None,
     'extra_info': '{"key1": "value1", "key2": "value2"}'
     }
 
@@ -53,6 +54,7 @@ fake_db_dev_2 = {
     'dev_id': 'pci_0000_04_10_1',
     'label': 'label_8086_1520',
     'instance_uuid': 'd5b446a6-a1b4-4d01-b4f0-eac37b3a62fc',
+    'request_id': None,
     'extra_info': '{"key3": "value3", "key4": "value4"}'
     }
 
