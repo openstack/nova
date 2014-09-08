@@ -29,7 +29,7 @@ class FlavorManageSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
                                  "flavor-create-post-req",
                                  subs)
         subs.update(self._get_regexes())
-        self._verify_response("flavor-create-post-resp", subs, response, 201)
+        self._verify_response("flavor-create-post-resp", subs, response, 200)
 
     def test_create_flavor(self):
         # Get api sample to create a flavor.
@@ -39,5 +39,5 @@ class FlavorManageSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
         # Get api sample to delete a flavor.
         self._create_flavor()
         response = self._do_delete("flavors/10")
-        self.assertEqual(response.status, 204)
+        self.assertEqual(response.status, 202)
         self.assertEqual(response.read(), '')

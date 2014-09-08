@@ -104,7 +104,6 @@ def return_flavor_not_found(flavor_id, ctxt=None):
 
 
 class FlavorsTestV21(test.TestCase):
-    api_version = "2.1"
     _prefix = "/v3"
     Controller = flavors_v3.FlavorsController
     fake_request = fakes.HTTPRequestV3
@@ -122,6 +121,14 @@ class FlavorsTestV21(test.TestCase):
                        "get_flavor_by_flavor_id",
                        fake_flavor_get_by_flavor_id)
         self.controller = self.Controller()
+
+    def _set_expected_body(self, expected, ephemeral, swap, disabled):
+        # NOTE(oomichi): On v2.1 API, some extensions of v2.0 are merged
+        # as core features and we can get the following parameters as the
+        # default.
+        expected['OS-FLV-EXT-DATA:ephemeral'] = ephemeral
+        expected['OS-FLV-DISABLED:disabled'] = disabled
+        expected['swap'] = swap
 
     def test_get_flavor_by_invalid_id(self):
         self.stubs.Set(nova.compute.flavors,
@@ -155,10 +162,8 @@ class FlavorsTestV21(test.TestCase):
                 ],
             },
         }
-        if self.api_version == "2.1":
-            expected['flavor']['ephemeral'] = '20'
-            expected['flavor']['swap'] = '10'
-            expected['flavor']['disabled'] = False
+        self._set_expected_body(expected['flavor'], ephemeral='20',
+                                swap='10', disabled=False)
         self.assertEqual(flavor, expected)
 
     def test_get_flavor_with_custom_link_prefix(self):
@@ -187,11 +192,9 @@ class FlavorsTestV21(test.TestCase):
                 ],
             },
         }
-        if self.api_version == "2.1":
-            expected['flavor']['ephemeral'] = '20'
-            expected['flavor']['swap'] = '10'
-            expected['flavor']['disabled'] = False
-        self.assertEqual(flavor, expected)
+        self._set_expected_body(expected['flavor'], ephemeral='20',
+                                swap='10', disabled=False)
+        self.assertEqual(expected, flavor)
 
     def test_get_flavor_list(self):
         req = self.fake_request.blank(self._prefix + '/flavors')
@@ -399,14 +402,11 @@ class FlavorsTestV21(test.TestCase):
                 },
             ],
         }
-        if self.api_version == "2.1":
-            expected['flavors'][0]['ephemeral'] = '20'
-            expected['flavors'][0]['swap'] = '10'
-            expected['flavors'][0]['disabled'] = False
-            expected['flavors'][1]['ephemeral'] = '10'
-            expected['flavors'][1]['swap'] = '5'
-            expected['flavors'][1]['disabled'] = False
-        self.assertEqual(flavor, expected)
+        self._set_expected_body(expected['flavors'][0], ephemeral='20',
+                                swap='10', disabled=False)
+        self._set_expected_body(expected['flavors'][1], ephemeral='10',
+                                swap='5', disabled=False)
+        self.assertEqual(expected, flavor)
 
     def test_get_empty_flavor_list(self):
         self.stubs.Set(nova.compute.flavors, "get_all_flavors_sorted_list",
@@ -511,20 +511,20 @@ class FlavorsTestV21(test.TestCase):
                 },
             ],
         }
-        if self.api_version == "2.1":
-            expected['flavors'][0]['ephemeral'] = '10'
-            expected['flavors'][0]['swap'] = '5'
-            expected['flavors'][0]['disabled'] = False
-        self.assertEqual(flavor, expected)
+        self._set_expected_body(expected['flavors'][0], ephemeral='10',
+                                swap='5', disabled=False)
+        self.assertEqual(expected, flavor)
 
 
 class FlavorsTestV20(FlavorsTestV21):
-    api_version = "2.0"
     _prefix = "/v2/fake"
     Controller = flavors_v2.Controller
     fake_request = fakes.HTTPRequest
     _rspv = "v2/fake"
     _fake = "/fake"
+
+    def _set_expected_body(self, expected, ephemeral, swap, disabled):
+        pass
 
 
 class FlavorsXMLSerializationTest(test.TestCase):
@@ -765,7 +765,6 @@ class FlavorsXMLSerializationTest(test.TestCase):
 class DisabledFlavorsWithRealDBTestV21(test.TestCase):
     """Tests that disabled flavors should not be shown nor listed."""
     Controller = flavors_v3.FlavorsController
-    api_version = "2.1"
     _prefix = "/v3"
     fake_request = fakes.HTTPRequestV3
 
@@ -855,14 +854,12 @@ class DisabledFlavorsWithRealDBTestV21(test.TestCase):
 class DisabledFlavorsWithRealDBTestV20(DisabledFlavorsWithRealDBTestV21):
     """Tests that disabled flavors should not be shown nor listed."""
     Controller = flavors_v2.Controller
-    api_version = "2.0"
     _prefix = "/v2/fake"
     fake_request = fakes.HTTPRequest
 
 
 class ParseIsPublicTestV21(test.TestCase):
     Controller = flavors_v3.FlavorsController
-    api_version = "2.1"
 
     def setUp(self):
         super(ParseIsPublicTestV21, self).setUp()
@@ -900,4 +897,3 @@ class ParseIsPublicTestV21(test.TestCase):
 
 class ParseIsPublicTestV20(ParseIsPublicTestV21):
     Controller = flavors_v2.Controller
-    api_version = "2.0"

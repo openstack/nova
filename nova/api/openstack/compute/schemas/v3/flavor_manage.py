@@ -44,7 +44,7 @@ create = {
                     'pattern': '^[0-9]*$', 'minimum': 0
                 },
                 # non-negative ( >= 0) integer
-                'ephemeral': {
+                'OS-FLV-EXT-DATA:ephemeral': {
                     'type': ['integer', 'string'],
                     'pattern': '^[0-9]*$', 'minimum': 0
                 },

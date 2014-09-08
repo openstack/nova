@@ -27,6 +27,9 @@ FAKE_FLAVORS = {
         "name": 'flavor 1',
         "memory_mb": '256',
         "root_gb": '10',
+        "swap": 512,
+        "vcpus": 1,
+        "ephemeral_gb": 1,
         "disabled": False,
     },
     'flavor 2': {
@@ -34,6 +37,9 @@ FAKE_FLAVORS = {
         "name": 'flavor 2',
         "memory_mb": '512',
         "root_gb": '20',
+        "swap": None,
+        "vcpus": 1,
+        "ephemeral_gb": 1,
         "disabled": True,
     },
 }
@@ -52,12 +58,13 @@ def fake_get_all_flavors_sorted_list(context=None, inactive=False,
     ]
 
 
-class FlavorDisabledTest(test.NoDBTestCase):
+class FlavorDisabledTestV21(test.NoDBTestCase):
+    base_url = '/v3/flavors'
     content_type = 'application/json'
-    prefix = '%s:' % flavor_disabled.Flavor_disabled.alias
+    prefix = "OS-FLV-DISABLED:"
 
     def setUp(self):
-        super(FlavorDisabledTest, self).setUp()
+        super(FlavorDisabledTestV21, self).setUp()
         ext = ('nova.api.openstack.compute.contrib'
               '.flavor_disabled.Flavor_disabled')
         self.flags(osapi_compute_extension=[ext])
@@ -71,7 +78,7 @@ class FlavorDisabledTest(test.NoDBTestCase):
     def _make_request(self, url):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app_v3(init_only=('flavors')))
         return res
 
     def _get_flavor(self, body):
@@ -84,14 +91,14 @@ class FlavorDisabledTest(test.NoDBTestCase):
         self.assertEqual(str(flavor.get('%sdisabled' % self.prefix)), disabled)
 
     def test_show(self):
-        url = '/v2/fake/flavors/1'
+        url = self.base_url + '/1'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
         self.assertFlavorDisabled(self._get_flavor(res.body), 'False')
 
     def test_detail(self):
-        url = '/v2/fake/flavors/detail'
+        url = self.base_url + '/detail'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
@@ -100,7 +107,17 @@ class FlavorDisabledTest(test.NoDBTestCase):
         self.assertFlavorDisabled(flavors[1], 'True')
 
 
-class FlavorDisabledXmlTest(FlavorDisabledTest):
+class FlavorDisabledTestV2(FlavorDisabledTestV21):
+    base_url = '/v2/fake/flavors'
+
+    def _make_request(self, url):
+        req = webob.Request.blank(url)
+        req.headers['Accept'] = self.content_type
+        res = req.get_response(fakes.wsgi_app())
+        return res
+
+
+class FlavorDisabledXmlTest(FlavorDisabledTestV2):
     content_type = 'application/xml'
     prefix = '{%s}' % flavor_disabled.Flavor_disabled.namespace
 
