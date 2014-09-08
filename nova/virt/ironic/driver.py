@@ -28,12 +28,12 @@ import six
 
 from nova.compute import arch
 from nova.compute import power_state
+from nova.compute import task_states
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
-from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.openstack.common import excutils
 from nova.openstack.common import jsonutils
@@ -255,7 +255,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         self.firewall_driver.unfilter_instance(instance, network_info)
 
     def _add_driver_fields(self, node, instance, image_meta, flavor,
-                               preserve_ephemeral=None):
+                           preserve_ephemeral=None):
         icli = client_wrapper.IronicClientWrapper()
         patch = patcher.create(node).get_deploy_patch(instance,
                                                       image_meta,
@@ -276,9 +276,7 @@ class IronicDriver(virt_driver.ComputeDriver):
 
     def _cleanup_deploy(self, node, instance, network_info):
         icli = client_wrapper.IronicClientWrapper()
-        context = nova_context.get_admin_context()
-        flavor = flavor_obj.Flavor.get_by_id(context,
-                                             instance['instance_type_id'])
+        flavor = instance.get_flavor()
         patch = patcher.create(node).get_cleanup_patch(instance, network_info,
                                                        flavor)
 
@@ -469,6 +467,14 @@ class IronicDriver(virt_driver.ComputeDriver):
                 'cpu_time': 0
                 }
 
+    def deallocate_networks_on_reschedule(self, instance):
+        """Does the driver want networks deallocated on reschedule?
+
+        :param instance: the instance object.
+        :returns: Boolean value. If True deallocate networks on reschedule.
+        """
+        return True
+
     def macs_for_instance(self, instance):
         """List the MAC addresses of an instance.
 
@@ -515,9 +521,7 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         icli = client_wrapper.IronicClientWrapper()
         node = icli.call("node.get", node_uuid)
-
-        flavor = flavor_obj.Flavor.get_by_id(context,
-                                             instance['instance_type_id'])
+        flavor = instance.get_flavor()
 
         self._add_driver_fields(node, instance, image_meta, flavor)
 
@@ -718,6 +722,61 @@ class IronicDriver(virt_driver.ComputeDriver):
             caps.append(data)
         return caps
 
+    def refresh_security_group_rules(self, security_group_id):
+        """Refresh security group rules from data store.
+
+        Invoked when security group rules are updated.
+
+        :param security_group_id: The security group id.
+
+        """
+        self.firewall_driver.refresh_security_group_rules(security_group_id)
+
+    def refresh_security_group_members(self, security_group_id):
+        """Refresh security group members from data store.
+
+        Invoked when instances are added/removed to a security group.
+
+        :param security_group_id: The security group id.
+
+        """
+        self.firewall_driver.refresh_security_group_members(security_group_id)
+
+    def refresh_provider_fw_rules(self):
+        """Triggers a firewall update based on database changes."""
+        self.firewall_driver.refresh_provider_fw_rules()
+
+    def refresh_instance_security_rules(self, instance):
+        """Refresh security group rules from data store.
+
+        Gets called when an instance gets added to or removed from
+        the security group the instance is a member of or if the
+        group gains or loses a rule.
+
+        :param instance: The instance object.
+
+        """
+        self.firewall_driver.refresh_instance_security_rules(instance)
+
+    def ensure_filtering_rules_for_instance(self, instance, network_info):
+        """Set up filtering rules.
+
+        :param instance: The instance object.
+        :param network_info: Instance network information.
+
+        """
+        self.firewall_driver.setup_basic_filtering(instance, network_info)
+        self.firewall_driver.prepare_instance_filter(instance, network_info)
+
+    def unfilter_instance(self, instance, network_info):
+        """Stop filtering instance.
+
+        :param instance: The instance object.
+        :param network_info: Instance network information.
+
+        """
+        self.firewall_driver.unfilter_instance(instance, network_info)
+
     def _plug_vifs(self, node, instance, network_info):
         # NOTE(PhilDay): Accessing network_info will block if the thread
         # it wraps hasn't finished, so do this ahead of time so that we
@@ -793,3 +852,75 @@ class IronicDriver(virt_driver.ComputeDriver):
         icli = client_wrapper.IronicClientWrapper()
         node = icli.call("node.get", instance['node'])
         self._unplug_vifs(node, instance, network_info)
+
+    def rebuild(self, context, instance, image_meta, injected_files,
+                admin_password, bdms, detach_block_devices,
+                attach_block_devices, network_info=None,
+                recreate=False, block_device_info=None,
+                preserve_ephemeral=False):
+        """Rebuild/redeploy an instance.
+
+        This version of rebuild() allows for supporting the option to
+        preserve the ephemeral partition. We cannot call spawn() from
+        here because it will attempt to set the instance_uuid value
+        again, which is not allowed by the Ironic API. It also requires
+        the instance to not have an 'active' provision state, but we
+        cannot safely change that. Given that, we implement only the
+        portions of spawn() we need within rebuild().
+
+        :param context: The security context.
+        :param instance: The instance object.
+        :param image_meta: Image object returned by nova.image.glance
+            that defines the image from which to boot this instance. Ignored
+            by this driver.
+        :param injected_files: User files to inject into instance. Ignored
+            by this driver.
+        :param admin_password: Administrator password to set in
+            instance. Ignored by this driver.
+        :param bdms: block-device-mappings to use for rebuild. Ignored
+            by this driver.
+        :param detach_block_devices: function to detach block devices. See
+            nova.compute.manager.ComputeManager:_rebuild_default_impl for
+            usage. Ignored by this driver.
+        :param attach_block_devices: function to attach block devices. See
+            nova.compute.manager.ComputeManager:_rebuild_default_impl for
+            usage. Ignored by this driver.
+        :param network_info: Instance network information. Ignored by
+            this driver.
+        :param recreate: Boolean value; if True the instance is
+            recreated on a new hypervisor - all the cleanup of old state is
+            skipped. Ignored by this driver.
+        :param block_device_info: Instance block device
+            information. Ignored by this driver.
+        :param preserve_ephemeral: Boolean value; if True the ephemeral
+            must be preserved on rebuild.
+
+        """
+        instance.task_state = task_states.REBUILD_SPAWNING
+        instance.save(expected_task_state=[task_states.REBUILDING])
+
+        node_uuid = instance.node
+        icli = client_wrapper.IronicClientWrapper()
+        node = icli.call("node.get", node_uuid)
+        flavor = instance.get_flavor()
+
+        self._add_driver_fields(node, instance, image_meta, flavor,
+                                preserve_ephemeral)
+
+        # Trigger the node rebuild/redeploy.
+        try:
+            icli.call("node.set_provision_state",
+                      node_uuid, ironic_states.REBUILD)
+        except (exception.NovaException,               # Retry failed
+                ironic_exception.InternalServerError,  # Validations
+                ironic_exception.BadRequest) as e:     # Maintenance
+            msg = (_("Failed to request Ironic to rebuild instance "
+                     "%(inst)s: %(reason)s") % {'inst': instance['uuid'],
+                                                'reason': six.text_type(e)})
+            raise exception.InstanceDeployFailure(msg)
+
+        # Although the target provision state is REBUILD, it will actually go
+        # to ACTIVE once the redeploy is finished.
+        timer = loopingcall.FixedIntervalLoopingCall(self._wait_for_active,
+                                                     icli, instance)
+        timer.start(interval=CONF.ironic.api_retry_interval).wait()
