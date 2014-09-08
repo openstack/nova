@@ -544,18 +544,24 @@ class NetworkManager(manager.Manager):
             host = kwargs.get('host')
 
         try:
-            if 'fixed_ips' in kwargs:
-                fixed_ips = kwargs['fixed_ips']
+            requested_networks = kwargs.get('requested_networks')
+            if requested_networks:
+                # NOTE(obondarev): Temporary and transitional
+                if isinstance(requested_networks, objects.NetworkRequestList):
+                    requested_networks = requested_networks.as_tuples()
+
+                fixed_ips = [ip for (net_id, ip) in requested_networks]
             else:
-                fixed_ips = objects.FixedIPList.get_by_instance_uuid(
+                fixed_ip_list = objects.FixedIPList.get_by_instance_uuid(
                     read_deleted_context, instance_uuid)
+                fixed_ips = [str(ip.address) for ip in fixed_ip_list]
         except exception.FixedIpNotFoundForInstance:
             fixed_ips = []
         LOG.debug("Network deallocation for instance",
                   context=context, instance_uuid=instance_uuid)
         # deallocate fixed ips
         for fixed_ip in fixed_ips:
-            self.deallocate_fixed_ip(context, str(fixed_ip.address), host=host,
+            self.deallocate_fixed_ip(context, fixed_ip, host=host,
                     instance=instance)
 
         if CONF.update_dns_entries:

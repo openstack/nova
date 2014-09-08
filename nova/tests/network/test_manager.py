@@ -1905,6 +1905,23 @@ class CommonNetworkTestCase(test.TestCase):
             (ctx, '1.2.3.4', 'fake-host')
         ], manager.deallocate_fixed_ip_calls)
 
+    def test_deallocate_for_instance_with_requested_networks(self):
+        manager = fake_network.FakeNetworkManager()
+        db = manager.db
+        db.virtual_interface_delete_by_instance = mock.Mock()
+        ctx = context.RequestContext('igonre', 'igonre')
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest.from_tuple(t)
+                     for t in [('123', '1.2.3.4'), ('123', '4.3.2.1')]])
+        manager.deallocate_for_instance(
+            ctx,
+            instance=fake_instance.fake_instance_obj(ctx),
+            requested_networks=requested_networks)
+
+        self.assertEqual([
+            (ctx, '1.2.3.4', 'fake-host'), (ctx, '4.3.2.1', 'fake-host')
+        ], manager.deallocate_fixed_ip_calls)
+
     @mock.patch('nova.db.fixed_ip_get_by_instance')
     @mock.patch('nova.db.fixed_ip_disassociate')
     def test_remove_fixed_ip_from_instance(self, disassociate, get):
