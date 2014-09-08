@@ -275,22 +275,20 @@ class API(base_api.NetworkAPI):
             raise exception.InvalidInput(
                 reason=msg % instance.uuid)
         requested_networks = kwargs.get('requested_networks')
-        if isinstance(requested_networks, objects.NetworkRequestList):
-            # NOTE(danms): Temporary and transitional
-            requested_networks = requested_networks.as_tuples()
         dhcp_opts = kwargs.get('dhcp_options', None)
         ports = {}
         net_ids = []
         ordered_networks = []
         if requested_networks:
-            for network_id, fixed_ip, port_id in requested_networks:
-                if port_id:
-                    port = neutron.show_port(port_id)['port']
+            for request in requested_networks:
+                if request.port_id:
+                    port = neutron.show_port(request.port_id)['port']
                     if port.get('device_id'):
-                        raise exception.PortInUse(port_id=port_id)
+                        raise exception.PortInUse(port_id=request.port_id)
                     if hypervisor_macs is not None:
                         if port['mac_address'] not in hypervisor_macs:
-                            raise exception.PortNotUsable(port_id=port_id,
+                            raise exception.PortNotUsable(
+                                port_id=request.port_id,
                                 instance=instance.uuid)
                         else:
                             # Don't try to use this MAC if we need to create a
@@ -298,11 +296,11 @@ class API(base_api.NetworkAPI):
                             # configured by users into multiple ports so we
                             # discard rather than popping.
                             available_macs.discard(port['mac_address'])
-                    network_id = port['network_id']
-                    ports[port_id] = port
-                if network_id:
-                    net_ids.append(network_id)
-                    ordered_networks.append((network_id, fixed_ip, port_id))
+                    request.network_id = port['network_id']
+                    ports[request.port_id] = port
+                if request.network_id:
+                    net_ids.append(request.network_id)
+                    ordered_networks.append(request)
 
         nets = self._get_available_networks(context, instance.project_id,
                                             net_ids)
@@ -314,14 +312,15 @@ class API(base_api.NetworkAPI):
         # or if it is indirectly called through allocate_port_for_instance()
         # with None params=(network_id=None, requested_ip=None, port_id=None):
         if (not requested_networks
-            or requested_networks == [(None, None, None)]):
+            or requested_networks.is_single_unspecified):
             # bug/1267723 - if no network is requested and more
             # than one is available then raise NetworkAmbiguous Exception
             if len(nets) > 1:
                 msg = _("Multiple possible networks found, use a Network "
                          "ID to be more specific.")
                 raise exception.NetworkAmbiguous(msg)
-            ordered_networks.append((nets[0]['id'], None, None))
+            ordered_networks.append(
+                objects.NetworkRequest(network_id=nets[0]['id']))
 
         security_groups = kwargs.get('security_groups', [])
         security_group_ids = []
@@ -362,11 +361,11 @@ class API(base_api.NetworkAPI):
         created_port_ids = []
         ports_in_requested_order = []
         nets_in_requested_order = []
-        for network_id, fixed_ip, port_id in ordered_networks:
+        for request in ordered_networks:
             # Network lookup for available network_id
             network = None
             for net in nets:
-                if net['id'] == network_id:
+                if net['id'] == request.network_id:
                     network = net
                     break
             # if network_id did not pass validate_networks() and not available
@@ -386,7 +385,7 @@ class API(base_api.NetworkAPI):
                     and network.get('port_security_enabled', True))):
 
                 raise exception.SecurityGroupCannotBeApplied()
-            network_id = network['id']
+            request.network_id = network['id']
             zone = 'compute:%s' % instance.availability_zone
             port_req_body = {'port': {'device_id': instance.uuid,
                                       'device_owner': zone}}
@@ -397,15 +396,15 @@ class API(base_api.NetworkAPI):
                 port_client = (neutron if not
                                self._has_port_binding_extension(context) else
                                neutronv2.get_client(context, admin=True))
-                if port_id:
-                    port = ports[port_id]
+                if request.port_id:
+                    port = ports[request.port_id]
                     port_client.update_port(port['id'], port_req_body)
                     touched_port_ids.append(port['id'])
                     ports_in_requested_order.append(port['id'])
                 else:
                     created_port = self._create_port(
-                            port_client, instance, network_id,
-                            port_req_body, fixed_ip,
+                            port_client, instance, request.network_id,
+                            port_req_body, request.address,
                             security_group_ids, available_macs, dhcp_opts)
                     created_port_ids.append(created_port)
                     ports_in_requested_order.append(created_port)
@@ -484,7 +483,10 @@ class API(base_api.NetworkAPI):
         data = neutron.list_ports(**search_opts)
         ports = [port['id'] for port in data.get('ports', [])]
 
-        requested_networks = kwargs.get('requested_networks') or {}
+        requested_networks = kwargs.get('requested_networks') or []
+        # NOTE(danms): Temporary and transitional
+        if isinstance(requested_networks, objects.NetworkRequestList):
+            requested_networks = requested_networks.as_tuples()
         ports_to_skip = [port_id for nets, fips, port_id in requested_networks]
         ports = set(ports) - set(ports_to_skip)
         # Reset device_id and device_owner for the ports that are skipped
@@ -518,8 +520,12 @@ class API(base_api.NetworkAPI):
     def allocate_port_for_instance(self, context, instance, port_id,
                                    network_id=None, requested_ip=None):
         """Allocate a port for the instance."""
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id=network_id,
+                                            address=requested_ip,
+                                            port_id=port_id)])
         return self.allocate_for_instance(context, instance,
-                requested_networks=[(network_id, requested_ip, port_id)])
+                requested_networks=requested_networks)
 
     def deallocate_port_for_instance(self, context, instance, port_id):
         """Remove a specified port from the instance.
@@ -676,7 +682,7 @@ class API(base_api.NetworkAPI):
         neutron = neutronv2.get_client(context)
         ports_needed_per_instance = 0
 
-        if not requested_networks:
+        if requested_networks is None or len(requested_networks) == 0:
             nets = self._get_available_networks(context, context.project_id,
                                                 neutron=neutron)
             if len(nets) > 1:
@@ -693,27 +699,34 @@ class API(base_api.NetworkAPI):
             instance_on_net_ids = []
             net_ids_requested = []
 
-            for (net_id, fixed_ip, port_id) in requested_networks:
-                if port_id:
+            # TODO(danms): Remove me when all callers pass an object
+            if isinstance(requested_networks[0], tuple):
+                requested_networks = objects.NetworkRequestList(
+                    objects=[objects.NetworkRequest.from_tuple(t)
+                             for t in requested_networks])
+
+            for request in requested_networks:
+                if request.port_id:
                     try:
-                        port = neutron.show_port(port_id).get('port')
+                        port = neutron.show_port(request.port_id).get('port')
                     except neutronv2.exceptions.NeutronClientException as e:
                         if e.status_code == 404:
                             port = None
                         else:
                             with excutils.save_and_reraise_exception():
                                 LOG.exception(_LE("Failed to access port %s"),
-                                              port_id)
+                                              request.port_id)
                     if not port:
-                        raise exception.PortNotFound(port_id=port_id)
+                        raise exception.PortNotFound(port_id=request.port_id)
                     if port.get('device_id', None):
-                        raise exception.PortInUse(port_id=port_id)
+                        raise exception.PortInUse(port_id=request.port_id)
                     if not port.get('fixed_ips'):
-                        raise exception.PortRequiresFixedIP(port_id=port_id)
-                    net_id = port['network_id']
+                        raise exception.PortRequiresFixedIP(
+                            port_id=request.port_id)
+                    request.network_id = port['network_id']
                 else:
                     ports_needed_per_instance += 1
-                    net_ids_requested.append(net_id)
+                    net_ids_requested.append(request.network_id)
 
                     # NOTE(jecarey) There is currently a race condition.
                     # That is, if you have more than one request for a specific
@@ -723,24 +736,26 @@ class API(base_api.NetworkAPI):
                     # spawn. That instance will go into error state.
                     # TODO(jecarey) Need to address this race condition once we
                     # have the ability to update mac addresses in Neutron.
-                    if fixed_ip:
+                    if request.address:
                         # TODO(jecarey) Need to look at consolidating list_port
                         # calls once able to OR filters.
-                        search_opts = {'network_id': net_id,
-                                       'fixed_ips': 'ip_address=%s' % fixed_ip,
+                        search_opts = {'network_id': request.network_id,
+                                       'fixed_ips': 'ip_address=%s' % (
+                                           request.address),
                                        'fields': 'device_id'}
                         existing_ports = neutron.list_ports(
                                                     **search_opts)['ports']
                         if existing_ports:
                             i_uuid = existing_ports[0]['device_id']
                             raise exception.FixedIpAlreadyInUse(
-                                                    address=fixed_ip,
+                                                    address=request.address,
                                                     instance_uuid=i_uuid)
 
                 if (not CONF.neutron.allow_duplicate_networks and
-                    net_id in instance_on_net_ids):
-                        raise exception.NetworkDuplicated(network_id=net_id)
-                instance_on_net_ids.append(net_id)
+                    request.network_id in instance_on_net_ids):
+                        raise exception.NetworkDuplicated(
+                            network_id=request.network_id)
+                instance_on_net_ids.append(request.network_id)
 
             # Now check to see if all requested networks exist
             if net_ids_requested:
