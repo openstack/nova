@@ -34,8 +34,7 @@ from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
-from nova.objects import flavor as flavor_obj
-from nova.objects import instance as instance_obj
+from nova import objects
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -293,8 +292,8 @@ class IronicDriver(virt_driver.ComputeDriver):
         icli = client_wrapper.IronicClientWrapper()
         # TODO(mrda): It would be better to use instance.get_flavor() here
         # but right now that doesn't include extra_specs which are required
-        flavor = flavor_obj.Flavor.get_by_id(context,
-                                             instance['instance_type_id'])
+        flavor = objects.Flavor.get_by_id(context,
+                                          instance['instance_type_id'])
         patch = patcher.create(node).get_cleanup_patch(instance, network_info,
                                                        flavor)
 
@@ -379,8 +378,8 @@ class IronicDriver(virt_driver.ComputeDriver):
         icli = client_wrapper.IronicClientWrapper()
         node_list = icli.call("node.list", associated=True)
         context = nova_context.get_admin_context()
-        return [instance_obj.Instance.get_by_uuid(context,
-                                                  i.instance_uuid).name
+        return [objects.Instance.get_by_uuid(context,
+                                             i.instance_uuid).name
                 for i in node_list]
 
     def list_instance_uuids(self):
@@ -583,8 +582,8 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         icli = client_wrapper.IronicClientWrapper()
         node = icli.call("node.get", node_uuid)
-        flavor = flavor_obj.Flavor.get_by_id(context,
-                                             instance['instance_type_id'])
+        flavor = objects.Flavor.get_by_id(context,
+                                          instance['instance_type_id'])
 
         self._add_driver_fields(node, instance, image_meta, flavor)
 
@@ -965,8 +964,8 @@ class IronicDriver(virt_driver.ComputeDriver):
         node_uuid = instance.node
         icli = client_wrapper.IronicClientWrapper()
         node = icli.call("node.get", node_uuid)
-        flavor = flavor_obj.Flavor.get_by_id(context,
-                                             instance['instance_type_id'])
+        flavor = objects.Flavor.get_by_id(context,
+                                          instance['instance_type_id'])
 
         self._add_driver_fields(node, instance, image_meta, flavor,
                                 preserve_ephemeral)
