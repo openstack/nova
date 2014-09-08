@@ -15,11 +15,14 @@
 from nova.api.validation import parameter_types
 
 server_create = {
-    'os-security-groups:security_groups': {
+    'security_groups': {
         'type': 'array',
         'items': {
             'type': 'object',
             'properties': {
+                # NOTE(oomichi): allocate_for_instance() of neutronv2/api.py
+                # gets security_group names or UUIDs from this parameter.
+                # parameter_types.name allows both format.
                 'name': parameter_types.name,
             },
             'additionalProperties': False,

@@ -12,7 +12,7 @@
                 "rel": "bookmark"
             }
         ],
-        "os-security-groups:security_groups": [
+        "security_groups": [
             {
                 "name": "default"
             }

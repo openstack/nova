@@ -63,7 +63,7 @@
             "OS-SRV-USG:launched_at": "%(strtime)s",
             "OS-SRV-USG:terminated_at": null,
             "progress": 0,
-            "os-security-groups:security_groups": [
+            "security_groups": [
                 {
                     "name": "default"
                 }

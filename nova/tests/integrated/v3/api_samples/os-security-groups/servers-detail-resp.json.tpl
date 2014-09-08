@@ -51,7 +51,7 @@
             "status": "ACTIVE",
             "tenant_id": "openstack",
             "user_id": "fake",
-            "os-security-groups:security_groups": [{"name": "test"}],
+            "security_groups": [{"name": "test"}],
             "key_name": null
     }]
 }
