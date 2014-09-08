@@ -588,7 +588,8 @@ class HostFiltersTestCase(test.NoDBTestCase):
         filt_cls = self.class_map['DiskFilter']()
         self.flags(disk_allocation_ratio=1.0)
         filter_properties = {'instance_type': {'root_gb': 1,
-                                               'ephemeral_gb': 1}}
+                                               'ephemeral_gb': 1,
+                                               'swap': 1024}}
         service = {'disabled': False}
         host = fakes.FakeHostState('host1', 'node1',
                 {'free_disk_mb': 11 * 1024, 'total_usable_disk_gb': 13,
@@ -600,7 +601,8 @@ class HostFiltersTestCase(test.NoDBTestCase):
         filt_cls = self.class_map['DiskFilter']()
         self.flags(disk_allocation_ratio=1.0)
         filter_properties = {'instance_type': {'root_gb': 11,
-                                               'ephemeral_gb': 1}}
+                                               'ephemeral_gb': 1,
+                                               'swap': 1024}}
         service = {'disabled': False}
         host = fakes.FakeHostState('host1', 'node1',
                 {'free_disk_mb': 11 * 1024, 'total_usable_disk_gb': 13,
@@ -612,7 +614,8 @@ class HostFiltersTestCase(test.NoDBTestCase):
         filt_cls = self.class_map['DiskFilter']()
         self.flags(disk_allocation_ratio=10.0)
         filter_properties = {'instance_type': {'root_gb': 100,
-                                               'ephemeral_gb': 19}}
+                                               'ephemeral_gb': 18,
+                                               'swap': 1024}}
         service = {'disabled': False}
         # 1GB used... so 119GB allowed...
         host = fakes.FakeHostState('host1', 'node1',
@@ -626,7 +629,8 @@ class HostFiltersTestCase(test.NoDBTestCase):
         filt_cls = self.class_map['DiskFilter']()
         self.flags(disk_allocation_ratio=10.0)
         filter_properties = {'instance_type': {'root_gb': 100,
-                                               'ephemeral_gb': 20}}
+                                               'ephemeral_gb': 19,
+                                               'swap': 1024}}
         service = {'disabled': False}
         # 1GB used... so 119GB allowed...
         host = fakes.FakeHostState('host1', 'node1',
@@ -1587,3 +1591,46 @@ class HostFiltersTestCase(test.NoDBTestCase):
         self.pci_request_result = True
         self.assertRaises(AttributeError, filt_cls.host_passes,
                           host, filter_properties)
+
+    def test_aggregate_disk_filter_value_error(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['AggregateDiskFilter']()
+        self.flags(disk_allocation_ratio=1.0)
+        filter_properties = {
+            'context': self.context,
+            'instance_type': {'root_gb': 1,
+                              'ephemeral_gb': 1,
+                              'swap': 1024}}
+        service = {'disabled': False}
+        host = fakes.FakeHostState('host1', 'node1',
+                                   {'free_disk_mb': 3 * 1024,
+                                    'total_usable_disk_gb': 1,
+                                   'service': service})
+        self._create_aggregate_with_host(name='fake_aggregate',
+                hosts=['host1'],
+                metadata={'disk_allocation_ratio': 'XXX'})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_aggregate_disk_filter_default_value(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['AggregateDiskFilter']()
+        self.flags(disk_allocation_ratio=1.0)
+        filter_properties = {
+            'context': self.context,
+            'instance_type': {'root_gb': 2,
+                              'ephemeral_gb': 1,
+                              'swap': 1024}}
+        service = {'disabled': False}
+        host = fakes.FakeHostState('host1', 'node1',
+                                   {'free_disk_mb': 3 * 1024,
+                                    'total_usable_disk_gb': 1,
+                                   'service': service})
+        # Uses global conf.
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+        # Uses an aggregate with ratio
+        self._create_aggregate_with_host(
+            name='fake_aggregate',
+            hosts=['host1'],
+            metadata={'disk_allocation_ratio': '2'})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))

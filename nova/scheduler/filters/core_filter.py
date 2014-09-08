@@ -17,10 +17,10 @@
 
 from oslo.config import cfg
 
-from nova import db
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
+from nova.scheduler.filters import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -78,25 +78,16 @@ class AggregateCoreFilter(BaseCoreFilter):
     """
 
     def _get_cpu_allocation_ratio(self, host_state, filter_properties):
-        context = filter_properties['context'].elevated()
         # TODO(uni): DB query in filter is a performance hit, especially for
         # system with lots of hosts. Will need a general solution here to fix
         # all filters with aggregate DB call things.
-        metadata = db.aggregate_metadata_get_by_host(
-                     context, host_state.host, key='cpu_allocation_ratio')
-        aggregate_vals = metadata.get('cpu_allocation_ratio', set())
-        num_values = len(aggregate_vals)
-
-        if num_values == 0:
-            return CONF.cpu_allocation_ratio
-
-        if num_values > 1:
-            LOG.warning(_("%(num_values)d ratio values found, "
-                          "of which the minimum value will be used."),
-                         {'num_values': num_values})
-
+        aggregate_vals = utils.aggregate_values_from_db(
+            filter_properties['context'],
+            host_state.host,
+            'cpu_allocation_ratio')
         try:
-            ratio = float(min(aggregate_vals))
+            ratio = utils.validate_num_values(
+                aggregate_vals, CONF.cpu_allocation_ratio, cast_to=float)
         except ValueError as e:
             LOG.warning(_("Could not decode cpu_allocation_ratio: '%s'"), e)
             ratio = CONF.cpu_allocation_ratio
