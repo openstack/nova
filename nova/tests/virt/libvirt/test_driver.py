@@ -9135,6 +9135,21 @@ Active:          8381604 kB
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._unplug_vifs')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain')
+    def test_cleanup_pass_with_no_mount_device(self, undefine, unplug):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        conn.firewall_driver = mock.Mock()
+        conn._disconnect_volume = mock.Mock()
+        fake_inst = {'name': 'foo'}
+        fake_bdms = [{'connection_info': 'foo',
+                     'mount_device': None}]
+        with mock.patch('nova.virt.driver'
+                        '.block_device_info_get_mapping',
+                        return_value=fake_bdms):
+            conn.cleanup('ctxt', fake_inst, 'netinfo', destroy_disks=False)
+        self.assertTrue(conn._disconnect_volume.called)
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._unplug_vifs')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain')
     def test_cleanup_wants_vif_errors_ignored(self, undefine, unplug):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         fake_inst = {'name': 'foo'}
