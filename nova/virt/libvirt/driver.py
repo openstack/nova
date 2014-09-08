@@ -1158,6 +1158,10 @@ class LibvirtDriver(driver.ComputeDriver):
                                                   False)):
             self._delete_instance_files(instance)
 
+        if CONF.serial_console.enabled:
+            for host, port in self._get_serial_ports_from_instance(instance):
+                serial_console.release_port(host=host, port=port)
+
         self._undefine_domain(instance)
 
     def _detach_encrypted_volumes(self, instance):
@@ -1167,10 +1171,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                    [disk['path'] for disk in disks])
         for path in encrypted_volumes:
             dmcrypt.delete_volume(path)
-
-        if CONF.serial_console.enabled:
-            for host, port in self._get_serial_ports_from_instance(instance):
-                serial_console.release_port(host=host, port=port)
 
     def _get_serial_ports_from_instance(self, instance, mode=None):
         """Returns an iterator over serial port(s) configured on instance.

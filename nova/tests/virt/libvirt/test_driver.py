@@ -9400,6 +9400,41 @@ Active:          8381604 kB
                               conn.cleanup, 'ctxt', fake_inst, 'netinfo')
             unplug.assert_called_once_with(fake_inst, 'netinfo', True)
 
+    @mock.patch('nova.virt.driver.block_device_info_get_mapping')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_get_serial_ports_from_instance')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain')
+    def test_cleanup_serial_console_enabled(
+            self, undefine, get_ports,
+            block_device_info_get_mapping):
+        self.flags(enabled="True", group='serial_console')
+        instance = 'i1'
+        network_info = {}
+        bdm_info = {}
+        firewall_driver = mock.MagicMock()
+
+        get_ports.return_value = iter([('127.0.0.1', 10000)])
+        block_device_info_get_mapping.return_value = ()
+
+        # We want to ensure undefine_domain is called after
+        # lookup_domain.
+        def undefine_domain(instance):
+            get_ports.side_effect = Exception("domain undefined")
+        undefine.side_effect = undefine_domain
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        conn.firewall_driver = firewall_driver
+        conn.cleanup(
+            'ctx', instance, network_info,
+            block_device_info=bdm_info,
+            destroy_disks=False, destroy_vifs=False)
+
+        get_ports.assert_called_once_with(instance)
+        undefine.assert_called_once_with(instance)
+        firewall_driver.unfilter_instance.assert_called_once_with(
+            instance, network_info=network_info)
+        block_device_info_get_mapping.assert_called_once_with(bdm_info)
+
     def test_swap_volume(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
 
