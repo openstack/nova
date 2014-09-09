@@ -29,6 +29,14 @@ def volume_name(base):
     return base + _dmcrypt_suffix
 
 
+def is_encrypted(path):
+    """Returns true if the path corresponds to an encrypted disk."""
+    if path.startswith('/dev/mapper'):
+        return path.rpartition('/')[2].endswith(_dmcrypt_suffix)
+    else:
+        return False
+
+
 def create_volume(target, device, cipher, key_size, key):
     """Sets up a dmcrypt mapping
 

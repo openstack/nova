@@ -46,6 +46,7 @@ from nova import hooks
 from nova.i18n import _
 from nova.i18n import _LE
 from nova import image
+from nova import keymgr
 from nova import network
 from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
@@ -111,9 +112,32 @@ compute_opts = [
                      'boot from volume. A negative number means unlimited.'),
 ]
 
+ephemeral_storage_encryption_group = cfg.OptGroup(
+    name='ephemeral_storage_encryption',
+    title='Ephemeral storage encryption options')
+
+ephemeral_storage_encryption_opts = [
+    cfg.BoolOpt('enabled',
+                default=False,
+                help='Whether to encrypt ephemeral storage'),
+    cfg.StrOpt('cipher',
+               default='aes-xts-plain64',
+               help='The cipher and mode to be used to encrypt ephemeral '
+                    'storage. Which ciphers are available ciphers depends '
+                    'on kernel support. See /proc/crypto for the list of '
+                    'available options.'),
+    cfg.IntOpt('key_size',
+               default=512,
+               help='The bit length of the encryption key to be used to '
+                    'encrypt ephemeral storage (in XTS mode only half of '
+                    'the bits are used for encryption key)')
+]
 
 CONF = cfg.CONF
 CONF.register_opts(compute_opts)
+CONF.register_group(ephemeral_storage_encryption_group)
+CONF.register_opts(ephemeral_storage_encryption_opts,
+                   group='ephemeral_storage_encryption')
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
@@ -244,6 +268,8 @@ class API(base.Base):
         self._compute_task_api = None
         self.servicegroup_api = servicegroup.API()
         self.notifier = rpc.get_notifier('compute', CONF.host)
+        if CONF.ephemeral_storage_encryption.enabled:
+            self.key_manager = keymgr.API()
 
         super(API, self).__init__(**kwargs)
 
@@ -1192,7 +1218,7 @@ class API(base.Base):
     def _default_display_name(self, instance_uuid):
         return "Server %s" % instance_uuid
 
-    def _populate_instance_for_create(self, instance, image,
+    def _populate_instance_for_create(self, context, instance, image,
                                       index, security_groups, instance_type):
         """Build the beginning of a new instance."""
 
@@ -1208,6 +1234,12 @@ class API(base.Base):
         info_cache.instance_uuid = instance.uuid
         info_cache.network_info = network_model.NetworkInfo()
         instance.info_cache = info_cache
+        if CONF.ephemeral_storage_encryption.enabled:
+            instance.ephemeral_key_uuid = self.key_manager.create_key(
+                context,
+                length=CONF.ephemeral_storage_encryption.key_size)
+        else:
+            instance.ephemeral_key_uuid = None
 
         # Store image properties so we can use them later
         # (for notifications, etc).  Only store what we can.
@@ -1240,7 +1272,7 @@ class API(base.Base):
         This is called by the scheduler after a location for the
         instance has been determined.
         """
-        self._populate_instance_for_create(instance, image, index,
+        self._populate_instance_for_create(context, instance, image, index,
                                            security_group, instance_type)
 
         self._populate_instance_names(instance, num_instances)

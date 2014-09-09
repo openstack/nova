@@ -3705,6 +3705,83 @@ class LibvirtConnTestCase(test.TestCase,
         self.assertEqual(snapshot['disk_format'], 'raw')
         self.assertEqual(snapshot['name'], snapshot_name)
 
+    def test_lvm_snapshot_in_raw_format(self):
+        # Tests Lvm backend snapshot functionality with raw format
+        # snapshots.
+        xml = """
+              <domain type='kvm'>
+                   <devices>
+                       <disk type='block' device='disk'>
+                           <source dev='/dev/some-vg/some-lv'/>
+                       </disk>
+                   </devices>
+              </domain>
+              """
+        update_task_state_calls = [
+            mock.call(task_state=task_states.IMAGE_PENDING_UPLOAD),
+            mock.call(task_state=task_states.IMAGE_UPLOADING,
+                      expected_state=task_states.IMAGE_PENDING_UPLOAD)]
+        mock_update_task_state = mock.Mock()
+        mock_lookupByName = mock.Mock(return_value=FakeVirtDomain(xml),
+                                      autospec=True)
+        volume_info = {'VG': 'nova-vg', 'LV': 'disk'}
+        mock_volume_info = mock.Mock(return_value=volume_info,
+                                             autospec=True)
+        mock_volume_info_calls = [mock.call('/dev/nova-vg/lv')]
+        mock_convert_image = mock.Mock()
+
+        def convert_image_side_effect(source, dest, out_format,
+                                      run_as_root=True):
+            libvirt_driver.libvirt_utils.files[dest] = ''
+        mock_convert_image.side_effect = convert_image_side_effect
+
+        self.flags(snapshots_directory='./',
+                   snapshot_image_format='raw',
+                   images_type='lvm',
+                   images_volume_group='nova-vg', group='libvirt')
+        libvirt_driver.libvirt_utils.disk_type = "lvm"
+
+        # Start test
+        image_service = nova.tests.image.fake.FakeImageService()
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        properties = {'instance_id': instance_ref['id'],
+                      'user_id': str(self.context.user_id)}
+        snapshot_name = 'test-snap'
+        sent_meta = {'name': snapshot_name, 'is_public': False,
+                     'status': 'creating', 'properties': properties}
+        recv_meta = image_service.create(context, sent_meta)
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        with contextlib.nested(
+                mock.patch.object(libvirt_driver.LibvirtDriver,
+                                   '_conn',
+                                   autospec=True),
+                mock.patch.object(libvirt_driver.imagebackend.lvm,
+                                  'volume_info',
+                                  mock_volume_info),
+                mock.patch.object(libvirt_driver.imagebackend.images,
+                                  'convert_image',
+                                  mock_convert_image),
+                mock.patch.object(libvirt_driver.LibvirtDriver,
+                                  '_lookup_by_name',
+                                  mock_lookupByName)):
+            conn.snapshot(self.context, instance_ref, recv_meta['id'],
+                      mock_update_task_state)
+
+        mock_lookupByName.assert_called_once_with("instance-00000001")
+        mock_volume_info.assert_has_calls(mock_volume_info_calls)
+        mock_convert_image.assert_called_once()
+        snapshot = image_service.show(context, recv_meta['id'])
+        mock_update_task_state.assert_has_calls(update_task_state_calls)
+        self.assertEqual('available', snapshot['properties']['image_state'])
+        self.assertEqual('active', snapshot['status'])
+        self.assertEqual('raw', snapshot['disk_format'])
+        self.assertEqual(snapshot_name, snapshot['name'])
+        # This is for all the subsequent tests that do not set the value of
+        # images type
+        self.flags(images_type='default', group='libvirt')
+        libvirt_driver.libvirt_utils.disk_type = "qcow2"
+
     def test_lxc_snapshot_in_raw_format(self):
         expected_calls = [
             {'args': (),
@@ -3736,6 +3813,7 @@ class LibvirtConnTestCase(test.TestCase,
         self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
         libvirt_driver.utils.execute = self.fake_execute
         self.stubs.Set(libvirt_driver.libvirt_utils, 'disk_type', 'raw')
+        libvirt_driver.libvirt_utils.disk_type = "raw"
 
         def convert_image(source, dest, out_format):
             libvirt_driver.libvirt_utils.files[dest] = ''
@@ -3846,6 +3924,80 @@ class LibvirtConnTestCase(test.TestCase,
         self.assertEqual(snapshot['disk_format'], 'qcow2')
         self.assertEqual(snapshot['name'], snapshot_name)
 
+    def test_lvm_snapshot_in_qcow2_format(self):
+        # Tests Lvm backend snapshot functionality with raw format
+        # snapshots.
+        xml = """
+              <domain type='kvm'>
+                   <devices>
+                       <disk type='block' device='disk'>
+                           <source dev='/dev/some-vg/some-lv'/>
+                       </disk>
+                   </devices>
+              </domain>
+              """
+        update_task_state_calls = [
+            mock.call(task_state=task_states.IMAGE_PENDING_UPLOAD),
+            mock.call(task_state=task_states.IMAGE_UPLOADING,
+                      expected_state=task_states.IMAGE_PENDING_UPLOAD)]
+        mock_update_task_state = mock.Mock()
+        mock_lookupByName = mock.Mock(return_value=FakeVirtDomain(xml),
+                                      autospec=True)
+        volume_info = {'VG': 'nova-vg', 'LV': 'disk'}
+        mock_volume_info = mock.Mock(return_value=volume_info, autospec=True)
+        mock_volume_info_calls = [mock.call('/dev/nova-vg/lv')]
+        mock_convert_image = mock.Mock()
+
+        def convert_image_side_effect(source, dest, out_format,
+                                      run_as_root=True):
+            libvirt_driver.libvirt_utils.files[dest] = ''
+        mock_convert_image.side_effect = convert_image_side_effect
+
+        self.flags(snapshots_directory='./',
+                   snapshot_image_format='qcow2',
+                   images_type='lvm',
+                   images_volume_group='nova-vg', group='libvirt')
+        libvirt_driver.libvirt_utils.disk_type = "lvm"
+
+        # Start test
+        image_service = nova.tests.image.fake.FakeImageService()
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        properties = {'instance_id': instance_ref['id'],
+                      'user_id': str(self.context.user_id)}
+        snapshot_name = 'test-snap'
+        sent_meta = {'name': snapshot_name, 'is_public': False,
+                     'status': 'creating', 'properties': properties}
+        recv_meta = image_service.create(context, sent_meta)
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        with contextlib.nested(
+                mock.patch.object(libvirt_driver.LibvirtDriver,
+                                   '_conn',
+                                   autospec=True),
+                mock.patch.object(libvirt_driver.imagebackend.lvm,
+                                  'volume_info',
+                                   mock_volume_info),
+                mock.patch.object(libvirt_driver.imagebackend.images,
+                                   'convert_image',
+                                   mock_convert_image),
+                mock.patch.object(libvirt_driver.LibvirtDriver,
+                                   '_lookup_by_name',
+                                   mock_lookupByName)):
+            conn.snapshot(self.context, instance_ref, recv_meta['id'],
+                      mock_update_task_state)
+
+        mock_lookupByName.assert_called_once_with("instance-00000001")
+        mock_volume_info.assert_has_calls(mock_volume_info_calls)
+        mock_convert_image.assert_called_once()
+        snapshot = image_service.show(context, recv_meta['id'])
+        mock_update_task_state.assert_has_calls(update_task_state_calls)
+        self.assertEqual('available', snapshot['properties']['image_state'])
+        self.assertEqual('active', snapshot['status'])
+        self.assertEqual('qcow2', snapshot['disk_format'])
+        self.assertEqual(snapshot_name, snapshot['name'])
+        self.flags(images_type='default', group='libvirt')
+        libvirt_driver.libvirt_utils.disk_type = "qcow2"
+
     def test_snapshot_no_image_architecture(self):
         expected_calls = [
             {'args': (),
@@ -3928,6 +4080,7 @@ class LibvirtConnTestCase(test.TestCase,
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
         self.mox.StubOutWithMock(libvirt_driver.utils, 'execute')
         libvirt_driver.utils.execute = self.fake_execute
+        libvirt_driver.libvirt_utils.disk_type = "qcow2"
 
         self.mox.ReplayAll()
 
@@ -3998,6 +4151,7 @@ class LibvirtConnTestCase(test.TestCase,
         self.flags(snapshots_directory='./',
                    virt_type='lxc',
                    group='libvirt')
+        libvirt_driver.libvirt_utils.disk_type = "qcow2"
 
         # Assign a non-existent image
         test_instance = copy.deepcopy(self.test_instance)
@@ -6352,7 +6506,6 @@ class LibvirtConnTestCase(test.TestCase,
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
                                  '_undefine_domain')
-        libvirt_driver.LibvirtDriver._undefine_domain(instance)
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         db.instance_get_by_uuid(mox.IgnoreArg(), mox.IgnoreArg(),
                                 columns_to_join=['info_cache',
@@ -6375,8 +6528,7 @@ class LibvirtConnTestCase(test.TestCase,
                                  'delete_instance_files')
         (libvirt_driver.LibvirtDriver.delete_instance_files(mox.IgnoreArg()).
          AndReturn(True))
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_cleanup_lvm')
-        libvirt_driver.LibvirtDriver._cleanup_lvm(instance)
+        libvirt_driver.LibvirtDriver._undefine_domain(instance)
 
         # Start test
         self.mox.ReplayAll()

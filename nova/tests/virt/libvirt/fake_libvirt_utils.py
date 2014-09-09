@@ -156,7 +156,12 @@ def file_open(path, mode=None):
 
 
 def find_disk(virt_dom):
-    return "filename"
+    if disk_type == 'lvm':
+        return "/dev/nova-vg/lv"
+    elif disk_type in ['raw', 'qcow2']:
+        return "filename"
+    else:
+        return "unknown_type_disk"
 
 
 def load_file(path):
