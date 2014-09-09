@@ -2077,7 +2077,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.compute._cleanup_allocated_networks(self.context, self.instance,
             self.requested_networks)
         self.compute._set_instance_error_state(self.context,
-                                               self.instance.uuid)
+                                               self.instance)
         self._instance_action_events()
         self.mox.ReplayAll()
 
