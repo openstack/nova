@@ -43,6 +43,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
+from nova import db
 from nova import exception
 from nova.image import glance
 from nova.network import model as network_model
@@ -1127,6 +1128,18 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                         injected_files=[], admin_password=None,
                         network_info=self.network_info,
                         block_device_info=block_device_info)
+
+    def test_spawn_hw_versions(self):
+        def _fake_flavor_get(context, id):
+            flavor = stubs._fake_flavor_get(context, id)
+            flavor['extra_specs'] = {'vmware:hw_version': 'vmx-08'}
+            return flavor
+
+        with mock.patch.object(db, 'flavor_get', _fake_flavor_get):
+            self._create_vm()
+        vm = self._get_vm_record()
+        version = vm.get("version")
+        self.assertEqual('vmx-08', version)
 
     def mock_upload_image(self, context, image, instance, **kwargs):
         self.assertEqual(image, 'Test-Snapshot')

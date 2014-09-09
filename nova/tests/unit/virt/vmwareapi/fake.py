@@ -420,6 +420,7 @@ class VirtualMachine(ManagedObject):
         self.set("summary.config.numCpu", kwargs.get("numCpu", 1))
         self.set("summary.config.memorySizeMB", kwargs.get("mem", 1))
         self.set("summary.config.instanceUuid", kwargs.get("instanceUuid"))
+        self.set("version", kwargs.get("version"))
 
         devices = _create_array_of_type('VirtualDevice')
         devices.VirtualDevice = kwargs.get("virtual_device", [])
@@ -957,7 +958,8 @@ def create_cluster(name, ds_ref):
 def create_vm(uuid=None, name=None,
               cpus=1, memory=128, devices=None,
               vmPathName=None, extraConfig=None,
-              res_pool_ref=None, host_ref=None):
+              res_pool_ref=None, host_ref=None,
+              version=None):
     if uuid is None:
         uuid = uuidutils.generate_uuid()
 
@@ -1001,7 +1003,8 @@ def create_vm(uuid=None, name=None,
               "mem": memory,
               "extra_config": extraConfig,
               "virtual_device": devices,
-              "instanceUuid": uuid}
+              "instanceUuid": uuid,
+              "version": version}
     vm = VirtualMachine(**vm_dict)
     _create_object("VirtualMachine", vm)
 
@@ -1239,7 +1242,7 @@ class FakeVim(object):
             return create_task(method, "error", error_fault=ex).obj
 
         pool = kwargs.get('pool')
-
+        version = getattr(config_spec, 'version', None)
         devices = []
         for device_change in config_spec.deviceChange:
             if device_change.operation == 'add':
@@ -1248,7 +1251,8 @@ class FakeVim(object):
         vm_ref = create_vm(config_spec.instanceUuid, config_spec.name,
                            config_spec.numCPUs, config_spec.memoryMB,
                            devices, config_spec.files.vmPathName,
-                           config_spec.extraConfig, pool)
+                           config_spec.extraConfig, pool,
+                           version=version)
 
         task_mdo = create_task(method, "success", result=vm_ref)
         return task_mdo.obj

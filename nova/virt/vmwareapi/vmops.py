@@ -262,6 +262,8 @@ class VMwareVMOps(object):
             value = flavor.extra_specs.get('quota:' + key)
             if value:
                 setattr(extra_specs.cpu_limits, key, type(value))
+        hw_version = flavor.extra_specs.get('vmware:hw_version')
+        extra_specs.hw_version = hw_version
         return extra_specs
 
     def _fetch_image_as_file(self, context, vi, image_ds_loc):
