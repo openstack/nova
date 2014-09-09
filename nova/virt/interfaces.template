@@ -34,6 +34,9 @@ iface {{ ifc.name }} inet6 static
 {% if ifc.gateway_v6 %}
     gateway {{ ifc.gateway_v6 }}
 {% endif %}
+{% if ifc.dns_v6 %}
+    dns-nameservers {{ ifc.dns_v6 }}
+{% endif %}
 {% endif %}
 {% endif %}
 {% endfor %}

@@ -535,6 +535,10 @@ class NetworkInfoTests(test.NoDBTestCase):
             ipv6_subnet_dict = dict(
                 cidr='1234:567::/48',
                 gateway=gateway_ip,
+                dns=[fake_network_cache_model.new_ip(
+                        dict(address='2001:4860:4860::8888')),
+                     fake_network_cache_model.new_ip(
+                         dict(address='2001:4860:4860::8844'))],
                 ips=[ip])
             if not gateway:
                 ipv6_subnet_dict['gateway'] = None
@@ -643,6 +647,7 @@ iface eth0 inet6 static
     address 1234:567::2
     netmask 48
     gateway 1234:567::1
+    dns-nameservers 2001:4860:4860::8888 2001:4860:4860::8844
 """
         template = self._setup_injected_network_scenario(use_ipv6=True)
         self.assertEqual(expected, template)
@@ -667,6 +672,7 @@ iface eth0 inet static
 iface eth0 inet6 static
     address 1234:567::2
     netmask 48
+    dns-nameservers 2001:4860:4860::8888 2001:4860:4860::8844
 """
         template = self._setup_injected_network_scenario(use_ipv6=True,
                                                          gateway=False)
@@ -699,6 +705,7 @@ iface eth0 inet6 static
     address 1234:567::2
     netmask 48
     gateway 1234:567::1
+    dns-nameservers 2001:4860:4860::8888 2001:4860:4860::8844
 
 auto eth1
 iface eth1 inet static
@@ -711,6 +718,7 @@ iface eth1 inet6 static
     address 1234:567::2
     netmask 48
     gateway 1234:567::1
+    dns-nameservers 2001:4860:4860::8888 2001:4860:4860::8844
 """
         template = self._setup_injected_network_scenario(use_ipv6=True,
                                                          two_interfaces=True)
