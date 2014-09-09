@@ -49,14 +49,19 @@ class QuotaSetsController(wsgi.Controller):
         quota_set.update(id=str(project_id))
         return dict(quota_set=quota_set)
 
-    def _validate_quota_limit(self, limit, minimum, maximum):
+    def _validate_quota_limit(self, resource, limit, minimum, maximum):
         # NOTE: -1 is a flag value for unlimited
         if ((limit < minimum) and
            (maximum != -1 or (maximum == -1 and limit != -1))):
-            msg = _("Quota limit must be greater than %s.") % minimum
+            msg = (_("Quota limit %(limit)s for %(resource)s must "
+                     "be greater than or equal to already used and "
+                     "reserved %(minimum)s.") %
+                   {'limit': limit, 'resource': resource, 'minimum': minimum})
             raise webob.exc.HTTPBadRequest(explanation=msg)
         if maximum != -1 and limit > maximum:
-            msg = _("Quota limit must be less than %s.") % maximum
+            msg = (_("Quota limit %(limit)s for %(resource)s must be "
+                     "less than or equal to %(maximum)s.") %
+                   {'limit': limit, 'resource': resource, 'maximum': maximum})
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
     def _get_quotas(self, context, id, user_id=None, usages=False):
@@ -116,12 +121,6 @@ class QuotaSetsController(wsgi.Controller):
         except exception.Forbidden:
             raise webob.exc.HTTPForbidden()
 
-        try:
-            quotas = self._get_quotas(context, id, user_id=user_id,
-                                      usages=True)
-        except exception.Forbidden:
-            raise webob.exc.HTTPForbidden()
-
         LOG.debug("Force update quotas: %s", force_update)
 
         for key, value in body['quota_set'].iteritems():
@@ -131,26 +130,11 @@ class QuotaSetsController(wsgi.Controller):
             # quota, this check will be ignored if admin want to force
             # update
             value = int(value)
-            if force_update is not True and value >= 0:
-                quota_value = quotas.get(key)
-                if quota_value and quota_value['limit'] >= 0:
-                    quota_used = (quota_value['in_use'] +
-                                  quota_value['reserved'])
-                    LOG.debug("Quota %(key)s used: %(quota_used)s, "
-                              "value: %(value)s.",
-                              {'key': key, 'quota_used': quota_used,
-                               'value': value})
-                    if quota_used > value:
-                        msg = (_("Quota value %(value)s for %(key)s are "
-                                "less than already used and reserved "
-                                "%(quota_used)s") %
-                                {'value': value, 'key': key,
-                                 'quota_used': quota_used})
-                        raise webob.exc.HTTPBadRequest(explanation=msg)
+            if not force_update:
+                minimum = settable_quotas[key]['minimum']
+                maximum = settable_quotas[key]['maximum']
+                self._validate_quota_limit(key, value, minimum, maximum)
 
-            minimum = settable_quotas[key]['minimum']
-            maximum = settable_quotas[key]['maximum']
-            self._validate_quota_limit(value, minimum, maximum)
             try:
                 objects.Quotas.create_limit(context, project_id,
                                             key, value, user_id=user_id)
