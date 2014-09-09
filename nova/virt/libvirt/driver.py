@@ -3785,8 +3785,11 @@ class LibvirtDriver(driver.ComputeDriver):
         consolepty.type = "pty"
         guest.add_device(consolepty)
 
-        # We want a tablet if VNC is enabled,
-        # or SPICE is enabled and the SPICE agent is disabled
+        # We want a tablet if VNC is enabled, or SPICE is enabled and
+        # the SPICE agent is disabled. If the SPICE agent is enabled
+        # it provides a paravirt mouse which drastically reduces
+        # overhead (by eliminating USB polling).
+        #
         # NB: this implies that if both SPICE + VNC are enabled
         # at the same time, we'll get the tablet whether the
         # SPICE agent is used or not.
