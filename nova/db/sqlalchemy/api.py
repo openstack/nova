@@ -1159,7 +1159,7 @@ def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
         #             then this has concurrency issues
         if not fixed_ip_ref:
-            raise exception.NoMoreFixedIps()
+            raise exception.NoMoreFixedIps(net=network_id)
 
         if fixed_ip_ref['network_id'] is None:
             fixed_ip_ref['network'] = network_id
