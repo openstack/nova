@@ -185,8 +185,9 @@ class IronicDriver(virt_driver.ComputeDriver):
         vcpus = int(node.properties.get('cpus', 0))
         memory_mb = int(node.properties.get('memory_mb', 0))
         local_gb = int(node.properties.get('local_gb', 0))
+        raw_cpu_arch = node.properties.get('cpu_arch', None)
         try:
-            cpu_arch = arch.canonicalize(node.properties.get('cpu_arch', None))
+            cpu_arch = arch.canonicalize(raw_cpu_arch)
         except exception.InvalidArchitectureName:
             cpu_arch = None
         if not cpu_arch:
@@ -202,7 +203,9 @@ class IronicDriver(virt_driver.ComputeDriver):
         # node.driver_info, and a flavor no longer needs to contain any of
         # these three extra specs, though the cpu_arch may still be used
         # in a heterogeneous environment, if so desired.
-        nodes_extra_specs['cpu_arch'] = cpu_arch
+        # NOTE(dprince): we use the raw cpu_arch here because extra_specs
+        # filters aren't canonicalized
+        nodes_extra_specs['cpu_arch'] = raw_cpu_arch
 
         # NOTE(gilliard): To assist with more precise scheduling, if the
         # node.properties contains a key 'capabilities', we expect the value
