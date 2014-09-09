@@ -400,7 +400,9 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         """
         ironicclient = client_wrapper.IronicClientWrapper()
-        node_list = ironicclient.call("node.list", associated=True)
+        # NOTE(lucasagomes): limit == 0 is an indicator to continue
+        # pagination until there're no more values to be returned.
+        node_list = ironicclient.call("node.list", associated=True, limit=0)
         context = nova_context.get_admin_context()
         return [objects.Instance.get_by_uuid(context,
                                              i.instance_uuid).name
@@ -413,7 +415,9 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         """
         ironicclient = client_wrapper.IronicClientWrapper()
-        node_list = ironicclient.call("node.list", associated=True)
+        # NOTE(lucasagomes): limit == 0 is an indicator to continue
+        # pagination until there're no more values to be returned.
+        node_list = ironicclient.call("node.list", associated=True, limit=0)
         return list(n.instance_uuid for n in node_list)
 
     def node_is_available(self, nodename):
@@ -446,7 +450,9 @@ class IronicDriver(virt_driver.ComputeDriver):
 
     def _refresh_cache(self):
         ironicclient = client_wrapper.IronicClientWrapper()
-        node_list = ironicclient.call('node.list', detail=True)
+        # NOTE(lucasagomes): limit == 0 is an indicator to continue
+        # pagination until there're no more values to be returned.
+        node_list = ironicclient.call('node.list', detail=True, limit=0)
         node_cache = {}
         for node in node_list:
             node_cache[node.uuid] = node
