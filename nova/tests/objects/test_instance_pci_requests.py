@@ -18,6 +18,7 @@ from nova.tests.objects import test_objects
 
 
 FAKE_UUID = '79a53d6b-0893-4838-a971-15f4f382e7c2'
+FAKE_REQUEST_UUID = '69b53d6b-0793-4839-c981-f5c4f382e7d2'
 
 # NOTE(danms): Yes, these are the same right now, but going forward,
 # we have changes to make which will be reflected in the format
@@ -27,12 +28,14 @@ fake_pci_requests = [
      'spec': [{'vendor_id': '8086',
                'device_id': '1502'}],
      'alias_name': 'alias_1',
-     'is_new': False},
+     'is_new': False,
+     'request_id': FAKE_REQUEST_UUID},
     {'count': 2,
      'spec': [{'vendor_id': '6502',
                'device_id': '07B5'}],
      'alias_name': 'alias_2',
-     'is_new': True},
+     'is_new': True,
+     'request_id': FAKE_REQUEST_UUID},
  ]
 
 fake_legacy_pci_requests = [
@@ -117,13 +120,15 @@ class _TestInstancePCIRequests(object):
                 count=1,
                 spec=[{'foo': 'bar'}, {'baz': 'bat'}],
                 alias_name='alias_1',
-                is_new=False)])
+                is_new=False,
+                request_id=FAKE_REQUEST_UUID)])
         requests.save()
         self.assertEqual(FAKE_UUID, mock_update.call_args_list[0][0][1])
         self.assertEqual(
             [{'count': 1, 'is_new': False,
               'alias_name': 'alias_1',
-              'spec': [{'foo': 'bar'}, {'baz': 'bat'}]}],
+              'spec': [{'foo': 'bar'}, {'baz': 'bat'}],
+              'request_id': FAKE_REQUEST_UUID}],
             jsonutils.loads(
                 mock_update.call_args_list[0][0][2]['pci_requests']))
 
@@ -160,6 +165,20 @@ class _TestInstancePCIRequests(object):
     def test_new_compatibility(self):
         request = objects.InstancePCIRequest(is_new=False)
         self.assertFalse(request.new)
+
+    def test_backport_1_0(self):
+        requests = objects.InstancePCIRequests(
+            requests=[objects.InstancePCIRequest(count=1,
+                                                 request_id=FAKE_UUID),
+                      objects.InstancePCIRequest(count=2,
+                                                 request_id=FAKE_UUID)])
+        primitive = requests.obj_to_primitive(target_version='1.0')
+        backported = objects.InstancePCIRequests.obj_from_primitive(
+            primitive)
+        self.assertEqual('1.0', backported.VERSION)
+        self.assertEqual(2, len(backported.requests))
+        self.assertFalse(backported.requests[0].obj_attr_is_set('request_id'))
+        self.assertFalse(backported.requests[1].obj_attr_is_set('request_id'))
 
 
 class TestInstancePCIRequests(test_objects._LocalTest,

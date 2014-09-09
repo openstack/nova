@@ -13,18 +13,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import exception
-from nova import objects
 from nova.pci import pci_whitelist
 from nova import test
 
 
 dev_dict = {
     'compute_node_id': 1,
-    'address': 'a',
+    'address': '0000:00:0a.1',
     'product_id': '0001',
     'vendor_id': '8086',
     'status': 'available',
+    'phys_function': '0000:00:0a.0',
     }
 
 
@@ -32,66 +31,39 @@ class PciHostDevicesWhiteListTestCase(test.NoDBTestCase):
     def setUp(self):
         super(PciHostDevicesWhiteListTestCase, self).setUp()
 
-    def test_whitelist_wrong_format(self):
-        white_list = '[{"vendor_x_id":"8086", "product_id":"0001"}]'
-        self.assertRaises(
-            exception.PciConfigInvalidWhitelist,
-            pci_whitelist.PciHostDevicesWhiteList, white_list
-        )
-
-        white_list = '[{"vendor_id":"80863", "product_id":"0001"}]'
-        self.assertRaises(
-            exception.PciConfigInvalidWhitelist,
-            pci_whitelist.PciHostDevicesWhiteList, white_list
-        )
-
-    def test_whitelist_missed_fields(self):
-        white_list = '[{"vendor_id":"80863"}]'
-        self.assertRaises(
-            exception.PciConfigInvalidWhitelist,
-            pci_whitelist.PciHostDevicesWhiteList, white_list
-        )
-
     def test_whitelist(self):
-        white_list = '[{"product_id":"0001", "vendor_id":"8086"}]'
+        white_list = '{"product_id":"0001", "vendor_id":"8086"}'
         parsed = pci_whitelist.PciHostDevicesWhiteList([white_list])
-        self.assertEqual(parsed.spec, [{'vendor_id': '8086',
-                                        'product_id': '0001'}])
+        self.assertEqual(1, len(parsed.specs))
 
     def test_whitelist_empty(self):
-        dev = objects.PciDevice.create(dev_dict)
         parsed = pci_whitelist.PciHostDevicesWhiteList()
-        self.assertEqual(parsed.device_assignable(dev), False)
+        self.assertFalse(parsed.device_assignable(dev_dict))
 
     def test_whitelist_multiple(self):
-        white_list_1 = '[{"product_id":"0001", "vendor_id":"8086"}]'
-        white_list_2 = '[{"product_id":"0002", "vendor_id":"8087"}]'
-        parsed = pci_whitelist.PciHostDevicesWhiteList(
-            [white_list_1, white_list_2])
-        self.assertEqual(parsed.spec,
-                        [{'vendor_id': '8086', 'product_id': '0001'},
-                         {'vendor_id': '8087', 'product_id': '0002'}])
+        wl1 = '{"product_id":"0001", "vendor_id":"8086"}'
+        wl2 = '{"product_id":"0002", "vendor_id":"8087"}'
+        parsed = pci_whitelist.PciHostDevicesWhiteList([wl1, wl2])
+        self.assertEqual(2, len(parsed.specs))
 
     def test_device_assignable(self):
-        dev = objects.PciDevice.create(dev_dict)
-        white_list = '[{"product_id":"0001", "vendor_id":"8086"}]'
+        white_list = '{"product_id":"0001", "vendor_id":"8086"}'
         parsed = pci_whitelist.PciHostDevicesWhiteList([white_list])
-        self.assertEqual(parsed.device_assignable(dev), True)
+        self.assertIsNotNone(parsed.device_assignable(dev_dict))
 
     def test_device_assignable_multiple(self):
-        dev = objects.PciDevice.create(dev_dict)
-        white_list_1 = '[{"product_id":"0001", "vendor_id":"8086"}]'
-        white_list_2 = '[{"product_id":"0002", "vendor_id":"8087"}]'
+        white_list_1 = '{"product_id":"0001", "vendor_id":"8086"}'
+        white_list_2 = '{"product_id":"0002", "vendor_id":"8087"}'
         parsed = pci_whitelist.PciHostDevicesWhiteList(
             [white_list_1, white_list_2])
-        self.assertEqual(parsed.device_assignable(dev), True)
-        dev.vendor_id = '8087'
-        dev.product_id = '0002'
-        self.assertEqual(parsed.device_assignable(dev), True)
+        self.assertIsNotNone(parsed.device_assignable(dev_dict))
+        dev_dict1 = dev_dict.copy()
+        dev_dict1['vendor_id'] = '8087'
+        dev_dict1['product_id'] = '0002'
+        self.assertIsNotNone(parsed.device_assignable(dev_dict1))
 
     def test_get_pci_devices_filter(self):
-        white_list_1 = '[{"product_id":"0001", "vendor_id":"8086"}]'
+        white_list_1 = '{"product_id":"0001", "vendor_id":"8086"}'
         self.flags(pci_passthrough_whitelist=[white_list_1])
         pci_filter = pci_whitelist.get_pci_devices_filter()
-        dev = objects.PciDevice.create(dev_dict)
-        self.assertEqual(pci_filter.device_assignable(dev), True)
+        self.assertIsNotNone(pci_filter.device_assignable(dev_dict))

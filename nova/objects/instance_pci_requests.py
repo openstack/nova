@@ -14,18 +14,21 @@ from nova import db
 from nova.objects import base
 from nova.objects import fields
 from nova.openstack.common import jsonutils
+from nova import utils
 
 
 class InstancePCIRequest(base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Add request_id
+    VERSION = '1.1'
 
     fields = {
         'count': fields.IntegerField(),
         'spec': fields.ListOfDictOfNullableStringsField(),
-        'alias_name': fields.StringField(),
+        'alias_name': fields.StringField(nullable=True),
         # A stashed request related to a resize, not current
         'is_new': fields.BooleanField(default=False),
+        'request_id': fields.UUIDField(nullable=True),
     }
 
     def obj_load_attr(self, attr):
@@ -39,15 +42,29 @@ class InstancePCIRequest(base.NovaObject):
     def new(self):
         return self.is_new
 
+    def obj_make_compatible(self, primitive, target_version):
+        target_version = utils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1) and 'request_id' in primitive:
+            del primitive['request_id']
+
 
 class InstancePCIRequests(base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: InstancePCIRequest 1.1
+    VERSION = '1.1'
 
     fields = {
         'instance_uuid': fields.UUIDField(),
         'requests': fields.ListOfObjectsField('InstancePCIRequest'),
     }
+
+    def obj_make_compatible(self, primitive, target_version):
+        target_version = utils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1) and 'requests' in primitive:
+            for index, request in enumerate(self.requests):
+                request.obj_make_compatible(
+                    primitive['requests'][index]['nova_object.data'], '1.0')
+                primitive['requests'][index]['nova_object.version'] = '1.0'
 
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, instance_uuid):
@@ -65,7 +82,8 @@ class InstancePCIRequests(base.NovaObject):
             for request in requests:
                 request_obj = InstancePCIRequest(
                     count=request['count'], spec=request['spec'],
-                    alias_name=request['alias_name'], is_new=request['is_new'])
+                    alias_name=request['alias_name'], is_new=request['is_new'],
+                    request_id=request['request_id'])
                 request_obj.obj_reset_changes()
                 obj_pci_requests.requests.append(request_obj)
 
@@ -117,7 +135,8 @@ class InstancePCIRequests(base.NovaObject):
         blob = [{'count': x.count,
                  'spec': x.spec,
                  'alias_name': x.alias_name,
-                 'is_new': x.is_new} for x in self.requests]
+                 'is_new': x.is_new,
+                 'request_id': x.request_id} for x in self.requests]
         requests = jsonutils.dumps(blob)
         db.instance_extra_update_by_uuid(context, self.instance_uuid,
                                          {'pci_requests': requests})
