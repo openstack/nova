@@ -932,17 +932,17 @@ class ServersController(wsgi.Controller):
 
     @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.response(202)
-    @wsgi.action('create_image')
+    @wsgi.action('createImage')
     @common.check_snapshots_enabled
     def _action_create_image(self, req, id, body):
         """Snapshot a server instance."""
         context = req.environ['nova.context']
-        entity = body.get("create_image", {})
+        entity = body.get("createImage", {})
 
         image_name = entity.get("name")
 
         if not image_name:
-            msg = _("create_image entity requires name attribute")
+            msg = _("createImage entity requires name attribute")
             raise exc.HTTPBadRequest(explanation=msg)
 
         props = {}
@@ -984,7 +984,7 @@ class ServersController(wsgi.Controller):
                                                   extra_properties=props)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                        'create_image')
+                        'createImage')
         except exception.Invalid as err:
             raise exc.HTTPBadRequest(explanation=err.format_message())
 

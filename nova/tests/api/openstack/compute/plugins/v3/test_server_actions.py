@@ -818,7 +818,7 @@ class ServerActionsControllerTest(test.TestCase):
 
     def test_create_image(self):
         body = {
-            'create_image': {
+            'createImage': {
                 'name': 'Snapshot 1',
             },
         }
@@ -832,7 +832,7 @@ class ServerActionsControllerTest(test.TestCase):
     def test_create_image_name_too_long(self):
         long_name = 'a' * 260
         body = {
-            'create_image': {
+            'createImage': {
                 'name': long_name,
             },
         }
@@ -847,10 +847,10 @@ class ServerActionsControllerTest(test.TestCase):
         def _fake_id(x):
             return '%s-%s-%s-%s' % (x * 8, x * 4, x * 4, x * 12)
 
-        body = dict(create_image=dict(name='snapshot_of_volume_backed'))
+        body = dict(createImage=dict(name='snapshot_of_volume_backed'))
 
         if extra_properties:
-            body['create_image']['metadata'] = extra_properties
+            body['createImage']['metadata'] = extra_properties
 
         image_service = glance.get_default_image_service()
 
@@ -941,9 +941,9 @@ class ServerActionsControllerTest(test.TestCase):
         def _fake_id(x):
             return '%s-%s-%s-%s' % (x * 8, x * 4, x * 4, x * 12)
 
-        body = dict(create_image=dict(name='snapshot_of_volume_backed'))
+        body = dict(createImage=dict(name='snapshot_of_volume_backed'))
         if extra_metadata:
-            body['create_image']['metadata'] = extra_metadata
+            body['createImage']['metadata'] = extra_metadata
 
         image_service = glance.get_default_image_service()
 
@@ -1011,7 +1011,7 @@ class ServerActionsControllerTest(test.TestCase):
         """
         self.flags(allow_instance_snapshots=False)
         body = {
-            'create_image': {
+            'createImage': {
                 'name': 'Snapshot 1',
             },
         }
@@ -1022,7 +1022,7 @@ class ServerActionsControllerTest(test.TestCase):
 
     def test_create_image_with_metadata(self):
         body = {
-            'create_image': {
+            'createImage': {
                 'name': 'Snapshot 1',
                 'metadata': {'key': 'asdf'},
             },
@@ -1036,13 +1036,13 @@ class ServerActionsControllerTest(test.TestCase):
 
     def test_create_image_with_too_much_metadata(self):
         body = {
-            'create_image': {
+            'createImage': {
                 'name': 'Snapshot 1',
                 'metadata': {},
             },
         }
         for num in range(CONF.quota_metadata_items + 1):
-            body['create_image']['metadata']['foo%i' % num] = "bar"
+            body['createImage']['metadata']['foo%i' % num] = "bar"
 
         req = fakes.HTTPRequestV3.blank(self.url)
         self.assertRaises(webob.exc.HTTPForbidden,
@@ -1051,7 +1051,7 @@ class ServerActionsControllerTest(test.TestCase):
 
     def test_create_image_no_name(self):
         body = {
-            'create_image': {},
+            'createImage': {},
         }
         req = fakes.HTTPRequestV3.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -1060,7 +1060,7 @@ class ServerActionsControllerTest(test.TestCase):
 
     def test_create_image_blank_name(self):
         body = {
-            'create_image': {
+            'createImage': {
                 'name': '',
             }
         }
@@ -1071,7 +1071,7 @@ class ServerActionsControllerTest(test.TestCase):
 
     def test_create_image_bad_metadata(self):
         body = {
-            'create_image': {
+            'createImage': {
                 'name': 'geoff',
                 'metadata': 'henry',
             },
@@ -1089,7 +1089,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'snapshot', snapshot)
 
         body = {
-            "create_image": {
+            "createImage": {
                 "name": "test_snapshot",
             },
         }
