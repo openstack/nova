@@ -31,6 +31,7 @@ from nova.virt.xenapi.client import session as xenapi_session
 from nova.virt.xenapi import fake as xenapi_fake
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import vmops
+from nova.virt.xenapi import volume_utils
 from nova.virt.xenapi import volumeops
 
 
@@ -611,6 +612,53 @@ class SpawnTestCase(VMOpsTestBase):
         self.mox.ReplayAll()
         self.vmops._configure_new_instance_with_agent(instance, vm_ref,
                 None, None)
+
+
+class DestroyTestCase(VMOpsTestBase):
+    def setUp(self):
+        super(DestroyTestCase, self).setUp()
+        self.context = context.RequestContext(user_id=None, project_id=None)
+        self.instance = fake_instance.fake_instance_obj(self.context)
+
+    @mock.patch.object(vm_utils, 'lookup', side_effect=[None, None])
+    @mock.patch.object(vm_utils, 'hard_shutdown_vm')
+    @mock.patch.object(volume_utils, 'find_sr_by_uuid')
+    @mock.patch.object(volume_utils, 'forget_sr')
+    def test_no_vm_no_bdm(self, forget_sr, find_sr_by_uuid, hard_shutdown_vm,
+            lookup):
+        self.vmops.destroy(self.instance, 'network_info',
+                {'block_device_mapping': []})
+        self.assertEqual(0, find_sr_by_uuid.call_count)
+        self.assertEqual(0, forget_sr.call_count)
+        self.assertEqual(0, hard_shutdown_vm.call_count)
+
+    @mock.patch.object(vm_utils, 'lookup', side_effect=[None, None])
+    @mock.patch.object(vm_utils, 'hard_shutdown_vm')
+    @mock.patch.object(volume_utils, 'find_sr_by_uuid', return_value=None)
+    @mock.patch.object(volume_utils, 'forget_sr')
+    def test_no_vm_orphaned_volume_no_sr(self, forget_sr, find_sr_by_uuid,
+            hard_shutdown_vm, lookup):
+        self.vmops.destroy(self.instance, 'network_info',
+                {'block_device_mapping': [{'connection_info':
+                    {'data': {'volume_id': 'fake-uuid'}}}]})
+        find_sr_by_uuid.assert_called_once_with(self.vmops._session,
+                'FA15E-D15C-fake-uuid')
+        self.assertEqual(0, forget_sr.call_count)
+        self.assertEqual(0, hard_shutdown_vm.call_count)
+
+    @mock.patch.object(vm_utils, 'lookup', side_effect=[None, None])
+    @mock.patch.object(vm_utils, 'hard_shutdown_vm')
+    @mock.patch.object(volume_utils, 'find_sr_by_uuid', return_value='sr_ref')
+    @mock.patch.object(volume_utils, 'forget_sr')
+    def test_no_vm_orphaned_volume(self, forget_sr, find_sr_by_uuid,
+            hard_shutdown_vm, lookup):
+        self.vmops.destroy(self.instance, 'network_info',
+                {'block_device_mapping': [{'connection_info':
+                    {'data': {'volume_id': 'fake-uuid'}}}]})
+        find_sr_by_uuid.assert_called_once_with(self.vmops._session,
+                'FA15E-D15C-fake-uuid')
+        forget_sr.assert_called_once_with(self.vmops._session, 'sr_ref')
+        self.assertEqual(0, hard_shutdown_vm.call_count)
 
 
 @mock.patch.object(vmops.VMOps, '_update_instance_progress')
