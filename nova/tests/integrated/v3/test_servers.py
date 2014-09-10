@@ -152,13 +152,14 @@ class ServersActionsJsonTest(ServersSampleBase):
 
     def test_server_revert_resize(self):
         uuid = self.test_server_resize()
-        self._test_server_action(uuid, "revert_resize",
+        self._test_server_action(uuid, "revertResize",
                                  'server-action-revert-resize')
 
     def test_server_confirm_resize(self):
         uuid = self.test_server_resize()
-        self._test_server_action(uuid, "confirm_resize",
-                                 'server-action-confirm-resize')
+        self._test_server_action(uuid, "confirmResize",
+                                 'server-action-confirm-resize',
+                                 code=204)
 
     def test_server_create_image(self):
         uuid = self._post_server()

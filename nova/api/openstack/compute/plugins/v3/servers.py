@@ -681,9 +681,12 @@ class ServersController(wsgi.Controller):
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
 
+    # NOTE(gmann): Returns 204 for backwards compatibility but should be 202
+    # for representing async API as this API just accepts the request and
+    # request hypervisor driver to complete the same in async mode.
     @extensions.expected_errors((400, 404, 409))
-    @wsgi.response(202)
-    @wsgi.action('confirm_resize')
+    @wsgi.response(204)
+    @wsgi.action('confirmResize')
     def _action_confirm_resize(self, req, id, body):
         context = req.environ['nova.context']
         instance = self._get_server(context, req, id)
@@ -696,11 +699,11 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'confirm_resize')
+                    'confirmResize')
 
     @extensions.expected_errors((400, 404, 409))
     @wsgi.response(202)
-    @wsgi.action('revert_resize')
+    @wsgi.action('revertResize')
     def _action_revert_resize(self, req, id, body):
         context = req.environ['nova.context']
         instance = self._get_server(context, req, id)
@@ -716,7 +719,7 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'revert_resize')
+                    'revertResize')
         return webob.Response(status_int=202)
 
     @extensions.expected_errors((400, 404, 409))

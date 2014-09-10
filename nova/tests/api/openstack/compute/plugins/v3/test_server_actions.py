@@ -149,8 +149,11 @@ class ServerActionsControllerTest(test.TestCase):
         self.mox.UnsetStubs()
 
     def test_actions_with_locked_instance(self):
-        actions = ['resize', 'confirm_resize', 'revert_resize', 'reboot',
+        actions = ['resize', 'confirmResize', 'revertResize', 'reboot',
                    'rebuild']
+
+        method_translations = {'confirmResize': 'confirm_resize',
+                               'revertResize': 'revert_resize'}
 
         body_map = {'resize': {'flavorRef': '2'},
                     'reboot': {'type': 'HARD'},
@@ -158,13 +161,14 @@ class ServerActionsControllerTest(test.TestCase):
                                 'adminPass': 'TNc53Dr8s7vw'}}
 
         args_map = {'resize': (('2'), {}),
-                    'confirm_resize': ((), {}),
+                    'confirmResize': ((), {}),
                     'reboot': (('HARD',), {}),
                     'rebuild': ((self.image_uuid, 'TNc53Dr8s7vw'), {})}
 
         for action in actions:
-            self.mox.StubOutWithMock(compute_api.API, action)
-            self._test_locked_instance(action, method=None,
+            method = method_translations.get(action)
+            self.mox.StubOutWithMock(compute_api.API, method or action)
+            self._test_locked_instance(action, method=method,
                                        body_map=body_map,
                                        compute_api_args_map=args_map)
 
@@ -715,7 +719,7 @@ class ServerActionsControllerTest(test.TestCase):
                           req, FAKE_UUID, body)
 
     def test_confirm_resize_server(self):
-        body = dict(confirm_resize=None)
+        body = dict(confirmResize=None)
 
         self.confirm_resize_called = False
 
@@ -730,7 +734,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertEqual(self.confirm_resize_called, True)
 
     def test_confirm_resize_migration_not_found(self):
-        body = dict(confirm_resize=None)
+        body = dict(confirmResize=None)
 
         def confirm_resize_mock(*args):
             raise exception.MigrationNotFoundByStatus(instance_id=1,
@@ -746,7 +750,7 @@ class ServerActionsControllerTest(test.TestCase):
                           req, FAKE_UUID, body)
 
     def test_confirm_resize_raises_conflict_on_invalid_state(self):
-        body = dict(confirm_resize=None)
+        body = dict(confirmResize=None)
 
         def fake_confirm_resize(*args, **kwargs):
             raise exception.InstanceInvalidState(attr='fake_attr',
