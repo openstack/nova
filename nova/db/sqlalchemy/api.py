@@ -1302,12 +1302,12 @@ def _fixed_ip_get_by_address(context, address, session=None,
 @require_context
 def fixed_ip_get_by_floating_address(context, floating_address):
     return model_query(context, models.FixedIp).\
-                       outerjoin(models.FloatingIp,
-                                 models.FloatingIp.fixed_ip_id ==
-                                 models.FixedIp.id).\
+                       join(models.FloatingIp,
+                            models.FloatingIp.fixed_ip_id ==
+                            models.FixedIp.id).\
                        filter(models.FloatingIp.address == floating_address).\
                        first()
-    # NOTE(tr3buchet) please don't invent an exception here, empty list is fine
+    # NOTE(tr3buchet) please don't invent an exception here, None is fine
 
 
 @require_context
