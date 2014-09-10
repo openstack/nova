@@ -519,16 +519,6 @@ def get_rdm_disk(hardware_devices, uuid):
             return device
 
 
-def get_copy_virtual_disk_spec(client_factory,
-                               adapter_type=constants.DEFAULT_ADAPTER_TYPE,
-                               disk_type=constants.DEFAULT_DISK_TYPE):
-    """Builds the Virtual Disk copy spec."""
-    dest_spec = client_factory.create('ns0:VirtualDiskSpec')
-    dest_spec.adapterType = get_vmdk_adapter_type(adapter_type)
-    dest_spec.diskType = disk_type
-    return dest_spec
-
-
 def get_vmdk_create_spec(client_factory, size_in_kb,
                          adapter_type=constants.DEFAULT_ADAPTER_TYPE,
                          disk_type=constants.DEFAULT_DISK_TYPE):
@@ -1310,7 +1300,7 @@ def create_virtual_disk(session, dc_ref, adapter_type, disk_type,
                "disk_type": disk_type})
 
 
-def copy_virtual_disk(session, dc_ref, source, dest, copy_spec=None):
+def copy_virtual_disk(session, dc_ref, source, dest):
     """Copy a sparse virtual disk to a thin virtual disk. This is also
        done to generate the meta-data file whose specifics
        depend on the size of the disk, thin/thick provisioning and the
@@ -1320,7 +1310,6 @@ def copy_virtual_disk(session, dc_ref, source, dest, copy_spec=None):
     :param dc_ref: - data center reference object
     :param source: - source datastore path
     :param dest: - destination datastore path
-    :param copy_spec: - the copy specification
     """
     LOG.debug("Copying Virtual Disk %(source)s to %(dest)s",
               {'source': source, 'dest': dest})
@@ -1331,8 +1320,7 @@ def copy_virtual_disk(session, dc_ref, source, dest, copy_spec=None):
             vim.service_content.virtualDiskManager,
             sourceName=source,
             sourceDatacenter=dc_ref,
-            destName=dest,
-            destSpec=copy_spec)
+            destName=dest)
     session._wait_for_task(vmdk_copy_task)
     LOG.debug("Copied Virtual Disk %(source)s to %(dest)s",
               {'source': source, 'dest': dest})

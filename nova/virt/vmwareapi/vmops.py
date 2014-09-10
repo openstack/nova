@@ -431,15 +431,9 @@ class VMwareVMOps(object):
 
                 if not image_info.is_iso and image_info.is_sparse:
                     # Copy the sparse virtual disk to a thin virtual disk.
-                    disk_type = "thin"
-                    copy_spec = self.get_copy_virtual_disk_spec(
-                            client_factory,
-                            image_info.adapter_type,
-                            disk_type)
                     vm_util.copy_virtual_disk(self._session, dc_info.ref,
                                               str(sparse_ds_loc),
-                                              str(upload_path_loc),
-                                              copy_spec)
+                                              str(upload_path_loc))
                     self._delete_datastore_file(instance,
                                                 sparse_ds_loc,
                                                 dc_info.ref)
@@ -579,7 +573,6 @@ class VMwareVMOps(object):
         5. Delete the coalesced .vmdk and -flat.vmdk created.
         """
         vm_ref = vm_util.get_vm_ref(self._session, instance)
-        client_factory = self._session._get_vim().client.factory
         service_content = self._session._get_vim().service_content
 
         def _get_vm_and_vmdk_attribs():
@@ -634,9 +627,6 @@ class VMwareVMOps(object):
 
         def _copy_vmdk_content():
             # Consolidate the snapshotted disk to a temporary vmdk.
-            copy_spec = self.get_copy_virtual_disk_spec(client_factory,
-                                                        adapter_type,
-                                                        disk_type)
             LOG.debug('Copying snapshotted disk %s.',
                       vmdk_file_path_before_snapshot,
                       instance=instance)
@@ -648,7 +638,6 @@ class VMwareVMOps(object):
                 sourceDatacenter=dc_info.ref,
                 destName=str(dest_vmdk_file_path),
                 destDatacenter=dc_info.ref,
-                destSpec=copy_spec,
                 force=False)
             self._session._wait_for_task(copy_disk_task)
             LOG.debug('Copied snapshotted disk %s.',
@@ -1440,16 +1429,11 @@ class VMwareVMOps(object):
         root_disk_ds_loc = vi.datastore.build_path(instance_folder,
                                                    root_disk_name)
 
-        client_factory = self._session._get_vim().client.factory
-        copy_spec = self.get_copy_virtual_disk_spec(
-                client_factory, vi.ii.adapter_type, vi.ii.disk_type)
-
         vm_util.copy_virtual_disk(
                 self._session,
                 vi.dc_info.ref,
                 str(vi.cache_image_path),
-                str(root_disk_ds_loc),
-                copy_spec)
+                str(root_disk_ds_loc))
 
         self._extend_if_required(
                 vi.dc_info, vi.ii, vi.instance, str(root_disk_ds_loc))
@@ -1493,17 +1477,11 @@ class VMwareVMOps(object):
                                             vi.datastore.ref):
                 LOG.debug("Copying root disk of size %sGb", vi.root_gb)
                 try:
-                    client_factory = self._session._get_vim().client.factory
-                    copy_spec = self.get_copy_virtual_disk_spec(
-                            client_factory, vi.ii.adapter_type,
-                            vi.ii.disk_type)
-
                     vm_util.copy_virtual_disk(
                             self._session,
                             vi.dc_info.ref,
                             str(vi.cache_image_path),
-                            str(sized_disk_ds_loc),
-                            copy_spec)
+                            str(sized_disk_ds_loc))
                 except Exception as e:
                     LOG.warning(_("Root disk file creation "
                                   "failed - %s"), e)
@@ -1567,17 +1545,6 @@ class VMwareVMOps(object):
                     vi.ii.adapter_type, vi.ii.disk_type,
                     str(root_disk_ds_loc),
                     vi.root_gb * units.Mi, linked_clone)
-
-    def get_copy_virtual_disk_spec(self, client_factory, adapter_type,
-                                   disk_type):
-        LOG.debug("Will copy while retaining adapter type "
-                  "%(adapter_type)s and disk type %(disk_type)s",
-                  {"disk_type": disk_type,
-                   "adapter_type": adapter_type})
-        # Passing of the destination copy spec is not supported when
-        # VirtualDiskManager.CopyVirtualDisk is called on VC. The behavior of a
-        # spec-less copy is to consolidate to the target disk while keeping its
-        # disk and adapter type unchanged.
 
     def _update_datacenter_cache_from_objects(self, dcs):
         """Updates the datastore/datacenter cache."""

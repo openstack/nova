@@ -859,15 +859,14 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             mock.patch.object(session, "_wait_for_task"),
         ) as (fake_call_method, fake_wait_for_task):
             vm_util.copy_virtual_disk(session, 'fake-dc-ref',
-                                      'fake-source', 'fake-dest', 'fake-spec')
+                                      'fake-source', 'fake-dest')
             fake_call_method.assert_called_once_with(
                     session._get_vim(),
                     "CopyVirtualDisk_Task",
                     dm,
                     sourceName='fake-source',
                     sourceDatacenter='fake-dc-ref',
-                    destName='fake-dest',
-                    destSpec='fake-spec')
+                    destName='fake-dest')
             fake_wait_for_task.assert_called_once_with('fake-task')
 
     def _create_fake_vm_objects(self):

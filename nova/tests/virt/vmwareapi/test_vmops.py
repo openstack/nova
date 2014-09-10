@@ -591,8 +591,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         sized_cached_image_ds_loc = cache_root_folder.join(
                 "%s.%s.vmdk" % (self._image_id, vi.root_gb))
 
-        copy_spec = None
-
         self._vmops._volumeops = mock.Mock()
         mock_attach_disk_to_vm = self._vmops._volumeops.attach_disk_to_vm
 
@@ -601,8 +599,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         mock_copy_virtual_disk.assert_called_once_with(
                 self._session, self._dc_info.ref,
                 str(vi.cache_image_path),
-                str(sized_cached_image_ds_loc),
-                copy_spec)
+                str(sized_cached_image_ds_loc))
 
         if not flavor_fits_image:
             mock_extend_virtual_disk.assert_called_once_with(
@@ -641,8 +638,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 self._instance, "fake_uuid", image_info,
                 self._ds, self._dc_info, mock_imagecache)
 
-        copy_spec = None
-
         self._vmops._volumeops = mock.Mock()
         mock_attach_disk_to_vm = self._vmops._volumeops.attach_disk_to_vm
 
@@ -651,7 +646,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         mock_copy_virtual_disk.assert_called_once_with(
                 self._session, self._dc_info.ref,
                 str(vi.cache_image_path),
-                '[fake_ds] fake_uuid/fake_uuid.vmdk', copy_spec)
+                '[fake_ds] fake_uuid/fake_uuid.vmdk')
 
         if not flavor_fits_image:
             mock_extend_virtual_disk.assert_called_once_with(
@@ -890,17 +885,13 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 mock_copy_virtual_disk.assert_called_with(self._session,
                                                           dc_ref,
                                                           source_file,
-                                                          dest_file,
-                                                          None)
+                                                          dest_file)
 
-    @mock.patch.object(vmops.VMwareVMOps, 'get_copy_virtual_disk_spec',
-                       return_value=None)
     @mock.patch.object(ds_util, 'get_datastore')
     @mock.patch.object(vmops.VMwareVMOps, 'get_datacenter_ref_and_name')
     def _test_get_spawn_vm_config_info(self,
                                        mock_get_datacenter_ref_and_name,
                                        mock_get_datastore,
-                                       mock_get_copy_virtual_disk_spec,
                                        image_size_bytes=0,
                                        instance_name=None):
         image_info = vmware_images.VMwareImage(

@@ -2114,19 +2114,6 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase,
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_snapshot(self):
-        # Ensure VMwareVMOps's get_copy_virtual_disk_spec is getting called
-        # two times
-        self.mox.StubOutWithMock(vmops.VMwareVMOps,
-                                 'get_copy_virtual_disk_spec')
-        self.conn._vmops.get_copy_virtual_disk_spec(
-                mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn(None)
-        self.conn._vmops.get_copy_virtual_disk_spec(
-                mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn(None)
-
-        self.mox.ReplayAll()
-
         self._create_vm()
         self._test_snapshot()
 
@@ -2162,9 +2149,7 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase,
 
     @mock.patch.object(nova.virt.vmwareapi.vmware_images.VMwareImage,
                        'from_image')
-    @mock.patch.object(vmops.VMwareVMOps, 'get_copy_virtual_disk_spec')
-    def test_spawn_with_sparse_image(self, mock_get_copy_virtual_disk_spec,
-                                     mock_from_image):
+    def test_spawn_with_sparse_image(self, mock_from_image):
         img_info = vmware_images.VMwareImage(
             image_id=self.fake_image_uuid,
             file_size=1024,
@@ -2172,7 +2157,6 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase,
             linked_clone=False)
 
         mock_from_image.return_value = img_info
-        mock_get_copy_virtual_disk_spec.return_value = None
 
         self._create_vm()
         info = self.conn.get_info({'uuid': self.uuid,
