@@ -516,7 +516,11 @@ class ComputeTaskManager(base.Base):
                                           updates, ex, request_spec)
             quotas.rollback()
 
-            msg = _("No valid host found for cold migrate")
+            # if the flavor IDs match, it's migrate; otherwise resize
+            if flavor['id'] == instance['instance_type_id']:
+                msg = _("No valid host found for cold migrate")
+            else:
+                msg = _("No valid host found for resize")
             raise exception.NoValidHost(reason=msg)
 
         try:
