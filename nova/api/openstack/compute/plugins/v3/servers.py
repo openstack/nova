@@ -1018,7 +1018,7 @@ class ServersController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
     @extensions.expected_errors((404, 409))
-    @wsgi.action('start')
+    @wsgi.action('os-start')
     def _start_server(self, req, id, body):
         """Start an instance."""
         context = req.environ['nova.context']
@@ -1033,7 +1033,7 @@ class ServersController(wsgi.Controller):
         return webob.Response(status_int=202)
 
     @extensions.expected_errors((404, 409))
-    @wsgi.action('stop')
+    @wsgi.action('os-stop')
     def _stop_server(self, req, id, body):
         """Stop an instance."""
         context = req.environ['nova.context']

@@ -15,7 +15,11 @@
 import mox
 import webob
 
-from nova.api.openstack.compute.contrib import server_start_stop
+from nova.api.openstack.compute.contrib import server_start_stop \
+    as server_v2
+from nova.api.openstack.compute import plugins
+from nova.api.openstack.compute.plugins.v3 import servers \
+    as server_v21
 from nova.compute import api as compute_api
 from nova import db
 from nova import exception
@@ -49,11 +53,18 @@ def fake_start_stop_invalid_state(self, context, instance):
     raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
 
 
-class ServerStartStopTest(test.TestCase):
+class ServerStartStopTestV21(test.TestCase):
+    start_policy = "compute:v3:servers:start"
+    stop_policy = "compute:v3:servers:stop"
 
     def setUp(self):
-        super(ServerStartStopTest, self).setUp()
-        self.controller = server_start_stop.ServerStartStopActionController()
+        super(ServerStartStopTestV21, self).setUp()
+        self._setup_controller()
+
+    def _setup_controller(self):
+        ext_info = plugins.LoadedExtensionInfo()
+        self.controller = server_v21.ServersController(
+                              extension_info=ext_info)
 
     def test_start(self):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
@@ -67,7 +78,7 @@ class ServerStartStopTest(test.TestCase):
 
     def test_start_policy_failed(self):
         rules = {
-            "compute:start":
+            self.start_policy:
                 common_policy.parse_rule("project_id:non_fake")
         }
         policy.set_rules(rules)
@@ -77,7 +88,7 @@ class ServerStartStopTest(test.TestCase):
         exc = self.assertRaises(exception.PolicyNotAuthorized,
                                 self.controller._start_server,
                                 req, 'test_inst', body)
-        self.assertIn('compute:start', exc.format_message())
+        self.assertIn(self.start_policy, exc.format_message())
 
     def test_start_not_ready(self):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
@@ -115,7 +126,7 @@ class ServerStartStopTest(test.TestCase):
 
     def test_stop_policy_failed(self):
         rules = {
-            "compute:stop":
+            self.stop_policy:
                 common_policy.parse_rule("project_id:non_fake")
         }
         policy.set_rules(rules)
@@ -125,7 +136,7 @@ class ServerStartStopTest(test.TestCase):
         exc = self.assertRaises(exception.PolicyNotAuthorized,
                                 self.controller._stop_server,
                                 req, 'test_inst', body)
-        self.assertIn("compute:stop", exc.format_message())
+        self.assertIn(self.stop_policy, exc.format_message())
 
     def test_stop_not_ready(self):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
@@ -162,3 +173,11 @@ class ServerStartStopTest(test.TestCase):
         body = dict(stop="")
         self.assertRaises(webob.exc.HTTPNotFound,
             self.controller._stop_server, req, 'test_inst', body)
+
+
+class ServerStartStopTestV2(ServerStartStopTestV21):
+    start_policy = "compute:start"
+    stop_policy = "compute:stop"
+
+    def _setup_controller(self):
+        self.controller = server_v2.ServerStartStopActionController()
