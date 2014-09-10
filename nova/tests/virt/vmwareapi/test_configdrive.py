@@ -48,7 +48,6 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.conn = driver.VMwareVCDriver(fake.FakeVirtAPI)
         self.network_info = utils.get_test_network_info()
-        self.vim = vmwareapi_fake.FakeVim()
         self.node_name = '%s(%s)' % (self.conn.dict_mors.keys()[0],
                                      cluster_name)
         image_ref = nova.tests.image.fake.get_valid_image_id()
