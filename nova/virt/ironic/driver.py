@@ -34,6 +34,7 @@ from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
+from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
@@ -288,9 +289,12 @@ class IronicDriver(virt_driver.ComputeDriver):
             LOG.error(msg)
             raise exception.InstanceDeployFailure(msg)
 
-    def _cleanup_deploy(self, node, instance, network_info):
+    def _cleanup_deploy(self, context, node, instance, network_info):
         icli = client_wrapper.IronicClientWrapper()
-        flavor = instance.get_flavor()
+        # TODO(mrda): It would be better to use instance.get_flavor() here
+        # but right now that doesn't include extra_specs which are required
+        flavor = flavor_obj.Flavor.get_by_id(context,
+                                             instance['instance_type_id'])
         patch = patcher.create(node).get_cleanup_patch(instance, network_info,
                                                        flavor)
 
@@ -579,7 +583,8 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         icli = client_wrapper.IronicClientWrapper()
         node = icli.call("node.get", node_uuid)
-        flavor = instance.get_flavor()
+        flavor = flavor_obj.Flavor.get_by_id(context,
+                                             instance['instance_type_id'])
 
         self._add_driver_fields(node, instance, image_meta, flavor)
 
@@ -594,7 +599,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         validate_chk = icli.call("node.validate", node_uuid)
         if not validate_chk.deploy or not validate_chk.power:
             # something is wrong. undo what we have done
-            self._cleanup_deploy(node, instance, network_info)
+            self._cleanup_deploy(context, node, instance, network_info)
             raise exception.ValidationError(_(
                 "Ironic node: %(id)s failed to validate."
                 " (deploy: %(deploy)s, power: %(power)s)")
@@ -612,7 +617,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                               "%(instance)s on baremetal node %(node)s."),
                           {'instance': instance['uuid'],
                            'node': node_uuid})
-                self._cleanup_deploy(node, instance, network_info)
+                self._cleanup_deploy(context, node, instance, network_info)
 
         # trigger the node deploy
         try:
@@ -625,7 +630,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                            {'inst': instance['uuid'],
                             'reason': six.text_type(e)})
                 LOG.error(msg)
-                self._cleanup_deploy(node, instance, network_info)
+                self._cleanup_deploy(context, node, instance, network_info)
 
         timer = loopingcall.FixedIntervalLoopingCall(self._wait_for_active,
                                                      icli, instance)
@@ -712,7 +717,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                                     ironic_states.DEPLOYWAIT):
             self._unprovision(icli, instance, node)
 
-        self._cleanup_deploy(node, instance, network_info)
+        self._cleanup_deploy(context, node, instance, network_info)
 
     def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None, bad_volumes_callback=None):
@@ -960,7 +965,8 @@ class IronicDriver(virt_driver.ComputeDriver):
         node_uuid = instance.node
         icli = client_wrapper.IronicClientWrapper()
         node = icli.call("node.get", node_uuid)
-        flavor = instance.get_flavor()
+        flavor = flavor_obj.Flavor.get_by_id(context,
+                                             instance['instance_type_id'])
 
         self._add_driver_fields(node, instance, image_meta, flavor,
                                 preserve_ephemeral)
