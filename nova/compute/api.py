@@ -784,8 +784,16 @@ class API(base.Base):
         system_metadata = flavors.save_flavor_info(
             dict(), instance_type)
 
+        # PCI requests come from two sources: instance flavor and
+        # requested_networks. The first call in below returns an
+        # InstancePCIRequests object which is a list of InstancePCIRequest
+        # objects. The second call in below creates an InstancePCIRequest
+        # object for each SR-IOV port, and append it to the list in the
+        # InstancePCIRequests object
         pci_request_info = pci_request.get_pci_requests_from_flavor(
             instance_type)
+        self.network_api.create_pci_requests_for_sriov_ports(context,
+            pci_request_info, requested_networks)
 
         base_options = {
             'reservation_id': reservation_id,
@@ -827,13 +835,15 @@ class API(base.Base):
         return base_options, max_network_count
 
     def _build_filter_properties(self, context, scheduler_hints, forced_host,
-            forced_node, instance_type):
+            forced_node, instance_type, pci_request_info):
         filter_properties = dict(scheduler_hints=scheduler_hints)
         filter_properties['instance_type'] = instance_type
         if forced_host:
             filter_properties['force_hosts'] = [forced_host]
         if forced_node:
             filter_properties['force_nodes'] = [forced_node]
+        if pci_request_info and pci_request_info.requests:
+            filter_properties['pci_requests'] = pci_request_info
         return filter_properties
 
     def _provision_instances(self, context, instance_type, min_count,
@@ -1036,7 +1046,9 @@ class API(base.Base):
                 block_device_mapping, shutdown_terminate)
 
         filter_properties = self._build_filter_properties(context,
-                scheduler_hints, forced_host, forced_node, instance_type)
+                scheduler_hints, forced_host,
+                forced_node, instance_type,
+                base_options.get('pci_request_info'))
 
         self._update_instance_group(context, instances, scheduler_hints)
 

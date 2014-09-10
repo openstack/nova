@@ -263,6 +263,11 @@ def stub_out_nw_api(stubs, cls=None, private=None, publics=None):
         def validate_networks(self, context, networks, max_count):
             return max_count
 
+        def create_pci_requests_for_sriov_ports(self, context,
+                                                system_metadata,
+                                                requested_networks):
+            pass
+
     if cls is None:
         cls = Fake
     stubs.Set(network_api, 'API', cls)

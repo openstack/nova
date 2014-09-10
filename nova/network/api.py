@@ -406,6 +406,17 @@ class API(base_api.NetworkAPI):
         # the requested number in this case.
         return num_instances
 
+    def create_pci_requests_for_sriov_ports(self, context,
+                                            pci_requests,
+                                            requested_networks):
+        """Check requested networks for any SR-IOV port request.
+
+        Create a PCI request object for each SR-IOV port, and add it to the
+        pci_requests object that contains a list of PCI request object.
+        """
+        # This is NOOP for Nova network since it doesn't support SR-IOV.
+        pass
+
     @wrap_check_policy
     def get_instance_uuids_by_ip_filter(self, context, filters):
         """Returns a list of dicts in the form of

@@ -237,6 +237,16 @@ class NetworkAPI(base.Base):
         """Returns all network info related to an instance."""
         raise NotImplementedError()
 
+    def create_pci_requests_for_sriov_ports(self, context,
+                                            pci_requests,
+                                            requested_networks):
+        """Check requested networks for any SR-IOV port request.
+
+        Create a PCI request object for each SR-IOV port, and add it to the
+        pci_requests object that contains a list of PCI request object.
+        """
+        raise NotImplementedError()
+
     def validate_networks(self, context, requested_networks, num_instances):
         """validate the networks passed at the time of creating
         the server.
