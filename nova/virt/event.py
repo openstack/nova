@@ -22,10 +22,19 @@ driver.
 
 import time
 
+from nova.openstack.common.gettextutils import _
+
 EVENT_LIFECYCLE_STARTED = 0
 EVENT_LIFECYCLE_STOPPED = 1
 EVENT_LIFECYCLE_PAUSED = 2
 EVENT_LIFECYCLE_RESUMED = 3
+
+NAMES = {
+    EVENT_LIFECYCLE_STARTED: _('Started'),
+    EVENT_LIFECYCLE_STOPPED: _('Stopped'),
+    EVENT_LIFECYCLE_PAUSED: _('Paused'),
+    EVENT_LIFECYCLE_RESUMED: _('Resumed')
+}
 
 
 class Event(object):
@@ -83,3 +92,6 @@ class LifecycleEvent(InstanceEvent):
 
     def get_transition(self):
         return self.transition
+
+    def get_name(self):
+        return NAMES.get(self.transition, _('Unknown'))

@@ -988,9 +988,9 @@ class ComputeManager(manager.Manager):
         return retry_reboot, reboot_type
 
     def handle_lifecycle_event(self, event):
-        LOG.info(_("Lifecycle event %(state)d on VM %(uuid)s") %
-                  {'state': event.get_transition(),
-                   'uuid': event.get_instance_uuid()})
+        LOG.info(_("VM %(state)s (Lifecycle Event)") %
+                  {'state': event.get_name()},
+                 instance_uuid=event.get_instance_uuid())
         context = nova.context.get_admin_context(read_deleted='yes')
         instance = instance_obj.Instance.get_by_uuid(
             context, event.get_instance_uuid())
