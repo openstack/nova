@@ -28,6 +28,7 @@ from nova import test
 from nova.tests.image import fake as fake_image
 from nova.tests import utils as test_utils
 from nova.tests.virt.libvirt import fake_libvirt_utils
+from nova.tests.virt.libvirt import test_libvirt
 from nova.virt import event as virtevent
 from nova.virt import fake
 from nova.virt.libvirt import imagebackend
@@ -458,11 +459,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.connection.attach_volume(None, connection_info, instance_ref,
                                       '/dev/sda')
 
-        bdm = {
-            'root_device_name': None,
-            'swap': None,
-            'ephemerals': [],
-            'block_device_mapping': [{
+        bdm_data = {
             'instance_uuid': instance_ref['uuid'],
             'connection_info': {'driver_volume_type': 'fake'},
             'mount_device': '/dev/sda',
@@ -471,8 +468,15 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
             'snapshot_id': None,
             'volume_id': 'abcdedf',
             'volume_size': None,
-            'no_device': None
-            }]
+            'no_device': None,
+        }
+        bdm = {
+            'block_device_mapping': [
+                test_libvirt.mocked_bdm(1, bdm_data),
+            ],
+            'root_device_name': None,
+            'swap': None,
+            'ephemerals': [],
         }
         self.connection.power_on(self.ctxt, instance_ref, network_info, bdm)
         self.connection.detach_volume(connection_info,

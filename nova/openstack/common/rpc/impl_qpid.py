@@ -369,7 +369,7 @@ class DirectPublisher(Publisher):
         """Init a 'direct' publisher."""
 
         if conf.qpid_topology_version == 1:
-            node_name = msg_id
+            node_name = "%s/%s" % (msg_id, msg_id)
             node_opts = {"type": "direct"}
         elif conf.qpid_topology_version == 2:
             node_name = "amq.direct/%s" % msg_id
@@ -468,6 +468,10 @@ class Connection(object):
         self.brokers = params['qpid_hosts']
         self.username = params['username']
         self.password = params['password']
+
+        brokers_count = len(self.brokers)
+        self.next_broker_indices = itertools.cycle(range(brokers_count))
+
         self.connection_create(self.brokers[0])
         self.reconnect()
 
@@ -495,23 +499,21 @@ class Connection(object):
 
     def reconnect(self):
         """Handles reconnecting and re-establishing sessions and queues."""
-        attempt = 0
         delay = 1
         while True:
             # Close the session if necessary
             if self.connection.opened():
                 try:
                     self.connection.close()
-                except qpid_exceptions.ConnectionError:
+                except qpid_exceptions.MessagingError:
                     pass
 
-            broker = self.brokers[attempt % len(self.brokers)]
-            attempt += 1
+            broker = self.brokers[next(self.next_broker_indices)]
 
             try:
                 self.connection_create(broker)
                 self.connection.open()
-            except qpid_exceptions.ConnectionError as e:
+            except qpid_exceptions.MessagingError as e:
                 msg_dict = dict(e=e, delay=delay)
                 msg = _("Unable to connect to AMQP server: %(e)s. "
                         "Sleeping %(delay)s seconds") % msg_dict
@@ -539,7 +541,7 @@ class Connection(object):
             try:
                 return method(*args, **kwargs)
             except (qpid_exceptions.Empty,
-                    qpid_exceptions.ConnectionError) as e:
+                    qpid_exceptions.MessagingError) as e:
                 if error_callback:
                     error_callback(e)
                 self.reconnect()

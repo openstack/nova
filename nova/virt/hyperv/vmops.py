@@ -36,7 +36,6 @@ from nova.virt import configdrive
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import utilsfactory
-from nova.virt.hyperv import vhdutilsv2
 from nova.virt.hyperv import vmutils
 from nova.virt.hyperv import volumeops
 
@@ -161,24 +160,25 @@ class VMOps(object):
                 base_vhd_size = base_vhd_info['MaxInternalSize']
                 root_vhd_size = instance['root_gb'] * 1024 ** 3
 
-                # NOTE(lpetrut): Checking the namespace is needed as the
-                # following method is not yet implemented in vhdutilsv2.
-                if not isinstance(self._vhdutils, vhdutilsv2.VHDUtilsV2):
-                    root_vhd_internal_size = (
+                root_vhd_internal_size = (
                         self._vhdutils.get_internal_vhd_size_by_file_size(
                             root_vhd_path, root_vhd_size))
-                else:
-                    root_vhd_internal_size = root_vhd_size
 
                 if root_vhd_internal_size < base_vhd_size:
-                    raise vmutils.HyperVException(_("Cannot resize a VHD to a "
-                                                    "smaller size"))
+                    error_msg = _("Cannot resize a VHD to a smaller size, the"
+                                  " original size is %(base_vhd_size)s, the"
+                                  " newer size is %(root_vhd_size)s"
+                                  ) % {'base_vhd_size': base_vhd_size,
+                                       'root_vhd_size': root_vhd_internal_size}
+                    raise vmutils.HyperVException(error_msg)
                 elif root_vhd_internal_size > base_vhd_size:
                     LOG.debug(_("Resizing VHD %(root_vhd_path)s to new "
                                 "size %(root_vhd_size)s"),
-                              {'base_vhd_path': base_vhd_path,
+                              {'root_vhd_size': root_vhd_internal_size,
                                'root_vhd_path': root_vhd_path})
-                    self._vhdutils.resize_vhd(root_vhd_path, root_vhd_size)
+                    self._vhdutils.resize_vhd(root_vhd_path,
+                                              root_vhd_internal_size,
+                                              is_file_max_size=False)
         except Exception:
             with excutils.save_and_reraise_exception():
                 if self._pathutils.exists(root_vhd_path):
@@ -226,10 +226,9 @@ class VMOps(object):
                                           admin_password)
 
             self.power_on(instance)
-        except Exception as ex:
-            LOG.exception(ex)
-            self.destroy(instance)
-            raise vmutils.HyperVException(_('Spawn instance failed'))
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                self.destroy(instance)
 
     def create_instance(self, instance, network_info, block_device_info,
                         root_vhd_path, eph_vhd_path):
@@ -275,8 +274,9 @@ class VMOps(object):
 
     def _create_config_drive(self, instance, injected_files, admin_password):
         if CONF.config_drive_format != 'iso9660':
-            vmutils.HyperVException(_('Invalid config_drive_format "%s"') %
-                                    CONF.config_drive_format)
+            raise vmutils.UnsupportedConfigDriveFormatException(
+                _('Invalid config_drive_format "%s"') %
+                CONF.config_drive_format)
 
         LOG.info(_('Using config drive for instance: %s'), instance=instance)
 
@@ -352,10 +352,10 @@ class VMOps(object):
 
             if destroy_disks:
                 self._delete_disk_files(instance_name)
-        except Exception as ex:
-            LOG.exception(ex)
-            raise vmutils.HyperVException(_('Failed to destroy instance: %s') %
-                                          instance_name)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                LOG.exception(_('Failed to destroy instance: %s'),
+                              instance_name)
 
     def reboot(self, instance, network_info, reboot_type):
         """Reboot the specified instance."""
@@ -405,9 +405,8 @@ class VMOps(object):
             LOG.debug(_("Successfully changed state of VM %(vm_name)s"
                         " to: %(req_state)s"),
                       {'vm_name': vm_name, 'req_state': req_state})
-        except Exception as ex:
-            LOG.exception(ex)
-            msg = (_("Failed to change vm state of %(vm_name)s"
-                     " to %(req_state)s") %
-                   {'vm_name': vm_name, 'req_state': req_state})
-            raise vmutils.HyperVException(msg)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                LOG.error(_("Failed to change vm state of %(vm_name)s"
+                            " to %(req_state)s"),
+                          {'vm_name': vm_name, 'req_state': req_state})

@@ -415,7 +415,7 @@ class HyperVAPITestCase(test.NoDBTestCase):
                                              mox.IsA(str))
         m.WithSideEffects(self._add_ide_disk)
 
-    def _test_spawn_config_drive(self, use_cdrom):
+    def _test_spawn_config_drive(self, use_cdrom, format_error=False):
         self.flags(force_config_drive=True)
         self.flags(config_drive_cdrom=use_cdrom, group='hyperv')
         self.flags(mkisofs_cmd='mkisofs.exe')
@@ -427,13 +427,24 @@ class HyperVAPITestCase(test.NoDBTestCase):
             expected_ide_disks = 2
             expected_ide_dvds = 0
 
-        self._test_spawn_instance(expected_ide_disks=expected_ide_disks,
-                                  expected_ide_dvds=expected_ide_dvds,
-                                  config_drive=True,
-                                  use_cdrom=use_cdrom)
+        if format_error:
+            self.assertRaises(vmutils.UnsupportedConfigDriveFormatException,
+                              self._test_spawn_instance,
+                              with_exception=True,
+                              config_drive=True,
+                              use_cdrom=use_cdrom)
+        else:
+            self._test_spawn_instance(expected_ide_disks=expected_ide_disks,
+                                      expected_ide_dvds=expected_ide_dvds,
+                                      config_drive=True,
+                                      use_cdrom=use_cdrom)
 
     def test_spawn_config_drive(self):
         self._test_spawn_config_drive(False)
+
+    def test_spawn_config_drive_format_error(self):
+        CONF.set_override('config_drive_format', 'wrong_format')
+        self._test_spawn_config_drive(True, True)
 
     def test_spawn_config_drive_cdrom(self):
         self._test_spawn_config_drive(True)
@@ -977,7 +988,8 @@ class HyperVAPITestCase(test.NoDBTestCase):
                 mox.IsA(str), mox.IsA(object))
             m.AndReturn(1025)
 
-            vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object))
+            vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object),
+                                         is_file_max_size=False)
 
     def _setup_spawn_instance_mocks(self, cow, setup_vif_mocks_func=None,
                                     with_exception=False,
@@ -1017,7 +1029,8 @@ class HyperVAPITestCase(test.NoDBTestCase):
                 m = vhdutils.VHDUtils.get_internal_vhd_size_by_file_size(
                     mox.IsA(str), mox.IsA(object))
                 m.AndReturn(1025)
-                vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object))
+                vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object),
+                                             is_file_max_size=False)
 
         self._setup_check_admin_permissions_mocks(
                                           admin_permissions=admin_permissions)
@@ -1032,7 +1045,7 @@ class HyperVAPITestCase(test.NoDBTestCase):
                                           block_device_info,
                                           ephemeral_storage=ephemeral_storage)
 
-        if config_drive:
+        if config_drive and not with_exception:
             self._setup_spawn_config_drive_mocks(use_cdrom)
 
         # TODO(alexpilotti) Based on where the exception is thrown
@@ -1289,7 +1302,7 @@ class HyperVAPITestCase(test.NoDBTestCase):
         mount_point = '/dev/sdc'
 
         def fake_login_storage_target(connection_info):
-            raise Exception('Fake connection exception')
+            raise vmutils.HyperVException('Fake connection exception')
 
         self.stubs.Set(self._conn._volumeops, '_login_storage_target',
                        fake_login_storage_target)
@@ -1664,3 +1677,17 @@ class VolumeOpsTestCase(HyperVAPITestCase):
             self.assertRaises(exception.NotFound,
                               self.volumeops._get_mounted_disk_from_lun,
                               target_iqn, target_lun)
+
+    def test_plug_vifs(self):
+        # Check to make sure the method raises NotImplementedError.
+        self.assertRaises(NotImplementedError,
+                          self._conn.plug_vifs,
+                          instance=self._test_spawn_instance,
+                          network_info=None)
+
+    def test_unplug_vifs(self):
+        # Check to make sure the method raises NotImplementedError.
+        self.assertRaises(NotImplementedError,
+                          self._conn.unplug_vifs,
+                          instance=self._test_spawn_instance,
+                          network_info=None)

@@ -668,9 +668,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                 return
 
         net_info = compute_utils.get_nw_info_for_instance(instance)
-
-        self.driver.plug_vifs(instance, net_info)
-
+        try:
+            self.driver.plug_vifs(instance, net_info)
+        except NotImplementedError as e:
+            LOG.debug(e, instance=instance)
         if instance['task_state'] == task_states.RESIZE_MIGRATING:
             # We crashed during resize/migration, so roll back for safety
             try:
@@ -3456,7 +3457,10 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _unshelve_instance(self, context, instance, image):
         self._notify_about_instance_usage(context, instance, 'unshelve.start')
+        compute_info = self._get_compute_info(context.elevated(), self.host)
         instance.task_state = task_states.SPAWNING
+        instance.node = compute_info['hypervisor_hostname']
+        instance.host = self.host
         instance.save()
 
         network_info = self._get_instance_nw_info(context, instance)
@@ -3464,6 +3468,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                 context, instance, legacy=False)
         block_device_info = self._prep_block_device(context, instance, bdms)
         scrubbed_keys = self._unshelve_instance_key_scrub(instance)
+
+        if image:
+            shelved_image_ref = instance.image_ref
+            instance.image_ref = image['id']
+
         try:
             self.driver.spawn(context, instance, image, injected_files=[],
                     admin_password=None,
@@ -3474,6 +3483,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.exception(_('Instance failed to spawn'), instance=instance)
 
         if image:
+            instance.image_ref = shelved_image_ref
             image_service = glance.get_default_image_service()
             image_service.delete(context, image['id'])
 
@@ -4162,8 +4172,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             # but we must do it explicitly here when block_migration
             # is false, as the network devices at the source must be
             # torn down
-            self.driver.unplug_vifs(instance_ref, network_info)
-
+            try:
+                self.driver.unplug_vifs(instance_ref, network_info)
+            except NotImplementedError as e:
+                LOG.debug(e, instance=instance_ref)
         # NOTE(tr3buchet): tear down networks on source host
         self.network_api.setup_networks_on_host(ctxt, instance_ref,
                                                 self.host, teardown=True)
@@ -4349,7 +4361,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 try:
                     instance = instance_obj.Instance.get_by_uuid(
                         context, instance_uuids.pop(0),
-                        expected_attrs=['system_metadata'])
+                        expected_attrs=['system_metadata', 'info_cache'])
                 except exception.InstanceNotFound:
                     # Instance is gone.  Try to grab another.
                     continue

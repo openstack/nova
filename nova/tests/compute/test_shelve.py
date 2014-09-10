@@ -148,11 +148,14 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         sys_meta['shelved_at'] = timeutils.strtime(at=cur_time)
         sys_meta['shelved_image_id'] = image['id']
         sys_meta['shelved_host'] = host
+        hypervisor_hostname = 'fake_hypervisor_hostname'
+        fake_compute_info = {'hypervisor_hostname': hypervisor_hostname}
 
         self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute, '_prep_block_device')
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
+        self.mox.StubOutWithMock(self.compute, '_get_compute_info')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
 
         self.deleted_image_id = None
@@ -165,8 +168,12 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
         self.compute._notify_about_instance_usage(self.context, instance,
                 'unshelve.start')
+        self.compute._get_compute_info(mox.IgnoreArg(),
+                                       mox.IgnoreArg()).AndReturn(
+                                                        fake_compute_info)
         db.instance_update_and_get_original(self.context, instance['uuid'],
-                {'task_state': task_states.SPAWNING},
+                {'task_state': task_states.SPAWNING, 'host': host,
+                 'node': hypervisor_hostname},
                 update_cells=False,
                 columns_to_join=['metadata', 'system_metadata'],
                 ).AndReturn((db_instance, db_instance))
@@ -183,6 +190,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 {'power_state': 123,
                  'vm_state': vm_states.ACTIVE,
                  'task_state': None,
+                 'image_ref': instance['image_ref'],
                  'key_data': None,
                  'auto_disk_config': False,
                  'expected_task_state': task_states.SPAWNING,
@@ -197,6 +205,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.compute.unshelve_instance(self.context, instance,
                 image=image)
         self.assertEqual(image['id'], self.deleted_image_id)
+        self.assertEqual(instance.host, self.compute.host)
 
         self.mox.VerifyAll()
         self.mox.UnsetStubs()
@@ -219,17 +228,24 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         sys_meta['shelved_at'] = timeutils.strtime(at=cur_time)
         sys_meta['shelved_image_id'] = None
         sys_meta['shelved_host'] = host
+        hypervisor_hostname = 'fake_hypervisor_hostname'
+        fake_compute_info = {'hypervisor_hostname': hypervisor_hostname}
 
         self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute, '_prep_block_device')
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
+        self.mox.StubOutWithMock(self.compute, '_get_compute_info')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
 
         self.compute._notify_about_instance_usage(self.context, instance,
                 'unshelve.start')
+        self.compute._get_compute_info(mox.IgnoreArg(),
+                                       mox.IgnoreArg()).AndReturn(
+                                                        fake_compute_info)
         db.instance_update_and_get_original(self.context, instance['uuid'],
-                {'task_state': task_states.SPAWNING},
+                {'task_state': task_states.SPAWNING, 'host': host,
+                 'node': hypervisor_hostname},
                 update_cells=False,
                 columns_to_join=['metadata', 'system_metadata']
                 ).AndReturn((db_instance, db_instance))

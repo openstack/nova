@@ -47,7 +47,7 @@ class ViewBuilder(common.ViewBuilder):
     )
 
     _fault_statuses = (
-        "ERROR",
+        "ERROR", "DELETED"
     )
 
     def __init__(self):
@@ -147,6 +147,9 @@ class ViewBuilder(common.ViewBuilder):
 
     @staticmethod
     def _get_vm_state(instance):
+        # If the instance is deleted the vm and task states don't really matter
+        if instance.get("deleted"):
+            return "DELETED"
         return common.status_from_state(instance.get("vm_state"),
                                         instance.get("task_state"))
 

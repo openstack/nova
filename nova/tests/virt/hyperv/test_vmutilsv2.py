@@ -39,6 +39,8 @@ class VMUtilsV2TestCase(test.NoDBTestCase):
     _FAKE_RES_DATA = "fake_res_data"
     _FAKE_RES_PATH = "fake_res_path"
     _FAKE_DYNAMIC_MEMORY_RATIO = 1.0
+    _FAKE_VHD_PATH = "fake_vhd_path"
+    _FAKE_VOLUME_DRIVE_PATH = "fake_volume_drive_path"
 
     def setUp(self):
         self._vmutils = vmutilsv2.VMUtilsV2()
@@ -114,6 +116,32 @@ class VMUtilsV2TestCase(test.NoDBTestCase):
         self._vmutils.create_scsi_controller(self._FAKE_VM_NAME)
 
         self.assertTrue(self._vmutils._add_virt_resource.called)
+
+    def test_get_vm_storage_paths(self):
+        mock_vm = self._lookup_vm()
+
+        mock_vmsettings = [mock.MagicMock()]
+        mock_vm.associators.return_value = mock_vmsettings
+        mock_sasds = []
+        mock_sasd1 = mock.MagicMock()
+        mock_sasd1.ResourceSubType = self._vmutils._IDE_DISK_RES_SUB_TYPE
+        mock_sasd1.HostResource = [self._FAKE_VHD_PATH]
+        mock_sasd2 = mock.MagicMock()
+        mock_sasd2.ResourceSubType = self._vmutils._PHYS_DISK_RES_SUB_TYPE
+        mock_sasd2.HostResource = [self._FAKE_VOLUME_DRIVE_PATH]
+        mock_sasds.append(mock_sasd1)
+        mock_sasds.append(mock_sasd2)
+        mock_vmsettings[0].associators.return_value = mock_sasds
+
+        storage = self._vmutils.get_vm_storage_paths(self._FAKE_VM_NAME)
+        (disk_files, volume_drives) = storage
+
+        mock_vm.associators.assert_called_with(
+            wmi_result_class='Msvm_VirtualSystemSettingData')
+        mock_vmsettings[0].associators.assert_called_with(
+            wmi_result_class='Msvm_StorageAllocationSettingData')
+        self.assertEqual([self._FAKE_VHD_PATH], disk_files)
+        self.assertEqual([self._FAKE_VOLUME_DRIVE_PATH], volume_drives)
 
     def test_destroy(self):
         self._lookup_vm()
@@ -214,25 +242,30 @@ class VMUtilsV2TestCase(test.NoDBTestCase):
         mock_svc.RemoveResourceSettings.assert_called_with(
             [self._FAKE_RES_PATH])
 
-    def test_enable_vm_metrics_collection(self):
+    @mock.patch('nova.virt.hyperv.vmutils.VMUtils._get_vm_disks')
+    def test_enable_vm_metrics_collection(self, mock_get_vm_disks):
         self._lookup_vm()
         mock_svc = self._vmutils._conn.Msvm_MetricService()[0]
 
         metric_def = mock.MagicMock()
+        mock_disk = mock.MagicMock()
+        mock_disk.path_.return_value = self._FAKE_RES_PATH
+        mock_get_vm_disks.return_value = ([mock_disk], [mock_disk])
 
-        fake_metric_def_paths = ["fake_0", "fake_1", "fake_2"]
+        fake_metric_def_paths = ["fake_0", None]
+        fake_metric_resource_paths = [self._FAKE_VM_PATH, self._FAKE_RES_PATH]
+
         metric_def.path_.side_effect = fake_metric_def_paths
-
         self._vmutils._conn.CIM_BaseMetricDefinition.return_value = [
             metric_def]
 
         self._vmutils.enable_vm_metrics_collection(self._FAKE_VM_NAME)
 
         calls = []
-        for fake_metric_def_path in fake_metric_def_paths:
+        for i in range(len(fake_metric_def_paths)):
             calls.append(mock.call(
-                Subject=self._FAKE_VM_PATH,
-                Definition=fake_metric_def_path,
+                Subject=fake_metric_resource_paths[i],
+                Definition=fake_metric_def_paths[i],
                 MetricCollectionEnabled=self._vmutils._METRIC_ENABLED))
 
         mock_svc.ControlMetrics.assert_has_calls(calls, any_order=True)

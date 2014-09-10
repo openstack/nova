@@ -512,7 +512,7 @@ class DomainSnapshot(object):
 
 
 class Connection(object):
-    def __init__(self, uri, readonly, version=9007):
+    def __init__(self, uri=None, readonly=False, version=9007):
         if not uri or uri == '':
             if allow_default_uri_connection:
                 uri = 'qemu:///session'
@@ -635,6 +635,9 @@ class Connection(object):
 
     def domainEventRegisterAny(self, dom, eventid, callback, opaque):
         self._event_callbacks[eventid] = [callback, opaque]
+
+    def registerCloseCallback(self, cb, opaque):
+        pass
 
     def getCapabilities(self):
         """Return spoofed capabilities."""

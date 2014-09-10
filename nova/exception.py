@@ -593,6 +593,11 @@ class NetworkAmbiguous(Invalid):
                 "network ID(s) to select which one(s) to connect to,")
 
 
+class ExternalNetworkAttachForbidden(NotAuthorized):
+    msg_fmt = _("It is not allowed to create an interface on "
+                "external network %(network_uuid)s")
+
+
 class DatastoreNotFound(NotFound):
     msg_fmt = _("Could not find the datastore reference(s) which the VM uses.")
 
