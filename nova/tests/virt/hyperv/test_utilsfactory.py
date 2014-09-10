@@ -30,10 +30,6 @@ CONF = cfg.CONF
 
 
 class TestHyperVUtilsFactory(test.NoDBTestCase):
-
-    def setUp(self):
-        super(TestHyperVUtilsFactory, self).setUp()
-
     def test_get_vmutils_force_v1_and_min_version(self):
         self._test_returned_class(None, True, True)
 

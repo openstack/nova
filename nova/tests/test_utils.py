@@ -809,9 +809,6 @@ class ValidateIntegerTestCase(test.NoDBTestCase):
 
 
 class ValidateNeutronConfiguration(test.NoDBTestCase):
-    def setUp(self):
-        super(ValidateNeutronConfiguration, self).setUp()
-
     def test_nova_network(self):
         self.assertFalse(utils.is_neutron())
 

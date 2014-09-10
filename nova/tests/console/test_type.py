@@ -18,9 +18,6 @@ from nova import test
 
 
 class TypeTestCase(test.TestCase):
-    def setUp(self):
-        super(TypeTestCase, self).setUp()
-
     def test_console(self):
         c = ctype.Console(host='127.0.0.1', port=8945)
 

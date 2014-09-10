@@ -28,9 +28,6 @@ dev_dict = {
 
 
 class PciHostDevicesWhiteListTestCase(test.NoDBTestCase):
-    def setUp(self):
-        super(PciHostDevicesWhiteListTestCase, self).setUp()
-
     def test_whitelist(self):
         white_list = '{"product_id":"0001", "vendor_id":"8086"}'
         parsed = pci_whitelist.PciHostDevicesWhiteList([white_list])

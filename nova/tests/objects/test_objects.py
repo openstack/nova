@@ -1007,9 +1007,6 @@ object_relationships = {
 
 
 class TestObjectVersions(test.TestCase):
-    def setUp(self):
-        super(TestObjectVersions, self).setUp()
-
     def _find_remotable_method(self, cls, thing, parent_was_remotable=False):
         """Follow a chain of remotable things down to the original function."""
         if isinstance(thing, classmethod):
