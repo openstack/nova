@@ -36,7 +36,7 @@ from nova.compute import vm_states
 from nova.console import type as ctype
 from nova import context as nova_context
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LW
 from nova import objects
 from nova.openstack.common import excutils
 from nova.openstack.common import lockutils
@@ -269,6 +269,105 @@ class VMwareVMOps(object):
                 allocations[key] = type(value)
         return allocations
 
+    def _fetch_image_as_file(self, context, vi, image_ds_loc):
+        """Download image as an individual file to host via HTTP PUT."""
+        session = self._session
+        session_vim = session._get_vim()
+        cookies = session_vim.client.options.transport.cookiejar
+
+        LOG.debug("Downloading image file data %(image_id)s to "
+                  "%(file_path)s on the data store "
+                  "%(datastore_name)s",
+                  {'image_id': vi.ii.image_id,
+                   'file_path': image_ds_loc,
+                   'datastore_name': vi.datastore.name},
+                  instance=vi.instance)
+
+        vmware_images.fetch_image(
+            context,
+            vi.instance,
+            session._host,
+            vi.dc_info.name,
+            vi.datastore.name,
+            image_ds_loc.rel_path,
+            cookies=cookies)
+
+    def _prepare_sparse_image(self, vi):
+        tmp_dir_loc = vi.datastore.build_path(
+                self._tmp_folder, uuidutils.generate_uuid())
+        tmp_image_ds_loc = tmp_dir_loc.join(
+                vi.ii.image_id, "tmp-sparse.vmdk")
+        return tmp_dir_loc, tmp_image_ds_loc
+
+    def _prepare_flat_image(self, vi):
+        tmp_dir_loc = vi.datastore.build_path(
+                self._tmp_folder, uuidutils.generate_uuid())
+        tmp_image_ds_loc = tmp_dir_loc.join(
+                vi.ii.image_id, vi.cache_image_path.basename)
+        ds_util.mkdir(self._session, tmp_image_ds_loc.parent, vi.dc_info.ref)
+        vm_util.create_virtual_disk(
+                self._session, vi.dc_info.ref,
+                vi.ii.adapter_type,
+                vi.ii.disk_type,
+                str(tmp_image_ds_loc),
+                vi.ii.file_size_in_kb)
+        flat_vmdk_name = vi.cache_image_path.basename.replace('.vmdk',
+                                                              '-flat.vmdk')
+        flat_vmdk_ds_loc = tmp_dir_loc.join(vi.ii.image_id, flat_vmdk_name)
+        self._delete_datastore_file(vi.instance, str(flat_vmdk_ds_loc),
+                                    vi.dc_info.ref)
+        return tmp_dir_loc, flat_vmdk_ds_loc
+
+    def _prepare_iso_image(self, vi):
+        tmp_dir_loc = vi.datastore.build_path(
+                self._tmp_folder, uuidutils.generate_uuid())
+        tmp_image_ds_loc = tmp_dir_loc.join(
+                vi.ii.image_id, vi.cache_image_path.basename)
+        return tmp_dir_loc, tmp_image_ds_loc
+
+    def _move_to_cache(self, dc_ref, src_folder_ds_path, dst_folder_ds_path):
+        try:
+            ds_util.file_move(self._session, dc_ref,
+                              src_folder_ds_path, dst_folder_ds_path)
+        except vexc.FileAlreadyExistsException:
+            # Folder move has failed. This may be due to the fact that a
+            # process or thread has already completed the operation.
+            # Since image caching is synchronized, this can only happen
+            # due to action external to the process.
+            # In the event of a FileAlreadyExists we continue,
+            # all other exceptions will be raised.
+            LOG.warning(_LW("Destination %s already exists! Concurrent moves "
+                            "can lead to unexpected results."),
+                      dst_folder_ds_path)
+
+    def _cache_sparse_image(self, vi, tmp_image_ds_loc):
+        tmp_dir_loc = tmp_image_ds_loc.parent.parent
+        converted_image_ds_loc = tmp_dir_loc.join(
+                vi.ii.image_id, vi.cache_image_path.basename)
+        # converts fetched image to preallocated disk
+        vm_util.copy_virtual_disk(
+                self._session,
+                vi.dc_info.ref,
+                str(tmp_image_ds_loc),
+                str(converted_image_ds_loc))
+
+        self._delete_datastore_file(vi.instance, str(tmp_image_ds_loc),
+                                    vi.dc_info.ref)
+
+        self._move_to_cache(vi.dc_info.ref,
+                            tmp_image_ds_loc.parent,
+                            vi.cache_image_folder)
+
+    def _cache_flat_image(self, vi, tmp_image_ds_loc):
+        self._move_to_cache(vi.dc_info.ref,
+                            tmp_image_ds_loc.parent,
+                            vi.cache_image_folder)
+
+    def _cache_iso_image(self, vi, tmp_image_ds_loc):
+        self._move_to_cache(vi.dc_info.ref,
+                            tmp_image_ds_loc.parent,
+                            vi.cache_image_folder)
+
     def _get_vm_config_info(self, instance, image_info, instance_name=None):
         """Captures all relevant information from the spawn parameters."""
 
@@ -288,6 +387,46 @@ class VMwareVMOps(object):
                                                 dc_info,
                                                 self._imagecache)
 
+    def _get_image_callbacks(self, vi):
+        disk_type = vi.ii.disk_type
+
+        image_fetch = self._fetch_image_as_file
+
+        if vi.ii.is_iso:
+            image_prepare = self._prepare_iso_image
+            image_cache = self._cache_iso_image
+        elif disk_type == constants.DISK_TYPE_SPARSE:
+            image_prepare = self._prepare_sparse_image
+            image_cache = self._cache_sparse_image
+        elif disk_type in constants.SUPPORTED_FLAT_VARIANTS:
+            image_prepare = self._prepare_flat_image
+            image_cache = self._cache_flat_image
+        else:
+            reason = _("disk type '%s' not supported") % disk_type
+            raise exception.InvalidDiskInfo(reason=reason)
+        return image_prepare, image_fetch, image_cache
+
+    def _fetch_image_if_missing(self, context, vi):
+        image_prepare, image_fetch, image_cache = self._get_image_callbacks(vi)
+        LOG.debug("Processing image %s", vi.ii.image_id)
+
+        with lockutils.lock(str(vi.cache_image_path),
+                            lock_file_prefix='nova-vmware-fetch_image'):
+            self.check_cache_folder(vi.datastore.name, vi.datastore.ref)
+            ds_browser = self._get_ds_browser(vi.datastore.ref)
+            if not ds_util.file_exists(self._session, ds_browser,
+                                       vi.cache_image_folder,
+                                       vi.cache_image_path.basename):
+                LOG.debug("Preparing fetch location")
+                tmp_dir_loc, tmp_image_ds_loc = image_prepare(vi)
+                LOG.debug("Fetch image to %s", tmp_image_ds_loc)
+                image_fetch(context, vi, tmp_image_ds_loc)
+                LOG.debug("Caching image")
+                image_cache(vi, tmp_image_ds_loc)
+                LOG.debug("Cleaning up location %s", str(tmp_dir_loc))
+                self._delete_datastore_file(vi.instance, str(tmp_dir_loc),
+                                            vi.dc_info.ref)
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None,
               instance_name=None, power_on=True):
@@ -296,12 +435,6 @@ class VMwareVMOps(object):
         image_info = vmware_images.VMwareImage.from_image(instance.image_ref,
                                                           image_meta)
         vi = self._get_vm_config_info(instance, image_info, instance_name)
-
-        # NOTE(vui): temporarily retaining some local variables until
-        # the spawn refactoring is complete.
-        instance_name = vi.instance_name
-        datastore = vi.datastore
-        dc_info = vi.dc_info
 
         # Creates the virtual machine. The virtual machine reference returned
         # is unique within Virtual Center.
@@ -314,7 +447,7 @@ class VMwareVMOps(object):
 
         # Cache the vm_ref. This saves a remote call to the VC. This uses the
         # instance_name. This covers all use cases including rescue and resize.
-        vm_util.vm_ref_cache_update(instance_name, vm_ref)
+        vm_util.vm_ref_cache_update(vi.instance_name, vm_ref)
 
         # Set the machine.id parameter of the instance to inject
         # the NIC configuration inside the VM
@@ -348,113 +481,11 @@ class VMwareVMOps(object):
                 # than logging, can we simplify this?
                 self._volumeops.attach_root_volume(connection_info, instance,
                                                    self._default_root_device,
-                                                   datastore.ref)
+                                                   vi.datastore.ref)
         else:
-            # TODO(hartsocks): Refactor this section image handling section.
-            # The next section handles manipulating various image types
-            # as well as preparing those image's virtual disks for mounting
-            # in our virtual machine.
-
-            upload_name = instance.image_ref
-            upload_folder = '%s/%s' % (self._base_folder, upload_name)
-
-            session_vim = self._session._get_vim()
-            cookies = session_vim.client.options.transport.cookiejar
-
-            ds_browser = self._get_ds_browser(datastore.ref)
-            upload_file_name = upload_name + ".%s" % image_info.file_type
-
-            if CONF.remove_unused_base_images:
-                self._imagecache.enlist_image(
-                        image_info.image_id, datastore, dc_info.ref)
-
-            # Check if the image exists in the datastore cache. If not the
-            # image will be uploaded and cached.
-            if not (self._check_if_folder_file_exists(ds_browser,
-                                                      datastore.ref,
-                                                      datastore.name,
-                                                      upload_folder,
-                                                      upload_file_name)):
-                # Upload will be done to the self._tmp_folder and then moved
-                # to the self._base_folder
-                tmp_upload_folder = '%s/%s' % (self._tmp_folder,
-                                               uuidutils.generate_uuid())
-                upload_folder = '%s/%s' % (tmp_upload_folder, upload_name)
-
-                # Naming the VM files in correspondence with the VM instance
-                # The flat vmdk file name
-                flat_uploaded_vmdk_name = "%s-flat.vmdk" % (upload_name)
-                # The sparse vmdk file name for sparse disk image
-                sparse_uploaded_vmdk_name = "%s-sparse.vmdk" % (upload_name)
-
-                flat_ds_loc = datastore.build_path(
-                        upload_folder, flat_uploaded_vmdk_name)
-                sparse_ds_loc = datastore.build_path(
-                        upload_folder, sparse_uploaded_vmdk_name)
-
-                upload_path_loc = datastore.build_path(
-                        upload_folder, upload_file_name)
-                upload_rel_path = upload_path_loc.rel_path
-                if not image_info.is_iso:
-                    if not image_info.is_sparse:
-                        # Create a flat virtual disk and retain the metadata
-                        # file. This will be done in the unique temporary
-                        # directory.
-                        ds_util.mkdir(
-                                self._session,
-                                datastore.build_path(upload_folder),
-                                dc_info.ref)
-                        LOG.debug("Create virtual disk on %s",
-                                  datastore.name, instance=instance)
-                        vm_util.create_virtual_disk(self._session,
-                                                    dc_info.ref,
-                                                    image_info.adapter_type,
-                                                    image_info.disk_type,
-                                                    str(upload_path_loc),
-                                                    image_info.file_size_in_kb)
-                        LOG.debug("Virtual disk created on %s.",
-                                  datastore.name, instance=instance)
-                        self._delete_datastore_file(instance,
-                                                    flat_ds_loc,
-                                                    dc_info.ref)
-                        upload_rel_path = flat_ds_loc.rel_path
-                    else:
-                        upload_rel_path = sparse_ds_loc.rel_path
-
-                vmware_images.fetch_image(context,
-                                          instance,
-                                          self._session._host,
-                                          dc_info.name,
-                                          datastore.name,
-                                          upload_rel_path,
-                                          cookies=cookies)
-
-                if not image_info.is_iso and image_info.is_sparse:
-                    # Copy the sparse virtual disk to a thin virtual disk.
-                    vm_util.copy_virtual_disk(self._session, dc_info.ref,
-                                              str(sparse_ds_loc),
-                                              str(upload_path_loc))
-                    self._delete_datastore_file(instance,
-                                                sparse_ds_loc,
-                                                dc_info.ref)
-                base_folder = '%s/%s' % (self._base_folder, upload_name)
-                dest_folder = datastore.build_path(base_folder)
-                src_folder = datastore.build_path(upload_folder)
-                try:
-                    ds_util.file_move(self._session, dc_info.ref,
-                                      src_folder, dest_folder)
-                except vexc.FileAlreadyExistsException:
-                    # File move has failed. This may be due to the fact that a
-                    # process or thread has already completed the opertaion.
-                    # In the event of a FileAlreadyExists we continue,
-                    # all other exceptions will be raised.
-                    LOG.debug("File %s already exists", dest_folder)
-
-                # Delete the temp upload folder
-                self._delete_datastore_file(instance,
-                                            datastore.build_path(
-                                                    tmp_upload_folder),
-                                            dc_info.ref)
+            self._imagecache.enlist_image(
+                    image_info.image_id, vi.datastore, vi.dc_info.ref)
+            self._fetch_image_if_missing(context, vi)
 
             if image_info.is_iso:
                 self._use_iso_image(vm_ref, vi)
