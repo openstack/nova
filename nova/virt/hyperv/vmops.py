@@ -446,7 +446,7 @@ class VMOps(object):
         while timeout > 0:
             # Perform a soft shutdown on the instance.
             # Wait maximum timeout for the instance to be shutdown.
-            # If it was not shutdown, retry until it succeded or a maximum of
+            # If it was not shutdown, retry until it succeeds or a maximum of
             # time waited is equal to timeout.
             wait_time = min(retry_interval, timeout)
             try:
@@ -454,7 +454,8 @@ class VMOps(object):
                           timeout, instance=instance)
                 self._vmutils.soft_shutdown_vm(instance.name)
                 if self._wait_for_power_off(instance.name, wait_time):
-                    LOG.info(_LI("Soft shutdown succeded."), instance=instance)
+                    LOG.info(_LI("Soft shutdown succeeded."),
+                             instance=instance)
                     return True
             except vmutils.HyperVException as e:
                 # Exception is raised when trying to shutdown the instance

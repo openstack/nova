@@ -332,7 +332,7 @@ class TestSecurityGroups(test.TestCase):
         groups.append(sg)
         # An expected rule here needs to be created as the api returns
         # different attributes on the rule for a response than what was
-        # passed in. For exmaple:
+        # passed in. For example:
         #  "cidr": "0.0.0.0/0" ->"ip_range": {"cidr": "0.0.0.0/0"}
         expected_rule = security_group_rule_template(
             ip_range={'cidr': '10.2.3.124/24'}, parent_group_id=1,

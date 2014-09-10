@@ -11054,7 +11054,7 @@ class EvacuateHostTestCase(BaseTestCase):
         self.assertRaises(exception.InstanceExists,
                           lambda: self._rebuild(on_shared_storage=True))
 
-    def test_driver_doesnt_support_recreate(self):
+    def test_driver_does_not_support_recreate(self):
         with utils.temporary_mutation(self.compute.driver.capabilities,
                                       supports_recreate=False):
             self.stubs.Set(self.compute.driver, 'instance_on_disk',

@@ -6854,7 +6854,7 @@ class LibvirtConnTestCase(test.TestCase,
     @mock.patch('nova.virt.libvirt.LibvirtDriver._get_guest_config')
     @mock.patch('nova.virt.libvirt.blockinfo.get_disk_info')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._destroy')
-    def test_hard_reboot_doesnt_call_glance_show(self,
+    def test_hard_reboot_does_not_call_glance_show(self,
             mock_destroy, mock_get_disk_info, mock_get_guest_config,
             mock_get_instance_path, mock_write_to_file,
             mock_get_instance_disk_info, mock_create_images_and_backing,
