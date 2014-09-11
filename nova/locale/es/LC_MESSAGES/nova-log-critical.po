@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-08-12 06:05+0000\n"
-"PO-Revision-Date: 2014-07-25 14:11+0000\n"
+"POT-Creation-Date: 2014-09-11 06:01+0000\n"
+"PO-Revision-Date: 2014-09-02 17:10+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Spanish (http://www.transifex.com/projects/p/nova/language/"
 "es/)\n"
@@ -19,20 +19,7 @@ msgstr ""
 "Generated-By: Babel 1.3\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: nova/api/openstack/__init__.py:331
+#: nova/api/openstack/__init__.py:339
 #, python-format
 msgid "Missing core API extensions: %s"
 msgstr "Extensiones core API omitidas: %s"
-
-#: nova/virt/vmwareapi/driver.py:658
-#, python-format
-msgid ""
-"Unable to connect to server at %(server)s, sleeping for %(seconds)s seconds"
-msgstr ""
-"Incapaz de conectar al servidor en %(server)s, esperando durante %(seconds)s "
-"segundos"
-
-#: nova/virt/vmwareapi/driver.py:767
-#, python-format
-msgid "In vmwareapi: _call_method (session=%s)"
-msgstr "En vmwareapi: _call_method (session=%s)"

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-08-18 06:03+0000\n"
+"POT-Creation-Date: 2014-09-11 06:01+0000\n"
 "PO-Revision-Date: 2014-06-30 04:40+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Korean (Korea) (http://www.transifex.com/projects/p/nova/"
@@ -24,7 +24,7 @@ msgstr ""
 msgid "%(url)s returned with HTTP %(status)d"
 msgstr ""
 
-#: nova/api/openstack/__init__.py:294
+#: nova/api/openstack/__init__.py:298
 msgid "V3 API has been disabled by configuration"
 msgstr ""
 
@@ -38,18 +38,18 @@ msgstr ""
 msgid "HTTP exception thrown: %s"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/os_networks.py:101
-#: nova/api/openstack/compute/contrib/os_tenant_networks.py:128
+#: nova/api/openstack/compute/contrib/os_networks.py:109
+#: nova/api/openstack/compute/contrib/os_tenant_networks.py:130
 #, python-format
 msgid "Deleting network with id %s"
 msgstr ""
 
-#: nova/compute/manager.py:2663
+#: nova/compute/manager.py:2735
 #, python-format
 msgid "bringing vm to original state: '%s'"
 msgstr ""
 
-#: nova/compute/manager.py:5471
+#: nova/compute/manager.py:5612
 #, python-format
 msgid ""
 "During sync_power_state the instance has a pending task (%(task)s). Skip."
@@ -79,7 +79,7 @@ msgstr "Eventlet 백도어는 프로세스 %(pid)d 일 동안 %(port)s에서 수
 msgid "Created lock path: %s"
 msgstr ""
 
-#: nova/openstack/common/lockutils.py:251
+#: nova/openstack/common/lockutils.py:194
 #, python-format
 msgid "Failed to remove file %(file)s"
 msgstr ""
@@ -141,9 +141,9 @@ msgstr ""
 msgid "Waiting on %d children to exit"
 msgstr "%d 하위에서 종료하기를 대기 중임"
 
-#: nova/openstack/common/db/sqlalchemy/utils.py:387
+#: nova/scheduler/client/report.py:52
 #, python-format
-msgid "Deleting duplicated row with id: %(id)s from table: %(table)s"
+msgid "Compute_service record updated for %s"
 msgstr ""
 
 #: nova/scheduler/filters/utils.py:50
@@ -161,100 +161,114 @@ msgstr ""
 msgid "instance chain %s disappeared during refresh, skipping"
 msgstr ""
 
-#: nova/virt/disk/vfs/guestfs.py:139
-msgid "Unable to force TCG mode, libguestfs too old?"
+#: nova/virt/hyperv/vmops.py:457
+msgid "Soft shutdown succeeded."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:835
+#: nova/virt/libvirt/driver.py:898
 #, python-format
 msgid ""
 "Unable to use bulk domain list APIs, falling back to slow code path: %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:948
+#: nova/virt/libvirt/driver.py:1011
 msgid "Instance destroyed successfully."
 msgstr "인스턴스가 영구 삭제되었습니다. "
 
-#: nova/virt/libvirt/driver.py:958
+#: nova/virt/libvirt/driver.py:1021
 msgid "Instance may be started again."
 msgstr "인스턴스가 다시 시작됩니다."
 
-#: nova/virt/libvirt/driver.py:968
+#: nova/virt/libvirt/driver.py:1031
 msgid "Going to destroy instance again."
 msgstr "인스턴스를 다시 영구 삭제하려 합니다."
 
-#: nova/virt/libvirt/driver.py:1576
+#: nova/virt/libvirt/driver.py:1681
 msgid "Beginning live snapshot process"
 msgstr "라이브 스냅샷 프로세스 시작 중"
 
-#: nova/virt/libvirt/driver.py:1579
+#: nova/virt/libvirt/driver.py:1684
 msgid "Beginning cold snapshot process"
 msgstr "콜드 스냅샷 프로세스 시작 중"
 
-#: nova/virt/libvirt/driver.py:1608
+#: nova/virt/libvirt/driver.py:1713
 msgid "Snapshot extracted, beginning image upload"
 msgstr "스냅샷 추출, 이미지 업로드 시작 중"
 
-#: nova/virt/libvirt/driver.py:1620
+#: nova/virt/libvirt/driver.py:1725
 msgid "Snapshot image upload complete"
 msgstr "스냅샷 이미지 업로드 완료"
 
-#: nova/virt/libvirt/driver.py:2132
+#: nova/virt/libvirt/driver.py:2237
 msgid "Instance soft rebooted successfully."
 msgstr "인스턴스가 소프트 리부트되었습니다. "
 
-#: nova/virt/libvirt/driver.py:2175
+#: nova/virt/libvirt/driver.py:2280
 msgid "Instance shutdown successfully."
 msgstr "인스턴스가 시스템 종료되었습니다. "
 
-#: nova/virt/libvirt/driver.py:2183
+#: nova/virt/libvirt/driver.py:2288
 msgid "Instance may have been rebooted during soft reboot, so return now."
 msgstr ""
 "인스턴스가 소프트 리부트 중에 다시 부팅되었을 수 있으므로, 지금 리턴합니다. "
 
-#: nova/virt/libvirt/driver.py:2252
+#: nova/virt/libvirt/driver.py:2357
 msgid "Instance rebooted successfully."
 msgstr "인스턴스가 다시 부트되었습니다. "
 
-#: nova/virt/libvirt/driver.py:2420
+#: nova/virt/libvirt/driver.py:2400
+msgid "Instance already shutdown."
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:2416
+#, python-format
+msgid "Instance shutdown successfully after %d seconds."
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:2445
+#, python-format
+msgid "Instance failed to shutdown in %d seconds."
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:2602
 msgid "Instance spawned successfully."
 msgstr "인스턴스가 파생되었습니다. "
 
-#: nova/virt/libvirt/driver.py:2436
+#: nova/virt/libvirt/driver.py:2618
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
 msgstr "데이터: %(data)r, fpath: %(fpath)r"
 
-#: nova/virt/libvirt/driver.py:2475 nova/virt/libvirt/driver.py:2502
+#: nova/virt/libvirt/driver.py:2657 nova/virt/libvirt/driver.py:2684
 #, python-format
 msgid "Truncated console log returned, %d bytes ignored"
 msgstr "잘린 콘솔 로그가 리턴되었으며, %d 바이트는 무시됨"
 
-#: nova/virt/libvirt/driver.py:2731
-msgid "Creating image"
-msgstr "이미지 작성 중"
-
-#: nova/virt/libvirt/driver.py:2857
-msgid "Using config drive"
-msgstr "구성 드라이브 사용 중"
-
-#: nova/virt/libvirt/driver.py:2866
+#: nova/virt/libvirt/driver.py:2816
 #, python-format
 msgid "Creating config drive at %(path)s"
 msgstr "%(path)s에 구성 드라이브 작성 중"
 
-#: nova/virt/libvirt/driver.py:3437
+#: nova/virt/libvirt/driver.py:2939
+msgid "Creating image"
+msgstr "이미지 작성 중"
+
+#: nova/virt/libvirt/driver.py:3067
+msgid "Using config drive"
+msgstr "구성 드라이브 사용 중"
+
+#: nova/virt/libvirt/driver.py:3711
 msgid "Configuring timezone for windows instance to localtime"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4320
+#: nova/virt/libvirt/driver.py:4646
 #, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. Instance="
 "%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4326
+#: nova/virt/libvirt/driver.py:4652
 #, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
@@ -263,26 +277,26 @@ msgstr ""
 "%s 인스턴스에 대한 libvirt에서 도메인을 찾을 수 없습니다. 디바이스의 블록 통"
 "계를 가져올 수 없음"
 
-#: nova/virt/libvirt/driver.py:4568
+#: nova/virt/libvirt/driver.py:4894
 #, python-format
 msgid "Instance launched has CPU info: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5316
+#: nova/virt/libvirt/driver.py:5645
 msgid "Instance running successfully."
 msgstr "인스턴스가 정상적으로 실행 중입니다. "
 
-#: nova/virt/libvirt/driver.py:5590
+#: nova/virt/libvirt/driver.py:5994
 #, python-format
 msgid "Deleting instance files %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5603
+#: nova/virt/libvirt/driver.py:6007
 #, python-format
 msgid "Deletion of %s failed"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5607
+#: nova/virt/libvirt/driver.py:6011
 #, python-format
 msgid "Deletion of %s complete"
 msgstr ""
@@ -355,11 +369,11 @@ msgstr "손상된 기본 파일: %s"
 msgid "Removable base files: %s"
 msgstr "제거 가능한 기본 파일: %s"
 
-#: nova/virt/libvirt/utils.py:490
+#: nova/virt/libvirt/utils.py:513
 msgid "findmnt tool is not installed"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:1355
+#: nova/virt/xenapi/vm_utils.py:1320
 #, python-format
 msgid ""
 "Image creation data, cacheable: %(cache)s, downloaded: %(downloaded)s "
