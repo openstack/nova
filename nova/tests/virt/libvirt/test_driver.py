@@ -9511,6 +9511,11 @@ class HostStateTestCase(test.TestCase):
         "vendor_id": '8086',
         "dev_type": 'type-PF',
         "phys_function": None}]
+    numa_topology = hardware.VirtNUMAHostTopology(
+                        cells=[hardware.VirtNUMATopologyCellUsage(
+                                1, set([1, 2]), 1024),
+                           hardware.VirtNUMATopologyCellUsage(
+                                2, set([3, 4]), 1024)])
 
     class FakeConnection(object):
         """Fake connection object."""
@@ -9558,6 +9563,9 @@ class HostStateTestCase(test.TestCase):
         def _get_pci_passthrough_devices(self):
             return jsonutils.dumps(HostStateTestCase.pci_devices)
 
+        def _get_host_numa_topology(self):
+            return HostStateTestCase.numa_topology
+
     def test_update_status(self):
         hs = libvirt_driver.HostState(self.FakeConnection())
         stats = hs._stats
@@ -9581,6 +9589,10 @@ class HostStateTestCase(test.TestCase):
         self.assertEqual(stats["disk_available_least"], 80)
         self.assertEqual(jsonutils.loads(stats["pci_passthrough_devices"]),
                          HostStateTestCase.pci_devices)
+        self.assertThat(hardware.VirtNUMAHostTopology.from_json(
+                            stats['numa_topology'])._to_dict(),
+                        matchers.DictMatches(
+                                HostStateTestCase.numa_topology._to_dict()))
 
 
 class NWFilterFakes:

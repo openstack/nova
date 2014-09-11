@@ -465,7 +465,8 @@ class XenAPIDriver(driver.ComputeDriver):
                'supported_instances': jsonutils.dumps(
                    host_stats['supported_instances']),
                'pci_passthrough_devices': jsonutils.dumps(
-                   host_stats['pci_passthrough_devices'])}
+                   host_stats['pci_passthrough_devices']),
+               'numa_topology': None}
 
         return dic
 

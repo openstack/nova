@@ -395,7 +395,8 @@ class FakeDriver(driver.ComputeDriver):
                'hypervisor_hostname': nodename,
                'disk_available_least': 0,
                'cpu_info': '?',
-               'supported_instances': jsonutils.dumps([(None, 'fake', None)])
+               'supported_instances': jsonutils.dumps([(None, 'fake', None)]),
+               'numa_topology': None,
               }
         return dic
 

@@ -306,6 +306,11 @@ class ResourceTracker(object):
             return
         resources['host_ip'] = CONF.my_ip
 
+        # TODO(berrange): remove this once all virt drivers are updated
+        # to report topology
+        if "numa_topology" not in resources:
+            resources["numa_topology"] = None
+
         self._verify_resources(resources)
 
         self._report_hypervisor_resource_view(resources)
@@ -703,7 +708,8 @@ class ResourceTracker(object):
 
     def _verify_resources(self, resources):
         resource_keys = ["vcpus", "memory_mb", "local_gb", "cpu_info",
-                         "vcpus_used", "memory_mb_used", "local_gb_used"]
+                         "vcpus_used", "memory_mb_used", "local_gb_used",
+                         "numa_topology"]
 
         missing_keys = [k for k in resource_keys if k not in resources]
         if missing_keys:

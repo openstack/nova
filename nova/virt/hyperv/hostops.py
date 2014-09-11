@@ -131,7 +131,8 @@ class HostOps(object):
                'cpu_info': jsonutils.dumps(cpu_info),
                 'supported_instances': jsonutils.dumps(
                     [(arch.I686, 'hyperv', 'hvm'),
-                     (arch.X86_64, 'hyperv', 'hvm')])
+                     (arch.X86_64, 'hyperv', 'hvm')]),
+               'numa_topology': None,
                }
 
         return dic

@@ -109,6 +109,7 @@ class FakeVirtDriver(driver.ComputeDriver):
             'hypervisor_version': 0,
             'hypervisor_hostname': 'fakehost',
             'cpu_info': '',
+            'numa_topology': None,
         }
         if self.pci_support:
             d['pci_passthrough_devices'] = jsonutils.dumps(self.pci_devices)
