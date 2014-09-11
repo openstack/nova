@@ -19,6 +19,7 @@
 import copy
 
 from nova.api.ec2 import apirequest
+from nova.openstack.common import timeutils
 from nova import test
 
 
@@ -71,3 +72,20 @@ class APIRequestTestCase(test.NoDBTestCase):
         resp['utf8'] = unichr(40960) + u'abcd' + unichr(1972)
         data = self.req._render_response(resp, 'uuid')
         self.assertIn('<utf8>&#40960;abcd&#1972;</utf8>', data)
+
+    # Tests for individual data element format functions
+
+    def test_return_valid_isoformat(self):
+        """Ensure that the ec2 api returns datetime in xs:dateTime
+           (which apparently isn't datetime.isoformat())
+           NOTE(ken-pepple): https://bugs.launchpad.net/nova/+bug/721297
+        """
+        conv = apirequest._database_to_isoformat
+        # sqlite database representation with microseconds
+        time_to_convert = timeutils.parse_strtime("2011-02-21 20:14:10.634276",
+                                                  "%Y-%m-%d %H:%M:%S.%f")
+        self.assertEqual(conv(time_to_convert), '2011-02-21T20:14:10.634Z')
+        # mysqlite database representation
+        time_to_convert = timeutils.parse_strtime("2011-02-21 19:56:18",
+                                                  "%Y-%m-%d %H:%M:%S")
+        self.assertEqual(conv(time_to_convert), '2011-02-21T19:56:18.000Z')
