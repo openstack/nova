@@ -22,7 +22,8 @@ import mock
 from oslo.serialization import jsonutils
 import webob
 
-from nova.api.openstack.compute.contrib import floating_ips
+from nova.api.openstack.compute.contrib import floating_ips as fips_v2
+from nova.api.openstack.compute.plugins.v3 import floating_ips as fips_v21
 from nova.api.openstack import extensions
 from nova import compute
 from nova.compute import utils as compute_utils
@@ -105,18 +106,16 @@ def get_instance_by_floating_ip_addr(self, context, address):
     return None
 
 
-class FloatingIpTestNeutron(test.NoDBTestCase):
+class FloatingIpTestNeutronV21(test.NoDBTestCase):
+    floating_ips = fips_v21
 
     def setUp(self):
-        super(FloatingIpTestNeutron, self).setUp()
+        super(FloatingIpTestNeutronV21, self).setUp()
         self.flags(network_api_class='nova.network.neutronv2.api.API')
-        self.controller = floating_ips.FloatingIPController()
-
-    def _get_fake_request(self):
-        return fakes.HTTPRequest.blank('/v2/fake/os-floating-ips/1')
+        self.controller = self.floating_ips.FloatingIPController()
 
     def test_floatingip_delete(self):
-        req = self._get_fake_request()
+        req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips/1')
         fip_val = {'address': '1.1.1.1', 'fixed_ip_id': '192.168.1.2'}
         with contextlib.nested(
             mock.patch.object(self.controller.network_api,
@@ -140,9 +139,15 @@ class FloatingIpTestNeutron(test.NoDBTestCase):
             self.assertTrue(dis_and_del.called)
 
 
-class FloatingIpTest(test.TestCase):
+class FloatingIpTestNeutronV2(FloatingIpTestNeutronV21):
+    floating_ips = fips_v2
+
+
+class FloatingIpTestV21(test.TestCase):
     floating_ip = "10.10.10.10"
     floating_ip_2 = "10.10.10.11"
+    floating_ips = fips_v21
+    url = '/v2/fake/servers/test_inst/action'
 
     def _create_floating_ips(self, floating_ips=None):
         """Create a floating ip object."""
@@ -169,11 +174,11 @@ class FloatingIpTest(test.TestCase):
     def _get_fake_server_request(self):
         return fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
 
-    def _get_fake_response(self, req, init_only):
-        return req.get_response(fakes.wsgi_app(init_only=(init_only,)))
+    def _get_fake_app(self):
+        return fakes.wsgi_app_v21(init_only=('servers', 'os-floating-ips'))
 
     def setUp(self):
-        super(FloatingIpTest, self).setUp()
+        super(FloatingIpTestV21, self).setUp()
         self.stubs.Set(compute.api.API, "get",
                        compute_api_get)
         self.stubs.Set(network.api.API, "get_floating_ip",
@@ -200,17 +205,14 @@ class FloatingIpTest(test.TestCase):
 
         self.ext_mgr = extensions.ExtensionManager()
         self.ext_mgr.extensions = {}
-        self.controller = floating_ips.FloatingIPController()
-        self.manager = floating_ips.FloatingIPActionController(self.ext_mgr)
-
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Floating_ips'])
+        self.controller = self.floating_ips.FloatingIPController()
+        self.manager = self.floating_ips.\
+                            FloatingIPActionController(self.ext_mgr)
+        self.app = self._get_fake_app()
 
     def tearDown(self):
         self._delete_floating_ip()
-        super(FloatingIpTest, self).tearDown()
+        super(FloatingIpTestV21, self).tearDown()
 
     def test_floatingip_delete(self):
         req = self._get_fake_fip_request('1')
@@ -237,7 +239,7 @@ class FloatingIpTest(test.TestCase):
                                                     floating_ip_address)
         # NOTE(vish): network_get uses the id not the address
         floating_ip = db.floating_ip_get(self.context, floating_ip['id'])
-        view = floating_ips._translate_floating_ip_view(floating_ip)
+        view = self.floating_ips._translate_floating_ip_view(floating_ip)
         self.assertIn('floating_ip', view)
         self.assertTrue(view['floating_ip']['id'])
         self.assertEqual(view['floating_ip']['ip'], self.floating_ip)
@@ -247,7 +249,7 @@ class FloatingIpTest(test.TestCase):
     def test_translate_floating_ip_view_dict(self):
         floating_ip = {'id': 0, 'address': '10.0.0.10', 'pool': 'nova',
                        'fixed_ip': None}
-        view = floating_ips._translate_floating_ip_view(floating_ip)
+        view = self.floating_ips._translate_floating_ip_view(floating_ip)
         self.assertIn('floating_ip', view)
 
     def test_floating_ips_list(self):
@@ -275,7 +277,7 @@ class FloatingIpTest(test.TestCase):
 
         req = self._get_fake_fip_request('9876')
         req.method = 'DELETE'
-        res = self._get_fake_response(req, 'os-floating-ips')
+        res = req.get_response(self.app)
         self.assertEqual(res.status_int, 404)
         expected_msg = ('{"itemNotFound": {"message": "Floating ip not found '
                                          'for id 9876", "code": 404}}')
@@ -293,14 +295,14 @@ class FloatingIpTest(test.TestCase):
 
         self.stubs.Set(network.api.API, "get_floating_ip",
                 fake_get_floating_ip)
-        self.stubs.Set(floating_ips, "get_instance_by_floating_ip_addr",
+        self.stubs.Set(self.floating_ips, "get_instance_by_floating_ip_addr",
                 fake_get_instance_by_floating_ip_addr)
-        self.stubs.Set(floating_ips, "disassociate_floating_ip",
+        self.stubs.Set(self.floating_ips, "disassociate_floating_ip",
                 fake_disassociate_floating_ip)
 
         req = self._get_fake_fip_request('1')
         req.method = 'DELETE'
-        res = self._get_fake_response(req, 'os-floating-ips')
+        res = req.get_response(self.app)
         self.assertEqual(res.status_int, 202)
 
     def test_floating_ip_show(self):
@@ -319,7 +321,7 @@ class FloatingIpTest(test.TestCase):
                        fake_get_floating_ip)
 
         req = self._get_fake_fip_request('9876')
-        res = self._get_fake_response(req, 'os-floating-ips')
+        res = req.get_response(self.app)
         self.assertEqual(res.status_int, 404)
         expected_msg = ('{"itemNotFound": {"message": "Floating ip not found '
                         'for id 9876", "code": 404}}')
@@ -475,25 +477,6 @@ class FloatingIpTest(test.TestCase):
                           self.manager._add_floating_ip, req, 'test_inst',
                           body)
 
-    def test_not_extended_floating_ip_associate_fixed(self):
-        # Check that fixed_address is ignored if os-extended-floating-ips
-        # is not loaded
-        fixed_address_requested = '192.168.1.101'
-        fixed_address_allocated = '192.168.1.100'
-
-        def fake_associate_floating_ip(*args, **kwargs):
-            self.assertEqual(fixed_address_allocated,
-                             kwargs['fixed_address'])
-
-        self.stubs.Set(network.api.API, "associate_floating_ip",
-                       fake_associate_floating_ip)
-        body = dict(addFloatingIp=dict(address=self.floating_ip,
-                                       fixed_address=fixed_address_requested))
-
-        req = self._get_fake_server_request()
-        rsp = self.manager._add_floating_ip(req, 'test_inst', body)
-        self.assertEqual(202, rsp.status_int)
-
     def test_associate_not_allocated_floating_ip_to_instance(self):
         def fake_associate_floating_ip(self, context, instance,
                               floating_address, fixed_address,
@@ -504,11 +487,11 @@ class FloatingIpTest(test.TestCase):
                        fake_associate_floating_ip)
         floating_ip = '10.10.10.11'
         body = dict(addFloatingIp=dict(address=floating_ip))
-        req = self._get_fake_server_request()
+        req = webob.Request.blank(self.url)
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        resp = self._get_fake_response(req, 'servers')
+        resp = req.get_response(self.app)
         res_dict = jsonutils.loads(resp.body)
         self.assertEqual(resp.status_int, 404)
         self.assertEqual(res_dict['itemNotFound']['message'],
@@ -701,9 +684,43 @@ class FloatingIpTest(test.TestCase):
                           body)
 
 
-class ExtendedFloatingIpTest(test.TestCase):
+class FloatingIpTestV2(FloatingIpTestV21):
+    floating_ips = fips_v2
+
+    def _get_fake_app(self):
+        return fakes.wsgi_app(init_only=('servers', 'os-floating-ips'))
+
+    def setUp(self):
+        super(FloatingIpTestV2, self).setUp()
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Floating_ips'])
+
+    def test_not_extended_floating_ip_associate_fixed(self):
+        # Check that fixed_address is ignored if os-extended-floating-ips
+        # is not loaded
+        fixed_address_requested = '192.168.1.101'
+        fixed_address_allocated = '192.168.1.100'
+
+        def fake_associate_floating_ip(*args, **kwargs):
+            self.assertEqual(fixed_address_allocated,
+                             kwargs['fixed_address'])
+
+        self.stubs.Set(network.api.API, "associate_floating_ip",
+                       fake_associate_floating_ip)
+        body = dict(addFloatingIp=dict(address=self.floating_ip,
+                                       fixed_address=fixed_address_requested))
+
+        req = self._get_fake_server_request()
+        rsp = self.manager._add_floating_ip(req, 'test_inst', body)
+        self.assertEqual(202, rsp.status_int)
+
+
+class ExtendedFloatingIpTestV21(test.TestCase):
     floating_ip = "10.10.10.10"
     floating_ip_2 = "10.10.10.11"
+    floating_ips = fips_v21
 
     def _create_floating_ips(self, floating_ips=None):
         """Create a floating ip object."""
@@ -727,11 +744,11 @@ class ExtendedFloatingIpTest(test.TestCase):
     def _get_fake_request(self):
         return fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
 
-    def _get_fake_response(self, req, init_only):
-        return req.get_response(fakes.wsgi_app(init_only=(init_only,)))
+    def _get_fake_app(self):
+        return fakes.wsgi_app_v21(init_only=('servers', 'os-floating-ips'))
 
     def setUp(self):
-        super(ExtendedFloatingIpTest, self).setUp()
+        super(ExtendedFloatingIpTestV21, self).setUp()
         self.stubs.Set(compute.api.API, "get",
                        compute_api_get)
         self.stubs.Set(network.api.API, "get_floating_ip",
@@ -760,16 +777,14 @@ class ExtendedFloatingIpTest(test.TestCase):
         self.ext_mgr.extensions = {}
         self.ext_mgr.extensions['os-floating-ips'] = True
         self.ext_mgr.extensions['os-extended-floating-ips'] = True
-        self.controller = floating_ips.FloatingIPController()
-        self.manager = floating_ips.FloatingIPActionController(self.ext_mgr)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Floating_ips', 'Extended_floating_ips'])
+        self.controller = self.floating_ips.FloatingIPController()
+        self.manager = self.floating_ips.\
+                       FloatingIPActionController(self.ext_mgr)
+        self.app = self._get_fake_app()
 
     def tearDown(self):
         self._delete_floating_ip()
-        super(ExtendedFloatingIpTest, self).tearDown()
+        super(ExtendedFloatingIpTestV21, self).tearDown()
 
     def test_extended_floating_ip_associate_fixed(self):
         fixed_address = '192.168.1.101'
@@ -799,16 +814,30 @@ class ExtendedFloatingIpTest(test.TestCase):
         req.method = "POST"
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        resp = self._get_fake_response(req, 'servers')
+        resp = req.get_response(self.app)
         res_dict = jsonutils.loads(resp.body)
         self.assertEqual(resp.status_int, 400)
         self.assertEqual(res_dict['badRequest']['message'],
                        "Specified fixed address not assigned to instance")
 
 
-class FloatingIpSerializerTest(test.TestCase):
+class ExtendedFloatingIpTestV2(ExtendedFloatingIpTestV21):
+    floating_ips = fips_v2
+
+    def _get_fake_app(self):
+        return fakes.wsgi_app(init_only=('servers', 'os-floating-ips'))
+
+    def setUp(self):
+        super(ExtendedFloatingIpTestV2, self).setUp()
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Floating_ips', 'Extended_floating_ips'])
+
+
+class FloatingIpSerializerTestV2(test.TestCase):
     def test_default_serializer(self):
-        serializer = floating_ips.FloatingIPTemplate()
+        serializer = fips_v2.FloatingIPTemplate()
         text = serializer.serialize(dict(
                 floating_ip=dict(
                     instance_id=1,
@@ -825,7 +854,7 @@ class FloatingIpSerializerTest(test.TestCase):
         self.assertEqual('1', tree.get('id'))
 
     def test_index_serializer(self):
-        serializer = floating_ips.FloatingIPsTemplate()
+        serializer = fips_v2.FloatingIPsTemplate()
         text = serializer.serialize(dict(
                 floating_ips=[
                     dict(instance_id=1,
