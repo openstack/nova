@@ -23,10 +23,12 @@ import datetime
 from xml.dom import minidom
 
 from lxml import etree
+import six
 
 from nova.api.ec2 import ec2utils
 from nova import exception
 from nova.openstack.common import log as logging
+from nova.openstack.common import strutils
 
 LOG = logging.getLogger(__name__)
 
@@ -134,6 +136,7 @@ class APIRequest(object):
             data_el.appendChild(
                   xml.createTextNode(_database_to_isoformat(data)))
         elif data is not None:
-            data_el.appendChild(xml.createTextNode(str(data)))
+            data_el.appendChild(xml.createTextNode(
+                strutils.safe_encode(six.text_type(data))))
 
         return data_el
