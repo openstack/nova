@@ -72,7 +72,7 @@ def login_iscsi(portal_address, portal_port, target_iqn):
                   run_as_root=True,
                   check_exit_code=[0])
     # Ensure the login complete
-    time.sleep(3)
+    time.sleep(10)
 
 
 def logout_iscsi(portal_address, portal_port, target_iqn):
@@ -104,7 +104,7 @@ def make_partitions(dev, root_mb, swap_mb, ephemeral_mb):
             attempts=3,
             check_exit_code=[0])
     # avoid "device is busy"
-    time.sleep(3)
+    time.sleep(10)
 
 
 def is_block_device(dev):
