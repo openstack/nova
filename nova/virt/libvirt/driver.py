@@ -271,6 +271,8 @@ CONF.import_opt('vif_plugging_timeout', 'nova.virt.driver')
 CONF.import_opt('enabled', 'nova.console.serial', group='serial_console')
 CONF.import_opt('proxyclient_address', 'nova.console.serial',
                 group='serial_console')
+CONF.import_opt('hw_disk_discard', 'nova.virt.libvirt.imagebackend',
+                group='libvirt')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     libvirt_firewall.__name__,
@@ -345,8 +347,12 @@ MIN_LIBVIRT_BLOCKIO_VERSION = (0, 10, 2)
 # BlockJobInfo management requirement
 MIN_LIBVIRT_BLOCKJOBINFO_VERSION = (1, 1, 1)
 # Relative block commit (feature is detected,
-#  this version is only used for messaging)
+# this version is only used for messaging)
 MIN_LIBVIRT_BLOCKCOMMIT_RELATIVE_VERSION = (1, 2, 7)
+# libvirt discard feature
+MIN_LIBVIRT_DISCARD_VERSION = (1, 0, 6)
+MIN_QEMU_DISCARD_VERSION = (1, 6, 0)
+REQ_HYPERVISOR_DISCARD = "QEMU"
 
 
 def libvirt_error_handler(context, err):
@@ -3307,6 +3313,17 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_guest_disk_config(self, instance, name, disk_mapping, inst_type,
                                image_type=None):
+        if CONF.libvirt.hw_disk_discard:
+            if not self._has_min_version(MIN_LIBVIRT_DISCARD_VERSION,
+                                     MIN_QEMU_DISCARD_VERSION,
+                                     REQ_HYPERVISOR_DISCARD):
+                msg = (_('Volume sets discard option, but libvirt %(libvirt)s'
+                         ' or later is required, qemu %(qemu)s'
+                         ' or later is required.') %
+                      {'libvirt': MIN_LIBVIRT_DISCARD_VERSION,
+                       'qemu': MIN_QEMU_DISCARD_VERSION})
+                raise exception.Invalid(msg)
+
         image = self.image_backend.image(instance,
                                          name,
                                          image_type)
