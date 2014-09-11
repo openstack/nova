@@ -485,12 +485,8 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertIsNone(host.pci_stats)
         self.assertEqual(hyper_ver_int, host.hypervisor_version)
 
-    @mock.patch.object(host_manager.objects.InstancePCIRequests,
-        'get_by_instance_uuid',
-        return_value=host_manager.objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.virt.hardware.get_host_numa_usage_from_instance')
-    def test_stat_consumption_from_instance(self, numa_usage_mock,
-                                            mock_pci_req):
+    def test_stat_consumption_from_instance(self, numa_usage_mock):
         numa_usage_mock.return_value = 'fake-consumed-once'
         host = host_manager.HostState("fakehost", "fakenode")
 
@@ -498,7 +494,7 @@ class HostStateTestCase(test.NoDBTestCase):
                         project_id='12345', vm_state=vm_states.BUILDING,
                         task_state=task_states.SCHEDULING, os_type='Linux',
                         uuid='fake-uuid')
-        host.consume_from_instance('fake-context', instance)
+        host.consume_from_instance(instance)
         numa_usage_mock.assert_called_once_with(host, instance)
         self.assertEqual('fake-consumed-once', host.numa_topology)
 
@@ -507,7 +503,7 @@ class HostStateTestCase(test.NoDBTestCase):
                         project_id='12345', vm_state=vm_states.PAUSED,
                         task_state=None, os_type='Linux',
                         uuid='fake-uuid')
-        host.consume_from_instance('fake-context', instance)
+        host.consume_from_instance(instance)
 
         self.assertEqual(2, host.num_instances)
         self.assertEqual(1, host.num_io_ops)

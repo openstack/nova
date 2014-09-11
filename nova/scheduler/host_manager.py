@@ -27,7 +27,6 @@ from nova.compute import vm_states
 from nova import db
 from nova import exception
 from nova.i18n import _
-from nova import objects
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -229,7 +228,7 @@ class HostState(object):
         # update metrics
         self._update_metrics_from_compute_node(compute)
 
-    def consume_from_instance(self, context, instance):
+    def consume_from_instance(self, instance):
         """Incrementally update host state from an instance."""
         disk_mb = (instance['root_gb'] + instance['ephemeral_gb']) * 1024
         ram_mb = instance['memory_mb']
@@ -242,9 +241,8 @@ class HostState(object):
         # Track number of instances on host
         self.num_instances += 1
 
-        pci_requests = objects.InstancePCIRequests.get_by_instance_uuid(
-            context, instance['uuid'])
-        if pci_requests.requests and self.pci_stats:
+        pci_requests = instance.get('pci_requests')
+        if pci_requests and pci_requests.requests and self.pci_stats:
             self.pci_stats.apply_requests(pci_requests.requests)
 
         # Calculate the numa usage

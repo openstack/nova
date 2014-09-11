@@ -40,7 +40,7 @@ class BaseBaremetalNodeState(host_manager.HostState):
         stats = compute.get('stats', '{}')
         self.stats = jsonutils.loads(stats)
 
-    def consume_from_instance(self, context, instance):
+    def consume_from_instance(self, instance):
         """Consume nodes entire resources regardless of instance request."""
         self.free_ram_mb = 0
         self.free_disk_mb = 0
