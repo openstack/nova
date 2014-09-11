@@ -2306,6 +2306,16 @@ class ComputeTestCase(BaseTestCase):
         instance.task_state = task_states.RESUMING
         instance.save()
         self.compute.resume_instance(self.context, instance)
+
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 6)
+
+        msg = fake_notifier.NOTIFICATIONS[2]
+        self.assertEqual(msg.event_type,
+                         'compute.instance.suspend.start')
+        msg = fake_notifier.NOTIFICATIONS[3]
+        self.assertEqual(msg.event_type,
+                         'compute.instance.suspend.end')
+
         self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_suspend_error(self):
@@ -2372,11 +2382,11 @@ class ComputeTestCase(BaseTestCase):
         instance.task_state = task_states.RESUMING
         instance.save()
         self.compute.resume_instance(self.context, instance)
-        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 5)
-        msg = fake_notifier.NOTIFICATIONS[3]
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 6)
+        msg = fake_notifier.NOTIFICATIONS[4]
         self.assertEqual(msg.event_type,
                          'compute.instance.resume.start')
-        msg = fake_notifier.NOTIFICATIONS[4]
+        msg = fake_notifier.NOTIFICATIONS[5]
         self.assertEqual(msg.event_type,
                          'compute.instance.resume.end')
         self.compute.terminate_instance(self.context, instance, [], [])
