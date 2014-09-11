@@ -199,11 +199,12 @@ def internal_lock(name):
     with _semaphores_lock:
         try:
             sem = _semaphores[name]
+            LOG.debug('Using existing semaphore "%s"', name)
         except KeyError:
             sem = threading.Semaphore()
             _semaphores[name] = sem
+            LOG.debug('Created new semaphore "%s"', name)
 
-    LOG.debug('Got semaphore "%(lock)s"', {'lock': name})
     return sem
 
 
@@ -225,13 +226,14 @@ def lock(name, lock_file_prefix=None, external=False, lock_path=None):
     """
     int_lock = internal_lock(name)
     with int_lock:
+        LOG.debug('Acquired semaphore "%(lock)s"', {'lock': name})
         if external and not CONF.disable_process_locking:
             ext_lock = external_lock(name, lock_file_prefix, lock_path)
             with ext_lock:
                 yield ext_lock
         else:
             yield int_lock
-    LOG.debug('Released semaphore "%(lock)s"', {'lock': name})
+        LOG.debug('Releasing semaphore "%(lock)s"', {'lock': name})
 
 
 def synchronized(name, lock_file_prefix=None, external=False, lock_path=None):
