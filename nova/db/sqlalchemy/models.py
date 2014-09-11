@@ -332,6 +332,7 @@ class InstanceExtra(BASE, NovaBase):
     instance_uuid = Column(String(36), ForeignKey('instances.uuid'),
                            nullable=False)
     numa_topology = Column(Text)
+    pci_requests = Column(Text)
     instance = orm.relationship(Instance,
                             backref=orm.backref('numa_topology',
                                                 uselist=False),
