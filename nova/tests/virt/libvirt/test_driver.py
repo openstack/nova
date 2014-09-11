@@ -2175,7 +2175,6 @@ class LibvirtConnTestCase(test.TestCase,
         """
         self.flags(virt_type='lxc', group='libvirt')
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        mock_domain = mock.MagicMock()
         mock_instance = mock.MagicMock()
         mock_get_inst_path.return_value = '/tmp/'
         mock_image_backend = mock.MagicMock()
@@ -2185,14 +2184,22 @@ class LibvirtConnTestCase(test.TestCase,
         conn.image_backend.image.return_value = mock_image
         mock_setup_container.return_value = '/dev/nbd0'
         mock_get_info.side_effect = exception.InstanceNotFound(
-                instance_id='foo')
+                                                   instance_id='foo')
+        conn._conn.defineXML = mock.Mock()
+        conn._conn.defineXML.side_effect = ValueError('somethingbad')
+        with contextlib.nested(
+              mock.patch.object(conn, '_is_booted_from_volume',
+                                return_value=False),
+              mock.patch.object(conn, 'plug_vifs'),
+              mock.patch.object(conn, 'firewall_driver'),
+              mock.patch.object(conn, 'cleanup')):
+            self.assertRaises(ValueError,
+                              conn._create_domain_and_network,
+                              self.context,
+                              'xml',
+                              mock_instance, None)
 
-        mock_domain.createWithFlags.side_effect = ValueError('somethingbad')
-
-        self.assertRaises(ValueError, conn._create_domain, domain=mock_domain,
-                          instance=mock_instance)
-
-        mock_teardown.assert_called_with(container_dir='/tmp/rootfs')
+            mock_teardown.assert_called_with(container_dir='/tmp/rootfs')
 
     def test_video_driver_flavor_limit_not_set(self):
         self.flags(virt_type='kvm', group='libvirt')
@@ -6000,6 +6007,95 @@ class LibvirtConnTestCase(test.TestCase,
         self.assertTrue(self.cache_called_for_disk)
         db.instance_destroy(self.context, instance['uuid'])
 
+    def test_start_lxc_from_volume(self):
+        self.flags(virt_type="lxc",
+                   group='libvirt')
+
+        def check_setup_container(path, container_dir=None, use_cow=False):
+            self.assertEqual(path, '/dev/path/to/dev')
+            self.assertTrue(use_cow)
+            return '/dev/nbd1'
+
+        bdm = {
+                  'guest_format': None,
+                  'boot_index': 0,
+                  'mount_device': '/dev/sda',
+                  'connection_info': {
+                      'driver_volume_type': 'iscsi',
+                      'serial': 'afc1',
+                      'data': {
+                          'access_mode': 'rw',
+                          'target_discovered': False,
+                          'encrypted': False,
+                          'qos_specs': None,
+                          'target_iqn': 'iqn: volume-afc1',
+                          'target_portal': 'ip: 3260',
+                          'volume_id': 'afc1',
+                          'target_lun': 1,
+                          'auth_password': 'uj',
+                          'auth_username': '47',
+                          'auth_method': 'CHAP'
+                      }
+                  },
+                  'disk_bus': 'scsi',
+                  'device_type': 'disk',
+                  'delete_on_termination': False
+              }
+
+        def _get(key, opt=None):
+            return bdm.get(key, opt)
+
+        def getitem(key):
+            return bdm[key]
+
+        def setitem(key, val):
+            bdm[key] = val
+
+        bdm_mock = mock.MagicMock()
+        bdm_mock.__getitem__.side_effect = getitem
+        bdm_mock.__setitem__.side_effect = setitem
+        bdm_mock.get = _get
+
+        disk_mock = mock.MagicMock()
+        disk_mock.source_path = '/dev/path/to/dev'
+
+        block_device_info = {'block_device_mapping': [bdm_mock],
+                             'root_device_name': '/dev/sda'}
+
+        # Volume-backed instance created without image
+        instance_ref = self.test_instance
+        instance_ref['image_ref'] = ''
+        instance_ref['root_device_name'] = '/dev/sda'
+        instance_ref['ephemeral_gb'] = 0
+        instance_ref['uuid'] = uuidutils.generate_uuid()
+        instance_ref['system_metadata']['image_disk_format'] = 'qcow2'
+        instance = db.instance_create(self.context, instance_ref)
+        self.addCleanup(db.instance_destroy, self.context, instance['uuid'])
+        inst_obj = objects.Instance.get_by_uuid(self.context, instance['uuid'])
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        with contextlib.nested(
+            mock.patch.object(conn, '_create_images_and_backing'),
+            mock.patch.object(conn, 'plug_vifs'),
+            mock.patch.object(conn.firewall_driver, 'setup_basic_filtering'),
+            mock.patch.object(conn.firewall_driver, 'prepare_instance_filter'),
+            mock.patch.object(conn.firewall_driver, 'apply_instance_filter'),
+            mock.patch.object(conn, '_create_domain'),
+            mock.patch.object(conn, '_connect_volume',
+                                     return_value=disk_mock),
+            mock.patch.object(conn, 'get_info',
+                              return_value={'state': power_state.RUNNING}),
+            mock.patch('nova.virt.disk.api.setup_container',
+                       side_effect=check_setup_container),
+            mock.patch('nova.virt.disk.api.teardown_container'),):
+
+            conn.spawn(self.context, inst_obj, None, [], None,
+                       network_info=[],
+                       block_device_info=block_device_info)
+            self.assertEqual('/dev/nbd1',
+                             inst_obj.system_metadata.get(
+                             'rootfs_device_name'))
+
     def test_spawn_with_pci_devices(self):
         def fake_none(*args, **kwargs):
             return None
@@ -8487,7 +8583,6 @@ Active:          8381604 kB
                            mock_setup_container, mock_get_info, mock_clean):
         self.flags(virt_type='lxc', group='libvirt')
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        mock_domain = mock.MagicMock()
         mock_instance = mock.MagicMock()
         inst_sys_meta = dict()
         mock_instance.system_metadata = inst_sys_meta
@@ -8500,13 +8595,20 @@ Active:          8381604 kB
         mock_setup_container.return_value = '/dev/nbd0'
         mock_get_info.return_value = {'state': power_state.RUNNING}
 
-        domain = conn._create_domain(domain=mock_domain,
-                                     instance=mock_instance)
+        with contextlib.nested(
+            mock.patch.object(conn, '_create_images_and_backing'),
+            mock.patch.object(conn, '_is_booted_from_volume',
+                              return_value=False),
+            mock.patch.object(conn, '_create_domain'),
+            mock.patch.object(conn, 'plug_vifs'),
+            mock.patch.object(conn.firewall_driver, 'setup_basic_filtering'),
+            mock.patch.object(conn.firewall_driver, 'prepare_instance_filter'),
+            mock.patch.object(conn.firewall_driver, 'apply_instance_filter')):
+            conn._create_domain_and_network(self.context, 'xml',
+                                            mock_instance, [])
 
-        self.assertEqual(mock_domain, domain)
         self.assertEqual('/dev/nbd0', inst_sys_meta['rootfs_device_name'])
         mock_instance.save.assert_has_calls([mock.call()])
-        mock_domain.createWithFlags.assert_has_calls([mock.call(0)])
         mock_get_inst_path.assert_has_calls([mock.call(mock_instance)])
         mock_ensure_tree.assert_has_calls([mock.call('/tmp/rootfs')])
         conn.image_backend.image.assert_has_calls([mock.call(mock_instance,
@@ -8542,7 +8644,6 @@ Active:          8381604 kB
             self.assertEqual(100, id_maps[1].count)
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        mock_domain = mock.MagicMock()
         mock_instance = mock.MagicMock()
         inst_sys_meta = dict()
         mock_instance.system_metadata = inst_sys_meta
@@ -8556,13 +8657,20 @@ Active:          8381604 kB
         mock_chown.side_effect = chown_side_effect
         mock_get_info.return_value = {'state': power_state.RUNNING}
 
-        domain = conn._create_domain(domain=mock_domain,
-                                     instance=mock_instance)
+        with contextlib.nested(
+            mock.patch.object(conn, '_create_images_and_backing'),
+            mock.patch.object(conn, '_is_booted_from_volume',
+                              return_value=False),
+            mock.patch.object(conn, '_create_domain'),
+            mock.patch.object(conn, 'plug_vifs'),
+            mock.patch.object(conn.firewall_driver, 'setup_basic_filtering'),
+            mock.patch.object(conn.firewall_driver, 'prepare_instance_filter'),
+            mock.patch.object(conn.firewall_driver, 'apply_instance_filter')):
+            conn._create_domain_and_network(self.context, 'xml',
+                                            mock_instance, [])
 
-        self.assertEqual(mock_domain, domain)
         self.assertEqual('/dev/nbd0', inst_sys_meta['rootfs_device_name'])
         mock_instance.save.assert_has_calls([mock.call()])
-        mock_domain.createWithFlags.assert_has_calls([mock.call(0)])
         mock_get_inst_path.assert_has_calls([mock.call(mock_instance)])
         mock_ensure_tree.assert_has_calls([mock.call('/tmp/rootfs')])
         conn.image_backend.image.assert_has_calls([mock.call(mock_instance,
@@ -8585,7 +8693,6 @@ Active:          8381604 kB
                                            mock_get_info, mock_teardown):
         self.flags(virt_type='lxc', group='libvirt')
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        mock_domain = mock.MagicMock()
         mock_instance = mock.MagicMock()
         inst_sys_meta = dict()
         mock_instance.system_metadata = inst_sys_meta
@@ -8598,13 +8705,20 @@ Active:          8381604 kB
         mock_setup_container.return_value = '/dev/nbd0'
         mock_get_info.return_value = {'state': power_state.SHUTDOWN}
 
-        domain = conn._create_domain(domain=mock_domain,
-                                     instance=mock_instance)
+        with contextlib.nested(
+            mock.patch.object(conn, '_create_images_and_backing'),
+            mock.patch.object(conn, '_is_booted_from_volume',
+                              return_value=False),
+            mock.patch.object(conn, '_create_domain'),
+            mock.patch.object(conn, 'plug_vifs'),
+            mock.patch.object(conn.firewall_driver, 'setup_basic_filtering'),
+            mock.patch.object(conn.firewall_driver, 'prepare_instance_filter'),
+            mock.patch.object(conn.firewall_driver, 'apply_instance_filter')):
+            conn._create_domain_and_network(self.context, 'xml',
+                                            mock_instance, [])
 
-        self.assertEqual(mock_domain, domain)
         self.assertEqual('/dev/nbd0', inst_sys_meta['rootfs_device_name'])
         mock_instance.save.assert_has_calls([mock.call()])
-        mock_domain.createWithFlags.assert_has_calls([mock.call(0)])
         mock_get_inst_path.assert_has_calls([mock.call(mock_instance)])
         mock_ensure_tree.assert_has_calls([mock.call('/tmp/rootfs')])
         conn.image_backend.image.assert_has_calls([mock.call(mock_instance,
@@ -9098,15 +9212,18 @@ Active:          8381604 kB
         self.flags(virt_type='lxc', group='libvirt')
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = objects.Instance(id=1, uuid='fake-uuid')
+        instance = objects.Instance(id=1, uuid='fake-uuid',
+                                    image_ref='my_fake_image')
 
         with contextlib.nested(
+              mock.patch.object(conn, '_is_booted_from_volume',
+                                return_value=False),
               mock.patch.object(conn, 'plug_vifs'),
               mock.patch.object(conn, 'firewall_driver'),
               mock.patch.object(conn, '_create_domain',
                                 side_effect=exception.NovaException),
               mock.patch.object(conn, 'cleanup')) as (
-              cleanup, firewall_driver, create, plug_vifs):
+              cleanup, firewall_driver, create, plug_vifs, boot):
             self.assertRaises(exception.NovaException,
                               conn._create_domain_and_network,
                               self.context,
@@ -9116,42 +9233,25 @@ Active:          8381604 kB
     def test_create_without_pause(self):
         self.flags(virt_type='lxc', group='libvirt')
 
+        @contextlib.contextmanager
+        def fake_lxc_disk_handler(*args, **kwargs):
+            yield
+
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(id=1, uuid='fake-uuid')
 
         with contextlib.nested(
+              mock.patch.object(conn, '_lxc_disk_handler',
+                                side_effect=fake_lxc_disk_handler),
               mock.patch.object(conn, 'plug_vifs'),
               mock.patch.object(conn, 'firewall_driver'),
               mock.patch.object(conn, '_create_domain'),
               mock.patch.object(conn, 'cleanup')) as (
-              cleanup, firewall_driver, create, plug_vifs):
+              _handler, cleanup, firewall_driver, create, plug_vifs):
             domain = conn._create_domain_and_network(self.context, 'xml',
                                                      instance, None)
             self.assertEqual(0, create.call_args_list[0][1]['launch_flags'])
             self.assertEqual(0, domain.resume.call_count)
-
-    def test_lxc_create_and_rootfs_saved(self):
-        self.flags(virt_type='lxc', group='libvirt')
-
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = db.instance_create(self.context, self.test_instance)
-        inst_obj = objects.Instance.get_by_uuid(self.context, instance['uuid'])
-
-        with contextlib.nested(
-              mock.patch('nova.virt.disk.api.setup_container',
-                         return_value='/dev/nbd1'),
-              mock.patch('nova.virt.disk.api.clean_lxc_namespace'),
-              mock.patch('nova.openstack.common.fileutils.ensure_tree'),
-              mock.patch.object(conn.image_backend, 'image'),
-              mock.patch.object(conn, '_enable_hairpin'),
-              mock.patch.object(conn, 'get_info',
-                                return_value={'state': power_state.RUNNING})
-              ):
-            conn._conn.defineXML = mock.Mock()
-            conn._create_domain('xml', instance=inst_obj)
-            self.assertEqual('/dev/nbd1',
-                             inst_obj.system_metadata.get(
-                             'rootfs_device_name'))
 
     def _test_create_with_network_events(self, neutron_failure=None,
                                          power_on=True):

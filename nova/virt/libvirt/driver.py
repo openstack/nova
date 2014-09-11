@@ -25,6 +25,7 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 
 """
 
+import contextlib
 import errno
 import functools
 import glob
@@ -2589,9 +2590,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                   disk_info, image_meta,
                                   block_device_info=block_device_info,
                                   write_to_disk=True)
-
         self._create_domain_and_network(context, xml, instance, network_info,
-                                        block_device_info)
+                                        block_device_info, disk_info=disk_info)
         LOG.debug("Instance is running", instance=instance)
 
         def _wait_for_boot():
@@ -4031,15 +4031,33 @@ class LibvirtDriver(driver.ComputeDriver):
                 'cpu_time': dom_info[4],
                 'id': virt_dom.ID()}
 
-    def _create_domain_setup_lxc(self, instance):
+    def _create_domain_setup_lxc(self, instance, block_device_info, disk_info):
         inst_path = libvirt_utils.get_instance_path(instance)
+        block_device_mapping = driver.block_device_info_get_mapping(
+                                                  block_device_info)
+        disk_info = disk_info or {}
+        disk_mapping = disk_info.get('mapping', [])
+
+        if self._is_booted_from_volume(instance, disk_mapping):
+            root_disk = block_device.get_root_bdm(block_device_mapping)
+            disk_path = root_disk['connection_info']['data']['device_path']
+            disk_info = blockinfo.get_info_from_bdm(
+                                            CONF.libvirt.virt_type, root_disk)
+            self._connect_volume(root_disk['connection_info'], disk_info)
+
+            # Get the system metadata from the instance
+            system_meta = utils.instance_sys_meta(instance)
+            use_cow = system_meta['image_disk_format'] == 'qcow2'
+        else:
+            image = self.image_backend.image(instance, 'disk')
+            disk_path = image.path
+            use_cow = CONF.use_cow_images
+
         container_dir = os.path.join(inst_path, 'rootfs')
         fileutils.ensure_tree(container_dir)
-
-        image = self.image_backend.image(instance, 'disk')
-        rootfs_dev = disk.setup_container(image.path,
-                             container_dir=container_dir,
-                             use_cow=CONF.use_cow_images)
+        rootfs_dev = disk.setup_container(disk_path,
+                                          container_dir=container_dir,
+                                          use_cow=use_cow)
 
         try:
             # Save rootfs device to disconnect it when deleting the instance
@@ -4072,6 +4090,28 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             disk.teardown_container(container_dir=container_dir)
 
+    @contextlib.contextmanager
+    def _lxc_disk_handler(self, instance, block_device_info, disk_info):
+        """Context manager to handle the pre and post instance boot,
+           LXC specific disk operations.
+
+           An image or a volume path will be prepared and setup to be
+           used by the container, prior to starting it.
+           The disk will be disconnected and unmounted if a container has
+           failed to start.
+        """
+
+        if CONF.libvirt.virt_type != 'lxc':
+            yield
+            return
+
+        self._create_domain_setup_lxc(instance, block_device_info, disk_info)
+
+        try:
+            yield
+        finally:
+            self._create_domain_cleanup_lxc(instance)
+
     def _create_domain(self, xml=None, domain=None,
                        instance=None, launch_flags=0, power_on=True):
         """Create a domain.
@@ -4080,8 +4120,6 @@ class LibvirtDriver(driver.ComputeDriver):
         the domain definition is overwritten from the xml.
         """
         err = None
-        if instance and CONF.libvirt.virt_type == 'lxc':
-            self._create_domain_setup_lxc(instance)
         try:
             if xml:
                 err = _LE('Error defining a domain with XML: %s') % xml
@@ -4100,9 +4138,6 @@ class LibvirtDriver(driver.ComputeDriver):
             with excutils.save_and_reraise_exception():
                 if err:
                     LOG.error(err)
-        finally:
-            if instance and CONF.libvirt.virt_type == 'lxc':
-                self._create_domain_cleanup_lxc(instance)
 
         return domain
 
@@ -4124,7 +4159,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _create_domain_and_network(self, context, xml, instance, network_info,
                                    block_device_info=None, power_on=True,
-                                   reboot=False, vifs_already_plugged=False):
+                                   reboot=False, vifs_already_plugged=False,
+                                   disk_info=None):
 
         """Do required network setup and create domain."""
         block_device_mapping = driver.block_device_info_get_mapping(
@@ -4132,9 +4168,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
-            disk_info = blockinfo.get_info_from_bdm(
-                CONF.libvirt.virt_type, vol)
-            conf = self._connect_volume(connection_info, disk_info)
+            info = blockinfo.get_info_from_bdm(
+                   CONF.libvirt.virt_type, vol)
+            conf = self._connect_volume(connection_info, info)
 
             # cache device_path in connection_info -- required by encryptors
             if 'data' in connection_info:
@@ -4172,10 +4208,12 @@ class LibvirtDriver(driver.ComputeDriver):
                                                            network_info)
                 self.firewall_driver.prepare_instance_filter(instance,
                                                              network_info)
-                domain = self._create_domain(
-                    xml, instance=instance,
-                    launch_flags=launch_flags,
-                    power_on=power_on)
+                with self._lxc_disk_handler(instance, block_device_info,
+                                            disk_info):
+                    domain = self._create_domain(
+                        xml, instance=instance,
+                        launch_flags=launch_flags,
+                        power_on=power_on)
 
                 self.firewall_driver.apply_instance_filter(instance,
                                                            network_info)
