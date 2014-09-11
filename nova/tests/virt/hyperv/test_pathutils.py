@@ -19,6 +19,7 @@ import mock
 from nova import test
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import pathutils
+from nova.virt.hyperv import vmutils
 
 
 class PathUtilsTestCase(test.NoDBTestCase):
@@ -56,3 +57,20 @@ class PathUtilsTestCase(test.NoDBTestCase):
         configdrive_path = self._pathutils.lookup_configdrive_path(
             self.fake_instance_name)
         self.assertIsNone(configdrive_path)
+
+    @mock.patch('os.path.join')
+    def test_get_instances_sub_dir(self, fake_path_join):
+
+        class WindowsError(Exception):
+            def __init__(self, winerror=None):
+                self.winerror = winerror
+
+        fake_dir_name = "fake_dir_name"
+        fake_windows_error = WindowsError
+        self._pathutils._check_create_dir = mock.MagicMock(
+            side_effect=WindowsError(pathutils.ERROR_INVALID_NAME))
+        with mock.patch('__builtin__.WindowsError',
+                        fake_windows_error, create=True):
+            self.assertRaises(vmutils.HyperVException,
+                              self._pathutils._get_instances_sub_dir,
+                              fake_dir_name)
