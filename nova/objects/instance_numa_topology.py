@@ -35,6 +35,8 @@ class InstanceNUMATopology(base.NovaObject):
     VERSION = '1.0'
 
     fields = {
+        # NOTE(danms): The 'id' field is no longer used and should be
+        # removed in the future when convenient
         'id': fields.IntegerField(),
         'instance_uuid': fields.UUIDField(),
         'cells': fields.ListOfObjectsField('InstanceNUMACell'),
@@ -63,17 +65,12 @@ class InstanceNUMATopology(base.NovaObject):
 
     @base.remotable
     def create(self, context):
-        if self.obj_attr_is_set('id'):
-            raise exception.ObjectActionError(action='create',
-                                              reason='already created')
         topology = self.topology_from_obj()
         if not topology:
             return
-        values = {'instance_uuid': self.instance_uuid,
-                   'numa_topology': topology.to_json()}
-        db_object = db.instance_extra_create(context, values)
-        self.instance_uuid = db_object['instance_uuid']
-        self.id = db_object['id']
+        values = {'numa_topology': topology.to_json()}
+        db.instance_extra_update_by_uuid(context, self.instance_uuid,
+                                         values)
         self.obj_reset_changes()
 
     @base.remotable_classmethod
@@ -82,6 +79,9 @@ class InstanceNUMATopology(base.NovaObject):
                 context, instance_uuid)
         if not db_topology:
             raise exception.NumaTopologyNotFound(instance_uuid=instance_uuid)
+
+        if db_topology['numa_topology'] is None:
+            return None
 
         topo = hardware.VirtNUMAInstanceTopology.from_json(
                 db_topology['numa_topology'])
