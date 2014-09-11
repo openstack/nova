@@ -1334,12 +1334,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
     def test_external_instance_event(self):
         instances = [
-            objects.Instance(uuid='uuid1'),
-            objects.Instance(uuid='uuid2')]
+            objects.Instance(id=1, uuid='uuid1'),
+            objects.Instance(id=2, uuid='uuid2')]
         events = [
             objects.InstanceExternalEvent(name='network-changed',
+                                          tag='tag1',
                                           instance_uuid='uuid1'),
-            objects.InstanceExternalEvent(name='foo', instance_uuid='uuid2')]
+            objects.InstanceExternalEvent(name='foo', instance_uuid='uuid2',
+                                          tag='tag2')]
 
         @mock.patch.object(self.compute.network_api, 'get_instance_nw_info')
         @mock.patch.object(self.compute, '_process_instance_event')
