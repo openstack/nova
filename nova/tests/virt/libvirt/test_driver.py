@@ -11403,7 +11403,7 @@ class LibvirtVolumeUsageTestCase(test.TestCase):
         self.assertEqual(vol_usage, [])
 
 
-class LibvirtNonblockingTestCase(test.TestCase):
+class LibvirtNonblockingTestCase(test.NoDBTestCase):
     """Test libvirtd calls are nonblocking."""
 
     def setUp(self):
