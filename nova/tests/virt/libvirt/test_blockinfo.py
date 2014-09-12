@@ -19,9 +19,7 @@ import mock
 
 from nova import block_device
 from nova.compute import arch
-from nova.compute import flavors
 from nova import context
-from nova import db
 from nova import exception
 from nova import objects
 from nova import test
@@ -31,7 +29,7 @@ from nova.virt import block_device as driver_block_device
 from nova.virt.libvirt import blockinfo
 
 
-class LibvirtBlockInfoTest(test.TestCase):
+class LibvirtBlockInfoTest(test.NoDBTestCase):
 
     def setUp(self):
         super(LibvirtBlockInfoTest, self).setUp()
@@ -39,22 +37,33 @@ class LibvirtBlockInfoTest(test.TestCase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.get_admin_context()
-        flavor = db.flavor_get(self.context, 2)
-        sys_meta = flavors.save_flavor_info({}, flavor)
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.test_instance = {
-                'uuid': '32dfcb37-5af1-552b-357c-be8c3aa38310',
-                'memory_kb': '1024000',
-                'basepath': '/some/path',
-                'bridge_name': 'br100',
-                'vcpus': 2,
-                'project_id': 'fake',
-                'bridge': 'br101',
-                'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
-                'root_gb': 10,
-                'ephemeral_gb': 20,
-                'instance_type_id': 2,  # m1.tiny
-                'system_metadata': sys_meta}
+            'uuid': '32dfcb37-5af1-552b-357c-be8c3aa38310',
+            'memory_kb': '1024000',
+            'basepath': '/some/path',
+            'bridge_name': 'br100',
+            'vcpus': 2,
+            'project_id': 'fake',
+            'bridge': 'br101',
+            'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            'root_gb': 10,
+            'ephemeral_gb': 20,
+            'instance_type_id': 2,  # m1.tiny
+            'config_drive': None,
+            'system_metadata': {
+                'instance_type_memory_mb': 128,
+                'instance_type_root_gb': 0,
+                'instance_type_name': 'm1.micro',
+                'instance_type_ephemeral_gb': 0,
+                'instance_type_vcpus': 1,
+                'instance_type_swap': 0,
+                'instance_type_rxtx_factor': 1.0,
+                'instance_type_flavorid': '1',
+                'instance_type_vcpu_weight': None,
+                'instance_type_id': 2,
+            }
+        }
 
     def test_volume_in_mapping(self):
         swap = {'device_name': '/dev/sdb',
@@ -146,8 +155,7 @@ class LibvirtBlockInfoTest(test.TestCase):
     def test_get_disk_mapping_simple(self):
         # The simplest possible disk mapping setup, all defaults
 
-        user_context = context.RequestContext(self.user_id, self.project_id)
-        instance_ref = db.instance_create(user_context, self.test_instance)
+        instance_ref = objects.Instance(**self.test_instance)
 
         mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
                                              "virtio", "ide")
@@ -164,8 +172,7 @@ class LibvirtBlockInfoTest(test.TestCase):
     def test_get_disk_mapping_simple_rootdev(self):
         # A simple disk mapping setup, but with custom root device name
 
-        user_context = context.RequestContext(self.user_id, self.project_id)
-        instance_ref = db.instance_create(user_context, self.test_instance)
+        instance_ref = objects.Instance(**self.test_instance)
         block_device_info = {
             'root_device_name': '/dev/sda'
             }
@@ -186,8 +193,7 @@ class LibvirtBlockInfoTest(test.TestCase):
     def test_get_disk_mapping_rescue(self):
         # A simple disk mapping setup, but in rescue mode
 
-        user_context = context.RequestContext(self.user_id, self.project_id)
-        instance_ref = db.instance_create(user_context, self.test_instance)
+        instance_ref = objects.Instance(**self.test_instance)
 
         mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
                                              "virtio", "ide",
@@ -205,9 +211,8 @@ class LibvirtBlockInfoTest(test.TestCase):
     def test_get_disk_mapping_lxc(self):
         # A simple disk mapping setup, but for lxc
 
-        user_context = context.RequestContext(self.user_id, self.project_id)
         self.test_instance['ephemeral_gb'] = 0
-        instance_ref = db.instance_create(user_context, self.test_instance)
+        instance_ref = objects.Instance(**self.test_instance)
 
         mapping = blockinfo.get_disk_mapping("lxc", instance_ref,
                                              "lxc", "lxc",
@@ -223,8 +228,7 @@ class LibvirtBlockInfoTest(test.TestCase):
     def test_get_disk_mapping_simple_iso(self):
         # A simple disk mapping setup, but with a ISO for root device
 
-        user_context = context.RequestContext(self.user_id, self.project_id)
-        instance_ref = db.instance_create(user_context, self.test_instance)
+        instance_ref = objects.Instance(**self.test_instance)
         image_meta = {'disk_format': 'iso'}
 
         mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
@@ -244,9 +248,8 @@ class LibvirtBlockInfoTest(test.TestCase):
     def test_get_disk_mapping_simple_swap(self):
         # A simple disk mapping setup, but with a swap device added
 
-        user_context = context.RequestContext(self.user_id, self.project_id)
         self.test_instance['system_metadata']['instance_type_swap'] = 5
-        instance_ref = db.instance_create(user_context, self.test_instance)
+        instance_ref = objects.Instance(**self.test_instance)
 
         mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
                                              "virtio", "ide")
@@ -269,8 +272,7 @@ class LibvirtBlockInfoTest(test.TestCase):
 
         self.flags(force_config_drive=True)
 
-        user_context = context.RequestContext(self.user_id, self.project_id)
-        instance_ref = db.instance_create(user_context, self.test_instance)
+        instance_ref = objects.Instance(**self.test_instance)
 
         mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
                                              "virtio", "ide")
@@ -305,8 +307,7 @@ class LibvirtBlockInfoTest(test.TestCase):
         self.flags(force_config_drive=True)
         self.flags(config_drive_format='iso9660')
 
-        user_context = context.RequestContext(self.user_id, self.project_id)
-        instance_ref = db.instance_create(user_context, self.test_instance)
+        instance_ref = objects.Instance(**self.test_instance)
 
         mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
                                              "virtio", "ide")
@@ -334,8 +335,7 @@ class LibvirtBlockInfoTest(test.TestCase):
         self.flags(force_config_drive=True)
         self.flags(config_drive_format='vfat')
 
-        user_context = context.RequestContext(self.user_id, self.project_id)
-        instance_ref = db.instance_create(user_context, self.test_instance)
+        instance_ref = objects.Instance(**self.test_instance)
 
         mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
                                              "virtio", "ide")
@@ -352,9 +352,8 @@ class LibvirtBlockInfoTest(test.TestCase):
 
     def test_get_disk_mapping_ephemeral(self):
         # A disk mapping with ephemeral devices
-        user_context = context.RequestContext(self.user_id, self.project_id)
         self.test_instance['system_metadata']['instance_type_swap'] = 5
-        instance_ref = db.instance_create(user_context, self.test_instance)
+        instance_ref = objects.Instance(**self.test_instance)
 
         block_device_info = {
             'ephemerals': [
@@ -386,8 +385,7 @@ class LibvirtBlockInfoTest(test.TestCase):
     def test_get_disk_mapping_custom_swap(self):
         # A disk mapping with a swap device at position vdb. This
         # should cause disk.local to be removed
-        user_context = context.RequestContext(self.user_id, self.project_id)
-        instance_ref = db.instance_create(user_context, self.test_instance)
+        instance_ref = objects.Instance(**self.test_instance)
 
         block_device_info = {
             'swap': {'device_name': '/dev/vdb',
@@ -408,8 +406,7 @@ class LibvirtBlockInfoTest(test.TestCase):
 
     def test_get_disk_mapping_blockdev_root(self):
         # A disk mapping with a blockdev replacing the default root
-        user_context = context.RequestContext(self.user_id, self.project_id)
-        instance_ref = db.instance_create(user_context, self.test_instance)
+        instance_ref = objects.Instance(**self.test_instance)
 
         block_device_info = {
             'block_device_mapping': [
@@ -435,8 +432,7 @@ class LibvirtBlockInfoTest(test.TestCase):
 
     def test_get_disk_mapping_blockdev_eph(self):
         # A disk mapping with a blockdev replacing the ephemeral device
-        user_context = context.RequestContext(self.user_id, self.project_id)
-        instance_ref = db.instance_create(user_context, self.test_instance)
+        instance_ref = objects.Instance(**self.test_instance)
 
         block_device_info = {
             'block_device_mapping': [
@@ -461,8 +457,7 @@ class LibvirtBlockInfoTest(test.TestCase):
 
     def test_get_disk_mapping_blockdev_many(self):
         # A disk mapping with a blockdev replacing all devices
-        user_context = context.RequestContext(self.user_id, self.project_id)
-        instance_ref = db.instance_create(user_context, self.test_instance)
+        instance_ref = objects.Instance(**self.test_instance)
 
         block_device_info = {
             'block_device_mapping': [
@@ -498,8 +493,7 @@ class LibvirtBlockInfoTest(test.TestCase):
 
     def test_get_disk_mapping_complex(self):
         # The strangest possible disk mapping setup
-        user_context = context.RequestContext(self.user_id, self.project_id)
-        instance_ref = db.instance_create(user_context, self.test_instance)
+        instance_ref = objects.Instance(**self.test_instance)
 
         block_device_info = {
             'root_device_name': '/dev/vdf',
@@ -537,8 +531,7 @@ class LibvirtBlockInfoTest(test.TestCase):
         self.assertEqual(expect, mapping)
 
     def test_get_disk_mapping_updates_original(self):
-        user_context = context.RequestContext(self.user_id, self.project_id)
-        instance_ref = db.instance_create(user_context, self.test_instance)
+        instance_ref = objects.Instance(**self.test_instance)
 
         block_device_info = {
             'root_device_name': '/dev/vda',
@@ -821,7 +814,7 @@ class LibvirtBlockInfoTest(test.TestCase):
         self.assertEqual(expected_order, blockinfo.get_boot_order(disk_info))
 
 
-class DefaultDeviceNamesTestCase(test.TestCase):
+class DefaultDeviceNamesTestCase(test.NoDBTestCase):
     def setUp(self):
         super(DefaultDeviceNamesTestCase, self).setUp()
         self.context = context.get_admin_context()
