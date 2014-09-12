@@ -719,7 +719,9 @@ def _snapshot_attached_here_impl(session, instance, vm_ref, label, userdevice,
     if post_snapshot_callback is not None:
         post_snapshot_callback(task_state=task_states.IMAGE_PENDING_UPLOAD)
     try:
-        # Ensure no VHDs will vanish while we migrate them
+        # When the VDI snapshot is taken a new parent is introduced.
+        # If we have taken a snapshot before, the new parent can be coalesced.
+        # We need to wait for this to happen before trying to copy the chain.
         _wait_for_vhd_coalesce(session, instance, sr_ref, vm_vdi_ref,
                                vdi_uuid_chain)
 
@@ -2044,10 +2046,9 @@ def _child_vhds(session, sr_ref, vdi_uuid, old_snapshots_only=False):
     return list(children)
 
 
-def _count_parents_children(session, vdi_ref, sr_ref):
+def _count_children(session, parent_vdi_uuid, sr_ref):
     # Search for any other vdi which has the same parent as us to work out
     # whether we have siblings and therefore if coalesce is possible
-    parent_vdi_uuid = _get_vhd_parent_uuid(session, vdi_ref)
     children = 0
     for _ref, rec in _get_all_vdis_in_sr(session, sr_ref):
         if (rec['sm_config'].get('vhd-parent') == parent_vdi_uuid):
@@ -2067,31 +2068,47 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
     in vdi_uuid_list may also be coalesced (except the base UUID - which is
     guaranteed to remain)
     """
-    # NOTE(bobba): If we don't have any VDIs in the target list, then no
-    # coalescing can be guaranteed (e.g. file based SRs don't do leaf
-    # coalescing)
-    if len(vdi_uuid_list) == 0:
+    # If the base disk was a leaf node, there will be no coalescing
+    # after a VDI snapshot.
+    if len(vdi_uuid_list) == 1:
+        LOG.debug("Old chain is single VHD, coalesce not possible.",
+                  instance=instance)
         return
 
-    # Check if we have siblings. If so, coalesce will not take place.
-    if _count_parents_children(session, vdi_ref, sr_ref) > 1:
+    # If the parent of the original disk has other children,
+    # there will be no coalesce because of the VDI snapshot.
+    # For example, the first snapshot for an instance that has been
+    # spawned from a cached image, will not coalesce, because of this rule.
+    parent_vdi_uuid = vdi_uuid_list[1]
+    if _count_children(session, parent_vdi_uuid, sr_ref) > 1:
+        LOG.debug("Parent has other children, coalesce is unlikely.",
+                  instance=instance)
         return
 
+    # When the VDI snapshot is taken, a new parent is created.
+    # Assuming it is not one of the above cases, that new parent
+    # can be coalesced, so we need to wait for that to happen.
     max_attempts = CONF.xenserver.vhd_coalesce_max_attempts
+    # Remove the leaf node from list, to get possible good parents
+    # when the coalesce has completed.
+    # Its possible that other coalesce operation happen, so we need
+    # to consider the full chain, rather than just the most recent parent.
+    good_parent_uuids = vdi_uuid_list[1:]
     for i in xrange(max_attempts):
         # NOTE(sirp): This rescan is necessary to ensure the VM's `sm_config`
         # matches the underlying VHDs.
+        # This can also kick XenServer into performing a pending coalesce.
         _scan_sr(session, sr_ref)
         parent_uuid = _get_vhd_parent_uuid(session, vdi_ref)
-        if parent_uuid and (parent_uuid not in vdi_uuid_list):
+        if parent_uuid and (parent_uuid not in good_parent_uuids):
             LOG.debug("Parent %(parent_uuid)s not yet in parent list"
-                      " %(vdi_uuid_list)s, waiting for coalesce...",
+                      " %(good_parent_uuids)s, waiting for coalesce...",
                       {'parent_uuid': parent_uuid,
-                       'vdi_uuid_list': vdi_uuid_list},
+                       'good_parent_uuids': good_parent_uuids},
                       instance=instance)
         else:
-            parent_ref = session.call_xenapi("VDI.get_by_uuid", parent_uuid)
-            _get_vhd_parent_uuid(session, parent_ref)
+            LOG.debug("Coalesce detected, because parent is: %s" % parent_uuid,
+                      instance=instance)
             return
 
         greenthread.sleep(CONF.xenserver.vhd_coalesce_poll_interval)
