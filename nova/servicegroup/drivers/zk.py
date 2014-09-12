@@ -122,7 +122,14 @@ class ZooKeeperDriver(api.ServiceGroupDriver):
         monitor = self._monitors.get(group_id, None)
         if monitor is None:
             path = "%s/%s" % (CONF.zookeeper.sg_prefix, group_id)
-            monitor = membership.MembershipMonitor(self._session, path)
+
+            null = open(os.devnull, "w")
+            local_session = evzookeeper.ZKSession(CONF.zookeeper.address,
+                                                  recv_timeout=
+                                                  CONF.zookeeper.recv_timeout,
+                                                  zklog_fd=null)
+
+            monitor = membership.MembershipMonitor(local_session, path)
             self._monitors[group_id] = monitor
             # Note(maoy): When initialized for the first time, it takes a
             # while to retrieve all members from zookeeper. To prevent
