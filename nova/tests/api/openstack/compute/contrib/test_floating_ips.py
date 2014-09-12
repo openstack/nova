@@ -511,6 +511,20 @@ class FloatingIpTest(test.TestCase):
                           self.manager._add_floating_ip, req, 'test_inst',
                           body)
 
+    def test_associate_floating_ip_bad_address_key(self):
+        body = dict(addFloatingIp=dict(bad_address='10.10.10.11'))
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.manager._add_floating_ip, req, 'test_inst',
+                          body)
+
+    def test_associate_floating_ip_bad_addfloatingip_key(self):
+        body = dict(bad_addFloatingIp=dict(address='10.10.10.11'))
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.manager._add_floating_ip, req, 'test_inst',
+                          body)
+
     def test_floating_ip_disassociate(self):
         def get_instance_by_floating_ip_addr(self, context, address):
             if address == '10.10.10.10':
