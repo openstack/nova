@@ -2407,9 +2407,10 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra, params)
 
-    def test_create_instance_invalid_key_name(self):
-        image_href = 'http://localhost/v2/images/2'
-        self.body['server']['imageRef'] = image_href
+    @mock.patch('nova.compute.api.API.create',
+                side_effect=exception.KeypairNotFound(name='nonexistentkey',
+                                                      user_id=1))
+    def test_create_instance_invalid_key_name(self, mock_create):
         self.body['server']['key_name'] = 'nonexistentkey'
         self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
