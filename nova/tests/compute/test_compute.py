@@ -9311,6 +9311,38 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertTrue(called.get('fake_libvirt_driver_instance_exists'))
         self.assertTrue(called.get('fake_roll_detaching'))
 
+    def test_detach_volume_not_found(self):
+        # Ensure that a volume can be detached even when it is removed
+        # from an instance but remaining in bdm. See bug #1367964.
+
+        instance = self._create_fake_instance()
+        fake_bdm = fake_block_device.FakeDbBlockDeviceDict(
+                {'source_type': 'volume', 'destination_type': 'volume',
+                 'volume_id': 'fake-id', 'device_name': '/dev/vdb',
+                 'connection_info': '{"test": "test"}'})
+        bdm = objects.BlockDeviceMapping(**fake_bdm)
+
+        with contextlib.nested(
+            mock.patch.object(self.compute.driver, 'detach_volume',
+                              side_effect=exception.DiskNotFound('sdb')),
+            mock.patch.object(objects.BlockDeviceMapping,
+                              'get_by_volume_id', return_value=bdm),
+            mock.patch.object(cinder.API, 'terminate_connection'),
+            mock.patch.object(bdm, 'destroy'),
+            mock.patch.object(self.compute, '_notify_about_instance_usage'),
+            mock.patch.object(self.compute.volume_api, 'detach'),
+            mock.patch.object(self.compute.driver, 'get_volume_connector',
+                              return_value='fake-connector')
+        ) as (mock_detach_volume, mock_volume, mock_terminate_connection,
+              mock_destroy, mock_notify, mock_detach, mock_volume_connector):
+            self.compute.detach_volume(self.context, 'fake-id', instance)
+            self.assertTrue(mock_detach_volume.called)
+            mock_terminate_connection.assert_called_once_with(self.context,
+                                                              'fake-id',
+                                                              'fake-connector')
+            mock_destroy.assert_called_once_with()
+            mock_detach.assert_called_once_with(mock.ANY, 'fake-id')
+
     def test_terminate_with_volumes(self):
         # Make sure that volumes get detached during instance termination.
         admin = context.get_admin_context()
