@@ -247,6 +247,29 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         expected_multipath_cmd = ('multipath', '-r')
         self.assertIn(expected_multipath_cmd, self.executes)
 
+    def test_iscsiadm_discover_parsing(self):
+        # Ensure that parsing iscsiadm discover ignores cruft.
+
+        targets = [
+            ["192.168.204.82:3260,1",
+             ("iqn.2010-10.org.openstack:volume-"
+              "f9b12623-6ce3-4dac-a71f-09ad4249bdd3")],
+            ["192.168.204.82:3261,1",
+             ("iqn.2010-10.org.openstack:volume-"
+              "f9b12623-6ce3-4dac-a71f-09ad4249bdd4")]]
+
+        # This slight wonkiness brought to you by pep8, as the actual
+        # example output runs about 97 chars wide.
+        sample_input = """Loading iscsi modules: done
+Starting iSCSI initiator service: done
+Setting up iSCSI targets: unused
+%s %s
+%s %s
+""" % (targets[0][0], targets[0][1], targets[1][0], targets[1][1])
+        driver = volume.LibvirtISCSIVolumeDriver("none")
+        out = driver._get_target_portals_from_iscsiadm_output(sample_input)
+        self.assertEqual(out, targets)
+
     def test_libvirt_iscsi_driver(self):
         # NOTE(vish) exists is to make driver assume connecting worked
         self.stubs.Set(os.path, 'exists', lambda x: True)

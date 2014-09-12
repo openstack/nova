@@ -246,7 +246,15 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
 
     def _get_target_portals_from_iscsiadm_output(self, output):
         # return both portals and iqns
-        return [line.split() for line in output.splitlines()]
+        #
+        # as we are parsing a command line utility, allow for the
+        # possibility that additional debug data is spewed in the
+        # stream, and only grab actual ip / iqn lines.
+        targets = []
+        for data in [line.split() for line in output.splitlines()]:
+            if len(data) == 2 and data[1].startswith('iqn.'):
+                targets.append(data)
+        return targets
 
     @utils.synchronized('connect_volume')
     def connect_volume(self, connection_info, disk_info):
