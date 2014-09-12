@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-08-18 06:03+0000\n"
+"POT-Creation-Date: 2014-09-11 06:01+0000\n"
 "PO-Revision-Date: 2014-07-16 14:42+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Chinese (China) (http://www.transifex.com/projects/p/nova/"
@@ -24,7 +24,7 @@ msgstr ""
 msgid "%(url)s returned with HTTP %(status)d"
 msgstr ""
 
-#: nova/api/openstack/__init__.py:294
+#: nova/api/openstack/__init__.py:298
 msgid "V3 API has been disabled by configuration"
 msgstr ""
 
@@ -38,18 +38,18 @@ msgstr ""
 msgid "HTTP exception thrown: %s"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/os_networks.py:101
-#: nova/api/openstack/compute/contrib/os_tenant_networks.py:128
+#: nova/api/openstack/compute/contrib/os_networks.py:109
+#: nova/api/openstack/compute/contrib/os_tenant_networks.py:130
 #, python-format
 msgid "Deleting network with id %s"
 msgstr ""
 
-#: nova/compute/manager.py:2663
+#: nova/compute/manager.py:2735
 #, python-format
 msgid "bringing vm to original state: '%s'"
 msgstr ""
 
-#: nova/compute/manager.py:5471
+#: nova/compute/manager.py:5612
 #, python-format
 msgid ""
 "During sync_power_state the instance has a pending task (%(task)s). Skip."
@@ -79,7 +79,7 @@ msgstr ""
 msgid "Created lock path: %s"
 msgstr "已创建锁路径：%s"
 
-#: nova/openstack/common/lockutils.py:251
+#: nova/openstack/common/lockutils.py:194
 #, python-format
 msgid "Failed to remove file %(file)s"
 msgstr ""
@@ -141,10 +141,10 @@ msgstr ""
 msgid "Waiting on %d children to exit"
 msgstr "正在等待 %d 个子代退出"
 
-#: nova/openstack/common/db/sqlalchemy/utils.py:387
+#: nova/scheduler/client/report.py:52
 #, python-format
-msgid "Deleting duplicated row with id: %(id)s from table: %(table)s"
-msgstr "正在从表 %(table)s 中删除具有id %(id)s 的重复行"
+msgid "Compute_service record updated for %s"
+msgstr ""
 
 #: nova/scheduler/filters/utils.py:50
 #, python-format
@@ -161,125 +161,139 @@ msgstr ""
 msgid "instance chain %s disappeared during refresh, skipping"
 msgstr ""
 
-#: nova/virt/disk/vfs/guestfs.py:139
-msgid "Unable to force TCG mode, libguestfs too old?"
+#: nova/virt/hyperv/vmops.py:457
+msgid "Soft shutdown succeeded."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:835
+#: nova/virt/libvirt/driver.py:898
 #, python-format
 msgid ""
 "Unable to use bulk domain list APIs, falling back to slow code path: %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:948
+#: nova/virt/libvirt/driver.py:1011
 msgid "Instance destroyed successfully."
 msgstr "实例销毁成功。"
 
-#: nova/virt/libvirt/driver.py:958
+#: nova/virt/libvirt/driver.py:1021
 msgid "Instance may be started again."
 msgstr "可再次启动实例。"
 
-#: nova/virt/libvirt/driver.py:968
+#: nova/virt/libvirt/driver.py:1031
 msgid "Going to destroy instance again."
 msgstr "将再次销毁实例。"
 
-#: nova/virt/libvirt/driver.py:1576
+#: nova/virt/libvirt/driver.py:1681
 msgid "Beginning live snapshot process"
 msgstr "正在开始实时快照流程"
 
-#: nova/virt/libvirt/driver.py:1579
+#: nova/virt/libvirt/driver.py:1684
 msgid "Beginning cold snapshot process"
 msgstr "正在结束冷快照流程"
 
-#: nova/virt/libvirt/driver.py:1608
+#: nova/virt/libvirt/driver.py:1713
 msgid "Snapshot extracted, beginning image upload"
 msgstr "已抽取快照，正在开始映像上载"
 
-#: nova/virt/libvirt/driver.py:1620
+#: nova/virt/libvirt/driver.py:1725
 msgid "Snapshot image upload complete"
 msgstr "快照映像上载完成"
 
-#: nova/virt/libvirt/driver.py:2132
+#: nova/virt/libvirt/driver.py:2237
 msgid "Instance soft rebooted successfully."
 msgstr "已成功执行实例软重新引导。"
 
-#: nova/virt/libvirt/driver.py:2175
+#: nova/virt/libvirt/driver.py:2280
 msgid "Instance shutdown successfully."
 msgstr "已成功关闭实例。"
 
-#: nova/virt/libvirt/driver.py:2183
+#: nova/virt/libvirt/driver.py:2288
 msgid "Instance may have been rebooted during soft reboot, so return now."
 msgstr "在软重新引导期间，可能已重新引导实例，因此会立即返回。"
 
-#: nova/virt/libvirt/driver.py:2252
+#: nova/virt/libvirt/driver.py:2357
 msgid "Instance rebooted successfully."
 msgstr "实例成功重启。"
 
-#: nova/virt/libvirt/driver.py:2420
+#: nova/virt/libvirt/driver.py:2400
+msgid "Instance already shutdown."
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:2416
+#, python-format
+msgid "Instance shutdown successfully after %d seconds."
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:2445
+#, python-format
+msgid "Instance failed to shutdown in %d seconds."
+msgstr ""
+
+#: nova/virt/libvirt/driver.py:2602
 msgid "Instance spawned successfully."
 msgstr "实例成功生产。"
 
-#: nova/virt/libvirt/driver.py:2436
+#: nova/virt/libvirt/driver.py:2618
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
 msgstr "data：%(data)r, fpath: %(fpath)r"
 
-#: nova/virt/libvirt/driver.py:2475 nova/virt/libvirt/driver.py:2502
+#: nova/virt/libvirt/driver.py:2657 nova/virt/libvirt/driver.py:2684
 #, python-format
 msgid "Truncated console log returned, %d bytes ignored"
 msgstr "已返回截断的控制台日志，忽略了 %d 个字节"
 
-#: nova/virt/libvirt/driver.py:2731
-msgid "Creating image"
-msgstr "正在创建镜像"
-
-#: nova/virt/libvirt/driver.py:2857
-msgid "Using config drive"
-msgstr "正在使用配置驱动器"
-
-#: nova/virt/libvirt/driver.py:2866
+#: nova/virt/libvirt/driver.py:2816
 #, python-format
 msgid "Creating config drive at %(path)s"
 msgstr "正在 %(path)s 处创建配置驱动器"
 
-#: nova/virt/libvirt/driver.py:3437
+#: nova/virt/libvirt/driver.py:2939
+msgid "Creating image"
+msgstr "正在创建镜像"
+
+#: nova/virt/libvirt/driver.py:3067
+msgid "Using config drive"
+msgstr "正在使用配置驱动器"
+
+#: nova/virt/libvirt/driver.py:3711
 msgid "Configuring timezone for windows instance to localtime"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4320
+#: nova/virt/libvirt/driver.py:4646
 #, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. Instance="
 "%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4326
+#: nova/virt/libvirt/driver.py:4652
 #, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
 "device"
 msgstr "对于实例 %s，在 libvirt 中找不到域。无法获取设备的块统计信息"
 
-#: nova/virt/libvirt/driver.py:4568
+#: nova/virt/libvirt/driver.py:4894
 #, python-format
 msgid "Instance launched has CPU info: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5316
+#: nova/virt/libvirt/driver.py:5645
 msgid "Instance running successfully."
 msgstr "实例正在成功运行。"
 
-#: nova/virt/libvirt/driver.py:5590
+#: nova/virt/libvirt/driver.py:5994
 #, python-format
 msgid "Deleting instance files %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5603
+#: nova/virt/libvirt/driver.py:6007
 #, python-format
 msgid "Deletion of %s failed"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5607
+#: nova/virt/libvirt/driver.py:6011
 #, python-format
 msgid "Deletion of %s complete"
 msgstr ""
@@ -351,11 +365,11 @@ msgstr "损坏的基文件：%s"
 msgid "Removable base files: %s"
 msgstr "可删除的基文件：%s"
 
-#: nova/virt/libvirt/utils.py:490
+#: nova/virt/libvirt/utils.py:513
 msgid "findmnt tool is not installed"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:1355
+#: nova/virt/xenapi/vm_utils.py:1320
 #, python-format
 msgid ""
 "Image creation data, cacheable: %(cache)s, downloaded: %(downloaded)s "
