@@ -5451,6 +5451,11 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
         for i in range(3):
             db.security_group_create(self.ctxt, {'project_id': 'project1'})
 
+        usages['server_groups'] = 4
+        for i in range(4):
+            db.instance_group_create(self.ctxt, {'uuid': str(i),
+                                                 'project_id': 'project1'})
+
         reservations_uuids = db.quota_reserve(self.ctxt, reservable_resources,
                                               quotas, quotas, deltas, None,
                                               None, None, 'project1')

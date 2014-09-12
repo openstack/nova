@@ -72,6 +72,12 @@ quota_opts = [
     cfg.IntOpt('quota_key_pairs',
                default=100,
                help='Number of key pairs per user'),
+    cfg.IntOpt('quota_server_groups',
+               default=10,
+               help='Number of server groups per project'),
+    cfg.IntOpt('quota_server_group_members',
+               default=10,
+               help='Number of servers per server group'),
     cfg.IntOpt('reservation_expire',
                default=86400,
                help='Number of seconds until a reservation expires'),
@@ -1416,6 +1422,11 @@ def _keypair_get_count_by_user(*args, **kwargs):
     return objects.KeyPairList.get_count_by_user(*args, **kwargs)
 
 
+def _server_group_count_members_by_user(*args, **kwargs):
+    """Helper method to avoid referencing objects.InstanceGroup on import."""
+    return objects.InstanceGroup.count_members_by_user(*args, **kwargs)
+
+
 QUOTAS = QuotaEngine()
 
 
@@ -1439,6 +1450,11 @@ resources = [
                       'quota_security_group_rules'),
     CountableResource('key_pairs', _keypair_get_count_by_user,
                       'quota_key_pairs'),
+    ReservableResource('server_groups', '_sync_server_groups',
+                      'quota_server_groups'),
+    CountableResource('server_group_members',
+                      _server_group_count_members_by_user,
+                      'quota_server_group_members'),
     ]
 
 

@@ -333,11 +333,17 @@ def _sync_security_groups(context, project_id, user_id, session):
     return dict(security_groups=_security_group_count_by_project_and_user(
                 context, project_id, user_id, session))
 
+
+def _sync_server_groups(context, project_id, user_id, session):
+    return dict(server_groups=_instance_group_count_by_project_and_user(
+                context, project_id, user_id, session))
+
 QUOTA_SYNC_FUNCTIONS = {
     '_sync_instances': _sync_instances,
     '_sync_floating_ips': _sync_floating_ips,
     '_sync_fixed_ips': _sync_fixed_ips,
     '_sync_security_groups': _sync_security_groups,
+    '_sync_server_groups': _sync_server_groups,
 }
 
 ###################
@@ -5888,6 +5894,15 @@ def instance_group_get_all_by_project_id(context, project_id):
     return _instance_group_get_query(context, models.InstanceGroup).\
                             filter_by(project_id=project_id).\
                             all()
+
+
+def _instance_group_count_by_project_and_user(context, project_id,
+                                              user_id, session=None):
+    return model_query(context, models.InstanceGroup, read_deleted="no",
+                       session=session).\
+                   filter_by(project_id=project_id).\
+                   filter_by(user_id=user_id).\
+                   count()
 
 
 def _instance_group_model_get_query(context, model_class, group_id,

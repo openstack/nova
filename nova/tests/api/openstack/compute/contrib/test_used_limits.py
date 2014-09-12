@@ -34,6 +34,7 @@ class FakeRequest(object):
 
 class UsedLimitsTestCaseV21(test.NoDBTestCase):
     used_limit_extension = "compute_extension:v3:os-used-limits:used_limits"
+    include_server_group_quotas = True
 
     def setUp(self):
         """Run before each test."""
@@ -62,12 +63,17 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
             'totalInstancesUsed': 'instances',
             'totalFloatingIpsUsed': 'floating_ips',
             'totalSecurityGroupsUsed': 'security_groups',
+            'totalServerGroupsUsed': 'server_groups',
         }
         limits = {}
+        expected_abs_limits = []
         for display_name, q in quota_map.iteritems():
             limits[q] = {'limit': len(display_name),
                          'in_use': len(display_name) / 2,
                          'reserved': len(display_name) / 3}
+            if (self.include_server_group_quotas or
+                display_name != 'totalServerGroupsUsed'):
+                expected_abs_limits.append(display_name)
 
         def stub_get_project_quotas(context, project_id, usages=True):
             return limits
@@ -76,14 +82,17 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
                        stub_get_project_quotas)
         if self.ext_mgr is not None:
             self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(False)
+            self.ext_mgr.is_loaded('os-server-group-quotas').AndReturn(
+                self.include_server_group_quotas)
             self.mox.ReplayAll()
 
         self.controller.index(fake_req, res)
         abs_limits = res.obj['limits']['absolute']
-        for used_limit, value in abs_limits.iteritems():
-            r = limits[quota_map[used_limit]]['reserved'] if reserved else 0
+        for limit in expected_abs_limits:
+            value = abs_limits[limit]
+            r = limits[quota_map[limit]]['reserved'] if reserved else 0
             self.assertEqual(value,
-                             limits[quota_map[used_limit]]['in_use'] + r)
+                             limits[quota_map[limit]]['in_use'] + r)
 
     def test_used_limits_basic(self):
         self._do_test_used_limits(False)
@@ -111,6 +120,8 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
         fake_req.GET = {'tenant_id': tenant_id}
         if self.ext_mgr is not None:
             self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(True)
+            self.ext_mgr.is_loaded('os-server-group-quotas').AndReturn(
+                self.include_server_group_quotas)
         self.authorize(self.fake_context, target=target)
         self.mox.StubOutWithMock(quota.QUOTAS, 'get_project_quotas')
         quota.QUOTAS.get_project_quotas(self.fake_context, '%s' % tenant_id,
@@ -134,6 +145,8 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
         fake_req.GET = {}
         if self.ext_mgr is not None:
             self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(True)
+            self.ext_mgr.is_loaded('os-server-group-quotas').AndReturn(
+                self.include_server_group_quotas)
         self.mox.StubOutWithMock(extensions, 'extension_authorizer')
         self.mox.StubOutWithMock(quota.QUOTAS, 'get_project_quotas')
         quota.QUOTAS.get_project_quotas(self.fake_context, '%s' % project_id,
@@ -182,6 +195,8 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
         fake_req = FakeRequest(self.fake_context)
         if self.ext_mgr is not None:
             self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(False)
+            self.ext_mgr.is_loaded('os-server-group-quotas').AndReturn(
+                self.include_server_group_quotas)
         self.mox.StubOutWithMock(quota.QUOTAS, 'get_project_quotas')
         quota.QUOTAS.get_project_quotas(self.fake_context, project_id,
                                         usages=True).AndReturn({})
@@ -206,6 +221,8 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
 
         if self.ext_mgr is not None:
             self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(False)
+            self.ext_mgr.is_loaded('os-server-group-quotas').AndReturn(
+                self.include_server_group_quotas)
         self.stubs.Set(quota.QUOTAS, "get_project_quotas",
                        stub_get_project_quotas)
         self.mox.ReplayAll()
@@ -230,6 +247,8 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
 
         if self.ext_mgr is not None:
             self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(False)
+            self.ext_mgr.is_loaded('os-server-group-quotas').AndReturn(
+                self.include_server_group_quotas)
         self.stubs.Set(quota.QUOTAS, "get_project_quotas",
                        stub_get_project_quotas)
         self.mox.ReplayAll()
@@ -241,6 +260,7 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
 
 class UsedLimitsTestCaseV2(UsedLimitsTestCaseV21):
     used_limit_extension = "compute_extension:used_limits_for_admin"
+    include_server_group_quotas = False
 
     def _set_up_controller(self):
         self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
@@ -274,6 +294,7 @@ class UsedLimitsTestCaseXml(test.NoDBTestCase):
         self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(False)
         self.stubs.Set(quota.QUOTAS, "get_project_quotas",
                        stub_get_project_quotas)
+        self.ext_mgr.is_loaded('os-server-group-quotas').AndReturn(False)
         self.mox.ReplayAll()
 
         self.controller.index(fake_req, res)

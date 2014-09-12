@@ -45,6 +45,7 @@ class UsedLimitsController(wsgi.Controller):
             'totalInstancesUsed': 'instances',
             'totalFloatingIpsUsed': 'floating_ips',
             'totalSecurityGroupsUsed': 'security_groups',
+            'totalServerGroupsUsed': 'server_groups',
         }
         used_limits = {}
         for display_name, key in quota_map.iteritems():

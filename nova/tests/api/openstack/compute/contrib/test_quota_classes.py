@@ -17,6 +17,7 @@ from lxml import etree
 import webob
 
 from nova.api.openstack.compute.contrib import quota_classes
+from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -37,7 +38,9 @@ class QuotaClassSetsTest(test.TestCase):
 
     def setUp(self):
         super(QuotaClassSetsTest, self).setUp()
-        self.controller = quota_classes.QuotaClassSetsController()
+        self.ext_mgr = extensions.ExtensionManager()
+        self.ext_mgr.extensions = {}
+        self.controller = quota_classes.QuotaClassSetsController(self.ext_mgr)
 
     def test_format_quota_set(self):
         raw_quota_set = {

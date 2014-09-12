@@ -30,7 +30,8 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
     # Version 1.5: Add get_hosts()
     # Version 1.6: Add get_by_name()
     # Version 1.7: Deprecate metadetails
-    VERSION = '1.7'
+    # Version 1.8: Add count_members_by_user()
+    VERSION = '1.8'
 
     fields = {
         'id': fields.IntegerField(),
@@ -160,6 +161,15 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
         return list(set([instance.host for instance in instances
                          if instance.host]))
 
+    @base.remotable
+    def count_members_by_user(self, context, user_id):
+        """Count the number of instances in a group belonging to a user."""
+        filter_uuids = self.members
+        filters = {'uuid': filter_uuids, 'user_id': user_id, 'deleted': False}
+        instances = objects.InstanceList.get_by_filters(context,
+                                                        filters=filters)
+        return len(instances)
+
 
 class InstanceGroupList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
@@ -168,7 +178,8 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
     # Version 1.2: InstanceGroup <= version 1.5
     # Version 1.3: InstanceGroup <= version 1.6
     # Version 1.4: InstanceGroup <= version 1.7
-    VERSION = '1.2'
+    # Version 1.5: InstanceGroup <= version 1.8
+    VERSION = '1.5'
 
     fields = {
         'objects': fields.ListOfObjectsField('InstanceGroup'),
@@ -180,6 +191,7 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
         '1.2': '1.5',
         '1.3': '1.6',
         '1.4': '1.7',
+        '1.5': '1.8',
         }
 
     @base.remotable_classmethod
