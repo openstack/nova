@@ -15,9 +15,12 @@
 import collections
 
 from oslo.config import cfg
+import six
 
+from nova import context
 from nova import exception
 from nova.i18n import _
+from nova import objects
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 
@@ -900,3 +903,98 @@ class VirtNUMAHostTopology(VirtNUMATopology):
                     claimed_cell.cpu_usage > limit_cell.cpu_limit):
                 return (_("Requested instance NUMA topology cannot fit "
                           "the given host NUMA topology."))
+
+
+# TODO(ndipanov): Remove when all code paths are using objects
+def instance_topology_from_instance(instance):
+    """Convenience method for getting the numa_topology out of instances
+
+    Since we may get an Instance as either a dict, a db object, or an actual
+    Instance object, this makes sure we get beck either None, or an instance
+    of
+
+    """
+    if isinstance(instance, objects.Instance):
+        # NOTE (ndipanov): This may cause a lazy-load of the attribute
+        instance_numa_topology = instance.numa_topology
+    else:
+        if 'numa_topology' in instance:
+            instance_numa_topology = instance['numa_topology']
+        elif 'uuid' in instance:
+            try:
+                instance_numa_topology = (
+                    objects.InstanceNUMATopology.get_by_instance_uuid(
+                            context.get_admin_context(), instance['uuid'])
+                    )
+            except exception.NumaTopologyNotFound:
+                instance_numa_topology = None
+        else:
+            instance_numa_topology = None
+
+    if instance_numa_topology:
+        if isinstance(instance_numa_topology, six.string_types):
+            instance_numa_topology = VirtNUMAInstanceTopology.from_json(
+                            instance_numa_topology)
+        elif isinstance(instance_numa_topology, dict):
+            # NOTE (ndipanov): A horrible hack so that we can use this in the
+            # scheduler, since the InstanceNUMATopology object is serialized
+            # raw using the obj_base.obj_to_primitive, (which is buggy and will
+            # give us a dict with a list of InstanceNUMACell objects) by
+            # scheduler_utils.build_request_spec in the conductor.
+            #
+            # Remove when request_spec is a proper object itself!
+            cells = instance_numa_topology.get('cells')
+            if cells:
+                instance_numa_topology = objects.InstanceNUMATopology(
+                        cells=cells)
+
+    return instance_numa_topology
+
+
+# TODO(ndipanov): Remove when all code paths are using objects
+def get_host_numa_usage_from_instance(host, instance, free=False,
+                                     never_serialize_result=False):
+    """Calculate new 'numa_usage' of 'host' from 'instance' NUMA usage
+
+    This is a convenience method to help us handle the fact that we use several
+    different types throughout the code (ComputeNode and Instance objects,
+    dicts, scheduler HostState) which may have both json and deserialized
+    versions of VirtNUMATopology classes.
+
+    Handles all the complexity without polluting the class method with it.
+
+    :param host: nova.objects.ComputeNode instance, or a db object or dict
+    :param instance: nova.objects.Instance instance, or a db object or dict
+    :param free: if True the the returned topology will have it's usage
+                 decreased instead.
+    :param never_serialize_result: if True result will always be an instance of
+                                   VirtNUMAHostTopology class.
+
+    :returns: numa_usage in the format it was on the host or
+              VirtNUMAHostTopology instance if never_serialize_result was True
+    """
+    jsonify_result = False
+
+    instance_numa_topology = instance_topology_from_instance(instance)
+    if instance_numa_topology:
+        instance_numa_topology = [instance_numa_topology]
+
+    try:
+        host_numa_topology = host.get('numa_topology')
+    except AttributeError:
+        host_numa_topology = host.numa_topology
+
+    if host_numa_topology is not None and isinstance(
+            host_numa_topology, six.string_types):
+        jsonify_result = True
+        host_numa_topology = VirtNUMAHostTopology.from_json(host_numa_topology)
+
+    updated_numa_topology = (
+        VirtNUMAHostTopology.usage_from_instances(
+                host_numa_topology, instance_numa_topology, free=free))
+
+    if updated_numa_topology is not None:
+        if jsonify_result and not never_serialize_result:
+            updated_numa_topology = updated_numa_topology.to_json()
+
+    return updated_numa_topology
