@@ -171,6 +171,21 @@ class FixedIpTestV21(test.NoDBTestCase):
         resp = req.get_response(self.app)
         self.assertEqual(400, resp.status_int)
 
+    @mock.patch.object(compute.api.API, 'remove_fixed_ip',
+        side_effect=exception.FixedIpNotFoundForSpecificInstance(
+            instance_uuid=UUID, ip='10.10.10.1'))
+    def test_remove_fixed_ip_not_found(self, _remove_fixed_ip):
+
+        body = {'remove_fixed_ip': {'address': '10.10.10.1'}}
+        req = webob.Request.blank(
+            self._get_url() + '/servers/%s/action' % UUID)
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers['content-type'] = 'application/json'
+
+        resp = req.get_response(self.app)
+        self.assertEqual(400, resp.status_int)
+
 
 class FixedIpTestV2(FixedIpTestV21):
     def setUp(self):
