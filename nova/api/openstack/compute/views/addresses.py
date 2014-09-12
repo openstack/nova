@@ -51,6 +51,6 @@ class ViewBuilderV3(ViewBuilder):
         return {
             "version": ip["version"],
             "addr": ip["address"],
-            "type": ip["type"],
-            "mac_addr": ip['mac_address'],
+            "OS-EXT-IPS:type": ip["type"],
+            "OS-EXT-IPS-MAC:mac_addr": ip['mac_address'],
         }
