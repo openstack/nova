@@ -3441,8 +3441,16 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.PciDeviceUnsupportedHypervisor(
                     type=CONF.libvirt.virt_type)
 
-        watchdog_action = flavor.extra_specs.get('hw_watchdog_action',
-                                                 'disabled')
+        if 'hw_watchdog_action' in flavor.extra_specs:
+            LOG.warn(_LW('Old property name "hw_watchdog_action" is now '
+                         'deprecated and will be removed in L release. '
+                         'Use updated property name '
+                         '"hw:watchdog_action" instead'))
+        # TODO(pkholkin): accepting old property name 'hw_watchdog_action'
+        #                should be removed in L release
+        watchdog_action = (flavor.extra_specs.get('hw_watchdog_action') or
+                           flavor.extra_specs.get('hw:watchdog_action')
+                           or 'disabled')
         if (image_meta is not None and
                 image_meta.get('properties', {}).get('hw_watchdog_action')):
             watchdog_action = image_meta['properties']['hw_watchdog_action']
