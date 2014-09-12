@@ -2318,15 +2318,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual("none", cfg.devices[7].action)
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
-    def test_get_guest_config_with_watchdog_action_flavor(self,
-                                                          mock_flavor):
+    def _test_get_guest_config_with_watchdog_action_flavor(self, mock_flavor,
+            hw_watchdog_action="hw:watchdog_action"):
         self.flags(virt_type='kvm', group='libvirt')
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
         instance_ref = objects.Instance(**self.test_instance)
         flavor = instance_ref.get_flavor()
-        flavor.extra_specs = {'hw_watchdog_action': 'none'}
+        flavor.extra_specs = {hw_watchdog_action: 'none'}
         mock_flavor.return_value = flavor
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -2355,6 +2355,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual("none", cfg.devices[7].action)
+
+    def test_get_guest_config_with_watchdog_action_through_flavor(self):
+        self._test_get_guest_config_with_watchdog_action_flavor()
+
+    # TODO(pkholkin): the test accepting old property name 'hw_watchdog_action'
+    #                should be removed in the next release
+    def test_get_guest_config_with_watchdog_action_through_flavor_no_scope(
+            self):
+        self._test_get_guest_config_with_watchdog_action_flavor(
+            hw_watchdog_action="hw_watchdog_action")
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
     def test_get_guest_config_with_watchdog_overrides_flavor(self,
