@@ -2673,6 +2673,25 @@ class TestNeutronv2WithMock(test.TestCase):
                           raise_if_fail=True)
         mock_client.delete_port.assert_called_once_with('port1')
 
+    def test_deallocate_port_for_instance_fails(self):
+        mock_client = mock.Mock()
+        api = neutronapi.API()
+        with contextlib.nested(
+            mock.patch.object(neutronv2, 'get_client',
+                              return_value=mock_client),
+            mock.patch.object(api, '_delete_ports',
+                              side_effect=exceptions.Unauthorized),
+            mock.patch.object(api, 'get_instance_nw_info')
+        ) as (
+            get_client, delete_ports, get_nw_info
+        ):
+            self.assertRaises(exceptions.Unauthorized,
+                              api.deallocate_port_for_instance,
+                              self.context, instance={'uuid': 'fake'},
+                              port_id='fake')
+        # make sure that we didn't try to reload nw info
+        self.assertFalse(get_nw_info.called)
+
 
 class TestNeutronv2ModuleMethods(test.TestCase):
 
