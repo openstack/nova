@@ -1976,7 +1976,7 @@ class ComputeManager(manager.Manager):
                         instance=instance)
                     self._cleanup_allocated_networks(context, instance,
                         requested_networks)
-                    self._set_instance_error_state(context, instance.uuid)
+                    self._set_instance_error_state(context, instance)
                     return
                 retry['exc'] = traceback.format_exception(*sys.exc_info())
                 # NOTE(comstud): Deallocate networks if the driver wants
