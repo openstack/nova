@@ -1071,6 +1071,17 @@ class ComputeManager(manager.Manager):
                         event.get_transition())
 
         if vm_power_state is not None:
+            LOG.debug('Synchronizing instance power state after lifecycle '
+                      'event "%(event)s"; current vm_state: %(vm_state)s, '
+                      'current task_state: %(task_state)s, current DB '
+                      'power_state: %(db_power_state)s, VM power_state: '
+                      '%(vm_power_state)s',
+                      dict(event=event.get_name(),
+                           vm_state=instance.vm_state,
+                           task_state=instance.task_state,
+                           db_power_state=instance.power_state,
+                           vm_power_state=vm_power_state),
+                      instance_uuid=instance.uuid)
             self._sync_instance_power_state(context,
                                             instance,
                                             vm_power_state)
@@ -2461,6 +2472,31 @@ class ComputeManager(manager.Manager):
 
         @utils.synchronized(instance.uuid)
         def do_stop_instance():
+            current_power_state = self._get_power_state(context, instance)
+            LOG.debug('Stopping instance; current vm_state: %(vm_state)s, '
+                      'current task_state: %(task_state)s, current DB '
+                      'power_state: %(db_power_state)s, current VM '
+                      'power_state: %(current_power_state)s',
+                      dict(vm_state=instance.vm_state,
+                           task_state=instance.task_state,
+                           db_power_state=instance.power_state,
+                           current_power_state=current_power_state),
+                      instance_uuid=instance.uuid)
+
+            # NOTE(mriedem): If the instance is already powered off, we are
+            # possibly tearing down and racing with other operations, so we can
+            # expect the task_state to be None if something else updates the
+            # instance and we're not locking it.
+            expected_task_state = [task_states.POWERING_OFF]
+            # The list of power states is from _sync_instance_power_state.
+            if current_power_state in (power_state.NOSTATE,
+                                       power_state.SHUTDOWN,
+                                       power_state.CRASHED):
+                LOG.info(_LI('Instance is already powered off in the '
+                             'hypervisor when stop is called.'),
+                         instance=instance)
+                expected_task_state.append(None)
+
             self._notify_about_instance_usage(context, instance,
                                               "power_off.start")
             self._power_off_instance(context, instance, clean_shutdown)
@@ -2468,7 +2504,7 @@ class ComputeManager(manager.Manager):
             instance.power_state = current_power_state
             instance.vm_state = vm_states.STOPPED
             instance.task_state = None
-            instance.save(expected_task_state=task_states.POWERING_OFF)
+            instance.save(expected_task_state=expected_task_state)
             self._notify_about_instance_usage(context, instance,
                                               "power_off.end")
 
@@ -5691,8 +5727,16 @@ class ComputeManager(manager.Manager):
             # The only rational power state should be RUNNING
             if vm_power_state in (power_state.SHUTDOWN,
                                   power_state.CRASHED):
-                LOG.warn(_("Instance shutdown by itself. Calling "
-                           "the stop API."), instance=db_instance)
+                LOG.warn(_LW("Instance shutdown by itself. Calling the stop "
+                             "API. Current vm_state: %(vm_state)s, current "
+                             "task_state: %(task_state)s, current DB "
+                             "power_state: %(db_power_state)s, current VM "
+                             "power_state: %(vm_power_state)s"),
+                         {'vm_state': vm_state,
+                          'task_state': db_instance.task_state,
+                          'db_power_state': db_power_state,
+                          'vm_power_state': vm_power_state},
+                         instance=db_instance)
                 try:
                     # Note(maoy): here we call the API instead of
                     # brutally updating the vm_state in the database
@@ -5738,8 +5782,16 @@ class ComputeManager(manager.Manager):
             if vm_power_state not in (power_state.NOSTATE,
                                       power_state.SHUTDOWN,
                                       power_state.CRASHED):
-                LOG.warn(_("Instance is not stopped. Calling "
-                           "the stop API."), instance=db_instance)
+                LOG.warn(_LW("Instance is not stopped. Calling "
+                             "the stop API. Current vm_state: %(vm_state)s, "
+                             "current task_state: %(task_state)s, "
+                             "current DB power_state: %(db_power_state)s, "
+                             "current VM power_state: %(vm_power_state)s"),
+                         {'vm_state': vm_state,
+                          'task_state': db_instance.task_state,
+                          'db_power_state': db_power_state,
+                          'vm_power_state': vm_power_state},
+                         instance=db_instance)
                 try:
                     # NOTE(russellb) Force the stop, because normally the
                     # compute API would not allow an attempt to stop a stopped
