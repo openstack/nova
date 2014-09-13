@@ -101,6 +101,10 @@ def finish_subprocess(proc, cmdline, cmd_input=None, ok_exit_codes=None):
 
     ret = proc.returncode
     if ret not in ok_exit_codes:
+        LOG.error("Command '%(cmdline)s' with process id '%(pid)s' expected "
+                  "return code in '%(ok)s' but got '%(rc)s': %(err)s" %
+                  {'cmdline': cmdline, 'pid': proc.pid, 'ok': ok_exit_codes,
+                   'rc': ret, 'err': err})
         raise SubprocessException(' '.join(cmdline), ret, out, err)
     return out
 
