@@ -904,10 +904,12 @@ class TestNeutronv2(TestNeutronv2Base):
             net_idx=2, requested_networks=requested_networks,
             macs=set(['my_mac2']),
             _break='mac' + self.nets2[0]['id'])
-        self.assertRaises(exception.PortNotFree,
-                          api.allocate_for_instance, self.context,
-                          self.instance, requested_networks=requested_networks,
-                          macs=set(['my_mac2']))
+        with mock.patch.object(api, '_delete_ports'):
+            self.assertRaises(exception.PortNotFree,
+                              api.allocate_for_instance, self.context,
+                              self.instance,
+                              requested_networks=requested_networks,
+                              macs=set(['my_mac2']))
 
     def test_allocate_for_instance_two_macs_two_networks(self):
         # If two MACs are available and two networks requested, two new ports
@@ -2754,6 +2756,54 @@ class TestNeutronv2WithMock(test.TestCase):
                               self.context,
                               network_uuid)
             fake_show_network.assert_called_once_with(network_uuid)
+
+    def test_deallocate_for_instance_uses_delete_helper(self):
+        # setup fake data
+        instance = fake_instance.fake_instance_obj(self.context)
+        port_data = {'ports': [{'id': str(uuid.uuid4())}]}
+        ports = set([port['id'] for port in port_data.get('ports')])
+        api = neutronapi.API()
+        # setup mocks
+        mock_client = mock.Mock()
+        mock_client.list_ports.return_value = port_data
+        with contextlib.nested(
+            mock.patch.object(neutronv2, 'get_client',
+                              return_value=mock_client),
+            mock.patch.object(api, '_delete_ports')
+        ) as (
+            mock_get_client, mock_delete
+        ):
+            # run the code
+            api.deallocate_for_instance(self.context, instance)
+            # assert the calls
+            mock_client.list_ports.assert_called_once_with(
+                device_id=instance.uuid)
+            mock_delete.assert_called_once_with(
+                mock_client, instance, ports, raise_if_fail=True)
+
+    def _test_delete_ports(self, expect_raise):
+        results = [exceptions.NeutronClientException, None]
+        mock_client = mock.Mock()
+        with mock.patch.object(mock_client, 'delete_port',
+                               side_effect=results):
+            api = neutronapi.API()
+            api._delete_ports(mock_client, {'uuid': 'foo'}, ['port1', 'port2'],
+                              raise_if_fail=expect_raise)
+
+    def test_delete_ports_raise(self):
+        self.assertRaises(exceptions.NeutronClientException,
+                          self._test_delete_ports, True)
+
+    def test_delete_ports_no_raise(self):
+        self._test_delete_ports(False)
+
+    def test_delete_ports_never_raise_404(self):
+        mock_client = mock.Mock()
+        mock_client.delete_port.side_effect = exceptions.PortNotFoundClient
+        api = neutronapi.API()
+        api._delete_ports(mock_client, {'uuid': 'foo'}, ['port1'],
+                          raise_if_fail=True)
+        mock_client.delete_port.assert_called_once_with('port1')
 
 
 class TestNeutronv2ModuleMethods(test.TestCase):
