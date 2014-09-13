@@ -24,7 +24,6 @@ from nova.i18n import _
 from nova import objects
 from nova.openstack.common import log as logging
 from nova.pci import pci_device
-from nova.pci import pci_request
 from nova.pci import pci_stats
 
 LOG = logging.getLogger(__name__)
@@ -150,12 +149,12 @@ class PciDevTracker(object):
             self.pci_devs.append(dev_obj)
             self.stats.add_device(dev_obj)
 
-    def _claim_instance(self, instance, prefix=''):
-        pci_requests = pci_request.get_instance_pci_requests(
-            instance, prefix)
-        if not pci_requests:
+    def _claim_instance(self, context, instance, prefix=''):
+        pci_requests = objects.InstancePCIRequests.get_by_instance(
+            context, instance)
+        if not pci_requests.requests:
             return None
-        devs = self.stats.consume_requests(pci_requests)
+        devs = self.stats.consume_requests(pci_requests.requests)
         if not devs:
             raise exception.PciDeviceRequestFailed(pci_requests)
         for dev in devs:
@@ -184,7 +183,7 @@ class PciDevTracker(object):
                     dev['instance_uuid'] == instance['uuid']):
                 self._free_device(dev)
 
-    def update_pci_for_instance(self, instance):
+    def update_pci_for_instance(self, context, instance):
         """Update instance's pci usage information.
 
         The caller should hold the COMPUTE_RESOURCE_SEMAPHORE lock
@@ -210,12 +209,12 @@ class PciDevTracker(object):
                 self.allocations[uuid] = devs
         elif (uuid not in self.allocations and
                uuid not in self.claims):
-            devs = self._claim_instance(instance)
+            devs = self._claim_instance(context, instance)
             if devs:
                 self._allocate_instance(instance, devs)
                 self.allocations[uuid] = devs
 
-    def update_pci_for_migration(self, instance, sign=1):
+    def update_pci_for_migration(self, context, instance, sign=1):
         """Update instance's pci usage information when it is migrated.
 
         The caller should hold the COMPUTE_RESOURCE_SEMAPHORE lock.
@@ -225,7 +224,7 @@ class PciDevTracker(object):
         """
         uuid = instance['uuid']
         if sign == 1 and uuid not in self.claims:
-            devs = self._claim_instance(instance, 'new_')
+            devs = self._claim_instance(context, instance, 'new_')
             if devs:
                 self.claims[uuid] = devs
         if sign == -1 and uuid in self.claims:

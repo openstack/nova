@@ -19,10 +19,10 @@ Claim objects for use with resource tracking.
 
 from nova import exception
 from nova.i18n import _
+from nova import objects
 from nova.objects import base as obj_base
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.pci import pci_request
 
 
 LOG = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ class Claim(NopClaim):
     correct decisions with respect to host selection.
     """
 
-    def __init__(self, instance, tracker, resources, overhead=None,
+    def __init__(self, context, instance, tracker, resources, overhead=None,
                  limits=None):
         super(Claim, self).__init__()
         # Stash a copy of the instance at the current point of time
@@ -85,6 +85,7 @@ class Claim(NopClaim):
             overhead = {'memory_mb': 0}
 
         self.overhead = overhead
+        self.context = context
 
         # Check claim at constructor to avoid mess code
         # Raise exception ComputeResourcesUnavailable if claim failed
@@ -103,7 +104,7 @@ class Claim(NopClaim):
         been aborted.
         """
         LOG.debug("Aborting claim: %s" % self, instance=self.instance)
-        self.tracker.abort_instance_claim(self.instance)
+        self.tracker.abort_instance_claim(self.context, self.instance)
 
     def _claim_test(self, resources, limits=None):
         """Test if this claim can be satisfied given available resources and
@@ -158,11 +159,12 @@ class Claim(NopClaim):
         return self._test(type_, unit, total, used, requested, limit)
 
     def _test_pci(self):
-        pci_requests = pci_request.get_instance_pci_requests(self.instance)
+        pci_requests = objects.InstancePCIRequests.get_by_instance_uuid(
+            self.context, self.instance['uuid'])
 
-        if pci_requests:
+        if pci_requests.requests:
             can_claim = self.tracker.pci_tracker.stats.support_requests(
-                pci_requests)
+                pci_requests.requests)
             if not can_claim:
                 return _('Claim pci failed.')
 
@@ -204,11 +206,13 @@ class ResizeClaim(Claim):
     """Claim used for holding resources for an incoming resize/migration
     operation.
     """
-    def __init__(self, instance, instance_type, tracker, resources,
+    def __init__(self, context, instance, instance_type, tracker, resources,
                  overhead=None, limits=None):
         self.instance_type = instance_type
-        super(ResizeClaim, self).__init__(instance, tracker, resources,
-                                          overhead=overhead, limits=limits)
+        self.context = context
+        super(ResizeClaim, self).__init__(context, instance, tracker,
+                                          resources, overhead=overhead,
+                                          limits=limits)
         self.migration = None
 
     @property
@@ -221,11 +225,12 @@ class ResizeClaim(Claim):
         return self.instance_type['memory_mb'] + self.overhead['memory_mb']
 
     def _test_pci(self):
-        pci_requests = pci_request.get_instance_pci_requests(
-            self.instance, 'new_')
-        if pci_requests:
+        pci_requests = objects.InstancePCIRequests.\
+                       get_by_instance_uuid_and_newness(
+                           self.context, self.instance['uuid'], True)
+        if pci_requests.requests:
             claim = self.tracker.pci_tracker.stats.support_requests(
-                pci_requests)
+                pci_requests.requests)
             if not claim:
                 return _('Claim pci failed.')
 
@@ -238,4 +243,5 @@ class ResizeClaim(Claim):
         been aborted.
         """
         LOG.debug("Aborting claim: %s" % self, instance=self.instance)
-        self.tracker.drop_resize_claim(self.instance, self.instance_type)
+        self.tracker.drop_resize_claim(self.context, self.instance,
+                                       self.instance_type)

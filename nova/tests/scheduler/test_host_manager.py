@@ -15,6 +15,9 @@
 """
 Tests For HostManager
 """
+
+import mock
+
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import db
@@ -474,18 +477,23 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertIsNone(host.pci_stats)
         self.assertEqual(hyper_ver_int, host.hypervisor_version)
 
-    def test_stat_consumption_from_instance(self):
+    @mock.patch.object(host_manager.objects.InstancePCIRequests,
+        'get_by_instance_uuid',
+        return_value=host_manager.objects.InstancePCIRequests(requests=[]))
+    def test_stat_consumption_from_instance(self, mock_pci_req):
         host = host_manager.HostState("fakehost", "fakenode")
 
         instance = dict(root_gb=0, ephemeral_gb=0, memory_mb=0, vcpus=0,
                         project_id='12345', vm_state=vm_states.BUILDING,
-                        task_state=task_states.SCHEDULING, os_type='Linux')
-        host.consume_from_instance(instance)
+                        task_state=task_states.SCHEDULING, os_type='Linux',
+                        uuid='fake-uuid')
+        host.consume_from_instance('fake-context', instance)
 
         instance = dict(root_gb=0, ephemeral_gb=0, memory_mb=0, vcpus=0,
                         project_id='12345', vm_state=vm_states.PAUSED,
-                        task_state=None, os_type='Linux')
-        host.consume_from_instance(instance)
+                        task_state=None, os_type='Linux',
+                        uuid='fake-uuid')
+        host.consume_from_instance('fake-context', instance)
 
         self.assertEqual(2, host.num_instances)
         self.assertEqual(1, host.num_io_ops)

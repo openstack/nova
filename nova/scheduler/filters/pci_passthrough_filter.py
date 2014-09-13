@@ -44,7 +44,7 @@ class PciPassthroughFilter(filters.BaseHostFilter):
         pci_requests = filter_properties.get('pci_requests')
         if not pci_requests:
             return True
-        if not host_state.pci_stats.support_requests(pci_requests):
+        if not host_state.pci_stats.support_requests(pci_requests.requests):
             LOG.debug("%(host_state)s doesn't have the required PCI devices"
                       " (%(requests)s)",
                       {'host_state': host_state, 'requests': pci_requests})

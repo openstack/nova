@@ -61,6 +61,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
+from nova.pci import pci_request
 import nova.policy
 from nova import quota
 from nova import rpc
@@ -783,6 +784,9 @@ class API(base.Base):
         system_metadata = flavors.save_flavor_info(
             dict(), instance_type)
 
+        pci_request_info = pci_request.get_pci_requests_from_flavor(
+            instance_type)
+
         base_options = {
             'reservation_id': reservation_id,
             'image_ref': image_href,
@@ -810,6 +814,7 @@ class API(base.Base):
             'availability_zone': availability_zone,
             'root_device_name': root_device_name,
             'progress': 0,
+            'pci_request_info': pci_request_info,
             'system_metadata': system_metadata}
 
         options_from_image = self._inherit_properties_from_image(
@@ -847,7 +852,9 @@ class API(base.Base):
                         context, instance_type, boot_meta, instance,
                         security_groups, block_device_mapping,
                         num_instances, i, shutdown_terminate)
-
+                pci_requests = base_options['pci_request_info']
+                pci_requests.instance_uuid = instance.uuid
+                pci_requests.save(context)
                 instances.append(instance)
                 # send a state update notification for the initial create to
                 # show it going from non-existent to BUILDING

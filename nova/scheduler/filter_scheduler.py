@@ -302,7 +302,7 @@ class FilterScheduler(driver.Scheduler):
 
             # Now consume the resources so the filter/weights
             # will change for the next instance.
-            chosen_host.obj.consume_from_instance(instance_properties)
+            chosen_host.obj.consume_from_instance(context, instance_properties)
             if update_group_hosts is True:
                 filter_properties['group_hosts'].add(chosen_host.obj.host)
         return selected_hosts

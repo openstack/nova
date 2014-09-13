@@ -155,7 +155,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.driver.schedule_run_instance(fake_context, request_spec,
                 None, None, None, None, {}, False)
 
-    def test_schedule_happy_day(self):
+    @mock.patch.object(objects.InstancePCIRequests,
+        'get_by_instance_uuid',
+        return_value=objects.InstancePCIRequests(requests=[]))
+    def test_schedule_happy_day(self, mock_pci_req):
         """Make sure there's nothing glaringly wrong with _schedule()
         by doing a happy day pass through.
         """
@@ -186,7 +189,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                                 'memory_mb': 512,
                                                 'ephemeral_gb': 0,
                                                 'vcpus': 1,
-                                                'os_type': 'Linux'}}
+                                                'os_type': 'Linux',
+                                                'uuid': 'fake-uuid'}}
         self.mox.ReplayAll()
         weighed_hosts = sched._schedule(fake_context, request_spec, {})
         self.assertEqual(len(weighed_hosts), 10)
@@ -456,7 +460,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self._group_details_in_filter_properties(group, 'get_by_name',
                                                  group.name, 'anti-affinity')
 
-    def test_schedule_host_pool(self):
+    @mock.patch.object(objects.InstancePCIRequests,
+        'get_by_instance_uuid',
+        return_value=objects.InstancePCIRequests(requests=[]))
+    def test_schedule_host_pool(self, mock_pci_req):
         """Make sure the scheduler_host_subset_size property works properly."""
 
         self.flags(scheduler_host_subset_size=2)
@@ -469,11 +476,12 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         fakes.mox_host_manager_db_calls(self.mox, fake_context)
 
         instance_properties = {'project_id': 1,
-                                    'root_gb': 512,
-                                    'memory_mb': 512,
-                                    'ephemeral_gb': 0,
-                                    'vcpus': 1,
-                                    'os_type': 'Linux'}
+                               'root_gb': 512,
+                               'memory_mb': 512,
+                               'ephemeral_gb': 0,
+                               'vcpus': 1,
+                               'os_type': 'Linux',
+                               'uuid': 'fake-uuid'}
 
         request_spec = dict(instance_properties=instance_properties,
                             instance_type={})
@@ -485,7 +493,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # one host should be chosen
         self.assertEqual(len(hosts), 1)
 
-    def test_schedule_large_host_pool(self):
+    @mock.patch.object(objects.InstancePCIRequests,
+        'get_by_instance_uuid',
+        return_value=objects.InstancePCIRequests(requests=[]))
+    def test_schedule_large_host_pool(self, mock_pci_req):
         """Hosts should still be chosen if pool size
         is larger than number of filtered hosts.
         """
@@ -500,11 +511,12 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         fakes.mox_host_manager_db_calls(self.mox, fake_context)
 
         instance_properties = {'project_id': 1,
-                                    'root_gb': 512,
-                                    'memory_mb': 512,
-                                    'ephemeral_gb': 0,
-                                    'vcpus': 1,
-                                    'os_type': 'Linux'}
+                               'root_gb': 512,
+                               'memory_mb': 512,
+                               'ephemeral_gb': 0,
+                               'vcpus': 1,
+                               'os_type': 'Linux',
+                               'uuid': 'fake-uuid'}
         request_spec = dict(instance_properties=instance_properties,
                             instance_type={})
         filter_properties = {}
@@ -515,7 +527,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # one host should be chose
         self.assertEqual(len(hosts), 1)
 
-    def test_schedule_chooses_best_host(self):
+    @mock.patch.object(objects.InstancePCIRequests,
+        'get_by_instance_uuid',
+        return_value=objects.InstancePCIRequests(requests=[]))
+    def test_schedule_chooses_best_host(self, mock_pci_req):
         """If scheduler_host_subset_size is 1, the largest host with greatest
         weight should be returned.
         """
@@ -543,7 +558,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                 'memory_mb': 512,
                                 'ephemeral_gb': 0,
                                 'vcpus': 1,
-                                'os_type': 'Linux'}
+                                'os_type': 'Linux',
+                                'uuid': 'fake-uuid'}
 
         request_spec = dict(instance_properties=instance_properties,
                             instance_type={})
@@ -561,7 +577,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.assertEqual(50, hosts[0].weight)
 
-    def test_select_destinations(self):
+    @mock.patch.object(objects.InstancePCIRequests,
+        'get_by_instance_uuid',
+        return_value=objects.InstancePCIRequests(requests=[]))
+    def test_select_destinations(self, mock_pci_req):
         """select_destinations is basically a wrapper around _schedule().
 
         Similar to the _schedule tests, this just does a happy path test to
@@ -598,7 +617,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                                 'memory_mb': 512,
                                                 'ephemeral_gb': 0,
                                                 'vcpus': 1,
-                                                'os_type': 'Linux'},
+                                                'os_type': 'Linux',
+                                                'uuid': 'fake-uuid'},
                         'num_instances': 1}
         self.mox.ReplayAll()
         dests = sched.select_destinations(fake_context, request_spec, {})
