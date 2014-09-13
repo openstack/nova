@@ -34,6 +34,7 @@ fake_pci = {
     'address': '0000:00:00.1',
     'product_id': 'p',
     'vendor_id': 'v',
+    'request_id': None,
     'status': 'available'}
 fake_pci_1 = dict(fake_pci, address='0000:00:00.2',
                   product_id='p1', vendor_id='v1')
@@ -56,6 +57,7 @@ fake_db_dev = {
     'label': 'l',
     'instance_uuid': None,
     'extra_info': '{}',
+    'request_id': None,
     }
 fake_db_dev_1 = dict(fake_db_dev, vendor_id='v1',
                      product_id='p1', id=2,

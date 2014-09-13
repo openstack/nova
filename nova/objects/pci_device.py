@@ -19,6 +19,7 @@ from nova.objects import base
 from nova.objects import fields
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -66,7 +67,8 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
 
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
-    VERSION = '1.1'
+    # Version 1.2: added request_id field
+    VERSION = '1.2'
 
     fields = {
         'id': fields.IntegerField(),
@@ -81,8 +83,14 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         'dev_id': fields.StringField(nullable=True),
         'label': fields.StringField(nullable=True),
         'instance_uuid': fields.StringField(nullable=True),
+        'request_id': fields.StringField(nullable=True),
         'extra_info': fields.DictOfStringsField(),
     }
+
+    def obj_make_compatible(self, primitive, target_version):
+        target_version = utils.convert_version_to_tuple(target_version)
+        if target_version < (1, 2) and 'request_id' in primitive:
+            del primitive['request_id']
 
     def update_device(self, dev_dict):
         """Sync the content from device dictionary to device object.
@@ -167,7 +175,8 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
 class PciDeviceList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              PciDevice <= 1.1
-    VERSION = '1.0'
+    # Version 1.1: PciDevice 1.2
+    VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('PciDevice'),
@@ -175,6 +184,7 @@ class PciDeviceList(base.ObjectListBase, base.NovaObject):
     child_versions = {
         '1.0': '1.1',
         # NOTE(danms): PciDevice was at 1.1 before we added this
+        '1.1': '1.2',
         }
 
     def __init__(self, *args, **kwargs):

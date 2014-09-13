@@ -45,6 +45,7 @@ fake_db_dev = {
     'label': 'l',
     'instance_uuid': None,
     'extra_info': '{}',
+    'request_id': None,
     }
 
 
@@ -64,6 +65,7 @@ fake_db_dev_1 = {
     'label': 'l',
     'instance_uuid': None,
     'extra_info': '{}',
+    'request_id': None,
     }
 
 

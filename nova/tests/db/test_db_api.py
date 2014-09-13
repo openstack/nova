@@ -7094,6 +7094,7 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 'label': 'label_8086_1520',
                 'status': 'available',
                 'instance_uuid': '00000000-0000-0000-0000-000000000010',
+                'request_id': None,
                 }, {'id': 3356,
                 'compute_node_id': 1,
                 'address': '0000:0f:03.7',
@@ -7105,6 +7106,7 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 'label': 'label_8086_1520',
                 'status': 'available',
                 'instance_uuid': '00000000-0000-0000-0000-000000000010',
+                'request_id': None,
                 }
 
     def _create_fake_pci_devs(self):

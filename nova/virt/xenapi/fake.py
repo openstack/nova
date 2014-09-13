@@ -712,14 +712,14 @@ class SessionBase(object):
 
         """
         # Driver is not pciback
-        dev_bad1 = ["Slot:\t86:10.0", "Class:\t0604", "Vendor:\t10b5",
+        dev_bad1 = ["Slot:\t0000:86:10.0", "Class:\t0604", "Vendor:\t10b5",
                     "Device:\t8747", "Rev:\tba", "Driver:\tpcieport", "\n"]
         # Driver is pciback but vendor and device are bad
-        dev_bad2 = ["Slot:\t88:00.0", "Class:\t0300", "Vendor:\t0bad",
+        dev_bad2 = ["Slot:\t0000:88:00.0", "Class:\t0300", "Vendor:\t0bad",
                     "Device:\tcafe", "SVendor:\t10de", "SDevice:\t100d",
                     "Rev:\ta1", "Driver:\tpciback", "\n"]
         # Driver is pciback and vendor, device are used for matching
-        dev_good = ["Slot:\t87:00.0", "Class:\t0300", "Vendor:\t10de",
+        dev_good = ["Slot:\t0000:87:00.0", "Class:\t0300", "Vendor:\t10de",
                     "Device:\t11bf", "SVendor:\t10de", "SDevice:\t100d",
                     "Rev:\ta1", "Driver:\tpciback", "\n"]
 

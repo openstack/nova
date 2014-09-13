@@ -72,6 +72,7 @@ def allocate(devobj, instance):
 def remove(devobj):
     devobj.status = 'removed'
     devobj.instance_uuid = None
+    devobj.request_id = None
 
 
 @check_device_status(dev_status=['claimed', 'allocated'])
@@ -84,6 +85,7 @@ def free(devobj, instance=None):
     old_status = devobj.status
     devobj.status = 'available'
     devobj.instance_uuid = None
+    devobj.request_id = None
     if old_status == 'allocated' and instance:
         # Notes(yjiang5): remove this check when instance object for
         # compute manager is finished

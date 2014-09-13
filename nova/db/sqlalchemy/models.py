@@ -1402,6 +1402,9 @@ class PciDevice(BASE, NovaBase):
     label = Column(String(255), nullable=False)
 
     status = Column(String(36), nullable=False)
+    # the request_id is used to identify a device that is allocated for a
+    # particular request
+    request_id = Column(String(36), nullable=True)
 
     extra_info = Column(Text)
 
