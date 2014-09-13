@@ -168,15 +168,6 @@ class API(base_api.NetworkAPI):
             nets,
             net_ids)
 
-        if not soft_external_network_attach_authorize(context):
-            for net in nets:
-                # Perform this check here rather than in validate_networks to
-                # ensure the check is performed every time
-                # allocate_for_instance is invoked
-                if net.get('router:external'):
-                    raise exception.ExternalNetworkAttachForbidden(
-                        network_uuid=net['id'])
-
         return nets
 
     def _create_port(self, port_client, instance, network_id, port_req_body,
@@ -238,6 +229,17 @@ class API(base_api.NetworkAPI):
             with excutils.save_and_reraise_exception():
                 LOG.exception(_LE('Neutron error creating port on network %s'),
                               network_id, instance=instance)
+
+    def _check_external_network_attach(self, context, nets):
+        """Check if attaching to external network is permitted."""
+        if not soft_external_network_attach_authorize(context):
+            for net in nets:
+                # Perform this check here rather than in validate_networks to
+                # ensure the check is performed every time
+                # allocate_for_instance is invoked
+                if net.get('router:external'):
+                    raise exception.ExternalNetworkAttachForbidden(
+                        network_uuid=net['id'])
 
     def allocate_for_instance(self, context, instance, **kwargs):
         """Allocate network resources for the instance.
@@ -321,6 +323,11 @@ class API(base_api.NetworkAPI):
                 raise exception.NetworkAmbiguous(msg)
             ordered_networks.append(
                 objects.NetworkRequest(network_id=nets[0]['id']))
+
+        # NOTE(melwitt): check external net attach permission after the
+        #                check for ambiguity, there could be another
+        #                available net which is permitted bug/1364344
+        self._check_external_network_attach(context, nets)
 
         security_groups = kwargs.get('security_groups', [])
         security_group_ids = []
