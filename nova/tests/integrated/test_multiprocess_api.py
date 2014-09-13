@@ -77,6 +77,7 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
             # Really exit
             os._exit(status)
 
+        LOG.info("Launched OSAPI WSGI service in process %d", pid)
         self.pid = pid
 
         # Wait at most 10 seconds to spawn workers
@@ -100,19 +101,24 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
     def tearDown(self):
         if self.pid:
             # Make sure all processes are stopped
+            LOG.info("in tearDown(), stopping launcher pid %d with SIGTERM",
+                     self.pid)
             os.kill(self.pid, signal.SIGTERM)
 
-            self._terminate_workers()
+            self._wait_for_all_workers_to_end()
 
             try:
                 # Make sure we reap our test process
                 self._reap_test()
             except fixtures.TimeoutException:
-                # If the child gets stuck or is too slow in existing
+                # If the child gets stuck or is too slow in exiting
                 # after receiving the SIGTERM, gracefully handle the
                 # timeout exception and try harder to kill it. We need
                 # to do this otherwise the child process can hold up
                 # the test run
+                LOG.warn("got fixtures.TimeoutException during tearDown(). "
+                         "going nuclear with a SIGKILL on launcher pid %d.",
+                         self.pid)
                 os.kill(self.pid, signal.SIGKILL)
 
         super(MultiprocessWSGITest, self).tearDown()
@@ -132,7 +138,10 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
 
         processes = [tuple(int(p) for p in l.strip().split()[:2])
                      for l in f.readlines()]
-        return [p for p, pp in processes if pp == self.pid]
+        workers = [p for p, pp in processes if pp == self.pid]
+        LOG.info('in _get_workers(), workers: %r for PPID %d',
+                 workers, self.pid)
+        return workers
 
     def wait_on_process_until_end(self, worker_pid):
         # NOTE: the testing framework itself has a
@@ -155,6 +164,9 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
                 # needs to check their exit state.
                 if err.errno == errno.ESRCH:
                     break
+                LOG.warning("got non-ESRCH errno %d when attempting "
+                            "status of worker PID %d",
+                            err.errno, worker_pid)
         LOG.info('process %r has exited' % worker_pid)
 
     def test_killed_worker_recover(self):
@@ -171,7 +183,6 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
 
         # Make sure worker pids don't match
         end_workers = self._get_workers()
-        LOG.info('workers: %r' % end_workers)
         self.assertNotEqual(start_workers, end_workers)
 
         # check if api service still works
@@ -188,9 +199,9 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
         LOG.info("sent launcher_process pid: %r signal: %r" % (self.pid, sig))
         os.kill(self.pid, sig)
 
-        self._terminate_workers()
+        self._wait_for_all_workers_to_end()
 
-    def _terminate_workers(self):
+    def _wait_for_all_workers_to_end(self):
         worker_pids = self._get_workers()
 
         # did you know the test framework has a timeout of its own?
