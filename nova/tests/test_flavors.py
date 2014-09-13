@@ -344,6 +344,27 @@ class InstanceTypeToolsTest(test.TestCase):
         flavors.delete_flavor_info(metadata, '', '_')
         self.assertEqual(metadata, {})
 
+    def test_flavor_numa_extras_are_saved(self):
+        instance_type = flavors.get_default_flavor()
+        instance_type['extra_specs'] = {
+            'hw:numa_mem.0': '123',
+            'hw:numa_cpus.0': '456',
+            'hw:numa_mem.1': '789',
+            'hw:numa_cpus.1': 'ABC',
+            'foo': 'bar',
+        }
+        sysmeta = flavors.save_flavor_info({}, instance_type)
+        _instance_type = flavors.extract_flavor({'system_metadata': sysmeta})
+        expected_extra_specs = {
+            'hw:numa_mem.0': '123',
+            'hw:numa_cpus.0': '456',
+            'hw:numa_mem.1': '789',
+            'hw:numa_cpus.1': 'ABC',
+        }
+        self.assertEqual(expected_extra_specs, _instance_type['extra_specs'])
+        flavors.delete_flavor_info(sysmeta, '')
+        self.assertEqual({}, sysmeta)
+
 
 class InstanceTypeFilteringTest(test.TestCase):
     """Test cases for the filter option available for instance_type_get_all."""
