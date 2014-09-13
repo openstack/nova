@@ -214,8 +214,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             del primitive['numa_topology']
         if target_version < (1, 10) and 'info_cache' in primitive:
             # NOTE(danms): Instance <= 1.9 (havana) had info_cache 1.4
-            self.info_cache.obj_make_compatible(primitive['info_cache'],
-                                                '1.4')
+            self.info_cache.obj_make_compatible(
+                    primitive['info_cache']['nova_object.data'], '1.4')
             primitive['info_cache']['nova_object.version'] = '1.4'
         if target_version < (1, 7):
             # NOTE(danms): Before 1.7, we couldn't handle unicode in
@@ -225,10 +225,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                 primitive[field] = primitive[field].encode('ascii', 'replace')
         if target_version < (1, 15) and 'pci_devices' in primitive:
             # NOTE(baoli): Instance <= 1.14 (icehouse) had PciDeviceList 1.0
-            # NOTE(vish): pci_devices is a list object so we must pull the
-            #             underlying primitive out of the nova_object_data.
             self.pci_devices.obj_make_compatible(
-                primitive['pci_devices']['nova_object.data'], '1.0')
+                    primitive['pci_devices']['nova_object.data'], '1.0')
             primitive['pci_devices']['nova_object.version'] = '1.0'
         if target_version < (1, 6):
             # NOTE(danms): Before 1.6 there was no pci_devices list
