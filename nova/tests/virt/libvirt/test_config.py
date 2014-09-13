@@ -1166,6 +1166,47 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               <source dev="eth0" mode="passthrough"/>
             </interface>""")
 
+    def test_config_8021Qbh_hostdev(self):
+        obj = config.LibvirtConfigGuestInterface()
+        obj.net_type = "hostdev"
+        obj.mac_addr = "DE:AD:BE:EF:CA:FE"
+        obj.source_dev = "0000:0a:00.1"
+        obj.vporttype = "802.1Qbh"
+        obj.add_vport_param("profileid", "MyPortProfile")
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <interface type="hostdev" managed="yes">
+              <mac address="DE:AD:BE:EF:CA:FE"/>
+              <source>
+                <address type="pci" domain="0x0000"
+                   bus="0x0a" slot="0x00" function="0x1"/>
+              </source>
+              <virtualport type="802.1Qbh">
+                <parameters profileid="MyPortProfile"/>
+              </virtualport>
+            </interface>""")
+
+    def test_config_hw_veb_hostdev(self):
+        obj = config.LibvirtConfigGuestInterface()
+        obj.net_type = "hostdev"
+        obj.mac_addr = "DE:AD:BE:EF:CA:FE"
+        obj.source_dev = "0000:0a:00.1"
+        obj.vlan = "100"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <interface type="hostdev" managed="yes">
+              <mac address="DE:AD:BE:EF:CA:FE"/>
+              <source>
+                <address type="pci" domain="0x0000"
+                   bus="0x0a" slot="0x00" function="0x1"/>
+              </source>
+              <vlan>
+               <tag id="100"/>
+              </vlan>
+            </interface>""")
+
 
 class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
 

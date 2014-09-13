@@ -28,6 +28,7 @@ import time
 from nova import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common import units
+from nova.pci import pci_utils
 from nova.virt import hardware
 
 from lxml import etree
@@ -986,6 +987,11 @@ class LibvirtConfigGuestSnapshotDisk(LibvirtConfigObject):
                 elif self.source_type == 'network':
                     self.source_protocol = c.get('protocol')
                     self.source_name = c.get('name')
+                    for sub in c.getchildren():
+                        if sub.tag == 'host':
+                            self.source_hosts.append(sub.get('name'))
+                            self.source_ports.append(sub.get('port'))
+
             elif c.tag == 'serial':
                 self.serial = c.text
 
@@ -1082,11 +1088,14 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         self.vif_outbound_peak = None
         self.vif_outbound_burst = None
         self.vif_outbound_average = None
+        self.vlan = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestInterface, self).format_dom()
 
         dev.set("type", self.net_type)
+        if self.net_type == "hostdev":
+            dev.set("managed", "yes")
         dev.append(etree.Element("mac", address=self.mac_addr))
         if self.model:
             dev.append(etree.Element("model", type=self.model))
@@ -1100,8 +1109,25 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         elif self.net_type == "direct":
             dev.append(etree.Element("source", dev=self.source_dev,
                                      mode=self.source_mode))
+        elif self.net_type == "hostdev":
+            source_elem = etree.Element("source")
+            domain, bus, slot, func = \
+                pci_utils.get_pci_address_fields(self.source_dev)
+            addr_elem = etree.Element("address", type='pci')
+            addr_elem.set("domain", "0x%s" % (domain))
+            addr_elem.set("bus", "0x%s" % (bus))
+            addr_elem.set("slot", "0x%s" % (slot))
+            addr_elem.set("function", "0x%s" % (func))
+            source_elem.append(addr_elem)
+            dev.append(source_elem)
         else:
             dev.append(etree.Element("source", bridge=self.source_dev))
+
+        if self.vlan and self.net_type in ("direct", "hostdev"):
+            vlan_elem = etree.Element("vlan")
+            tag_elem = etree.Element("tag", id=self.vlan)
+            vlan_elem.append(tag_elem)
+            dev.append(vlan_elem)
 
         if self.target_dev is not None:
             dev.append(etree.Element("target", dev=self.target_dev))

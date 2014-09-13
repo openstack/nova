@@ -43,6 +43,7 @@ from nova.compute import flavors
 from nova.compute import manager
 from nova.compute import power_state
 from nova.compute import task_states
+from nova.compute import utils as compute_utils
 from nova.compute import vm_mode
 from nova.compute import vm_states
 from nova import context
@@ -219,6 +220,9 @@ class FakeVirtDomain(object):
         return self.uuidstr
 
     def attachDeviceFlags(self, xml, flags):
+        pass
+
+    def attachDevice(self, xml):
         pass
 
     def detachDeviceFlags(self, xml, flags):
@@ -2663,6 +2667,7 @@ class LibvirtConnTestCase(test.TestCase,
                                address='0000:00:00.1',
                                compute_id=compute_ref['id'],
                                instance_uuid=instance.uuid,
+                               request_id=None,
                                extra_info=jsonutils.dumps({}))
         db.pci_device_update(self.context, pci_device_info['compute_node_id'],
                              pci_device_info['address'], pci_device_info)
@@ -2701,6 +2706,7 @@ class LibvirtConnTestCase(test.TestCase,
                                address='0000:00:00.2',
                                compute_id=compute_ref['id'],
                                instance_uuid=instance.uuid,
+                               request_id=None,
                                extra_info=jsonutils.dumps({}))
         db.pci_device_update(self.context, pci_device_info['compute_node_id'],
                              pci_device_info['address'], pci_device_info)
@@ -7123,6 +7129,63 @@ class LibvirtConnTestCase(test.TestCase,
                                   shutdown_attempts=1,
                                   succeeds=False)
 
+    @mock.patch.object(FakeVirtDomain, 'attachDevice')
+    @mock.patch.object(FakeVirtDomain, 'ID', return_value=1)
+    @mock.patch.object(compute_utils, 'get_image_metadata', return_value=None)
+    def test_attach_sriov_ports(self,
+                                mock_get_image_metadata,
+                                mock_ID,
+                                mock_attachDevice):
+        instance = db.instance_create(self.context, self.test_instance)
+        network_info = _fake_network_info(self.stubs, 1)
+        network_info[0]['vnic_type'] = network_model.VNIC_TYPE_DIRECT
+        domain = FakeVirtDomain()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        conn._attach_sriov_ports(self.context, instance, domain, network_info)
+        mock_get_image_metadata.assert_called_once_with(self.context,
+            conn._image_api, instance['image_ref'], instance)
+        self.assertTrue(mock_attachDevice.called)
+
+    @mock.patch.object(FakeVirtDomain, 'attachDevice')
+    @mock.patch.object(FakeVirtDomain, 'ID', return_value=1)
+    @mock.patch.object(compute_utils, 'get_image_metadata', return_value=None)
+    def test_attach_sriov_ports_with_info_cache(self,
+                                                mock_get_image_metadata,
+                                                mock_ID,
+                                                mock_attachDevice):
+        instance = db.instance_create(self.context, self.test_instance)
+        network_info = _fake_network_info(self.stubs, 1)
+        network_info[0]['vnic_type'] = network_model.VNIC_TYPE_DIRECT
+        instance.info_cache.network_info = network_info
+        domain = FakeVirtDomain()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        conn._attach_sriov_ports(self.context, instance, domain, None)
+        mock_get_image_metadata.assert_called_once_with(self.context,
+            conn._image_api, instance['image_ref'], instance)
+        self.assertTrue(mock_attachDevice.called)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_has_min_version', return_value=True)
+    @mock.patch.object(FakeVirtDomain, 'detachDeviceFlags')
+    @mock.patch.object(compute_utils, 'get_image_metadata', return_value=None)
+    def test_detach_sriov_ports(self,
+                                mock_get_image_metadata,
+                                mock_detachDeviceFlags,
+                                mock_has_min_version):
+        instance = db.instance_create(self.context, self.test_instance)
+        network_info = _fake_network_info(self.stubs, 1)
+        network_info[0]['vnic_type'] = network_model.VNIC_TYPE_DIRECT
+        instance.info_cache.network_info = network_info
+        domain = FakeVirtDomain()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        conn._detach_sriov_ports(instance, domain)
+        mock_get_image_metadata.assert_called_once_with(mock.ANY,
+            conn._image_api, instance['image_ref'], instance)
+        self.assertTrue(mock_detachDeviceFlags.called)
+
     def test_resume(self):
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
                     "<devices>"
@@ -9870,7 +9933,6 @@ class IptablesFirewallTestCase(test.TestCase):
         from nova.network import linux_net
         linux_net.iptables_manager.execute = fake_iptables_execute
 
-        from nova.compute import utils as compute_utils  # noqa
         self.stubs.Set(compute_utils, 'get_nw_info_for_instance',
                        lambda instance: network_model)
 

@@ -19,6 +19,8 @@ This module provides helper APIs for populating the config.py
 classes based on common operational needs / policies
 """
 
+from nova.pci import pci_utils
+
 
 def set_vif_guest_frontend_config(conf, mac, model, driver):
     """Populate a LibvirtConfigGuestInterface instance
@@ -89,17 +91,42 @@ def set_vif_host_backend_802qbg_config(conf, devname, managerid,
         conf.target_dev = tapname
 
 
-def set_vif_host_backend_802qbh_config(conf, devname, profileid,
+def set_vif_host_backend_802qbh_config(conf, net_type, devname, profileid,
                                        tapname=None):
     """Populate a LibvirtConfigGuestInterface instance
     with host backend details for an 802.1qbh device.
     """
 
-    conf.net_type = "direct"
-    conf.source_dev = devname
-    conf.source_mode = "vepa"
+    conf.net_type = net_type
+    if net_type == 'direct':
+        conf.source_mode = 'passthrough'
+        conf.source_dev = pci_utils.get_ifname_by_pci_address(devname)
+        conf.driver_name = 'vhost'
+    else:
+        conf.source_dev = devname
+        conf.model = None
     conf.vporttype = "802.1Qbh"
     conf.add_vport_param("profileid", profileid)
+    if tapname:
+        conf.target_dev = tapname
+
+
+def set_vif_host_backend_hw_veb(conf, net_type, devname, vlan,
+                                tapname=None):
+    """Populate a LibvirtConfigGuestInterface instance
+    with host backend details for an device that supports hardware
+    virtual ethernet bridge.
+    """
+
+    conf.net_type = net_type
+    if net_type == 'direct':
+        conf.source_mode = 'passthrough'
+        conf.source_dev = pci_utils.get_ifname_by_pci_address(devname)
+        conf.driver_name = 'vhost'
+    else:
+        conf.source_dev = devname
+        conf.model = None
+    conf.vlan = vlan
     if tapname:
         conf.target_dev = tapname
 
