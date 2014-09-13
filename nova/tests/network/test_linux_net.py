@@ -1014,6 +1014,21 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             device_exists.assert_has_calls(calls['device_exists'])
             _execute.assert_has_calls(calls['_execute'])
 
+    def test_ensure_bridge_brclt_addif_exception(self):
+        def fake_execute(*cmd, **kwargs):
+            if ('brctl', 'addif', 'bridge', 'eth0') == cmd:
+                return ('', 'some error happens')
+            else:
+                return ('', '')
+
+        with contextlib.nested(
+            mock.patch.object(linux_net, 'device_exists', return_value=True),
+            mock.patch.object(linux_net, '_execute', fake_execute)
+        ) as (device_exists, _execute):
+            driver = linux_net.LinuxBridgeInterfaceDriver()
+            self.assertRaises(exception.NovaException,
+                              driver.ensure_bridge, 'bridge', 'eth0')
+
     def test_set_device_mtu_configured(self):
         self.flags(network_device_mtu=10000)
         calls = [
