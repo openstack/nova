@@ -703,6 +703,14 @@
             "name": "ExtendedEvacuateFindHost",
             "namespace": "http://docs.openstack.org/compute/ext/extended_evacuate_find_host/api/v2",
             "updated": "%(isotime)s"
+        },
+        {
+            "alias": "os-server-group-quotas",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ServerGroupQuotas",
+            "namespace": "http://docs.openstack.org/compute/ext/server-group-quotas/api/v2",
+            "updated": "%(isotime)s"
         }
     ]
 }

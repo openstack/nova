@@ -260,13 +260,17 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
 
 class UsedLimitsTestCaseV2(UsedLimitsTestCaseV21):
     used_limit_extension = "compute_extension:used_limits_for_admin"
-    include_server_group_quotas = False
 
     def _set_up_controller(self):
         self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
         self.controller = used_limits_v2.UsedLimitsController(self.ext_mgr)
         self.mox.StubOutWithMock(used_limits_v2, 'authorize_for_admin')
         self.authorize = used_limits_v2.authorize_for_admin
+
+
+class UsedLimitsTestCaseV2WithoutServerGroupQuotas(UsedLimitsTestCaseV2):
+    used_limit_extension = "compute_extension:used_limits_for_admin"
+    include_server_group_quotas = False
 
 
 class UsedLimitsTestCaseXml(test.NoDBTestCase):

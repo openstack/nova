@@ -4490,3 +4490,55 @@ class ServerGroupsSampleJsonTest(ServersSampleBase):
 
 class ServerGroupsSampleXmlTest(ServerGroupsSampleJsonTest):
     ctype = 'xml'
+
+
+class ServerGroupQuotas_LimitsSampleJsonTest(LimitsSampleJsonTest):
+    extension_name = ("nova.api.openstack.compute.contrib."
+                      "server_group_quotas.Server_group_quotas")
+
+
+class ServerGroupQuotas_LimitsSampleXmlTest(LimitsSampleXmlTest):
+    extension_name = ("nova.api.openstack.compute.contrib."
+                      "server_group_quotas.Server_group_quotas")
+
+
+class ServerGroupQuotas_UsedLimitsSamplesJsonTest(UsedLimitsSamplesJsonTest):
+    extension_name = ("nova.api.openstack.compute.contrib."
+               "server_group_quotas.Server_group_quotas")
+    extends_name = ("nova.api.openstack.compute.contrib.used_limits."
+                    "Used_limits")
+
+
+class ServerGroupQuotas_UsedLimitsSamplesXmlTest(UsedLimitsSamplesXmlTest):
+    extension_name = ("nova.api.openstack.compute.contrib."
+               "server_group_quotas.Server_group_quotas")
+    extends_name = ("nova.api.openstack.compute.contrib.used_limits."
+                    "Used_limits")
+
+
+class ServerGroupQuotas_QuotasSampleJsonTests(QuotasSampleJsonTests):
+    extension_name = ("nova.api.openstack.compute.contrib."
+               "server_group_quotas.Server_group_quotas")
+    extends_name = "nova.api.openstack.compute.contrib.quotas.Quotas"
+
+
+class ServerGroupQuotas_QuotasSampleXmlTests(QuotasSampleXmlTests):
+    extension_name = ("nova.api.openstack.compute.contrib."
+               "server_group_quotas.Server_group_quotas")
+    extends_name = "nova.api.openstack.compute.contrib.quotas.Quotas"
+
+
+class ServerGroupQuotasQuota_ClassesSampleJsonTests(
+           QuotaClassesSampleJsonTests):
+    extension_name = ("nova.api.openstack.compute.contrib."
+              "server_group_quotas.Server_group_quotas")
+    extends_name = ("nova.api.openstack.compute.contrib.quota_classes."
+                    "Quota_classes")
+
+
+class ServerGroupQuotas_QuotaClassesSampleXmlTests(
+           QuotaClassesSampleXmlTests):
+    extension_name = ("nova.api.openstack.compute.contrib."
+              "server_group_quotas.Server_group_quotas")
+    extends_name = ("nova.api.openstack.compute.contrib.quota_classes."
+                    "Quota_classes")

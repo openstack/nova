@@ -242,6 +242,9 @@
   <extension alias="os-server-groups" updated="2013-06-20T00:00:00Z" namespace="http://docs.openstack.org/compute/ext/servergroups/api/v2" name="ServerGroups">
     <description>Server group support.</description>
   </extension>
+  <extension alias="os-server-group-quotas" updated="2014-07-25T00:00:00Z" namespace="http://docs.openstack.org/compute/ext/server-group-quotas/api/v2" name="ServerGroupQuotas">
+    <description>Adds quota support to server groups.</description>
+  </extension>
   <extension alias="os-server-list-multi-status" updated="2014-05-11T00:00:00Z" namespace="http://docs.openstack.org/compute/ext/os-server-list-multi-status/api/v2" name="ServerListMultiStatus">
     <description>Allow to filter the servers by a set of status values.</description>
   </extension>
