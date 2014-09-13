@@ -628,3 +628,15 @@ class VMUtilsTestCase(test.NoDBTestCase):
         self.assertEqual(mock_get_vm_setting_data().Notes,
                          '\n'.join('fake notes'))
         self.assertEqual(response, mock_get_wmi_obj())
+
+    def test_list_instances(self):
+        vs = mock.MagicMock()
+        attrs = {'ElementName': 'fake_name'}
+        vs.configure_mock(**attrs)
+        self._vmutils._conn.Msvm_VirtualSystemSettingData.return_value = [vs]
+        response = self._vmutils.list_instances()
+
+        self.assertEqual([(attrs['ElementName'])], response)
+        self._vmutils._conn.Msvm_VirtualSystemSettingData.assert_called_with(
+            ['ElementName'],
+            SettingType=self._vmutils._VIRTUAL_SYSTEM_CURRENT_SETTINGS)

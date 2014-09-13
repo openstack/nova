@@ -175,3 +175,15 @@ class VMUtilsV2TestCase(test_vmutils.VMUtilsTestCase):
 
     def test_create_vm_obj_no_vm_path(self):
         self._test_create_vm_obj(vm_path=None)
+
+    def test_list_instances(self):
+        vs = mock.MagicMock()
+        attrs = {'ElementName': 'fake_name'}
+        vs.configure_mock(**attrs)
+        self._vmutils._conn.Msvm_VirtualSystemSettingData.return_value = [vs]
+        response = self._vmutils.list_instances()
+
+        self.assertEqual([(attrs['ElementName'])], response)
+        self._vmutils._conn.Msvm_VirtualSystemSettingData.assert_called_with(
+            ['ElementName'],
+            VirtualSystemType=self._vmutils._VIRTUAL_SYSTEM_TYPE_REALIZED)
