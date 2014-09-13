@@ -1731,3 +1731,8 @@ class ImageSerialPortNumberExceedFlavorValue(Invalid):
 
 class InvalidImageConfigDrive(Invalid):
     msg_fmt = _("Image's config drive option '%(config_drive)s' is invalid")
+
+
+class InvalidHypervisorVirtType(Invalid):
+    msg_fmt = _("Hypervisor virtualization type '%(hvtype)s' is not "
+                "recognised")
