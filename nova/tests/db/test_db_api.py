@@ -5144,10 +5144,8 @@ class NetworkTestCase(test.TestCase, ModelsObjectComparatorMixin):
         # network with instance with host set
         net3 = db.network_create_safe(self.ctxt, {})
         instance = db.instance_create(self.ctxt, {'host': host})
-        vif = db.virtual_interface_create(self.ctxt,
-            {'instance_uuid': instance.uuid})
         db.fixed_ip_create(self.ctxt, {'network_id': net3.id,
-            'virtual_interface_id': vif.id})
+            'instance_uuid': instance.uuid})
         self._assertEqualListsOfObjects([net1, net2, net3],
             db.network_get_all_by_host(self.ctxt, host))
 

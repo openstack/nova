@@ -2788,16 +2788,14 @@ def network_get_by_cidr(context, cidr):
 def network_get_all_by_host(context, host):
     session = get_session()
     fixed_host_filter = or_(models.FixedIp.host == host,
-                            models.Instance.host == host)
+            and_(models.FixedIp.instance_uuid != null(),
+                 models.Instance.host == host))
     fixed_ip_query = model_query(context, models.FixedIp.network_id,
                                  base_model=models.FixedIp,
                                  session=session).\
-                     outerjoin((models.VirtualInterface,
-                           models.VirtualInterface.id ==
-                           models.FixedIp.virtual_interface_id)).\
                      outerjoin((models.Instance,
-                           models.Instance.uuid ==
-                               models.VirtualInterface.instance_uuid)).\
+                                models.Instance.uuid ==
+                                models.FixedIp.instance_uuid)).\
                      filter(fixed_host_filter)
     # NOTE(vish): return networks that have host set
     #             or that have a fixed ip with host set
