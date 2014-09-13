@@ -28,7 +28,6 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import objects
-from nova.pci import pci_request
 from nova.scheduler import driver
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
@@ -676,19 +675,3 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         sched._provision_resource(fake_context, weighted_host,
                                   request_spec, filter_properties,
                                   None, None, None, None)
-
-    def test_pci_request_in_filter_properties(self):
-        instance_type = {}
-        request_spec = {'instance_type': instance_type,
-                        'instance_properties': {'project_id': 1,
-                                                'os_type': 'Linux'}}
-        filter_properties = {}
-        requests = [{'count': 1, 'spec': [{'vendor_id': '8086'}]}]
-        self.mox.StubOutWithMock(pci_request, 'get_pci_requests_from_flavor')
-        pci_request.get_pci_requests_from_flavor(
-            instance_type).AndReturn(requests)
-        self.mox.ReplayAll()
-        self.driver.populate_filter_properties(
-            request_spec, filter_properties)
-        self.assertEqual(filter_properties.get('pci_requests'),
-                         requests)

@@ -382,6 +382,14 @@ class VIFTests(test.NoDBTestCase):
         vif2 = model.VIF(active=False)
         self.assertNotEqual(vif1, vif2)
 
+        vif1 = model.VIF(vnic_type=model.VNIC_TYPE_NORMAL)
+        vif2 = model.VIF(vnic_type=model.VNIC_TYPE_DIRECT)
+        self.assertNotEqual(vif1, vif2)
+
+        vif1 = model.VIF(profile={'pci_slot': '0000:0a:00.1'})
+        vif2 = model.VIF(profile={'pci_slot': '0000:0a:00.2'})
+        self.assertNotEqual(vif1, vif2)
+
     def test_create_vif_with_type(self):
         vif_dict = dict(
             id=1,

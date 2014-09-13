@@ -19,11 +19,13 @@ from nova import utils
 
 class NetworkRequest(obj_base.NovaObject):
     # Version 1.0: Initial version
+    # Version 1.1: Added pci_request_id
     VERSION = '1.0'
     fields = {
         'network_id': fields.StringField(nullable=True),
         'address': fields.IPAddressField(nullable=True),
         'port_id': fields.UUIDField(nullable=True),
+        'pci_request_id': fields.UUIDField(nullable=True),
     }
 
     def obj_load_attr(self, attr):
@@ -32,15 +34,16 @@ class NetworkRequest(obj_base.NovaObject):
     def to_tuple(self):
         address = str(self.address) if self.address is not None else None
         if utils.is_neutron():
-            return self.network_id, address, self.port_id
+            return self.network_id, address, self.port_id, self.pci_request_id
         else:
             return self.network_id, address
 
     @classmethod
     def from_tuple(cls, net_tuple):
-        if len(net_tuple) == 3:
-            network_id, address, port_id = net_tuple
-            return cls(network_id=network_id, address=address, port_id=port_id)
+        if len(net_tuple) == 4:
+            network_id, address, port_id, pci_request_id = net_tuple
+            return cls(network_id=network_id, address=address,
+                       port_id=port_id, pci_request_id=pci_request_id)
         else:
             network_id, address = net_tuple
             return cls(network_id=network_id, address=address)
@@ -53,8 +56,9 @@ class NetworkRequestList(obj_base.ObjectListBase, obj_base.NovaObject):
 
     child_versions = {
         '1.0': '1.0',
+        '1.1': '1.1',
         }
-    VERSION = '1.0'
+    VERSION = '1.1'
 
     def as_tuples(self):
         return [x.to_tuple() for x in self.objects]

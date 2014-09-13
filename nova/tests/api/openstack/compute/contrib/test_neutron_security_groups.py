@@ -27,6 +27,7 @@ from nova import compute
 from nova import context
 import nova.db
 from nova import exception
+from nova.network import model
 from nova.network import neutronv2
 from nova.network.neutronv2 import api as neutron_api
 from nova.network.security_group import neutron_driver
@@ -69,7 +70,7 @@ class TestNeutronSecurityGroups(
         return net
 
     def _create_port(self, **kwargs):
-        body = {'port': {}}
+        body = {'port': {'binding:vnic_type': model.VNIC_TYPE_NORMAL}}
         fields = ['security_groups', 'device_id', 'network_id',
                   'port_security_enabled']
         for field in fields:
@@ -711,7 +712,9 @@ class MockClient(object):
                'device_id': p.get('device_id', str(uuid.uuid4())),
                'admin_state_up': p.get('admin_state_up', True),
                'security_groups': p.get('security_groups', []),
-               'network_id': p.get('network_id')}
+               'network_id': p.get('network_id'),
+               'binding:vnic_type':
+                   p.get('binding:vnic_type') or model.VNIC_TYPE_NORMAL}
 
         network = self._fake_networks[p['network_id']]
         if 'port_security_enabled' in p:

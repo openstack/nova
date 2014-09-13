@@ -16,6 +16,7 @@
 #
 
 import time
+import uuid
 
 from neutronclient.common import exceptions as neutron_client_exc
 from oslo.config import cfg
@@ -35,6 +36,9 @@ from nova import objects
 from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
+from nova.pci import pci_manager
+from nova.pci import pci_request
+from nova.pci import pci_whitelist
 
 neutron_opts = [
     cfg.StrOpt('url',
@@ -310,7 +314,8 @@ class API(base_api.NetworkAPI):
 
         # if this function is directly called without a requested_network param
         # or if it is indirectly called through allocate_port_for_instance()
-        # with None params=(network_id=None, requested_ip=None, port_id=None):
+        # with None params=(network_id=None, requested_ip=None, port_id=None,
+        # pci_request_id=None):
         if (not requested_networks
             or requested_networks.is_single_unspecified):
             # bug/1267723 - if no network is requested and more
@@ -390,7 +395,9 @@ class API(base_api.NetworkAPI):
             port_req_body = {'port': {'device_id': instance.uuid,
                                       'device_owner': zone}}
             try:
-                self._populate_neutron_extension_values(context, instance,
+                self._populate_neutron_extension_values(context,
+                                                        instance,
+                                                        request.pci_request_id,
                                                         port_req_body)
                 # Requires admin creds to set port bindings
                 port_client = (neutron if not
@@ -461,8 +468,27 @@ class API(base_api.NetworkAPI):
             self._refresh_neutron_extensions_cache(context)
         return constants.PORTBINDING_EXT in self.extensions
 
+    @staticmethod
+    def _populate_neutron_binding_profile(instance, pci_request_id,
+                                          port_req_body):
+        """Populate neutron binding:profile.
+
+        Populate it with SR-IOV related information
+        """
+        if pci_request_id:
+            pci_dev = pci_manager.get_instance_pci_devs(
+                instance, pci_request_id).pop()
+            devspec = pci_whitelist.get_pci_device_devspec(pci_dev)
+            profile = {'pci_vendor_info': "%s:%s" % (pci_dev.vendor_id,
+                                                     pci_dev.product_id),
+                       'pci_slot': pci_dev.address,
+                       'physical_network':
+                           devspec.get_tags().get('physical_network')
+                      }
+            port_req_body['port']['binding:profile'] = profile
+
     def _populate_neutron_extension_values(self, context, instance,
-                                           port_req_body):
+                                           pci_request_id, port_req_body):
         """Populate neutron extension values for the instance.
 
         If the extensions loaded contain QOS_QUEUE then pass the rxtx_factor.
@@ -474,6 +500,9 @@ class API(base_api.NetworkAPI):
             port_req_body['port']['rxtx_factor'] = rxtx_factor
         if self._has_port_binding_extension(context):
             port_req_body['port']['binding:host_id'] = instance.get('host')
+            self._populate_neutron_binding_profile(instance,
+                                                   pci_request_id,
+                                                   port_req_body)
 
     def deallocate_for_instance(self, context, instance, **kwargs):
         """Deallocate all network resources related to the instance."""
@@ -487,7 +516,8 @@ class API(base_api.NetworkAPI):
         # NOTE(danms): Temporary and transitional
         if isinstance(requested_networks, objects.NetworkRequestList):
             requested_networks = requested_networks.as_tuples()
-        ports_to_skip = [port_id for nets, fips, port_id in requested_networks]
+        ports_to_skip = [port_id for nets, fips, port_id, pci_request_id
+                         in requested_networks]
         ports = set(ports) - set(ports_to_skip)
         # Reset device_id and device_owner for the ports that are skipped
         for port in ports_to_skip:
@@ -523,7 +553,8 @@ class API(base_api.NetworkAPI):
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(network_id=network_id,
                                             address=requested_ip,
-                                            port_id=port_id)])
+                                            port_id=port_id,
+                                            pci_request_id=None)])
         return self.allocate_for_instance(context, instance,
                 requested_networks=requested_networks)
 
@@ -669,6 +700,54 @@ class API(base_api.NetworkAPI):
 
         raise exception.FixedIpNotFoundForSpecificInstance(
                 instance_uuid=instance['uuid'], ip=address)
+
+    def _get_port_vnic_info(self, context, neutron, port_id):
+        """Retrieve port vnic info
+
+        Invoked with a valid port_id.
+        Return vnic type and the attached physical network name.
+        """
+        phynet_name = None
+        vnic_type = None
+        port = neutron.show_port(port_id,
+            fields=['binding:vnic_type', 'network_id']).get('port')
+        vnic_type = port['binding:vnic_type']
+        if vnic_type != network_model.VNIC_TYPE_NORMAL:
+            net_id = port['network_id']
+            net = neutron.show_network(net_id,
+                fields='provider:physical_network').get('network')
+            phynet_name = net.get('provider:physical_network')
+        return vnic_type, phynet_name
+
+    def create_pci_requests_for_sriov_ports(self, context, pci_requests,
+                                            requested_networks):
+        """Check requested networks for any SR-IOV port request.
+
+        Create a PCI request object for each SR-IOV port, and add it to the
+        pci_requests object that contains a list of PCI request object.
+        """
+        if not requested_networks:
+            return
+
+        neutron = neutronv2.get_client(context, admin=True)
+        for request_net in requested_networks:
+            phynet_name = None
+            vnic_type = network_model.VNIC_TYPE_NORMAL
+
+            if request_net.port_id:
+                vnic_type, phynet_name = self._get_port_vnic_info(
+                    context, neutron, request_net.port_id)
+            pci_request_id = None
+            if vnic_type != network_model.VNIC_TYPE_NORMAL:
+                request = objects.InstancePCIRequest(
+                    count=1,
+                    spec=[{pci_request.PCI_NET_TAG: phynet_name}],
+                    request_id=str(uuid.uuid4()))
+                pci_requests.requests.append(request)
+                pci_request_id = request.request_id
+
+            # Add pci_request_id into the requested network
+            request_net.pci_request_id = pci_request_id
 
     def validate_networks(self, context, requested_networks, num_instances):
         """Validate that the tenant can use the requested networks.
@@ -1297,7 +1376,9 @@ class API(base_api.NetworkAPI):
                     id=current_neutron_port['id'],
                     address=current_neutron_port['mac_address'],
                     network=network,
+                    vnic_type=current_neutron_port['binding:vnic_type'],
                     type=current_neutron_port.get('binding:vif_type'),
+                    profile=current_neutron_port.get('binding:profile'),
                     details=current_neutron_port.get('binding:vif_details'),
                     ovs_interfaceid=ovs_interfaceid,
                     devname=devname,

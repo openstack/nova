@@ -106,6 +106,8 @@ class PciDevTrackerTestCase(test.TestCase):
         super(PciDevTrackerTestCase, self).setUp()
         self.stubs.Set(db, 'pci_device_get_all_by_node',
             self._fake_get_pci_devices)
+        # The fake_pci_whitelist must be called before creating the fake
+        # devices
         patcher = pci_fakes.fake_pci_whitelist()
         self.addCleanup(patcher.stop)
         self._create_fake_instance()
