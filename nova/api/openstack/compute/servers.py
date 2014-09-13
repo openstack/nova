@@ -925,33 +925,37 @@ class Controller(wsgi.Controller):
         if self.ext_mgr.is_loaded('OS-SCH-HNT'):
             scheduler_hints = server_dict.get('scheduler_hints', {})
 
+        check_server_group_quota = \
+            self.ext_mgr.is_loaded('os-server-group-quotas')
+
         try:
             _get_inst_type = flavors.get_flavor_by_flavor_id
             inst_type = _get_inst_type(flavor_id, ctxt=context,
                                        read_deleted="no")
 
             (instances, resv_id) = self.compute_api.create(context,
-                            inst_type,
-                            image_uuid,
-                            display_name=name,
-                            display_description=name,
-                            key_name=key_name,
-                            metadata=server_dict.get('metadata', {}),
-                            access_ip_v4=access_ip_v4,
-                            access_ip_v6=access_ip_v6,
-                            injected_files=injected_files,
-                            admin_password=password,
-                            min_count=min_count,
-                            max_count=max_count,
-                            requested_networks=requested_networks,
-                            security_group=sg_names,
-                            user_data=user_data,
-                            availability_zone=availability_zone,
-                            config_drive=config_drive,
-                            block_device_mapping=block_device_mapping,
-                            auto_disk_config=auto_disk_config,
-                            scheduler_hints=scheduler_hints,
-                            legacy_bdm=legacy_bdm)
+                        inst_type,
+                        image_uuid,
+                        display_name=name,
+                        display_description=name,
+                        key_name=key_name,
+                        metadata=server_dict.get('metadata', {}),
+                        access_ip_v4=access_ip_v4,
+                        access_ip_v6=access_ip_v6,
+                        injected_files=injected_files,
+                        admin_password=password,
+                        min_count=min_count,
+                        max_count=max_count,
+                        requested_networks=requested_networks,
+                        security_group=sg_names,
+                        user_data=user_data,
+                        availability_zone=availability_zone,
+                        config_drive=config_drive,
+                        block_device_mapping=block_device_mapping,
+                        auto_disk_config=auto_disk_config,
+                        scheduler_hints=scheduler_hints,
+                        legacy_bdm=legacy_bdm,
+                        check_server_group_quota=check_server_group_quota)
         except (exception.QuotaError,
                 exception.PortLimitExceeded) as error:
             raise exc.HTTPForbidden(

@@ -2930,6 +2930,65 @@ class ServersControllerCreateTest(test.TestCase):
                 ' already used 9 of 10 cores')
         self._do_test_create_instance_above_quota('cores', 1, 10, msg)
 
+    def test_create_instance_above_quota_group_members(self):
+        ctxt = context.get_admin_context()
+        fake_group = objects.InstanceGroup(ctxt)
+        fake_group.create()
+
+        def fake_count(context, name, group, user_id):
+            self.assertEqual(name, "server_group_members")
+            self.assertEqual(group.uuid, fake_group.uuid)
+            self.assertEqual(user_id,
+                             self.req.environ['nova.context'].user_id)
+            return 10
+
+        def fake_limit_check(context, **kwargs):
+            if 'server_group_members' in kwargs:
+                raise exception.OverQuota(overs={})
+
+        def fake_instance_destroy(context, uuid, constraint):
+            return fakes.stub_instance(1)
+
+        self.stubs.Set(fakes.QUOTAS, 'count', fake_count)
+        self.stubs.Set(fakes.QUOTAS, 'limit_check', fake_limit_check)
+        self.stubs.Set(db, 'instance_destroy', fake_instance_destroy)
+        self.ext_mgr.extensions = {'OS-SCH-HNT': 'fake',
+                                   'os-server-group-quotas': 'fake'}
+        self.body['server']['scheduler_hints'] = {'group': fake_group.uuid}
+        self.req.body = jsonutils.dumps(self.body)
+
+        expected_msg = "Quota exceeded, too many servers in group"
+
+        try:
+            self.controller.create(self.req, self.body).obj['server']
+            self.fail('expected quota to be exceeded')
+        except webob.exc.HTTPForbidden as e:
+            self.assertEqual(e.explanation, expected_msg)
+
+    def test_create_instance_above_quota_server_groups(self):
+
+        def fake_reserve(contex, **deltas):
+            if 'server_groups' in deltas:
+                raise exception.OverQuota(overs={})
+
+        def fake_instance_destroy(context, uuid, constraint):
+            return fakes.stub_instance(1)
+
+        self.stubs.Set(fakes.QUOTAS, 'reserve', fake_reserve)
+        self.stubs.Set(db, 'instance_destroy', fake_instance_destroy)
+        self.ext_mgr.extensions = {'OS-SCH-HNT': 'fake',
+                                   'os-server-group-quotas': 'fake'}
+        self.body['server']['scheduler_hints'] = {'group': 'fake-group'}
+        self.req.body = jsonutils.dumps(self.body)
+
+        expected_msg = "Quota exceeded, too many server groups."
+
+        try:
+            self.controller.create(self.req, self.body).obj['server']
+            self.fail('expected quota to be exceeded')
+        except webob.exc.HTTPForbidden as e:
+            self.assertEqual(e.explanation, expected_msg)
+
 
 class ServersControllerCreateTestWithMock(test.TestCase):
     image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
