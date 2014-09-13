@@ -22,11 +22,14 @@ import mock
 import six
 
 from nova.compute import claims
+from nova import db
 from nova import exception
 from nova import objects
+from nova.openstack.common import jsonutils
 from nova.pci import pci_manager
 from nova import test
 from nova.tests.pci import pci_fakes
+from nova.virt import hardware
 
 
 class FakeResourceHandler(object):
@@ -65,11 +68,25 @@ class ClaimTestCase(test.NoDBTestCase):
         self.tracker = DummyTracker()
 
     def _claim(self, limits=None, overhead=None, **kwargs):
+        numa_topology = kwargs.pop('numa_topology', None)
         instance = self._fake_instance(**kwargs)
+        if numa_topology:
+            db_numa_topology = {
+                    'id': 1, 'created_at': None, 'updated_at': None,
+                    'deleted_at': None, 'deleted': None,
+                    'instance_uuid': instance['uuid'],
+                    'numa_topology': numa_topology.to_json()
+                }
+        else:
+            db_numa_topology = None
         if overhead is None:
             overhead = {'memory_mb': 0}
-        return claims.Claim('context', instance, self.tracker, self.resources,
-                            overhead=overhead, limits=limits)
+        with mock.patch.object(
+                db, 'instance_extra_get_by_instance_uuid',
+                return_value=db_numa_topology):
+            return claims.Claim('context', instance, self.tracker,
+                                self.resources, overhead=overhead,
+                                limits=limits)
 
     def _fake_instance(self, **kwargs):
         instance = {
@@ -78,7 +95,8 @@ class ClaimTestCase(test.NoDBTestCase):
             'root_gb': 10,
             'ephemeral_gb': 5,
             'vcpus': 1,
-            'system_metadata': {}
+            'system_metadata': {},
+            'numa_topology': None
         }
         instance.update(**kwargs)
         return instance
@@ -104,7 +122,11 @@ class ClaimTestCase(test.NoDBTestCase):
             'local_gb_used': 0,
             'free_disk_gb': 20,
             'vcpus': 2,
-            'vcpus_used': 0
+            'vcpus_used': 0,
+            'numa_topology': hardware.VirtNUMAHostTopology(
+                cells=[hardware.VirtNUMATopologyCellUsage(1, [1, 2], 512),
+                       hardware.VirtNUMATopologyCellUsage(2, [3, 4], 512)]
+                ).to_json()
         }
         if values:
             resources.update(values)
@@ -219,6 +241,38 @@ class ClaimTestCase(test.NoDBTestCase):
         self.assertTrue(self.tracker.ext_resources_handler.test_called)
         self.assertFalse(self.tracker.ext_resources_handler.usage_is_itype)
 
+    def test_numa_topology_no_limit(self, mock_get):
+        huge_instance = hardware.VirtNUMAInstanceTopology(
+                cells=[hardware.VirtNUMATopologyCell(
+                    1, set([1, 2, 3, 4, 5]), 2048)])
+        self._claim(numa_topology=huge_instance)
+
+    def test_numa_topology_fails(self, mock_get):
+        huge_instance = hardware.VirtNUMAInstanceTopology(
+                cells=[hardware.VirtNUMATopologyCell(
+                    1, set([1, 2, 3, 4, 5]), 2048)])
+        limit_topo = hardware.VirtNUMALimitTopology(
+                cells=[hardware.VirtNUMATopologyCellLimit(
+                            1, [1, 2], 512, cpu_limit=2, memory_limit=512),
+                       hardware.VirtNUMATopologyCellLimit(
+                            1, [3, 4], 512, cpu_limit=2, memory_limit=512)])
+        self.assertRaises(exception.ComputeResourcesUnavailable,
+                          self._claim,
+                          limits={'numa_topology': limit_topo.to_json()},
+                          numa_topology=huge_instance)
+
+    def test_numa_topology_passes(self, mock_get):
+        huge_instance = hardware.VirtNUMAInstanceTopology(
+                cells=[hardware.VirtNUMATopologyCell(
+                    1, set([1, 2, 3, 4, 5]), 2048)])
+        limit_topo = hardware.VirtNUMALimitTopology(
+                cells=[hardware.VirtNUMATopologyCellLimit(
+                            1, [1, 2], 512, cpu_limit=5, memory_limit=4096),
+                       hardware.VirtNUMATopologyCellLimit(
+                            1, [3, 4], 512, cpu_limit=5, memory_limit=4096)])
+        self._claim(limits={'numa_topology': limit_topo.to_json()},
+                    numa_topology=huge_instance)
+
     def test_abort(self, mock_get):
         claim = self._abort()
         self.assertTrue(claim.tracker.icalled)
@@ -239,14 +293,26 @@ class ResizeClaimTestCase(ClaimTestCase):
     def setUp(self):
         super(ResizeClaimTestCase, self).setUp()
         self.instance = self._fake_instance()
+        self.get_numa_constraint_patch = None
 
     def _claim(self, limits=None, overhead=None, **kwargs):
         instance_type = self._fake_instance_type(**kwargs)
+        numa_constraint = kwargs.pop('numa_topology', None)
         if overhead is None:
             overhead = {'memory_mb': 0}
-        return claims.ResizeClaim('context', self.instance, instance_type,
-                                  self.tracker, self.resources,
-                                  overhead=overhead, limits=limits)
+        with mock.patch.object(
+                hardware.VirtNUMAInstanceTopology, 'get_constraints',
+                return_value=numa_constraint):
+            return claims.ResizeClaim('context', self.instance, instance_type,
+                                      {}, self.tracker, self.resources,
+                                      overhead=overhead, limits=limits)
+
+    def _set_pci_request(self, claim):
+        request = [{'count': 1,
+                       'spec': [{'vendor_id': 'v', 'product_id': 'p'}],
+                      }]
+        claim.instance.update(
+            system_metadata={'new_pci_requests': jsonutils.dumps(request)})
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))

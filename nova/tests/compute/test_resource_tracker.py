@@ -1036,7 +1036,7 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
                 return_value=objects.InstancePCIRequests(requests=[]))
     def test_revert(self, mock_get):
         self.tracker.resize_claim(self.context, self.instance,
-                self.instance_type, self.limits)
+                self.instance_type, {}, self.limits)
         self.tracker.drop_resize_claim(self.context, self.instance)
 
         self.assertEqual(0, len(self.tracker.tracked_instances))
