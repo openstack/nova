@@ -35,6 +35,7 @@ from nova import rpc
 from nova import test
 from nova.tests.compute.monitors import test_monitors
 from nova.tests.objects import test_migration
+from nova.tests.pci import pci_fakes
 from nova.virt import driver
 
 
@@ -89,8 +90,7 @@ class FakeVirtDriver(driver.ComputeDriver):
         self.pci_stats = [{
             'count': 1,
             'vendor_id': 'v1',
-            'product_id': 'p1',
-            'extra_info': {'extra_k1': 'v1'}}] if self.pci_support else []
+            'product_id': 'p1'}] if self.pci_support else []
         if stats is not None:
             self.stats = stats
 
@@ -453,6 +453,10 @@ class BaseTrackerTestCase(BaseTestCase):
                 self._fake_migration_update)
         self.stubs.Set(db, 'migration_get_in_progress_by_host_and_node',
                 self._fake_migration_get_in_progress_by_host_and_node)
+
+        # Note that this must be called before the call to _init_tracker()
+        patcher = pci_fakes.fake_pci_whitelist()
+        self.addCleanup(patcher.stop)
 
         self._init_tracker()
         self.limits = self._limits()

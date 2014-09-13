@@ -267,11 +267,20 @@ class PciDevTracker(object):
             dev.compute_node_id = node_id
 
 
-def get_instance_pci_devs(inst):
-    """Get the devices assigned to the instances."""
+def get_instance_pci_devs(inst, request_id=None):
+    """Get the devices allocated to one or all requests for an instance.
+
+    - For generic PCI request, the request id is None.
+    - For sr-iov networking, the request id is a valid uuid
+    - There are a couple of cases where all the PCI devices allocated to an
+      instance need to be returned. Refer to libvirt driver that handles
+      soft_reboot and hard_boot of 'xen' instances.
+    """
     if isinstance(inst, objects.Instance):
-        return inst.pci_devices
+        pci_devices = inst.pci_devices
     else:
         ctxt = context.get_admin_context()
-        return objects.PciDeviceList.get_by_instance_uuid(
+        pci_devices = objects.PciDeviceList.get_by_instance_uuid(
             ctxt, inst['uuid'])
+    return [device for device in pci_devices if
+                   device.request_id == request_id or request_id == 'all']

@@ -14,14 +14,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import jsonschema
 from oslo.config import cfg
-import six
 
-from nova import exception
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.pci import pci_utils
+from nova.pci import pci_devspec
 
 pci_opts = [cfg.MultiStrOpt('pci_passthrough_whitelist',
                             default=[],
@@ -34,28 +30,6 @@ CONF = cfg.CONF
 CONF.register_opts(pci_opts)
 
 LOG = logging.getLogger(__name__)
-
-
-_PCI_VENDOR_PATTERN = "^(hex{4})$".replace("hex", "[\da-fA-F]")
-_WHITELIST_SCHEMA = {
-    "type": "array",
-    "items":
-    {
-        "type": "object",
-        "additionalProperties": False,
-        "properties": {
-            "product_id": {
-                "type": "string",
-                "pattern": _PCI_VENDOR_PATTERN
-            },
-            "vendor_id": {
-                "type": "string",
-                "pattern": _PCI_VENDOR_PATTERN
-            },
-        },
-        "required": ["product_id", "vendor_id"]
-    }
-}
 
 
 class PciHostDevicesWhiteList(object):
@@ -71,13 +45,9 @@ class PciHostDevicesWhiteList(object):
     def _parse_white_list_from_config(self, whitelists):
         """Parse and validate the pci whitelist from the nova config."""
         specs = []
-        try:
-            for jsonspecs in whitelists:
-                spec = jsonutils.loads(jsonspecs)
-                jsonschema.validate(spec, _WHITELIST_SCHEMA)
-                specs.extend(spec)
-        except Exception as e:
-            raise exception.PciConfigInvalidWhitelist(reason=six.text_type(e))
+        for jsonspec in whitelists:
+            spec = pci_devspec.PciDeviceSpec(jsonspec)
+            specs.append(spec)
 
         return specs
 
@@ -95,19 +65,29 @@ class PciHostDevicesWhiteList(object):
         """
         super(PciHostDevicesWhiteList, self).__init__()
         if whitelist_spec:
-            self.spec = self._parse_white_list_from_config(whitelist_spec)
+            self.specs = self._parse_white_list_from_config(whitelist_spec)
         else:
-            self.spec = None
+            self.specs = []
 
     def device_assignable(self, dev):
         """Check if a device can be assigned to a guest.
 
         :param dev: A dictionary describing the device properties
         """
-        if self.spec is None:
-            return False
-        return pci_utils.pci_device_prop_match(dev, self.spec)
+        for spec in self.specs:
+            if spec.match(dev):
+                return spec
+
+    def get_devspec(self, pci_dev):
+        for spec in self.specs:
+            if spec.match_pci_obj(pci_dev):
+                return spec
 
 
 def get_pci_devices_filter():
     return PciHostDevicesWhiteList(CONF.pci_passthrough_whitelist)
+
+
+def get_pci_device_devspec(pci_dev):
+    dev_filter = get_pci_devices_filter()
+    return dev_filter.get_devspec(pci_dev)

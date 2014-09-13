@@ -18,6 +18,7 @@ from nova import objects
 from nova.openstack.common import jsonutils
 from nova.pci import pci_stats as pci
 from nova import test
+from nova.tests.pci import pci_fakes
 
 fake_pci_1 = {
     'compute_node_id': 1,
@@ -38,16 +39,16 @@ fake_pci_2 = dict(fake_pci_1, vendor_id='v2',
 fake_pci_3 = dict(fake_pci_1, address='0000:00:00.3')
 
 
-pci_requests = [{'count': 1,
-                 'spec': [{'vendor_id': 'v1'}]},
-                {'count': 1,
-                 'spec': [{'vendor_id': 'v2'}]}]
+pci_requests = [objects.InstancePCIRequest(count=1,
+                    spec=[{'vendor_id': 'v1'}]),
+                objects.InstancePCIRequest(count=1,
+                    spec=[{'vendor_id': 'v2'}])]
 
 
-pci_requests_multiple = [{'count': 1,
-                          'spec': [{'vendor_id': 'v1'}]},
-                         {'count': 3,
-                          'spec': [{'vendor_id': 'v2'}]}]
+pci_requests_multiple = [objects.InstancePCIRequest(count=1,
+                             spec=[{'vendor_id': 'v1'}]),
+                         objects.InstancePCIRequest(count=3,
+                          spec=[{'vendor_id': 'v2'}])]
 
 
 class PciDeviceStatsTestCase(test.NoDBTestCase):
@@ -62,6 +63,9 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(PciDeviceStatsTestCase, self).setUp()
         self.pci_stats = pci.PciDeviceStats()
+        # The following two calls need to be made before adding the devices.
+        patcher = pci_fakes.fake_pci_whitelist()
+        self.addCleanup(patcher.stop)
         self._create_fake_devs()
 
     def test_add_device(self):

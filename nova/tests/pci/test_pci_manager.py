@@ -27,6 +27,7 @@ from nova.pci import pci_device
 from nova.pci import pci_manager
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests.pci import pci_fakes
 
 
 fake_pci = {
@@ -105,6 +106,8 @@ class PciDevTrackerTestCase(test.TestCase):
         super(PciDevTrackerTestCase, self).setUp()
         self.stubs.Set(db, 'pci_device_get_all_by_node',
             self._fake_get_pci_devices)
+        patcher = pci_fakes.fake_pci_whitelist()
+        self.addCleanup(patcher.stop)
         self._create_fake_instance()
         self.tracker = pci_manager.PciDevTracker(1)
 

@@ -26,6 +26,7 @@ from nova import exception
 from nova import objects
 from nova.pci import pci_manager
 from nova import test
+from nova.tests.pci import pci_fakes
 
 
 class FakeResourceHandler(object):
@@ -166,6 +167,7 @@ class ClaimTestCase(test.NoDBTestCase):
                 self._claim, limits=limits, root_gb=10, ephemeral_gb=40,
                 memory_mb=16384)
 
+    @pci_fakes.patch_pci_whitelist
     def test_pci_pass(self, mock_get):
         dev_dict = {
             'compute_node_id': 1,
@@ -180,8 +182,9 @@ class ClaimTestCase(test.NoDBTestCase):
             spec=[{'vendor_id': 'v', 'product_id': 'p'}])
         mock_get.return_value = objects.InstancePCIRequests(
             requests=[request])
-        claim._test_pci()
+        self.assertIsNone(claim._test_pci())
 
+    @pci_fakes.patch_pci_whitelist
     def test_pci_fail(self, mock_get):
         dev_dict = {
             'compute_node_id': 1,
@@ -198,6 +201,7 @@ class ClaimTestCase(test.NoDBTestCase):
             requests=[request])
         claim._test_pci()
 
+    @pci_fakes.patch_pci_whitelist
     def test_pci_pass_no_requests(self, mock_get):
         dev_dict = {
             'compute_node_id': 1,
@@ -208,7 +212,7 @@ class ClaimTestCase(test.NoDBTestCase):
         self.tracker.new_pci_tracker()
         self.tracker.pci_tracker.set_hvdevs([dev_dict])
         claim = self._claim()
-        claim._test_pci()
+        self.assertIsNone(claim._test_pci())
 
     def test_ext_resources(self, mock_get):
         self._claim()
