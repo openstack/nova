@@ -37,12 +37,21 @@ from nova.tests.compute.monitors import test_monitors
 from nova.tests.objects import test_migration
 from nova.tests.pci import pci_fakes
 from nova.virt import driver
+from nova.virt import hardware
 
 
 FAKE_VIRT_MEMORY_MB = 5
 FAKE_VIRT_MEMORY_OVERHEAD = 1
 FAKE_VIRT_MEMORY_WITH_OVERHEAD = (
         FAKE_VIRT_MEMORY_MB + FAKE_VIRT_MEMORY_OVERHEAD)
+FAKE_VIRT_NUMA_TOPOLOGY = hardware.VirtNUMAHostTopology(
+        cells=[hardware.VirtNUMATopologyCellUsage(0, set([1, 2]), 3072),
+               hardware.VirtNUMATopologyCellUsage(1, set([3, 4]), 3072)])
+FAKE_VIRT_NUMA_TOPOLOGY_OVERHEAD = hardware.VirtNUMALimitTopology(
+        cells=[hardware.VirtNUMATopologyCellLimit(
+                    0, set([1, 2]), 3072, 4, 10240),
+               hardware.VirtNUMATopologyCellLimit(
+                    1, set([3, 4]), 3072, 4, 10240)])
 ROOT_GB = 5
 EPHEMERAL_GB = 1
 FAKE_VIRT_LOCAL_GB = ROOT_GB + EPHEMERAL_GB
@@ -69,11 +78,13 @@ class UnsupportedVirtDriver(driver.ComputeDriver):
 
 class FakeVirtDriver(driver.ComputeDriver):
 
-    def __init__(self, pci_support=False, stats=None):
+    def __init__(self, pci_support=False, stats=None,
+                 numa_topology=FAKE_VIRT_NUMA_TOPOLOGY):
         super(FakeVirtDriver, self).__init__(None)
         self.memory_mb = FAKE_VIRT_MEMORY_MB
         self.local_gb = FAKE_VIRT_LOCAL_GB
         self.vcpus = FAKE_VIRT_VCPUS
+        self.numa_topology = numa_topology
 
         self.memory_mb_used = 0
         self.local_gb_used = 0
@@ -109,7 +120,8 @@ class FakeVirtDriver(driver.ComputeDriver):
             'hypervisor_version': 0,
             'hypervisor_hostname': 'fakehost',
             'cpu_info': '',
-            'numa_topology': None,
+            'numa_topology': (
+                self.numa_topology.to_json() if self.numa_topology else None),
         }
         if self.pci_support:
             d['pci_passthrough_devices'] = jsonutils.dumps(self.pci_devices)
@@ -140,11 +152,14 @@ class BaseTestCase(test.TestCase):
                                             manager=CONF.conductor.manager)
 
         self._instances = {}
+        self._numa_topologies = {}
         self._instance_types = {}
 
         self.stubs.Set(self.conductor.db,
                        'instance_get_all_by_host_and_node',
                        self._fake_instance_get_all_by_host_and_node)
+        self.stubs.Set(db, 'instance_extra_get_by_instance_uuid',
+                       self._fake_instance_extra_get_by_instance_uuid)
         self.stubs.Set(self.conductor.db,
                        'instance_update_and_get_original',
                        self._fake_instance_update_and_get_original)
@@ -168,6 +183,7 @@ class BaseTestCase(test.TestCase):
             "current_workload": 1,
             "running_vms": 0,
             "cpu_info": None,
+            "numa_topology": None,
             "stats": {
                 "num_instances": "1",
             },
@@ -266,9 +282,18 @@ class BaseTestCase(test.TestCase):
             'image_ref': None,
             'root_device_name': None,
         }
+        numa_topology = kwargs.pop('numa_topology', None)
+        if numa_topology:
+            numa_topology = {
+                'id': 1, 'created_at': None, 'updated_at': None,
+                'deleted_at': None, 'deleted': None,
+                'instance_uuid': instance['uuid'],
+                'numa_topology': numa_topology.to_json()
+            }
         instance.update(kwargs)
 
         self._instances[instance_uuid] = instance
+        self._numa_topologies[instance_uuid] = numa_topology
         return instance
 
     def _fake_flavor_create(self, **kwargs):
@@ -299,6 +324,10 @@ class BaseTestCase(test.TestCase):
 
     def _fake_instance_get_all_by_host_and_node(self, context, host, nodename):
         return [i for i in self._instances.values() if i['host'] == host]
+
+    def _fake_instance_extra_get_by_instance_uuid(self, context,
+                                                          instance_uuid):
+        return self._numa_topologies.get(instance_uuid)
 
     def _fake_flavor_get(self, ctxt, id_):
         return self._instance_types[id_]
@@ -505,14 +534,38 @@ class BaseTrackerTestCase(BaseTestCase):
 
     def _limits(self, memory_mb=FAKE_VIRT_MEMORY_WITH_OVERHEAD,
             disk_gb=FAKE_VIRT_LOCAL_GB,
-            vcpus=FAKE_VIRT_VCPUS):
+            vcpus=FAKE_VIRT_VCPUS,
+            numa_topology=FAKE_VIRT_NUMA_TOPOLOGY_OVERHEAD):
         """Create limits dictionary used for oversubscribing resources."""
 
         return {
             'memory_mb': memory_mb,
             'disk_gb': disk_gb,
-            'vcpu': vcpus
+            'vcpu': vcpus,
+            'numa_topology': numa_topology.to_json() if numa_topology else None
         }
+
+    def assertEqualNUMAHostTopology(self, expected, got):
+        attrs = ('cpuset', 'memory', 'id', 'cpu_usage', 'memory_usage')
+        if None in (expected, got):
+            if expected != got:
+                raise AssertionError("Topologies don't match. Expected: "
+                                     "%(expected)s, but got: %(got)s" %
+                                     {'expected': expected, 'got': got})
+            else:
+                return
+
+        if len(expected) != len(got):
+            raise AssertionError("Topologies don't match due to different "
+                                 "number of cells. Expected: "
+                                 "%(expected)s, but got: %(got)s" %
+                                 {'expected': expected, 'got': got})
+        for exp_cell, got_cell in zip(expected.cells, got.cells):
+            for attr in attrs:
+                if getattr(exp_cell, attr) != getattr(got_cell, attr):
+                    raise AssertionError("Topologies don't match. Expected: "
+                                         "%(expected)s, but got: %(got)s" %
+                                         {'expected': expected, 'got': got})
 
     def _assert(self, value, field, tracker=None):
 
@@ -524,7 +577,11 @@ class BaseTrackerTestCase(BaseTestCase):
                 "'%(field)s' not in compute node." % {'field': field})
         x = tracker.compute_node[field]
 
-        self.assertEqual(value, x)
+        if field == 'numa_topology':
+            self.assertEqualNUMAHostTopology(
+                    value, hardware.VirtNUMAHostTopology.from_json(x))
+        else:
+            self.assertEqual(value, x)
 
 
 class TrackerTestCase(BaseTrackerTestCase):
@@ -548,6 +605,7 @@ class TrackerTestCase(BaseTrackerTestCase):
         self._assert(FAKE_VIRT_MEMORY_MB, 'memory_mb')
         self._assert(FAKE_VIRT_LOCAL_GB, 'local_gb')
         self._assert(FAKE_VIRT_VCPUS, 'vcpus')
+        self._assert(FAKE_VIRT_NUMA_TOPOLOGY, 'numa_topology')
         self._assert(0, 'memory_mb_used')
         self._assert(0, 'local_gb_used')
         self._assert(0, 'vcpus_used')
@@ -604,6 +662,7 @@ class TrackerPciStatsTestCase(BaseTrackerTestCase):
         self._assert(FAKE_VIRT_MEMORY_MB, 'memory_mb')
         self._assert(FAKE_VIRT_LOCAL_GB, 'local_gb')
         self._assert(FAKE_VIRT_VCPUS, 'vcpus')
+        self._assert(FAKE_VIRT_NUMA_TOPOLOGY, 'numa_topology')
         self._assert(0, 'memory_mb_used')
         self._assert(0, 'local_gb_used')
         self._assert(0, 'vcpus_used')
@@ -652,6 +711,23 @@ class TrackerExtraResourcesTestCase(BaseTrackerTestCase):
 
 
 class InstanceClaimTestCase(BaseTrackerTestCase):
+    def _instance_topology(self, mem):
+        mem = mem * 1024
+        return hardware.VirtNUMAInstanceTopology(
+            cells=[hardware.VirtNUMATopologyCell(0, set([1]), mem),
+                   hardware.VirtNUMATopologyCell(1, set([3]), mem)])
+
+    def _claim_topology(self, mem, cpus=1):
+        if self.tracker.driver.numa_topology is None:
+            return None
+        mem = mem * 1024
+        return hardware.VirtNUMAHostTopology(
+            cells=[hardware.VirtNUMATopologyCellUsage(
+                       0, set([1, 2]), 3072, cpu_usage=cpus,
+                       memory_usage=mem),
+                   hardware.VirtNUMATopologyCellUsage(
+                       1, set([3, 4]), 3072, cpu_usage=cpus,
+                       memory_usage=mem)])
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -659,19 +735,26 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         flavor = self._fake_flavor_create()
         claim_mem = flavor['memory_mb'] + FAKE_VIRT_MEMORY_OVERHEAD
         claim_gb = flavor['root_gb'] + flavor['ephemeral_gb']
+        claim_topology = self._claim_topology(claim_mem / 2)
 
-        instance = self._fake_instance(flavor=flavor, task_state=None)
+        instance_topology = self._instance_topology(claim_mem / 2)
+
+        instance = self._fake_instance(
+                flavor=flavor, task_state=None,
+                numa_topology=instance_topology)
         self.tracker.update_usage(self.context, instance)
 
         self._assert(0, 'memory_mb_used')
         self._assert(0, 'local_gb_used')
         self._assert(0, 'current_workload')
+        self._assert(FAKE_VIRT_NUMA_TOPOLOGY, 'numa_topology')
 
         claim = self.tracker.instance_claim(self.context, instance,
                 self.limits)
         self.assertNotEqual(0, claim.memory_mb)
         self._assert(claim_mem, 'memory_mb_used')
         self._assert(claim_gb, 'local_gb_used')
+        self._assert(claim_topology, 'numa_topology')
 
         # now update should actually take effect
         instance['task_state'] = task_states.SCHEDULING
@@ -679,6 +762,7 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
 
         self._assert(claim_mem, 'memory_mb_used')
         self._assert(claim_gb, 'local_gb_used')
+        self._assert(claim_topology, 'numa_topology')
         self._assert(1, 'current_workload')
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
@@ -687,8 +771,11 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         claim_mem = 3
         claim_mem_total = 3 + FAKE_VIRT_MEMORY_OVERHEAD
         claim_disk = 2
+        claim_topology = self._claim_topology(claim_mem_total / 2)
+
+        instance_topology = self._instance_topology(claim_mem_total / 2)
         instance = self._fake_instance(memory_mb=claim_mem, root_gb=claim_disk,
-                ephemeral_gb=0)
+                ephemeral_gb=0, numa_topology=instance_topology)
 
         self.tracker.instance_claim(self.context, instance, self.limits)
 
@@ -696,6 +783,9 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         self.assertEqual(claim_mem_total, self.compute["memory_mb_used"])
         self.assertEqual(FAKE_VIRT_MEMORY_MB - claim_mem_total,
                          self.compute["free_ram_mb"])
+        self.assertEqualNUMAHostTopology(
+                claim_topology, hardware.VirtNUMAHostTopology.from_json(
+                    self.compute['numa_topology']))
 
         self.assertEqual(FAKE_VIRT_LOCAL_GB, self.compute["local_gb"])
         self.assertEqual(claim_disk, self.compute["local_gb_used"])
@@ -718,6 +808,9 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         self.assertEqual(claim_mem_total, self.compute['memory_mb_used'])
         self.assertEqual(FAKE_VIRT_MEMORY_MB - claim_mem_total,
                          self.compute['free_ram_mb'])
+        self.assertEqualNUMAHostTopology(
+                claim_topology, hardware.VirtNUMAHostTopology.from_json(
+                    self.compute['numa_topology']))
 
         self.assertEqual(claim_disk, self.compute['local_gb_used'])
         self.assertEqual(FAKE_VIRT_LOCAL_GB - claim_disk,
@@ -729,8 +822,13 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         claim_mem = 3
         claim_mem_total = 3 + FAKE_VIRT_MEMORY_OVERHEAD
         claim_disk = 2
+        claim_topology = self._claim_topology(claim_mem_total / 2)
+
+        instance_topology = self._instance_topology(claim_mem_total / 2)
         instance = self._fake_instance(memory_mb=claim_mem,
-                root_gb=claim_disk, ephemeral_gb=0)
+                root_gb=claim_disk, ephemeral_gb=0,
+                numa_topology=instance_topology)
+
         claim = self.tracker.instance_claim(self.context, instance,
                 self.limits)
         self.assertIsNotNone(claim)
@@ -738,6 +836,9 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         self.assertEqual(claim_mem_total, self.compute["memory_mb_used"])
         self.assertEqual(FAKE_VIRT_MEMORY_MB - claim_mem_total,
                          self.compute["free_ram_mb"])
+        self.assertEqualNUMAHostTopology(
+                claim_topology, hardware.VirtNUMAHostTopology.from_json(
+                    self.compute['numa_topology']))
 
         self.assertEqual(claim_disk, self.compute["local_gb_used"])
         self.assertEqual(FAKE_VIRT_LOCAL_GB - claim_disk,
@@ -747,6 +848,10 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
 
         self.assertEqual(0, self.compute["memory_mb_used"])
         self.assertEqual(FAKE_VIRT_MEMORY_MB, self.compute["free_ram_mb"])
+        self.assertEqualNUMAHostTopology(
+                FAKE_VIRT_NUMA_TOPOLOGY,
+                hardware.VirtNUMAHostTopology.from_json(
+                    self.compute['numa_topology']))
 
         self.assertEqual(0, self.compute["local_gb_used"])
         self.assertEqual(FAKE_VIRT_LOCAL_GB, self.compute["free_disk_gb"])
@@ -757,16 +862,25 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         memory_mb = FAKE_VIRT_MEMORY_MB * 2
         root_gb = ephemeral_gb = FAKE_VIRT_LOCAL_GB
         vcpus = FAKE_VIRT_VCPUS * 2
+        claim_topology = self._claim_topology(memory_mb)
+        instance_topology = self._instance_topology(memory_mb)
 
         limits = {'memory_mb': memory_mb + FAKE_VIRT_MEMORY_OVERHEAD,
                   'disk_gb': root_gb * 2,
-                  'vcpu': vcpus}
+                  'vcpu': vcpus,
+                  'numa_topology': FAKE_VIRT_NUMA_TOPOLOGY_OVERHEAD.to_json()}
+
         instance = self._fake_instance(memory_mb=memory_mb,
-                root_gb=root_gb, ephemeral_gb=ephemeral_gb)
+                root_gb=root_gb, ephemeral_gb=ephemeral_gb,
+                numa_topology=instance_topology)
 
         self.tracker.instance_claim(self.context, instance, limits)
         self.assertEqual(memory_mb + FAKE_VIRT_MEMORY_OVERHEAD,
                 self.tracker.compute_node['memory_mb_used'])
+        self.assertEqualNUMAHostTopology(
+                claim_topology,
+                hardware.VirtNUMAHostTopology.from_json(
+                    self.compute['numa_topology']))
         self.assertEqual(root_gb * 2,
                 self.tracker.compute_node['local_gb_used'])
 
@@ -774,13 +888,17 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
                 return_value=objects.InstancePCIRequests(requests=[]))
     def test_additive_claims(self, mock_get):
         self.limits['vcpu'] = 2
+        claim_topology = self._claim_topology(2, cpus=2)
 
         flavor = self._fake_flavor_create(
                 memory_mb=1, root_gb=1, ephemeral_gb=0)
-        instance = self._fake_instance(flavor=flavor)
+        instance_topology = self._instance_topology(1)
+        instance = self._fake_instance(
+                flavor=flavor, numa_topology=instance_topology)
         with self.tracker.instance_claim(self.context, instance, self.limits):
             pass
-        instance = self._fake_instance(flavor=flavor)
+        instance = self._fake_instance(
+                flavor=flavor, numa_topology=instance_topology)
         with self.tracker.instance_claim(self.context, instance, self.limits):
             pass
 
@@ -790,6 +908,11 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
                 self.tracker.compute_node['local_gb_used'])
         self.assertEqual(2 * flavor['vcpus'],
                 self.tracker.compute_node['vcpus_used'])
+
+        self.assertEqualNUMAHostTopology(
+                claim_topology,
+                hardware.VirtNUMAHostTopology.from_json(
+                    self.compute['numa_topology']))
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -806,13 +929,21 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         self.assertEqual(0, self.tracker.compute_node['local_gb_used'])
         self.assertEqual(0, self.compute['memory_mb_used'])
         self.assertEqual(0, self.compute['local_gb_used'])
+        self.assertEqualNUMAHostTopology(
+                FAKE_VIRT_NUMA_TOPOLOGY,
+                hardware.VirtNUMAHostTopology.from_json(
+                    self.compute['numa_topology']))
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))
     def test_instance_context_claim(self, mock_get):
         flavor = self._fake_flavor_create(
                 memory_mb=1, root_gb=2, ephemeral_gb=3)
-        instance = self._fake_instance(flavor=flavor)
+        claim_topology = self._claim_topology(1)
+
+        instance_topology = self._instance_topology(1)
+        instance = self._fake_instance(
+                flavor=flavor, numa_topology=instance_topology)
         with self.tracker.instance_claim(self.context, instance):
             # <insert exciting things that utilize resources>
             self.assertEqual(flavor['memory_mb'] + FAKE_VIRT_MEMORY_OVERHEAD,
@@ -821,6 +952,10 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
                              self.tracker.compute_node['local_gb_used'])
             self.assertEqual(flavor['memory_mb'] + FAKE_VIRT_MEMORY_OVERHEAD,
                              self.compute['memory_mb_used'])
+            self.assertEqualNUMAHostTopology(
+                    claim_topology,
+                    hardware.VirtNUMAHostTopology.from_json(
+                        self.compute['numa_topology']))
             self.assertEqual(flavor['root_gb'] + flavor['ephemeral_gb'],
                              self.compute['local_gb_used'])
 
@@ -833,6 +968,10 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
                          self.tracker.compute_node['local_gb_used'])
         self.assertEqual(flavor['memory_mb'] + FAKE_VIRT_MEMORY_OVERHEAD,
                          self.compute['memory_mb_used'])
+        self.assertEqualNUMAHostTopology(
+                claim_topology,
+                hardware.VirtNUMAHostTopology.from_json(
+                    self.compute['numa_topology']))
         self.assertEqual(flavor['root_gb'] + flavor['ephemeral_gb'],
                          self.compute['local_gb_used'])
 
@@ -1126,6 +1265,7 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
 
         values = {'source_compute': self.host, 'dest_compute': self.host,
                   'instance_uuid': instance['uuid'], 'new_instance_type_id': 2}
+        self._fake_flavor_create(id=2)
         self._fake_migration_create(self.context, values)
         self._fake_migration_create(self.context, values)
 

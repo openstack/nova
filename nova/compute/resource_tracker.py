@@ -40,6 +40,7 @@ from nova.pci import pci_manager
 from nova import rpc
 from nova.scheduler import client as scheduler_client
 from nova import utils
+from nova.virt import hardware
 
 resource_tracker_opts = [
     cfg.IntOpt('reserved_host_disk_mb', default=0,
@@ -180,7 +181,7 @@ class ResourceTracker(object):
 
         # Mark the resources in-use for the resize landing on this
         # compute host:
-        self._update_usage_from_migration(context, instance_ref,
+        self._update_usage_from_migration(context, instance_ref, image_meta,
                                               self.compute_node, migration)
         elevated = context.elevated()
         self._update(elevated, self.compute_node)
@@ -240,12 +241,21 @@ class ResourceTracker(object):
                 ctxt = context.elevated()
                 instance_type = self._get_instance_type(ctxt, instance, prefix)
 
+            if image_meta is None:
+                image_meta = utils.get_image_from_system_metadata(
+                        instance['system_metadata'])
+
             if instance_type['id'] == itype['id']:
+                numa_topology = (
+                        hardware.VirtNUMAInstanceTopology.get_constraints(
+                            itype, image_meta))
+                usage = self._get_usage_dict(
+                        itype, numa_topology=numa_topology)
                 if self.pci_tracker:
                     self.pci_tracker.update_pci_for_migration(context,
                                                               instance,
                                                               sign=-1)
-                self._update_usage(context, self.compute_node, itype, sign=-1)
+                self._update_usage(context, self.compute_node, usage, sign=-1)
 
                 ctxt = context.elevated()
                 self._update(ctxt, self.compute_node)
@@ -329,7 +339,8 @@ class ResourceTracker(object):
         # Grab all instances assigned to this node:
         instances = objects.InstanceList.get_by_host_and_node(
             context, self.host, self.nodename,
-            expected_attrs=['system_metadata'])
+            expected_attrs=['system_metadata',
+                            'numa_topology'])
 
         # Now calculate usage based on instance utilization:
         self._update_usage_from_instances(context, resources, instances)
@@ -528,8 +539,14 @@ class ResourceTracker(object):
         resources['running_vms'] = self.stats.num_instances
         self.ext_resources_handler.update_from_instance(usage, sign)
 
-    def _update_usage_from_migration(self, context, instance, resources,
-                                     migration):
+        # Calculate the numa usage
+        free = sign == -1
+        updated_numa_topology = hardware.get_host_numa_usage_from_instance(
+                resources, usage, free)
+        resources['numa_topology'] = updated_numa_topology
+
+    def _update_usage_from_migration(self, context, instance, image_meta,
+                                     resources, migration):
         """Update usage for a single migration.  The record may
         represent an incoming or outbound migration.
         """
@@ -568,10 +585,19 @@ class ResourceTracker(object):
             itype = self._get_instance_type(context, instance, 'old_',
                     migration['old_instance_type_id'])
 
+        if image_meta is None:
+            image_meta = utils.get_image_from_system_metadata(
+                    instance['system_metadata'])
+
         if itype:
+            numa_topology = (
+                    hardware.VirtNUMAInstanceTopology.get_constraints(
+                        itype, image_meta))
+            usage = self._get_usage_dict(
+                        itype, numa_topology=numa_topology)
             if self.pci_tracker:
                 self.pci_tracker.update_pci_for_migration(context, instance)
-            self._update_usage(context, resources, itype)
+            self._update_usage(context, resources, usage)
             if self.pci_tracker:
                 resources['pci_stats'] = jsonutils.dumps(
                         self.pci_tracker.stats)
@@ -611,8 +637,8 @@ class ResourceTracker(object):
         for migration in filtered.values():
             instance = migration['instance']
             try:
-                self._update_usage_from_migration(context, instance, resources,
-                                                  migration)
+                self._update_usage_from_migration(context, instance, None,
+                                                  resources, migration)
             except exception.FlavorNotFound:
                 LOG.warn(_("Flavor could not be found, skipping "
                            "migration."), instance_uuid=uuid)
@@ -750,3 +776,28 @@ class ResourceTracker(object):
             if not instance_type_id:
                 instance_type_id = instance['instance_type_id']
             return objects.Flavor.get_by_id(context, instance_type_id)
+
+    def _get_usage_dict(self, object_or_dict, **updates):
+        """Make a usage dict _update methods expect.
+
+        Accepts a dict or an Instance or Flavor object, and a set of updates.
+        Converts the object to a dict and applies the updates.
+
+        :param object_or_dict: instance or flavor as an object or just a dict
+        :param updates: key-value pairs to update the passed object.
+                        Currently only considers 'numa_topology', all other
+                        keys are ignored.
+
+        :returns: a dict with all the information from object_or_dict updated
+                  with updates
+        """
+        usage = {}
+        if isinstance(object_or_dict, (objects.Flavor, objects.Instance)):
+            usage = obj_base.obj_to_primitive(object_or_dict)
+        else:
+            usage.update(object_or_dict)
+
+        for key in ('numa_topology',):
+            if key in updates:
+                usage[key] = updates[key]
+        return usage
