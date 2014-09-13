@@ -474,16 +474,35 @@ class InstanceEvents(object):
         :returns: the eventlet.event.Event object on which the waiters
                   are blocked
         """
+        no_events_sentinel = object()
+        no_matching_event_sentinel = object()
+
         @utils.synchronized(self._lock_name(instance))
         def _pop_event():
             events = self._events.get(instance.uuid)
             if not events:
-                return None
+                return no_events_sentinel
             _event = events.pop(event.key, None)
             if not events:
                 del self._events[instance.uuid]
+            if _event is None:
+                return no_matching_event_sentinel
             return _event
-        return _pop_event()
+
+        result = _pop_event()
+        if result == no_events_sentinel:
+            LOG.debug('No waiting events found dispatching %(event)s',
+                      {'event': event.key},
+                      instance=instance)
+            return None
+        elif result == no_matching_event_sentinel:
+            LOG.debug('No event matching %(event)s in %(events)s',
+                      {'event': event.key,
+                       'events': self._events.get(instance.uuid, {}).keys()},
+                      instance=instance)
+            return None
+        else:
+            return result
 
     def clear_events_for_instance(self, instance):
         """Remove all pending events for an instance.
@@ -6075,6 +6094,9 @@ class ComputeManager(manager.Manager):
         for event in events:
             instance = [inst for inst in instances
                         if inst.uuid == event.instance_uuid][0]
+            LOG.debug('Received event %(event)s',
+                      {'event': event.key},
+                      instance=instance)
             if event.name == 'network-changed':
                 self.network_api.get_instance_nw_info(context, instance)
             else:
