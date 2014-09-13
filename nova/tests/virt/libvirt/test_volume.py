@@ -718,6 +718,28 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
             ('umount', export_mnt_base)]
         self.assertEqual(expected_commands, self.executes)
 
+    @mock.patch.object(volume.utils, 'execute')
+    @mock.patch.object(volume.LOG, 'debug')
+    @mock.patch.object(volume.LOG, 'exception')
+    def test_libvirt_nfs_driver_umount_error(self, mock_LOG_exception,
+                                        mock_LOG_debug, mock_utils_exe):
+        export_string = '192.168.1.1:/nfs/share1'
+        connection_info = {'data': {'export': export_string,
+                                    'name': self.name}}
+        libvirt_driver = volume.LibvirtNFSVolumeDriver(self.fake_conn)
+        mock_utils_exe.side_effect = processutils.ProcessExecutionError(
+            None, None, None, 'umount', 'umount: device is busy.')
+        libvirt_driver.disconnect_volume(connection_info, "vde")
+        self.assertTrue(mock_LOG_debug.called)
+        mock_utils_exe.side_effect = processutils.ProcessExecutionError(
+            None, None, None, 'umount', 'umount: target is busy.')
+        libvirt_driver.disconnect_volume(connection_info, "vde")
+        self.assertTrue(mock_LOG_debug.called)
+        mock_utils_exe.side_effect = processutils.ProcessExecutionError(
+            None, None, None, 'umount', 'umount: Other error.')
+        libvirt_driver.disconnect_volume(connection_info, "vde")
+        self.assertTrue(mock_LOG_exception.called)
+
     def test_libvirt_nfs_driver_already_mounted(self):
         # NOTE(vish) exists is to make driver assume connecting worked
         mnt_base = '/mnt'
