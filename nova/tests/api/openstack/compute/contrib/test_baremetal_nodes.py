@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+from oslo.config import cfg
 from webob import exc
 
 from nova.api.openstack.compute.contrib import baremetal_nodes
@@ -20,7 +22,10 @@ from nova.api.openstack import extensions
 from nova import context
 from nova import exception
 from nova import test
+from nova.tests.virt.ironic import utils as ironic_utils
 from nova.virt.baremetal import db
+
+CONF = cfg.CONF
 
 
 class FakeRequest(object):
@@ -69,7 +74,11 @@ def fake_interface(**updates):
         interface.update(updates)
     return interface
 
+FAKE_IRONIC_CLIENT = ironic_utils.FakeClient()
 
+
+@mock.patch.object(baremetal_nodes, '_get_ironic_client',
+                   lambda *_: FAKE_IRONIC_CLIENT)
 class BareMetalNodesTest(test.NoDBTestCase):
 
     def setUp(self):
@@ -371,3 +380,87 @@ class BareMetalNodesTest(test.NoDBTestCase):
         self.assertTrue(baremetal_nodes.is_valid_mac("AA:BB:CC:DD:EE:FF"))
         self.assertFalse(baremetal_nodes.is_valid_mac("AA BB CC DD EE FF"))
         self.assertFalse(baremetal_nodes.is_valid_mac("AA-BB-CC-DD-EE-FF"))
+
+    @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'list')
+    def test_index_ironic(self, mock_list):
+        CONF.set_override('compute_driver', 'nova.virt.ironic.driver')
+
+        properties = {'cpus': 2, 'memory_mb': 1024, 'local_gb': 20}
+        node = ironic_utils.get_test_node(properties=properties)
+        mock_list.return_value = [node]
+
+        res_dict = self.controller.index(self.request)
+        expected_output = {'nodes':
+                            [{'memory_mb': properties['memory_mb'],
+                             'host': 'IRONIC MANAGED',
+                             'disk_gb': properties['local_gb'],
+                             'interfaces': [],
+                             'task_state': None,
+                             'id': node.uuid,
+                             'cpus': properties['cpus']}]}
+        self.assertEqual(expected_output, res_dict)
+        mock_list.assert_called_once_with(detail=True)
+
+    @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'list_ports')
+    @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'get')
+    def test_show_ironic(self, mock_get, mock_list_ports):
+        CONF.set_override('compute_driver', 'nova.virt.ironic.driver')
+
+        properties = {'cpus': 1, 'memory_mb': 512, 'local_gb': 10}
+        node = ironic_utils.get_test_node(properties=properties)
+        port = ironic_utils.get_test_port()
+        mock_get.return_value = node
+        mock_list_ports.return_value = [port]
+
+        res_dict = self.controller.show(self.request, node.uuid)
+        expected_output = {'node':
+                            {'memory_mb': properties['memory_mb'],
+                             'instance_uuid': None,
+                             'host': 'IRONIC MANAGED',
+                             'disk_gb': properties['local_gb'],
+                             'interfaces': [{'address': port.address}],
+                             'task_state': None,
+                             'id': node.uuid,
+                             'cpus': properties['cpus']}}
+        self.assertEqual(expected_output, res_dict)
+        mock_get.assert_called_once_with(node.uuid)
+        mock_list_ports.assert_called_once_with(node.uuid)
+
+    @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'list_ports')
+    @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'get')
+    def test_show_ironic_no_interfaces(self, mock_get, mock_list_ports):
+        CONF.set_override('compute_driver', 'nova.virt.ironic.driver')
+
+        properties = {'cpus': 1, 'memory_mb': 512, 'local_gb': 10}
+        node = ironic_utils.get_test_node(properties=properties)
+        mock_get.return_value = node
+        mock_list_ports.return_value = []
+
+        res_dict = self.controller.show(self.request, node.uuid)
+        self.assertEqual([], res_dict['node']['interfaces'])
+        mock_get.assert_called_once_with(node.uuid)
+        mock_list_ports.assert_called_once_with(node.uuid)
+
+    def test_create_ironic_not_supported(self):
+        CONF.set_override('compute_driver', 'nova.virt.ironic.driver')
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.controller.create,
+                          self.request, {'node': object()})
+
+    def test_delete_ironic_not_supported(self):
+        CONF.set_override('compute_driver', 'nova.virt.ironic.driver')
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.controller.delete,
+                          self.request, 'fake-id')
+
+    def test_add_interface_ironic_not_supported(self):
+        CONF.set_override('compute_driver', 'nova.virt.ironic.driver')
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.controller._add_interface,
+                          self.request, 'fake-id', 'fake-body')
+
+    def test_remove_interface_ironic_not_supported(self):
+        CONF.set_override('compute_driver', 'nova.virt.ironic.driver')
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.controller._remove_interface,
+                          self.request, 'fake-id', 'fake-body')
