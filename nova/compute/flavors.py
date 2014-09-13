@@ -83,6 +83,11 @@ system_metadata_flavor_props = {
     }
 
 
+system_metadata_flavor_extra_props = [
+    'hw:numa_cpus.', 'hw:numa_mem.',
+]
+
+
 def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
            swap=0, rxtx_factor=1.0, is_public=True):
     """Creates flavors."""
@@ -292,6 +297,19 @@ def extract_flavor(instance, prefix=''):
     for key, type_fn in system_metadata_flavor_props.items():
         type_key = '%sinstance_type_%s' % (prefix, key)
         instance_type[key] = type_fn(sys_meta[type_key])
+
+    # NOTE(danms): We do NOT save all of extra_specs, but only the
+    # NUMA-related ones that we need to avoid an uglier alternative. This
+    # should be replaced by a general split-out of flavor information from
+    # system_metadata very soon.
+    extra_specs = [(k, v) for k, v in sys_meta.items()
+                   if k.startswith('%sinstance_type_extra_' % prefix)]
+    if extra_specs:
+        instance_type['extra_specs'] = {}
+        for key, value in extra_specs:
+            extra_key = key[len('%sinstance_type_extra_' % prefix):]
+            instance_type['extra_specs'][extra_key] = value
+
     return instance_type
 
 
@@ -309,6 +327,18 @@ def save_flavor_info(metadata, instance_type, prefix=''):
     for key in system_metadata_flavor_props.keys():
         to_key = '%sinstance_type_%s' % (prefix, key)
         metadata[to_key] = instance_type[key]
+
+    # NOTE(danms): We do NOT save all of extra_specs here, but only the
+    # NUMA-related ones that we need to avoid an uglier alternative. This
+    # should be replaced by a general split-out of flavor information from
+    # system_metadata very soon.
+    extra_specs = instance_type.get('extra_specs', {})
+    for extra_prefix in system_metadata_flavor_extra_props:
+        for key in extra_specs:
+            if key.startswith(extra_prefix):
+                to_key = '%sinstance_type_extra_%s' % (prefix, key)
+                metadata[to_key] = extra_specs[key]
+
     return metadata
 
 
@@ -321,6 +351,16 @@ def delete_flavor_info(metadata, *prefixes):
         for prefix in prefixes:
             to_key = '%sinstance_type_%s' % (prefix, key)
             del metadata[to_key]
+
+    # NOTE(danms): We do NOT save all of extra_specs, but only the
+    # NUMA-related ones that we need to avoid an uglier alternative. This
+    # should be replaced by a general split-out of flavor information from
+    # system_metadata very soon.
+    for key in metadata.keys():
+        for prefix in prefixes:
+            if key.startswith('%sinstance_type_extra_' % prefix):
+                del metadata[key]
+
     return metadata
 
 
