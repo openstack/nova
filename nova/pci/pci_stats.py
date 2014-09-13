@@ -120,12 +120,13 @@ class PciDeviceStats(object):
     def remove_device(self, dev):
         """Remove one device from the first pool that it matches."""
         dev_pool = self._create_pool_keys_from_dev(dev)
-        pool = self._find_pool(dev_pool)
-        if not pool:
-            raise exception.PciDevicePoolEmpty(
-                compute_node_id=dev.compute_node_id, address=dev.address)
-        pool['devices'].remove(dev)
-        self._decrease_pool_count(self.pools, pool)
+        if dev_pool:
+            pool = self._find_pool(dev_pool)
+            if not pool:
+                raise exception.PciDevicePoolEmpty(
+                    compute_node_id=dev.compute_node_id, address=dev.address)
+            pool['devices'].remove(dev)
+            self._decrease_pool_count(self.pools, pool)
 
     def get_free_devs(self):
         free_devs = []

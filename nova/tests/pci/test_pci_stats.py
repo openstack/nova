@@ -13,10 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 from nova import exception
 from nova import objects
 from nova.openstack.common import jsonutils
 from nova.pci import pci_stats as pci
+from nova.pci import pci_whitelist
 from nova import test
 from nova.tests.pci import pci_fakes
 
@@ -136,3 +139,129 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         self.assertRaises(exception.PciDeviceRequestFailed,
             self.pci_stats.consume_requests,
             pci_requests_multiple)
+
+
+@mock.patch.object(pci_whitelist, 'get_pci_devices_filter')
+class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super(PciDeviceStatsWithTagsTestCase, self).setUp()
+        self.pci_stats = pci.PciDeviceStats()
+        self._create_whitelist()
+
+    def _create_whitelist(self):
+        white_list = ['{"vendor_id":"1137","product_id":"0071",'
+                        '"address":"*:0a:00.*","physical_network":"physnet1"}',
+                       '{"vendor_id":"1137","product_id":"0072"}']
+        self.pci_wlist = pci_whitelist.PciHostDevicesWhiteList(white_list)
+
+    def _create_pci_devices(self):
+        self.pci_tagged_devices = []
+        for dev in range(4):
+            pci_dev = {'compute_node_id': 1,
+                       'address': '0000:0a:00.%d' % dev,
+                       'vendor_id': '1137',
+                       'product_id': '0071',
+                       'status': 'available',
+                       'request_id': None}
+            self.pci_tagged_devices.append(objects.PciDevice.create(pci_dev))
+
+        self.pci_untagged_devices = []
+        for dev in range(3):
+            pci_dev = {'compute_node_id': 1,
+                       'address': '0000:0b:00.%d' % dev,
+                       'vendor_id': '1137',
+                       'product_id': '0072',
+                       'status': 'available',
+                       'request_id': None}
+            self.pci_untagged_devices.append(objects.PciDevice.create(pci_dev))
+
+        map(self.pci_stats.add_device, self.pci_tagged_devices)
+        map(self.pci_stats.add_device, self.pci_untagged_devices)
+
+    def _assertPoolContent(self, pool, vendor_id, product_id, count, **tags):
+        self.assertEqual(vendor_id, pool['vendor_id'])
+        self.assertEqual(product_id, pool['product_id'])
+        self.assertEqual(count, pool['count'])
+        if tags:
+            for k, v in tags.iteritems():
+                self.assertEqual(v, pool[k])
+
+    def _assertPools(self):
+        # Pools are ordered based on the number of keys. 'product_id',
+        # 'vendor_id' are always part of the keys. When tags are present,
+        # they are also part of the keys. In this test class, we have
+        # two pools with the second one having the tag 'physical_network'
+        # and the value 'physnet1'
+        self.assertEqual(2, len(self.pci_stats.pools))
+        self._assertPoolContent(self.pci_stats.pools[0], '1137', '0072',
+                                len(self.pci_untagged_devices))
+        self.assertEqual(self.pci_untagged_devices,
+                         self.pci_stats.pools[0]['devices'])
+        self._assertPoolContent(self.pci_stats.pools[1], '1137', '0071',
+                                len(self.pci_tagged_devices),
+                                physical_network='physnet1')
+        self.assertEqual(self.pci_tagged_devices,
+                         self.pci_stats.pools[1]['devices'])
+
+    def test_add_devices(self, mock_get_dev_filter):
+        mock_get_dev_filter.return_value = self.pci_wlist
+        self._create_pci_devices()
+        self._assertPools()
+
+    def test_consume_reqeusts(self, mock_get_dev_filter):
+        mock_get_dev_filter.return_value = self.pci_wlist
+        self._create_pci_devices()
+        pci_requests = [objects.InstancePCIRequest(count=1,
+                            spec=[{'physical_network': 'physnet1'}]),
+                        objects.InstancePCIRequest(count=1,
+                            spec=[{'vendor_id': '1137',
+                                   'product_id': '0072'}])]
+        devs = self.pci_stats.consume_requests(pci_requests)
+        self.assertEqual(2, len(devs))
+        self.assertEqual(set(['0071', '0072']),
+                         set([dev['product_id'] for dev in devs]))
+        self._assertPoolContent(self.pci_stats.pools[0], '1137', '0072', 2)
+        self._assertPoolContent(self.pci_stats.pools[1], '1137', '0071', 3,
+                                physical_network='physnet1')
+
+    def test_add_device_no_devspec(self, mock_get_dev_filter):
+        mock_get_dev_filter.return_value = self.pci_wlist
+        self._create_pci_devices()
+        pci_dev = {'compute_node_id': 1,
+                   'address': '0000:0c:00.1',
+                   'vendor_id': '2345',
+                   'product_id': '0172',
+                   'status': 'available',
+                   'request_id': None}
+        pci_dev_obj = objects.PciDevice.create(pci_dev)
+        self.pci_stats.add_device(pci_dev_obj)
+        # There should be no change
+        self.assertEqual(None,
+            self.pci_stats._create_pool_keys_from_dev(pci_dev_obj))
+        self._assertPools()
+
+    def test_remove_device_no_devspec(self, mock_get_dev_filter):
+        mock_get_dev_filter.return_value = self.pci_wlist
+        self._create_pci_devices()
+        pci_dev = {'compute_node_id': 1,
+                   'address': '0000:0c:00.1',
+                   'vendor_id': '2345',
+                   'product_id': '0172',
+                   'status': 'available',
+                   'request_id': None}
+        pci_dev_obj = objects.PciDevice.create(pci_dev)
+        self.pci_stats.remove_device(pci_dev_obj)
+        # There should be no change
+        self.assertEqual(None,
+            self.pci_stats._create_pool_keys_from_dev(pci_dev_obj))
+        self._assertPools()
+
+    def test_remove_device(self, mock_get_dev_filter):
+        mock_get_dev_filter.return_value = self.pci_wlist
+        self._create_pci_devices()
+        dev1 = self.pci_untagged_devices.pop()
+        self.pci_stats.remove_device(dev1)
+        dev2 = self.pci_tagged_devices.pop()
+        self.pci_stats.remove_device(dev2)
+        self._assertPools()
