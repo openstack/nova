@@ -154,6 +154,8 @@ class IronicDriverTestCase(test.NoDBTestCase, test_driver.DriverAPITestHelper):
         result = self.driver._node_resource(node)
         self.assertEqual('i686',
                          jsonutils.loads(result['supported_instances'])[0][0])
+        self.assertEqual('i386',
+                         jsonutils.loads(result['stats'])['cpu_arch'])
 
     def test__node_resource_unknown_arch(self):
         node_uuid = uuidutils.generate_uuid()
