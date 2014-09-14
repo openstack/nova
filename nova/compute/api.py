@@ -67,6 +67,7 @@ from nova import quota
 from nova import rpc
 from nova import servicegroup
 from nova import utils
+from nova.virt import hardware
 from nova import volume
 
 LOG = logging.getLogger(__name__)
@@ -781,6 +782,12 @@ class API(base.Base):
                 block_device.properties_root_device_name(
                     boot_meta.get('properties', {})))
 
+        numa_topology = hardware.VirtNUMAInstanceTopology.get_constraints(
+                instance_type, boot_meta.get('properties', {}))
+        if numa_topology is not None:
+            numa_topology = objects.InstanceNUMATopology.obj_from_topology(
+                    numa_topology)
+
         system_metadata = flavors.save_flavor_info(
             dict(), instance_type)
 
@@ -823,6 +830,7 @@ class API(base.Base):
             'root_device_name': root_device_name,
             'progress': 0,
             'pci_request_info': pci_request_info,
+            'numa_topology': numa_topology,
             'system_metadata': system_metadata}
 
         options_from_image = self._inherit_properties_from_image(

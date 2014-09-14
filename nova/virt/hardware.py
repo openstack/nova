@@ -735,7 +735,7 @@ class VirtNUMAInstanceTopology(VirtNUMATopology):
         cells = []
         totalmem = 0
 
-        availcpus = set(range(flavor.vcpus))
+        availcpus = set(range(flavor['vcpus']))
 
         for node in range(nodes):
             cpus = cls._get_flavor_or_image_prop(
@@ -752,9 +752,9 @@ class VirtNUMAInstanceTopology(VirtNUMATopology):
             cpuset = parse_cpu_spec(cpus)
 
             for cpu in cpuset:
-                if cpu > (flavor.vcpus - 1):
+                if cpu > (flavor['vcpus'] - 1):
                     raise exception.ImageNUMATopologyCPUOutOfRange(
-                        cpunum=cpu, cpumax=(flavor.vcpus - 1))
+                        cpunum=cpu, cpumax=(flavor['vcpus'] - 1))
 
                 if cpu not in availcpus:
                     raise exception.ImageNUMATopologyCPUDuplicates(
@@ -769,17 +769,17 @@ class VirtNUMAInstanceTopology(VirtNUMATopology):
             raise exception.ImageNUMATopologyCPUsUnassigned(
                 cpuset=str(availcpus))
 
-        if totalmem != flavor.memory_mb:
+        if totalmem != flavor['memory_mb']:
             raise exception.ImageNUMATopologyMemoryOutOfRange(
                 memsize=totalmem,
-                memtotal=flavor.memory_mb)
+                memtotal=flavor['memory_mb'])
 
         return cls(cells)
 
     @classmethod
     def _get_constraints_auto(cls, nodes, flavor, image_meta):
-        if ((flavor.vcpus % nodes) > 0 or
-            (flavor.memory_mb % nodes) > 0):
+        if ((flavor['vcpus'] % nodes) > 0 or
+            (flavor['memory_mb'] % nodes) > 0):
             raise exception.ImageNUMATopologyAsymmetric()
 
         cells = []

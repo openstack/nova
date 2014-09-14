@@ -89,6 +89,7 @@ from nova import utils
 from nova.virt import block_device as driver_block_device
 from nova.virt import event
 from nova.virt import fake
+from nova.virt import hardware
 from nova.volume import cinder
 
 QUOTAS = quota.QUOTAS
@@ -7197,6 +7198,28 @@ class ComputeAPITestCase(BaseTestCase):
                                          expected_message):
             self.compute_api.create(self.context, inst_type,
                                     self.fake_image['id'])
+
+    @mock.patch('nova.virt.hardware.VirtNUMAInstanceTopology.get_constraints')
+    def test_create_with_numa_topology(self, numa_constraints_mock):
+        inst_type = flavors.get_default_flavor()
+        # This is what the stubbed out method will return
+        fake_image_props = {'kernel_id': 'fake_kernel_id',
+                            'ramdisk_id': 'fake_ramdisk_id',
+                            'something_else': 'meow'}
+
+        numa_topology = hardware.VirtNUMAInstanceTopology(
+            cells=[hardware.VirtNUMATopologyCell(0, set([1, 2]), 512),
+                   hardware.VirtNUMATopologyCell(1, set([3, 4]), 512)])
+        numa_constraints_mock.return_value = numa_topology
+
+        instances, resv_id = self.compute_api.create(self.context, inst_type,
+                                                     self.fake_image['id'])
+        numa_constraints_mock.assert_called_once_with(
+                inst_type, fake_image_props)
+        self.assertThat(numa_topology._to_dict(),
+                        matchers.DictMatches(
+                            instances[0].numa_topology
+                            .topology_from_obj()._to_dict()))
 
     def test_create_instance_defaults_display_name(self):
         # Verify that an instance cannot be created without a display_name.
