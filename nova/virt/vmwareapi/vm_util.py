@@ -1455,3 +1455,21 @@ def detach_devices_from_vm(session, vm_ref, devices):
     config_spec = _detach_and_delete_devices_config_spec(
         client_factory, devices)
     reconfigure_vm(session, vm_ref, config_spec)
+
+
+def get_ephemerals(session, vm_ref):
+    devices = []
+    hardware_devices = session._call_method(vim_util,
+            "get_dynamic_property", vm_ref, "VirtualMachine",
+            "config.hardware.device")
+
+    if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
+        hardware_devices = hardware_devices.VirtualDevice
+
+    for device in hardware_devices:
+        if device.__class__.__name__ == "VirtualDisk":
+            if (device.backing.__class__.__name__ ==
+                    "VirtualDiskFlatVer2BackingInfo"):
+                if 'ephemeral' in device.backing.fileName:
+                    devices.append(device)
+    return devices
