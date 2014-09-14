@@ -20,6 +20,7 @@ import datetime
 import errno
 import functools
 import os
+import random
 import re
 import shutil
 import tempfile
@@ -1179,6 +1180,149 @@ class LibvirtConnTestCase(test.TestCase,
                               vconfig.LibvirtConfigGuestUIDMap)
         self.assertIsInstance(cfg.idmaps[1],
                               vconfig.LibvirtConfigGuestGIDMap)
+
+    def test_get_guest_config_numa_host_instance_fits(self):
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        flavor = objects.Flavor(memory_mb=1, vcpus=2, root_gb=496,
+                                ephemeral_gb=8128, swap=33550336, name='fake',
+                                extra_specs={})
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "x86_64"
+        caps.host.topology = self._fake_caps_numa_topology()
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        with contextlib.nested(
+                mock.patch.object(
+                    objects.Flavor, "get_by_id", return_value=flavor),
+                mock.patch.object(
+                    conn, "_get_host_capabilities", return_value=caps),
+                mock.patch.object(
+                        random, 'choice',
+                        return_value=caps.host.topology.cells[0])):
+            cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+            self.assertEqual(set([0, 1]), cfg.cpuset)
+            self.assertIsNone(cfg.cputune)
+            self.assertIsNone(cfg.cpu.numa)
+
+    def test_get_guest_config_numa_host_instance_no_fit(self):
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        flavor = objects.Flavor(memory_mb=1, vcpus=4, root_gb=496,
+                                ephemeral_gb=8128, swap=33550336, name='fake',
+                                extra_specs={})
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "x86_64"
+        caps.host.topology = self._fake_caps_numa_topology()
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        with contextlib.nested(
+                mock.patch.object(
+                    objects.Flavor, "get_by_id", return_value=flavor),
+                mock.patch.object(
+                    conn, "_get_host_capabilities", return_value=caps),
+                mock.patch.object(
+                    hardware, 'get_vcpu_pin_set', return_value=set([3])),
+                mock.patch.object(
+                        random, 'choice',
+                        return_value=caps.host.topology.cells[0])):
+            cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+            self.assertEqual(set([3]), cfg.cpuset)
+            self.assertIsNone(cfg.cputune)
+            self.assertIsNone(cfg.cpu.numa)
+
+    def test_get_guest_config_non_numa_host_instance_topo(self):
+        instance_topology = objects.InstanceNUMATopology.obj_from_topology(
+                hardware.VirtNUMAInstanceTopology(
+                    cells=[hardware.VirtNUMATopologyCell(0, set([0]), 1024),
+                           hardware.VirtNUMATopologyCell(1, set([2]), 1024)]))
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        flavor = objects.Flavor(memory_mb=1, vcpus=2, root_gb=496,
+                                ephemeral_gb=8128, swap=33550336, name='fake',
+                                extra_specs={})
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "x86_64"
+        caps.host.topology = None
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        with contextlib.nested(
+                mock.patch.object(
+                    objects.Flavor, "get_by_id", return_value=flavor),
+                mock.patch.object(
+                    objects.InstanceNUMATopology, "get_by_instance_uuid",
+                    return_value=instance_topology),
+                mock.patch.object(
+                    conn, "_get_host_capabilities", return_value=caps)):
+            cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+            self.assertIsNone(cfg.cpuset)
+            self.assertIsNone(cfg.cputune)
+            self.assertIsNotNone(cfg.cpu.numa)
+            for instance_cell, numa_cfg_cell in zip(
+                    instance_topology.cells, cfg.cpu.numa.cells):
+                self.assertEqual(instance_cell.id, numa_cfg_cell.id)
+                self.assertEqual(instance_cell.cpuset, numa_cfg_cell.cpus)
+                self.assertEqual(instance_cell.memory, numa_cfg_cell.memory)
+
+    def test_get_guest_config_numa_host_instance_topo(self):
+        instance_topology = objects.InstanceNUMATopology.obj_from_topology(
+                hardware.VirtNUMAInstanceTopology(
+                    cells=[hardware.VirtNUMATopologyCell(0, set([0]), 1024),
+                           hardware.VirtNUMATopologyCell(1, set([1]), 1024)]))
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        flavor = objects.Flavor(memory_mb=1, vcpus=2, root_gb=496,
+                                ephemeral_gb=8128, swap=33550336, name='fake',
+                                extra_specs={})
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "x86_64"
+        caps.host.topology = self._fake_caps_numa_topology()
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        with contextlib.nested(
+                mock.patch.object(
+                    objects.Flavor, "get_by_id", return_value=flavor),
+                mock.patch.object(
+                    objects.InstanceNUMATopology, "get_by_instance_uuid",
+                    return_value=instance_topology),
+                mock.patch.object(
+                    conn, "_get_host_capabilities", return_value=caps),
+                mock.patch.object(
+                    hardware, 'get_vcpu_pin_set', return_value=set([0, 1, 2]))
+                ):
+            cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+            self.assertIsNone(cfg.cpuset)
+            # Test that the pinning is correct and limited to allowed only
+            self.assertEqual(0, cfg.cputune.vcpupin[0].id)
+            self.assertEqual(set([0, 1]), cfg.cputune.vcpupin[0].cpuset)
+            self.assertEqual(1, cfg.cputune.vcpupin[1].id)
+            self.assertEqual(set([2]), cfg.cputune.vcpupin[1].cpuset)
+            self.assertIsNotNone(cfg.cpu.numa)
+            for instance_cell, numa_cfg_cell in zip(
+                    instance_topology.cells, cfg.cpu.numa.cells):
+                self.assertEqual(instance_cell.id, numa_cfg_cell.id)
+                self.assertEqual(instance_cell.cpuset, numa_cfg_cell.cpus)
+                self.assertEqual(instance_cell.memory, numa_cfg_cell.memory)
 
     def test_get_guest_config_clock(self):
         self.flags(virt_type='kvm', group='libvirt')
@@ -7667,14 +7811,12 @@ class LibvirtConnTestCase(test.TestCase,
             if key not in ['phys_function', 'virt_functions', 'label']:
                 self.assertEqual(actctualvfs[0][key], expectvfs[1][key])
 
-    def test_get_host_numa_topology(self):
-        caps = vconfig.LibvirtConfigCaps()
-        caps.host = vconfig.LibvirtConfigCapsHost()
-        caps.host.topology = vconfig.LibvirtConfigCapsNUMATopology()
+    def _fake_caps_numa_topology(self):
+        topology = vconfig.LibvirtConfigCapsNUMATopology()
 
         cell_0 = vconfig.LibvirtConfigCapsNUMACell()
         cell_0.id = 0
-        cell_0.memory = 512
+        cell_0.memory = 1024
         cpu_0_0 = vconfig.LibvirtConfigCapsNUMACPU()
         cpu_0_0.id = 0
         cpu_0_0.socket_id = 0
@@ -7689,7 +7831,7 @@ class LibvirtConnTestCase(test.TestCase,
 
         cell_1 = vconfig.LibvirtConfigCapsNUMACell()
         cell_1.id = 1
-        cell_1.memory = 512
+        cell_1.memory = 1024
         cpu_1_0 = vconfig.LibvirtConfigCapsNUMACPU()
         cpu_1_0.id = 2
         cpu_1_0.socket_id = 1
@@ -7702,15 +7844,21 @@ class LibvirtConnTestCase(test.TestCase,
         cpu_1_1.sibling = 3
         cell_1.cpus = [cpu_1_0, cpu_1_1]
 
-        caps.host.topology.cells = [cell_0, cell_1]
+        topology.cells = [cell_0, cell_1]
+        return topology
+
+    def test_get_host_numa_topology(self):
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.topology = self._fake_caps_numa_topology()
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         expected_topo_dict = {'cells': [
                                 {'cpus': '0,1', 'cpu_usage': 0,
-                                  'mem': {'total': 512, 'used': 0},
+                                  'mem': {'total': 1024, 'used': 0},
                                   'id': 0},
                                 {'cpus': '3', 'cpu_usage': 0,
-                                  'mem': {'total': 512, 'used': 0},
+                                  'mem': {'total': 1024, 'used': 0},
                                   'id': 1}]}
         with contextlib.nested(
                 mock.patch.object(

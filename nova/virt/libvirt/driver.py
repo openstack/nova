@@ -31,6 +31,7 @@ import functools
 import glob
 import mmap
 import os
+import random
 import shutil
 import socket
 import sys
@@ -3365,7 +3366,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return cpu
 
-    def _get_guest_cpu_config(self, flavor, image):
+    def _get_guest_cpu_config(self, flavor, image, guest_cpu_numa):
         cpu = self._get_guest_cpu_model_config()
 
         if cpu is None:
@@ -3377,6 +3378,7 @@ class LibvirtDriver(driver.ComputeDriver):
         cpu.sockets = topology.sockets
         cpu.cores = topology.cores
         cpu.threads = topology.threads
+        cpu.numa = guest_cpu_numa
 
         return cpu
 
@@ -3664,6 +3666,111 @@ class LibvirtDriver(driver.ComputeDriver):
             id_maps.extend(gid_maps)
         return id_maps
 
+    def _get_cpu_numa_config_from_instance(self, context, instance):
+        # TODO(ndipanov): Remove this check once the tests are fixed, in
+        # reality all code paths should be using instance objects now.
+        if isinstance(instance, objects.Instance):
+            instance_topology = instance.numa_topology
+        else:
+            try:
+                instance_topology = (
+                        objects.InstanceNUMATopology.get_by_instance_uuid(
+                            context or nova_context.get_admin_context(),
+                            instance['uuid']))
+            except exception.NumaTopologyNotFound:
+                return
+
+        if instance_topology:
+            guest_cpu_numa = vconfig.LibvirtConfigGuestCPUNUMA()
+            for instance_cell in instance_topology.cells:
+                guest_cell = vconfig.LibvirtConfigGuestCPUNUMACell()
+                guest_cell.id = instance_cell.id
+                guest_cell.cpus = instance_cell.cpuset
+                guest_cell.memory = instance_cell.memory
+                guest_cpu_numa.cells.append(guest_cell)
+            return guest_cpu_numa
+
+    def _get_guest_numa_config(self, context, instance, flavor,
+                               allowed_cpus=None):
+        """Returns the config objects for the guest NUMA specs.
+
+        Determines the CPUs that the guest can be pinned to if the guest
+        specifies a cell topology and the host supports it. Constructs the
+        libvirt XML config object representing the NUMA topology selected
+        for the guest. Returns a tuple of:
+
+            (cpu_set, guest_cpu_tune, guest_cpu_numa)
+
+        With the following caveats:
+
+            a) If there is no specified guest NUMA topology, then
+               guest_cpu_tune and guest_cpu_numa shall be None. cpu_set
+               will be populated with the chosen CPUs that the guest
+               allowed CPUs fit within, which could be the supplied
+               allowed_cpus value if the host doesn't support NUMA
+               topologies.
+
+            b) If there is a specified guest NUMA topology, then
+               cpu_set will be None and guest_cpu_numa will be the
+               LibvirtConfigGuestCPUNUMA object representing the guest's
+               NUMA topology. If the host supports NUMA, then guest_cpu_tune
+               will contain a LibvirtConfigGuestCPUTune object representing
+               the optimized chosen cells that match the host capabilities
+               with the instance's requested topology. If the host does
+               not support NUMA, then guest_cpu_tune will be None.
+        """
+        caps = self._get_host_capabilities()
+        topology = caps.host.topology
+        # We have instance NUMA so translate it to the config class
+        guest_cpu_numa = self._get_cpu_numa_config_from_instance(
+                context, instance)
+
+        if not guest_cpu_numa:
+            # No NUMA topology defined for instance
+            vcpus = flavor.vcpus
+            memory = flavor.memory_mb
+            if topology:
+                # Host is NUMA capable so try to keep the instance in a cell
+                viable_cells = [cell for cell in topology.cells
+                                if vcpus <= len(cell.cpus) and
+                                memory * 1024 <= cell.memory]
+                if not viable_cells:
+                    # We can't contain the instance in a cell - do nothing for
+                    # now.
+                    # TODO(ndipanov): Attempt to spread the instance accross
+                    # NUMA nodes and expose the topology to the instance as an
+                    # optimisation
+                    return allowed_cpus, None, None
+                else:
+                    cell = random.choice(viable_cells)
+                    pin_cpuset = set(cpu.id for cpu in cell.cpus)
+                    if allowed_cpus:
+                        pin_cpuset &= allowed_cpus
+                    return pin_cpuset, None, None
+            else:
+                # We have no NUMA topology in the host either
+                return allowed_cpus, None, None
+        else:
+            if topology:
+                # Now get the CpuTune configuration from the numa_topology
+                guest_cpu_tune = vconfig.LibvirtConfigGuestCPUTune()
+                for host_cell in topology.cells:
+                    for guest_cell in guest_cpu_numa.cells:
+                        if guest_cell.id == host_cell.id:
+                            host_cpuset = set(cpu.id for cpu in host_cell.cpus)
+                            host_cpuset = (host_cpuset & allowed_cpus
+                                           if allowed_cpus else host_cpuset)
+
+                            for cpu in guest_cell.cpus:
+                                pin_cpuset = (
+                                    vconfig.LibvirtConfigGuestCPUTuneVCPUPin())
+                                pin_cpuset.id = cpu
+                                pin_cpuset.cpuset = host_cpuset
+                            guest_cpu_tune.vcpupin.append(pin_cpuset)
+                return None, guest_cpu_tune, guest_cpu_numa
+            else:
+                return allowed_cpus, None, guest_cpu_numa
+
     def _get_guest_config(self, instance, network_info, image_meta,
                           disk_info, rescue=None, block_device_info=None,
                           context=None):
@@ -3690,7 +3797,12 @@ class LibvirtDriver(driver.ComputeDriver):
         # We are using default unit for memory: KiB
         guest.memory = flavor.memory_mb * units.Ki
         guest.vcpus = flavor.vcpus
-        guest.cpuset = hardware.get_vcpu_pin_set()
+        allowed_cpus = hardware.get_vcpu_pin_set()
+
+        cpuset, cputune, guest_cpu_numa = self._get_guest_numa_config(
+                context, instance, flavor, allowed_cpus)
+        guest.cpuset = cpuset
+        guest.cputune = cputune
 
         guest.metadata.append(self._get_guest_config_meta(context,
                                                           instance,
@@ -3706,7 +3818,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 setattr(guest.cputune, name,
                         int(flavor.extra_specs[key]))
 
-        guest.cpu = self._get_guest_cpu_config(flavor, image_meta)
+        guest.cpu = self._get_guest_cpu_config(
+                flavor, image_meta, guest_cpu_numa)
 
         if 'root' in disk_mapping:
             root_device_name = block_device.prepend_dev(
