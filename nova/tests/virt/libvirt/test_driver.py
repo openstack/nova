@@ -12442,7 +12442,6 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
 
         instance = db.instance_create(self.c, self.inst)
 
-        snapshot_id = 'snap-asdf-qwert'
         new_file = 'new-file'
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
@@ -12480,8 +12479,7 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         self.conn._volume_snapshot_create(self.c, instance, domain,
-                                          self.volume_uuid, snapshot_id,
-                                          new_file)
+                                          self.volume_uuid, new_file)
 
         self.mox.VerifyAll()
 
@@ -12511,7 +12509,6 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
 
         instance = db.instance_create(self.c, self.inst)
 
-        snapshot_id = 'snap-asdf-qwert'
         new_file = 'new-file'
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
@@ -12549,8 +12546,7 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         self.conn._volume_snapshot_create(self.c, instance, domain,
-                                          self.volume_uuid, snapshot_id,
-                                          new_file)
+                                          self.volume_uuid, new_file)
 
         self.mox.VerifyAll()
 
@@ -12572,7 +12568,6 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
                                           instance,
                                           domain,
                                           self.volume_uuid,
-                                          self.create_info['snapshot_id'],
                                           self.create_info['new_file'])
 
         self.conn._volume_api.update_snapshot_status(
@@ -12605,7 +12600,6 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
                                           instance,
                                           domain,
                                           self.volume_uuid,
-                                          self.create_info['snapshot_id'],
                                           self.create_info['new_file']).\
             AndRaise(exception.NovaException('oops'))
 
