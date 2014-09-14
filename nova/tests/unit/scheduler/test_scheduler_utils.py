@@ -133,11 +133,16 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         if force_nodes is None:
             force_nodes = []
         if with_retry:
-            if not force_hosts and not force_nodes:
-                filter_properties = dict(retry=dict(hosts=[]))
-            else:
+            if ((len(force_hosts) == 1 and len(force_nodes) <= 1)
+                 or (len(force_nodes) == 1 and len(force_hosts) <= 1)):
                 filter_properties = dict(force_hosts=force_hosts,
                                          force_nodes=force_nodes)
+            elif len(force_hosts) > 1 or len(force_nodes) > 1:
+                filter_properties = dict(retry=dict(hosts=[]),
+                                         force_hosts=force_hosts,
+                                         force_nodes=force_nodes)
+            else:
+                filter_properties = dict(retry=dict(hosts=[]))
         else:
             filter_properties = dict()
 
@@ -153,7 +158,10 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
 
         scheduler_utils.populate_filter_properties(filter_properties,
                                                    host_state)
-        if with_retry and not force_hosts and not force_nodes:
+
+        enable_retry_force_hosts = not force_hosts or len(force_hosts) > 1
+        enable_retry_force_nodes = not force_nodes or len(force_nodes) > 1
+        if with_retry or enable_retry_force_hosts or enable_retry_force_nodes:
             # So we can check for 2 hosts
             scheduler_utils.populate_filter_properties(filter_properties,
                                                        host_state)
@@ -165,7 +173,8 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         self.assertEqual(expected_limits,
                          filter_properties.get('limits'))
 
-        if with_retry and not force_hosts and not force_nodes:
+        if (with_retry and enable_retry_force_hosts
+                       and enable_retry_force_nodes):
             self.assertEqual([['fake-host', 'fake-node'],
                               ['fake-host', 'fake-node']],
                              filter_properties['retry']['hosts'])
@@ -186,6 +195,14 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
 
     def test_populate_filter_props_force_nodes_no_retry(self):
         self._test_populate_filter_props(force_nodes=['force-node'])
+
+    def test_populate_filter_props_multi_force_hosts_with_retry(self):
+        self._test_populate_filter_props(force_hosts=['force-host1',
+                                                      'force-host2'])
+
+    def test_populate_filter_props_multi_force_nodes_with_retry(self):
+        self._test_populate_filter_props(force_nodes=['force-node1',
+                                                      'force-node2'])
 
     @mock.patch.object(scheduler_utils, '_max_attempts')
     def test_populate_retry_exception_at_max_attempts(self, _max_attempts):
