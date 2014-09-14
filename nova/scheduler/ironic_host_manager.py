@@ -68,9 +68,9 @@ class IronicNodeState(bbhm.BaseBaremetalNodeState):
         self.total_usable_disk_gb = compute['local_gb']
         self.updated = compute['updated_at']
 
-    def consume_from_instance(self, instance):
+    def consume_from_instance(self, context, instance):
         """Consume nodes entire resources regardless of instance request."""
-        super(IronicNodeState, self).consume_from_instance(instance)
+        super(IronicNodeState, self).consume_from_instance(context, instance)
 
         self.updated = timeutils.utcnow()
 

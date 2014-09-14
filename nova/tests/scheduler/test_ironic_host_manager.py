@@ -155,7 +155,7 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
         host.update_from_compute_node(self.compute_node)
 
         instance = dict(root_gb=10, ephemeral_gb=0, memory_mb=1024, vcpus=1)
-        host.consume_from_instance(instance)
+        host.consume_from_instance('fake-context', instance)
 
         self.assertEqual(1, host.vcpus_used)
         self.assertEqual(0, host.free_ram_mb)
@@ -166,7 +166,7 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
         host.update_from_compute_node(self.compute_node)
 
         instance = dict(root_gb=20, ephemeral_gb=0, memory_mb=2048, vcpus=2)
-        host.consume_from_instance(instance)
+        host.consume_from_instance('fake-context', instance)
 
         self.assertEqual(1, host.vcpus_used)
         self.assertEqual(0, host.free_ram_mb)
@@ -177,7 +177,7 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
         host.update_from_compute_node(self.compute_node)
 
         instance = dict(root_gb=5, ephemeral_gb=0, memory_mb=512, vcpus=1)
-        host.consume_from_instance(instance)
+        host.consume_from_instance('fake-context', instance)
 
         self.assertEqual(1, host.vcpus_used)
         self.assertEqual(0, host.free_ram_mb)
