@@ -96,6 +96,7 @@ class CellsAPI(object):
         can handle the version_cap being set to 1.27.
 
         * 1.28 - Make bdm_update_or_create_at_top and use bdm objects
+        * 1.29 - Adds set_admin_password()
     '''
 
     VERSION_ALIASES = {
@@ -607,3 +608,11 @@ class CellsAPI(object):
                    instance=instance, image_href=image_ref,
                    admin_password=new_pass, files_to_inject=injected_files,
                    preserve_ephemeral=preserve_ephemeral, kwargs=kwargs)
+
+    def set_admin_password(self, ctxt, instance, new_pass):
+        if not CONF.cells.enable:
+            return
+
+        cctxt = self.client.prepare(version='1.29')
+        cctxt.cast(ctxt, 'set_admin_password', instance=instance,
+                new_pass=new_pass)

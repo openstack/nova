@@ -951,6 +951,10 @@ class _TargetedMessageMethods(_BaseMessageMethods):
                                         image_href, admin_password,
                                         files_to_inject, **kwargs)
 
+    def set_admin_password(self, message, instance, new_pass):
+        self._call_compute_api_with_obj(message.ctxt, instance,
+                'set_admin_password', new_pass)
+
 
 class _BroadcastMessageMethods(_BaseMessageMethods):
     """These are the methods that can be called as a part of a broadcast
@@ -1805,6 +1809,10 @@ class MessageRunner(object):
                             kwargs=kwargs)
         self._instance_action(ctxt, instance, 'rebuild_instance',
                               extra_kwargs=extra_kwargs)
+
+    def set_admin_password(self, ctxt, instance, new_pass):
+        self._instance_action(ctxt, instance, 'set_admin_password',
+                extra_kwargs={'new_pass': new_pass})
 
     @staticmethod
     def get_message_types():

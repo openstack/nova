@@ -747,3 +747,14 @@ class CellsAPITestCase(test.NoDBTestCase):
                          'rotation': 'rotation'}
         self._check_result(call_info, 'backup_instance',
                            expected_args, version='1.24')
+
+    def test_set_admin_password(self):
+        call_info = self._stub_rpc_method('cast', None)
+
+        self.cells_rpcapi.set_admin_password(self.fake_context,
+                'fake-instance', 'fake-password')
+
+        expected_args = {'instance': 'fake-instance',
+                         'new_pass': 'fake-password'}
+        self._check_result(call_info, 'set_admin_password',
+                expected_args, version='1.29')

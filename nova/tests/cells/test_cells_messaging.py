@@ -1247,6 +1247,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
                                'confirm_resize': 'confirm_resize',
                                'reset_network': 'reset_network',
                                'inject_network_info': 'inject_network_info',
+                               'set_admin_password': 'set_admin_password',
                               }
         tgt_method = method_translations.get(method,
                                              '%s_instance' % method)
@@ -1399,6 +1400,11 @@ class CellsTargetedMethodsTestCase(test.TestCase):
                                  image_id='image-id',
                                  backup_type='backup-type',
                                  rotation='rotation')
+
+    def test_set_admin_password(self):
+        args = ['fake-password']
+        self._test_instance_action_method('set_admin_password', args, {}, args,
+                {}, False)
 
 
 class CellsBroadcastMethodsTestCase(test.TestCase):
