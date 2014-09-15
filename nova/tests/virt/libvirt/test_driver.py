@@ -11446,7 +11446,7 @@ class LibvirtNonblockingTestCase(test.NoDBTestCase):
         self.assertEqual(True, c.is_expected)
 
 
-class LibvirtVolumeSnapshotTestCase(test.TestCase):
+class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
     """Tests for libvirtDriver.volume_snapshot_create/delete."""
 
     def setUp(self):
@@ -11569,7 +11569,7 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
         self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
         self.mox.StubOutWithMock(self.conn, '_volume_api')
 
-        instance = db.instance_create(self.c, self.inst)
+        instance = objects.Instance(**self.inst)
 
         new_file = 'new-file'
 
@@ -11636,7 +11636,7 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
                 </devices>
               </domain>"""
 
-        instance = db.instance_create(self.c, self.inst)
+        instance = objects.Instance(**self.inst)
 
         new_file = 'new-file'
 
@@ -11683,7 +11683,7 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
         self.test_volume_snapshot_create(quiesce=False)
 
     def test_volume_snapshot_create_outer_success(self):
-        instance = db.instance_create(self.c, self.inst)
+        instance = objects.Instance(**self.inst)
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
 
@@ -11715,7 +11715,7 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
                                          self.create_info)
 
     def test_volume_snapshot_create_outer_failure(self):
-        instance = db.instance_create(self.c, self.inst)
+        instance = objects.Instance(**self.inst)
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
 
@@ -11747,7 +11747,7 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
     def test_volume_snapshot_delete_1(self):
         """Deleting newest snapshot -- blockRebase."""
 
-        instance = db.instance_create(self.c, self.inst)
+        instance = objects.Instance(**self.inst)
         snapshot_id = 'snapshot-1234'
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
@@ -11779,7 +11779,7 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
     def test_volume_snapshot_delete_2(self):
         """Deleting older snapshot -- blockCommit."""
 
-        instance = db.instance_create(self.c, self.inst)
+        instance = objects.Instance(**self.inst)
         snapshot_id = 'snapshot-1234'
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml)
@@ -11809,7 +11809,7 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
         self.mox.VerifyAll()
 
     def test_volume_snapshot_delete_outer_success(self):
-        instance = db.instance_create(self.c, self.inst)
+        instance = objects.Instance(**self.inst)
         snapshot_id = 'snapshot-1234'
 
         FakeVirtDomain(fake_xml=self.dom_xml)
@@ -11840,7 +11840,7 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
         self.mox.VerifyAll()
 
     def test_volume_snapshot_delete_outer_failure(self):
-        instance = db.instance_create(self.c, self.inst)
+        instance = objects.Instance(**self.inst)
         snapshot_id = '1234-9876'
 
         FakeVirtDomain(fake_xml=self.dom_xml)
@@ -11872,7 +11872,7 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
         self.mox.VerifyAll()
 
     def test_volume_snapshot_delete_invalid_type(self):
-        instance = db.instance_create(self.c, self.inst)
+        instance = objects.Instance(**self.inst)
 
         FakeVirtDomain(fake_xml=self.dom_xml)
 
@@ -11908,7 +11908,7 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
         # Ensure the libvirt lib has VIR_DOMAIN_BLOCK_COMMIT_RELATIVE
         self.stubs.Set(libvirt_driver, 'libvirt', fakelibvirt)
 
-        instance = db.instance_create(self.c, self.inst)
+        instance = objects.Instance(**self.inst)
         snapshot_id = 'snapshot-1234'
 
         domain = FakeNetdiskDomain(fake_xml=self.dom_netdisk_xml)
@@ -11950,7 +11950,7 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
         # Ensure the libvirt lib has VIR_DOMAIN_BLOCK_COMMIT_RELATIVE
         self.stubs.Set(libvirt_driver, 'libvirt', fakelibvirt)
 
-        instance = db.instance_create(self.c, self.inst)
+        instance = objects.Instance(**self.inst)
         snapshot_id = 'snapshot-1234'
 
         domain = FakeNetdiskDomain(fake_xml=self.dom_netdisk_xml)
