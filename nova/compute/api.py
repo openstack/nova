@@ -35,6 +35,7 @@ import six
 from nova import availability_zones
 from nova import block_device
 from nova.cells import opts as cells_opts
+from nova.compute import delete_types
 from nova.compute import flavors
 from nova.compute import instance_actions
 from nova.compute import power_state
@@ -1592,8 +1593,10 @@ class API(base.Base):
                 if self.servicegroup_api.service_is_up(service):
                     is_up = True
 
-                    if original_task_state in (task_states.DELETING,
-                                                  task_states.SOFT_DELETING):
+                    if (delete_type != delete_types.FORCE_DELETE
+                            and original_task_state in (
+                            task_states.DELETING,
+                            task_states.SOFT_DELETING)):
                         LOG.info(_('Instance is already in deleting state, '
                                    'ignoring this request'), instance=instance)
                         quotas.rollback()
@@ -1781,12 +1784,14 @@ class API(base.Base):
         LOG.debug('Going to try to soft delete instance',
                   instance=instance)
 
-        self._delete(context, instance, 'soft_delete', self._do_soft_delete,
+        self._delete(context, instance, delete_types.SOFT_DELETE,
+                     self._do_soft_delete,
                      task_state=task_states.SOFT_DELETING,
                      deleted_at=timeutils.utcnow())
 
-    def _delete_instance(self, context, instance):
-        self._delete(context, instance, 'delete', self._do_delete,
+    def _delete_instance(self, context, instance,
+                         delete_type=delete_types.DELETE):
+        self._delete(context, instance, delete_type, self._do_delete,
                      task_state=task_states.DELETING)
 
     @wrap_check_policy
@@ -1830,10 +1835,11 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
-    @check_instance_state(must_have_launched=False)
+    @check_instance_state(task_state=None,
+                          must_have_launched=False)
     def force_delete(self, context, instance):
         """Force delete an instance in any vm_state/task_state."""
-        self._delete_instance(context, instance)
+        self._delete_instance(context, instance, delete_types.FORCE_DELETE)
 
     def force_stop(self, context, instance, do_cast=True):
         LOG.debug("Going to try to stop instance", instance=instance)
