@@ -3450,6 +3450,9 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.libvirt_images_type == 'lvm':
             info = libvirt_utils.get_volume_group_info(
                                  CONF.libvirt_images_volume_group)
+        elif CONF.libvirt_images_type == 'rbd':
+            info = libvirt_utils.get_rbd_pool_info(
+                                 CONF.libvirt_images_rbd_pool)
         else:
             info = libvirt_utils.get_fs_info(CONF.instances_path)
 
