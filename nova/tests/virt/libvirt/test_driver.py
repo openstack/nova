@@ -9427,14 +9427,15 @@ Active:          8381604 kB
                                     image_ref='my_fake_image')
 
         with contextlib.nested(
+              mock.patch.object(conn, '_create_domain_setup_lxc'),
+              mock.patch.object(conn, '_create_domain_cleanup_lxc'),
               mock.patch.object(conn, '_is_booted_from_volume',
                                 return_value=False),
               mock.patch.object(conn, 'plug_vifs'),
               mock.patch.object(conn, 'firewall_driver'),
               mock.patch.object(conn, '_create_domain',
                                 side_effect=exception.NovaException),
-              mock.patch.object(conn, 'cleanup')) as (
-              cleanup, firewall_driver, create, plug_vifs, boot):
+              mock.patch.object(conn, 'cleanup')):
             self.assertRaises(exception.NovaException,
                               conn._create_domain_and_network,
                               self.context,
