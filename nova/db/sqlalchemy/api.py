@@ -3243,6 +3243,53 @@ def _refresh_quota_usages(quota_usage, until_refresh, in_use):
     quota_usage.until_refresh = until_refresh or None
 
 
+def _raise_overquota_exception(project_quotas, user_quotas, deltas, overs,
+                               project_usages, user_usages):
+    """Generates and raises an OverQuota exception.
+
+    :param project_quotas: dict of resource quotas (limits) for the project.
+    :param user_quotas:    dict of resource quotas (limits) for the user.
+    :param deltas:         dict of resource keys to positive/negative quota
+                           changes for the resources in a given operation.
+    :param overs:          list of resources that are over-quota for the
+                           operation.
+    :param project_usages: dict of resource keys to QuotaUsage records for the
+                           project.
+    :param user_usages:    dict of resource keys to QuotaUsage records for the
+                           user.
+    :raises:               nova.exception.OverQuota
+    """
+    if project_quotas == user_quotas:
+        usages = project_usages
+    else:
+        usages = user_usages
+    usages = dict((k, dict(in_use=v['in_use'], reserved=v['reserved']))
+                  for k, v in usages.items())
+    headroom = dict((res, user_quotas[res] -
+                         (usages[res]['in_use'] + usages[res]['reserved']))
+                    for res in user_quotas.keys())
+
+    # If quota_cores is unlimited [-1]:
+    # - set cores headroom based on instances headroom:
+    if user_quotas.get('cores') == -1:
+        if deltas['cores']:
+            hc = headroom['instances'] * deltas['cores']
+            headroom['cores'] = hc / deltas['instances']
+        else:
+            headroom['cores'] = headroom['instances']
+
+    # If quota_ram is unlimited [-1]:
+    # - set ram headroom based on instances headroom:
+    if user_quotas.get('ram') == -1:
+        if deltas['ram']:
+            hr = headroom['instances'] * deltas['ram']
+            headroom['ram'] = hr / deltas['instances']
+        else:
+            headroom['ram'] = headroom['instances']
+    raise exception.OverQuota(overs=sorted(overs), quotas=user_quotas,
+                              usages=usages, headroom=headroom)
+
+
 @require_context
 @_retry_on_deadlock
 def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
@@ -3361,36 +3408,10 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
     if unders:
         LOG.warning(_("Change will make usage less than 0 for the following "
                       "resources: %s"), unders)
+
     if overs:
-        if project_quotas == user_quotas:
-            usages = project_usages
-        else:
-            usages = user_usages
-        usages = dict((k, dict(in_use=v['in_use'], reserved=v['reserved']))
-                      for k, v in usages.items())
-        headroom = dict((res, user_quotas[res] -
-                             (usages[res]['in_use'] + usages[res]['reserved']))
-                        for res in user_quotas.keys())
-
-        # If quota_cores is unlimited [-1]:
-        # - set cores headroom based on instances headroom:
-        if user_quotas.get('cores') == -1:
-            if deltas['cores']:
-                hc = headroom['instances'] * deltas['cores']
-                headroom['cores'] = hc / deltas['instances']
-            else:
-                headroom['cores'] = headroom['instances']
-
-        # If quota_ram is unlimited [-1]:
-        # - set ram headroom based on instances headroom:
-        if user_quotas.get('ram') == -1:
-            if deltas['ram']:
-                hr = headroom['instances'] * deltas['ram']
-                headroom['ram'] = hr / deltas['instances']
-            else:
-                headroom['ram'] = headroom['instances']
-        raise exception.OverQuota(overs=sorted(overs), quotas=user_quotas,
-                                  usages=usages, headroom=headroom)
+        _raise_overquota_exception(project_quotas, user_quotas, deltas, overs,
+                                   project_usages, user_usages)
 
     return reservations
 
