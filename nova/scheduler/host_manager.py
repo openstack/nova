@@ -271,7 +271,8 @@ class HostManager(object):
     """Base HostManager class."""
 
     # Can be overridden in a subclass
-    host_state_cls = HostState
+    def host_state_cls(self, host, node, **kwargs):
+        return HostState(host, node, **kwargs)
 
     def __init__(self):
         self.host_state_map = {}
