@@ -26,7 +26,14 @@ from nova.tests import matchers
 from nova.virt import hardware as hw
 
 
-class FakeFlavor():
+class FakeFlavor(dict):
+    def __init__(self, vcpus, memory, extra_specs):
+        self['vcpus'] = vcpus
+        self['memory_mb'] = memory
+        self['extra_specs'] = extra_specs
+
+
+class FakeFlavorObject(object):
     def __init__(self, vcpus, memory, extra_specs):
         self.vcpus = vcpus
         self.memory_mb = memory
@@ -191,7 +198,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
     def test_validate_config(self):
         testdata = [
             {  # Flavor sets preferred topology only
-                "flavor": FakeFlavor(16, 2048, {
+                "flavor": FakeFlavorObject(16, 2048, {
                     "hw:cpu_sockets": "8",
                     "hw:cpu_cores": "2",
                     "hw:cpu_threads": "1",
@@ -204,7 +211,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 )
             },
             {  # Image topology overrides flavor
-                "flavor": FakeFlavor(16, 2048, {
+                "flavor": FakeFlavorObject(16, 2048, {
                     "hw:cpu_sockets": "8",
                     "hw:cpu_cores": "2",
                     "hw:cpu_threads": "1",
@@ -222,7 +229,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 )
             },
             {  # Partial image topology overrides flavor
-                "flavor": FakeFlavor(16, 2048, {
+                "flavor": FakeFlavorObject(16, 2048, {
                     "hw:cpu_sockets": "8",
                     "hw:cpu_cores": "2",
                     "hw:cpu_threads": "1",
@@ -237,7 +244,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 )
             },
             {  # Restrict use of threads
-                "flavor": FakeFlavor(16, 2048, {
+                "flavor": FakeFlavorObject(16, 2048, {
                     "hw:cpu_max_threads": "2",
                 }),
                 "image": {
@@ -250,7 +257,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 )
             },
             {  # Force use of at least two sockets
-                "flavor": FakeFlavor(16, 2048, {
+                "flavor": FakeFlavorObject(16, 2048, {
                     "hw:cpu_max_cores": "8",
                     "hw:cpu_max_threads": "1",
                 }),
@@ -262,7 +269,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 )
             },
             {  # Image limits reduce flavor
-                "flavor": FakeFlavor(16, 2048, {
+                "flavor": FakeFlavorObject(16, 2048, {
                     "hw:cpu_max_cores": "8",
                     "hw:cpu_max_threads": "1",
                 }),
@@ -276,7 +283,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 )
             },
             {  # Image limits kill flavor preferred
-                "flavor": FakeFlavor(16, 2048, {
+                "flavor": FakeFlavorObject(16, 2048, {
                     "hw:cpu_sockets": "2",
                     "hw:cpu_cores": "8",
                     "hw:cpu_threads": "1",
@@ -291,7 +298,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 )
             },
             {  # Image limits cannot exceed flavor
-                "flavor": FakeFlavor(16, 2048, {
+                "flavor": FakeFlavorObject(16, 2048, {
                     "hw:cpu_max_cores": "8",
                     "hw:cpu_max_threads": "1",
                 }),
@@ -303,7 +310,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 "expect": exception.ImageVCPULimitsRangeExceeded,
             },
             {  # Image preferred cannot exceed flavor
-                "flavor": FakeFlavor(16, 2048, {
+                "flavor": FakeFlavorObject(16, 2048, {
                     "hw:cpu_max_cores": "8",
                     "hw:cpu_max_threads": "1",
                 }),
@@ -539,7 +546,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
         testdata = [
             {  # Flavor sets preferred topology only
                 "allow_threads": True,
-                "flavor": FakeFlavor(16, 2048, {
+                "flavor": FakeFlavorObject(16, 2048, {
                     "hw:cpu_sockets": "8",
                     "hw:cpu_cores": "2",
                     "hw:cpu_threads": "1"
@@ -551,7 +558,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
             },
             {  # Image topology overrides flavor
                 "allow_threads": True,
-                "flavor": FakeFlavor(16, 2048, {
+                "flavor": FakeFlavorObject(16, 2048, {
                     "hw:cpu_sockets": "8",
                     "hw:cpu_cores": "2",
                     "hw:cpu_threads": "1",
@@ -568,7 +575,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
             },
             {  # Image topology overrides flavor
                 "allow_threads": False,
-                "flavor": FakeFlavor(16, 2048, {
+                "flavor": FakeFlavorObject(16, 2048, {
                     "hw:cpu_sockets": "8",
                     "hw:cpu_cores": "2",
                     "hw:cpu_threads": "1",
@@ -585,7 +592,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
             },
             {  # Partial image topology overrides flavor
                 "allow_threads": True,
-                "flavor": FakeFlavor(16, 2048, {
+                "flavor": FakeFlavorObject(16, 2048, {
                     "hw:cpu_sockets": "8",
                     "hw:cpu_cores": "2",
                     "hw:cpu_threads": "1"
@@ -599,7 +606,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
             },
             {  # Restrict use of threads
                 "allow_threads": True,
-                "flavor": FakeFlavor(16, 2048, {
+                "flavor": FakeFlavorObject(16, 2048, {
                     "hw:cpu_max_threads": "1"
                 }),
                 "image": {
@@ -609,7 +616,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
             },
             {  # Force use of at least two sockets
                 "allow_threads": True,
-                "flavor": FakeFlavor(16, 2048, {
+                "flavor": FakeFlavorObject(16, 2048, {
                     "hw:cpu_max_cores": "8",
                     "hw:cpu_max_threads": "1",
                 }),
@@ -620,7 +627,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
             },
             {  # Image limits reduce flavor
                 "allow_threads": True,
-                "flavor": FakeFlavor(16, 2048, {
+                "flavor": FakeFlavorObject(16, 2048, {
                     "hw:cpu_max_sockets": "8",
                     "hw:cpu_max_cores": "8",
                     "hw:cpu_max_threads": "1",
@@ -634,7 +641,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
             },
             {  # Image limits kill flavor preferred
                 "allow_threads": True,
-                "flavor": FakeFlavor(16, 2048, {
+                "flavor": FakeFlavorObject(16, 2048, {
                     "hw:cpu_sockets": "2",
                     "hw:cpu_cores": "8",
                     "hw:cpu_threads": "1",
@@ -1111,38 +1118,38 @@ class NUMATopologyTest(test.NoDBTestCase):
 
 class NumberOfSerialPortsTest(test.NoDBTestCase):
     def test_flavor(self):
-        flavor = FakeFlavor(8, 2048, {"hw:serial_port_count": 3})
+        flavor = FakeFlavorObject(8, 2048, {"hw:serial_port_count": 3})
         num_ports = hw.get_number_of_serial_ports(flavor, None)
         self.assertEqual(3, num_ports)
 
     def test_image_meta(self):
-        flavor = FakeFlavor(8, 2048, {})
+        flavor = FakeFlavorObject(8, 2048, {})
         image_meta = {"properties": {"hw_serial_port_count": 2}}
         num_ports = hw.get_number_of_serial_ports(flavor, image_meta)
         self.assertEqual(2, num_ports)
 
     def test_flavor_invalid_value(self):
-        flavor = FakeFlavor(8, 2048, {"hw:serial_port_count": 'foo'})
+        flavor = FakeFlavorObject(8, 2048, {"hw:serial_port_count": 'foo'})
         image_meta = {"properties": {}}
         self.assertRaises(exception.ImageSerialPortNumberInvalid,
                           hw.get_number_of_serial_ports,
                           flavor, image_meta)
 
     def test_image_meta_invalid_value(self):
-        flavor = FakeFlavor(8, 2048, {})
+        flavor = FakeFlavorObject(8, 2048, {})
         image_meta = {"properties": {"hw_serial_port_count": 'bar'}}
         self.assertRaises(exception.ImageSerialPortNumberInvalid,
                           hw.get_number_of_serial_ports,
                           flavor, image_meta)
 
     def test_image_meta_smaller_than_flavor(self):
-        flavor = FakeFlavor(8, 2048, {"hw:serial_port_count": 3})
+        flavor = FakeFlavorObject(8, 2048, {"hw:serial_port_count": 3})
         image_meta = {"properties": {"hw_serial_port_count": 2}}
         num_ports = hw.get_number_of_serial_ports(flavor, image_meta)
         self.assertEqual(2, num_ports)
 
     def test_flavor_smaller_than_image_meta(self):
-        flavor = FakeFlavor(8, 2048, {"hw:serial_port_count": 3})
+        flavor = FakeFlavorObject(8, 2048, {"hw:serial_port_count": 3})
         image_meta = {"properties": {"hw_serial_port_count": 4}}
         self.assertRaises(exception.ImageSerialPortNumberExceedFlavorValue,
                           hw.get_number_of_serial_ports,

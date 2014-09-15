@@ -794,8 +794,8 @@ class VirtNUMAInstanceTopology(VirtNUMATopology):
             if cpus is not None or mem is not None:
                 raise exception.ImageNUMATopologyIncomplete()
 
-            ncpus = int(flavor.vcpus / nodes)
-            mem = int(flavor.memory_mb / nodes)
+            ncpus = int(flavor['vcpus'] / nodes)
+            mem = int(flavor['memory_mb'] / nodes)
             start = node * ncpus
             cpuset = set(range(start, start + ncpus))
 
