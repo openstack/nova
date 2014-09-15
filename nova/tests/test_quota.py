@@ -2307,7 +2307,7 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
                                                user_id):
             return self.usages.copy(), self.usages.copy()
 
-        def fake_quota_usage_create(context, project_id, user_id, resource,
+        def fake_quota_usage_create(project_id, user_id, resource,
                                     in_use, reserved, until_refresh,
                                     session=None, save=True):
             quota_usage_ref = self._make_quota_usage(
@@ -2318,7 +2318,7 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
 
             return quota_usage_ref
 
-        def fake_reservation_create(context, uuid, usage_id, project_id,
+        def fake_reservation_create(uuid, usage_id, project_id,
                                     user_id, resource, delta, expire,
                                     session=None):
             reservation_ref = self._make_reservation(
