@@ -4232,6 +4232,7 @@ class ComputeManager(manager.Manager):
         instance.save(expected_task_state=task_states.SPAWNING)
         self._notify_about_instance_usage(context, instance, 'unshelve.end')
 
+    @messaging.expected_exceptions(NotImplementedError)
     @wrap_instance_fault
     def reset_network(self, context, instance):
         """Reset networking on the given instance."""
