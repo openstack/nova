@@ -572,12 +572,8 @@ class API(base_api.NetworkAPI):
 
         Return network information for the instance
         """
-        try:
-            neutronv2.get_client(context).delete_port(port_id)
-        except Exception:
-            LOG.exception(_LE("Failed to delete neutron port %s"),
-                          port_id)
-
+        neutron = neutronv2.get_client(context)
+        self._delete_ports(neutron, instance, [port_id], raise_if_fail=True)
         return self.get_instance_nw_info(context, instance)
 
     def list_ports(self, context, **search_opts):
