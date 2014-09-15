@@ -3717,8 +3717,8 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         except AttributeError:
             msg = _("Security group %s is not a string or unicode") % property
             self.raise_invalid_property(msg)
-
-        utils.check_string_length(val, min_length=1, max_length=255)
+        utils.check_string_length(val, name=property, min_length=1,
+                                  max_length=255)
 
         if allowed and not re.match(allowed, val):
             # Some validation to ensure that values match API spec.
