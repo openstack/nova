@@ -66,7 +66,6 @@ __imagebackend_opts = [
                default='',  # default determined by librados
                help='Path to the ceph configuration file to use'),
     cfg.StrOpt('hw_disk_discard',
-               default=None,
                help='Discard option for nova managed disks (valid options '
                     'are: ignore, unmap). Need Libvirt(1.0.6) Qemu1.5 '
                     '(raw format) Qemu1.6(qcow2 format)'),
