@@ -1091,6 +1091,9 @@ class CloudController(object):
                              result):
         """Format InstanceBlockDeviceMappingResponseItemType."""
         root_device_type = 'instance-store'
+        root_device_short_name = block_device.strip_dev(root_device_name)
+        if root_device_name == root_device_short_name:
+            root_device_name = block_device.prepend_dev(root_device_name)
         mapping = []
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance_uuid)
@@ -1099,7 +1102,9 @@ class CloudController(object):
             if volume_id is None or bdm.no_device:
                 continue
 
-            if bdm.device_name == root_device_name and bdm.is_volume:
+            if (bdm.is_volume and
+                    (bdm.device_name == root_device_name or
+                     bdm.device_name == root_device_short_name)):
                 root_device_type = 'ebs'
 
             vol = self.volume_api.get(context, volume_id)
