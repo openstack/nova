@@ -2053,7 +2053,8 @@ class HostFiltersTestCase(test.NoDBTestCase):
                 objects.InstanceNUMATopology.obj_from_topology(
                     instance_topology))
         filter_properties = {
-            'instance_properties': obj_base.obj_to_primitive(instance)}
+            'instance_properties': jsonutils.to_primitive(
+                obj_base.obj_to_primitive(instance))}
         host = fakes.FakeHostState('host1', 'node1',
                                    {'numa_topology': fakes.NUMA_TOPOLOGY})
         filt_cls = self.class_map['NUMATopologyFilter']()
@@ -2069,7 +2070,8 @@ class HostFiltersTestCase(test.NoDBTestCase):
                     instance_topology))
 
         filter_properties = {
-            'instance_properties': obj_base.obj_to_primitive(instance)}
+            'instance_properties': jsonutils.to_primitive(
+                obj_base.obj_to_primitive(instance))}
         host = fakes.FakeHostState('host1', 'node1', {})
         filt_cls = self.class_map['NUMATopologyFilter']()
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
@@ -2078,7 +2080,8 @@ class HostFiltersTestCase(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(self.context)
         instance.numa_topology = None
         filter_properties = {
-            'instance_properties': obj_base.obj_to_primitive(instance)}
+            'instance_properties': jsonutils.to_primitive(
+                obj_base.obj_to_primitive(instance))}
         host = fakes.FakeHostState('host1', 'node1',
                                    {'numa_topology': fakes.NUMA_TOPOLOGY})
         filt_cls = self.class_map['NUMATopologyFilter']()
@@ -2095,7 +2098,8 @@ class HostFiltersTestCase(test.NoDBTestCase):
                 objects.InstanceNUMATopology.obj_from_topology(
                     instance_topology))
         filter_properties = {
-            'instance_properties': obj_base.obj_to_primitive(instance)}
+            'instance_properties': jsonutils.to_primitive(
+                obj_base.obj_to_primitive(instance))}
         host = fakes.FakeHostState('host1', 'node1',
                                    {'numa_topology': fakes.NUMA_TOPOLOGY})
         filt_cls = self.class_map['NUMATopologyFilter']()
@@ -2112,7 +2116,8 @@ class HostFiltersTestCase(test.NoDBTestCase):
                 objects.InstanceNUMATopology.obj_from_topology(
                     instance_topology))
         filter_properties = {
-            'instance_properties': obj_base.obj_to_primitive(instance)}
+            'instance_properties': jsonutils.to_primitive(
+                obj_base.obj_to_primitive(instance))}
         host = fakes.FakeHostState('host1', 'node1',
                                    {'numa_topology': fakes.NUMA_TOPOLOGY})
         filt_cls = self.class_map['NUMATopologyFilter']()
@@ -2130,7 +2135,8 @@ class HostFiltersTestCase(test.NoDBTestCase):
                 objects.InstanceNUMATopology.obj_from_topology(
                     instance_topology))
         filter_properties = {
-            'instance_properties': obj_base.obj_to_primitive(instance)}
+            'instance_properties': jsonutils.to_primitive(
+                obj_base.obj_to_primitive(instance))}
         host = fakes.FakeHostState('host1', 'node1',
                                    {'numa_topology': fakes.NUMA_TOPOLOGY})
         filt_cls = self.class_map['NUMATopologyFilter']()
