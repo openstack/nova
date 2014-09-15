@@ -237,7 +237,7 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
         pci_dev_obj = objects.PciDevice.create(pci_dev)
         self.pci_stats.add_device(pci_dev_obj)
         # There should be no change
-        self.assertEqual(None,
+        self.assertIsNone(
             self.pci_stats._create_pool_keys_from_dev(pci_dev_obj))
         self._assertPools()
 
@@ -253,7 +253,7 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
         pci_dev_obj = objects.PciDevice.create(pci_dev)
         self.pci_stats.remove_device(pci_dev_obj)
         # There should be no change
-        self.assertEqual(None,
+        self.assertIsNone(
             self.pci_stats._create_pool_keys_from_dev(pci_dev_obj))
         self._assertPools()
 

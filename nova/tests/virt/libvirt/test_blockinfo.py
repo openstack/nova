@@ -725,10 +725,10 @@ class LibvirtBlockInfoTest(test.TestCase):
         self.assertEqual('/dev/vda', blockinfo.get_device_name(driver_bdm))
 
         bdm_obj.device_name = None
-        self.assertEqual(None, blockinfo.get_device_name(bdm_obj))
+        self.assertIsNone(blockinfo.get_device_name(bdm_obj))
 
         driver_bdm = driver_block_device.DriverVolumeBlockDevice(bdm_obj)
-        self.assertEqual(None, blockinfo.get_device_name(driver_bdm))
+        self.assertIsNone(blockinfo.get_device_name(driver_bdm))
 
     @mock.patch('nova.virt.libvirt.blockinfo.find_disk_dev_for_disk_bus',
                 return_value='vda')
