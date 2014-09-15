@@ -180,6 +180,21 @@ class TestSecurityGroups(test.TestCase):
 
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
 
+    def test_create_security_group_with_empty_description(self):
+        sg = security_group_template()
+        sg['description'] = ""
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
+        try:
+            self.controller.create(req, {'security_group': sg})
+            self.fail('Should have raised BadRequest exception')
+        except webob.exc.HTTPBadRequest as exc:
+            self.assertEqual('description has a minimum character requirement'
+                             ' of 1.', exc.explanation)
+        except exception.InvalidInput as exc:
+            self.fail('Should have raised BadRequest exception instead of')
+        self._assert_no_security_groups_reserved(req.environ['nova.context'])
+
     def test_create_security_group_with_blank_name(self):
         sg = security_group_template(name='')
 

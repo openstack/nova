@@ -92,6 +92,10 @@ class TestNeutronSecurityGroups(
         # Neutron's security group description field is optional.
         pass
 
+    def test_create_security_group_with_empty_description(self):
+        # Neutron's security group description field is optional.
+        pass
+
     def test_create_security_group_with_blank_name(self):
         # Neutron's security group name field is optional.
         pass
