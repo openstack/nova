@@ -132,7 +132,7 @@ def retry_if_task_in_progress(f, *args, **kwargs):
         try:
             f(*args, **kwargs)
             return
-        except error_util.TaskInProgress:
+        except vexc.TaskInProgress:
             pass
 
 
