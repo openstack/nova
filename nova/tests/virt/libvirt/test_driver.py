@@ -10129,7 +10129,7 @@ class HostStateTestCase(test.NoDBTestCase):
                                 HostStateTestCase.numa_topology._to_dict()))
 
 
-class LibvirtDriverTestCase(test.TestCase):
+class LibvirtDriverTestCase(test.NoDBTestCase):
     """Test for nova.virt.libvirt.libvirt_driver.LibvirtDriver."""
     def setUp(self):
         super(LibvirtDriverTestCase, self).setUp()
@@ -10142,16 +10142,28 @@ class LibvirtDriverTestCase(test.TestCase):
         if not params:
             params = {}
 
-        sys_meta = flavors.save_flavor_info(
-            {}, flavors.get_flavor_by_name('m1.tiny'))
+        sys_meta = {
+            'instance_type_memory_mb': 512,
+            'instance_type_swap': 0,
+            'instance_type_vcpu_weight': None,
+            'instance_type_root_gb': 1,
+            'instance_type_id': 2,
+            'instance_type_name': u'm1.tiny',
+            'instance_type_ephemeral_gb': 0,
+            'instance_type_rxtx_factor': 1.0,
+            'instance_type_flavorid': u'1',
+            'instance_type_vcpus': 1
+        }
 
         inst = {}
+        inst['id'] = 1
+        inst['uuid'] = '52d3b512-1152-431f-a8f7-28f0288a622b'
+        inst['os_type'] = 'linux'
         inst['image_ref'] = '1'
         inst['reservation_id'] = 'r-fakeres'
         inst['user_id'] = 'fake'
         inst['project_id'] = 'fake'
-        type_id = flavors.get_flavor_by_name('m1.tiny')['id']
-        inst['instance_type_id'] = type_id
+        inst['instance_type_id'] = 2
         inst['ami_launch_index'] = 0
         inst['host'] = 'host1'
         inst['root_gb'] = 10
@@ -10163,7 +10175,8 @@ class LibvirtDriverTestCase(test.TestCase):
         inst['system_metadata'] = sys_meta
 
         inst.update(params)
-        return db.instance_create(self.context, inst)
+
+        return objects.Instance(**inst)
 
     def test_migrate_disk_and_power_off_exception(self):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
@@ -10932,6 +10945,7 @@ class LibvirtDriverTestCase(test.TestCase):
                                  'setup_basic_filtering')
         self.mox.StubOutWithMock(domain, 'attachDeviceFlags')
         self.mox.StubOutWithMock(domain, 'info')
+        self.mox.StubOutWithMock(objects.Flavor, 'get_by_id')
 
         self.libvirtconnection._lookup_by_name(
             'instance-00000001').AndReturn(domain)
@@ -10939,8 +10953,10 @@ class LibvirtDriverTestCase(test.TestCase):
             self.libvirtconnection.firewall_driver.setup_basic_filtering(
                 instance, [network_info[0]])
 
-        fake_flavor = objects.Flavor.get_by_id(
-            self.context, instance['instance_type_id'])
+        fake_flavor = instance.get_flavor()
+
+        objects.Flavor.get_by_id(mox.IgnoreArg(), 2).AndReturn(fake_flavor)
+
         if method == 'attach_interface':
             fake_image_meta = {'id': instance['image_ref']}
         elif method == 'detach_interface':
@@ -11006,8 +11022,7 @@ class LibvirtDriverTestCase(test.TestCase):
             expected_flags=(libvirt.VIR_DOMAIN_AFFECT_CONFIG))
 
     def test_rescue(self):
-        instance = self._create_instance()
-        instance.config_drive = False
+        instance = self._create_instance({'config_drive': None})
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
                     "<devices>"
                     "<disk type='file'><driver name='qemu' type='raw'/>"
