@@ -962,6 +962,8 @@ object_data = {
     'InstanceGroupList': '1.5-b507229896d60fad117cb3223dbaa0cc',
     'InstanceInfoCache': '1.5-ef64b604498bfa505a8c93747a9d8b2f',
     'InstanceList': '1.9-6f290799b0ac19eb9e72ed580520b883',
+    'InstancePCIRequest': '1.1-e082d174f4643e5756ba098c47c1510f',
+    'InstancePCIRequests': '1.1-bc7c6684d8579ee49d6a3b8aef756918',
     'InstanceNUMACell': '1.0-17e6ee0a24cb6651d1b084efa3027bda',
     'InstanceNUMATopology': '1.0-86b95d263c4c68411d44c6741b8d2bb0',
     'KeyPair': '1.1-3410f51950d052d861c11946a6ae621a',
@@ -972,6 +974,8 @@ object_data = {
     'MyOwnedObject': '1.0-0f3d6c028543d7f3715d121db5b8e298',
     'Network': '1.2-2ea21ede5e45bb80e7b7ac7106915c4e',
     'NetworkList': '1.2-aa4ad23f035b97a41732ea8b3445fc5e',
+    'NetworkRequest': '1.0-f31192f5a725017707f989585e12d7dc',
+    'NetworkRequestList': '1.1-beeab521ac9450f1f5ef4eaa945a783c',
     'PciDevice': '1.2-29e35c3199f3b98ce66e5d1212612818',
     'PciDeviceList': '1.1-2896df4f5b06579e5f35adba5fcae9db',
     'Quotas': '1.1-7897deef00e6cd3095c8916f68d24418',
@@ -1063,7 +1067,7 @@ class TestObjectVersions(test.TestCase):
 
         stored = set(object_data.items())
         computed = set(fingerprints.items())
-        changed = stored - computed
+        changed = stored.symmetric_difference(computed)
         expected = {}
         actual = {}
         for name, hash in changed:
@@ -1095,7 +1099,7 @@ class TestObjectVersions(test.TestCase):
 
         stored = set([(x, str(y)) for x, y in object_relationships.items()])
         computed = set([(x, str(y)) for x, y in tree.items()])
-        changed = stored - computed
+        changed = stored.symmetric_difference(computed)
         expected = {}
         actual = {}
         for name, deps in changed:
