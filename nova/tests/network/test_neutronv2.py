@@ -244,9 +244,11 @@ class TestNeutronv2Base(test.TestCase):
         self.nets7.append(self.nets1[0])
         self.nets7.append(self.nets2[1])
         self.nets7.append(self.nets1[0])
+        # A network request with only external network
+        self.nets8 = [self.nets5[1]]
 
-        self.nets = [self.nets1, self.nets2, self.nets3,
-                     self.nets4, self.nets5, self.nets6, self.nets7]
+        self.nets = [self.nets1, self.nets2, self.nets3, self.nets4,
+                     self.nets5, self.nets6, self.nets7, self.nets8]
 
         self.port_address = '10.0.1.2'
         self.port_data1 = [{'network_id': 'my_netid1',
@@ -1124,6 +1126,56 @@ class TestNeutronv2(TestNeutronv2Base):
                           api.allocate_for_instance, self.context,
                           self.instance, requested_networks=requested_networks)
 
+    def test_allocate_for_instance_with_externalnet_forbidden(self):
+        """Only one network is available, it's external, and the client
+           is unauthorized to use it.
+        """
+        self.instance = fake_instance.fake_instance_obj(self.context,
+                                                        **self.instance)
+        # no networks in the tenant
+        self.moxed_client.list_networks(
+            tenant_id=self.instance.project_id,
+            shared=False).AndReturn(
+                {'networks': model.NetworkInfo([])})
+        # external network is shared
+        self.moxed_client.list_networks(shared=True).AndReturn(
+            {'networks': self.nets8})
+        self.mox.ReplayAll()
+        api = neutronapi.API()
+        self.assertRaises(exception.ExternalNetworkAttachForbidden,
+                          api.allocate_for_instance,
+                          self.context, self.instance)
+
+    def test_allocate_for_instance_with_externalnet_multiple(self):
+        """Multiple networks are available, one the client is authorized
+           to use, and an external one the client is unauthorized to use.
+        """
+        self.instance = fake_instance.fake_instance_obj(self.context,
+                                                        **self.instance)
+        # network found in the tenant
+        self.moxed_client.list_networks(
+            tenant_id=self.instance.project_id,
+            shared=False).AndReturn(
+                {'networks': self.nets1})
+        # external network is shared
+        self.moxed_client.list_networks(shared=True).AndReturn(
+            {'networks': self.nets8})
+        self.mox.ReplayAll()
+        api = neutronapi.API()
+        self.assertRaises(
+            exception.NetworkAmbiguous,
+            api.allocate_for_instance,
+            self.context, self.instance)
+
+    def test_allocate_for_instance_with_externalnet_admin_ctx(self):
+        """Only one network is available, it's external, and the client
+           is authorized.
+        """
+        admin_ctx = context.RequestContext('userid', 'my_tenantid',
+                                           is_admin=True)
+        api = self._stub_allocate_for_instance(net_idx=8)
+        api.allocate_for_instance(admin_ctx, self.instance)
+
     def _deallocate_for_instance(self, number, requested_networks=None):
         # TODO(mriedem): Remove this conversion when all neutronv2 APIs are
         # converted to handling instance objects.
@@ -1782,20 +1834,6 @@ class TestNeutronv2(TestNeutronv2Base):
         # specify only first and last network
         req_ids = [net['id'] for net in (self.nets3[0], self.nets3[-1])]
         self._get_available_networks(prv_nets, pub_nets, req_ids)
-
-    def test_get_available_networks_with_externalnet_fails(self):
-        req_ids = [net['id'] for net in self.nets5]
-        self.assertRaises(
-            exception.ExternalNetworkAttachForbidden,
-            self._get_available_networks,
-            self.nets5, pub_nets=[], req_ids=req_ids)
-
-    def test_get_available_networks_with_externalnet_admin_ctx(self):
-        admin_ctx = context.RequestContext('userid', 'my_tenantid',
-                                           is_admin=True)
-        req_ids = [net['id'] for net in self.nets5]
-        self._get_available_networks(self.nets5, pub_nets=[],
-                                     req_ids=req_ids, context=admin_ctx)
 
     def test_get_available_networks_with_custom_policy(self):
         rules = {'network:attach_external_network':
