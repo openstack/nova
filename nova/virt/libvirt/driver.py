@@ -54,6 +54,7 @@ from nova.api.metadata import base as instance_metadata
 from nova import block_device
 from nova.compute import arch
 from nova.compute import flavors
+from nova.compute import hvtype
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
@@ -4675,7 +4676,7 @@ class LibvirtDriver(driver.ComputeDriver):
             for dt in g.domtype:
                 instance_cap = (
                     arch.canonicalize(g.arch),
-                    dt,
+                    hvtype.canonicalize(dt),
                     g.ostype)
                 instance_caps.append(instance_cap)
 

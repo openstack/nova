@@ -87,6 +87,9 @@ def canonicalize(name):
 
     newname = name.lower()
 
+    if newname == "xapi":
+        newname = XEN
+
     if not is_valid(newname):
         raise exception.InvalidHypervisorVirtType(hvtype=name)
 
