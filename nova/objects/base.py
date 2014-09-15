@@ -574,18 +574,6 @@ class ObjectListBase(object):
     def sort(self, cmp=None, key=None, reverse=False):
         self.objects.sort(cmp=cmp, key=key, reverse=reverse)
 
-    def _attr_objects_to_primitive(self):
-        """Serialization of object list."""
-        return [x.obj_to_primitive() for x in self.objects]
-
-    def _attr_objects_from_primitive(self, value):
-        """Deserialization of object list."""
-        objects = []
-        for entity in value:
-            obj = NovaObject.obj_from_primitive(entity, context=self._context)
-            objects.append(obj)
-        return objects
-
     def obj_make_compatible(self, primitive, target_version):
         primitives = primitive['objects']
         child_target_version = self.child_versions.get(target_version, '1.0')
