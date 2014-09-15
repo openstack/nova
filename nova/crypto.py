@@ -322,7 +322,7 @@ def _user_cert_subject(user_id, project_id):
     return CONF.user_cert_subject % (project_id, user_id, timeutils.isotime())
 
 
-def generate_x509_cert(user_id, project_id, bits=1024):
+def generate_x509_cert(user_id, project_id, bits=2048):
     """Generate and sign a cert for user in project."""
     subject = _user_cert_subject(user_id, project_id)
 
