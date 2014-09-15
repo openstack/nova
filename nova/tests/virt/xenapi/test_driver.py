@@ -19,15 +19,14 @@ import mock
 
 from nova.compute import arch
 from nova.openstack.common import units
-from nova.tests.virt import test_driver
 from nova.tests.virt.xenapi import stubs
+from nova.virt import driver
 from nova.virt import fake
 from nova.virt import xenapi
 from nova.virt.xenapi import driver as xenapi_driver
 
 
-class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB,
-                           test_driver.DriverAPITestHelper):
+class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
     """Unit tests for Driver operations."""
 
     def _get_driver(self):
@@ -99,4 +98,4 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB,
 
     def test_public_api_signatures(self):
         inst = self._get_driver()
-        self.assertPublicAPISignatures(inst)
+        self.assertPublicAPISignatures(driver.ComputeDriver(None), inst)

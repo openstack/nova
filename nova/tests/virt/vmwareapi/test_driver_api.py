@@ -51,7 +51,6 @@ import nova.tests.image.fake
 from nova.tests import matchers
 from nova.tests import test_flavors
 from nova.tests import utils
-from nova.tests.virt import test_driver
 from nova.tests.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.virt.vmwareapi import stubs
 from nova import utils as nova_utils
@@ -1985,8 +1984,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._cached_files_exist()
 
 
-class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase,
-                                test_driver.DriverAPITestHelper):
+class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
 
     def setUp(self):
 
@@ -2014,7 +2012,7 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase,
         vmwareapi_fake.cleanup()
 
     def test_public_api_signatures(self):
-        self.assertPublicAPISignatures(self.conn)
+        self.assertPublicAPISignatures(v_driver.ComputeDriver(None), self.conn)
 
     def test_list_instances(self):
         instances = self.conn.list_instances()
