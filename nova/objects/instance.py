@@ -225,6 +225,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                 primitive[field] = primitive[field].encode('ascii', 'replace')
         if target_version < (1, 15) and 'pci_devices' in primitive:
             # NOTE(baoli): Instance <= 1.14 (icehouse) had PciDeviceList 1.0
+            # NOTE(vish): pci_devices is a list object so we must pull the
+            #             underlying primitive out of the nova_object_data.
             self.pci_devices.obj_make_compatible(
                 primitive['pci_devices']['nova_object.data'], '1.0')
             primitive['pci_devices']['nova_object.version'] = '1.0'

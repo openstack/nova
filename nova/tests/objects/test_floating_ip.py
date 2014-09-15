@@ -240,6 +240,17 @@ class _TestFloatingIPObject(object):
         objects.FloatingIPList.destroy(None, ips)
         destroy_mock.assert_called_once_with(None, ips)
 
+    def test_backport_fixedip_1_1(self):
+        floating = objects.FloatingIP()
+        fixed = objects.FixedIP()
+        floating.fixed_ip = fixed
+        with mock.patch.object(fixed, 'obj_make_compatible') as compat:
+            primitive = {'fixed_ip': {'nova_object.data': {}}}
+            floating.obj_make_compatible(primitive, '1.1')
+            compat.assert_called_once_with(primitive['fixed_ip'], '1.1')
+            self.assertEqual('1.1',
+                             primitive['fixed_ip']['nova_object.version'])
+
 
 class TestFloatingIPObject(test_objects._LocalTest,
                            _TestFloatingIPObject):
