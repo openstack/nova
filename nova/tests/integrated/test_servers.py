@@ -186,11 +186,6 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
                           self.api.post_server_action, created_server_id,
                           {'restore': {}})
 
-        # Cannot forceDelete unless instance is deleted
-        self.assertRaises(client.OpenStackApiException,
-                          self.api.post_server_action, created_server_id,
-                          {'forceDelete': {}})
-
         # Delete the server
         self.api.delete_server(created_server_id)
 

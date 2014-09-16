@@ -1820,10 +1820,9 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
-    @check_instance_state(vm_state=[vm_states.SOFT_DELETED],
-                          must_have_launched=False)
+    @check_instance_state(must_have_launched=False)
     def force_delete(self, context, instance):
-        """Force delete a previously deleted (but not reclaimed) instance."""
+        """Force delete an instance in any vm_state/task_state."""
         self._delete_instance(context, instance)
 
     def force_stop(self, context, instance, do_cast=True):
