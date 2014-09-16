@@ -1218,7 +1218,8 @@ class API(base.Base):
                     self.volume_api.check_attach(context,
                                                  volume,
                                                  instance=instance)
-                except exception.CinderConnectionFailed:
+                except (exception.CinderConnectionFailed,
+                        exception.InvalidVolume):
                     raise
                 except Exception:
                     raise exception.InvalidBDMVolume(id=volume_id)
@@ -1358,7 +1359,8 @@ class API(base.Base):
         try:
             self._validate_bdm(
                 context, instance, instance_type, block_device_mapping)
-        except (exception.CinderConnectionFailed, exception.InvalidBDM):
+        except (exception.CinderConnectionFailed, exception.InvalidBDM,
+                exception.InvalidVolume):
             with excutils.save_and_reraise_exception():
                 instance.destroy(context)
 
