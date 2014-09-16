@@ -17,50 +17,86 @@
 """
 Mapping of bare metal node states.
 
-A node may have empty {} `properties` and `driver_info` in which case, it is
-said to be "initialized" but "not available", and the state is NOSTATE.
+Setting the node `power_state` is handled by the conductor's power
+synchronization thread. Based on the power state retrieved from the driver
+for the node, the state is set to POWER_ON or POWER_OFF, accordingly.
+Should this fail, the `power_state` value is left unchanged, and the node
+is placed into maintenance mode.
 
-When updating `properties`,  any data will be rejected if the data fails to be
-validated by the driver. Any node with non-empty `properties` is said to be
-"initialized", and the state is INIT.
-
-When the driver has received both `properties` and `driver_info`, it will check
-the power status of the node and update the `power_state` accordingly. If the
-driver fails to read the power state from the node, it will reject the
-`driver_info` change, and the state will remain as INIT. If the power status
-check succeeds, `power_state` will change to one of POWER_ON or POWER_OFF,
-accordingly.
-
-At this point, the power state may be changed via the API, a console
-may be started, and a tenant may be associated.
-
-The `power_state` for a node always represents the current power state. Any
-power operation sets this to the actual state when done (whether successful or
-not). It is set to ERROR only when unable to get the power state from a node.
-
-When `instance_uuid` is set to a non-empty / non-None value, the node is said
-to be "associated" with a tenant.
-
-An associated node can not be deleted.
-
-The `instance_uuid` field may be unset only if the node is in POWER_OFF or
-ERROR states.
+The `power_state` can also be set manually via the API. A failure to change
+the state leaves the current state unchanged. The node is NOT placed into
+maintenance mode in this case.
 """
 
+
+#####################
+# Provisioning states
+#####################
+
 NOSTATE = None
-INIT = 'initializing'
+""" No state information.
+
+Default for the power and provision state of newly created nodes.
+"""
+
 ACTIVE = 'active'
-BUILDING = 'building'
+""" Node is successfully deployed and associated with an instance. """
+
 DEPLOYWAIT = 'wait call-back'
+""" Node is waiting to be deployed.
+
+This will be the node `provision_state` while the node is waiting for
+the driver to finish deployment.
+"""
+
 DEPLOYING = 'deploying'
+""" Node is ready to receive a deploy request, or is currently being deployed.
+
+A node will have its `provision_state` set to DEPLOYING briefly before it
+receives its initial deploy request. It will also move to this state from
+DEPLOYWAIT after the callback is triggered and deployment is continued
+(disk partitioning and image copying).
+"""
+
 DEPLOYFAIL = 'deploy failed'
+""" Node deployment failed. """
+
 DEPLOYDONE = 'deploy complete'
+""" Node was successfully deployed.
+
+This is mainly a target provision state used during deployment. A successfully
+deployed node should go to ACTIVE status.
+"""
+
 DELETING = 'deleting'
+""" Node is actively being torn down. """
+
 DELETED = 'deleted'
+""" Node tear down was successful.
+
+This is mainly a target provision state used during node tear down. A
+successful tear down leaves the node with a `provision_state` of NOSTATE.
+"""
+
 ERROR = 'error'
+""" An error occurred during node processing.
+
+The `last_error` attribute of the node details should contain an error message.
+"""
+
 REBUILD = 'rebuild'
+""" Node is currently being rebuilt. """
+
+
+##############
+# Power states
+##############
 
 POWER_ON = 'power on'
+""" Node is powered on. """
+
 POWER_OFF = 'power off'
+""" Node is powered off. """
+
 REBOOT = 'rebooting'
-SUSPEND = 'suspended'
+""" Node is rebooting. """
