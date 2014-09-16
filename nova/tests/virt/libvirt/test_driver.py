@@ -11797,6 +11797,17 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                vconfig.LibvirtConfigGuestGIDMap,
                                1, 20000, 10)
 
+    def test_instance_on_disk(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(uuid='fake-uuid', id=1)
+        self.assertFalse(conn.instance_on_disk(instance))
+
+    def test_instance_on_disk_rbd(self):
+        self.flags(images_type='rbd', group='libvirt')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(uuid='fake-uuid', id=1)
+        self.assertTrue(conn.instance_on_disk(instance))
+
 
 class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
     """Test for LibvirtDriver.get_all_volume_usage."""
