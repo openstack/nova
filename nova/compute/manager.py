@@ -917,6 +917,18 @@ class ComputeManager(manager.Manager):
         self._clean_instance_console_tokens(context, instance)
         self._delete_scheduler_instance_info(context, instance.uuid)
 
+    def _create_reservations(self, context, instance, project_id, user_id):
+        vcpus = instance.vcpus
+        mem_mb = instance.memory_mb
+
+        quotas = objects.Quotas(context=context)
+        quotas.reserve(project_id=project_id,
+                       user_id=user_id,
+                       instances=-1,
+                       cores=-vcpus,
+                       ram=-mem_mb)
+        return quotas
+
     def _init_instance(self, context, instance):
         '''Initialize this instance during service init.'''
 
@@ -1018,14 +1030,11 @@ class ComputeManager(manager.Manager):
                 instance.obj_load_attr('system_metadata')
                 bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                         context, instance.uuid)
-                # FIXME(comstud): This needs fixed. We should be creating
-                # reservations and updating quotas, because quotas
-                # wouldn't have been updated for this instance since it is
-                # still in DELETING.  See bug 1296414.
-                #
-                # Create a dummy quota object for now.
-                quotas = objects.Quotas.from_reservations(
-                        context, None, instance=instance)
+                project_id, user_id = objects.quotas.ids_from_instance(
+                    context, instance)
+                quotas = self._create_reservations(context, instance,
+                                                   project_id, user_id)
+
                 self._delete_instance(context, instance, bdms, quotas)
             except Exception:
                 # we don't want that an exception blocks the init_host
