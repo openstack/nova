@@ -37,9 +37,8 @@ class SROps(stubs.XenAPITestBaseNoDB):
         self.session = mock.Mock()
         self.session.XenAPI.Failure = UUIDException
         self.session.call_xenapi.side_effect = UUIDException
-        self.assertEqual(volume_utils.find_sr_by_uuid(self.session,
-                                                      'sr_uuid'),
-                         None)
+        self.assertIsNone(
+            volume_utils.find_sr_by_uuid(self.session, 'sr_uuid'))
 
     def test_find_sr_from_vdi(self):
         vdi_ref = 'fake-ref'
@@ -81,11 +80,9 @@ class ISCSIParametersTestCase(stubs.XenAPITestBaseNoDB):
                          'host')
 
         # There is no default value
-        self.assertEqual(volume_utils._get_target_host(':port'),
-                         None)
+        self.assertIsNone(volume_utils._get_target_host(':port'))
 
-        self.assertEqual(volume_utils._get_target_host(None),
-                         None)
+        self.assertIsNone(volume_utils._get_target_host(None))
 
     def test_target_port(self):
         self.assertEqual(volume_utils._get_target_port('host:port'),

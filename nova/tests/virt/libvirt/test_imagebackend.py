@@ -1287,6 +1287,6 @@ class UtilTestCase(test.NoDBTestCase):
     def test_get_hw_disk_discard(self):
         self.assertEqual('unmap', imagebackend.get_hw_disk_discard("unmap"))
         self.assertEqual('ignore', imagebackend.get_hw_disk_discard("ignore"))
-        self.assertEqual(None, imagebackend.get_hw_disk_discard(None))
+        self.assertIsNone(imagebackend.get_hw_disk_discard(None))
         self.assertRaises(RuntimeError, imagebackend.get_hw_disk_discard,
                           "fake")

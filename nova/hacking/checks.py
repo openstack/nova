@@ -51,9 +51,9 @@ asse_equal_type_re = re.compile(
                        r"(.)*assertEqual\(type\((\w|\.|\'|\"|\[|\])+\), "
                        "(\w|\.|\'|\"|\[|\])+\)")
 asse_equal_end_with_none_re = re.compile(
-                           r"(.)*assertEqual\((\w|\.|\'|\"|\[|\])+, None\)")
+                           r"assertEqual\(.*?,\s+None\)$")
 asse_equal_start_with_none_re = re.compile(
-                           r"(.)*assertEqual\(None, (\w|\.|\'|\"|\[|\])+\)")
+                           r"assertEqual\(None,")
 conf_attribute_set_re = re.compile(r"CONF\.[a-z0-9_.]+\s*=\s*\w")
 log_translation = re.compile(
     r"(.)*LOG\.(audit|error|info|warn|warning|critical|exception)\(\s*('|\")")
@@ -250,8 +250,8 @@ def assert_equal_none(logical_line):
 
     N318
     """
-    res = (asse_equal_start_with_none_re.match(logical_line) or
-           asse_equal_end_with_none_re.match(logical_line))
+    res = (asse_equal_start_with_none_re.search(logical_line) or
+           asse_equal_end_with_none_re.search(logical_line))
     if res:
         yield (0, "N318: assertEqual(A, None) or assertEqual(None, A) "
                "sentences not allowed")

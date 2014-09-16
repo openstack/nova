@@ -517,9 +517,9 @@ class ApiTestCase(test.TestCase):
     @mock.patch('nova.objects.FixedIP.get_by_floating_address')
     def test_get_instance_by_floating_address_none(self, mock_get_by_floating):
         mock_get_by_floating.return_value = None
-        self.assertEqual(None,
-                         self.network_api.get_instance_id_by_floating_address(
-                             self.context, mock.sentinel.floating))
+        self.assertIsNone(
+            self.network_api.get_instance_id_by_floating_address(
+                self.context, mock.sentinel.floating))
         mock_get_by_floating.assert_called_once_with(self.context,
                                                      mock.sentinel.floating)
 

@@ -125,7 +125,7 @@ class RequestTest(test.NoDBTestCase):
                 compute_nodes[1])
         self.assertEqual(request.get_db_compute_node('id2'),
                 compute_nodes[2])
-        self.assertEqual(request.get_db_compute_node('id3'), None)
+        self.assertIsNone(request.get_db_compute_node('id3'))
         self.assertEqual(request.get_db_compute_nodes(),
                 {'id0': compute_nodes[0],
                  'id1': compute_nodes[1],
