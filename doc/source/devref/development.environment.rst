@@ -76,7 +76,7 @@ Linux Systems
 
 .. note::
 
-  This section is tested for Nova on Ubuntu (10.10-64) and
+  This section is tested for Nova on Ubuntu (14.04-64) and
   Fedora-based (RHEL 6.1) distributions. Feel free to add notes and
   change according to your experiences or operating system.
 
@@ -125,9 +125,9 @@ Getting the code
 Once you have the prerequisite system packages installed, the next
 step is to clone the code.
 
-Grab the code from GitHub::
+Grab the code from git::
 
-    git clone https://github.com/openstack/nova.git
+    git clone https://git.openstack.org/openstack/nova
     cd nova
 
 
@@ -223,7 +223,7 @@ of it.
 Contributing Your Work
 ======================
 
-Once your work is complete you may wish to contribute it to the project. 
+Once your work is complete you may wish to contribute it to the project.
 Refer to HowToContribute_ for information.
 Nova uses the Gerrit code review system. For information on how to submit
 your branch to Gerrit, see GerritWorkflow_.
