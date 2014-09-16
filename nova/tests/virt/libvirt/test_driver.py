@@ -3968,7 +3968,10 @@ class LibvirtConnTestCase(test.TestCase,
 
         mock_lookupByName.assert_called_once_with("instance-00000001")
         mock_volume_info.assert_has_calls(mock_volume_info_calls)
-        mock_convert_image.assert_called_once()
+        mock_convert_image.assert_called_once_with('/dev/nova-vg/lv',
+                                                   mock.ANY,
+                                                   'raw',
+                                                   run_as_root=True)
         snapshot = image_service.show(context, recv_meta['id'])
         mock_update_task_state.assert_has_calls(update_task_state_calls)
         self.assertEqual('available', snapshot['properties']['image_state'])
@@ -4186,7 +4189,10 @@ class LibvirtConnTestCase(test.TestCase,
 
         mock_lookupByName.assert_called_once_with("instance-00000001")
         mock_volume_info.assert_has_calls(mock_volume_info_calls)
-        mock_convert_image.assert_called_once()
+        mock_convert_image.assert_called_once_with('/dev/nova-vg/lv',
+                                                   mock.ANY,
+                                                   'qcow2',
+                                                   run_as_root=True)
         snapshot = image_service.show(context, recv_meta['id'])
         mock_update_task_state.assert_has_calls(update_task_state_calls)
         self.assertEqual('available', snapshot['properties']['image_state'])
@@ -9870,7 +9876,7 @@ Active:          8381604 kB
                             "host1.example.com",
                             lambda x: x,
                             lambda x: x)
-        mock_spawn.assert_called_once()
+        self.assertEqual(1, mock_spawn.call_count)
 
     @mock.patch.object(greenthread, "spawn")
     @mock.patch.object(fake_libvirt_utils, "is_valid_hostname")

@@ -347,6 +347,17 @@ def use_jsonutils(logical_line, filename):
                 yield (pos, msg % {'fun': f[:-1]})
 
 
+def check_assert_called_once(logical_line, filename):
+    msg = ("N327: assert_called_once is a no-op. please use assert_called_"
+           "once_with to test with explicit parameters or an assertEqual with"
+           " call_count.")
+
+    if 'nova/tests/' in filename:
+        pos = logical_line.find('.assert_called_once(')
+        if pos != -1:
+            yield (pos, msg)
+
+
 class CheckForStrExc(BaseASTChecker):
     """Checks for the use of str() on an exception.
 
@@ -423,5 +434,6 @@ def factory(register):
     register(no_mutable_default_args)
     register(check_explicit_underscore_import)
     register(use_jsonutils)
+    register(check_assert_called_once)
     register(CheckForStrExc)
     register(CheckForTransAdd)
