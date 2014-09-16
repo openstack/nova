@@ -19,7 +19,6 @@ from nova import objects
 from nova.objects import base
 from nova.objects import fields
 from nova.openstack.common import log as logging
-from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -48,24 +47,10 @@ class Service(base.NovaPersistentObject, base.NovaObject):
         'compute_node': fields.ObjectField('ComputeNode'),
         }
 
-    def obj_make_compatible(self, primitive, target_version):
-        target_version = utils.convert_version_to_tuple(target_version)
-        if target_version < (1, 3) and 'compute_node' in primitive:
-            self.compute_node.obj_make_compatible(
-                    primitive['compute_node']['nova_object.data'], '1.4')
-            primitive['compute_node']['nova_object.version'] = '1.4'
-        elif target_version < (1, 5) and 'compute_node' in primitive:
-            self.compute_node.obj_make_compatible(
-                    primitive['compute_node']['nova_object.data'], '1.5')
-            primitive['compute_node']['nova_object.version'] = '1.5'
-        elif target_version < (1, 6) and 'compute_node' in primitive:
-            self.compute_node.obj_make_compatible(
-                    primitive['compute_node']['nova_object.data'], '1.6')
-            primitive['compute_node']['nova_object.version'] = '1.6'
-        elif target_version < (1, 7) and 'compute_node' in primitive:
-            self.compute_node.obj_make_compatible(
-                    primitive['compute_node']['nova_object.data'], '1.7')
-            primitive['compute_node']['nova_object.version'] = '1.7'
+    obj_relationships = {
+        'compute_node': [('1.1', '1.4'), ('1.3', '1.5'), ('1.5', '1.6'),
+                         ('1.7', '1.8')],
+    }
 
     @staticmethod
     def _do_compute_node(context, service, db_service):

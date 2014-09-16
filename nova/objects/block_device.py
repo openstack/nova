@@ -22,7 +22,6 @@ from nova import objects
 from nova.objects import base
 from nova.objects import fields
 from nova.openstack.common import log as logging
-from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -66,20 +65,10 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject):
         'connection_info': fields.StringField(nullable=True),
     }
 
-    def obj_make_compatible(self, primitive, target_version):
-        target_version = utils.convert_version_to_tuple(target_version)
-        if target_version < (1, 2) and 'instance' in primitive:
-            self.instance.obj_make_compatible(
-                    primitive['instance']['nova_object.data'], '1.13')
-            primitive['instance']['nova_object.version'] = '1.13'
-        elif target_version < (1, 3) and 'instance' in primitive:
-            self.instance.obj_make_compatible(
-                    primitive['instance']['nova_object.data'], '1.14')
-            primitive['instance']['nova_object.version'] = '1.14'
-        elif target_version < (1, 4) and 'instance' in primitive:
-            self.instance.obj_make_compatible(
-                    primitive['instance']['nova_object.data'], '1.15')
-            primitive['instance']['nova_object.version'] = '1.15'
+    obj_relationships = {
+        'instance': [('1.0', '1.13'), ('1.2', '1.14'), ('1.3', '1.15'),
+                     ('1.4', '1.16')],
+    }
 
     @staticmethod
     def _from_db_object(context, block_device_obj,
