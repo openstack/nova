@@ -7510,20 +7510,21 @@ class LibvirtConnTestCase(test.TestCase,
                 conn.destroy, self.context, instance, [])
 
     def test_private_destroy_not_found(self):
+        ex = fakelibvirt.make_libvirtError(
+                libvirt.libvirtError,
+                "No such domain",
+                error_code=libvirt.VIR_ERR_NO_DOMAIN)
         mock = self.mox.CreateMock(libvirt.virDomain)
         mock.ID()
-        mock.destroy()
+        mock.destroy().AndRaise(ex)
+        mock.info().AndRaise(ex)
         self.mox.ReplayAll()
 
         def fake_lookup_by_name(instance_name):
             return mock
 
-        def fake_get_info(instance_name):
-            raise exception.InstanceNotFound(instance_id=instance_name)
-
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
-        self.stubs.Set(conn, 'get_info', fake_get_info)
         instance = {"name": "instancename", "id": "instanceid",
                     "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
         # NOTE(vish): verifies destroy doesn't raise if the instance disappears

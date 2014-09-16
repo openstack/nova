@@ -981,7 +981,10 @@ class LibvirtDriver(driver.ComputeDriver):
             except libvirt.libvirtError as e:
                 is_okay = False
                 errcode = e.get_error_code()
-                if errcode == libvirt.VIR_ERR_OPERATION_INVALID:
+                if errcode == libvirt.VIR_ERR_NO_DOMAIN:
+                    # Domain already gone. This can safely be ignored.
+                    is_okay = True
+                elif errcode == libvirt.VIR_ERR_OPERATION_INVALID:
                     # If the instance is already shut off, we get this:
                     # Code=55 Error=Requested operation is not valid:
                     # domain is not running
@@ -4224,7 +4227,20 @@ class LibvirtDriver(driver.ComputeDriver):
 
         """
         virt_dom = self._lookup_by_name(instance['name'])
-        dom_info = virt_dom.info()
+        try:
+            dom_info = virt_dom.info()
+        except libvirt.libvirtError as ex:
+            error_code = ex.get_error_code()
+            if error_code == libvirt.VIR_ERR_NO_DOMAIN:
+                raise exception.InstanceNotFound(instance_id=instance['name'])
+
+            msg = (_('Error from libvirt while getting domain info for '
+                     '%(instance_name)s: [Error Code %(error_code)s] %(ex)s') %
+                   {'instance_name': instance['name'],
+                    'error_code': error_code,
+                    'ex': ex})
+            raise exception.NovaException(msg)
+
         return {'state': LIBVIRT_POWER_STATE[dom_info[0]],
                 'max_mem': dom_info[1],
                 'mem': dom_info[2],
