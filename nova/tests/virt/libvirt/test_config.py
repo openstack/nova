@@ -1349,6 +1349,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.os_loader = '/usr/lib/xen/boot/hvmloader'
         obj.os_root = "root=xvda"
         obj.os_cmdline = "console=xvc0"
+        obj.pae = True
         obj.acpi = True
         obj.apic = True
 
@@ -1376,6 +1377,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <features>
                 <acpi/>
                 <apic/>
+                <pae/>
               </features>
               <devices>
                 <disk type="file" device="disk">
@@ -1411,6 +1413,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.os_type = "linux"
         obj.os_boot_dev = ["hd", "cdrom", "fd"]
         obj.os_smbios = config.LibvirtConfigGuestSMBIOS()
+        obj.pae = True
         obj.acpi = True
         obj.apic = True
 
@@ -1460,6 +1463,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <features>
                 <acpi/>
                 <apic/>
+                <pae/>
               </features>
               <cputune>
                 <shares>100</shares>
