@@ -61,7 +61,7 @@ cinder_opts = [
                help='Number of cinderclient retries on failed http calls',
             deprecated_group='DEFAULT',
             deprecated_name='cinder_http_retries'),
-    cfg.IntOpt('http_timeout', default=None,
+    cfg.IntOpt('http_timeout',
                help='HTTP inactivity timeout (in seconds)',
                deprecated_group='DEFAULT',
                deprecated_name='cinder_http_timeout'),
