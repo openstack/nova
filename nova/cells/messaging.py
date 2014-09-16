@@ -1393,8 +1393,11 @@ class MessageRunner(object):
             return
         my_cell_info = self.state_manager.get_my_state()
         capabs = self.state_manager.get_our_capabilities()
-        LOG.debug("Updating parents with our capabilities: %(capabs)s",
-                  {'capabs': capabs})
+        parent_cell_names = ','.join(x.name for x in parent_cells)
+        LOG.debug("Updating parents [%(parent_cell_names)s] with "
+                                     "our capabilities: %(capabs)s",
+                   {'parent_cell_names': parent_cell_names,
+                    'capabs': capabs})
         # We have to turn the sets into lists so they can potentially
         # be json encoded when the raw message is sent.
         for key, values in capabs.items():
@@ -1413,8 +1416,11 @@ class MessageRunner(object):
             return
         my_cell_info = self.state_manager.get_my_state()
         capacities = self.state_manager.get_our_capacities()
-        LOG.debug("Updating parents with our capacities: %(capacities)s",
-                  {'capacities': capacities})
+        parent_cell_names = ','.join(x.name for x in parent_cells)
+        LOG.debug("Updating parents [%(parent_cell_names)s] with "
+                                   "our capacities: %(capacities)s",
+                  {'parent_cell_names': parent_cell_names,
+                   'capacities': capacities})
         method_kwargs = {'cell_name': my_cell_info.name,
                          'capacities': capacities}
         for cell in parent_cells:
