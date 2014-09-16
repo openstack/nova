@@ -716,7 +716,8 @@ class API(base_api.NetworkAPI):
         vnic_type = None
         port = neutron.show_port(port_id,
             fields=['binding:vnic_type', 'network_id']).get('port')
-        vnic_type = port['binding:vnic_type']
+        vnic_type = port.get('binding:vnic_type',
+                             network_model.VNIC_TYPE_NORMAL)
         if vnic_type != network_model.VNIC_TYPE_NORMAL:
             net_id = port['network_id']
             net = neutron.show_network(net_id,
@@ -1381,7 +1382,8 @@ class API(base_api.NetworkAPI):
                     id=current_neutron_port['id'],
                     address=current_neutron_port['mac_address'],
                     network=network,
-                    vnic_type=current_neutron_port['binding:vnic_type'],
+                    vnic_type=current_neutron_port.get('binding:vnic_type',
+                        network_model.VNIC_TYPE_NORMAL),
                     type=current_neutron_port.get('binding:vif_type'),
                     profile=current_neutron_port.get('binding:profile'),
                     details=current_neutron_port.get('binding:vif_details'),
