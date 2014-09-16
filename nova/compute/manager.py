@@ -4487,11 +4487,16 @@ class ComputeManager(manager.Manager):
             bdm = objects.BlockDeviceMapping.get_by_volume_id(
                     context, volume_id)
         driver_bdm = driver_block_device.DriverVolumeBlockDevice(bdm)
-        try:
-            return self._attach_volume(context, instance, driver_bdm)
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                bdm.destroy(context)
+
+        @utils.synchronized(instance.uuid)
+        def do_attach_volume(context, instance, driver_bdm):
+            try:
+                return self._attach_volume(context, instance, driver_bdm)
+            except Exception:
+                with excutils.save_and_reraise_exception():
+                    bdm.destroy(context)
+
+        do_attach_volume(context, instance, driver_bdm)
 
     def _attach_volume(self, context, instance, bdm):
         context = context.elevated()
