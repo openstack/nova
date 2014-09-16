@@ -29,6 +29,7 @@ from nova.api.openstack.compute.contrib import networks_associate
 from nova.api.openstack.compute.contrib import os_networks as networks
 from nova.api.openstack.compute.contrib import os_tenant_networks as tnet
 from nova.api.openstack.compute.plugins.v3 import networks as networks_v21
+from nova.api.openstack.compute.plugins.v3 import tenant_networks as tnet_v21
 from nova.api.openstack import extensions
 import nova.context
 from nova import exception
@@ -562,10 +563,12 @@ class NetworksAssociateTest(test.NoDBTestCase):
                           req, uuid, {'disassociate_host': None})
 
 
-class TenantNetworksTest(test.NoDBTestCase):
+class TenantNetworksTestV21(test.NoDBTestCase):
+    ctrlr = tnet_v21.TenantNetworkController
+
     def setUp(self):
-        super(TenantNetworksTest, self).setUp()
-        self.controller = tnet.NetworkController()
+        super(TenantNetworksTestV21, self).setUp()
+        self.controller = self.ctrlr()
         self.flags(enable_network_quota=True)
 
     @mock.patch('nova.quota.QUOTAS.reserve')
@@ -599,3 +602,7 @@ class TenantNetworksTest(test.NoDBTestCase):
         ex = exception.NetworkInUse(network_id=1)
         expex = webob.exc.HTTPConflict
         self._test_network_delete_exception(ex, expex)
+
+
+class TenantNetworksTestV2(TenantNetworksTestV21):
+    ctrlr = tnet.NetworkController

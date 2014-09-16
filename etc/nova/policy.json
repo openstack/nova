@@ -264,6 +264,8 @@
     "compute_extension:v3:os-suspend-server:discoverable": "",
     "compute_extension:v3:os-suspend-server:suspend": "rule:admin_or_owner",
     "compute_extension:v3:os-suspend-server:resume": "rule:admin_or_owner",
+    "compute_extension:v3:os-tenant-networks": "rule:admin_or_owner",
+    "compute_extension:v3:os-tenant-networks:discoverable": "",
     "compute_extension:simple_tenant_usage:list": "rule:admin_api",
     "compute_extension:unshelve": "",
     "compute_extension:v3:os-shelve:unshelve": "",

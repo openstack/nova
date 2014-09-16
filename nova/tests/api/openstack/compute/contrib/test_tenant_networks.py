@@ -16,16 +16,19 @@ import mock
 import webob
 
 from nova.api.openstack.compute.contrib import os_tenant_networks as networks
+from nova.api.openstack.compute.plugins.v3 import tenant_networks \
+     as networks_v21
 from nova import exception
 from nova import test
 from nova.tests.api.openstack import fakes
 
 
-class NetworksTest(test.NoDBTestCase):
+class NetworksTestV21(test.NoDBTestCase):
+    ctrl_class = networks_v21.TenantNetworkController
 
     def setUp(self):
-        super(NetworksTest, self).setUp()
-        self.controller = networks.NetworkController()
+        super(NetworksTestV21, self).setUp()
+        self.controller = self.ctrl_class()
 
     @mock.patch('nova.network.api.API.delete',
                 side_effect=exception.NetworkInUse(network_id=1))
@@ -34,3 +37,7 @@ class NetworksTest(test.NoDBTestCase):
 
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller.delete, req, 1)
+
+
+class NetworksTestV2(NetworksTestV21):
+    ctrl_class = networks.NetworkController
