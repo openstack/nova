@@ -905,16 +905,11 @@ def get_dhcp_leases(context, network_ref):
     return '\n'.join(hosts)
 
 
-def get_dhcp_hosts(context, network_ref):
+def get_dhcp_hosts(context, network_ref, fixedips):
     """Get network's hosts config in dhcp-host format."""
     hosts = []
-    host = None
-    if network_ref['multi_host']:
-        host = CONF.host
     macs = set()
-    for fixedip in objects.FixedIPList.get_by_network(context,
-                                                      network_ref,
-                                                      host=host):
+    for fixedip in fixedips:
         if fixedip.allocated:
             if fixedip.virtual_interface.address not in macs:
                 hosts.append(_host_dhcp(fixedip))
@@ -973,7 +968,7 @@ def _remove_dhcp_mangle_rule(dev):
     iptables_manager.apply()
 
 
-def get_dhcp_opts(context, network_ref):
+def get_dhcp_opts(context, network_ref, fixedips):
     """Get network's hosts config in dhcp-opts format."""
     gateway = network_ref['gateway']
     # NOTE(vish): if we are in multi-host mode and we are not sharing
@@ -984,33 +979,13 @@ def get_dhcp_opts(context, network_ref):
         gateway = network_ref['dhcp_server']
     hosts = []
     if CONF.use_single_default_gateway:
-        # NOTE(vish): this will have serious performance implications if we
-        #             are not in multi_host mode.
-        host = None
-        if network_ref['multi_host']:
-            host = CONF.host
-        fixedips = objects.FixedIPList.get_by_network(context, network_ref,
-                                                      host=host)
-        if fixedips:
-            instance_set = set([fixedip.instance_uuid for fixedip in fixedips])
-            default_gw_vif = {}
-            for instance_uuid in instance_set:
-                vifs = objects.VirtualInterfaceList.get_by_instance_uuid(
-                        context, instance_uuid)
-                if vifs:
-                    # offer a default gateway to the first virtual interface
-                    default_gw_vif[instance_uuid] = vifs[0].id
-
-            for fixedip in fixedips:
-                if fixedip.allocated:
-                    instance_uuid = fixedip.instance_uuid
-                    if instance_uuid in default_gw_vif:
-                        # we don't want default gateway for this fixed ip
-                        if (default_gw_vif[instance_uuid] !=
-                                fixedip.virtual_interface_id):
-                            hosts.append(_host_dhcp_opts(fixedip))
-                        else:
-                            hosts.append(_host_dhcp_opts(fixedip, gateway))
+        for fixedip in fixedips:
+            if fixedip.allocated:
+                vif_id = fixedip.virtual_interface_id
+                if fixedip.default_route:
+                    hosts.append(_host_dhcp_opts(vif_id, gateway))
+                else:
+                    hosts.append(_host_dhcp_opts(vif_id))
     else:
         hosts.append(_host_dhcp_opts(None, gateway))
     return '\n'.join(hosts)
@@ -1022,14 +997,26 @@ def release_dhcp(dev, address, mac_address):
 
 def update_dhcp(context, dev, network_ref):
     conffile = _dhcp_file(dev, 'conf')
-    write_to_file(conffile, get_dhcp_hosts(context, network_ref))
-    restart_dhcp(context, dev, network_ref)
+    host = None
+    if network_ref['multi_host']:
+        host = CONF.host
+    fixedips = objects.FixedIPList.get_by_network(context,
+                                                  network_ref,
+                                                  host=host)
+    write_to_file(conffile, get_dhcp_hosts(context, network_ref, fixedips))
+    restart_dhcp(context, dev, network_ref, fixedips)
 
 
 def update_dns(context, dev, network_ref):
     hostsfile = _dhcp_file(dev, 'hosts')
+    host = None
+    if network_ref['multi_host']:
+        host = CONF.host
+    fixedips = objects.FixedIPList.get_by_network(context,
+                                                  network_ref,
+                                                  host=host)
     write_to_file(hostsfile, get_dns_hosts(context, network_ref))
-    restart_dhcp(context, dev, network_ref)
+    restart_dhcp(context, dev, network_ref, fixedips)
 
 
 def update_dhcp_hostfile_with_text(dev, hosts_text):
@@ -1056,7 +1043,7 @@ def kill_dhcp(dev):
 #           configuration options (like dchp-range, vlan, ...)
 #           aren't reloaded.
 @utils.synchronized('dnsmasq_start')
-def restart_dhcp(context, dev, network_ref):
+def restart_dhcp(context, dev, network_ref, fixedips):
     """(Re)starts a dnsmasq server for a given network.
 
     If a dnsmasq instance is already running then send a HUP
@@ -1066,7 +1053,7 @@ def restart_dhcp(context, dev, network_ref):
     conffile = _dhcp_file(dev, 'conf')
 
     optsfile = _dhcp_file(dev, 'opts')
-    write_to_file(optsfile, get_dhcp_opts(context, network_ref))
+    write_to_file(optsfile, get_dhcp_opts(context, network_ref, fixedips))
     os.chmod(optsfile, 0o644)
 
     _add_dhcp_mangle_rule(dev)
@@ -1190,18 +1177,19 @@ def _host_lease(fixedip):
                               fixedip.instance.hostname or '*')
 
 
-def _host_dhcp_network(data):
-    return 'NW-%s' % data.virtual_interface_id
+def _host_dhcp_network(vif_id):
+    return 'NW-%s' % vif_id
 
 
 def _host_dhcp(fixedip):
     """Return a host string for an address in dhcp-host format."""
     if CONF.use_single_default_gateway:
-        return '%s,%s.%s,%s,%s' % (fixedip.virtual_interface.address,
+        net = _host_dhcp_network(fixedip.virtual_interface_id)
+        return '%s,%s.%s,%s,net:%s' % (fixedip.virtual_interface.address,
                                fixedip.instance.hostname,
                                CONF.dhcp_domain,
                                fixedip.address,
-                               'net:' + _host_dhcp_network(fixedip))
+                               net)
     else:
         return '%s,%s.%s,%s' % (fixedip.virtual_interface.address,
                                fixedip.instance.hostname,
@@ -1215,11 +1203,11 @@ def _host_dns(fixedip):
                           CONF.dhcp_domain)
 
 
-def _host_dhcp_opts(fixedip=None, gateway=None):
+def _host_dhcp_opts(vif_id=None, gateway=None):
     """Return an empty gateway option."""
     values = []
-    if fixedip:
-        values.append(_host_dhcp_network(fixedip))
+    if vif_id is not None:
+        values.append(_host_dhcp_network(vif_id))
     # NOTE(vish): 3 is the dhcp option for gateway.
     values.append('3')
     if gateway:

@@ -128,6 +128,7 @@ fixed_ips = [{'id': 0,
               'allocated': True,
               'leased': True,
               'virtual_interface_id': 0,
+              'default_route': True,
               'instance_uuid': '00000000-0000-0000-0000-0000000000000000',
               'floating_ips': []},
              {'id': 1,
@@ -137,6 +138,7 @@ fixed_ips = [{'id': 0,
               'allocated': True,
               'leased': True,
               'virtual_interface_id': 1,
+              'default_route': False,
               'instance_uuid': '00000000-0000-0000-0000-0000000000000000',
               'floating_ips': []},
              {'id': 2,
@@ -146,6 +148,7 @@ fixed_ips = [{'id': 0,
               'allocated': True,
               'leased': True,
               'virtual_interface_id': 2,
+              'default_route': True,
               'instance_uuid': '00000000-0000-0000-0000-0000000000000001',
               'floating_ips': []},
              {'id': 3,
@@ -155,6 +158,7 @@ fixed_ips = [{'id': 0,
               'allocated': True,
               'leased': True,
               'virtual_interface_id': 3,
+              'default_route': False,
               'instance_uuid': '00000000-0000-0000-0000-0000000000000001',
               'floating_ips': []},
              {'id': 4,
@@ -164,6 +168,7 @@ fixed_ips = [{'id': 0,
               'allocated': True,
               'leased': False,
               'virtual_interface_id': 4,
+              'default_route': False,
               'instance_uuid': '00000000-0000-0000-0000-0000000000000000',
               'floating_ips': []},
              {'id': 5,
@@ -173,6 +178,7 @@ fixed_ips = [{'id': 0,
               'allocated': True,
               'leased': False,
               'virtual_interface_id': 5,
+              'default_route': False,
               'instance_uuid': '00000000-0000-0000-0000-0000000000000001',
               'floating_ips': []},
              {'id': 6,
@@ -182,6 +188,7 @@ fixed_ips = [{'id': 0,
               'allocated': False,
               'leased': True,
               'virtual_interface_id': 6,
+              'default_route': False,
               'instance_uuid': '00000000-0000-0000-0000-0000000000000001',
               'floating_ips': []}]
 
@@ -274,6 +281,7 @@ def get_associated(context, network_id, host=None, address=None):
             cleaned['instance_created'] = instance['created_at']
             cleaned['allocated'] = datum['allocated']
             cleaned['leased'] = datum['leased']
+            cleaned['default_route'] = datum['default_route']
             result.append(cleaned)
     return result
 
@@ -383,6 +391,11 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
 
         self.driver.update_dhcp(self.context, "eth0", networks[0])
 
+    def _get_fixedips(self, network, host=None):
+        return objects.FixedIPList.get_by_network(self.context,
+                                                  network,
+                                                  host=host)
+
     def test_get_dhcp_hosts_for_nw00(self):
         self.flags(use_single_default_gateway=True)
 
@@ -394,13 +407,14 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                 "DE:AD:BE:EF:00:04,fake_instance00.novalocal,"
                 "192.168.0.102,net:NW-4"
         )
-        actual_hosts = self.driver.get_dhcp_hosts(self.context, networks[0])
+        fixedips = self._get_fixedips(networks[0])
+        actual_hosts = self.driver.get_dhcp_hosts(self.context, networks[0],
+                                                  fixedips)
 
         self.assertEqual(actual_hosts, expected)
 
     def test_get_dhcp_hosts_for_nw01(self):
         self.flags(use_single_default_gateway=True)
-        self.flags(host='fake_instance01')
 
         expected = (
                 "DE:AD:BE:EF:00:02,fake_instance01.novalocal,"
@@ -408,7 +422,9 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                 "DE:AD:BE:EF:00:05,fake_instance01.novalocal,"
                 "192.168.1.102,net:NW-5"
         )
-        actual_hosts = self.driver.get_dhcp_hosts(self.context, networks[1])
+        fixedips = self._get_fixedips(networks[1], host='fake_instance01')
+        actual_hosts = self.driver.get_dhcp_hosts(self.context, networks[1],
+                                                  fixedips)
         self.assertEqual(actual_hosts, expected)
 
     def test_get_dns_hosts_for_nw00(self):
@@ -432,21 +448,27 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
     def test_get_dhcp_opts_for_nw00(self):
         self.flags(use_single_default_gateway=True)
         expected_opts = 'NW-0,3,192.168.0.1\nNW-3,3\nNW-4,3'
-        actual_opts = self.driver.get_dhcp_opts(self.context, networks[0])
+        fixedips = self._get_fixedips(networks[0])
+        actual_opts = self.driver.get_dhcp_opts(self.context, networks[0],
+                                                fixedips)
 
         self.assertEqual(actual_opts, expected_opts)
 
     def test_get_dhcp_opts_for_nw00_no_single_default_gateway(self):
         self.flags(use_single_default_gateway=False)
         expected_opts = '3,192.168.0.1'
-        actual_opts = self.driver.get_dhcp_opts(self.context, networks[0])
+        fixedips = self._get_fixedips(networks[0])
+        actual_opts = self.driver.get_dhcp_opts(self.context, networks[0],
+                                                fixedips)
 
         self.assertEqual(actual_opts, expected_opts)
 
     def test_get_dhcp_opts_for_nw01(self):
-        self.flags(use_single_default_gateway=True, host='fake_instance01')
+        self.flags(use_single_default_gateway=True)
         expected_opts = "NW-2,3,192.168.1.1\nNW-5,3"
-        actual_opts = self.driver.get_dhcp_opts(self.context, networks[1])
+        fixedips = self._get_fixedips(networks[1], 'fake_instance01')
+        actual_opts = self.driver.get_dhcp_opts(self.context, networks[1],
+                                                fixedips)
 
         self.assertEqual(actual_opts, expected_opts)
 
@@ -488,7 +510,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         expected = "NW-0,3"
         fixedip = objects.FixedIPList.get_by_network(self.context,
                                                      {'id': 0})[0]
-        actual = self.driver._host_dhcp_opts(fixedip)
+        actual = self.driver._host_dhcp_opts(fixedip.virtual_interface_id)
         self.assertEqual(actual, expected)
 
     def test_host_dhcp_without_default_gateway_network(self):
@@ -633,7 +655,8 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         for domain in ('', default_domain):
             executes = []
             self.flags(dhcp_domain=domain)
-            linux_net.restart_dhcp(self.context, dev, network_ref)
+            fixedips = self._get_fixedips(network_ref)
+            linux_net.restart_dhcp(self.context, dev, network_ref, fixedips)
             expected = ['env',
             'CONFIG_FILE=%s' % jsonutils.dumps(CONF.dhcpbridge_flagfile),
             'NETWORK_ID=fake',
