@@ -32,6 +32,7 @@ from nova import objects
 from nova.objects import fields
 from nova.openstack.common import log as logging
 from nova.openstack.common import versionutils
+from nova import utils
 
 
 LOG = logging.getLogger('object')
@@ -235,6 +236,32 @@ class NovaObject(object):
     fields = {}
     obj_extra_fields = []
 
+    # Table of sub-object versioning information
+    #
+    # This contains a list of version mappings, by the field name of
+    # the subobject. The mappings must be in order of oldest to
+    # newest, and are tuples of (my_version, subobject_version). A
+    # request to backport this object to $my_version will cause the
+    # subobject to be backported to $subobject_version.
+    #
+    # obj_relationships = {
+    #     'subobject1': [('1.2', '1.1'), ('1.4', '1.2')],
+    #     'subobject2': [('1.2', '1.0')],
+    # }
+    #
+    # In the above example:
+    #
+    # - If we are asked to backport our object to version 1.3,
+    #   subobject1 will be backported to version 1.1, since it was
+    #   bumped to version 1.2 when our version was 1.4.
+    # - If we are asked to backport our object to version 1.5,
+    #   no changes will be made to subobject1 or subobject2, since
+    #   they have not changed since version 1.4.
+    # - If we are asked to backlevel our object to version 1.1, we
+    #   will remove both subobject1 and subobject2 from the primitive,
+    #   since they were not added until version 1.2.
+    obj_relationships = {}
+
     def __init__(self, context=None, **kwargs):
         self._changed_fields = set()
         self._context = context
@@ -337,6 +364,51 @@ class NovaObject(object):
         """Create a copy."""
         return copy.deepcopy(self)
 
+    def _obj_make_obj_compatible(self, primitive, target_version, field):
+        """Backlevel a sub-object based on our versioning rules.
+
+        This is responsible for backporting objects contained within
+        this object's primitive according to a set of rules we
+        maintain about version dependencies between objects. This
+        requires that the obj_relationships table in this object is
+        correct and up-to-date.
+
+        :param:primitive: The primitive version of this object
+        :param:target_version: The version string requested for this object
+        :param:field: The name of the field in this object containing the
+                      sub-object to be backported
+        """
+
+        def _do_backport(to_version):
+            obj = getattr(self, field)
+            if obj:
+                obj.obj_make_compatible(
+                    primitive[field]['nova_object.data'],
+                    to_version)
+                primitive[field]['nova_object.version'] = to_version
+
+        target_version = utils.convert_version_to_tuple(target_version)
+        for index, versions in enumerate(self.obj_relationships[field]):
+            my_version, child_version = versions
+            my_version = utils.convert_version_to_tuple(my_version)
+            if target_version < my_version:
+                if index == 0:
+                    # We're backporting to a version from before this
+                    # subobject was added: delete it from the primitive.
+                    del primitive[field]
+                else:
+                    # We're in the gap between index-1 and index, so
+                    # backport to the older version
+                    last_child_version = \
+                        self.obj_relationships[field][index - 1][1]
+                    _do_backport(last_child_version)
+                return
+            elif target_version == my_version:
+                # This is the first mapping that satisfies the
+                # target_version request: backport the object.
+                _do_backport(child_version)
+                return
+
     def obj_make_compatible(self, primitive, target_version):
         """Make an object representation compatible with a target version.
 
@@ -363,7 +435,18 @@ class NovaObject(object):
         :raises: nova.exception.UnsupportedObjectError if conversion
         is not possible for some reason
         """
-        pass
+        for key, field in self.fields.items():
+            if not isinstance(field, fields.ObjectField):
+                continue
+            if not self.obj_attr_is_set(key):
+                continue
+            if key not in self.obj_relationships:
+                # NOTE(danms): This is really a coding error and shouldn't
+                # happen unless we miss something
+                raise exception.ObjectActionError(
+                    action='obj_make_compatible',
+                    reason='No rule for %s' % key)
+            self._obj_make_obj_compatible(primitive, target_version, key)
 
     def obj_to_primitive(self, target_version=None):
         """Simple base-case dehydration.
