@@ -34,12 +34,10 @@ import webob
 
 from nova.api import auth
 from nova.api import ec2
-from nova.api.ec2 import apirequest
 from nova.api.ec2 import ec2utils
 from nova import block_device
 from nova import context
 from nova import exception
-from nova.openstack.common import timeutils
 from nova.openstack.common import versionutils
 from nova import test
 from nova.tests import matchers
@@ -280,21 +278,6 @@ class ApiEc2TestCase(test.TestCase):
         else:
             self.ec2.new_http_connection(host, is_secure).AndReturn(self.http)
         return self.http
-
-    def test_return_valid_isoformat(self):
-        """Ensure that the ec2 api returns datetime in xs:dateTime
-           (which apparently isn't datetime.isoformat())
-           NOTE(ken-pepple): https://bugs.launchpad.net/nova/+bug/721297
-        """
-        conv = apirequest._database_to_isoformat
-        # sqlite database representation with microseconds
-        time_to_convert = timeutils.parse_strtime("2011-02-21 20:14:10.634276",
-                                                  "%Y-%m-%d %H:%M:%S.%f")
-        self.assertEqual(conv(time_to_convert), '2011-02-21T20:14:10.634Z')
-        # mysqlite database representation
-        time_to_convert = timeutils.parse_strtime("2011-02-21 19:56:18",
-                                                  "%Y-%m-%d %H:%M:%S")
-        self.assertEqual(conv(time_to_convert), '2011-02-21T19:56:18.000Z')
 
     def test_xmlns_version_matches_request_version(self):
         self.expect_http(api_version='2010-10-30')
