@@ -260,9 +260,9 @@ class BaseMigrationTestCase(test.NoDBTestCase):
         os.environ['PGUSER'] = user
         # note(boris-42): We must create and drop database, we can't
         # drop database which we have connected to, so for such
-        # operations there is a special database template1.
+        # operations there is a special database postgres.
         sqlcmd = ("psql -w -U %(user)s -h %(host)s -c"
-                  " '%(sql)s' -d template1")
+                  " '%(sql)s' -d postgres")
         sqldict = {'user': user, 'host': host}
 
         sqldict['sql'] = ("drop database if exists %s;") % database
@@ -325,7 +325,7 @@ class BaseMigrationTestCase(test.NoDBTestCase):
             os.environ['PGUSER'] = user
 
             sqlcmd = ("psql -w -U %(user)s -h %(host)s -c"
-                      " '%(sql)s' -d template1")
+                      " '%(sql)s' -d postgres")
 
             sql = ("create database if not exists %s;") % database
             createtable = sqlcmd % {'user': user, 'host': host, 'sql': sql}
