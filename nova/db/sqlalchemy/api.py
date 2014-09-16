@@ -475,6 +475,7 @@ def service_create(context, values):
 
 
 @require_admin_context
+@_retry_on_deadlock
 def service_update(context, service_id, values):
     session = get_session()
     with session.begin():
