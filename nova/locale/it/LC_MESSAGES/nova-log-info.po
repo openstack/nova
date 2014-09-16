@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-09-11 06:01+0000\n"
+"POT-Creation-Date: 2014-09-16 06:06+0000\n"
 "PO-Revision-Date: 2014-08-07 07:51+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Italian (http://www.transifex.com/projects/p/nova/language/"
@@ -44,12 +44,16 @@ msgstr "Generata eccezione HTTP: %s"
 msgid "Deleting network with id %s"
 msgstr "Eliminazione della rete con id %s"
 
-#: nova/compute/manager.py:2735
+#: nova/compute/manager.py:2516
+msgid "Instance is already powered off in the hypervisor when stop is called."
+msgstr ""
+
+#: nova/compute/manager.py:2792
 #, python-format
 msgid "bringing vm to original state: '%s'"
 msgstr ""
 
-#: nova/compute/manager.py:5612
+#: nova/compute/manager.py:5682
 #, python-format
 msgid ""
 "During sync_power_state the instance has a pending task (%(task)s). Skip."
@@ -166,111 +170,111 @@ msgstr ""
 msgid "Soft shutdown succeeded."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:898
+#: nova/virt/libvirt/driver.py:908
 #, python-format
 msgid ""
 "Unable to use bulk domain list APIs, falling back to slow code path: %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1011
+#: nova/virt/libvirt/driver.py:1024
 msgid "Instance destroyed successfully."
 msgstr "Istanza distrutta correttamente."
 
-#: nova/virt/libvirt/driver.py:1021
+#: nova/virt/libvirt/driver.py:1034
 msgid "Instance may be started again."
 msgstr "L'istanza può essere avviata di nuovo."
 
-#: nova/virt/libvirt/driver.py:1031
+#: nova/virt/libvirt/driver.py:1044
 msgid "Going to destroy instance again."
 msgstr "L'istanza verrà nuovamente distrutta."
 
-#: nova/virt/libvirt/driver.py:1681
+#: nova/virt/libvirt/driver.py:1695
 msgid "Beginning live snapshot process"
 msgstr "Inizio processo attivo istantanea"
 
-#: nova/virt/libvirt/driver.py:1684
+#: nova/virt/libvirt/driver.py:1698
 msgid "Beginning cold snapshot process"
 msgstr "Inizio processo di istantanea a freddo"
 
-#: nova/virt/libvirt/driver.py:1713
+#: nova/virt/libvirt/driver.py:1728
 msgid "Snapshot extracted, beginning image upload"
 msgstr "Istantanea estratta, inizio caricamento immagine"
 
-#: nova/virt/libvirt/driver.py:1725
+#: nova/virt/libvirt/driver.py:1740
 msgid "Snapshot image upload complete"
 msgstr "Caricamento immagine istantanea completato"
 
-#: nova/virt/libvirt/driver.py:2237
+#: nova/virt/libvirt/driver.py:2250
 msgid "Instance soft rebooted successfully."
 msgstr "Avvio a caldo dell'istanza eseguito correttamente."
 
-#: nova/virt/libvirt/driver.py:2280
+#: nova/virt/libvirt/driver.py:2293
 msgid "Instance shutdown successfully."
 msgstr "Chiusura dell'istanza eseguita correttamente."
 
-#: nova/virt/libvirt/driver.py:2288
+#: nova/virt/libvirt/driver.py:2301
 msgid "Instance may have been rebooted during soft reboot, so return now."
 msgstr ""
 "L'istanza potrebbe essere stat riavviata durante l'avvio a caldo, quindi "
 "ritornare adesso."
 
-#: nova/virt/libvirt/driver.py:2357
+#: nova/virt/libvirt/driver.py:2370
 msgid "Instance rebooted successfully."
 msgstr "Istanza riavviata correttamente."
 
-#: nova/virt/libvirt/driver.py:2400
+#: nova/virt/libvirt/driver.py:2413
 msgid "Instance already shutdown."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2416
+#: nova/virt/libvirt/driver.py:2429
 #, python-format
 msgid "Instance shutdown successfully after %d seconds."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2445
+#: nova/virt/libvirt/driver.py:2458
 #, python-format
 msgid "Instance failed to shutdown in %d seconds."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2602
+#: nova/virt/libvirt/driver.py:2616
 msgid "Instance spawned successfully."
 msgstr "Istanza generata correttamente."
 
-#: nova/virt/libvirt/driver.py:2618
+#: nova/virt/libvirt/driver.py:2632
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
 msgstr "dati: %(data)r, fpath: %(fpath)r"
 
-#: nova/virt/libvirt/driver.py:2657 nova/virt/libvirt/driver.py:2684
+#: nova/virt/libvirt/driver.py:2671 nova/virt/libvirt/driver.py:2698
 #, python-format
 msgid "Truncated console log returned, %d bytes ignored"
 msgstr "Restituito log della console troncato, %d byte ignorati"
 
-#: nova/virt/libvirt/driver.py:2816
+#: nova/virt/libvirt/driver.py:2830
 #, python-format
 msgid "Creating config drive at %(path)s"
 msgstr "Creazione unità config in %(path)s"
 
-#: nova/virt/libvirt/driver.py:2939
+#: nova/virt/libvirt/driver.py:2953
 msgid "Creating image"
 msgstr "Creazione immagine"
 
-#: nova/virt/libvirt/driver.py:3067
+#: nova/virt/libvirt/driver.py:3081
 msgid "Using config drive"
 msgstr "Utilizzo unità di config"
 
-#: nova/virt/libvirt/driver.py:3711
+#: nova/virt/libvirt/driver.py:3912
 msgid "Configuring timezone for windows instance to localtime"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4646
+#: nova/virt/libvirt/driver.py:4901
 #, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. Instance="
 "%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4652
+#: nova/virt/libvirt/driver.py:4907
 #, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
@@ -279,26 +283,26 @@ msgstr ""
 "Impossibile trovare il dominio in libvirt per l'istanza %s. Impossibile "
 "ottenere le statistiche del blocco per l'unità"
 
-#: nova/virt/libvirt/driver.py:4894
+#: nova/virt/libvirt/driver.py:5149
 #, python-format
 msgid "Instance launched has CPU info: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5645
+#: nova/virt/libvirt/driver.py:5900
 msgid "Instance running successfully."
 msgstr "Istanza in esecuzione correttamente."
 
-#: nova/virt/libvirt/driver.py:5994
+#: nova/virt/libvirt/driver.py:6249
 #, python-format
 msgid "Deleting instance files %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:6007
+#: nova/virt/libvirt/driver.py:6262
 #, python-format
 msgid "Deletion of %s failed"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:6011
+#: nova/virt/libvirt/driver.py:6266
 #, python-format
 msgid "Deletion of %s complete"
 msgstr ""
