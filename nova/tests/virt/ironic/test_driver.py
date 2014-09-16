@@ -31,7 +31,7 @@ from nova import test
 from nova.tests import fake_instance
 from nova.tests import utils
 from nova.tests.virt.ironic import utils as ironic_utils
-from nova.tests.virt import test_driver
+from nova.virt import driver
 from nova.virt import fake
 from nova.virt import firewall
 from nova.virt.ironic import client_wrapper as cw
@@ -76,7 +76,7 @@ FAKE_CLIENT_WRAPPER = FakeClientWrapper()
 
 
 @mock.patch.object(cw, 'IronicClientWrapper', lambda *_: FAKE_CLIENT_WRAPPER)
-class IronicDriverTestCase(test.NoDBTestCase, test_driver.DriverAPITestHelper):
+class IronicDriverTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(IronicDriverTestCase, self).setUp()
@@ -90,7 +90,7 @@ class IronicDriverTestCase(test.NoDBTestCase, test_driver.DriverAPITestHelper):
         CONF.set_default('api_retry_interval', default=0, group='ironic')
 
     def test_public_api_signatures(self):
-        self.assertPublicAPISignatures(self.driver)
+        self.assertPublicAPISignatures(driver.ComputeDriver(None), self.driver)
 
     def test_validate_driver_loading(self):
         self.assertIsInstance(self.driver, ironic_driver.IronicDriver)

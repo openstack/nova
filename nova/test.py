@@ -26,6 +26,7 @@ eventlet.monkey_patch(os=False)
 
 import copy
 import gettext
+import inspect
 import logging
 import os
 import shutil
@@ -341,6 +342,36 @@ class TestCase(testtools.TestCase):
     def start_service(self, name, host=None, **kwargs):
         svc = self.useFixture(ServiceFixture(name, host, **kwargs))
         return svc.service
+
+    def assertPublicAPISignatures(self, baseinst, inst):
+        def get_public_apis(inst):
+            methods = {}
+            for (name, value) in inspect.getmembers(inst, inspect.ismethod):
+                if name.startswith("_"):
+                    continue
+                methods[name] = value
+            return methods
+
+        baseclass = baseinst.__class__.__name__
+        basemethods = get_public_apis(baseinst)
+        implmethods = get_public_apis(inst)
+
+        extranames = []
+        for name in sorted(implmethods.keys()):
+            if name not in basemethods:
+                extranames.append(name)
+
+        self.assertEqual([], extranames,
+                         "public APIs not listed in base class %s" %
+                         baseclass)
+
+        for name in sorted(implmethods.keys()):
+            baseargs = inspect.getargspec(basemethods[name])
+            implargs = inspect.getargspec(implmethods[name])
+
+            self.assertEqual(baseargs, implargs,
+                             "%s args don't match base class %s" %
+                             (name, baseclass))
 
 
 class APICoverage(object):

@@ -71,7 +71,6 @@ from nova.tests.objects import test_pci_device
 from nova.tests.virt.libvirt import fake_imagebackend
 from nova.tests.virt.libvirt import fake_libvirt_utils
 from nova.tests.virt.libvirt import fakelibvirt
-from nova.tests.virt import test_driver
 from nova import utils
 from nova import version
 from nova.virt import block_device as driver_block_device
@@ -407,8 +406,7 @@ class FakeNodeDevice(object):
         return self.xml
 
 
-class LibvirtConnTestCase(test.TestCase,
-                          test_driver.DriverAPITestHelper):
+class LibvirtConnTestCase(test.TestCase):
 
     def setUp(self):
         super(LibvirtConnTestCase, self).setUp()
@@ -580,8 +578,9 @@ class LibvirtConnTestCase(test.TestCase,
                                               host)['disabled']
 
     def test_public_api_signatures(self):
+        baseinst = driver.ComputeDriver(None)
         inst = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.assertPublicAPISignatures(inst)
+        self.assertPublicAPISignatures(baseinst, inst)
 
     def test_set_host_enabled_with_disable(self):
         # Tests disabling an enabled host.
