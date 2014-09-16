@@ -249,8 +249,12 @@ class FloatingIPActionController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=msg)
         except exception.Forbidden as e:
             raise webob.exc.HTTPForbidden(explanation=e.format_message())
-        except Exception:
-            msg = _('Error. Unable to associate floating ip')
+        except Exception as e:
+            msg = _('Unable to associate floating ip %(address)s to '
+                    'fixed ip %(fixed_address)s for instance %(id)s. '
+                    'Error: %(error)s') % (
+                    {'address': address, 'fixed_address': fixed_address,
+                     'id': id, 'error': e})
             LOG.exception(msg)
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
