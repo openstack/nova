@@ -20,6 +20,7 @@ from eventlet import event as eventlet_event
 import mock
 import mox
 from oslo.config import cfg
+from oslo import messaging
 
 from nova.compute import power_state
 from nova.compute import task_states
@@ -40,6 +41,7 @@ from nova.tests import fake_block_device
 from nova.tests import fake_instance
 from nova.tests.objects import test_instance_fault
 from nova.tests.objects import test_instance_info_cache
+from nova import utils
 
 
 CONF = cfg.CONF
@@ -1906,6 +1908,27 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.assertEqual(power_state.SHUTDOWN, instance.power_state)
             self.assertIsNone(instance.task_state)
             self.assertEqual(vm_states.STOPPED, instance.vm_state)
+
+        do_test()
+
+    def test_reset_network_driver_not_implemented(self):
+        instance = fake_instance.fake_instance_obj(self.context)
+
+        @mock.patch.object(self.compute.driver, 'reset_network',
+                           side_effect=NotImplementedError())
+        @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+        def do_test(mock_add_fault, mock_reset):
+            self.assertRaises(messaging.ExpectedException,
+                              self.compute.reset_network,
+                              self.context,
+                              instance)
+
+            self.compute = utils.ExceptionHelper(self.compute)
+
+            self.assertRaises(NotImplementedError,
+                              self.compute.reset_network,
+                              self.context,
+                              instance)
 
         do_test()
 
