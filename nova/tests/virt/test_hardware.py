@@ -21,6 +21,7 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova.objects import base as base_obj
+from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests import matchers
 from nova.virt import hardware as hw
@@ -1301,13 +1302,16 @@ class HelperMethodsTestCase(test.NoDBTestCase):
             self.assertIsInstance(res, six.string_types)
             self.assertTrue(get_mock.called)
 
-    def test_instance_serialized_by_base_obj_to_primitive(self):
+    def test_instance_serialized_by_build_request_spec(self):
         host = objects.ComputeNode(numa_topology=self.hosttopo.to_json())
         fake_uuid = str(uuid.uuid4())
         instance = objects.Instance(context=self.context, id=1, uuid=fake_uuid,
                 numa_topology=objects.InstanceNUMATopology.obj_from_topology(
                     self.instancetopo))
-        instance_raw = base_obj.obj_to_primitive(instance)
+        # NOTE (ndipanov): This emulates scheduler.utils.build_request_spec
+        # We can remove this test once we no longer use that method.
+        instance_raw = jsonutils.to_primitive(
+                base_obj.obj_to_primitive(instance))
         res = hw.get_host_numa_usage_from_instance(host, instance_raw)
         self.assertIsInstance(res, six.string_types)
         self._check_usage(hw.VirtNUMAHostTopology.from_json(res))

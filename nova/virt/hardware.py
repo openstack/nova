@@ -911,8 +911,7 @@ def instance_topology_from_instance(instance):
 
     Since we may get an Instance as either a dict, a db object, or an actual
     Instance object, this makes sure we get beck either None, or an instance
-    of
-
+    of objects.InstanceNUMATopology class.
     """
     if isinstance(instance, objects.Instance):
         # NOTE (ndipanov): This may cause a lazy-load of the attribute
@@ -939,14 +938,20 @@ def instance_topology_from_instance(instance):
             # NOTE (ndipanov): A horrible hack so that we can use this in the
             # scheduler, since the InstanceNUMATopology object is serialized
             # raw using the obj_base.obj_to_primitive, (which is buggy and will
-            # give us a dict with a list of InstanceNUMACell objects) by
-            # scheduler_utils.build_request_spec in the conductor.
+            # give us a dict with a list of InstanceNUMACell objects), and then
+            # passed to jsonutils.to_primitive, which will make a dict out of
+            # those objects. All of this is done by
+            # scheduler.utils.build_request_spec called in the conductor.
             #
             # Remove when request_spec is a proper object itself!
-            cells = instance_numa_topology.get('cells')
-            if cells:
-                instance_numa_topology = objects.InstanceNUMATopology(
-                        cells=cells)
+            dict_cells = instance_numa_topology.get('cells')
+            if dict_cells:
+                cells = [objects.InstanceNUMACell(id=cell['id'],
+                                                  cpuset=set(cell['cpuset']),
+                                                  memory=cell['memory'])
+                         for cell in dict_cells]
+                instance_numa_topology = (
+                        objects.InstanceNUMATopology(cells=cells))
 
     return instance_numa_topology
 
