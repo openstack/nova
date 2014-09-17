@@ -659,38 +659,40 @@ def strip_base_mirror_from_vdis(session, vm_ref):
         _try_strip_base_mirror_from_vdi(session, vdi_ref)
 
 
-def _get_snapshots_for_vm(session, instance, vm_ref):
-    sr_ref = safe_find_sr(session)
-    vm_vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
-    parent_uuid = _get_vhd_parent_uuid(session, vm_vdi_ref)
+def _delete_snapshots_in_vdi_chain(session, instance, vdi_uuid_chain, sr_ref):
+    possible_snapshot_parents = vdi_uuid_chain[1:]
 
-    if not parent_uuid:
-        return []
+    if len(possible_snapshot_parents) == 0:
+        LOG.debug("No VHD chain.", instance=instance)
+        return
 
-    return _child_vhds(session, sr_ref, parent_uuid, old_snapshots_only=True)
-
-
-def remove_old_snapshots(session, instance, vm_ref):
-    """See if there is an snapshot present that should be removed."""
-    LOG.debug("Starting remove_old_snapshots for VM", instance=instance)
-
-    snapshot_uuids = _get_snapshots_for_vm(session, instance, vm_ref)
+    snapshot_uuids = _child_vhds(session, sr_ref, possible_snapshot_parents,
+                                 old_snapshots_only=True)
     number_of_snapshots = len(snapshot_uuids)
 
     if number_of_snapshots <= 0:
         LOG.debug("No snapshots to remove.", instance=instance)
         return
 
-    if number_of_snapshots > 1:
-        LOG.debug("More snapshots than expected, only deleting one.",
-                  instance=instance)
+    vdi_refs = [session.VDI.get_by_uuid(vdi_uuid)
+                for vdi_uuid in snapshot_uuids]
+    safe_destroy_vdis(session, vdi_refs)
 
-    vdi_uuid = snapshot_uuids[0]
-    vdi_ref = session.VDI.get_by_uuid(vdi_uuid)
-    safe_destroy_vdis(session, [vdi_ref])
-    scan_default_sr(session)
-    # TODO(johnthetubaguy): we could look for older snapshots too
-    LOG.debug("Removed one old snapshot.", instance=instance)
+    # ensure garbage collector has been run
+    _scan_sr(session, sr_ref)
+
+    LOG.info(_LI("Deleted %s snapshots.") % number_of_snapshots,
+             instance=instance)
+
+
+def remove_old_snapshots(session, instance, vm_ref):
+    """See if there is an snapshot present that should be removed."""
+    LOG.debug("Starting remove_old_snapshots for VM", instance=instance)
+    vm_vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
+    chain = _walk_vdi_chain(session, vm_vdi_rec['uuid'])
+    vdi_uuid_chain = [vdi_rec['uuid'] for vdi_rec in chain]
+    sr_ref = vm_vdi_rec["SR"]
+    _delete_snapshots_in_vdi_chain(session, instance, vdi_uuid_chain, sr_ref)
 
 
 @contextlib.contextmanager
@@ -714,6 +716,9 @@ def _snapshot_attached_here_impl(session, instance, vm_ref, label, userdevice,
     chain = _walk_vdi_chain(session, vm_vdi_rec['uuid'])
     vdi_uuid_chain = [vdi_rec['uuid'] for vdi_rec in chain]
     sr_ref = vm_vdi_rec["SR"]
+
+    # clean up after any interrupted snapshot attempts
+    _delete_snapshots_in_vdi_chain(session, instance, vdi_uuid_chain, sr_ref)
 
     snapshot_ref = _vdi_snapshot(session, vm_vdi_ref)
     if post_snapshot_callback is not None:
@@ -806,7 +811,7 @@ def destroy_cached_images(session, sr_ref, all_cached=False, dry_run=False):
         elif len(chain) == 2:
             # Siblings imply cached image is used
             root_vdi_rec = chain[-1]
-            children = _child_vhds(session, sr_ref, root_vdi_rec['uuid'])
+            children = _child_vhds(session, sr_ref, [root_vdi_rec['uuid']])
             if len(children) > 1:
                 continue
 
@@ -2022,7 +2027,7 @@ def _is_vdi_a_snapshot(vdi_rec):
     return is_a_snapshot and not image_id
 
 
-def _child_vhds(session, sr_ref, vdi_uuid, old_snapshots_only=False):
+def _child_vhds(session, sr_ref, vdi_uuid_list, old_snapshots_only=False):
     """Return the immediate children of a given VHD.
 
     This is not recursive, only the immediate children are returned.
@@ -2031,11 +2036,11 @@ def _child_vhds(session, sr_ref, vdi_uuid, old_snapshots_only=False):
     for ref, rec in _get_all_vdis_in_sr(session, sr_ref):
         rec_uuid = rec['uuid']
 
-        if rec_uuid == vdi_uuid:
+        if rec_uuid in vdi_uuid_list:
             continue
 
         parent_uuid = _get_vhd_parent_uuid(session, ref, rec)
-        if parent_uuid != vdi_uuid:
+        if parent_uuid not in vdi_uuid_list:
             continue
 
         if old_snapshots_only and not _is_vdi_a_snapshot(rec):
