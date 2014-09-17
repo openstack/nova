@@ -250,3 +250,22 @@ class VolumeOps(object):
 
     def get_target_from_disk_path(self, physical_drive_path):
         return self._volutils.get_target_from_disk_path(physical_drive_path)
+
+    def fix_instance_volume_disk_paths(self, instance_name, block_device_info):
+        mapping = driver.block_device_info_get_mapping(block_device_info)
+
+        if self.ebs_root_in_block_devices(block_device_info):
+            mapping = mapping[1:]
+
+        disk_address = 0
+        for vol in mapping:
+            data = vol['connection_info']['data']
+            target_lun = data['target_lun']
+            target_iqn = data['target_iqn']
+
+            mounted_disk_path = self._get_mounted_disk_from_lun(
+                target_iqn, target_lun, True)
+            ctrller_path = self._vmutils.get_vm_scsi_controller(instance_name)
+            self._vmutils.set_disk_host_resource(
+                instance_name, ctrller_path, disk_address, mounted_disk_path)
+            disk_address += 1
