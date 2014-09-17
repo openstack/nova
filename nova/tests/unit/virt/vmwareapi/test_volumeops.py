@@ -16,10 +16,13 @@ import contextlib
 
 import mock
 
+from nova.compute import vm_states
+from nova import exception
 from nova import test
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
 from nova.virt.vmwareapi import driver
+from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import volumeops
 
 
@@ -93,3 +96,55 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         with mock.patch.object(self._session, "_call_method", fake_call):
             val = self._volumeops._get_volume_uuid(vm_ref, uuid)
             self.assertIsNone(val)
+
+    def test_attach_volume_vmdk_invalid(self):
+        connection_info = {'driver_volume_type': 'vmdk',
+                           'serial': 'volume-fake-id',
+                           'data': {'volume': 'vm-10',
+                                    'volume_id': 'volume-fake-id'}}
+        instance = mock.MagicMock(name='fake-name', vm_state=vm_states.ACTIVE)
+        path_and_type = ('fake-path', 'ide', 'preallocated')
+        with contextlib.nested(
+            mock.patch.object(vm_util, 'get_vm_ref'),
+            mock.patch.object(self._volumeops, '_get_volume_ref'),
+            mock.patch.object(vm_util, 'get_vmdk_path_and_adapter_type',
+                              return_value=path_and_type)
+        ) as (get_vm_ref, get_volume_ref, get_vmdk_path_and_adapter_type):
+            self.assertRaises(exception.Invalid,
+                self._volumeops._attach_volume_vmdk, connection_info,
+                instance)
+
+            get_vm_ref.assert_called_once_with(self._volumeops._session,
+                                               instance)
+            get_volume_ref.assert_called_once_with(
+                connection_info['data']['volume'])
+            self.assertTrue(get_vmdk_path_and_adapter_type.called)
+
+    def test_detach_volume_vmdk_invalid(self):
+        connection_info = {'driver_volume_type': 'vmdk',
+                           'serial': 'volume-fake-id',
+                           'data': {'volume': 'vm-10',
+                                    'volume_id': 'volume-fake-id'}}
+        instance = mock.MagicMock(name='fake-name', vm_state=vm_states.ACTIVE)
+        path_and_type = ('fake-path', 'ide', 'preallocated')
+        with contextlib.nested(
+            mock.patch.object(vm_util, 'get_vm_ref',
+                              return_value=mock.sentinel.vm_ref),
+            mock.patch.object(self._volumeops, '_get_volume_ref'),
+            mock.patch.object(self._volumeops,
+                              '_get_vmdk_backed_disk_device'),
+            mock.patch.object(vm_util, 'get_vmdk_path_and_adapter_type',
+                              return_value=path_and_type)
+        ) as (get_vm_ref, get_volume_ref, get_vmdk_backed_disk_device,
+              get_vmdk_path_and_adapter_type):
+            self.assertRaises(exception.Invalid,
+                self._volumeops._detach_volume_vmdk, connection_info,
+                instance)
+
+            get_vm_ref.assert_called_once_with(self._volumeops._session,
+                                               instance)
+            get_volume_ref.assert_called_once_with(
+                connection_info['data']['volume'])
+            get_vmdk_backed_disk_device.assert_called_once_with(
+                mock.sentinel.vm_ref, connection_info['data'])
+            self.assertTrue(get_vmdk_path_and_adapter_type.called)

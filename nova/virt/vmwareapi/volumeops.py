@@ -20,9 +20,11 @@ Management class for Storage-related functions (attach, detach, etc).
 from oslo.config import cfg
 from oslo.vmware import vim_util as vutil
 
+from nova.compute import vm_states
 from nova import exception
 from nova.i18n import _, _LI
 from nova.openstack.common import log as logging
+from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 
@@ -315,20 +317,22 @@ class VMwareVolumeOps(object):
         LOG.debug("_attach_volume_vmdk: %s", connection_info,
                   instance=instance)
         data = connection_info['data']
-
-        # Get volume details from volume ref
         volume_ref = self._get_volume_ref(data['volume'])
-        volume_device = self._get_vmdk_base_volume_device(volume_ref)
-        volume_vmdk_path = volume_device.backing.fileName
 
         # Get details required for adding disk device such as
         # adapter_type, disk_type
         hw_devices = self._session._call_method(vim_util,
                                                 'get_dynamic_property',
-                                                vm_ref, 'VirtualMachine',
+                                                volume_ref, 'VirtualMachine',
                                                 'config.hardware.device')
-        (vmdk_file_path, adapter_type,
+        (volume_vmdk_path, adapter_type,
          disk_type) = vm_util.get_vmdk_path_and_adapter_type(hw_devices)
+
+        # IDE does not support disk hotplug
+        if (instance.vm_state == vm_states.ACTIVE and
+            adapter_type == constants.ADAPTER_TYPE_IDE):
+            msg = _('%s does not support disk hotplug.') % adapter_type
+            raise exception.Invalid(msg)
 
         # Attach the disk to virtual machine instance
         self.attach_disk_to_vm(vm_ref, instance, adapter_type,
@@ -408,7 +412,8 @@ class VMwareVolumeOps(object):
                                           compute_res, compute_res._type,
                                           'resourcePool')
 
-    def _consolidate_vmdk_volume(self, instance, vm_ref, device, volume_ref):
+    def _consolidate_vmdk_volume(self, instance, vm_ref, device, volume_ref,
+                                 adapter_type=None, disk_type=None):
         """Consolidate volume backing VMDK files if needed.
 
         The volume's VMDK file attached to an instance can be moved by SDRS
@@ -455,15 +460,7 @@ class VMwareVolumeOps(object):
         # Delete the original disk from the volume_ref
         self.detach_disk_from_vm(volume_ref, instance, original_device,
                                  destroy_disk=True)
-        # Attach the current disk to the volume_ref
-        # Get details required for adding disk device such as
-        # adapter_type, disk_type
-        hw_devices = self._session._call_method(vim_util,
-                                                'get_dynamic_property',
-                                                volume_ref, 'VirtualMachine',
-                                                'config.hardware.device')
-        (vmdk_file_path, adapter_type,
-         disk_type) = vm_util.get_vmdk_path_and_adapter_type(hw_devices)
+
         # Attach the current volume to the volume_ref
         self.attach_disk_to_vm(volume_ref, instance,
                                adapter_type, disk_type,
@@ -491,12 +488,28 @@ class VMwareVolumeOps(object):
         LOG.debug("_detach_volume_vmdk: %s", connection_info,
                   instance=instance)
         data = connection_info['data']
+        volume_ref = self._get_volume_ref(data['volume'])
 
         device = self._get_vmdk_backed_disk_device(vm_ref, data)
 
-        # Get the volume ref
-        volume_ref = self._get_volume_ref(data['volume'])
-        self._consolidate_vmdk_volume(instance, vm_ref, device, volume_ref)
+        # Get details required for adding disk device such as
+        # adapter_type, disk_type
+        hw_devices = self._session._call_method(vim_util,
+                                                'get_dynamic_property',
+                                                volume_ref, 'VirtualMachine',
+                                                'config.hardware.device')
+        (vmdk_file_path, adapter_type,
+         disk_type) = vm_util.get_vmdk_path_and_adapter_type(hw_devices)
+
+        # IDE does not support disk hotplug
+        if (instance.vm_state == vm_states.ACTIVE and
+            adapter_type == constants.ADAPTER_TYPE_IDE):
+            msg = _('%s does not support disk hotplug.') % adapter_type
+            raise exception.Invalid(msg)
+
+        self._consolidate_vmdk_volume(instance, vm_ref, device, volume_ref,
+                                      adapter_type=adapter_type,
+                                      disk_type=disk_type)
 
         self.detach_disk_from_vm(vm_ref, instance, device)
         LOG.debug("Detached VMDK: %s", connection_info, instance=instance)
