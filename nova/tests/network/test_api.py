@@ -20,7 +20,6 @@ import itertools
 
 import mock
 import mox
-from oslo.config import cfg
 
 from nova.compute import flavors
 from nova import context
@@ -40,8 +39,6 @@ from nova.tests.objects import test_fixed_ip
 from nova.tests.objects import test_flavor
 from nova.tests.objects import test_virtual_interface
 from nova import utils
-
-CONF = cfg.CONF
 
 FAKE_UUID = 'a47ae74e-ab08-547f-9eee-ffd23fc46c16'
 
