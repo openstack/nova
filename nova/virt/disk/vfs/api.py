@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from nova import exception
 from nova.i18n import _LW
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
@@ -21,31 +22,42 @@ LOG = logging.getLogger(__name__)
 
 class VFS(object):
 
+    # Class level flag to indicate whether we can consider
+    # that guestfs is ready to be used.
+    guestfs_ready = False
+
     @staticmethod
     def instance_for_image(imgfile, imgfmt, partition):
         LOG.debug("Instance for image imgfile=%(imgfile)s "
                   "imgfmt=%(imgfmt)s partition=%(partition)s",
                   {'imgfile': imgfile, 'imgfmt': imgfmt,
                    'partition': partition})
-        hasGuestfs = False
-        try:
-            LOG.debug("Trying to import guestfs")
-            importutils.import_module("guestfs")
-            hasGuestfs = True
-        except Exception:
-            pass
 
-        if hasGuestfs:
+        vfs = None
+        try:
             LOG.debug("Using primary VFSGuestFS")
-            return importutils.import_object(
+            vfs = importutils.import_object(
                 "nova.virt.disk.vfs.guestfs.VFSGuestFS",
                 imgfile, imgfmt, partition)
-        else:
-            LOG.warn(_LW("Unable to import guestfs, "
-                         "falling back to VFSLocalFS"))
-            return importutils.import_object(
-                "nova.virt.disk.vfs.localfs.VFSLocalFS",
-                imgfile, imgfmt, partition)
+            if not VFS.guestfs_ready:
+                # Inspect for capabilities and keep
+                # track of the result only if succeeded.
+                vfs.inspect_capabilities()
+                VFS.guestfs_ready = True
+            return vfs
+        except exception.NovaException:
+            if vfs is not None:
+                # We are able to load libguestfs but
+                # something wrong happens when trying to
+                # check for capabilities.
+                raise
+            else:
+                LOG.warn(_LW("Unable to import guestfs"
+                             "falling back to VFSLocalFS"))
+
+        return importutils.import_object(
+            "nova.virt.disk.vfs.localfs.VFSLocalFS",
+            imgfile, imgfmt, partition)
 
     """
     The VFS class defines an interface for manipulating files within

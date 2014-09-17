@@ -54,6 +54,9 @@ class GuestFS(object):
 
         self.drives.append((file, kwargs['format']))
 
+    def add_drive(self, file, format=None, *args, **kwargs):
+        self.add_drive_opts(file, format=None, *args, **kwargs)
+
     def inspect_os(self):
         return ["/dev/guestvgf/lv_root"]
 

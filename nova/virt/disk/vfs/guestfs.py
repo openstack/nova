@@ -52,9 +52,25 @@ class VFSGuestFS(vfs.VFS):
 
         global guestfs
         if guestfs is None:
-            guestfs = importutils.import_module('guestfs')
+            try:
+                guestfs = importutils.import_module('guestfs')
+            except Exception as e:
+                raise exception.NovaException(
+                    _("libguestfs is not installed (%s)") % e)
 
         self.handle = None
+
+    def inspect_capabilities(self):
+        """Determines whether guestfs is well configured."""
+        try:
+            g = guestfs.GuestFS()
+            g.add_drive("/dev/null")  # sic
+            g.launch()
+        except Exception as e:
+            raise exception.NovaException(
+                _("libguestfs installed but not usable (%s)") % e)
+
+        return self
 
     def setup_os(self):
         if self.partition == -1:
