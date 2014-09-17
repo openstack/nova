@@ -731,3 +731,22 @@ class MetadataXMLSerializationTest(test.TestCase):
                 exception.MalformedRequestBody,
                 deserializer.deserialize,
                 utils.killer_xml_body())
+
+
+class LinkPrefixTest(test.NoDBTestCase):
+
+    def test_update_link_prefix(self):
+        vb = common.ViewBuilder()
+        result = vb._update_link_prefix("http://192.168.0.243:24/",
+                                        "http://127.0.0.1/compute")
+        self.assertEqual("http://127.0.0.1/compute", result)
+
+        result = vb._update_link_prefix("http://foo.x.com/v1",
+                                        "http://new.prefix.com")
+        self.assertEqual("http://new.prefix.com/v1", result)
+
+        result = vb._update_link_prefix(
+                "http://foo.x.com/v1",
+                "http://new.prefix.com:20455/new_extra_prefix")
+        self.assertEqual("http://new.prefix.com:20455/new_extra_prefix/v1",
+                         result)
