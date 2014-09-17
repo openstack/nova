@@ -255,6 +255,7 @@ policy_data = """
     "compute_extension:v3:os-networks": "",
     "compute_extension:v3:os-networks:view": "",
     "compute_extension:networks_associate": "",
+    "compute_extension:v3:os-networks-associate": "",
     "compute_extension:os-tenant-networks": "",
     "compute_extension:v3:os-tenant-networks": "",
     "compute_extension:v3:os-pause-server:pause": "",
