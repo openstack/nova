@@ -820,6 +820,24 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         self.assertColumnNotExists(
                 engine, 'shadow_instance_extra', 'pci_requests')
 
+    def _check_254(self, engine, data):
+        self.assertColumnExists(engine, 'pci_devices', 'request_id')
+        self.assertColumnExists(
+            engine, 'shadow_pci_devices', 'request_id')
+
+        pci_devices = oslodbutils.get_table(engine, 'pci_devices')
+        shadow_pci_devices = oslodbutils.get_table(
+            engine, 'shadow_pci_devices')
+        self.assertIsInstance(pci_devices.c.request_id.type,
+                              sqlalchemy.types.String)
+        self.assertIsInstance(shadow_pci_devices.c.request_id.type,
+                              sqlalchemy.types.String)
+
+    def _post_downgrade_254(self, engine):
+        self.assertColumnNotExists(engine, 'pci_devices', 'request_id')
+        self.assertColumnNotExists(
+            engine, 'shadow_pci_devices', 'request_id')
+
 
 class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
