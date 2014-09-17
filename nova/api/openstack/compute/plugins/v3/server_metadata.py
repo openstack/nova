@@ -116,7 +116,7 @@ class ServerMetadataController(wsgi.Controller):
 
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'update metadata')
+                    'update metadata', server_id)
 
     @extensions.expected_errors(404)
     def show(self, req, server_id, id):
@@ -152,7 +152,7 @@ class ServerMetadataController(wsgi.Controller):
 
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'delete metadata')
+                    'delete metadata', server_id)
 
 
 class ServerMetadata(extensions.V3APIExtensionBase):

@@ -56,7 +56,7 @@ class ShelveController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                                                                  'shelve')
+                                                                  'shelve', id)
 
         return webob.Response(status_int=202)
 
@@ -73,7 +73,8 @@ class ShelveController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                                                              'shelveOffload')
+                                                              'shelveOffload',
+                                                              id)
 
         return webob.Response(status_int=202)
 
@@ -89,7 +90,8 @@ class ShelveController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                                                                  'unshelve')
+                                                                  'unshelve',
+                                                                  id)
         return webob.Response(status_int=202)
 
 

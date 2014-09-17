@@ -422,7 +422,7 @@ class VolumeAttachmentController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'attach_volume')
+                    'attach_volume', server_id)
 
         # The attach is async
         attachment = {}
@@ -491,7 +491,7 @@ class VolumeAttachmentController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'swap_volume')
+                    'swap_volume', server_id)
 
         if not found:
             msg = _("volume_id not found: %s") % old_volume_id
@@ -542,7 +542,7 @@ class VolumeAttachmentController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'detach_volume')
+                    'detach_volume', server_id)
 
         if not found:
             msg = _("volume_id not found: %s") % volume_id
