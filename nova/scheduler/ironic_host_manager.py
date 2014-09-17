@@ -23,6 +23,7 @@ subdivided into multiple instances.
 """
 from oslo.config import cfg
 
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 import nova.scheduler.base_baremetal_host_manager as bbhm
@@ -66,6 +67,13 @@ class IronicNodeState(bbhm.BaseBaremetalNodeState):
         super(IronicNodeState, self).update_from_compute_node(compute)
 
         self.total_usable_disk_gb = compute['local_gb']
+        self.hypervisor_type = compute.get('hypervisor_type')
+        self.hypervisor_version = compute.get('hypervisor_version')
+        self.hypervisor_hostname = compute.get('hypervisor_hostname')
+        self.cpu_info = compute.get('cpu_info')
+        if compute.get('supported_instances'):
+            self.supported_instances = jsonutils.loads(
+                    compute.get('supported_instances'))
         self.updated = compute['updated_at']
 
     def consume_from_instance(self, context, instance):
