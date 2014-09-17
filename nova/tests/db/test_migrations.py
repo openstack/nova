@@ -494,6 +494,16 @@ class BaseWalkMigrationTestCase(BaseMigrationTestCase):
 
         return True
 
+    def _skippable_migrations(self):
+        special = [
+            216,  # Havana
+        ]
+
+        havana_placeholders = range(217, 227)
+        icehouse_placeholders = range(235, 244)
+
+        return special + havana_placeholders + icehouse_placeholders
+
     def _migrate_up(self, engine, version, with_data=False):
         """migrate up to a new version of the db.
 
@@ -517,6 +527,10 @@ class BaseWalkMigrationTestCase(BaseMigrationTestCase):
                                                            self.REPOSITORY))
             if with_data:
                 check = getattr(self, "_check_%03d" % version, None)
+                if version not in self._skippable_migrations():
+                    self.assertIsNotNone(check,
+                                         ('DB Migration %i does not have a '
+                                          'test. Please add one!') % version)
                 if check:
                     check(engine, data)
         except Exception:
@@ -673,6 +687,11 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
 
         # confirm compute_node_stats exists
         oslodbutils.get_table(engine, 'compute_node_stats')
+
+    def _check_234(self, engine, data):
+        self.assertIndexMembers(engine, 'reservations',
+                                'reservations_deleted_expire_idx',
+                                ['deleted', 'expire'])
 
     def _check_244(self, engine, data):
         volume_usage_cache = oslodbutils.get_table(
@@ -970,6 +989,11 @@ class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     def _post_downgrade_010(self, engine):
         bm_nodes = oslodbutils.get_table(engine, 'bm_nodes')
         self.assertNotIn('preserve_ephemeral', bm_nodes.columns)
+
+    def _skippable_migrations(self):
+        # NOTE(danms): This is deprecated code, soon to be removed, so don't
+        # obsess about tests here.
+        return range(1, 100)
 
 
 class ProjectTestCase(test.NoDBTestCase):
