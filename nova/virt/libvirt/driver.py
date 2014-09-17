@@ -1331,6 +1331,13 @@ class LibvirtDriver(driver.ComputeDriver):
         driver = self.volume_drivers[driver_type]
         return driver.disconnect_volume(connection_info, disk_dev)
 
+    def _get_volume_config(self, connection_info, disk_info):
+        driver_type = connection_info.get('driver_volume_type')
+        if driver_type not in self.volume_drivers:
+            raise exception.VolumeDriverNotFound(driver_type=driver_type)
+        driver = self.volume_drivers[driver_type]
+        return driver.get_config(connection_info, disk_info)
+
     def _get_volume_encryptor(self, connection_info, encryption):
         encryptor = encryptors.get_volume_encryptor(connection_info,
                                                     **encryption)
