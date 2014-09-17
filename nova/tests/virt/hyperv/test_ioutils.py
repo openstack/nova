@@ -50,7 +50,7 @@ class IOThreadTestCase(test.NoDBTestCase):
         self._iothread._copy(self._FAKE_SRC, self._FAKE_DEST)
 
         fake_dest.write.assert_called_once_with(fake_data)
-        fake_dest.close.assert_called_once()
+        fake_dest.close.assert_called_once_with()
         fake_rename.assert_called_once_with(
             self._iothread._dest, self._iothread._dest_archive)
         fake_remove.assert_called_once_with(

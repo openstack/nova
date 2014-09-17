@@ -248,19 +248,33 @@ class HackingTestCase(test.NoDBTestCase):
     # installed.
     @mock.patch('pep8._checks',
                 {'physical_line': {}, 'logical_line': {}, 'tree': {}})
-    def _run_check(self, code, checker):
+    def _run_check(self, code, checker, filename=None):
         pep8.register_check(checker)
 
         lines = textwrap.dedent(code).strip().splitlines(True)
 
-        checker = pep8.Checker(lines=lines)
+        checker = pep8.Checker(filename=filename, lines=lines)
         checker.check_all()
         checker.report._deferred_print.sort()
         return checker.report._deferred_print
 
-    def _assert_has_errors(self, code, checker, expected_errors=None):
-        actual_errors = [e[:3] for e in self._run_check(code, checker)]
+    def _assert_has_errors(self, code, checker, expected_errors=None,
+                           filename=None):
+        actual_errors = [e[:3] for e in
+                         self._run_check(code, checker, filename)]
         self.assertEqual(expected_errors or [], actual_errors)
+
+    def test_assert_called_once(self):
+
+        checker = checks.check_assert_called_once
+        code = """
+               mock = Mock()
+               mock.method(1, 2, 3, test='wow')
+               mock.method.assert_called_once()
+               """
+        errors = [(3, 11, 'N327')]
+        self._assert_has_errors(code, checker, expected_errors=errors,
+                                filename='nova/tests/test_assert.py')
 
     def test_str_exception(self):
 

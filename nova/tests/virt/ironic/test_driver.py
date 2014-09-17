@@ -529,7 +529,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
                                              instance)
         fake_looping_call.start.assert_called_once_with(
             interval=CONF.ironic.api_retry_interval)
-        fake_looping_call.wait.assert_called_once()
+        fake_looping_call.wait.assert_called_once_with()
 
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(FAKE_CLIENT, 'node')
@@ -1117,7 +1117,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
                                              instance)
         fake_looping_call.start.assert_called_once_with(
             interval=CONF.ironic.api_retry_interval)
-        fake_looping_call.wait.assert_called_once()
+        fake_looping_call.wait.assert_called_once_with()
 
     def test_rebuild_preserve_ephemeral(self):
         self._test_rebuild(preserve=True)

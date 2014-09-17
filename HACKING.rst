@@ -39,6 +39,7 @@ Nova Specific Commandments
 - [N324] Ensure that jsonutils.%(fun)s must be used instead of json.%(fun)s
 - [N325] str() cannot be used on an exception.  Remove use or use six.text_type()
 - [N326] Translated messages cannot be concatenated.  String should be included in translated message.
+- [N327] assert_called_once() is not a valid method
 
 Creating Unit Tests
 -------------------
