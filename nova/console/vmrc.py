@@ -20,21 +20,25 @@ import base64
 from oslo.config import cfg
 
 from nova import exception
+from nova.i18n import _LW
 from nova.openstack.common import jsonutils
+from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import vim_util
 
 
 vmrc_opts = [
     cfg.IntOpt('console_vmrc_port',
                default=443,
-               help="Port for VMware VMRC connections"),
+               help="DEPRECATED. Port for VMware VMRC connections"),
     cfg.IntOpt('console_vmrc_error_retries',
                default=10,
-               help="Number of retries for retrieving VMRC information"),
+               help="DEPRECATED. "
+                    "Number of retries for retrieving VMRC information"),
     ]
 
 CONF = cfg.CONF
 CONF.register_opts(vmrc_opts)
+LOG = logging.getLogger(__name__)
 
 
 class VMRCConsole(object):
@@ -42,6 +46,8 @@ class VMRCConsole(object):
 
     def __init__(self):
         super(VMRCConsole, self).__init__()
+        LOG.warning(_LW('The ESX driver has been removed! '
+                        'This code will be removed in Kilo release!'))
 
     @property
     def console_type(self):
@@ -108,6 +114,7 @@ class VMRCSessionConsole(VMRCConsole):
 
     def __init__(self):
         super(VMRCSessionConsole, self).__init__()
+        LOG.warning(_LW('This code will be removed in Kilo release!'))
 
     @property
     def console_type(self):
