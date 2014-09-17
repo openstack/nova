@@ -44,7 +44,8 @@ class ConfFixture(config_fixture.Config):
         self.conf.set_default('api_paste_config',
                               paths.state_path_def('etc/nova/api-paste.ini'))
         self.conf.set_default('host', 'fake-mini')
-        self.conf.set_default('compute_driver', 'nova.virt.fake.FakeDriver')
+        self.conf.set_default('compute_driver',
+                              'nova.virt.fake.SmallFakeDriver')
         self.conf.set_default('fake_network', True)
         self.conf.set_default('flat_network_bridge', 'br100')
         self.conf.set_default('floating_ip_dns_manager',

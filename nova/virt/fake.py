@@ -89,15 +89,21 @@ class FakeDriver(driver.ComputeDriver):
         "supports_recreate": True,
         }
 
+    # Since we don't have a real hypervisor, pretend we have lots of
+    # disk and ram so this driver can be used to test large instances.
+    vcpus = 1000
+    memory_mb = 800000
+    local_gb = 600000
+
     """Fake hypervisor driver."""
 
     def __init__(self, virtapi, read_only=False):
         super(FakeDriver, self).__init__(virtapi)
         self.instances = {}
         self.host_status_base = {
-          'vcpus': 100000,
-          'memory_mb': 8000000000,
-          'local_gb': 600000000000,
+          'vcpus': self.vcpus,
+          'memory_mb': self.memory_mb,
+          'local_gb': self.local_gb,
           'vcpus_used': 0,
           'memory_mb_used': 0,
           'local_gb_used': 100000000000,
@@ -105,8 +111,9 @@ class FakeDriver(driver.ComputeDriver):
           'hypervisor_version': utils.convert_version_to_int('1.0'),
           'hypervisor_hostname': CONF.host,
           'cpu_info': {},
-          'disk_available_least': 500000000000,
-          'supported_instances': [(None, 'fake', None)],
+          'disk_available_least': 0,
+          'supported_instances': jsonutils.dumps([(None, 'fake', None)]),
+          'numa_topology': None,
           }
         self._mounts = {}
         self._interfaces = {}
@@ -384,21 +391,16 @@ class FakeDriver(driver.ComputeDriver):
         if nodename not in _FAKE_NODES:
             return {}
 
-        dic = {'vcpus': 1,
-               'memory_mb': 8192,
-               'local_gb': 1028,
-               'vcpus_used': 0,
-               'memory_mb_used': 0,
-               'local_gb_used': 0,
-               'hypervisor_type': 'fake',
-               'hypervisor_version': utils.convert_version_to_int('1.0'),
-               'hypervisor_hostname': nodename,
-               'disk_available_least': 0,
-               'cpu_info': '?',
-               'supported_instances': jsonutils.dumps([(None, 'fake', None)]),
-               'numa_topology': None,
-              }
-        return dic
+        status = self.get_host_stats()
+        # samples expect '?' instead of {}
+        if isinstance(status, list):
+            for host in status:
+                if host["hypervisor_hostname"] == nodename:
+                    host['cpu_info'] = '?'
+                    return host
+        else:
+            status['cpu_info'] = '?'
+            return status
 
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
         return
@@ -500,3 +502,15 @@ class FakeVirtAPI(virtapi.VirtAPI):
         # NOTE(danms): Don't actually wait for any events, just
         # fall through
         yield
+
+
+class SmallFakeDriver(FakeDriver):
+    # The api samples expect specific cpu memory and disk sizes. In order to
+    # allow the FakeVirt driver to be used outside of the unit tests, provide
+    # a separate class that has the values expected by the api samples. So
+    # instead of requiring new samples every time those
+    # values are adjusted allow them to be overwritten here.
+
+    vcpus = 1
+    memory_mb = 8192
+    local_gb = 1028

@@ -166,8 +166,7 @@ class BaseTestCase(test.TestCase):
 
     def setUp(self):
         super(BaseTestCase, self).setUp()
-        self.flags(compute_driver='nova.virt.fake.FakeDriver',
-                   network_manager='nova.network.manager.FlatManager')
+        self.flags(network_manager='nova.network.manager.FlatManager')
         fake.set_nodes([NODENAME])
         self.flags(use_local=True, group='conductor')
 
