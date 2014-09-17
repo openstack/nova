@@ -822,6 +822,15 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertColumnNotExists(engine, 'shadow_instance_extra',
                                    'vcpu_model')
 
+    def _check_277(self, engine, data):
+        self.assertIndexMembers(engine, 'fixed_ips',
+                                'fixed_ips_deleted_allocated_updated_at_idx',
+                                ['deleted', 'allocated', 'updated_at'])
+
+    def _post_downgrade_277(self, engine):
+        self.assertIndexNotExists(engine, 'fixed_ips',
+                                  'fixed_ips_deleted_allocated_updated_at_idx')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,

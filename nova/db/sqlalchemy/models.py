@@ -891,7 +891,9 @@ class FixedIp(BASE, NovaBase):
         Index('fixed_ips_address_reserved_network_id_deleted_idx',
               'address', 'reserved', 'network_id', 'deleted'),
         Index('fixed_ips_deleted_allocated_idx', 'address', 'deleted',
-              'allocated')
+              'allocated'),
+        Index('fixed_ips_deleted_allocated_updated_at_idx', 'deleted',
+              'allocated', 'updated_at')
     )
     id = Column(Integer, primary_key=True)
     address = Column(types.IPAddress())
