@@ -28,12 +28,18 @@ class NUMATopologyFilter(filters.BaseHostFilter):
         cpu_ratio = CONF.cpu_allocation_ratio
         instance = filter_properties.get('instance_properties', {})
         instance_topology = hardware.instance_topology_from_instance(instance)
+        host_topology, _fmt = hardware.host_topology_and_format_from_host(
+                host_state)
         if instance_topology:
-            if host_state.numa_topology:
+            if host_topology:
+                if not hardware.VirtNUMAHostTopology.can_fit_instances(
+                        host_topology, [instance_topology]):
+                    return False
+
                 limit_cells = []
                 usage_after_instance = (
-                        hardware.get_host_numa_usage_from_instance(
-                            host_state, instance, never_serialize_result=True))
+                        hardware.VirtNUMAHostTopology.usage_from_instances(
+                            host_topology, [instance_topology]))
                 for cell in usage_after_instance.cells:
                     max_cell_memory = int(cell.memory * ram_ratio)
                     max_cell_cpu = len(cell.cpuset) * cpu_ratio

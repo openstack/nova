@@ -838,6 +838,30 @@ class NUMATopologyTest(test.NoDBTestCase):
                     self.assertEqual(testitem["expect"].cells[i].memory,
                                      topology.cells[i].memory)
 
+    def test_can_fit_isntances(self):
+        hosttopo = hw.VirtNUMAHostTopology([
+            hw.VirtNUMATopologyCellUsage(0, set([0, 1, 2, 3]), 1024),
+            hw.VirtNUMATopologyCellUsage(1, set([4, 6]), 512)
+        ])
+        instance1 = hw.VirtNUMAInstanceTopology([
+            hw.VirtNUMATopologyCell(0, set([0, 1, 2]), 256),
+            hw.VirtNUMATopologyCell(1, set([4]), 256),
+        ])
+        instance2 = hw.VirtNUMAInstanceTopology([
+            hw.VirtNUMATopologyCell(0, set([0, 1]), 256),
+            hw.VirtNUMATopologyCell(1, set([4, 6]), 256),
+            hw.VirtNUMATopologyCell(2, set([7, 8]), 256),
+        ])
+
+        self.assertTrue(hw.VirtNUMAHostTopology.can_fit_instances(
+            hosttopo, []))
+        self.assertTrue(hw.VirtNUMAHostTopology.can_fit_instances(
+            hosttopo, [instance1]))
+        self.assertFalse(hw.VirtNUMAHostTopology.can_fit_instances(
+            hosttopo, [instance2]))
+        self.assertFalse(hw.VirtNUMAHostTopology.can_fit_instances(
+            hosttopo, [instance1, instance2]))
+
     def test_host_usage_contiguous(self):
         hosttopo = hw.VirtNUMAHostTopology([
             hw.VirtNUMATopologyCellUsage(0, set([0, 1, 2, 3]), 1024),
@@ -1190,6 +1214,11 @@ class NUMATopologyClaimsTest(test.NoDBTestCase):
                 cells=[
                     hw.VirtNUMATopologyCell(1, set([1]), 256),
                     hw.VirtNUMATopologyCell(2, set([5]), 1024)])
+        self.no_fit_instance = hw.VirtNUMAInstanceTopology(
+                cells=[
+                    hw.VirtNUMATopologyCell(1, set([1]), 256),
+                    hw.VirtNUMATopologyCell(2, set([2]), 256),
+                    hw.VirtNUMATopologyCell(3, set([3]), 256)])
 
     def test_claim_not_enough_info(self):
 
@@ -1225,6 +1254,17 @@ class NUMATopologyClaimsTest(test.NoDBTestCase):
                      self.host, [self.medium_instance, self.small_instance],
                      self.limits),
                 six.text_type)
+
+        # Instance fails if it won't fit the topology
+        self.assertIsInstance(
+                hw.VirtNUMAHostTopology.claim_test(
+                     self.host, [self.no_fit_instance], self.limits),
+                six.text_type)
+
+        # Instance fails if it won't fit the topology even with no limits
+        self.assertIsInstance(
+                hw.VirtNUMAHostTopology.claim_test(
+                     self.host, [self.no_fit_instance]), six.text_type)
 
 
 class HelperMethodsTestCase(test.NoDBTestCase):

@@ -844,6 +844,22 @@ class VirtNUMAHostTopology(VirtNUMATopology):
 
     cell_class = VirtNUMATopologyCellUsage
 
+    @staticmethod
+    def can_fit_instances(host, instances):
+        """Test if the instance topology can fit into the host
+
+        Returns True if all the cells of the all the instance topologies in
+        'instances' exist in the given 'host' topology. False otherwise.
+        """
+        if not host:
+            return True
+
+        host_cells = set(cell.id for cell in host.cells)
+        instances_cells = [set(cell.id for cell in instance.cells)
+                            for instance in instances]
+        return all(instance_cells <= host_cells
+                    for instance_cells in instances_cells)
+
     @classmethod
     def usage_from_instances(cls, host, instances, free=False):
         """Get host topology usage
@@ -893,7 +909,14 @@ class VirtNUMAHostTopology(VirtNUMATopology):
 
         :returns: None if the claim succeeds or text explaining the error.
         """
-        if not all((host, limits, instances)):
+        if not (host and instances):
+            return
+
+        if not cls.can_fit_instances(host, instances):
+            return (_("Requested instance NUMA topology cannot fit "
+                      "the given host NUMA topology."))
+
+        if not limits:
             return
 
         claimed_host = cls.usage_from_instances(host, instances)
@@ -901,8 +924,8 @@ class VirtNUMAHostTopology(VirtNUMATopology):
         for claimed_cell, limit_cell in zip(claimed_host.cells, limits.cells):
             if (claimed_cell.memory_usage > limit_cell.memory_limit or
                     claimed_cell.cpu_usage > limit_cell.cpu_limit):
-                return (_("Requested instance NUMA topology cannot fit "
-                          "the given host NUMA topology."))
+                return (_("Requested instance NUMA topology is too large for "
+                          "the given host NUMA topology limits."))
 
 
 # TODO(ndipanov): Remove when all code paths are using objects
@@ -957,6 +980,31 @@ def instance_topology_from_instance(instance):
 
 
 # TODO(ndipanov): Remove when all code paths are using objects
+def host_topology_and_format_from_host(host):
+    """Convenience method for getting the numa_topology out of hosts
+
+    Since we may get a host as either a dict, a db object, or an actual
+    ComputeNode object, or an instance of HostState class, this makes sure we
+    get beck either None, or an instance of VirtNUMAHostTopology class.
+
+    :returns: A two-tuple, first element is the topology itself or None, second
+              is a boolean set to True if topology was in json format.
+    """
+    was_json = False
+    try:
+        host_numa_topology = host.get('numa_topology')
+    except AttributeError:
+        host_numa_topology = host.numa_topology
+
+    if host_numa_topology is not None and isinstance(
+            host_numa_topology, six.string_types):
+        was_json = True
+        host_numa_topology = VirtNUMAHostTopology.from_json(host_numa_topology)
+
+    return host_numa_topology, was_json
+
+
+# TODO(ndipanov): Remove when all code paths are using objects
 def get_host_numa_usage_from_instance(host, instance, free=False,
                                      never_serialize_result=False):
     """Calculate new 'numa_usage' of 'host' from 'instance' NUMA usage
@@ -978,21 +1026,12 @@ def get_host_numa_usage_from_instance(host, instance, free=False,
     :returns: numa_usage in the format it was on the host or
               VirtNUMAHostTopology instance if never_serialize_result was True
     """
-    jsonify_result = False
-
     instance_numa_topology = instance_topology_from_instance(instance)
     if instance_numa_topology:
         instance_numa_topology = [instance_numa_topology]
 
-    try:
-        host_numa_topology = host.get('numa_topology')
-    except AttributeError:
-        host_numa_topology = host.numa_topology
-
-    if host_numa_topology is not None and isinstance(
-            host_numa_topology, six.string_types):
-        jsonify_result = True
-        host_numa_topology = VirtNUMAHostTopology.from_json(host_numa_topology)
+    host_numa_topology, jsonify_result = host_topology_and_format_from_host(
+            host)
 
     updated_numa_topology = (
         VirtNUMAHostTopology.usage_from_instances(
