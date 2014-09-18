@@ -25,8 +25,8 @@ be supported by multiple drivers ('XenAPI' or  'Libvirt-Xen').
 from nova import exception
 
 
-# This list is taken from libvirt, with OpenStack
-# specific 'baremetal' & 'fake' then added in.
+# This list is all known hypervisors
+# even if not currently supported by OpenStack.
 BAREMETAL = "baremetal"
 BHYVE = "bhyve"
 FAKE = "fake"
@@ -43,6 +43,7 @@ UML = "uml"
 VBOX = "vbox"
 VMWARE = "vmware"
 XEN = "xen"
+ZVM = "zvm"
 
 ALL = (
     BAREMETAL,
@@ -61,6 +62,7 @@ ALL = (
     VBOX,
     VMWARE,
     XEN,
+    ZVM,
 )
 
 
