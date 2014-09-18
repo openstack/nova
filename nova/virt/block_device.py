@@ -446,7 +446,7 @@ def get_swap(transformed_list):
     if not all(isinstance(device, DriverSwapBlockDevice) or
                'swap_size' in device
                 for device in transformed_list):
-        return transformed_list
+        return None
     try:
         return transformed_list.pop()
     except IndexError:
