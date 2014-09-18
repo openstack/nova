@@ -2,7 +2,7 @@
     "aggregate": {
         "availability_zone": "nova2",
         "created_at": "%(strtime)s",
-        "deleted": 0,
+        "deleted": false,
         "deleted_at": null,
         "hosts": [],
         "id": 1,
