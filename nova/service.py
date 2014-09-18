@@ -30,7 +30,7 @@ from nova import conductor
 from nova import context
 from nova import debugger
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova.objects import base as objects_base
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
@@ -312,7 +312,7 @@ class Service(service.Service):
             with utils.tempdir():
                 pass
         except Exception as e:
-            LOG.error(_('Temporary directory is invalid: %s'), e)
+            LOG.error(_LE('Temporary directory is invalid: %s'), e)
             sys.exit(1)
 
 

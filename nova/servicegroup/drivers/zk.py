@@ -21,7 +21,7 @@ from oslo.config import cfg
 from oslo.utils import importutils
 
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _LE
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.servicegroup import api
@@ -106,8 +106,9 @@ class ZooKeeperDriver(api.ServiceGroupDriver):
             member.leave()
             del self._memberships[key]
         except KeyError:
-            LOG.error(_('ZooKeeperDriver.leave: %(id)s has not joined to the '
-                        '%(gr)s group'), {'id': member_id, 'gr': group})
+            LOG.error(_LE('ZooKeeperDriver.leave: %(id)s has not joined '
+                          'to the %(gr)s group'),
+                      {'id': member_id, 'gr': group})
 
     def is_up(self, service_ref):
         group_id = service_ref['topic']

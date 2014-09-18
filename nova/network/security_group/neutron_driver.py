@@ -24,7 +24,7 @@ from webob import exc
 
 from nova.compute import api as compute_api
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova.network import neutronv2
 from nova.network.security_group import security_group_base
 from nova import objects
@@ -138,7 +138,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 LOG.debug("Neutron security group %s not found", name)
                 self.raise_not_found(unicode(e))
             else:
-                LOG.error(_("Neutron Error: %s"), e)
+                LOG.error(_LE("Neutron Error: %s"), e)
                 raise exc_info[0], exc_info[1], exc_info[2]
 
         return self._convert_to_nova_security_group_format(group)
@@ -185,7 +185,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             elif e.status_code == 409:
                 self.raise_invalid_property(unicode(e))
             else:
-                LOG.error(_("Neutron Error: %s"), e)
+                LOG.error(_LE("Neutron Error: %s"), e)
                 raise exc_info[0], exc_info[1], exc_info[2]
 
     def add_rules(self, context, id, name, vals):
@@ -280,7 +280,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 LOG.debug("Neutron security group rule %s not found", id)
                 self.raise_not_found(unicode(e))
             else:
-                LOG.error(_("Neutron Error: %s"), e)
+                LOG.error(_LE("Neutron Error: %s"), e)
                 raise exc_info[0], exc_info[1], exc_info[2]
         return self._convert_to_nova_security_group_rule_format(rule)
 

@@ -23,7 +23,7 @@ from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova import db
 from nova import exception
-from nova.i18n import _, _LW
+from nova.i18n import _, _LE, _LW
 from nova import notifications
 from nova.objects import base as obj_base
 from nova.openstack.common import log as logging
@@ -174,8 +174,8 @@ def _log_compute_error(instance_uuid, retry):
         return  # no previously attempted hosts, skip
 
     last_host, last_node = hosts[-1]
-    LOG.error(_('Error from last host: %(last_host)s (node %(last_node)s):'
-                ' %(exc)s'),
+    LOG.error(_LE('Error from last host: %(last_host)s (node %(last_node)s):'
+                  ' %(exc)s'),
               {'last_host': last_host,
                'last_node': last_node,
                'exc': exc},

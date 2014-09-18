@@ -25,7 +25,7 @@ from oslo.config import cfg
 
 from nova import context
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova import objects
 from nova.openstack.common import log as logging
 from nova.openstack.common import versionutils
@@ -141,8 +141,8 @@ class XenAPISession(object):
                 context.get_admin_context(),
                 CONF.host, key=pool_states.POOL_FLAG)[0]
             if not aggr:
-                LOG.error(_('Host is member of a pool, but DB '
-                                'says otherwise'))
+                LOG.error(_LE('Host is member of a pool, but DB '
+                              'says otherwise'))
                 raise exception.AggregateHostNotFound()
             return aggr.metadetails[CONF.host]
         else:

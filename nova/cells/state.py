@@ -31,7 +31,7 @@ from nova.cells import rpc_driver
 from nova import context
 from nova.db import base
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova import rpc
@@ -357,8 +357,8 @@ class CellStateManager(base.Base):
         cell = (self.child_cells.get(cell_name) or
                 self.parent_cells.get(cell_name))
         if not cell:
-            LOG.error(_("Unknown cell '%(cell_name)s' when trying to "
-                        "update capabilities"),
+            LOG.error(_LE("Unknown cell '%(cell_name)s' when trying to "
+                          "update capabilities"),
                       {'cell_name': cell_name})
             return
         # Make sure capabilities are sets.
@@ -372,8 +372,8 @@ class CellStateManager(base.Base):
         cell = (self.child_cells.get(cell_name) or
                 self.parent_cells.get(cell_name))
         if not cell:
-            LOG.error(_("Unknown cell '%(cell_name)s' when trying to "
-                        "update capacities"),
+            LOG.error(_LE("Unknown cell '%(cell_name)s' when trying to "
+                          "update capacities"),
                       {'cell_name': cell_name})
             return
         cell.update_capacities(capacities)

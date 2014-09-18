@@ -35,7 +35,7 @@ import webob.dec
 import webob.exc
 
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova.openstack.common import log as logging
 
 wsgi_opts = [
@@ -130,7 +130,7 @@ class Server(object):
         try:
             self._socket = eventlet.listen(bind_addr, family, backlog=backlog)
         except EnvironmentError:
-            LOG.error(_("Could not bind to %(host)s:%(port)s"),
+            LOG.error(_LE("Could not bind to %(host)s:%(port)s"),
                       {'host': host, 'port': port})
             raise
 
@@ -200,8 +200,8 @@ class Server(object):
 
             except Exception:
                 with excutils.save_and_reraise_exception():
-                    LOG.error(_("Failed to start %(name)s on %(host)s"
-                                ":%(port)s with SSL support"),
+                    LOG.error(_LE("Failed to start %(name)s on %(host)s"
+                                  ":%(port)s with SSL support"),
                               {'name': self.name, 'host': self.host,
                                'port': self.port})
 

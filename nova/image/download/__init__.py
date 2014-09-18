@@ -19,7 +19,7 @@ from oslo.config import cfg
 import stevedore.driver
 import stevedore.extension
 
-from nova.i18n import _
+from nova.i18n import _LE
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -39,9 +39,10 @@ def load_transfer_modules():
         schemes_list = mgr.driver.get_schemes()
         for scheme in schemes_list:
             if scheme in module_dictionary:
-                msg = _('%(scheme)s is registered as a module twice. '
-                        '%(module_name)s is not being used.')
-                LOG.error(msg)
+                LOG.error(_LE('%(scheme)s is registered as a module twice. '
+                              '%(module_name)s is not being used.'),
+                          {'scheme': scheme,
+                           'module_name': module_name})
             else:
                 module_dictionary[scheme] = mgr.driver
 

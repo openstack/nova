@@ -43,7 +43,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
 from nova import exception
-from nova.i18n import _, _LI
+from nova.i18n import _, _LE, _LI
 from nova.network import model as network_model
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
@@ -1489,8 +1489,8 @@ def _check_vdi_size(context, session, instance, vdi_uuid):
 
     size = _get_vdi_chain_size(session, vdi_uuid)
     if size > allowed_size:
-        LOG.error(_("Image size %(size)d exceeded flavor "
-                    "allowed size %(allowed_size)d"),
+        LOG.error(_LE("Image size %(size)d exceeded flavor "
+                      "allowed size %(allowed_size)d"),
                   {'size': size, 'allowed_size': allowed_size},
                   instance=instance)
 
@@ -1899,10 +1899,10 @@ def _find_sr(session):
         if sr_ref:
             return sr_ref
     # No SR found!
-    LOG.error(_("XenAPI is unable to find a Storage Repository to "
-                "install guest instances on. Please check your "
-                "configuration (e.g. set a default SR for the pool) "
-                "and/or configure the flag 'sr_matching_filter'."))
+    LOG.error(_LE("XenAPI is unable to find a Storage Repository to "
+                  "install guest instances on. Please check your "
+                  "configuration (e.g. set a default SR for the pool) "
+                  "and/or configure the flag 'sr_matching_filter'."))
     return None
 
 

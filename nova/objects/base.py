@@ -261,8 +261,8 @@ class NovaObject(object):
     def obj_class_from_name(cls, objname, objver):
         """Returns a class from the registry based on a name and version."""
         if objname not in cls._obj_classes:
-            LOG.error(_('Unable to instantiate unregistered object type '
-                        '%(objtype)s') % dict(objtype=objname))
+            LOG.error(_LE('Unable to instantiate unregistered object type '
+                          '%(objtype)s'), dict(objtype=objname))
             raise exception.UnsupportedObjectError(objtype=objname)
 
         # NOTE(comstud): If there's not an exact match, return the highest

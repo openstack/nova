@@ -25,7 +25,7 @@ from nova.conductor import rpcapi as conductor_rpcapi
 from nova import config
 import nova.db.api
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _LE
 from nova import objects
 from nova.objects import base as objects_base
 from nova.openstack.common import log as logging
@@ -47,7 +47,7 @@ def block_db_access():
         def __call__(self, *args, **kwargs):
             stacktrace = "".join(traceback.format_stack())
             LOG = logging.getLogger('nova.compute')
-            LOG.error(_('No db access allowed in nova-compute: %s'),
+            LOG.error(_LE('No db access allowed in nova-compute: %s'),
                       stacktrace)
             raise exception.DBNotAllowed('nova-compute')
 

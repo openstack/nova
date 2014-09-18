@@ -30,7 +30,7 @@ from nova.compute import vm_states
 from nova import conductor
 from nova.db import base
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova import objects
 from nova.objects import base as obj_base
 from nova.openstack.common import log as logging
@@ -192,8 +192,7 @@ class CellsScheduler(base.Base):
                         target_cell.name)
         # FIXME(comstud): Would be nice to kick this back up so that
         # the parent cell could retry, if we had a parent.
-        msg = _("Couldn't communicate with any cells")
-        LOG.error(msg)
+        LOG.error(_LE("Couldn't communicate with any cells"))
         raise exception.NoCellsAvailable()
 
     def build_instances(self, message, build_inst_kwargs):

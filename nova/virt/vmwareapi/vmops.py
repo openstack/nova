@@ -179,7 +179,7 @@ class VMwareVMOps(object):
             self._session._wait_for_task(vmdk_extend_task)
         except Exception as e:
             with excutils.save_and_reraise_exception():
-                LOG.error(_('Extending virtual disk failed with error: %s'),
+                LOG.error(_LE('Extending virtual disk failed with error: %s'),
                           e, instance=instance)
                 # Clean up files created during the extend operation
                 files = [name.replace(".vmdk", "-flat.vmdk"), name]
@@ -530,7 +530,7 @@ class VMwareVMOps(object):
                     return upload_iso_path
         except Exception as e:
             with excutils.save_and_reraise_exception():
-                LOG.error(_('Creating config drive failed with error: %s'),
+                LOG.error(_LE('Creating config drive failed with error: %s'),
                           e, instance=instance)
 
     def _attach_cdrom_to_vm(self, vm_ref, instance,

@@ -1496,7 +1496,7 @@ class ComputeManager(manager.Manager):
         return instance, network_info
 
     def _log_original_error(self, exc_info, instance_uuid):
-        LOG.error(_('Error: %s') % exc_info[1], instance_uuid=instance_uuid,
+        LOG.error(_LE('Error: %s'), exc_info[1], instance_uuid=instance_uuid,
                   exc_info=exc_info)
 
     def _reschedule_or_error(self, context, instance, exc_info,
@@ -2305,7 +2305,7 @@ class ComputeManager(manager.Manager):
             self._deallocate_network(context, instance, requested_networks)
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.error(_('Failed to deallocate network for instance.'),
+                LOG.error(_LE('Failed to deallocate network for instance.'),
                           instance=instance)
                 self._set_instance_error_state(context, instance)
 
@@ -2939,7 +2939,7 @@ class ComputeManager(manager.Manager):
                             'reboot.error', fault=error)
                     ctxt.reraise = False
                 else:
-                    LOG.error(_('Cannot reboot instance: %s'), error,
+                    LOG.error(_LE('Cannot reboot instance: %s'), error,
                               context=context, instance=instance)
                     self._set_instance_obj_error_state(context, instance)
 
@@ -3361,8 +3361,8 @@ class ComputeManager(manager.Manager):
                 migration = objects.Migration.get_by_id(
                                     context.elevated(), migration_id)
             except exception.MigrationNotFound:
-                LOG.error(_("Migration %s is not found during confirmation") %
-                            migration_id, context=context, instance=instance)
+                LOG.error(_LE("Migration %s is not found during confirmation"),
+                          migration_id, context=context, instance=instance)
                 quotas.rollback()
                 return
 
@@ -4763,8 +4763,8 @@ class ComputeManager(manager.Manager):
         network_info = self.network_api.allocate_port_for_instance(
             context, instance, port_id, network_id, requested_ip)
         if len(network_info) != 1:
-            LOG.error(_('allocate_port_for_instance returned %(ports)s ports')
-                      % dict(ports=len(network_info)))
+            LOG.error(_LE('allocate_port_for_instance returned %(ports)s '
+                          'ports'), dict(ports=len(network_info)))
             raise exception.InterfaceAttachFailed(
                     instance_uuid=instance.uuid)
         image_ref = instance.get('image_ref')
@@ -5335,8 +5335,8 @@ class ComputeManager(manager.Manager):
                 LOG.debug('Updated the network info_cache for instance',
                           instance=instance)
             except Exception:
-                LOG.error(_('An error occurred while refreshing the network '
-                            'cache.'), instance=instance, exc_info=True)
+                LOG.error(_LE('An error occurred while refreshing the network '
+                              'cache.'), instance=instance, exc_info=True)
         else:
             LOG.debug("Didn't find any instances for network info cache "
                       "update.")
@@ -5966,7 +5966,7 @@ class ComputeManager(manager.Manager):
         service = objects.Service.get_by_compute_host(context, self.host,
                                                         use_slave=use_slave)
         if not service:
-            LOG.error(_("No service record for host %s"), self.host)
+            LOG.error(_LE("No service record for host %s"), self.host)
             return []
         return objects.ComputeNodeList.get_by_service(context,
                                                       service,

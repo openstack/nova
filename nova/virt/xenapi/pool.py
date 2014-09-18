@@ -24,7 +24,7 @@ import six.moves.urllib.parse as urlparse
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova.openstack.common import log as logging
 from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils
@@ -177,7 +177,7 @@ class ResourcePool(object):
                     'master_pass': CONF.xenserver.connection_password, }
             self._session.call_plugin('xenhost', 'host_join', args)
         except self._session.XenAPI.Failure as e:
-            LOG.error(_("Pool-Join failed: %s"), e)
+            LOG.error(_LE("Pool-Join failed: %s"), e)
             raise exception.AggregateError(aggregate_id=aggregate_id,
                                            action='add_to_aggregate',
                                            reason=_('Unable to join %s '
@@ -196,7 +196,7 @@ class ResourcePool(object):
             host_ref = self._session.host.get_by_uuid(host_uuid)
             self._session.pool.eject(host_ref)
         except self._session.XenAPI.Failure as e:
-            LOG.error(_("Pool-eject failed: %s"), e)
+            LOG.error(_LE("Pool-eject failed: %s"), e)
             raise exception.AggregateError(aggregate_id=aggregate_id,
                                            action='remove_from_aggregate',
                                            reason=six.text_type(e.details))
@@ -207,7 +207,7 @@ class ResourcePool(object):
             pool_ref = self._session.pool.get_all()[0]
             self._session.pool.set_name_label(pool_ref, aggregate_name)
         except self._session.XenAPI.Failure as e:
-            LOG.error(_("Unable to set up pool: %s."), e)
+            LOG.error(_LE("Unable to set up pool: %s."), e)
             raise exception.AggregateError(aggregate_id=aggregate_id,
                                            action='add_to_aggregate',
                                            reason=six.text_type(e.details))
@@ -218,7 +218,7 @@ class ResourcePool(object):
             pool_ref = self._session.pool.get_all()[0]
             self._session.pool.set_name_label(pool_ref, '')
         except self._session.XenAPI.Failure as e:
-            LOG.error(_("Pool-set_name_label failed: %s"), e)
+            LOG.error(_LE("Pool-set_name_label failed: %s"), e)
             raise exception.AggregateError(aggregate_id=aggregate_id,
                                            action='remove_from_aggregate',
                                            reason=six.text_type(e.details))

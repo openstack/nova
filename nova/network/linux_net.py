@@ -31,7 +31,7 @@ from oslo.utils import timeutils
 import six
 
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova import objects
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
@@ -1080,7 +1080,7 @@ def restart_dhcp(context, dev, network_ref, fixedips):
                 _add_dnsmasq_accept_rules(dev)
                 return
             except Exception as exc:  # pylint: disable=W0703
-                LOG.error(_('Hupping dnsmasq threw %s'), exc)
+                LOG.error(_LE('Hupping dnsmasq threw %s'), exc)
         else:
             LOG.debug('Pid %d is stale, relaunching dnsmasq', pid)
 
@@ -1160,7 +1160,7 @@ interface %s
             try:
                 _execute('kill', pid, run_as_root=True)
             except Exception as exc:  # pylint: disable=W0703
-                LOG.error(_('killing radvd threw %s'), exc)
+                LOG.error(_LE('killing radvd threw %s'), exc)
         else:
             LOG.debug('Pid %d is stale, relaunching radvd', pid)
 
@@ -1322,7 +1322,7 @@ def _ovs_vsctl(args):
     try:
         return utils.execute(*full_args, run_as_root=True)
     except Exception as e:
-        LOG.error(_("Unable to execute %(cmd)s. Exception: %(exception)s"),
+        LOG.error(_LE("Unable to execute %(cmd)s. Exception: %(exception)s"),
                   {'cmd': full_args, 'exception': e})
         raise exception.AgentError(method=full_args)
 
@@ -1380,7 +1380,7 @@ def delete_net_dev(dev):
             LOG.debug("Net device removed: '%s'", dev)
         except processutils.ProcessExecutionError:
             with excutils.save_and_reraise_exception():
-                LOG.error(_("Failed removing net device: '%s'"), dev)
+                LOG.error(_LE("Failed removing net device: '%s'"), dev)
 
 
 # Similar to compute virt layers, the Linux network node

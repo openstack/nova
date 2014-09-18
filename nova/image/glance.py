@@ -32,7 +32,7 @@ import six
 import six.moves.urllib.parse as urlparse
 
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 import nova.image.download as image_xfers
 from nova.openstack.common import log as logging
 from nova import utils
@@ -271,9 +271,9 @@ class GlanceImageService(object):
             try:
                 self._download_handlers[scheme] = mod.get_download_handler()
             except Exception as ex:
-                fmt = _('When loading the module %(module_str)s the '
-                         'following error occurred: %(ex)s')
-                LOG.error(fmt % {'module_str': str(mod), 'ex': ex})
+                LOG.error(_LE('When loading the module %(module_str)s the '
+                              'following error occurred: %(ex)s'),
+                          {'module_str': str(mod), 'ex': ex})
 
     def detail(self, context, **kwargs):
         """Calls out to Glance for a list of detailed image information."""
@@ -330,8 +330,8 @@ class GlanceImageService(object):
         except KeyError:
             return None
         except Exception:
-            LOG.error(_("Failed to instantiate the download handler "
-                "for %(scheme)s") % {'scheme': scheme})
+            LOG.error(_LE("Failed to instantiate the download handler "
+                          "for %(scheme)s"), {'scheme': scheme})
         return
 
     def download(self, context, image_id, data=None, dst_path=None):
