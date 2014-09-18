@@ -1,0 +1,5 @@
+{
+    "removeSecurityGroup": {
+        "name": "test"
+    }
+}

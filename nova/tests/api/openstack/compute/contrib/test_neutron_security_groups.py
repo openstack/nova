@@ -51,8 +51,8 @@ class TestNeutronSecurityGroupsTestCase(test.TestCase):
         super(TestNeutronSecurityGroupsTestCase, self).tearDown()
 
 
-class TestNeutronSecurityGroups(
-        test_security_groups.TestSecurityGroups,
+class TestNeutronSecurityGroupsV21(
+        test_security_groups.TestSecurityGroupsV21,
         TestNeutronSecurityGroupsTestCase):
 
     def _create_sg_template(self, **kwargs):
@@ -398,6 +398,12 @@ class TestNeutronSecurityGroups(
                            security_groups=[sg1['id']],
                            port_security_enabled=False,
                            device_id=test_security_groups.FAKE_UUID1)
+
+
+class TestNeutronSecurityGroupsV2(TestNeutronSecurityGroupsV21):
+    controller_cls = security_groups.SecurityGroupController
+    server_secgrp_ctl_cls = security_groups.ServerSecurityGroupController
+    secgrp_act_ctl_cls = security_groups.SecurityGroupActionController
 
 
 class TestNeutronSecurityGroupRulesTestCase(TestNeutronSecurityGroupsTestCase):
