@@ -1309,13 +1309,13 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             def __init__(self):
                 self.finish_revert_migration_called = False
 
-            def finish_revert_migration(self, instance, block_info,
+            def finish_revert_migration(self, context, instance, block_info,
                                         power_on):
                 self.finish_revert_migration_called = True
 
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         conn._vmops = VMOpsMock()
-        conn.finish_revert_migration(instance, None)
+        conn.finish_revert_migration(self.context, instance, None)
         self.assertTrue(conn._vmops.finish_revert_migration_called)
 
     def test_reboot_hard(self):
@@ -1717,6 +1717,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         self.called = False
         self.fake_vm_start_called = False
         self.fake_finish_revert_migration_called = False
+        context = 'fake_context'
 
         def fake_vm_start(*args, **kwargs):
             self.fake_vm_start_called = True
@@ -1750,7 +1751,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         self.assertEqual(self.called, True)
         self.assertEqual(self.fake_vm_start_called, power_on)
 
-        conn.finish_revert_migration(instance, network_info)
+        conn.finish_revert_migration(context, instance, network_info)
         self.assertEqual(self.fake_finish_revert_migration_called, True)
 
     def test_revert_migrate_power_on(self):
