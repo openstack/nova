@@ -1914,8 +1914,8 @@
 # Driver to use for controlling virtualization. Options
 # include: libvirt.LibvirtDriver, xenapi.XenAPIDriver,
 # fake.FakeDriver, baremetal.BareMetalDriver,
-# vmwareapi.VMwareESXDriver, vmwareapi.VMwareVCDriver (string
-# value)
+# vmwareapi.VMwareESXDriver, vmwareapi.VMwareVCDriver,
+# hyperv.HyperVDriver (string value)
 #compute_driver=<None>
 
 # The default format an ephemeral_volume will be formatted
