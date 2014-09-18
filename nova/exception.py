@@ -1740,3 +1740,7 @@ class InvalidImageConfigDrive(Invalid):
 class InvalidHypervisorVirtType(Invalid):
     msg_fmt = _("Hypervisor virtualization type '%(hvtype)s' is not "
                 "recognised")
+
+
+class InvalidVirtualMachineMode(Invalid):
+    msg_fmt = _("Virtual machine mode '%(vmmode)s' is not recognised")
