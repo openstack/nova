@@ -2425,9 +2425,21 @@ class TestNeutronv2(TestNeutronv2Base):
                                  'physical_network': 'phynet1'},
              'binding:vif_details': {model.VIF_DETAILS_PROFILEID: 'pfid'},
              },
+            # admin_state_up=True and status='ACTIVE' thus vif.active=True
+            # This port has no binding:vnic_type to verify default is assumed
+            {'id': 'port5',
+             'network_id': 'net-id',
+             'admin_state_up': True,
+             'status': 'ACTIVE',
+             'fixed_ips': [{'ip_address': '1.1.1.1'}],
+             'mac_address': 'de:ad:be:ef:00:06',
+             'binding:vif_type': model.VIF_TYPE_BRIDGE,
+             # No binding:vnic_type
+             'binding:vif_details': {},
+             },
             # This does not match the networks we provide below,
             # so it should be ignored (and is here to verify that)
-            {'id': 'port5',
+            {'id': 'port6',
              'network_id': 'other-net-id',
              'admin_state_up': True,
              'status': 'DOWN',
@@ -2450,7 +2462,7 @@ class TestNeutronv2(TestNeutronv2Base):
         self.mox.StubOutWithMock(api, '_get_floating_ips_by_fixed_and_port')
         self.mox.StubOutWithMock(api, '_get_subnets_from_port')
         requested_ports = [fake_ports[2], fake_ports[0], fake_ports[1],
-                           fake_ports[3], fake_ports[4]]
+                           fake_ports[3], fake_ports[4], fake_ports[5]]
         for requested_port in requested_ports:
             api._get_floating_ips_by_fixed_and_port(
                 self.moxed_client, '1.1.1.1', requested_port['id']).AndReturn(
@@ -2467,8 +2479,9 @@ class TestNeutronv2(TestNeutronv2Base):
                                                   fake_ports[0]['id'],
                                                   fake_ports[1]['id'],
                                                   fake_ports[3]['id'],
-                                                  fake_ports[4]['id']])
-        self.assertEqual(len(nw_infos), 5)
+                                                  fake_ports[4]['id'],
+                                                  fake_ports[5]['id']])
+        self.assertEqual(len(nw_infos), 6)
         index = 0
         for nw_info in nw_infos:
             self.assertEqual(nw_info['address'],
@@ -2480,7 +2493,8 @@ class TestNeutronv2(TestNeutronv2Base):
             if nw_info['type'] == model.VIF_TYPE_BRIDGE:
                 self.assertEqual(nw_info['network']['bridge'], 'brqnet-id')
             self.assertEqual(nw_info['vnic_type'],
-                             requested_ports[index]['binding:vnic_type'])
+                                requested_ports[index].get('binding:vnic_type',
+                                    model.VNIC_TYPE_NORMAL))
             self.assertEqual(nw_info.get('details'),
                              requested_ports[index].get('binding:vif_details'))
             self.assertEqual(nw_info.get('profile'),
@@ -2492,12 +2506,14 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertEqual(nw_infos[2]['active'], True)
         self.assertEqual(nw_infos[3]['active'], True)
         self.assertEqual(nw_infos[4]['active'], True)
+        self.assertEqual(nw_infos[5]['active'], True)
 
         self.assertEqual(nw_infos[0]['id'], 'port0')
         self.assertEqual(nw_infos[1]['id'], 'port1')
         self.assertEqual(nw_infos[2]['id'], 'port2')
         self.assertEqual(nw_infos[3]['id'], 'port3')
         self.assertEqual(nw_infos[4]['id'], 'port4')
+        self.assertEqual(nw_infos[5]['id'], 'port5')
 
     def test_get_subnets_from_port(self):
         api = neutronapi.API()
@@ -2588,6 +2604,26 @@ class TestNeutronv2(TestNeutronv2Base):
             fields=['binding:vnic_type', 'network_id'])
         self.assertEqual(model.VNIC_TYPE_NORMAL, vnic_type)
         self.assertFalse(phynet_name)
+
+    @mock.patch.object(neutronv2, 'get_client', return_value=mock.Mock())
+    def test_get_port_vnic_info_3(self, mock_get_client):
+        api = neutronapi.API()
+        self.mox.ResetAll()
+        test_port = {
+            'port': {'id': 'my_port_id3',
+                      'network_id': 'net-id',
+                      # No binding:vnic_type
+                      },
+            }
+
+        mock_client = mock_get_client()
+        mock_client.show_port.return_value = test_port
+        vnic_type, phynet_name = api._get_port_vnic_info(
+            self.context, mock_client, test_port['port']['id'])
+
+        mock_client.show_port.assert_called_once_with(test_port['port']['id'],
+            fields=['binding:vnic_type', 'network_id'])
+        self.assertEqual(model.VNIC_TYPE_NORMAL, vnic_type)
 
     @mock.patch.object(neutronapi.API, "_get_port_vnic_info")
     @mock.patch.object(neutronv2, 'get_client', return_value=mock.Mock())
