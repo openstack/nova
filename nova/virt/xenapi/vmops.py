@@ -41,7 +41,7 @@ from nova.compute import vm_states
 from nova.console import type as ctype
 from nova import context as nova_context
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LI
 from nova import objects
 from nova.openstack.common import log as logging
 from nova.pci import manager as pci_manager
@@ -1210,8 +1210,8 @@ class VMOps(object):
             details = exc.details
             if (details[0] == 'VM_BAD_POWER_STATE' and
                     details[-1] == 'halted'):
-                LOG.info(_("Starting halted instance found during reboot"),
-                    instance=instance)
+                LOG.info(_LI("Starting halted instance found during reboot"),
+                         instance=instance)
                 self._start(instance, vm_ref=vm_ref,
                             bad_volumes_callback=bad_volumes_callback)
                 return
@@ -1414,7 +1414,7 @@ class VMOps(object):
         destroy_* methods are internal.
 
         """
-        LOG.info(_("Destroying VM"), instance=instance)
+        LOG.info(_LI("Destroying VM"), instance=instance)
 
         # We don't use _get_vm_opaque_ref because the instance may
         # truly not exist because of a failure during build. A valid
@@ -1616,11 +1616,11 @@ class VMOps(object):
                 timeout=timeout)
 
         if instances_info["instance_count"] > 0:
-            LOG.info(_("Found %(instance_count)d hung reboots "
-                       "older than %(timeout)d seconds") % instances_info)
+            LOG.info(_LI("Found %(instance_count)d hung reboots "
+                         "older than %(timeout)d seconds") % instances_info)
 
         for instance in instances:
-            LOG.info(_("Automatically hard rebooting"), instance=instance)
+            LOG.info(_LI("Automatically hard rebooting"), instance=instance)
             self.compute_api.reboot(ctxt, instance, "HARD")
 
     def get_info(self, instance, vm_ref=None):

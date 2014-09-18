@@ -25,7 +25,7 @@ from oslo.config import cfg
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
-from nova.i18n import _, _LW
+from nova.i18n import _, _LI, _LW
 from nova.openstack.common import log as logging
 from nova import rpc
 from nova.scheduler import driver
@@ -75,10 +75,10 @@ class FilterScheduler(driver.Scheduler):
         self.notifier.info(context, 'scheduler.run_instance.start', payload)
 
         instance_uuids = request_spec.get('instance_uuids')
-        LOG.info(_("Attempting to build %(num_instances)d instance(s) "
-                    "uuids: %(instance_uuids)s"),
-                  {'num_instances': len(instance_uuids),
-                   'instance_uuids': instance_uuids})
+        LOG.info(_LI("Attempting to build %(num_instances)d instance(s) "
+                     "uuids: %(instance_uuids)s"),
+                 {'num_instances': len(instance_uuids),
+                  'instance_uuids': instance_uuids})
         LOG.debug("Request Spec: %s" % request_spec)
 
         # check retry policy.  Rather ugly use of instance_uuids[0]...
@@ -104,10 +104,10 @@ class FilterScheduler(driver.Scheduler):
             try:
                 try:
                     weighed_host = weighed_hosts.pop(0)
-                    LOG.info(_("Choosing host %(weighed_host)s "
-                                "for instance %(instance_uuid)s"),
-                              {'weighed_host': weighed_host,
-                               'instance_uuid': instance_uuid})
+                    LOG.info(_LI("Choosing host %(weighed_host)s "
+                                 "for instance %(instance_uuid)s"),
+                             {'weighed_host': weighed_host,
+                              'instance_uuid': instance_uuid})
                 except IndexError:
                     raise exception.NoValidHost(reason="")
 

@@ -20,7 +20,7 @@ import time
 
 from oslo.config import cfg
 
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LI
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk.mount import api
@@ -88,7 +88,7 @@ class NbdMount(api.Mount):
                                  run_as_root=True)
         if err:
             self.error = _('qemu-nbd error: %s') % err
-            LOG.info(_('NBD mount error: %s'), self.error)
+            LOG.info(_LI('NBD mount error: %s'), self.error)
             return False
 
         # NOTE(vish): this forks into another process, so give it a chance
@@ -101,7 +101,7 @@ class NbdMount(api.Mount):
             time.sleep(1)
         else:
             self.error = _('nbd device %s did not show up') % device
-            LOG.info(_('NBD mount error: %s'), self.error)
+            LOG.info(_LI('NBD mount error: %s'), self.error)
 
             # Cleanup
             _out, err = utils.trycmd('qemu-nbd', '-d', device,

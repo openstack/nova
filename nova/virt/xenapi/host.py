@@ -29,7 +29,7 @@ from nova.compute import vm_mode
 from nova.compute import vm_states
 from nova import context
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LI
 from nova import objects
 from nova.openstack.common import log as logging
 from nova.pci import whitelist as pci_whitelist
@@ -73,10 +73,11 @@ class Host(object):
                         name = vm_rec['name_label']
                         uuid = _uuid_find(ctxt, host, name)
                         if not uuid:
-                            LOG.info(_('Instance %(name)s running on %(host)s'
-                                       ' could not be found in the database:'
-                                       ' assuming it is a worker VM and skip'
-                                       ' ping migration to a new host'),
+                            LOG.info(_LI('Instance %(name)s running on '
+                                         '%(host)s could not be found in '
+                                         'the database: assuming it is a '
+                                         'worker VM and skip ping migration '
+                                         'to a new host'),
                                      {'name': name, 'host': host})
                             continue
                     instance = objects.Instance.get_by_uuid(ctxt, uuid)

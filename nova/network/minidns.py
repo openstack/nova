@@ -19,7 +19,7 @@ import tempfile
 from oslo.config import cfg
 
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LI
 from nova.network import dns_driver
 from nova.openstack.common import log as logging
 
@@ -198,7 +198,7 @@ class MiniDNS(dns_driver.DNSDriver):
                     entry['domain'] != fqdomain.lower()):
                 outfile.write(line)
             else:
-                LOG.info(_("deleted %s"), entry)
+                LOG.info(_LI("deleted %s"), entry)
                 deleted = True
         infile.close()
         outfile.close()

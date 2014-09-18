@@ -56,7 +56,9 @@ asse_equal_start_with_none_re = re.compile(
                            r"assertEqual\(None,")
 conf_attribute_set_re = re.compile(r"CONF\.[a-z0-9_.]+\s*=\s*\w")
 log_translation = re.compile(
-    r"(.)*LOG\.(audit|error|info|warn|warning|critical|exception)\(\s*('|\")")
+    r"(.)*LOG\.(audit|error|warn|warning|critical|exception)\(\s*('|\")")
+log_translation_info = re.compile(
+    r"(.)*LOG\.(info)\(\s*(_\(|'|\")")
 translated_log = re.compile(
     r"(.)*LOG\.(audit|error|info|warn|warning|critical|exception)"
     "\(\s*_\(\s*('|\")")
@@ -294,10 +296,22 @@ def validate_log_translations(logical_line, physical_line, filename):
     # Translations are not required in the test directory
     # and the Xen utilities
     if ("nova/tests" in filename or
-            "plugins/xenserver/xenapi/etc/xapi.d" in filename):
+        "plugins/xenserver/xenapi/etc/xapi.d" in filename or
+        # TODO(Mike_D):Needs to be remove with:
+        # Iaebb239ef20a0da3df1e3552baf26f412d0fcdc0
+        "nova/compute" in filename or
+        "nova/cells" in filename or
+        "nova/image" in filename or
+        "nova/conductor" in filename or
+        "nova/wsgi.py" in filename or
+        "nova/filters.py" in filename or
+            "nova/db" in filename):
         return
     if pep8.noqa(physical_line):
         return
+    msg = "N328: LOG.info messages require translations `_LI()`!"
+    if log_translation_info.match(logical_line):
+        yield (0, msg)
     msg = "N321: Log messages require translations!"
     if log_translation.match(logical_line):
         yield (0, msg)

@@ -28,7 +28,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import db
 from nova import exception
-from nova.i18n import _, _LW
+from nova.i18n import _, _LI, _LW
 from nova.openstack.common import log as logging
 from nova.pci import stats as pci_stats
 from nova.scheduler import filters
@@ -419,8 +419,8 @@ class HostManager(object):
         dead_nodes = set(self.host_state_map.keys()) - seen_nodes
         for state_key in dead_nodes:
             host, node = state_key
-            LOG.info(_("Removing dead compute node %(host)s:%(node)s "
-                       "from scheduler") % {'host': host, 'node': node})
+            LOG.info(_LI("Removing dead compute node %(host)s:%(node)s "
+                         "from scheduler"), {'host': host, 'node': node})
             del self.host_state_map[state_key]
 
         return self.host_state_map.itervalues()

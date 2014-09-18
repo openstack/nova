@@ -25,7 +25,7 @@ import sys
 from oslo.config import cfg
 from oslo.utils import importutils
 
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LI
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import event as virtevent
@@ -1374,7 +1374,7 @@ def load_compute_driver(virtapi, compute_driver=None):
         LOG.error(_LE("Compute driver option required, but not specified"))
         sys.exit(1)
 
-    LOG.info(_("Loading compute driver '%s'") % compute_driver)
+    LOG.info(_LI("Loading compute driver '%s'"), compute_driver)
     try:
         driver = importutils.import_object_ns('nova.virt',
                                               compute_driver,

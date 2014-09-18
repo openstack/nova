@@ -40,6 +40,7 @@ Nova Specific Commandments
 - [N325] str() and unicode() cannot be used on an exception.  Remove use or use six.text_type()
 - [N326] Translated messages cannot be concatenated.  String should be included in translated message.
 - [N327] assert_called_once() is not a valid method
+- [N328] Validate that LOG.info messages use _LI.
 
 Creating Unit Tests
 -------------------

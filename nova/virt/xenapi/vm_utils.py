@@ -390,11 +390,11 @@ def unplug_vbd(session, vbd_ref, this_vm_ref):
         except session.XenAPI.Failure as exc:
             err = len(exc.details) > 0 and exc.details[0]
             if err == 'DEVICE_ALREADY_DETACHED':
-                LOG.info(_('VBD %s already detached'), vbd_ref)
+                LOG.info(_LI('VBD %s already detached'), vbd_ref)
                 return
             elif _should_retry_unplug_vbd(err):
-                LOG.info(_('VBD %(vbd_ref)s uplug failed with "%(err)s", '
-                           'attempt %(num_attempt)d/%(max_attempts)d'),
+                LOG.info(_LI('VBD %(vbd_ref)s uplug failed with "%(err)s", '
+                             'attempt %(num_attempt)d/%(max_attempts)d'),
                          {'vbd_ref': vbd_ref, 'num_attempt': num_attempt,
                           'max_attempts': max_attempts, 'err': err})
             else:
@@ -2171,7 +2171,7 @@ def cleanup_attached_vdis(session):
         if 'nova_instance_uuid' in vdi_rec['other_config']:
             # Belongs to an instance and probably left over after an
             # unclean restart
-            LOG.info(_('Disconnecting stale VDI %s from compute domU'),
+            LOG.info(_LI('Disconnecting stale VDI %s from compute domU'),
                      vdi_rec['uuid'])
             unplug_vbd(session, vbd_ref, this_vm_ref)
             destroy_vbd(session, vbd_ref)
@@ -2464,7 +2464,7 @@ def _mounted_processing(device, key, net, metadata):
                     vfs = vfsimpl.VFSLocalFS(imgfile=None,
                                              imgfmt=None,
                                              imgdir=tmpdir)
-                    LOG.info(_('Manipulating interface files directly'))
+                    LOG.info(_LI('Manipulating interface files directly'))
                     # for xenapi, we don't 'inject' admin_password here,
                     # it's handled at instance startup time, nor do we
                     # support injecting arbitrary files here.
@@ -2473,8 +2473,8 @@ def _mounted_processing(device, key, net, metadata):
             finally:
                 utils.execute('umount', dev_path, run_as_root=True)
         else:
-            LOG.info(_('Failed to mount filesystem (expected for '
-                       'non-linux instances): %s') % err)
+            LOG.info(_LI('Failed to mount filesystem (expected for '
+                         'non-linux instances): %s'), err)
 
 
 def ensure_correct_host(session):

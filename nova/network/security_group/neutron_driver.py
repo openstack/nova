@@ -24,7 +24,7 @@ from webob import exc
 
 from nova.compute import api as compute_api
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LI
 from nova.network import neutronv2
 from nova.network.security_group import security_group_base
 from nova import objects
@@ -437,8 +437,8 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             port['security_groups'].append(security_group_id)
             updated_port = {'security_groups': port['security_groups']}
             try:
-                LOG.info(_("Adding security group %(security_group_id)s to "
-                           "port %(port_id)s"),
+                LOG.info(_LI("Adding security group %(security_group_id)s to "
+                             "port %(port_id)s"),
                          {'security_group_id': security_group_id,
                           'port_id': port['id']})
                 neutron.update_port(port['id'], {'port': updated_port})
@@ -492,8 +492,8 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
 
             updated_port = {'security_groups': port['security_groups']}
             try:
-                LOG.info(_("Adding security group %(security_group_id)s to "
-                           "port %(port_id)s"),
+                LOG.info(_LI("Adding security group %(security_group_id)s to "
+                             "port %(port_id)s"),
                          {'security_group_id': security_group_id,
                           'port_id': port['id']})
                 neutron.update_port(port['id'], {'port': updated_port})

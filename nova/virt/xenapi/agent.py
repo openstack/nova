@@ -30,7 +30,7 @@ from nova.compute import utils as compute_utils
 from nova import context
 from nova import crypto
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LI
 from nova import objects
 from nova.openstack.common import log as logging
 from nova import utils
@@ -393,20 +393,20 @@ def find_guest_agent(base_dir):
         # reconfigure the network from xenstore data,
         # so manipulation of files in /etc is not
         # required
-        LOG.info(_('XenServer tools installed in this '
-                   'image are capable of network injection.  '
-                   'Networking files will not be'
-                   'manipulated'))
+        LOG.info(_LI('XenServer tools installed in this '
+                     'image are capable of network injection.  '
+                     'Networking files will not be'
+                     'manipulated'))
         return True
     xe_daemon_filename = os.path.join(base_dir,
         'usr', 'sbin', 'xe-daemon')
     if os.path.isfile(xe_daemon_filename):
-        LOG.info(_('XenServer tools are present '
-                   'in this image but are not capable '
-                   'of network injection'))
+        LOG.info(_LI('XenServer tools are present '
+                     'in this image but are not capable '
+                     'of network injection'))
     else:
-        LOG.info(_('XenServer tools are not '
-                   'installed in this image'))
+        LOG.info(_LI('XenServer tools are not '
+                     'installed in this image'))
     return False
 
 
