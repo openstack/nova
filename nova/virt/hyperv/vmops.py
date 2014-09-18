@@ -181,24 +181,14 @@ class VMOps(object):
                           {'base_vhd_path': base_vhd_path,
                            'root_vhd_path': root_vhd_path},
                           instance=instance)
+                self._vhdutils.create_differencing_vhd(root_vhd_path,
+                                                       base_vhd_path)
                 vhd_type = self._vhdutils.get_vhd_format(base_vhd_path)
-                if vhd_type == constants.DISK_FORMAT_VHDX:
-                    # Differencing vhdx images can be resized, so we use
-                    # the flavor size when creating the root image
-                    root_vhd_internal_size = (
-                        self._vhdutils.get_internal_vhd_size_by_file_size(
-                            base_vhd_path, root_vhd_size))
-                    if not self._is_resize_needed(root_vhd_path, base_vhd_size,
-                                                  root_vhd_internal_size,
-                                                  instance):
-                        root_vhd_internal_size = None
-
-                    self._vhdutils.create_differencing_vhd(
-                        root_vhd_path, base_vhd_path, root_vhd_internal_size)
-                else:
-                    # The base image had already been resized
-                    self._vhdutils.create_differencing_vhd(root_vhd_path,
-                                                           base_vhd_path)
+                if vhd_type == constants.DISK_FORMAT_VHD:
+                    # The base image has already been resized. As differencing
+                    # vhdx images support it, the root image will be resized
+                    # instead if needed.
+                    return root_vhd_path
             else:
                 LOG.debug("Copying VHD image %(base_vhd_path)s to target: "
                           "%(root_vhd_path)s",
@@ -207,16 +197,16 @@ class VMOps(object):
                           instance=instance)
                 self._pathutils.copyfile(base_vhd_path, root_vhd_path)
 
-                root_vhd_internal_size = (
-                        self._vhdutils.get_internal_vhd_size_by_file_size(
-                            root_vhd_path, root_vhd_size))
+            root_vhd_internal_size = (
+                self._vhdutils.get_internal_vhd_size_by_file_size(
+                    base_vhd_path, root_vhd_size))
 
-                if self._is_resize_needed(root_vhd_path, base_vhd_size,
+            if self._is_resize_needed(root_vhd_path, base_vhd_size,
+                                      root_vhd_internal_size,
+                                      instance):
+                self._vhdutils.resize_vhd(root_vhd_path,
                                           root_vhd_internal_size,
-                                          instance):
-                    self._vhdutils.resize_vhd(root_vhd_path,
-                                              root_vhd_internal_size,
-                                              is_file_max_size=False)
+                                          is_file_max_size=False)
         except Exception:
             with excutils.save_and_reraise_exception():
                 if self._pathutils.exists(root_vhd_path):

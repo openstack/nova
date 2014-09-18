@@ -68,12 +68,15 @@ class VHDUtilsV2(vhdutils.VHDUtils):
         self._create_vhd(self._VHD_TYPE_DYNAMIC, vhd_format, path,
                          max_internal_size=max_internal_size)
 
-    def create_differencing_vhd(self, path, parent_path, size=None):
+    def create_differencing_vhd(self, path, parent_path):
+        # Although this method can take a size argument in case of VHDX
+        # images, avoid it as the underlying Win32 is currently not
+        # resizing the disk properly. This can be reconsidered once the
+        # Win32 issue is fixed.
         parent_vhd_info = self.get_vhd_info(parent_path)
         self._create_vhd(self._VHD_TYPE_DIFFERENCING,
                          parent_vhd_info["Format"],
-                         path, parent_path=parent_path,
-                         max_internal_size=size)
+                         path, parent_path=parent_path)
 
     def _create_vhd(self, vhd_type, format, path, max_internal_size=None,
                     parent_path=None):

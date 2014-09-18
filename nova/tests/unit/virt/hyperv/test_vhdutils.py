@@ -64,14 +64,6 @@ class VHDUtilsTestCase(test.NoDBTestCase):
             Path=self._FAKE_VHD_PATH,
             ParentPath=self._FAKE_PARENT_PATH)
 
-    def test_create_differencing_vhd_with_new_size(self):
-        fake_new_size = 1024
-        self.assertRaises(vmutils.HyperVException,
-                          self._vhdutils.create_differencing_vhd,
-                          self._FAKE_VHD_PATH,
-                          self._FAKE_PARENT_PATH,
-                          fake_new_size)
-
     def test_get_internal_vhd_size_by_file_size_fixed(self):
         vhdutil = vhdutils.VHDUtils()
         root_vhd_size = 1 * 1024 ** 3
