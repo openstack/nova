@@ -390,6 +390,7 @@ class ComputeTaskAPI(object):
     1.7 - Do not send block_device_mapping and legacy_bdm to build_instances
     1.8 - Add rebuild_instance
     1.9 - Converted requested_networks to NetworkRequestList object
+    1.10 - Made migrate_server() and build_instances() send flavor objects
 
     """
 
@@ -404,17 +405,18 @@ class ComputeTaskAPI(object):
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
                   flavor, block_migration, disk_over_commit,
                   reservations=None):
-        if self.client.can_send_version('1.6'):
+        version = '1.10'
+        if not self.client.can_send_version(version):
+            flavor = objects_base.obj_to_primitive(flavor)
             version = '1.6'
-        else:
+        if not self.client.can_send_version(version):
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
             version = '1.4'
-        flavor_p = jsonutils.to_primitive(flavor)
         cctxt = self.client.prepare(version=version)
         return cctxt.call(context, 'migrate_server',
                           instance=instance, scheduler_hint=scheduler_hint,
-                          live=live, rebuild=rebuild, flavor=flavor_p,
+                          live=live, rebuild=rebuild, flavor=flavor,
                           block_migration=block_migration,
                           disk_over_commit=disk_over_commit,
                           reservations=reservations)
@@ -423,19 +425,21 @@ class ComputeTaskAPI(object):
             admin_password, injected_files, requested_networks,
             security_groups, block_device_mapping, legacy_bdm=True):
         image_p = jsonutils.to_primitive(image)
-        if 'instance_type' in filter_properties:
-            flavor = filter_properties['instance_type']
-            flavor_p = objects_base.obj_to_primitive(flavor)
-            filter_properties = dict(filter_properties, instance_type=flavor_p)
+        version = '1.10'
+        if not self.client.can_send_version(version):
+            version = '1.9'
+            if 'instance_type' in filter_properties:
+                flavor = filter_properties['instance_type']
+                flavor_p = objects_base.obj_to_primitive(flavor)
+                filter_properties = dict(filter_properties,
+                                         instance_type=flavor_p)
         kw = {'instances': instances, 'image': image_p,
                'filter_properties': filter_properties,
                'admin_password': admin_password,
                'injected_files': injected_files,
                'requested_networks': requested_networks,
                'security_groups': security_groups}
-
-        version = '1.9'
-        if not self.client.can_send_version('1.9'):
+        if not self.client.can_send_version(version):
             version = '1.8'
             kw['requested_networks'] = kw['requested_networks'].as_tuples()
         if not self.client.can_send_version('1.7'):

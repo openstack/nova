@@ -135,7 +135,7 @@ class CellsAPITestCase(test.NoDBTestCase):
                                                'arg2': 2,
                                                'arg3': 3}}
         self._check_result(call_info, 'build_instances',
-                expected_args, version='1.8')
+                expected_args, version='1.30')
 
     def test_get_capacities(self):
         capacity_info = {"capacity": "info"}

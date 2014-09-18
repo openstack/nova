@@ -468,7 +468,7 @@ class ComputeRpcAPITestCase(test.TestCase):
                 admin_password='passwd', injected_files=None,
                 requested_networks=['network1'], security_groups=None,
                 block_device_mapping=None, node='node', limits=[],
-                version='3.33')
+                version='3.36')
 
     @mock.patch('nova.utils.is_neutron', return_value=True)
     def test_build_and_run_instance_icehouse_compat(self, is_neutron):

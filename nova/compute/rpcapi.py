@@ -274,6 +274,8 @@ class ComputeAPI(object):
         ... Juno supports message version 3.35.  So, any changes to
         existing methods in 3.x after that point should be done such that they
         can handle the version_cap being set to 3.35.
+
+        * 3.36 - Make build_and_run_instance() send a Flavor object
     '''
 
     VERSION_ALIASES = {
@@ -880,17 +882,20 @@ class ComputeAPI(object):
             filter_properties, admin_password=None, injected_files=None,
             requested_networks=None, security_groups=None,
             block_device_mapping=None, node=None, limits=None):
-        version = '3.33'
+        version = '3.36'
+        if not self.client.can_send_version(version):
+            version = '3.33'
+            if 'instance_type' in filter_properties:
+                flavor = filter_properties['instance_type']
+                flavor_p = objects_base.obj_to_primitive(flavor)
+                filter_properties = dict(filter_properties,
+                                         instance_type=flavor_p)
         if not self.client.can_send_version(version):
             version = '3.23'
             if requested_networks is not None:
                 requested_networks = [(network_id, address, port_id)
                     for (network_id, address, port_id, _) in
                         requested_networks.as_tuples()]
-        if 'instance_type' in filter_properties:
-            flavor = filter_properties['instance_type']
-            flavor_p = objects_base.obj_to_primitive(flavor)
-            filter_properties = dict(filter_properties, instance_type=flavor_p)
 
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'build_and_run_instance', instance=instance,

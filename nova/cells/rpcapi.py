@@ -101,6 +101,8 @@ class CellsAPI(object):
         ... Juno supports message version 1.29.  So, any changes to
         existing methods in 1.x after that point should be done such that they
         can handle the version_cap being set to 1.29.
+
+        * 1.30 - Make build_instances() use flavor object
     '''
 
     VERSION_ALIASES = {
@@ -150,11 +152,15 @@ class CellsAPI(object):
         build_inst_kwargs['instances'] = instances_p
         build_inst_kwargs['image'] = jsonutils.to_primitive(
                 build_inst_kwargs['image'])
-        if 'filter_properties' in build_inst_kwargs:
-            flavor = build_inst_kwargs['filter_properties']['instance_type']
-            flavor_p = objects_base.obj_to_primitive(flavor)
-            build_inst_kwargs['filter_properties']['instance_type'] = flavor_p
-        cctxt = self.client.prepare(version='1.8')
+        version = '1.30'
+        if not self.client.can_send_version(version):
+            version = '1.8'
+            if 'filter_properties' in build_inst_kwargs:
+                filter_properties = build_inst_kwargs['filter_properties']
+                flavor = filter_properties['instance_type']
+                flavor_p = objects_base.obj_to_primitive(flavor)
+                filter_properties['instance_type'] = flavor_p
+        cctxt = self.client.prepare(version=version)
         cctxt.cast(ctxt, 'build_instances',
                    build_inst_kwargs=build_inst_kwargs)
 
