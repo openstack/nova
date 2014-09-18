@@ -2493,8 +2493,8 @@ class TestNeutronv2(TestNeutronv2Base):
             if nw_info['type'] == model.VIF_TYPE_BRIDGE:
                 self.assertEqual(nw_info['network']['bridge'], 'brqnet-id')
             self.assertEqual(nw_info['vnic_type'],
-                                requested_ports[index].get('binding:vnic_type',
-                                    model.VNIC_TYPE_NORMAL))
+                             requested_ports[index].get('binding:vnic_type',
+                                 model.VNIC_TYPE_NORMAL))
             self.assertEqual(nw_info.get('details'),
                              requested_ports[index].get('binding:vif_details'))
             self.assertEqual(nw_info.get('profile'),
@@ -2585,15 +2585,18 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertEqual(phynet_name, 'phynet1')
 
     @mock.patch.object(neutronv2, 'get_client', return_value=mock.Mock())
-    def test_get_port_vnic_info_2(self, mock_get_client):
+    def _test_get_port_vnic_info(self, mock_get_client,
+                                 binding_vnic_type=None):
         api = neutronapi.API()
         self.mox.ResetAll()
         test_port = {
             'port': {'id': 'my_port_id2',
                       'network_id': 'net-id',
-                      'binding:vnic_type': model.VNIC_TYPE_NORMAL,
                       },
             }
+
+        if binding_vnic_type:
+            test_port['port']['binding:vnic_type'] = binding_vnic_type
 
         mock_client = mock_get_client()
         mock_client.show_port.return_value = test_port
@@ -2605,25 +2608,11 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertEqual(model.VNIC_TYPE_NORMAL, vnic_type)
         self.assertFalse(phynet_name)
 
-    @mock.patch.object(neutronv2, 'get_client', return_value=mock.Mock())
-    def test_get_port_vnic_info_3(self, mock_get_client):
-        api = neutronapi.API()
-        self.mox.ResetAll()
-        test_port = {
-            'port': {'id': 'my_port_id3',
-                      'network_id': 'net-id',
-                      # No binding:vnic_type
-                      },
-            }
+    def test_get_port_vnic_info_2(self):
+        self._test_get_port_vnic_info(binding_vnic_type=model.VNIC_TYPE_NORMAL)
 
-        mock_client = mock_get_client()
-        mock_client.show_port.return_value = test_port
-        vnic_type, phynet_name = api._get_port_vnic_info(
-            self.context, mock_client, test_port['port']['id'])
-
-        mock_client.show_port.assert_called_once_with(test_port['port']['id'],
-            fields=['binding:vnic_type', 'network_id'])
-        self.assertEqual(model.VNIC_TYPE_NORMAL, vnic_type)
+    def test_get_port_vnic_info_3(self):
+        self._test_get_port_vnic_info()
 
     @mock.patch.object(neutronapi.API, "_get_port_vnic_info")
     @mock.patch.object(neutronv2, 'get_client', return_value=mock.Mock())
