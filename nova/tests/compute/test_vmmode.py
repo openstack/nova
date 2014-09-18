@@ -53,6 +53,10 @@ class ComputeVMModeTest(test.NoDBTestCase):
         mode = vm_mode.canonicalize('hv')
         self.assertEqual(vm_mode.HVM, mode)
 
+    def test_name_baremetal_compat(self):
+        mode = vm_mode.canonicalize('baremetal')
+        self.assertEqual(vm_mode.HVM, mode)
+
     def test_name_hvm(self):
         mode = vm_mode.canonicalize('hvm')
         self.assertEqual(vm_mode.HVM, mode)

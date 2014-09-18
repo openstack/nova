@@ -4708,7 +4708,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 instance_cap = (
                     arch.canonicalize(g.arch),
                     hvtype.canonicalize(dt),
-                    g.ostype)
+                    vm_mode.canonicalize(g.ostype))
                 instance_caps.append(instance_cap)
 
         return instance_caps
