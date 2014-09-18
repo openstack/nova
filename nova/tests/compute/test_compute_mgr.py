@@ -21,6 +21,7 @@ import mock
 import mox
 from oslo.config import cfg
 
+from nova.compute import manager
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
@@ -29,6 +30,7 @@ from nova.conductor import rpcapi as conductor_rpcapi
 from nova import context
 from nova import db
 from nova import exception
+from nova.network import api as network_api
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import block_device as block_device_obj
@@ -197,6 +199,33 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                           self.compute._allocate_network_async,
                           self.context, instance, req_networks, macs,
                           sec_groups, is_vpn, dhcp_options)
+
+    @mock.patch.object(network_api.API, 'allocate_for_instance')
+    @mock.patch.object(manager.ComputeManager, '_instance_update')
+    @mock.patch.object(time, 'sleep')
+    def test_allocate_network_with_conf_value_is_one(
+            self, sleep, _instance_update, allocate_for_instance):
+        self.flags(network_allocate_retries=1)
+
+        instance = fake_instance.fake_instance_obj(
+            self.context, expected_attrs=['system_metadata'])
+        is_vpn = 'fake-is-vpn'
+        req_networks = 'fake-req-networks'
+        macs = 'fake-macs'
+        sec_groups = 'fake-sec-groups'
+        dhcp_options = None
+        final_result = 'zhangtralon'
+
+        allocate_for_instance.side_effect = [test.TestingException(),
+                                             final_result]
+        res = self.compute._allocate_network_async(self.context, instance,
+                                                   req_networks,
+                                                   macs,
+                                                   sec_groups,
+                                                   is_vpn,
+                                                   dhcp_options)
+        self.assertEqual(final_result, res)
+        self.assertEqual(1, sleep.call_count)
 
     def test_init_host(self):
         our_host = self.compute.host
