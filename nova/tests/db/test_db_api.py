@@ -34,7 +34,6 @@ from sqlalchemy import Column
 from sqlalchemy.dialects import sqlite
 from sqlalchemy import Integer
 from sqlalchemy import MetaData
-from sqlalchemy.orm import exc as sqlalchemy_orm_exc
 from sqlalchemy.orm import query
 from sqlalchemy import sql
 from sqlalchemy import Table
@@ -1330,21 +1329,12 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
         instance = db.instance_create(self.ctxt, {})
         sid = self._create_security_group({'instances': [instance]})['id']
 
-        session = get_session()
-        self.mox.StubOutWithMock(sqlalchemy_api, 'get_session')
-        sqlalchemy_api.get_session(use_slave=False).AndReturn(session)
-        sqlalchemy_api.get_session(use_slave=False).AndReturn(session)
-        self.mox.ReplayAll()
-
         security_group = db.security_group_get(self.ctxt, sid,
                                                columns_to_join=['instances'])
-        session.expunge(security_group)
-        self.assertEqual(1, len(security_group['instances']))
+        self.assertIn('instances', security_group.__dict__)
 
         security_group = db.security_group_get(self.ctxt, sid)
-        session.expunge(security_group)
-        self.assertRaises(sqlalchemy_orm_exc.DetachedInstanceError,
-                          getattr, security_group, 'instances')
+        self.assertNotIn('instances', security_group.__dict__)
 
     def test_security_group_get_not_found_exception(self):
         self.assertRaises(exception.SecurityGroupNotFound,
