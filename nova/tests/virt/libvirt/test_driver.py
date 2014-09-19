@@ -7722,6 +7722,17 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(21474836480, result)
         mock_list.assert_called_with()
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver, "_list_instance_domains",
+                       return_value=[mock.MagicMock(name='foo')])
+    @mock.patch.object(libvirt_driver.LibvirtDriver, "_get_instance_disk_info",
+                       side_effect=exception.VolumeBDMPathNotFound(path='bar'))
+    def test_disk_over_committed_size_total_bdm_not_found(self,
+                                                          mock_get_disk_info,
+                                                          mock_list_domains):
+        # Tests that we handle VolumeBDMPathNotFound gracefully.
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertEqual(0, drvr._get_disk_over_committed_size_total())
+
     def test_cpu_info(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 

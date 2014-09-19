@@ -5743,6 +5743,14 @@ class LibvirtDriver(driver.ComputeDriver):
                              {'i_name': dom.name()})
                 else:
                     raise
+            except exception.VolumeBDMPathNotFound as e:
+                LOG.warn(_LW('Periodic task is updating the host stats, '
+                             'it is trying to get disk info for %(i_name)s, '
+                             'but the backing volume block device was removed '
+                             'by concurrent operations such as resize. '
+                             'Error: %(error)s'),
+                         {'i_name': dom.name(),
+                          'error': e})
             # NOTE(gtt116): give other tasks a chance.
             greenthread.sleep(0)
         return disk_over_committed_size
