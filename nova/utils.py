@@ -46,7 +46,7 @@ from oslo.utils import timeutils
 import six
 
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LW
 from nova.openstack.common import log as logging
 
 notify_decorator = 'nova.notifications.notify_decorator'
@@ -144,8 +144,9 @@ def vpn_ping(address, port, timeout=0.05, session_id=None):
         sock.close()
     fmt = '!BQxxxxxQxxxx'
     if len(received) != struct.calcsize(fmt):
-        LOG.warn(_('Expected to receive %(exp)s bytes, but actually %(act)s') %
-                 dict(exp=struct.calcsize(fmt), act=len(received)))
+        LOG.warning(_LW('Expected to receive %(exp)s bytes, '
+                        'but actually %(act)s'),
+                    dict(exp=struct.calcsize(fmt), act=len(received)))
         return False
     (identifier, server_sess, client_sess) = struct.unpack(fmt, received)
     if identifier == 0x40 and client_sess == session_id:

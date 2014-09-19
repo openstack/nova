@@ -68,7 +68,8 @@ class AggregateNumInstancesFilter(NumInstancesFilter):
             value = utils.validate_num_values(
                 aggregate_vals, CONF.max_instances_per_host, cast_to=int)
         except ValueError as e:
-            LOG.warn(_LW("Could not decode max_instances_per_host: '%s'"), e)
+            LOG.warning(_LW("Could not decode max_instances_per_host: '%s'"),
+                        e)
             value = CONF.max_instances_per_host
 
         return value

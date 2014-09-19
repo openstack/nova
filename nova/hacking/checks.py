@@ -56,13 +56,17 @@ asse_equal_start_with_none_re = re.compile(
                            r"assertEqual\(None,")
 conf_attribute_set_re = re.compile(r"CONF\.[a-z0-9_.]+\s*=\s*\w")
 log_translation = re.compile(
-    r"(.)*LOG\.(audit|error|warn|warning|critical)\(\s*('|\")")
+    r"(.)*LOG\.(audit|error|critical)\(\s*('|\")")
 log_translation_info = re.compile(
     r"(.)*LOG\.(info)\(\s*(_\(|'|\")")
 log_translation_exception = re.compile(
     r"(.)*LOG\.(exception)\(\s*(_\(|'|\")")
+log_translation_LW = re.compile(
+    r"(.)*LOG\.(warning)\(\s*(_\(|'|\")")
+log_warn = re.compile(
+    r"(.)*LOG\.(warn)\(\s*('|\"|_)")
 translated_log = re.compile(
-    r"(.)*LOG\.(audit|error|info|warn|warning|critical|exception)"
+    r"(.)*LOG\.(audit|error|info|critical|exception)"
     "\(\s*_\(\s*('|\")")
 mutable_default_args = re.compile(r"^\s*def .+\((.+=\{\}|.+=\[\])")
 string_translation = re.compile(r"[^_]*_\(\s*('|\")")
@@ -298,7 +302,13 @@ def validate_log_translations(logical_line, physical_line, filename):
     # Translations are not required in the test directory
     # and the Xen utilities
     if ("nova/tests" in filename or
-            "plugins/xenserver/xenapi/etc/xapi.d" in filename):
+        "plugins/xenserver/xenapi/etc/xapi.d" in filename or
+        # TODO(Mike_D):Needs to be remove with:
+        # I075ab2a522272f2082c292dfedc877abd8ebe328
+        "nova/api" in filename or
+        "nova/compute" in filename or
+        "nova/network" in filename or
+            "nova/virt" in filename):
         return
     if pep8.noqa(physical_line):
         return
@@ -307,6 +317,12 @@ def validate_log_translations(logical_line, physical_line, filename):
         yield (0, msg)
     msg = "N329: LOG.exception messages require translations `_LE()`!"
     if log_translation_exception.match(logical_line):
+        yield (0, msg)
+    msg = "N330: LOG.warning messages require translations `_LW()`!"
+    if log_translation_LW.match(logical_line):
+        yield (0, msg)
+    msg = "N331: Use LOG.warning due to compatibility with py3"
+    if log_warn.match(logical_line):
         yield (0, msg)
     msg = "N321: Log messages require translations!"
     if log_translation.match(logical_line):

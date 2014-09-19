@@ -29,7 +29,6 @@ from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LC
-from nova.i18n import _LE
 from nova.i18n import _LI
 from nova.i18n import _LW
 from nova.i18n import translate
@@ -90,7 +89,7 @@ class FaultWrapper(base_wsgi.Middleware):
                                   status, webob.exc.HTTPInternalServerError)()
 
     def _error(self, inner, req):
-        LOG.exception(_LE("Caught error: %s"), unicode(inner))
+        LOG.exception(_("Caught error: %s"), unicode(inner))
 
         safe = getattr(inner, 'safe', False)
         headers = getattr(inner, 'headers', None)

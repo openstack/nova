@@ -95,11 +95,11 @@ def _get_port_range():
         if start >= stop:
             raise ValueError
     except ValueError:
-        LOG.warn(_LW("serial_console.port_range should be <num>:<num>. "
-                     "Given value %(port_range)s could not be parsed. "
-                     "Taking the default port range %(default)s."),
-                 {'port_range': config_range,
-                  'default': DEFAULT_PORT_RANGE})
+        LOG.warning(_LW("serial_console.port_range should be <num>:<num>. "
+                        "Given value %(port_range)s could not be parsed. "
+                        "Taking the default port range %(default)s."),
+                    {'port_range': config_range,
+                     'default': DEFAULT_PORT_RANGE})
         start, stop = map(int, DEFAULT_PORT_RANGE.split(':'))
     return start, stop
 

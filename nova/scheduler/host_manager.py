@@ -167,7 +167,7 @@ class HostState(object):
             if name:
                 self.metrics[name] = item
             else:
-                LOG.warn(_LW("Metric name unknown of %r"), item)
+                LOG.warning(_LW("Metric name unknown of %r"), item)
 
     def update_from_compute_node(self, compute):
         """Update information about a host from its compute_node info."""
@@ -182,11 +182,11 @@ class HostState(object):
         if least_gb is not None:
             if least_gb > free_gb:
                 # can occur when an instance in database is not on host
-                LOG.warn(_LW("Host %(hostname)s has more disk space than "
-                             "database expected "
-                             "(%(physical)sgb > %(database)sgb)"),
-                         {'physical': least_gb, 'database': free_gb,
-                          'hostname': compute['hypervisor_hostname']})
+                LOG.warning(_LW("Host %(hostname)s has more disk space than "
+                                "database expected "
+                                "(%(physical)sgb > %(database)sgb)"),
+                            {'physical': least_gb, 'database': free_gb,
+                             'hostname': compute['hypervisor_hostname']})
             free_gb = min(least_gb, free_gb)
         free_disk_mb = free_gb * 1024
 
@@ -401,7 +401,7 @@ class HostManager(object):
         for compute in compute_nodes:
             service = compute['service']
             if not service:
-                LOG.warn(_LW("No service for compute ID %s"), compute['id'])
+                LOG.warning(_LW("No service for compute ID %s"), compute['id'])
                 continue
             host = service['host']
             node = compute.get('hypervisor_hostname')

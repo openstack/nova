@@ -31,7 +31,7 @@ from nova import conductor
 from nova import context
 from nova import debugger
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LW
 from nova.objects import base as objects_base
 from nova.openstack.common import log as logging
 from nova.openstack.common import service
@@ -283,7 +283,7 @@ class Service(service.Service):
             self.conductor_api.service_destroy(context.get_admin_context(),
                                                self.service_id)
         except exception.NotFound:
-            LOG.warn(_('Service killed that has no database entry'))
+            LOG.warning(_LW('Service killed that has no database entry'))
 
     def stop(self):
         try:

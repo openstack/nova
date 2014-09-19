@@ -60,7 +60,7 @@ def init():
     if not (CONF.remote_debug.host and CONF.remote_debug.port):
         return
 
-    from nova.i18n import _
+    from nova.i18n import _LW
     from nova.openstack.common import log as logging
     LOG = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ def init():
                     stdoutToServer=False,
                     stderrToServer=False)
 
-    LOG.warn(_('WARNING: Using the remote debug option changes how '
-               'Nova uses the eventlet library to support async IO. This '
-               'could result in failures that do not occur under normal '
-               'operation. Use at your own risk.'))
+    LOG.warning(_LW('WARNING: Using the remote debug option changes how '
+                    'Nova uses the eventlet library to support async IO. This '
+                    'could result in failures that do not occur under normal '
+                    'operation. Use at your own risk.'))

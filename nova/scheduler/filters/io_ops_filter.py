@@ -73,7 +73,7 @@ class AggregateIoOpsFilter(IoOpsFilter):
             value = utils.validate_num_values(
                 aggregate_vals, CONF.max_io_ops_per_host, cast_to=int)
         except ValueError as e:
-            LOG.warn(_LW("Could not decode max_io_ops_per_host: '%s'"), e)
+            LOG.warning(_LW("Could not decode max_io_ops_per_host: '%s'"), e)
             value = CONF.max_io_ops_per_host
 
         return value

@@ -230,10 +230,10 @@ def parse_options(opts, sep='=', converter=str, name=""):
         else:
             bad.append(opt)
     if bad:
-        LOG.warn(_LW("Ignoring the invalid elements of the option "
-                     "%(name)s: %(options)s"),
-                 {'name': name,
-                  'options': ", ".join(bad)})
+        LOG.warning(_LW("Ignoring the invalid elements of the option "
+                        "%(name)s: %(options)s"),
+                    {'name': name,
+                     'options': ", ".join(bad)})
     return good
 
 

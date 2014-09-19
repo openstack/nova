@@ -144,7 +144,7 @@ class MetadataRequestHandler(wsgi.Application):
         try:
             meta_data = self.get_metadata_by_remote_address(remote_address)
         except Exception:
-            LOG.exception(_LE('Failed to get metadata for ip: %s'),
+            LOG.exception(_('Failed to get metadata for ip: %s'),
                           remote_address)
             msg = _('An unknown error has occurred. '
                     'Please try your request again.')
@@ -202,7 +202,7 @@ class MetadataRequestHandler(wsgi.Application):
             meta_data = self.get_metadata_by_instance_id(instance_id,
                                                          remote_address)
         except Exception:
-            LOG.exception(_LE('Failed to get metadata for instance id: %s'),
+            LOG.exception(_('Failed to get metadata for instance id: %s'),
                           instance_id)
             msg = _('An unknown error has occurred. '
                     'Please try your request again.')

@@ -65,7 +65,7 @@ class ContextTestCase(test.NoDBTestCase):
         def fake_warn(log_msg):
             info['log_msg'] = log_msg
 
-        self.stubs.Set(context.LOG, 'warn', fake_warn)
+        self.stubs.Set(context.LOG, 'warning', fake_warn)
 
         c = context.RequestContext('user', 'project',
                 extra_arg1='meow', extra_arg2='wuff')

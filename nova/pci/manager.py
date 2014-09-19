@@ -20,7 +20,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _LW
 from nova import objects
 from nova.openstack.common import log as logging
 from nova.pci import device
@@ -109,11 +109,12 @@ class PciDevTracker(object):
                 try:
                     device.remove(existed)
                 except exception.PciDeviceInvalidStatus as e:
-                    LOG.warn(_("Trying to remove device with %(status)s "
-                               "ownership %(instance_uuid)s because of "
-                               "%(pci_exception)s"), {'status': existed.status,
-                                  'instance_uuid': existed.instance_uuid,
-                                  'pci_exception': e.format_message()})
+                    LOG.warning(_LW("Trying to remove device with %(status)s "
+                                    "ownership %(instance_uuid)s because of "
+                                    "%(pci_exception)s"),
+                                {'status': existed.status,
+                                 'instance_uuid': existed.instance_uuid,
+                                 'pci_exception': e.format_message()})
                     # Note(yjiang5): remove the device by force so that
                     # db entry is cleaned in next sync.
                     existed.status = 'removed'
