@@ -31,6 +31,7 @@ from nova.compute import vm_mode
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LW
 from nova.openstack.common import excutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -118,15 +119,8 @@ class BareMetalDriver(driver.ComputeDriver):
         "supports_recreate": False,
         }
 
-    def _do_deprecation_warning(self):
-        LOG.warning(_('The baremetal driver is deprecated, untested, '
-                      'unmaintained and will be replaced by an Ironic '
-                      'driver in the future.'))
-
     def __init__(self, virtapi, read_only=False):
         super(BareMetalDriver, self).__init__(virtapi)
-
-        self._do_deprecation_warning()
 
         self.driver = importutils.import_object(
                 CONF.baremetal.driver, virtapi)
@@ -166,7 +160,11 @@ class BareMetalDriver(driver.ComputeDriver):
         return cls._instance
 
     def init_host(self, host):
-        return
+        LOG.warn(_LW('The baremetal driver is deprecated in Juno and will be '
+                     'removed before the next release. Please plan to '
+                     'transition to Ironic as soon as possible. See '
+                     'https://wiki.openstack.org/wiki/Ironic for more '
+                     'information'))
 
     def get_hypervisor_type(self):
         return 'baremetal'
