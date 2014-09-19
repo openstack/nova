@@ -42,6 +42,21 @@ class LvmTestCase(test.NoDBTestCase):
         self.assertEqual(expected_commands, executes)
         self.assertEqual(size, 123456789)
 
+    @mock.patch.object(utils, 'execute',
+                       side_effect=processutils.ProcessExecutionError(
+                            stderr=('blockdev: cannot open /dev/foo: '
+                                    'No such device or address')))
+    def test_get_volume_size_not_found(self, mock_execute):
+        self.assertRaises(exception.VolumeBDMPathNotFound,
+                          lvm.get_volume_size, '/dev/foo')
+
+    @mock.patch.object(utils, 'execute',
+                       side_effect=processutils.ProcessExecutionError(
+                            stderr='blockdev: i am sad in other ways'))
+    def test_get_volume_size_unexpectd_error(self, mock_execute):
+        self.assertRaises(processutils.ProcessExecutionError,
+                          lvm.get_volume_size, '/dev/foo')
+
     def test_lvm_clear(self):
         def fake_lvm_size(path):
             return lvm_size

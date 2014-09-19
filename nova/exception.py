@@ -535,6 +535,10 @@ class VolumeBDMNotFound(NotFound):
     msg_fmt = _("No volume Block Device Mapping with id %(volume_id)s.")
 
 
+class VolumeBDMPathNotFound(VolumeBDMNotFound):
+    msg_fmt = _("No volume Block Device Mapping at path: %(path)s")
+
+
 class SnapshotNotFound(NotFound):
     ec2_code = 'InvalidSnapshot.NotFound'
     msg_fmt = _("Snapshot %(snapshot_id)s could not be found.")
