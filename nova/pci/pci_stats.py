@@ -177,7 +177,7 @@ class PciDeviceStats(object):
 
     def _apply_request(self, pools, request):
         count = request.count
-        matching_pools = self._filter_pools_for_spec(pools, request['spec'])
+        matching_pools = self._filter_pools_for_spec(pools, request.spec)
         if sum([pool['count'] for pool in matching_pools]) < count:
             return False
         else:

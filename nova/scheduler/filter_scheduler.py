@@ -297,7 +297,17 @@ class FilterScheduler(driver.Scheduler):
 
             # Now consume the resources so the filter/weights
             # will change for the next instance.
-            chosen_host.obj.consume_from_instance(context, instance_properties)
+            # NOTE (baoli) adding and deleting pci_requests is a temporary
+            # fix to avoid DB access in consume_from_instance() while getting
+            # pci_requests. The change can be removed once pci_requests is
+            # part of the instance object that is passed into the scheduler
+            # APIs
+            pci_requests = filter_properties.get('pci_requests')
+            if pci_requests:
+                instance_properties['pci_requests'] = pci_requests
+            chosen_host.obj.consume_from_instance(instance_properties)
+            if pci_requests:
+                del instance_properties['pci_requests']
             if update_group_hosts is True:
                 filter_properties['group_hosts'].add(chosen_host.obj.host)
         return selected_hosts
