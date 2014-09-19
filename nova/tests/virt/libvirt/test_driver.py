@@ -24,6 +24,7 @@ import random
 import re
 import shutil
 import tempfile
+import threading
 import time
 import uuid
 from xml.dom import minidom
@@ -55,6 +56,7 @@ from nova import objects
 from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import lockutils
 from nova.openstack.common import loopingcall
 from nova.openstack.common import processutils
 from nova.openstack.common import timeutils
@@ -9237,10 +9239,13 @@ Active:          8381604 kB
         else:
             raise ValueError("Unhandled method %" % method_name)
 
-    def test_attach_interface_get_config(self):
+    @mock.patch.object(lockutils, "external_lock")
+    def test_attach_interface_get_config(self, mock_lock):
         """Tests that the get_config() method is properly called in
         attach_interface().
         """
+        mock_lock.return_value = threading.Semaphore()
+
         self._test_attach_detach_interface_get_config("attach_interface")
 
     def test_detach_interface_get_config(self):
@@ -10111,7 +10116,9 @@ class IptablesFirewallTestCase(test.TestCase):
                                    'project_id': 'fake',
                                    'instance_type_id': 1})
 
-    def test_static_filters(self):
+    @mock.patch.object(lockutils, "external_lock")
+    def test_static_filters(self, mock_lock):
+        mock_lock.return_value = threading.Semaphore()
         instance_ref = self._create_instance_ref()
         src_instance_ref = self._create_instance_ref()
 
@@ -10262,7 +10269,9 @@ class IptablesFirewallTestCase(test.TestCase):
         self.assertEqual(len(rulesv4), 2)
         self.assertEqual(len(rulesv6), 0)
 
-    def test_multinic_iptables(self):
+    @mock.patch.object(lockutils, "external_lock")
+    def test_multinic_iptables(self, mock_lock):
+        mock_lock.return_value = threading.Semaphore()
         ipv4_rules_per_addr = 1
         ipv4_addr_per_network = 2
         ipv6_rules_per_addr = 1
@@ -10289,7 +10298,9 @@ class IptablesFirewallTestCase(test.TestCase):
         self.assertEqual(ipv6_network_rules,
                   ipv6_rules_per_addr * ipv6_addr_per_network * networks_count)
 
-    def test_do_refresh_security_group_rules(self):
+    @mock.patch.object(lockutils, "external_lock")
+    def test_do_refresh_security_group_rules(self, mock_lock):
+        mock_lock.return_value = threading.Semaphore()
         instance_ref = self._create_instance_ref()
         self.mox.StubOutWithMock(self.fw,
                                  'instance_rules')
@@ -10315,7 +10326,9 @@ class IptablesFirewallTestCase(test.TestCase):
         self.fw.instance_info[instance_ref['id']] = (instance_ref, None)
         self.fw.do_refresh_security_group_rules("fake")
 
-    def test_do_refresh_security_group_rules_instance_disappeared(self):
+    @mock.patch.object(lockutils, "external_lock")
+    def test_do_refresh_security_group_rules_instance_gone(self, mock_lock):
+        mock_lock.return_value = threading.Semaphore()
         instance1 = {'id': 1, 'uuid': 'fake-uuid1'}
         instance2 = {'id': 2, 'uuid': 'fake-uuid2'}
         self.fw.instance_info = {1: (instance1, 'netinfo1'),
@@ -10335,7 +10348,9 @@ class IptablesFirewallTestCase(test.TestCase):
                                                    any_order=True)
             self.assertEqual(0, mock_filter.add_chain.call_count)
 
-    def test_unfilter_instance_undefines_nwfilter(self):
+    @mock.patch.object(lockutils, "external_lock")
+    def test_unfilter_instance_undefines_nwfilter(self, mock_lock):
+        mock_lock.return_value = threading.Semaphore()
         admin_ctxt = context.get_admin_context()
 
         fakefilter = NWFilterFakes()
@@ -10357,7 +10372,9 @@ class IptablesFirewallTestCase(test.TestCase):
 
         db.instance_destroy(admin_ctxt, instance_ref['uuid'])
 
-    def test_provider_firewall_rules(self):
+    @mock.patch.object(lockutils, "external_lock")
+    def test_provider_firewall_rules(self, mock_lock):
+        mock_lock.return_value = threading.Semaphore()
         # setup basic instance data
         instance_ref = self._create_instance_ref()
         # FRAGILE: peeks at how the firewall names chains
