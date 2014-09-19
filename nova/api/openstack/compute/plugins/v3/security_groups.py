@@ -18,6 +18,7 @@
 import contextlib
 
 from oslo.serialization import jsonutils
+import six
 from webob import exc
 
 from nova.api.openstack import common
@@ -32,6 +33,7 @@ from nova.i18n import _
 from nova.network.security_group import neutron_driver
 from nova.network.security_group import openstack_driver
 from nova.openstack.common import log as logging
+from nova.virt import netutils
 
 
 LOG = logging.getLogger(__name__)
@@ -230,6 +232,88 @@ class SecurityGroupController(SecurityGroupControllerBase):
                                                               group_ref)}
 
 
+class SecurityGroupRulesController(SecurityGroupControllerBase):
+
+    def create(self, req, body):
+        context = _authorize_context(req)
+
+        sg_rule = self._from_body(body, 'security_group_rule')
+
+        with translate_exceptions():
+            parent_group_id = self.security_group_api.validate_id(
+                sg_rule.get('parent_group_id'))
+            security_group = self.security_group_api.get(context, None,
+                                                         parent_group_id,
+                                                         map_exception=True)
+        try:
+            new_rule = self._rule_args_to_dict(context,
+                              to_port=sg_rule.get('to_port'),
+                              from_port=sg_rule.get('from_port'),
+                              ip_protocol=sg_rule.get('ip_protocol'),
+                              cidr=sg_rule.get('cidr'),
+                              group_id=sg_rule.get('group_id'))
+        except Exception as exp:
+            raise exc.HTTPBadRequest(explanation=six.text_type(exp))
+
+        if new_rule is None:
+            msg = _("Not enough parameters to build a valid rule.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        new_rule['parent_group_id'] = security_group['id']
+
+        if 'cidr' in new_rule:
+            net, prefixlen = netutils.get_net_and_prefixlen(new_rule['cidr'])
+            if net not in ('0.0.0.0', '::') and prefixlen == '0':
+                msg = _("Bad prefix for network in cidr %s") % new_rule['cidr']
+                raise exc.HTTPBadRequest(explanation=msg)
+
+        group_rule_data = None
+        with translate_exceptions():
+            if sg_rule.get('group_id'):
+                source_group = self.security_group_api.get(
+                            context, id=sg_rule['group_id'])
+                group_rule_data = {'name': source_group.get('name'),
+                                   'tenant_id': source_group.get('project_id')}
+
+            security_group_rule = (
+                self.security_group_api.create_security_group_rule(
+                    context, security_group, new_rule))
+
+        formatted_rule = self._format_security_group_rule(context,
+                                                          security_group_rule,
+                                                          group_rule_data)
+        return {"security_group_rule": formatted_rule}
+
+    def _rule_args_to_dict(self, context, to_port=None, from_port=None,
+                           ip_protocol=None, cidr=None, group_id=None):
+
+        if group_id is not None:
+            group_id = self.security_group_api.validate_id(group_id)
+
+            # check if groupId exists
+            self.security_group_api.get(context, id=group_id)
+            return self.security_group_api.new_group_ingress_rule(
+                                    group_id, ip_protocol, from_port, to_port)
+        else:
+            cidr = self.security_group_api.parse_cidr(cidr)
+            return self.security_group_api.new_cidr_ingress_rule(
+                                        cidr, ip_protocol, from_port, to_port)
+
+    @wsgi.response(202)
+    def delete(self, req, id):
+        context = _authorize_context(req)
+
+        with translate_exceptions():
+            id = self.security_group_api.validate_id(id)
+            rule = self.security_group_api.get_rule(context, id)
+            group_id = rule['parent_group_id']
+            security_group = self.security_group_api.get(context, None,
+                                                         group_id,
+                                                         map_exception=True)
+            self.security_group_api.remove_rules(context, security_group,
+                                                 [rule['id']])
+
+
 class ServerSecurityGroupController(SecurityGroupControllerBase):
 
     def index(self, req, server_id):
@@ -391,7 +475,10 @@ class SecurityGroups(extensions.V3APIExtensionBase):
             'os-security-groups',
             controller=ServerSecurityGroupController(),
             parent=dict(member_name='server', collection_name='servers'))
-        return [secgrp_ext, server_secgrp_ext]
+        secgrp_rules_ext = extensions.ResourceExtension(
+            'os-security-group-rules',
+            controller=SecurityGroupRulesController())
+        return [secgrp_ext, server_secgrp_ext, secgrp_rules_ext]
 
     # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
     # parameter as this is placed to handle scheduler_hint extension for V2.1.
