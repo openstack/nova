@@ -904,6 +904,27 @@ class TestShow(test.NoDBTestCase):
         self.assertIn('locations', info)
         self.assertEqual(expected, info['locations'])
 
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_do_not_show_deleted_images(self, is_avail_mock, trans_from_mock):
+        class fake_image_cls(dict):
+            id = 'b31aa5dd-f07a-4748-8f15-398346887584'
+            deleted = True
+
+        glance_image = fake_image_cls()
+        client = mock.MagicMock()
+        client.call.return_value = glance_image
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageService(client)
+
+        with testtools.ExpectedException(exception.ImageNotFound):
+            service.show(ctx, glance_image.id, show_deleted=False)
+
+        client.call.assert_called_once_with(ctx, 1, 'get',
+                                            glance_image.id)
+        self.assertFalse(is_avail_mock.called)
+        self.assertFalse(trans_from_mock.called)
+
 
 class TestDetail(test.NoDBTestCase):
 

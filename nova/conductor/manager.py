@@ -660,7 +660,9 @@ class ComputeTaskManager(base.Base):
 
         def safe_image_show(ctx, image_id):
             if image_id:
-                return self.image_api.get(ctx, image_id)
+                return self.image_api.get(ctx, image_id, show_deleted=False)
+            else:
+                raise exception.ImageNotFound(image_id='')
 
         if instance.vm_state == vm_states.SHELVED:
             instance.task_state = task_states.POWERING_ON
@@ -678,8 +680,14 @@ class ComputeTaskManager(base.Base):
                 except exception.ImageNotFound:
                     instance.vm_state = vm_states.ERROR
                     instance.save()
-                    reason = _('Unshelve attempted but the image %s '
-                               'cannot be found.') % image_id
+
+                    if image_id:
+                        reason = _('Unshelve attempted but the image %s '
+                                   'cannot be found.') % image_id
+                    else:
+                        reason = _('Unshelve attempted but the image_id is '
+                                   'not provided')
+
                     LOG.error(reason, instance=instance)
                     raise exception.UnshelveException(
                         instance_id=instance.uuid, reason=reason)
