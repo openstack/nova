@@ -23,11 +23,17 @@ from nova.api.openstack.compute.schemas.v3 import volumes as volumes_schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
+from nova import compute
 from nova import exception
+from nova.i18n import _
+from nova import objects
+from nova.openstack.common import uuidutils
 from nova import volume
 
 ALIAS = "os-volumes"
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+authorize_attach = extensions.extension_authorizer('compute',
+                                                   'v3:os-volumes-attachments')
 
 
 def _translate_volume_detail_view(context, vol):
@@ -203,6 +209,252 @@ def _translate_attachment_summary_view(volume_id, instance_uuid, mountpoint):
     return d
 
 
+class VolumeAttachmentController(wsgi.Controller):
+    """The volume attachment API controller for the OpenStack API.
+
+    A child resource of the server.  Note that we use the volume id
+    as the ID of the attachment (though this is not guaranteed externally)
+
+    """
+
+    def __init__(self):
+        self.compute_api = compute.API()
+        self.volume_api = volume.API()
+        super(VolumeAttachmentController, self).__init__()
+
+    @extensions.expected_errors(404)
+    def index(self, req, server_id):
+        """Returns the list of volume attachments for a given instance."""
+        context = req.environ['nova.context']
+        authorize_attach(context, action='index')
+        return self._items(req, server_id,
+                           entity_maker=_translate_attachment_summary_view)
+
+    @extensions.expected_errors(404)
+    def show(self, req, server_id, id):
+        """Return data about the given volume attachment."""
+        context = req.environ['nova.context']
+        authorize(context)
+        authorize_attach(context, action='show')
+
+        volume_id = id
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       want_objects=True)
+
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance['uuid'])
+
+        if not bdms:
+            msg = _("Instance %s is not attached.") % server_id
+            raise exc.HTTPNotFound(explanation=msg)
+
+        assigned_mountpoint = None
+
+        for bdm in bdms:
+            if bdm.volume_id == volume_id:
+                assigned_mountpoint = bdm.device_name
+                break
+
+        if assigned_mountpoint is None:
+            msg = _("volume_id not found: %s") % volume_id
+            raise exc.HTTPNotFound(explanation=msg)
+
+        return {'volumeAttachment': _translate_attachment_detail_view(
+            volume_id,
+            instance['uuid'],
+            assigned_mountpoint)}
+
+    def _validate_volume_id(self, volume_id):
+        if not uuidutils.is_uuid_like(volume_id):
+            msg = _("Bad volumeId format: volumeId is "
+                    "not in proper format (%s)") % volume_id
+            raise exc.HTTPBadRequest(explanation=msg)
+
+    @extensions.expected_errors((400, 404, 409))
+    def create(self, req, server_id, body):
+        """Attach a volume to an instance."""
+        context = req.environ['nova.context']
+        authorize(context)
+        authorize_attach(context, action='create')
+
+        if not self.is_valid_body(body, 'volumeAttachment'):
+            msg = _("volumeAttachment not specified")
+            raise exc.HTTPBadRequest(explanation=msg)
+        try:
+            volume_id = body['volumeAttachment']['volumeId']
+        except KeyError:
+            msg = _("volumeId must be specified.")
+            raise exc.HTTPBadRequest(explanation=msg)
+        device = body['volumeAttachment'].get('device')
+
+        self._validate_volume_id(volume_id)
+
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       want_objects=True)
+        try:
+            device = self.compute_api.attach_volume(context, instance,
+                                                    volume_id, device)
+        except exception.VolumeNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'attach_volume', server_id)
+        except (exception.InvalidVolume,
+                exception.InvalidDevicePath) as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
+
+        # The attach is async
+        attachment = {}
+        attachment['id'] = volume_id
+        attachment['serverId'] = server_id
+        attachment['volumeId'] = volume_id
+        attachment['device'] = device
+
+        # NOTE(justinsb): And now, we have a problem...
+        # The attach is async, so there's a window in which we don't see
+        # the attachment (until the attachment completes).  We could also
+        # get problems with concurrent requests.  I think we need an
+        # attachment state, and to write to the DB here, but that's a bigger
+        # change.
+        # For now, we'll probably have to rely on libraries being smart
+
+        # TODO(justinsb): How do I return "accepted" here?
+        return {'volumeAttachment': attachment}
+
+    @wsgi.response(202)
+    @extensions.expected_errors((400, 404, 409))
+    def update(self, req, server_id, id, body):
+        context = req.environ['nova.context']
+        authorize(context)
+        authorize_attach(context, action='update')
+
+        if not self.is_valid_body(body, 'volumeAttachment'):
+            msg = _("volumeAttachment not specified")
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        old_volume_id = id
+        try:
+            old_volume = self.volume_api.get(context, old_volume_id)
+
+            try:
+                new_volume_id = body['volumeAttachment']['volumeId']
+            except KeyError:
+                msg = _("volumeId must be specified.")
+                raise exc.HTTPBadRequest(explanation=msg)
+            self._validate_volume_id(new_volume_id)
+            new_volume = self.volume_api.get(context, new_volume_id)
+        except exception.VolumeNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       want_objects=True)
+
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance.uuid)
+        found = False
+        try:
+            for bdm in bdms:
+                if bdm.volume_id != old_volume_id:
+                    continue
+                try:
+                    self.compute_api.swap_volume(context, instance, old_volume,
+                                                 new_volume)
+                    found = True
+                    break
+                except exception.VolumeUnattached:
+                    # The volume is not attached.  Treat it as NotFound
+                    # by falling through.
+                    pass
+                except exception.InvalidVolume as e:
+                    raise exc.HTTPBadRequest(explanation=e.format_message())
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'swap_volume', server_id)
+
+        if not found:
+            msg = _("The volume was either invalid or not attached to the "
+                    "instance.")
+            raise exc.HTTPNotFound(explanation=msg)
+
+    @wsgi.response(202)
+    @extensions.expected_errors((400, 403, 404, 409))
+    def delete(self, req, server_id, id):
+        """Detach a volume from an instance."""
+        context = req.environ['nova.context']
+        authorize(context)
+        authorize_attach(context, action='delete')
+
+        volume_id = id
+
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       want_objects=True)
+
+        try:
+            volume = self.volume_api.get(context, volume_id)
+        except exception.VolumeNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance['uuid'])
+        if not bdms:
+            msg = _("Instance %s is not attached.") % server_id
+            raise exc.HTTPNotFound(explanation=msg)
+
+        found = False
+        try:
+            for bdm in bdms:
+                if bdm.volume_id != volume_id:
+                    continue
+                if bdm.is_root:
+                    msg = _("Can't detach root device volume")
+                    raise exc.HTTPForbidden(explanation=msg)
+                try:
+                    self.compute_api.detach_volume(context, instance, volume)
+                    found = True
+                    break
+                except exception.VolumeUnattached:
+                    # The volume is not attached.  Treat it as NotFound
+                    # by falling through.
+                    pass
+                except exception.InvalidVolume as e:
+                    raise exc.HTTPBadRequest(explanation=e.format_message())
+
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'detach_volume', server_id)
+
+        if not found:
+            msg = _("volume_id not found: %s") % volume_id
+            raise exc.HTTPNotFound(explanation=msg)
+
+    def _items(self, req, server_id, entity_maker):
+        """Returns a list of attachments, transformed through entity_maker."""
+        context = req.environ['nova.context']
+        authorize(context)
+
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       want_objects=True)
+
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance['uuid'])
+        limited_list = common.limited(bdms, req)
+        results = []
+
+        for bdm in limited_list:
+            if bdm.volume_id:
+                results.append(entity_maker(bdm.volume_id,
+                                            bdm.instance_uuid,
+                                            bdm.device_name))
+
+        return {'volumeAttachments': results}
+
+
 def _translate_snapshot_detail_view(context, vol):
     """Maps keys for snapshots details view."""
 
@@ -320,6 +572,13 @@ class Volumes(extensions.V3APIExtensionBase):
 
         res = extensions.ResourceExtension('os-volumes_boot',
                                            inherits='servers')
+        resources.append(res)
+
+        res = extensions.ResourceExtension('os-volume_attachments',
+                                           VolumeAttachmentController(),
+                                           parent=dict(
+                                                member_name='server',
+                                                collection_name='servers'))
         resources.append(res)
 
         res = extensions.ResourceExtension(

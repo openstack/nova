@@ -340,9 +340,9 @@ class VolumeApiTestV2(VolumeApiTestV21):
         return fakes.wsgi_app()
 
 
-class VolumeAttachTests(test.TestCase):
+class VolumeAttachTestsV21(test.TestCase):
     def setUp(self):
-        super(VolumeAttachTests, self).setUp()
+        super(VolumeAttachTestsV21, self).setUp()
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
                        fake_bdms_get_all_by_instance)
         self.stubs.Set(compute_api.API, 'get', fake_get_instance)
@@ -354,9 +354,10 @@ class VolumeAttachTests(test.TestCase):
              'id': FAKE_UUID_A,
              'volumeId': FAKE_UUID_A
             }}
-        self.ext_mgr = extensions.ExtensionManager()
-        self.ext_mgr.extensions = {}
-        self.attachments = volumes.VolumeAttachmentController(self.ext_mgr)
+        self._set_up_controller()
+
+    def _set_up_controller(self):
+        self.attachments = volumes_v3.VolumeAttachmentController()
 
     def test_show(self):
         req = webob.Request.blank('/v2/servers/id/os-volume_attachments/uuid')
@@ -423,7 +424,14 @@ class VolumeAttachTests(test.TestCase):
         req.environ['nova.context'] = self.context
 
         result = self.attachments.delete(req, FAKE_UUID, FAKE_UUID_A)
-        self.assertEqual('202 Accepted', result.status)
+        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # method instead of status_int in a response object.
+        if isinstance(self.attachments,
+                      volumes_v3.VolumeAttachmentController):
+            status_int = self.attachments.delete.wsgi_code
+        else:
+            status_int = result.status_int
+        self.assertEqual(202, status_int)
 
     def test_detach_vol_not_found(self):
         self.stubs.Set(compute_api.API,
@@ -545,7 +553,8 @@ class VolumeAttachTests(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.attachments.create,
                           req, FAKE_UUID, body=body)
 
-    def _test_swap(self, uuid=FAKE_UUID_A, fake_func=None, body=None):
+    def _test_swap(self, attachments, uuid=FAKE_UUID_A,
+                   fake_func=None, body=None):
         fake_func = fake_func or fake_swap_volume
         self.stubs.Set(compute_api.API,
                        'swap_volume',
@@ -558,38 +567,55 @@ class VolumeAttachTests(test.TestCase):
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
-        return self.attachments.update(req, FAKE_UUID, uuid, body=body)
+        return attachments.update(req, FAKE_UUID, uuid, body=body)
 
     def test_swap_volume_for_locked_server(self):
-        self.ext_mgr.extensions['os-volume-attachment-update'] = True
 
         def fake_swap_volume_for_locked_server(self, context, instance,
                                                 old_volume, new_volume):
             raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
 
-        self.ext_mgr.extensions['os-volume-attachment-update'] = True
         self.assertRaises(webob.exc.HTTPConflict, self._test_swap,
+                          self.attachments,
                           fake_func=fake_swap_volume_for_locked_server)
 
-    def test_swap_volume_no_extension(self):
-        self.assertRaises(webob.exc.HTTPBadRequest, self._test_swap)
-
     def test_swap_volume(self):
-        self.ext_mgr.extensions['os-volume-attachment-update'] = True
-        result = self._test_swap()
-        self.assertEqual('202 Accepted', result.status)
+        result = self._test_swap(self.attachments)
+        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # method instead of status_int in a response object.
+        if isinstance(self.attachments,
+                      volumes_v3.VolumeAttachmentController):
+            status_int = self.attachments.update.wsgi_code
+        else:
+            status_int = result.status_int
+        self.assertEqual(202, status_int)
 
     def test_swap_volume_no_attachment(self):
-        self.ext_mgr.extensions['os-volume-attachment-update'] = True
-
-        self.assertRaises(exc.HTTPNotFound, self._test_swap, FAKE_UUID_C)
+        self.assertRaises(exc.HTTPNotFound, self._test_swap,
+                          self.attachments, FAKE_UUID_C)
 
     def test_swap_volume_without_volumeId(self):
-        self.ext_mgr.extensions['os-volume-attachment-update'] = True
         body = {'volumeAttachment': {'device': '/dev/fake'}}
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_swap,
+                          self.attachments,
                           body=body)
+
+
+class VolumeAttachTestsV2(VolumeAttachTestsV21):
+
+    def _set_up_controller(self):
+        ext_mgr = extensions.ExtensionManager()
+        ext_mgr.extensions = {'os-volume-attachment-update'}
+        self.attachments = volumes.VolumeAttachmentController(ext_mgr)
+        ext_mgr_no_update = extensions.ExtensionManager()
+        ext_mgr_no_update.extensions = {}
+        self.attachments_no_update = volumes.VolumeAttachmentController(
+                                                 ext_mgr_no_update)
+
+    def test_swap_volume_no_extension(self):
+        self.assertRaises(webob.exc.HTTPBadRequest, self._test_swap,
+                          self.attachments_no_update)
 
 
 class VolumeSerializerTest(test.TestCase):
