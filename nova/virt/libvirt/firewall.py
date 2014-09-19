@@ -15,6 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import uuid
+
+from lxml import etree
 from oslo.config import cfg
 
 from nova.cloudpipe import pipelib
@@ -59,31 +62,30 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         return self._libvirt_get_connection()
     _conn = property(_get_connection)
 
-    @staticmethod
-    def nova_no_nd_reflection_filter():
+    def nova_no_nd_reflection_filter(self):
         """This filter protects false positives on IPv6 Duplicate Address
         Detection(DAD).
         """
+        uuid = self._get_filter_uuid('nova-no-nd-reflection')
         return '''<filter name='nova-no-nd-reflection' chain='ipv6'>
                   <!-- no nd reflection -->
                   <!-- drop if destination mac is v6 mcast mac addr and
                        we sent it. -->
-
+                  <uuid>%s</uuid>
                   <rule action='drop' direction='in'>
                       <mac dstmacaddr='33:33:00:00:00:00'
                            dstmacmask='ff:ff:00:00:00:00' srcmacaddr='$MAC'/>
                   </rule>
-                  </filter>'''
+                  </filter>''' % uuid
 
-    @staticmethod
-    def nova_dhcp_filter():
+    def nova_dhcp_filter(self):
         """The standard allow-dhcp-server filter is an <ip> one, so it uses
            ebtables to allow traffic through. Without a corresponding rule in
            iptables, it'll get blocked anyway.
         """
-
+        uuid = self._get_filter_uuid('nova-allow-dhcp-server')
         return '''<filter name='nova-allow-dhcp-server' chain='ipv4'>
-                    <uuid>891e4787-e5c0-d59b-cbd6-41bc3c6b36fc</uuid>
+                    <uuid>%s</uuid>
                     <rule action='accept' direction='out'
                           priority='100'>
                       <udp srcipaddr='0.0.0.0'
@@ -97,7 +99,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
                            srcportstart='67'
                            dstportstart='68'/>
                     </rule>
-                  </filter>'''
+                  </filter>''' % uuid
 
     def setup_basic_filtering(self, instance, network_info):
         """Set up basic filtering (MAC, IP, and ARP spoofing protection)."""
@@ -172,7 +174,9 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         nic_id = vif['address'].replace(':', '')
         instance_filter_name = self._instance_filter_name(instance, nic_id)
         parameters = self._get_instance_filter_parameters(vif)
+        uuid = self._get_filter_uuid(instance_filter_name)
         xml = '''<filter name='%s' chain='root'>''' % instance_filter_name
+        xml += '<uuid>%s</uuid>' % uuid
         for f in filters:
             xml += '''<filterref filter='%s'>''' % f
             xml += ''.join(parameters)
@@ -210,22 +214,39 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         filter_set = ['no-mac-spoofing',
                       'no-ip-spoofing',
                       'no-arp-spoofing']
-        self._define_filter(self.nova_no_nd_reflection_filter)
+
+        self._define_filter(self.nova_no_nd_reflection_filter())
         filter_set.append('nova-no-nd-reflection')
         self._define_filter(self._filter_container('nova-nodhcp', filter_set))
         filter_set.append('allow-dhcp-server')
         self._define_filter(self._filter_container('nova-base', filter_set))
         self._define_filter(self._filter_container('nova-vpn',
                                                    ['allow-dhcp-server']))
-        self._define_filter(self.nova_dhcp_filter)
+        self._define_filter(self.nova_dhcp_filter())
 
         self.static_filters_configured = True
 
     def _filter_container(self, name, filters):
-        xml = '''<filter name='%s' chain='root'>%s</filter>''' % (
-                 name,
+        uuid = self._get_filter_uuid(name)
+        xml = '''<filter name='%s' chain='root'>
+                   <uuid>%s</uuid>
+                   %s
+                 </filter>''' % (name, uuid,
                  ''.join(["<filterref filter='%s'/>" % (f,) for f in filters]))
         return xml
+
+    def _get_filter_uuid(self, name):
+        try:
+            flt = self._conn.nwfilterLookupByName(name)
+            xml = flt.XMLDesc(0)
+            doc = etree.fromstring(xml)
+            u = doc.find("./uuid").text
+        except Exception as e:
+            LOG.debug("Cannot find UUID for filter '%s': '%s'" % (name, e))
+            u = uuid.uuid4().hex
+
+        LOG.debug("UUID for filter '%s' is '%s'" % (name, u))
+        return u
 
     def _define_filter(self, xml):
         if callable(xml):
