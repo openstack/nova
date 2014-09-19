@@ -226,6 +226,26 @@ class API(base.Base):
         return self.floating_manager.deallocate_floating_ip(context, address,
                  affect_auto_assigned)
 
+    def disassociate_and_release_floating_ip(self, context, instance,
+                                           floating_ip):
+        """Removes (deallocates) and deletes the floating ip.
+
+        This api call was added to allow this to be done in one operation
+        if using neutron.
+        """
+
+        address = floating_ip['address']
+        if floating_ip.get('fixed_ip_id'):
+            try:
+                self.disassociate_floating_ip(context, instance, address)
+            except exception.FloatingIpNotAssociated:
+                msg = ("Floating ip %s has already been disassociated, "
+                       "perhaps by another concurrent action.") % address
+                LOG.debug(msg)
+
+        # release ip from project
+        return self.release_floating_ip(context, address)
+
     @wrap_check_policy
     @refresh_cache
     def associate_floating_ip(self, context, instance,
