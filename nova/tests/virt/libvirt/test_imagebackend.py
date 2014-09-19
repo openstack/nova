@@ -20,6 +20,7 @@ import shutil
 import tempfile
 
 import fixtures
+import mock
 from oslo.config import cfg
 
 from inspect import getargspec
@@ -736,10 +737,12 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         self.libvirt_utils = imagebackend.libvirt_utils
         self.utils = imagebackend.utils
         self.rbd = self.mox.CreateMockAnything()
+        self.rados = self.mox.CreateMockAnything()
 
     def prepare_mocks(self):
         fn = self.mox.CreateMockAnything()
         self.mox.StubOutWithMock(imagebackend, 'rbd')
+        self.mox.StubOutWithMock(imagebackend, 'rados')
         return fn
 
     def test_cache(self):
@@ -830,6 +833,9 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.rbd.RBD_FEATURE_LAYERING = 1
 
+        self.mox.StubOutWithMock(imagebackend.disk, 'get_disk_size')
+        imagebackend.disk.get_disk_size(self.TEMPLATE_PATH
+                                       ).AndReturn(self.SIZE)
         rbd_name = "%s/%s" % (self.INSTANCE['name'], self.NAME)
         cmd = ('--pool', self.POOL, self.TEMPLATE_PATH,
                rbd_name, '--new-format', '--id', self.USER,
@@ -848,9 +854,13 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         fake_processutils.fake_execute_clear_log()
         fake_processutils.stub_out_processutils_execute(self.stubs)
         self.mox.StubOutWithMock(imagebackend, 'rbd')
+        self.mox.StubOutWithMock(imagebackend, 'rados')
         image = self.image_class(self.INSTANCE, self.NAME)
 
         def fake_fetch(target, *args, **kwargs):
+            return
+
+        def fake_resize(rbd_name, size):
             return
 
         self.stubs.Set(os.path, 'exists', lambda _: True)
@@ -863,6 +873,15 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
     def test_parent_compatible(self):
         self.assertEqual(getargspec(imagebackend.Image.libvirt_info),
              getargspec(self.image_class.libvirt_info))
+
+    def test_resize(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        with mock.patch.object(imagebackend, "RBDVolumeProxy") as mock_proxy:
+            volume_mock = mock.Mock()
+            mock_proxy.side_effect = [mock_proxy]
+            mock_proxy.__enter__.side_effect = [volume_mock]
+            image._resize(image.rbd_name, self.SIZE)
+            volume_mock.resize.assert_called_once_with(self.SIZE)
 
 
 class BackendTestCase(test.NoDBTestCase):
