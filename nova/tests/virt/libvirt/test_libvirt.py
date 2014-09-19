@@ -6194,24 +6194,25 @@ class IptablesFirewallTestCase(test.TestCase):
         self.fw.instance_rules(instance_ref,
                                mox.IgnoreArg()).AndReturn((None, None))
         self.fw.add_filters_for_instance(instance_ref, mox.IgnoreArg(),
-                                         mox.IgnoreArg())
+                                         mox.IgnoreArg(), mox.IgnoreArg())
         self.fw.instance_rules(instance_ref,
                                mox.IgnoreArg()).AndReturn((None, None))
         self.fw.iptables.ipv4['filter'].has_chain(mox.IgnoreArg()
                                                   ).AndReturn(True)
         self.fw.add_filters_for_instance(instance_ref, mox.IgnoreArg(),
-                                         mox.IgnoreArg())
+                                         mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
 
         self.fw.prepare_instance_filter(instance_ref, mox.IgnoreArg())
-        self.fw.instances[instance_ref['id']] = instance_ref
+        self.fw.instance_info[instance_ref['id']] = (instance_ref, None)
         self.fw.do_refresh_security_group_rules("fake")
 
     def test_do_refresh_security_group_rules_instance_disappeared(self):
         instance1 = {'id': 0, 'uuid': 'fake-uuid1'}
         instance2 = {'id': 1, 'uuid': 'fake-uuid2'}
-        self.fw.instances = {0: instance1, 1: instance2}
-        self.fw.network_infos = _fake_network_info(self.stubs, 2)
+        network_infos = _fake_network_info(self.stubs, 2)
+        self.fw.instance_info[instance1['id']] = (instance1, network_infos[0])
+        self.fw.instance_info[instance2['id']] = (instance2, network_infos[1])
         mock_filter = mock.MagicMock()
         with mock.patch.dict(self.fw.iptables.ipv4, {'filter': mock_filter}):
             mock_filter.has_chain.return_value = False
