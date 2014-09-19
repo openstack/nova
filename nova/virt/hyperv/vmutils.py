@@ -679,12 +679,14 @@ class VMUtils(object):
             serial_port.Connection = [update_connection]
             self._modify_virt_resource(serial_port, vm.path_())
 
-        return serial_port.Connection
+        if len(serial_port.Connection) > 0:
+            return serial_port.Connection[0]
 
     def get_active_instances(self):
         """Return the names of all the active instances known to Hyper-V."""
-        vm_names = [v.ElementName for v in
-                    self._conn.Msvm_ComputerSystem(Caption="Virtual Machine")
-                    if v.EnabledState == constants.HYPERV_VM_STATE_ENABLED]
+        vm_names = self.list_instances()
+        vms = [self._lookup_vm(vm_name) for vm_name in vm_names]
+        active_vm_names = [v.ElementName for v in vms
+            if v.EnabledState == constants.HYPERV_VM_STATE_ENABLED]
 
-        return vm_names
+        return active_vm_names

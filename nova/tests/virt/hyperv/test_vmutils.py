@@ -543,13 +543,12 @@ class VMUtilsTestCase(test.NoDBTestCase):
         type(fake_vm).EnabledState = mock.PropertyMock(
             side_effect=[constants.HYPERV_VM_STATE_ENABLED,
                          constants.HYPERV_VM_STATE_DISABLED])
-        self._vmutils._conn.Msvm_ComputerSystem.return_value = (
-            [fake_vm] * 2)
-
+        self._vmutils.list_instances = mock.MagicMock(
+            return_value=[mock.sentinel.fake_vm_name] * 2)
+        self._vmutils._lookup_vm = mock.MagicMock(side_effect=[fake_vm] * 2)
         active_instances = self._vmutils.get_active_instances()
 
-        self.assertIn('active_vm', active_instances)
-        self.assertEqual(1, len(active_instances))
+        self.assertEqual(['active_vm'], active_instances)
 
     def _test_get_vm_serial_port_connection(self, new_connection=None):
         old_serial_connection = 'old_serial_connection'
@@ -572,11 +571,11 @@ class VMUtilsTestCase(test.NoDBTestCase):
             self._FAKE_VM_NAME, update_connection=new_connection)
 
         if new_connection:
-            self.assertIn(new_connection, ret_val)
+            self.assertEqual(new_connection, ret_val)
             fake_modify.assert_called_once_with(fake_serial_port,
                                                 mock_vm.path_())
         else:
-            self.assertIn(old_serial_connection, ret_val)
+            self.assertEqual(old_serial_connection, ret_val)
 
     def test_set_vm_serial_port_connection(self):
         self._test_get_vm_serial_port_connection('new_serial_connection')

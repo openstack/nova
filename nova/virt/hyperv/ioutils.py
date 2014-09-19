@@ -49,6 +49,7 @@ class IOThread(native_threading.Thread):
     def _copy(self, src, dest):
         with open(self._src, 'rb') as src:
             with open(self._dest, 'ab', 0) as dest:
+                dest.seek(0, os.SEEK_END)
                 log_size = dest.tell()
                 while (not self._stopped.isSet()):
                     # Read one byte at a time to avoid blocking.
