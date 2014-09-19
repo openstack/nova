@@ -105,10 +105,9 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
                      self.pid)
             os.kill(self.pid, signal.SIGTERM)
 
-            self._wait_for_all_workers_to_end()
-
             try:
                 # Make sure we reap our test process
+                self._wait_for_all_workers_to_end()
                 self._reap_test()
             except fixtures.TimeoutException:
                 # If the child gets stuck or is too slow in exiting
@@ -117,9 +116,14 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
                 # to do this otherwise the child process can hold up
                 # the test run
                 LOG.warn("got fixtures.TimeoutException during tearDown(). "
-                         "going nuclear with a SIGKILL on launcher pid %d.",
-                         self.pid)
+                         "going nuclear with SIGKILL.")
+                for worker_pid in self._get_workers():
+                    LOG.warn("worker pid %d" % worker_pid)
+                    os.kill(worker_pid, signal.SIGKILL)
+
+                LOG.warn("parent pid %d" % self.pid)
                 os.kill(self.pid, signal.SIGKILL)
+                raise
 
         super(MultiprocessWSGITest, self).tearDown()
 
