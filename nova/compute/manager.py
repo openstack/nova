@@ -1466,7 +1466,7 @@ class ComputeManager(manager.Manager):
             # Make sure the async call finishes
             if network_info is not None:
                 network_info.wait(do_raise=False)
-            rescheduled = self._reschedule_or_error(context, instance,
+            rescheduled = self._reschedule_or_error(original_context, instance,
                     exc_info, requested_networks, admin_password,
                     injected_files_orig, is_first_time, request_spec,
                     filter_properties, bdms, legacy_bdm_in_spec)
@@ -1494,6 +1494,9 @@ class ComputeManager(manager.Manager):
         """Try to re-schedule the build or re-raise the original build error to
         error out the instance.
         """
+        original_context = context
+        context = context.elevated()
+
         instance_uuid = instance['uuid']
         rescheduled = False
 
@@ -1523,7 +1526,7 @@ class ComputeManager(manager.Manager):
                     legacy_bdm_in_spec)
             task_state = task_states.SCHEDULING
 
-            rescheduled = self._reschedule(context, request_spec,
+            rescheduled = self._reschedule(original_context, request_spec,
                     filter_properties, instance,
                     self.scheduler_rpcapi.run_instance, method_args,
                     task_state, exc_info)
