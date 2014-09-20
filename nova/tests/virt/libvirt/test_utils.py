@@ -80,8 +80,6 @@ blah BLAH: bb
         ])
         self.assertEqual(2, mock_execute.call_count)
 
-
-class ImageUtilsTestCase(test.NoDBTestCase):
     def test_disk_type(self):
         # Seems like lvm detection
         # if its in /dev ??
