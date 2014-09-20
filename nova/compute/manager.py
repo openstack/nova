@@ -5735,8 +5735,8 @@ class ComputeManager(manager.Manager):
             LOG.info(_("During the sync_power process the "
                        "instance has moved from "
                        "host %(src)s to host %(dst)s") %
-                       {'src': self.host,
-                        'dst': db_instance.host},
+                       {'src': db_instance.host,
+                        'dst': self.host},
                      instance=db_instance)
             return
         elif db_instance.task_state is not None:
