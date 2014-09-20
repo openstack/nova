@@ -19,6 +19,7 @@ import contextlib
 
 import mock
 import mox
+from oslo.config import cfg
 from oslo import messaging
 
 from nova.api.ec2 import ec2utils
@@ -57,6 +58,10 @@ from nova.tests import fake_notifier
 from nova.tests import fake_server_actions
 from nova.tests import fake_utils
 from nova import utils
+
+
+CONF = cfg.CONF
+CONF.import_opt('report_interval', 'nova.service')
 
 
 FAKE_IMAGE_REF = 'fake-image-ref'
@@ -862,6 +867,30 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
         self.mox.ReplayAll()
         self.conductor.security_groups_trigger_handler(self.context,
                                                        'event', ['arg'])
+
+    @mock.patch.object(db, 'service_update')
+    @mock.patch('oslo.messaging.RPCClient.prepare')
+    def test_service_update_time_big(self, mock_prepare, mock_update):
+        CONF.set_override('report_interval', 10)
+        services = {'id': 1}
+        self.conductor.service_update(self.context, services, {})
+        mock_prepare.assert_called_once_with(timeout=9)
+
+    @mock.patch.object(db, 'service_update')
+    @mock.patch('oslo.messaging.RPCClient.prepare')
+    def test_service_update_time_small(self, mock_prepare, mock_update):
+        CONF.set_override('report_interval', 3)
+        services = {'id': 1}
+        self.conductor.service_update(self.context, services, {})
+        mock_prepare.assert_called_once_with(timeout=3)
+
+    @mock.patch.object(db, 'service_update')
+    @mock.patch('oslo.messaging.RPCClient.prepare')
+    def test_service_update_no_time(self, mock_prepare, mock_update):
+        CONF.set_override('report_interval', None)
+        services = {'id': 1}
+        self.conductor.service_update(self.context, services, {})
+        mock_prepare.assert_called_once_with()
 
 
 class ConductorAPITestCase(_BaseTestCase, test.TestCase):
