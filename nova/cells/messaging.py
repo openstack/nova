@@ -875,7 +875,7 @@ class _TargetedMessageMethods(_BaseMessageMethods):
                         extra_instance_updates):
         """Resize an instance via compute_api.resize()."""
         self._call_compute_api_with_obj(message.ctxt, instance, 'resize',
-                                        flavor_id=flavor['id'],
+                                        flavor_id=flavor['flavorid'],
                                         **extra_instance_updates)
 
     def live_migrate_instance(self, message, instance, block_migration,
