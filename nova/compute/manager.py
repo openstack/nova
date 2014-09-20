@@ -1235,18 +1235,28 @@ class ComputeManager(manager.Manager):
         # TODO(yamahata): creating volume simultaneously
         #                 reduces creation time?
         # TODO(yamahata): eliminate dumb polling
-        attempts = 0
         start = time.time()
-        while attempts < CONF.block_device_allocate_retries:
+        retries = CONF.block_device_allocate_retries
+        if retries < 0:
+            LOG.warn(_LW("Treating negative config value (%(retries)s) for "
+                         "'block_device_retries' as 0."),
+                     {'retries': retries})
+        # (1) treat  negative config value as 0
+        # (2) the configured value is 0, one attempt should be made
+        # (3) the configured value is > 0, then the total number attempts
+        #      is (retries + 1)
+        attempts = 1
+        if retries >= 1:
+            attempts = retries + 1
+        for attempt in range(1, attempts + 1):
             volume = self.volume_api.get(context, vol_id)
             volume_status = volume['status']
             if volume_status not in ['creating', 'downloading']:
                 if volume_status != 'available':
                     LOG.warn(_("Volume id: %s finished being created but was"
                                " not set as 'available'"), vol_id)
-                return attempts + 1
+                return attempt
             greenthread.sleep(CONF.block_device_allocate_retries_interval)
-            attempts += 1
         # NOTE(harlowja): Should only happen if we ran out of attempts
         raise exception.VolumeNotCreated(volume_id=vol_id,
                                          seconds=int(time.time() - start),
