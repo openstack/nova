@@ -19,6 +19,7 @@ Test multiprocess enabled API service.
 import errno
 import os
 import signal
+import sys
 import time
 import traceback
 
@@ -59,6 +60,9 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
             # to catch all exceptions and make sure nothing leaks out, in
             # particular SystemExit, which is raised by sys.exit(). We use
             # os._exit() which doesn't have this problem.
+            sys.stdin.close()
+            sys.stdout.close()
+            sys.stderr.close()
             status = 0
             try:
                 launcher = service.process_launcher()
