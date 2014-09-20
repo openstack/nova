@@ -402,6 +402,16 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
         )
         sleep_mock.assert_called_once_with(1)
 
+    @mock.patch('glanceclient.Client')
+    def test_create_glance_client_with_ssl(self, client_mock):
+        self.flags(ca_file='foo.cert', cert_file='bar.cert',
+                   key_file='wut.key', group='ssl')
+        ctxt = mock.sentinel.ctx
+        glance._create_glance_client(ctxt, 'host4', 9295, use_ssl=True)
+        client_mock.assert_called_once_with(
+            '1', 'https://host4:9295', insecure=False, ssl_compression=False,
+            cert_file='bar.cert', key_file='wut.key', cacert='foo.cert')
+
 
 class TestDownloadNoDirectUri(test.NoDBTestCase):
 
