@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo.config import cfg
 import webob.exc
 
 from nova.api.openstack import extensions
@@ -25,8 +24,6 @@ from nova import utils
 
 ALIAS = "os-services"
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
-CONF = cfg.CONF
-CONF.import_opt('service_down_time', 'nova.service')
 
 
 class ServiceController(wsgi.Controller):
