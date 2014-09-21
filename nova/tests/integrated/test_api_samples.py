@@ -4031,7 +4031,7 @@ class AssistedVolumeSnapshotsJsonTest(ApiSampleTestBaseV2):
             'description': 'Daily backup',
             'volume_id': '521752a6-acf6-4b2d-bc7a-119f9148cd8c',
             'snapshot_id': '421752a6-acf6-4b2d-bc7a-119f9148cd8c',
-            'type': 'qcow',
+            'type': 'qcow2',
             'new_file': 'new_file_name'
         }
         subs.update(self._get_regexes())
