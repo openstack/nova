@@ -21,6 +21,17 @@ LOG = logging.getLogger(__name__)
 
 
 class VFS(object):
+    """Interface for manipulating disk image.
+
+    The VFS class defines an interface for manipulating files within
+    a virtual disk image filesystem. This allows file injection code
+    to avoid the assumption that the virtual disk image can be mounted
+    in the host filesystem.
+
+    All paths provided to the APIs in this class should be relative
+    to the root of the virtual disk image filesystem. Subclasses
+    will translate paths as required by their implementation.
+    """
 
     # Class level flag to indicate whether we can consider
     # that guestfs is ready to be used.
@@ -59,87 +70,71 @@ class VFS(object):
             "nova.virt.disk.vfs.localfs.VFSLocalFS",
             imgfile, imgfmt, partition)
 
-    """
-    The VFS class defines an interface for manipulating files within
-    a virtual disk image filesystem. This allows file injection code
-    to avoid the assumption that the virtual disk image can be mounted
-    in the host filesystem.
-
-    All paths provided to the APIs in this class should be relative
-    to the root of the virtual disk image filesystem. Subclasses
-    will translate paths as required by their implementation.
-    """
     def __init__(self, imgfile, imgfmt, partition):
         self.imgfile = imgfile
         self.imgfmt = imgfmt
         self.partition = partition
 
-    """
-    Perform any one-time setup tasks to make the virtual
-    filesystem available to future API calls
-    """
     def setup(self):
+        """Performs any one-time setup.
+
+        Perform any one-time setup tasks to make the virtual filesystem
+        available to future API calls.
+        """
         pass
 
-    """
-    Release all resources initialized in the setup method
-    """
     def teardown(self):
+        """Releases all resources initialized in the setup method."""
         pass
 
-    """
-    Create a directory @path, including all intermedia
-    path components if they do not already exist
-    """
     def make_path(self, path):
+        """Creates a directory @path.
+
+        Create a directory @path, including all intermedia path components
+        if they do not already exist.
+        """
         pass
 
-    """
-    Append @content to the end of the file identified
-    by @path, creating the file if it does not already
-    exist
-    """
     def append_file(self, path, content):
+        """Appends @content to the end of the file.
+
+        Append @content to the end of the file identified by @path, creating
+        the file if it does not already exist.
+        """
         pass
 
-    """
-    Replace the entire contents of the file identified
-    by @path, with @content, creating the file if it does
-    not already exist
-    """
     def replace_file(self, path, content):
+        """Replaces contents of the file.
+
+        Replace the entire contents of the file identified by @path, with
+        @content, creating the file if it does not already exist.
+        """
         pass
 
-    """
-    Return the entire contents of the file identified
-    by @path
-    """
     def read_file(self, path):
+        """Returns the entire contents of the file identified by @path."""
         pass
 
-    """
-    Return a True if the file identified by @path
-    exists
-    """
     def has_file(self, path):
+        """Returns a True if the file identified by @path exists."""
         pass
 
-    """
-    Set the permissions on the file identified by
-    @path to @mode. The file must exist prior to
-    this call.
-    """
     def set_permissions(self, path, mode):
+        """Sets the permissions on the file.
+
+        Set the permissions on the file identified by @path to @mode. The file
+        must exist prior to this call.
+        """
         pass
 
-    """
-    Set the ownership on the file identified by
-    @path to the username @user and groupname @group.
-    Either of @user or @group may be None, in which case
-    the current ownership will be left unchanged. The
-    ownership must be passed in string form, allowing
-    subclasses to translate to uid/gid form as required.
-    The file must exist prior to this call.
-    """
     def set_ownership(self, path, user, group):
+        """Sets the ownership on the file.
+
+        Set the ownership on the file identified by @path to the username
+        @user and groupname @group. Either of @user or @group may be None,
+        in which case the current ownership will be left unchanged.
+        The ownership must be passed in string form, allowing subclasses to
+        translate to uid/gid form as required. The file must exist prior to
+        this call.
+        """
         pass
