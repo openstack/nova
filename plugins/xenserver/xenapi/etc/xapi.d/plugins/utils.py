@@ -218,6 +218,13 @@ def _assert_vhd_not_hidden(path):
                     "VHD %s is marked as hidden without child" % path)
 
 
+def _vhd_util_check(vdi_path):
+    check_cmd = ["vhd-util", "check", "-n", vdi_path, "-p"]
+    out = run_command(check_cmd, ok_exit_codes=[0, 22])
+    first_line = out.splitlines()[0].strip()
+    return out, first_line
+
+
 def _validate_vhd(vdi_path):
     """This checks for several errors in the VHD structure.
 
@@ -229,9 +236,13 @@ def _validate_vhd(vdi_path):
     Dom0's are out-of-sync. This would corrupt the SR if it were imported, so
     generate an exception to bail.
     """
-    check_cmd = ["vhd-util", "check", "-n", vdi_path, "-p"]
-    out = run_command(check_cmd, ok_exit_codes=[0, 22])
-    first_line = out.splitlines()[0].strip()
+    out, first_line = _vhd_util_check(vdi_path)
+
+    if 'invalid' in first_line:
+        LOG.warning("VHD invalid, attempting repair.")
+        repair_cmd = ["vhd-util", "repair", "-n", vdi_path]
+        run_command(repair_cmd)
+        out, first_line = _vhd_util_check(vdi_path)
 
     if 'invalid' in first_line:
         if 'footer' in first_line:
@@ -258,6 +269,8 @@ def _validate_vhd(vdi_path):
             "VDI '%(vdi_path)s' has an invalid %(part)s: '%(details)s'"
             "%(extra)s" % {'vdi_path': vdi_path, 'part': part,
                            'details': details, 'extra': extra})
+
+    LOG.info("VDI is valid: %s" % vdi_path)
 
 
 def _validate_vdi_chain(vdi_path):
