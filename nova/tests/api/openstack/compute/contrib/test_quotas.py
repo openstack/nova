@@ -17,6 +17,7 @@
 import copy
 
 from lxml import etree
+import mock
 import webob
 
 from nova.api.openstack.compute.contrib import quotas as quotas_v2
@@ -371,36 +372,47 @@ class ExtendedQuotasTestV21(BaseQuotaSetsTest):
         else:
             return dict((k, v['limit']) for k, v in self.fake_quotas.items())
 
+    def fake_get_settable_quotas(self, context, project_id, user_id=None):
+        return {
+            'ram': {'minimum': self.fake_quotas['ram']['in_use'] +
+                               self.fake_quotas['ram']['reserved'],
+                    'maximum': -1},
+            'cores': {'minimum': self.fake_quotas['cores']['in_use'] +
+                                 self.fake_quotas['cores']['reserved'],
+                      'maximum': -1},
+            'instances': {'minimum': self.fake_quotas['instances']['in_use'] +
+                                     self.fake_quotas['instances']['reserved'],
+                          'maximum': -1},
+        }
+
     def test_quotas_update_exceed_in_used(self):
+        patcher = mock.patch.object(quota.QUOTAS, 'get_settable_quotas')
+        get_settable_quotas = patcher.start()
 
         body = {'quota_set': {'cores': 10}}
 
-        self.stubs.Set(self.plugin.QuotaSetsController, '_get_quotas',
-                       self.fake_get_quotas)
+        get_settable_quotas.side_effect = self.fake_get_settable_quotas
         req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
                                       use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 'update_me', body=body)
+        mock.patch.stopall()
 
     def test_quotas_force_update_exceed_in_used(self):
-        self.stubs.Set(self.plugin.QuotaSetsController, '_get_quotas',
-                       self.fake_get_quotas)
+        patcher = mock.patch.object(quota.QUOTAS, 'get_settable_quotas')
+        get_settable_quotas = patcher.start()
+        patcher = mock.patch.object(self.plugin.QuotaSetsController,
+                                    '_get_quotas')
+        _get_quotas = patcher.start()
+
+        body = {'quota_set': {'cores': 10, 'force': 'True'}}
+
+        get_settable_quotas.side_effect = self.fake_get_settable_quotas
+        _get_quotas.side_effect = self.fake_get_quotas
         req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
                                       use_admin_context=True)
-
-        expected = {'quota_set': {'ram': 25600, 'instances': 200, 'cores': 10}}
-        expected = self.get_update_expected_response(expected)
-
-        body = {'quota_set': {'ram': 25600,
-                              'instances': 200,
-                              'cores': 10,
-                              'force': 'True'}}
-        self.fake_quotas.get('ram')['limit'] = 25600
-        self.fake_quotas.get('cores')['limit'] = 10
-        self.fake_quotas.get('instances')['limit'] = 200
-
-        res_dict = self.controller.update(req, 'update_me', body=body)
-        self.assertEqual(expected, res_dict)
+        self.controller.update(req, 'update_me', body=body)
+        mock.patch.stopall()
 
 
 class UserQuotasTestV21(BaseQuotaSetsTest):
