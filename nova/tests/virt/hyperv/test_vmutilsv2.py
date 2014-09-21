@@ -135,7 +135,7 @@ class VMUtilsV2TestCase(test_vmutils.VMUtilsTestCase):
     @mock.patch('nova.virt.hyperv.vmutilsv2.VMUtilsV2.check_ret_val')
     @mock.patch('nova.virt.hyperv.vmutilsv2.VMUtilsV2._get_wmi_obj')
     def _test_create_vm_obj(self, mock_get_wmi_obj, mock_check_ret_val,
-                            vm_path):
+                            vm_path, dynamic_memory_ratio=1.0):
         mock_vs_man_svc = mock.MagicMock()
         mock_vs_data = mock.MagicMock()
         mock_job = mock.MagicMock()
@@ -150,9 +150,11 @@ class VMUtilsV2TestCase(test_vmutils.VMUtilsTestCase):
                                                      fake_ret_val)
         mock_job.associators.return_value = ['fake vm path']
 
-        response = self._vmutils._create_vm_obj(vs_man_svc=mock_vs_man_svc,
-                                                vm_name='fake vm',
-                                                notes='fake notes')
+        response = self._vmutils._create_vm_obj(
+            vs_man_svc=mock_vs_man_svc,
+            vm_name='fake vm',
+            notes='fake notes',
+            dynamic_memory_ratio=dynamic_memory_ratio)
 
         if not vm_path:
             mock_job.associators.assert_called_once_with(
@@ -165,6 +167,9 @@ class VMUtilsV2TestCase(test_vmutils.VMUtilsTestCase):
             SystemSettings=mock_vs_data.GetText_(1))
         mock_check_ret_val.assert_called_once_with(fake_ret_val, fake_job_path)
 
+        if dynamic_memory_ratio > 1:
+            self.assertFalse(mock_vs_data.VirtualNumaEnabled)
+
         mock_get_wmi_obj.assert_called_with('fake vm path')
 
         self.assertEqual(mock_vs_data.Notes, 'fake notes')
@@ -175,6 +180,9 @@ class VMUtilsV2TestCase(test_vmutils.VMUtilsTestCase):
 
     def test_create_vm_obj_no_vm_path(self):
         self._test_create_vm_obj(vm_path=None)
+
+    def test_create_vm_obj_dynamic_memory(self):
+        self._test_create_vm_obj(vm_path=None, dynamic_memory_ratio=1.1)
 
     def test_list_instances(self):
         vs = mock.MagicMock()
