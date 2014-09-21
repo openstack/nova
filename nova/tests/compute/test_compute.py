@@ -6891,6 +6891,72 @@ class ComputeTestCase(BaseTestCase):
                 event.EVENT_LIFECYCLE_STOPPED)
         self.compute.handle_events(event_instance)
 
+    @mock.patch.object(objects.Migration, 'get_by_id')
+    @mock.patch.object(objects.Quotas, 'rollback')
+    def test_confirm_resize_roll_back_quota_migration_not_found(self,
+            mock_rollback, mock_get_by_id):
+        instance = self._create_fake_instance_obj()
+
+        migration = objects.Migration()
+        migration.instance_uuid = instance.uuid
+        migration.status = 'finished'
+        migration.id = 0
+
+        mock_get_by_id.side_effect = exception.MigrationNotFound(
+                migration_id=0)
+        self.compute.confirm_resize(self.context, instance=instance,
+                                    migration=migration, reservations=[])
+        self.assertTrue(mock_rollback.called)
+
+    @mock.patch.object(instance_obj.Instance, 'get_by_uuid')
+    @mock.patch.object(objects.Quotas, 'rollback')
+    def test_confirm_resize_roll_back_quota_instance_not_found(self,
+            mock_rollback, mock_get_by_id):
+        instance = self._create_fake_instance_obj()
+
+        migration = objects.Migration()
+        migration.instance_uuid = instance.uuid
+        migration.status = 'finished'
+        migration.id = 0
+
+        mock_get_by_id.side_effect = exception.InstanceNotFound(
+                instance_id=instance.uuid)
+        self.compute.confirm_resize(self.context, instance=instance,
+                                    migration=migration, reservations=[])
+        self.assertTrue(mock_rollback.called)
+
+    @mock.patch.object(objects.Migration, 'get_by_id')
+    @mock.patch.object(objects.Quotas, 'rollback')
+    def test_confirm_resize_roll_back_quota_status_confirmed(self,
+            mock_rollback, mock_get_by_id):
+        instance = self._create_fake_instance_obj()
+
+        migration = objects.Migration()
+        migration.instance_uuid = instance.uuid
+        migration.status = 'confirmed'
+        migration.id = 0
+
+        mock_get_by_id.return_value = migration
+        self.compute.confirm_resize(self.context, instance=instance,
+                                    migration=migration, reservations=[])
+        self.assertTrue(mock_rollback.called)
+
+    @mock.patch.object(objects.Migration, 'get_by_id')
+    @mock.patch.object(objects.Quotas, 'rollback')
+    def test_confirm_resize_roll_back_quota_status_dummy(self,
+            mock_rollback, mock_get_by_id):
+        instance = self._create_fake_instance_obj()
+
+        migration = objects.Migration()
+        migration.instance_uuid = instance.uuid
+        migration.status = 'dummy'
+        migration.id = 0
+
+        mock_get_by_id.return_value = migration
+        self.compute.confirm_resize(self.context, instance=instance,
+                                    migration=migration, reservations=[])
+        self.assertTrue(mock_rollback.called)
+
     def test_allow_confirm_resize_on_instance_in_deleting_task_state(self):
         instance = self._create_fake_instance_obj()
         old_type = flavors.extract_flavor(instance)
