@@ -192,7 +192,10 @@ class Image(object):
         """
         @utils.synchronized(filename, external=True, lock_path=self.lock_path)
         def fetch_func_sync(target, *args, **kwargs):
-            fetch_func(target=target, *args, **kwargs)
+            # The image may have been fetched while a subsequent
+            # call was waiting to obtain the lock.
+            if not os.path.exists(target):
+                fetch_func(target=target, *args, **kwargs)
 
         base_dir = os.path.join(CONF.instances_path,
                                 CONF.image_cache_subdirectory_name)
