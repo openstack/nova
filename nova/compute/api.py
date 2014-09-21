@@ -2166,6 +2166,8 @@ class API(base.Base):
     @check_instance_state(vm_state=set(
                     vm_states.ALLOW_SOFT_REBOOT + vm_states.ALLOW_HARD_REBOOT),
                           task_state=[None, task_states.REBOOTING,
+                                      task_states.REBOOT_PENDING,
+                                      task_states.REBOOT_STARTED,
                                       task_states.REBOOTING_HARD,
                                       task_states.RESUMING,
                                       task_states.UNPAUSING,
@@ -2182,7 +2184,8 @@ class API(base.Base):
                 method='reboot')
         if ((reboot_type == 'SOFT' and
                 instance['task_state'] in
-                (task_states.REBOOTING, task_states.REBOOTING_HARD)) or
+                (task_states.REBOOTING, task_states.REBOOTING_HARD,
+                 task_states.REBOOT_PENDING, task_states.REBOOT_STARTED)) or
             (reboot_type == 'HARD' and
                 instance['task_state'] == task_states.REBOOTING_HARD)):
             raise exception.InstanceInvalidState(
@@ -2193,7 +2196,9 @@ class API(base.Base):
         state = {'SOFT': task_states.REBOOTING,
                  'HARD': task_states.REBOOTING_HARD}[reboot_type]
         instance.task_state = state
-        instance.save(expected_task_state=[None, task_states.REBOOTING])
+        instance.save(expected_task_state=[None, task_states.REBOOTING,
+                                           task_states.REBOOT_PENDING,
+                                           task_states.REBOOT_STARTED])
 
         self._record_action_start(context, instance, instance_actions.REBOOT)
 
