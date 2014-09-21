@@ -26,11 +26,13 @@ from oslo.config import cfg
 from nova import context
 from nova import exception
 from nova import keymgr
+from nova.openstack.common import imageutils
 from nova.openstack.common import units
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests import fake_processutils
 from nova.tests.virt.libvirt import fake_libvirt_utils
+from nova.virt import images
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import rbd_utils
 
@@ -222,7 +224,9 @@ class RawTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.mox.VerifyAll()
 
-    def test_create_image_extend(self):
+    @mock.patch.object(images, 'qemu_img_info',
+                       return_value=imageutils.QemuImgInfo())
+    def test_create_image_extend(self, fake_qemu_img_info):
         fn = self.prepare_mocks()
         fn(max_size=self.SIZE, target=self.TEMPLATE_PATH, image_id=None)
         imagebackend.libvirt_utils.copy_image(self.TEMPLATE_PATH, self.PATH)
@@ -253,7 +257,10 @@ class RawTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.mox.VerifyAll()
 
-    def test_resolve_driver_format(self):
+    @mock.patch.object(images, 'qemu_img_info',
+                       side_effect=exception.InvalidDiskInfo(
+                           reason='invalid path'))
+    def test_resolve_driver_format(self, fake_qemu_img_info):
         image = self.image_class(self.INSTANCE, self.NAME)
         driver_format = image.resolve_driver_format()
         self.assertEqual(driver_format, 'raw')

@@ -12,13 +12,34 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
 
+import mock
+
+from nova import exception
+from nova.openstack.common import processutils
 from nova import test
+from nova import utils
 from nova.virt import images
 
 
 class QemuTestCase(test.NoDBTestCase):
     def test_qemu_info_with_bad_path(self):
-        image_info = images.qemu_img_info("/path/that/does/not/exist")
+        self.assertRaises(exception.InvalidDiskInfo,
+                          images.qemu_img_info,
+                          '/path/that/does/not/exist')
+
+    @mock.patch.object(os.path, 'exists', return_value=True)
+    def test_qemu_info_with_errors(self, path_exists):
+        self.assertRaises(processutils.ProcessExecutionError,
+                          images.qemu_img_info,
+                          '/fake/path')
+
+    @mock.patch.object(os.path, 'exists', return_value=True)
+    @mock.patch.object(utils, 'execute',
+                       return_value=('stdout', None))
+    def test_qemu_info_with_no_errors(self, path_exists,
+                                      utils_execute):
+        image_info = images.qemu_img_info('/fake/path')
         self.assertTrue(image_info)
         self.assertTrue(str(image_info))
