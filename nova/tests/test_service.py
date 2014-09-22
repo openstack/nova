@@ -29,6 +29,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import manager
+from nova.openstack.common import processutils
 from nova.openstack.common import service as _service
 from nova import rpc
 from nova import service
@@ -311,6 +312,21 @@ class TestWSGIService(test.TestCase):
         test_service.start()
         self.assertNotEqual(0, test_service.port)
         test_service.stop()
+
+    def test_workers_set_default(self):
+        test_service = service.WSGIService("osapi_compute")
+        self.assertEqual(test_service.workers, processutils.get_worker_count())
+
+    def test_workers_set_good_user_setting(self):
+        CONF.set_override('osapi_compute_workers', 8)
+        test_service = service.WSGIService("osapi_compute")
+        self.assertEqual(test_service.workers, 8)
+
+    def test_workers_set_zero_user_setting(self):
+        CONF.set_override('osapi_compute_workers', 0)
+        test_service = service.WSGIService("osapi_compute")
+        # If a value less than 1 is used, defaults to number of procs available
+        self.assertEqual(test_service.workers, processutils.get_worker_count())
 
     def test_service_start_with_illegal_workers(self):
         CONF.set_override("osapi_compute_workers", -1)
