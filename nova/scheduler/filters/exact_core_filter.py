@@ -15,7 +15,7 @@
 #    under the License.
 
 
-from nova.i18n import _
+from nova.i18n import _LW
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
 
@@ -33,7 +33,7 @@ class ExactCoreFilter(filters.BaseHostFilter):
 
         if not host_state.vcpus_total:
             # Fail safe
-            LOG.warning(_("VCPUs not set; assuming CPU collection broken"))
+            LOG.warning(_LW("VCPUs not set; assuming CPU collection broken"))
             return False
 
         required_vcpus = instance_type['vcpus']

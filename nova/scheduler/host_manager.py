@@ -26,7 +26,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import db
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LW
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -167,7 +167,7 @@ class HostState(object):
             if name:
                 self.metrics[name] = item
             else:
-                LOG.warn(_("Metric name unknown of %r") % item)
+                LOG.warn(_LW("Metric name unknown of %r"), item)
 
     def update_from_compute_node(self, compute):
         """Update information about a host from its compute_node info."""
@@ -182,8 +182,8 @@ class HostState(object):
         if least_gb is not None:
             if least_gb > free_gb:
                 # can occur when an instance in database is not on host
-                LOG.warn(_("Host has more disk space than database expected"
-                           " (%(physical)sgb > %(database)sgb)") %
+                LOG.warn(_LW("Host has more disk space than database "
+                             "expected (%(physical)sgb > %(database)sgb)"),
                          {'physical': least_gb, 'database': free_gb})
             free_gb = min(least_gb, free_gb)
         free_disk_mb = free_gb * 1024
@@ -395,7 +395,7 @@ class HostManager(object):
         for compute in compute_nodes:
             service = compute['service']
             if not service:
-                LOG.warn(_("No service for compute ID %s") % compute['id'])
+                LOG.warn(_LW("No service for compute ID %s"), compute['id'])
                 continue
             host = service['host']
             node = compute.get('hypervisor_hostname')
