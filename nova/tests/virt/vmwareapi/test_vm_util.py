@@ -466,7 +466,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake_objects = fake.FakeRetrieveResult()
         refs = vm_util.get_all_cluster_refs_by_name(
             fake.FakeObjectRetrievalSession(fake_objects), ['fake_cluster'])
-        self.assertTrue(not refs)
+        self.assertEqual({}, refs)
 
     def test_get_all_cluster_refs_by_name_exists(self):
         fake_objects = fake.FakeRetrieveResult()
@@ -480,7 +480,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake_objects.add_object(partialObject(path='cluster'))
         refs = vm_util.get_all_cluster_refs_by_name(
             fake.FakeObjectRetrievalSession(fake_objects), ['cluster'])
-        self.assertTrue(not refs)
+        self.assertEqual({}, refs)
 
     def test_propset_dict_simple(self):
         ObjectContent = collections.namedtuple('ObjectContent', ['propSet'])
