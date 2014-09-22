@@ -275,8 +275,8 @@ class FloatingIP(object):
                 reservations = None
         except Exception:
             reservations = None
-            LOG.exception(_("Failed to update usages deallocating "
-                            "floating IP"))
+            LOG.exception(_LE("Failed to update usages deallocating "
+                              "floating IP"))
 
         rows_updated = objects.FloatingIP.deallocate(context, address)
         # number of updated rows will be 0 if concurrently another

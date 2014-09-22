@@ -24,7 +24,7 @@ from sqlalchemy.types import NullType
 
 from nova.db.sqlalchemy import api as db
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova.openstack.common import log as logging
 
 
@@ -129,8 +129,8 @@ def create_shadow_table(migrate_engine, table_name=None, table=None,
         # which raises unwrapped OperationalError, so we should catch it until
         # oslo.db would wraps all such exceptions
         LOG.info(repr(shadow_table))
-        LOG.exception(_('Exception while creating table.'))
+        LOG.exception(_LE('Exception while creating table.'))
         raise exception.ShadowTableExists(name=shadow_table_name)
     except Exception:
         LOG.info(repr(shadow_table))
-        LOG.exception(_('Exception while creating table.'))
+        LOG.exception(_LE('Exception while creating table.'))

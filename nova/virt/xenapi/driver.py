@@ -30,7 +30,7 @@ from oslo.serialization import jsonutils
 from oslo.utils import units
 import six.moves.urllib.parse as urlparse
 
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import driver
@@ -138,7 +138,7 @@ class XenAPIDriver(driver.ComputeDriver):
         try:
             vm_utils.cleanup_attached_vdis(self._session)
         except Exception:
-            LOG.exception(_('Failure while cleaning up attached VDIs'))
+            LOG.exception(_LE('Failure while cleaning up attached VDIs'))
 
     def instance_exists(self, instance):
         """Checks existence of an instance on the host.

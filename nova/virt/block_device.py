@@ -20,6 +20,7 @@ from oslo.utils import excutils
 
 from nova import block_device
 from nova.i18n import _
+from nova.i18n import _LE
 from nova.i18n import _LI
 from nova import objects
 from nova.objects import base as obj_base
@@ -253,8 +254,8 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                         device_type=self['device_type'], encryption=encryption)
             except Exception:  # pylint: disable=W0702
                 with excutils.save_and_reraise_exception():
-                    LOG.exception(_("Driver failed to attach volume "
-                                    "%(volume_id)s at %(mountpoint)s"),
+                    LOG.exception(_LE("Driver failed to attach volume "
+                                      "%(volume_id)s at %(mountpoint)s"),
                                   {'volume_id': volume_id,
                                    'mountpoint': self['mount_device']},
                                   context=context, instance=instance)

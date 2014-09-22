@@ -1418,7 +1418,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
             virt_dom.attachDeviceFlags(conf.to_xml(), flags)
         except Exception as ex:
-            LOG.exception(_('Failed to attach volume at mountpoint: %s'),
+            LOG.exception(_LE('Failed to attach volume at mountpoint: %s'),
                           mountpoint, instance=instance)
             if isinstance(ex, libvirt.libvirtError):
                 errcode = ex.get_error_code()

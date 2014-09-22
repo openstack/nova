@@ -54,7 +54,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 body).get('security_group')
         except n_exc.NeutronClientException as e:
             exc_info = sys.exc_info()
-            LOG.exception(_("Neutron Error creating security group %s"),
+            LOG.exception(_LE("Neutron Error creating security group %s"),
                           name)
             if e.status_code == 401:
                 # TODO(arosen) Cannot raise generic response from neutron here
@@ -75,7 +75,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 security_group['id'], body).get('security_group')
         except n_exc.NeutronClientException as e:
             exc_info = sys.exc_info()
-            LOG.exception(_("Neutron Error updating security group %s"),
+            LOG.exception(_LE("Neutron Error updating security group %s"),
                           name)
             if e.status_code == 401:
                 # TODO(arosen) Cannot raise generic response from neutron here
@@ -159,7 +159,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 'security_groups')
         except n_exc.NeutronClientException:
             with excutils.save_and_reraise_exception():
-                LOG.exception(_("Neutron Error getting security groups"))
+                LOG.exception(_LE("Neutron Error getting security groups"))
         converted_rules = []
         for security_group in security_groups:
             converted_rules.append(
@@ -205,15 +205,15 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         except n_exc.NeutronClientException as e:
             exc_info = sys.exc_info()
             if e.status_code == 404:
-                LOG.exception(_("Neutron Error getting security group %s"),
+                LOG.exception(_LE("Neutron Error getting security group %s"),
                               name)
                 self.raise_not_found(six.text_type(e))
             elif e.status_code == 409:
-                LOG.exception(_("Neutron Error adding rules to security "
-                                "group %s"), name)
+                LOG.exception(_LE("Neutron Error adding rules to security "
+                                  "group %s"), name)
                 self.raise_over_quota(six.text_type(e))
             else:
-                LOG.exception(_("Neutron Error:"))
+                LOG.exception(_LE("Neutron Error:"))
                 raise exc_info[0], exc_info[1], exc_info[2]
         converted_rules = []
         for rule in rules:
@@ -267,7 +267,8 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 neutron.delete_security_group_rule(rule_ids.pop())
         except n_exc.NeutronClientException:
             with excutils.save_and_reraise_exception():
-                LOG.exception(_("Neutron Error unable to delete %s"), rule_ids)
+                LOG.exception(_LE("Neutron Error unable to delete %s"),
+                              rule_ids)
 
     def get_rule(self, context, id):
         neutron = neutronv2.get_client(context)
@@ -411,14 +412,14 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                         'project': context.project_id})
                 self.raise_not_found(msg)
             else:
-                LOG.exception(_("Neutron Error:"))
+                LOG.exception(_LE("Neutron Error:"))
                 raise exc_info[0], exc_info[1], exc_info[2]
         params = {'device_id': instance['uuid']}
         try:
             ports = neutron.list_ports(**params).get('ports')
         except n_exc.NeutronClientException:
             with excutils.save_and_reraise_exception():
-                LOG.exception(_("Neutron Error:"))
+                LOG.exception(_LE("Neutron Error:"))
 
         if not ports:
             msg = (_("instance_id %s could not be found as device id on"
@@ -444,7 +445,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 neutron.update_port(port['id'], {'port': updated_port})
             except Exception:
                 with excutils.save_and_reraise_exception():
-                    LOG.exception(_("Neutron Error:"))
+                    LOG.exception(_LE("Neutron Error:"))
 
     @compute_api.wrap_check_security_groups_policy
     def remove_from_instance(self, context, instance, security_group_name):
@@ -464,14 +465,14 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                         'project': context.project_id})
                 self.raise_not_found(msg)
             else:
-                LOG.exception(_("Neutron Error:"))
+                LOG.exception(_LE("Neutron Error:"))
                 raise exc_info[0], exc_info[1], exc_info[2]
         params = {'device_id': instance['uuid']}
         try:
             ports = neutron.list_ports(**params).get('ports')
         except n_exc.NeutronClientException:
             with excutils.save_and_reraise_exception():
-                LOG.exception(_("Neutron Error:"))
+                LOG.exception(_LE("Neutron Error:"))
 
         if not ports:
             msg = (_("instance_id %s could not be found as device id on"
@@ -500,7 +501,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 found_security_group = True
             except Exception:
                 with excutils.save_and_reraise_exception():
-                    LOG.exception(_("Neutron Error:"))
+                    LOG.exception(_LE("Neutron Error:"))
         if not found_security_group:
             msg = (_("Security group %(security_group_name)s not associated "
                      "with the instance %(instance)s") %

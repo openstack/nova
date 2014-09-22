@@ -20,7 +20,7 @@ from sqlalchemy import ForeignKey, Index, Integer, MetaData, String, Table
 from sqlalchemy import Text
 from sqlalchemy.types import NullType
 
-from nova.i18n import _
+from nova.i18n import _LE
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
@@ -81,7 +81,7 @@ def _create_shadow_tables(migrate_engine):
             shadow_table.create()
         except Exception:
             LOG.info(repr(shadow_table))
-            LOG.exception(_('Exception while creating table.'))
+            LOG.exception(_LE('Exception while creating table.'))
             raise
 
 
@@ -108,7 +108,7 @@ def _populate_instance_types(instance_types_table):
                         'is_public': True})
     except Exception:
         LOG.info(repr(instance_types_table))
-        LOG.exception(_('Exception while seeding instance_types table'))
+        LOG.exception(_LE('Exception while seeding instance_types table'))
         raise
 
 
@@ -1100,7 +1100,7 @@ def upgrade(migrate_engine):
             table.create()
         except Exception:
             LOG.info(repr(table))
-            LOG.exception(_('Exception while creating table.'))
+            LOG.exception(_LE('Exception while creating table.'))
             raise
 
     # task log unique constraint

@@ -202,7 +202,7 @@ class _BaseMessage(object):
         except Exception as exc:
             resp_value = sys.exc_info()
             failure = True
-            LOG.exception(_("Error processing message locally: %(exc)s"),
+            LOG.exception(_LE("Error processing message locally: %(exc)s"),
                           {'exc': exc})
         return Response(self.routing_path, resp_value, failure)
 
@@ -407,7 +407,7 @@ class _TargetedMessage(_BaseMessage):
             next_hop = self._get_next_hop()
         except Exception as exc:
             exc_info = sys.exc_info()
-            LOG.exception(_("Error locating next hop for message: %(exc)s"),
+            LOG.exception(_LE("Error locating next hop for message: %(exc)s"),
                           {'exc': exc})
             return self._send_response_from_exception(exc_info)
 
@@ -513,7 +513,7 @@ class _BroadcastMessage(_BaseMessage):
             next_hops = self._get_next_hops()
         except Exception as exc:
             exc_info = sys.exc_info()
-            LOG.exception(_("Error locating next hops for message: %(exc)s"),
+            LOG.exception(_LE("Error locating next hops for message: %(exc)s"),
                           {'exc': exc})
             return self._send_response_from_exception(exc_info)
 
@@ -533,7 +533,7 @@ class _BroadcastMessage(_BaseMessage):
             # Error just trying to send to cells.  Send a single response
             # with the failure.
             exc_info = sys.exc_info()
-            LOG.exception(_("Error sending message to next hops: %(exc)s"),
+            LOG.exception(_LE("Error sending message to next hops: %(exc)s"),
                           {'exc': exc})
             self._cleanup_response_queue()
             return self._send_response_from_exception(exc_info)

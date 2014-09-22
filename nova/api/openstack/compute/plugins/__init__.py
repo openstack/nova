@@ -14,7 +14,7 @@
 
 
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ class LoadedExtensionInfo(object):
                       ' '.join(extension.__doc__.strip().split()))
             LOG.debug('Ext version: %i', extension.version)
         except AttributeError as ex:
-            LOG.exception(_("Exception loading extension: %s"), ex)
+            LOG.exception(_LE("Exception loading extension: %s"), ex)
             return False
 
         return True

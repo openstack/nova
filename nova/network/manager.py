@@ -977,8 +977,8 @@ class NetworkManager(manager.Manager):
             quotas.reserve(context, fixed_ips=-1, project_id=quota_project,
                            user_id=quota_user)
         except Exception:
-            LOG.exception(_("Failed to update usages deallocating "
-                            "fixed IP"))
+            LOG.exception(_LE("Failed to update usages deallocating "
+                              "fixed IP"))
 
         try:
             self._do_trigger_security_group_members_refresh_for_instance(

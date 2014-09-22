@@ -60,7 +60,7 @@ from nova.compute import vm_states
 import nova.context
 from nova.db.sqlalchemy import models
 from nova import exception
-from nova.i18n import _, _LI
+from nova.i18n import _, _LI, _LE
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova import quota
@@ -844,8 +844,8 @@ def floating_ip_bulk_destroy(context, ips):
                                     project_id=project_id)
             except Exception:
                 with excutils.save_and_reraise_exception():
-                    LOG.exception(_("Failed to update usages bulk "
-                                    "deallocating floating IP"))
+                    LOG.exception(_LE("Failed to update usages bulk "
+                                      "deallocating floating IP"))
 
 
 @require_context

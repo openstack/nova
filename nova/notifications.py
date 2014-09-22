@@ -28,7 +28,7 @@ import six
 from nova.compute import flavors
 import nova.context
 from nova import db
-from nova.i18n import _
+from nova.i18n import _LE
 from nova.image import glance
 from nova import network
 from nova.network import model as network_model
@@ -146,7 +146,7 @@ def send_update(context, old_instance, new_instance, service=None, host=None):
                     service=service, host=host,
                     old_display_name=old_display_name)
         except Exception:
-            LOG.exception(_("Failed to send state update notification"),
+            LOG.exception(_LE("Failed to send state update notification"),
                     instance=new_instance)
 
 
@@ -185,7 +185,7 @@ def send_update_with_states(context, instance, old_vm_state, new_vm_state,
                     new_vm_state=new_vm_state, new_task_state=new_task_state,
                     service=service, host=host)
         except Exception:
-            LOG.exception(_("Failed to send state update notification"),
+            LOG.exception(_LE("Failed to send state update notification"),
                     instance=instance)
 
 
@@ -289,7 +289,7 @@ def bandwidth_usage(instance_ref, audit_start,
         except Exception:
             try:
                 with excutils.save_and_reraise_exception():
-                    LOG.exception(_('Failed to get nw_info'),
+                    LOG.exception(_LE('Failed to get nw_info'),
                                   instance=instance_ref)
             except Exception:
                 if ignore_missing_network_data:

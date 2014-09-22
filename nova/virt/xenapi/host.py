@@ -105,8 +105,8 @@ class Host(object):
 
                     break
                 except self._session.XenAPI.Failure:
-                    LOG.exception(_('Unable to migrate VM %(vm_ref)s '
-                                    'from %(host)s'),
+                    LOG.exception(_LE('Unable to migrate VM %(vm_ref)s '
+                                      'from %(host)s'),
                                   {'vm_ref': vm_ref, 'host': host})
                     instance.host = host
                     instance.vm_state = vm_states.ACTIVE
@@ -309,7 +309,7 @@ def call_xenhost(session, method, arg_dict):
             return ''
         return jsonutils.loads(result)
     except ValueError:
-        LOG.exception(_("Unable to get updated status"))
+        LOG.exception(_LE("Unable to get updated status"))
         return None
     except session.XenAPI.Failure as e:
         LOG.error(_LE("The call to %(method)s returned "

@@ -41,6 +41,7 @@ Nova Specific Commandments
 - [N326] Translated messages cannot be concatenated.  String should be included in translated message.
 - [N327] assert_called_once() is not a valid method
 - [N328] Validate that LOG.info messages use _LI.
+- [N329] Validate that LOG.exception messages use _LE.
 
 Creating Unit Tests
 -------------------

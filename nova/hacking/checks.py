@@ -56,9 +56,11 @@ asse_equal_start_with_none_re = re.compile(
                            r"assertEqual\(None,")
 conf_attribute_set_re = re.compile(r"CONF\.[a-z0-9_.]+\s*=\s*\w")
 log_translation = re.compile(
-    r"(.)*LOG\.(audit|error|warn|warning|critical|exception)\(\s*('|\")")
+    r"(.)*LOG\.(audit|error|warn|warning|critical)\(\s*('|\")")
 log_translation_info = re.compile(
     r"(.)*LOG\.(info)\(\s*(_\(|'|\")")
+log_translation_exception = re.compile(
+    r"(.)*LOG\.(exception)\(\s*(_\(|'|\")")
 translated_log = re.compile(
     r"(.)*LOG\.(audit|error|info|warn|warning|critical|exception)"
     "\(\s*_\(\s*('|\")")
@@ -302,6 +304,9 @@ def validate_log_translations(logical_line, physical_line, filename):
         return
     msg = "N328: LOG.info messages require translations `_LI()`!"
     if log_translation_info.match(logical_line):
+        yield (0, msg)
+    msg = "N329: LOG.exception messages require translations `_LE()`!"
+    if log_translation_exception.match(logical_line):
         yield (0, msg)
     msg = "N321: Log messages require translations!"
     if log_translation.match(logical_line):

@@ -31,7 +31,7 @@ from nova.cells import rpc_driver
 from nova import context
 from nova.db import base
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _LE
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova import rpc
@@ -176,7 +176,7 @@ class CellStateManager(base.Base):
                 attempts += 1
                 if attempts > 120:
                     raise
-                LOG.exception(_('DB error: %s') % e)
+                LOG.exception(_LE('DB error: %s'), e)
                 time.sleep(30)
 
         my_cell_capabs = {}

@@ -30,7 +30,7 @@ from nova.compute import vm_states
 from nova import conductor
 from nova.db import base
 from nova import exception
-from nova.i18n import _, _LE, _LI
+from nova.i18n import _LE, _LI
 from nova import objects
 from nova.objects import base as obj_base
 from nova.openstack.common import log as logging
@@ -195,8 +195,8 @@ class CellsScheduler(base.Base):
                         build_inst_kwargs)
                 return
             except Exception:
-                LOG.exception(_("Couldn't communicate with cell '%s'") %
-                        target_cell.name)
+                LOG.exception(_LE("Couldn't communicate with cell '%s'"),
+                              target_cell.name)
         # FIXME(comstud): Would be nice to kick this back up so that
         # the parent cell could retry, if we had a parent.
         LOG.error(_LE("Couldn't communicate with any cells"))
@@ -242,7 +242,7 @@ class CellsScheduler(base.Base):
                     time.sleep(sleep_time)
                     continue
         except Exception:
-            LOG.exception(_("Error scheduling instances %(instance_uuids)s"),
+            LOG.exception(_LE("Error scheduling instances %(instance_uuids)s"),
                           {'instance_uuids': instance_uuids})
             ctxt = message.ctxt
             for instance_uuid in instance_uuids:
