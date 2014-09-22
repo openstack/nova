@@ -2824,30 +2824,6 @@ class LibvirtDriver(driver.ComputeDriver):
         utils.mkfs('swap', target)
 
     @staticmethod
-    def _create_configdrive(target, instance, admin_pass, files,
-                            network_info, max_size=None):
-        extra_md = {}
-        if admin_pass:
-            extra_md['admin_pass'] = admin_pass
-
-        inst_md = instance_metadata.InstanceMetadata(instance,
-            content=files, extra_md=extra_md,
-            network_info=network_info)
-
-        with configdrive.ConfigDriveBuilder(
-                instance_md=inst_md) as cdb:
-            LOG.info(_LI('Creating config drive at %(path)s'),
-                    {'path': target}, instance=instance)
-
-            try:
-                cdb.make_drive(target)
-            except processutils.ProcessExecutionError as e:
-                with excutils.save_and_reraise_exception():
-                    LOG.error(_LE('Creating config drive failed '
-                                'with error: %s'),
-                            e, instance=instance)
-
-    @staticmethod
     def _get_console_log_path(instance):
         return os.path.join(libvirt_utils.get_instance_path(instance),
                             'console.log')
@@ -3088,15 +3064,36 @@ class LibvirtDriver(driver.ComputeDriver):
         # Config drive
         if configdrive.required_by(instance):
             LOG.info(_LI('Using config drive'), instance=instance)
+            extra_md = {}
+            if admin_pass:
+                extra_md['admin_pass'] = admin_pass
 
-            image_type = self._get_configdrive_image_type()
-            backend = image('disk.config', image_type)
-            backend.cache(fetch_func=self._create_configdrive,
-                          filename='disk.config' + suffix,
-                          instance=instance,
-                          admin_pass=admin_pass,
-                          files=files,
-                          network_info=network_info)
+            inst_md = instance_metadata.InstanceMetadata(instance,
+                content=files, extra_md=extra_md, network_info=network_info)
+            with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
+                configdrive_path = self._get_disk_config_path(instance, suffix)
+                LOG.info(_LI('Creating config drive at %(path)s'),
+                         {'path': configdrive_path}, instance=instance)
+
+                try:
+                    cdb.make_drive(configdrive_path)
+                except processutils.ProcessExecutionError as e:
+                    with excutils.save_and_reraise_exception():
+                        LOG.error(_LE('Creating config drive failed '
+                                      'with error: %s'),
+                                  e, instance=instance)
+
+                def dummy_fetch_func(target, *args, **kwargs):
+                    # NOTE(sileht): this is never called because the
+                    # the target have already been created by
+                    # cdb.make_drive call
+                    pass
+
+                image_type = self._get_configdrive_image_type()
+                backend = image('disk.config', image_type)
+                backend.cache(fetch_func=dummy_fetch_func,
+                              context=context,
+                              filename='disk.config' + suffix)
 
         # File injection only if needed
         elif inject_files and CONF.libvirt.inject_partition != -2:
