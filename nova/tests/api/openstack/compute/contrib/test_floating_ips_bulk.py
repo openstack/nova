@@ -24,10 +24,10 @@ from nova.tests.api.openstack import fakes
 CONF = cfg.CONF
 
 
-class FloatingIPBulk(test.TestCase):
+class FloatingIpsBulk(test.TestCase):
 
     def setUp(self):
-        super(FloatingIPBulk, self).setUp()
+        super(FloatingIpsBulk, self).setUp()
 
         self.context = context.get_admin_context()
         self.controller = floating_ips_bulk.FloatingIPBulkController()
