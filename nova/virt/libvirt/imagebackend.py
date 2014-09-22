@@ -362,8 +362,8 @@ class Raw(Image):
             data = images.qemu_img_info(self.path)
             return data.file_format
         except exception.InvalidDiskInfo as e:
-            LOG.info(_LI('Failed to get image info from %(path)s, '
-                          'error was %(error)s'),
+            LOG.info(_LI('Failed to get image info from path %(path)s; '
+                         'error: %(error)s'),
                       {'path': self.path,
                        'error': e})
             return 'raw'
