@@ -148,7 +148,16 @@ class FilterScheduler(driver.Scheduler):
 
         # Couldn't fulfill the request_spec
         if len(selected_hosts) < num_instances:
-            raise exception.NoValidHost(reason='')
+            # Log the details but don't put those into the reason since
+            # we don't want to give away too much information about our
+            # actual environment.
+            LOG.debug('There are %(hosts)d hosts available but '
+                      '%(num_instances)d instances requested to build.',
+                      {'hosts': len(selected_hosts),
+                       'num_instances': num_instances})
+
+            reason = _('There are not enough hosts available.')
+            raise exception.NoValidHost(reason=reason)
 
         dests = [dict(host=host.obj.host, nodename=host.obj.nodename,
                       limits=host.obj.limits) for host in selected_hosts]
