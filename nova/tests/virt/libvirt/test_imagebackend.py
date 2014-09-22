@@ -37,6 +37,7 @@ from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import rbd_utils
 
 CONF = cfg.CONF
+CONF.import_opt('fixed_key', 'nova.keymgr.conf_key_mgr', group='keymgr')
 
 
 class _ImageTestCase(object):
@@ -672,7 +673,7 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
         self.assertEqual(fake_processutils.fake_execute_get_log(), [])
 
 
-class EncryptedLvmTestCase(_ImageTestCase, test.TestCase):
+class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
     VG = 'FakeVG'
     TEMPLATE_SIZE = 512
     SIZE = 1024
