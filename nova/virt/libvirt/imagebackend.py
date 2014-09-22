@@ -584,10 +584,10 @@ class Lvm(Image):
         except Exception:
             with excutils.save_and_reraise_exception():
                 if self.ephemeral_key_uuid is None:
-                    lvm.remove_volumes(path)
+                    lvm.remove_volumes([path])
                 else:
                     dmcrypt.delete_volume(path.rpartition('/')[2])
-                    lvm.remove_volumes(self.lv_path)
+                    lvm.remove_volumes([self.lv_path])
 
     def snapshot_extract(self, target, out_format):
         images.convert_image(self.path, target, out_format,
