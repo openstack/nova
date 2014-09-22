@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 import webob.exc
 
 from nova.api.openstack.compute.contrib import agents as agents_v2
@@ -212,6 +213,13 @@ class AgentsTestV21(test.NoDBTestCase):
         req = FakeRequest()
         self.controller.delete(req, 1)
 
+    def test_agents_delete_with_id_not_found(self):
+        with mock.patch.object(db, 'agent_build_destroy',
+            side_effect=exception.AgentBuildNotFound(id=1)):
+            req = FakeRequest()
+            self.assertRaises(webob.exc.HTTPNotFound,
+                              self.controller.delete, req, 1)
+
     def test_agents_list(self):
         req = FakeRequest()
         res_dict = self.controller.index(req)
@@ -327,6 +335,16 @@ class AgentsTestV21(test.NoDBTestCase):
 
     def test_agents_update_with_invalid_length_md5hash(self):
         self._test_agents_update_with_invalid_length('md5hash')
+
+    def test_agents_update_with_id_not_found(self):
+        with mock.patch.object(db, 'agent_build_update',
+            side_effect=exception.AgentBuildNotFound(id=1)):
+            req = FakeRequest()
+            body = {'para': {'version': '7.0',
+                    'url': 'http://example.com/path/to/resource',
+                    'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
+            self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.update, req, 1, body=body)
 
 
 class AgentsTestV2(AgentsTestV21):
