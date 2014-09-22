@@ -20,7 +20,7 @@ from nova import utils
 from nova.virt.libvirt import dmcrypt
 
 
-class LibvirtDmcryptTestCase(test.TestCase):
+class LibvirtDmcryptTestCase(test.NoDBTestCase):
     def setUp(self):
         super(LibvirtDmcryptTestCase, self).setUp()
 
