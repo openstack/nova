@@ -3463,7 +3463,6 @@ class LibvirtDriver(driver.ComputeDriver):
                     devices.append(disklocal)
                     instance.default_ephemeral_device = (
                         block_device.prepend_dev(disklocal.target_dev))
-                    instance.save()
 
                 for idx, eph in enumerate(
                     driver.block_device_info_get_ephemerals(
@@ -3482,7 +3481,6 @@ class LibvirtDriver(driver.ComputeDriver):
                     devices.append(diskswap)
                     instance.default_swap_device = (
                         block_device.prepend_dev(diskswap.target_dev))
-                    instance.save()
 
             if 'disk.config' in disk_mapping:
                 image_type = self._get_configdrive_image_type()
@@ -3842,7 +3840,6 @@ class LibvirtDriver(driver.ComputeDriver):
             # NOTE(yamahata):
             # for nova.api.ec2.cloud.CloudController.get_metadata()
             instance.root_device_name = root_device_name
-            instance.save()
 
         guest.os_type = vm_mode.get_from_instance(instance)
 
@@ -4295,8 +4292,6 @@ class LibvirtDriver(driver.ComputeDriver):
             # Save rootfs device to disconnect it when deleting the instance
             if rootfs_dev:
                 instance.system_metadata['rootfs_device_name'] = rootfs_dev
-                instance.save()
-
             if CONF.libvirt.uid_maps or CONF.libvirt.gid_maps:
                 id_maps = self._get_guest_idmaps()
                 libvirt_utils.chown_for_id_maps(container_dir, id_maps)
