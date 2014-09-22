@@ -8148,27 +8148,27 @@ class ComputeAPITestCase(BaseTestCase):
 
         # get all instances
         instances = self.compute_api.get_all(c,
-                search_opts={'metadata': {}})
+                search_opts={'metadata': u"{}"})
         self.assertEqual(len(instances), 5)
 
         # wrong key/value combination
         instances = self.compute_api.get_all(c,
-                search_opts={'metadata': {'key1': 'value3'}})
+                search_opts={'metadata': u'{"key1": "value3"}'})
         self.assertEqual(len(instances), 0)
 
         # non-existing keys
         instances = self.compute_api.get_all(c,
-                search_opts={'metadata': {'key5': 'value1'}})
+                search_opts={'metadata': u'{"key5": "value1"}'})
         self.assertEqual(len(instances), 0)
 
         # find existing instance
         instances = self.compute_api.get_all(c,
-                search_opts={'metadata': {'key2': 'value2'}})
+                search_opts={'metadata': u'{"key2": "value2"}'})
         self.assertEqual(len(instances), 1)
         self.assertEqual(instances[0]['uuid'], instance2['uuid'])
 
         instances = self.compute_api.get_all(c,
-                search_opts={'metadata': {'key3': 'value3'}})
+                search_opts={'metadata': u'{"key3": "value3"}'})
         self.assertEqual(len(instances), 2)
         instance_uuids = [instance['uuid'] for instance in instances]
         self.assertIn(instance3['uuid'], instance_uuids)
@@ -8176,15 +8176,14 @@ class ComputeAPITestCase(BaseTestCase):
 
         # multiple criteria as a dict
         instances = self.compute_api.get_all(c,
-                search_opts={'metadata': {'key3': 'value3',
-                                          'key4': 'value4'}})
+            search_opts={'metadata': u'{"key3": "value3","key4": "value4"}'})
         self.assertEqual(len(instances), 1)
         self.assertEqual(instances[0]['uuid'], instance4['uuid'])
 
         # multiple criteria as a list
         instances = self.compute_api.get_all(c,
-                search_opts={'metadata': [{'key4': 'value4'},
-                                          {'key3': 'value3'}]})
+            search_opts=
+                {'metadata': u'[{"key4": "value4"},{"key3": "value3"}]'})
         self.assertEqual(len(instances), 1)
         self.assertEqual(instances[0]['uuid'], instance4['uuid'])
 
@@ -8193,6 +8192,19 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(c, instance2['uuid'])
         db.instance_destroy(c, instance3['uuid'])
         db.instance_destroy(c, instance4['uuid'])
+
+    def test_get_all_by_system_metadata(self):
+        # Test searching instances by system metadata.
+
+        c = context.get_admin_context()
+        instance1 = self._create_fake_instance({
+                'system_metadata': {'key1': 'value1'}})
+
+        # find existing instance
+        instances = self.compute_api.get_all(c,
+                search_opts={'system_metadata': u'{"key1": "value1"}'})
+        self.assertEqual(len(instances), 1)
+        self.assertEqual(instances[0]['uuid'], instance1['uuid'])
 
     def test_all_instance_metadata(self):
         self._create_fake_instance({'metadata': {'key1': 'value1'},
