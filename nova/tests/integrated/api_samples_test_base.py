@@ -197,7 +197,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             if isinstance(expected, six.string_types):
                 # NOTE(danms): Ignore whitespace in this comparison
                 expected = expected.strip()
-                result = result.strip()
+                if isinstance(result, six.string_types):
+                    result = result.strip()
             if expected != result:
                 raise NoMatch(
                         _('Values do not match:\n'
