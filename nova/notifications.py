@@ -335,6 +335,9 @@ def info_from_instance(context, instance_ref, network_info,
     def null_safe_str(s):
         return str(s) if s else ''
 
+    def null_safe_int(s):
+        return int(s) if s else ''
+
     def null_safe_isotime(s):
         if isinstance(s, datetime.datetime):
             return timeutils.strtime(s)
@@ -381,6 +384,7 @@ def info_from_instance(context, instance_ref, network_info,
         host=instance_ref['host'],
         node=instance_ref['node'],
         availability_zone=instance_ref['availability_zone'],
+        cell_name=null_safe_str(instance_ref['cell_name']),
 
         # Date properties
         created_at=str(instance_ref['created_at']),
@@ -400,6 +404,7 @@ def info_from_instance(context, instance_ref, network_info,
         # Status properties
         state=instance_ref['vm_state'],
         state_description=null_safe_str(instance_ref.get('task_state')),
+        progress=null_safe_int(instance_ref['progress']),
 
         # accessIPs
         access_ip_v4=instance_ref['access_ip_v4'],

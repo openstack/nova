@@ -285,6 +285,34 @@ class NotificationsTestCase(test.TestCase):
         self.assertEqual(self.net_info[0]['address'],
                          info["fixed_ips"][0]["vif_mac"])
 
+    def test_payload_has_cell_name_empty(self):
+        info = notifications.info_from_instance(self.context, self.instance,
+                                                  self.net_info, None)
+        self.assertIn("cell_name", info)
+        self.assertIsNone(self.instance['cell_name'])
+        self.assertEqual("", info["cell_name"])
+
+    def test_payload_has_cell_name(self):
+        self.instance['cell_name'] = "cell1"
+        info = notifications.info_from_instance(self.context, self.instance,
+                                                  self.net_info, None)
+        self.assertIn("cell_name", info)
+        self.assertEqual("cell1", info["cell_name"])
+
+    def test_payload_has_progress_empty(self):
+        info = notifications.info_from_instance(self.context, self.instance,
+                                                  self.net_info, None)
+        self.assertIn("progress", info)
+        self.assertIsNone(self.instance['progress'])
+        self.assertEqual("", info["progress"])
+
+    def test_payload_has_progress(self):
+        self.instance['progress'] = 50
+        info = notifications.info_from_instance(self.context, self.instance,
+                                                  self.net_info, None)
+        self.assertIn("progress", info)
+        self.assertEqual(50, info["progress"])
+
     def test_send_access_ip_update(self):
         notifications.send_update(self.context, self.instance, self.instance)
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
