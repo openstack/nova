@@ -46,6 +46,18 @@ class IronicHostManagerTestCase(test.NoDBTestCase):
         super(IronicHostManagerTestCase, self).setUp()
         self.host_manager = ironic_host_manager.IronicHostManager()
 
+    def test_manager_public_api_signatures(self):
+        self.assertPublicAPISignatures(host_manager.HostManager(),
+                                       self.host_manager)
+
+    def test_state_public_api_signatures(self):
+        self.assertPublicAPISignatures(
+            host_manager.HostState("dummy",
+                                   "dummy"),
+            ironic_host_manager.IronicNodeState("dummy",
+                                                "dummy")
+        )
+
     def test_get_all_host_states(self):
         # Ensure .service is set and we have the values we expect to.
         context = 'fake_context'

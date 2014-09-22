@@ -28,6 +28,18 @@ class BaremetalHostManagerTestCase(test.NoDBTestCase):
         super(BaremetalHostManagerTestCase, self).setUp()
         self.host_manager = baremetal_host_manager.BaremetalHostManager()
 
+    def test_manager_public_api_signatures(self):
+        self.assertPublicAPISignatures(host_manager.HostManager(),
+                                       self.host_manager)
+
+    def test_state_public_api_signatures(self):
+        self.assertPublicAPISignatures(
+            host_manager.HostState("dummy",
+                                   "dummy"),
+            baremetal_host_manager.BaremetalNodeState("dummy",
+                                                      "dummy")
+        )
+
     @mock.patch.object(baremetal_host_manager.BaremetalNodeState, '__init__')
     def test_create_baremetal_node_state(self, init_mock):
         init_mock.return_value = None
