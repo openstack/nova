@@ -665,6 +665,18 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
 
+    def test_spawn_root_size_0(self):
+        self._create_vm(instance_type='m1.micro')
+        info = self.conn.get_info({'uuid': self.uuid,
+                                   'node': self.instance_node})
+        self._check_vm_info(info, power_state.RUNNING)
+        cache = ('[%s] vmware_base/%s/%s.vmdk' %
+                 (self.ds, 'fake_image_uuid', 'fake_image_uuid'))
+        gb_cache = ('[%s] vmware_base/%s/%s.0.vmdk' %
+                    (self.ds, 'fake_image_uuid', 'fake_image_uuid'))
+        self.assertTrue(vmwareapi_fake.get_file(cache))
+        self.assertFalse(vmwareapi_fake.get_file(gb_cache))
+
     def _spawn_with_delete_exception(self, fault=None):
 
         def fake_call_method(module, method, *args, **kwargs):
