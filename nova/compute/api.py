@@ -1885,6 +1885,9 @@ class API(base.Base):
                 sort_key, sort_dir, limit=limit, marker=marker,
                 expected_attrs=expected_attrs)
 
+        if 'ip6' in filters or 'ip' in filters:
+            inst_models = self._ip_filter(inst_models, filters)
+
         if want_objects:
             return inst_models
 
@@ -1895,18 +1898,29 @@ class API(base.Base):
 
         return instances
 
+    @staticmethod
+    def _ip_filter(inst_models, filters):
+        ipv4_f = re.compile(str(filters.get('ip')))
+        ipv6_f = re.compile(str(filters.get('ip6')))
+        result_objs = []
+        for instance in inst_models:
+            nw_info = compute_utils.get_nw_info_for_instance(instance)
+            for vif in nw_info:
+                for fixed_ip in vif.fixed_ips():
+                    address = fixed_ip.get('address')
+                    if not address:
+                        continue
+                    version = fixed_ip.get('version')
+                    if ((version == 4 and ipv4_f.match(address)) or
+                        (version == 6 and ipv6_f.match(address))):
+                        result_objs.append(instance)
+                        continue
+        return instance_obj.InstanceList(objects=result_objs)
+
     def _get_instances_by_filters(self, context, filters,
                                   sort_key, sort_dir,
                                   limit=None,
                                   marker=None, expected_attrs=None):
-        if 'ip6' in filters or 'ip' in filters:
-            res = self.network_api.get_instance_uuids_by_ip_filter(context,
-                                                                   filters)
-            # NOTE(jkoelker) It is possible that we will get the same
-            #                instance uuid twice (one for ipv4 and ipv6)
-            uuids = set([r['instance_uuid'] for r in res])
-            filters['uuid'] = uuids
-
         fields = ['metadata', 'system_metadata', 'info_cache',
                   'security_groups']
         if expected_attrs:
