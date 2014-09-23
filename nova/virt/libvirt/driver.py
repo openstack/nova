@@ -4538,7 +4538,7 @@ class LibvirtDriver(driver.ComputeDriver):
             return self._vcpu_total
 
         available_ids = hardware.get_vcpu_pin_set()
-        if available_ids[-1] >= total_pcpus:
+        if sorted(available_ids)[-1] >= total_pcpus:
             raise exception.Invalid(_("Invalid vcpu_pin_set config, "
                                       "out of hypervisor cpu range."))
         self._vcpu_total = len(available_ids)

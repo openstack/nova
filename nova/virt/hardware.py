@@ -39,7 +39,7 @@ LOG = logging.getLogger(__name__)
 def get_vcpu_pin_set():
     """Parsing vcpu_pin_set config.
 
-    Returns a list of pcpu ids can be used by instances.
+    Returns a set of pcpu ids can be used by instances.
     """
     if not CONF.vcpu_pin_set:
         return None
@@ -48,7 +48,7 @@ def get_vcpu_pin_set():
     if not cpuset_ids:
         raise exception.Invalid(_("No CPUs available after parsing %r") %
                                 CONF.vcpu_pin_set)
-    return sorted(cpuset_ids)
+    return cpuset_ids
 
 
 def parse_cpu_spec(spec):
