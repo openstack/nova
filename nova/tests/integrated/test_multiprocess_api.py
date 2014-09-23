@@ -163,6 +163,7 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
             try:
                 os.kill(worker_pid, 0)
                 time.sleep(0.1)
+                LOG.info("Worker: %s still around, trying again" % worker_pid)
             except OSError as err:
                 # by watching specifically for errno.ESRCH
                 # we guarantee this loop continues until
@@ -171,6 +172,7 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
                 # for several cycles in case a parent process
                 # needs to check their exit state.
                 if err.errno == errno.ESRCH:
+                    LOG.info("Worker: %s successfully shut down" % worker_pid)
                     break
                 LOG.warning("got non-ESRCH errno %d when attempting "
                             "status of worker PID %d",
