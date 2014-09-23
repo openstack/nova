@@ -195,8 +195,6 @@ class ExtensionManager(object):
             return
 
         alias = ext.alias
-        LOG.audit(_('Loaded extension: %s'), alias)
-
         if alias in self.extensions:
             raise exception.NovaException("Found duplicate extension: %s"
                                           % alias)
