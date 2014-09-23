@@ -708,7 +708,7 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
         nfs_cmd = ['mount', '-t', 'nfs']
         if CONF.libvirt.nfs_mount_options is not None:
             nfs_cmd.extend(['-o', CONF.libvirt.nfs_mount_options])
-        if options is not None:
+        if options:
             nfs_cmd.extend(options.split(' '))
         nfs_cmd.extend([nfs_share, mount_path])
 
