@@ -1174,8 +1174,16 @@ class FakeVim(object):
         """Creates and registers a VM object with the Host System."""
         config_spec = kwargs.get("config")
         pool = kwargs.get('pool')
+        name = config_spec.name
 
         vm_path = ds_util.DatastorePath.parse(config_spec.files.vmPathName)
+        # Fill in the default path to the vmx file if we were only given a
+        # datastore. Note that if you create a VM with vmPathName '[foo]', when
+        # you retrieve vmPathName it will be '[foo] uuid/uuid.vmx'. Hence we
+        # use vm_path below for the stored value of vmPathName.
+        if vm_path.rel_path == '':
+            vm_path = vm_path.join(name, name + '.vmx')
+
         for key, value in _db_content["Datastore"].iteritems():
             if value.get('summary.name') == vm_path.datastore:
                 ds = key
@@ -1189,11 +1197,11 @@ class FakeVim(object):
                 devices.append(device_change.device)
 
         host = _db_content["HostSystem"].keys()[0]
-        vm_dict = {"name": config_spec.name,
+        vm_dict = {"name": name,
                   "ds": [ds],
                   "runtime_host": host,
                   "powerstate": "poweredOff",
-                  "vmPathName": config_spec.files.vmPathName,
+                  "vmPathName": str(vm_path),
                   "numCpu": config_spec.numCPUs,
                   "mem": config_spec.memoryMB,
                   "extra_config": config_spec.extraConfig,
