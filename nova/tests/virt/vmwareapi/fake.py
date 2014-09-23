@@ -962,8 +962,6 @@ def _add_file(file_path):
 
 def _remove_file(file_path):
     """Removes a file reference from the db."""
-    if _db_content.get("files") is None:
-        raise exception.NoFilesFound()
     # Check if the remove is for a single file object or for a folder
     if file_path.find(".vmdk") != -1:
         if file_path not in _db_content.get("files"):
@@ -991,8 +989,6 @@ def fake_get_network(*args, **kwargs):
 
 def get_file(file_path):
     """Check if file exists in the db."""
-    if _db_content.get("files") is None:
-        raise exception.NoFilesFound()
     return file_path in _db_content.get("files")
 
 
@@ -1308,8 +1304,6 @@ class FakeVim(object):
         """Searches the datastore for a file."""
         # TODO(garyk): add support for spec parameter
         ds_path = kwargs.get("datastorePath")
-        if _db_content.get("files", None) is None:
-            raise exception.NoFilesFound()
         matched_files = set()
         # Check if we are searching for a file or a directory
         directory = False
@@ -1373,8 +1367,6 @@ class FakeVim(object):
     def _make_dir(self, method, *args, **kwargs):
         """Creates a directory in the datastore."""
         ds_path = kwargs.get("name")
-        if _db_content.get("files", None) is None:
-            raise exception.NoFilesFound()
         if get_file(ds_path):
             raise vexc.FileAlreadyExistsException()
         _db_content["files"].append('%s/' % ds_path)
