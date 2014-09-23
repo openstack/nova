@@ -34,7 +34,7 @@ import six
 import six.moves.urllib.parse as urlparse
 
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LW
 import nova.image.download as image_xfers
 
 
@@ -210,7 +210,13 @@ class GlanceClientWrapper(object):
         retry_excs = (glanceclient.exc.ServiceUnavailable,
                 glanceclient.exc.InvalidEndpoint,
                 glanceclient.exc.CommunicationError)
-        num_attempts = 1 + CONF.glance.num_retries
+        retries = CONF.glance.num_retries
+        if retries < 0:
+            LOG.warning(_LW("Treating negative config value (%(retries)s) for "
+                            "'glance.num_retries' as 0."),
+                        {'retries': retries})
+            retries = 0
+        num_attempts = retries + 1
 
         for attempt in xrange(1, num_attempts + 1):
             client = self.client or self._create_onetime_client(context,
