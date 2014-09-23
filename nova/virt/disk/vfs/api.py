@@ -13,7 +13,7 @@
 # under the License.
 
 from nova import exception
-from nova.i18n import _LW
+from nova.i18n import _LI
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 
@@ -63,7 +63,7 @@ class VFS(object):
                 # check for capabilities.
                 raise
             else:
-                LOG.warn(_LW("Unable to import guestfs"
+                LOG.info(_LI("Unable to import guestfs"
                              "falling back to VFSLocalFS"))
 
         return importutils.import_object(
