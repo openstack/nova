@@ -113,7 +113,9 @@ class IronicClientWrapper(object):
         retry_excs = (ironic.exc.ServiceUnavailable,
                       ironic.exc.ConnectionRefused,
                       ironic.exc.Conflict)
-        num_attempts = CONF.ironic.api_max_retries
+        # num_attempts should be the times of retry + 1
+        # eg. retry==0 just means  run once and no retry
+        num_attempts = max(0, CONF.ironic.api_max_retries) + 1
 
         for attempt in range(1, num_attempts + 1):
             client = self._get_client()
