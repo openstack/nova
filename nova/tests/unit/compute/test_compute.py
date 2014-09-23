@@ -6268,6 +6268,36 @@ class ComputeTestCase(BaseTestCase):
         for instance in unrescued_instances.values():
             self.assertTrue(instance)
 
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    def test_poll_rebooting_instances(self, get):
+        reboot_timeout = 60
+        updated_at = timeutils.utcnow() - datetime.timedelta(minutes=5)
+        to_poll = [objects.Instance(uuid='fake_uuid1',
+                                         task_state=task_states.REBOOTING,
+                                         updated_at=updated_at),
+                   objects.Instance(uuid='fake_uuid2',
+                                         task_state=task_states.REBOOT_STARTED,
+                                         updated_at=updated_at),
+                   objects.Instance(uuid='fake_uuid3',
+                                         task_state=task_states.REBOOT_PENDING,
+                                         updated_at=updated_at)]
+        self.flags(reboot_timeout=reboot_timeout)
+        get.return_value = to_poll
+        ctxt = context.get_admin_context()
+
+        with (mock.patch.object(
+            self.compute.driver, 'poll_rebooting_instances'
+        )) as mock_poll:
+            self.compute._poll_rebooting_instances(ctxt)
+            mock_poll.assert_called_with(reboot_timeout, to_poll)
+
+        filters = {'host': 'fake-mini',
+                   'task_state': [
+                       task_states.REBOOTING, task_states.REBOOT_STARTED,
+                       task_states.REBOOT_PENDING]}
+        get.assert_called_once_with(ctxt, filters,
+                                    expected_attrs=[], use_slave=True)
+
     def test_poll_unconfirmed_resizes(self):
         instances = [
             fake_instance.fake_db_instance(uuid='fake_uuid1',

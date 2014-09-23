@@ -5438,7 +5438,10 @@ class ComputeManager(manager.Manager):
     @periodic_task.periodic_task
     def _poll_rebooting_instances(self, context):
         if CONF.reboot_timeout > 0:
-            filters = {'task_state': task_states.REBOOTING,
+            filters = {'task_state':
+                       [task_states.REBOOTING,
+                        task_states.REBOOT_STARTED,
+                        task_states.REBOOT_PENDING],
                        'host': self.host}
             rebooting = objects.InstanceList.get_by_filters(
                 context, filters, expected_attrs=[], use_slave=True)
