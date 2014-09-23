@@ -189,6 +189,34 @@ def send_update_with_states(context, instance, old_vm_state, new_vm_state,
                     instance=instance)
 
 
+def _compute_states_payload(instance, old_vm_state=None,
+            old_task_state=None, new_vm_state=None, new_task_state=None):
+    # If the states were not specified we assume the current instance
+    # states are the correct information. This is important to do for
+    # both old and new states because otherwise we create some really
+    # confusing nofications like:
+    #
+    #   None(None) => Building(none)
+    #
+    # When we really were just continuing to build
+    if new_vm_state is None:
+        new_vm_state = instance["vm_state"]
+    if new_task_state is None:
+        new_task_state = instance["task_state"]
+    if old_vm_state is None:
+        old_vm_state = instance["vm_state"]
+    if old_task_state is None:
+        old_task_state = instance["task_state"]
+
+    states_payload = {
+        "old_state": old_vm_state,
+        "state": new_vm_state,
+        "old_task_state": old_task_state,
+        "new_task_state": new_task_state,
+    }
+    return states_payload
+
+
 def _send_instance_update_notification(context, instance, old_vm_state=None,
             old_task_state=None, new_vm_state=None, new_task_state=None,
             service="compute", host=None, old_display_name=None):
@@ -198,19 +226,11 @@ def _send_instance_update_notification(context, instance, old_vm_state=None,
 
     payload = info_from_instance(context, instance, None, None)
 
-    if not new_vm_state:
-        new_vm_state = instance["vm_state"]
-    if not new_task_state:
-        new_task_state = instance["task_state"]
-
-    states_payload = {
-        "old_state": old_vm_state,
-        "state": new_vm_state,
-        "old_task_state": old_task_state,
-        "new_task_state": new_task_state,
-    }
-
-    payload.update(states_payload)
+    # determine how we'll report states
+    payload.update(
+        _compute_states_payload(
+            instance, old_vm_state, old_task_state,
+            new_vm_state, new_task_state))
 
     # add audit fields:
     (audit_start, audit_end) = audit_period_bounds(current_period=True)
