@@ -2021,6 +2021,8 @@ class ComputeManager(manager.Manager):
                         instance=instance)
                     self._cleanup_allocated_networks(context, instance,
                         requested_networks)
+                    compute_utils.add_instance_fault_from_exc(context,
+                            instance, e, sys.exc_info())
                     self._set_instance_error_state(context, instance)
                     return
                 retry['exc'] = traceback.format_exception(*sys.exc_info())
@@ -2049,8 +2051,10 @@ class ComputeManager(manager.Manager):
                         requested_networks)
                 self._cleanup_volumes(context, instance.uuid,
                         block_device_mapping, raise_exc=False)
+                compute_utils.add_instance_fault_from_exc(context, instance,
+                        e, sys.exc_info())
                 self._set_instance_error_state(context, instance)
-            except Exception:
+            except Exception as e:
                 # Should not reach here.
                 msg = _LE('Unexpected build failure, not rescheduling build.')
                 LOG.exception(msg, instance=instance)
@@ -2058,6 +2062,8 @@ class ComputeManager(manager.Manager):
                         requested_networks)
                 self._cleanup_volumes(context, instance.uuid,
                         block_device_mapping, raise_exc=False)
+                compute_utils.add_instance_fault_from_exc(context, instance,
+                        e, sys.exc_info())
                 self._set_instance_error_state(context, instance)
 
         do_build_and_run_instance(context, instance, image, request_spec,
