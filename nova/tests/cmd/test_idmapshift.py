@@ -13,11 +13,11 @@
 # limitations under the License.
 
 import argparse
-import unittest
 
 import mock
 
 from nova.cmd import idmapshift
+from nova import test
 
 
 def join_side_effect(root, *args):
@@ -34,7 +34,7 @@ class FakeStat(object):
         self.st_gid = gid
 
 
-class BaseTestCase(unittest.TestCase):
+class BaseTestCase(test.NoDBTestCase):
     def __init__(self, *args, **kwargs):
         super(BaseTestCase, self).__init__(*args, **kwargs)
         self.uid_maps = [(0, 10000, 10), (10, 20000, 1000)]
@@ -180,7 +180,7 @@ class ShiftDirTestCase(BaseTestCase):
         mock_shift_path.assert_has_calls(shift_path_calls)
 
 
-class ConfirmPathTestCase(unittest.TestCase):
+class ConfirmPathTestCase(test.NoDBTestCase):
     @mock.patch('os.lstat')
     def test_confirm_path(self, mock_lstat):
         uid_ranges = [(1000, 1999)]
@@ -256,6 +256,7 @@ class ConfirmPathTestCase(unittest.TestCase):
 
 class ConfirmDirTestCase(BaseTestCase):
     def setUp(self):
+        super(ConfirmDirTestCase, self).setUp()
         self.uid_map_ranges = idmapshift.get_ranges(self.uid_maps)
         self.gid_map_ranges = idmapshift.get_ranges(self.gid_maps)
 
@@ -353,7 +354,7 @@ class ConfirmDirTestCase(BaseTestCase):
         mock_confirm_path.assert_has_calls(confirm_path_calls)
 
 
-class IDMapTypeTestCase(unittest.TestCase):
+class IDMapTypeTestCase(test.NoDBTestCase):
     def test_id_map_type(self):
         result = idmapshift.id_map_type("1:1:1,2:2:2")
         self.assertEqual([(1, 1, 1), (2, 2, 2)], result)
