@@ -271,7 +271,7 @@ class TestCase(testtools.TestCase):
             level = logging.INFO
 
         # Collect logs
-        fs = '%(levelname)s [%(name)s] %(message)s'
+        fs = '%(asctime)s %(levelname)s [%(name)s] %(message)s'
         self.useFixture(fixtures.FakeLogger(format=fs, level=None))
         root.handlers[0].setLevel(level)
 
