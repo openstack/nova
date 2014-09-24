@@ -301,7 +301,6 @@ class ResourceTracker(object):
             notifier.info(context, 'compute.metrics.update', metrics_info)
         return metrics
 
-    @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def update_available_resource(self, context):
         """Override in-memory calculations of compute node resource usage based
         on data audited from the hypervisor layer.
@@ -330,6 +329,10 @@ class ResourceTracker(object):
 
         self._report_hypervisor_resource_view(resources)
 
+        return self._update_available_resource(context, resources)
+
+    @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
+    def _update_available_resource(self, context, resources):
         if 'pci_passthrough_devices' in resources:
             if not self.pci_tracker:
                 self.pci_tracker = pci_manager.PciDevTracker()
