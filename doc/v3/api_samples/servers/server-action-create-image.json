@@ -1,5 +1,5 @@
 {
-    "create_image" : {
+    "createImage" : {
         "name" : "foo-image",
         "metadata": {
             "meta_var": "meta_val"
