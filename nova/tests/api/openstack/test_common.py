@@ -430,6 +430,16 @@ class MiscFunctionsTest(test.TestCase):
                 expected = 'RESIZE'
                 self.assertEqual(expected, actual)
 
+    def test_status_rebuild_from_state(self):
+        for vm_state in (vm_states.ACTIVE, vm_states.STOPPED,
+                         vm_states.ERROR):
+            for task_state in (task_states.REBUILDING,
+                               task_states.REBUILD_BLOCK_DEVICE_MAPPING,
+                               task_states.REBUILD_SPAWNING):
+                actual = common.status_from_state(vm_state, task_state)
+                expected = 'REBUILD'
+                self.assertEqual(expected, actual)
+
     def test_task_and_vm_state_from_status(self):
         fixture1 = ['reboot']
         actual = common.task_and_vm_state_from_status(fixture1)
