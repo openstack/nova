@@ -2667,6 +2667,66 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         except Exception as e:
             self.assertEqual(test_exception, e)
 
+    @mock.patch('nova.network.model.NetworkInfoAsyncWrapper.wait')
+    @mock.patch(
+        'nova.compute.manager.ComputeManager._build_networks_for_instance')
+    @mock.patch('nova.objects.Instance.save')
+    def test_build_resources_instance_not_found_before_yield(
+            self, mock_save, mock_build_network, mock_info_wait):
+        mock_build_network.return_value = self.network_info
+        expected_exc = exception.InstanceNotFound(
+            instance_id=self.instance.uuid)
+        mock_save.side_effect = expected_exc
+        try:
+            with self.compute._build_resources(self.context, self.instance,
+                    self.requested_networks, self.security_groups,
+                    self.image, self.block_device_mapping):
+                raise
+        except Exception as e:
+            self.assertEqual(expected_exc, e)
+        mock_build_network.assert_called_once_with(self.context, self.instance,
+                self.requested_networks, self.security_groups)
+        mock_info_wait.assert_called_once_with(do_raise=False)
+
+    @mock.patch('nova.network.model.NetworkInfoAsyncWrapper.wait')
+    @mock.patch(
+        'nova.compute.manager.ComputeManager._build_networks_for_instance')
+    @mock.patch('nova.objects.Instance.save')
+    def test_build_resources_unexpected_task_error_before_yield(
+            self, mock_save, mock_build_network, mock_info_wait):
+        mock_build_network.return_value = self.network_info
+        mock_save.side_effect = exception.UnexpectedTaskStateError(
+            expected='', actual='')
+        try:
+            with self.compute._build_resources(self.context, self.instance,
+                    self.requested_networks, self.security_groups,
+                    self.image, self.block_device_mapping):
+                raise
+        except exception.BuildAbortException:
+            pass
+        mock_build_network.assert_called_once_with(self.context, self.instance,
+                self.requested_networks, self.security_groups)
+        mock_info_wait.assert_called_once_with(do_raise=False)
+
+    @mock.patch('nova.network.model.NetworkInfoAsyncWrapper.wait')
+    @mock.patch(
+        'nova.compute.manager.ComputeManager._build_networks_for_instance')
+    @mock.patch('nova.objects.Instance.save')
+    def test_build_resources_exception_before_yield(
+            self, mock_save, mock_build_network, mock_info_wait):
+        mock_build_network.return_value = self.network_info
+        mock_save.side_effect = Exception()
+        try:
+            with self.compute._build_resources(self.context, self.instance,
+                    self.requested_networks, self.security_groups,
+                    self.image, self.block_device_mapping):
+                raise
+        except exception.BuildAbortException:
+            pass
+        mock_build_network.assert_called_once_with(self.context, self.instance,
+                self.requested_networks, self.security_groups)
+        mock_info_wait.assert_called_once_with(do_raise=False)
+
     def test_build_resources_aborts_on_cleanup_failure(self):
         self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
         self.mox.StubOutWithMock(self.compute, '_shutdown_instance')

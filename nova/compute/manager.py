@@ -2172,7 +2172,7 @@ class ComputeManager(manager.Manager):
     def _build_resources(self, context, instance, requested_networks,
             security_groups, image, block_device_mapping):
         resources = {}
-
+        network_info = None
         try:
             network_info = self._build_networks_for_instance(context, instance,
                     requested_networks, security_groups)
@@ -2207,13 +2207,22 @@ class ComputeManager(manager.Manager):
             resources['block_device_info'] = block_device_info
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError):
-            raise
+            with excutils.save_and_reraise_exception() as ctxt:
+                # Make sure the async call finishes
+                if network_info is not None:
+                    network_info.wait(do_raise=False)
         except exception.UnexpectedTaskStateError as e:
+            # Make sure the async call finishes
+            if network_info is not None:
+                network_info.wait(do_raise=False)
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=e.format_message())
         except Exception:
             LOG.exception(_LE('Failure prepping block device'),
                     instance=instance)
+            # Make sure the async call finishes
+            if network_info is not None:
+                network_info.wait(do_raise=False)
             msg = _('Failure prepping block device.')
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=msg)
