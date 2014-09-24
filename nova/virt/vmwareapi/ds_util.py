@@ -124,6 +124,10 @@ class DatastorePath(object):
             return "[%s] %s" % (self._datastore_name, self.rel_path)
         return "[%s]" % self._datastore_name
 
+    def __repr__(self):
+        return "%s(%s, %s)" % (self.__class__.__name__,
+                               self.datastore, self.rel_path)
+
     @property
     def datastore(self):
         return self._datastore_name
