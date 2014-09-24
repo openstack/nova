@@ -1209,8 +1209,7 @@ class LibvirtConnTestCase(test.TestCase):
                 mock.patch.object(
                     conn, "_get_host_capabilities", return_value=caps),
                 mock.patch.object(
-                        random, 'choice',
-                        return_value=caps.host.topology.cells[0])):
+                        random, 'choice', side_effect=lambda cells: cells[0])):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
             self.assertEqual(set([0, 1]), cfg.cpuset)
             self.assertIsNone(cfg.cputune)
@@ -1239,11 +1238,47 @@ class LibvirtConnTestCase(test.TestCase):
                     conn, "_get_host_capabilities", return_value=caps),
                 mock.patch.object(
                     hardware, 'get_vcpu_pin_set', return_value=set([3])),
-                mock.patch.object(
-                        random, 'choice',
-                        return_value=caps.host.topology.cells[0])):
+                mock.patch.object(random, 'choice')
+            ) as (get_by_id_mock, get_host_cap_mock,
+                  get_vcpu_pin_set_mock, choice_mock):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+            self.assertFalse(choice_mock.called)
             self.assertEqual(set([3]), cfg.cpuset)
+            self.assertIsNone(cfg.cputune)
+            self.assertIsNone(cfg.cpu.numa)
+
+    def test_get_guest_config_numa_host_instance_fit_w_cpu_pinset(self):
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        flavor = objects.Flavor(memory_mb=1, vcpus=2, root_gb=496,
+                                ephemeral_gb=8128, swap=33550336, name='fake',
+                                extra_specs={})
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "x86_64"
+        caps.host.topology = self._fake_caps_numa_topology()
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        with contextlib.nested(
+                mock.patch.object(
+                    objects.Flavor, "get_by_id", return_value=flavor),
+                mock.patch.object(
+                    conn, "_get_host_capabilities", return_value=caps),
+                mock.patch.object(
+                    hardware, 'get_vcpu_pin_set', return_value=set([2, 3])),
+                mock.patch.object(
+                    random, 'choice', side_effect=lambda cells: cells[0])
+                ) as (get_by_id_mock, get_host_cap_mock,
+                        get_vcpu_pin_set_mock, choice_mock):
+            cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+            # NOTE(ndipanov): we make sure that pin_set was taken into account
+            # when choosing viable cells
+            choice_mock.assert_called_once_with([set([2, 3])])
+            self.assertEqual(set([2, 3]), cfg.cpuset)
             self.assertIsNone(cfg.cputune)
             self.assertIsNone(cfg.cpu.numa)
 
