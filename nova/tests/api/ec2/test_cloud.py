@@ -2233,8 +2233,8 @@ class CloudTestCase(test.TestCase):
                         {'instanceId': 'i-00000001',
                          'previousState': {'code': 16,
                                            'name': 'running'},
-                         'currentState': {'code': 80,
-                                           'name': 'stopped'}}]}
+                         'currentState': {'code': 64,
+                                           'name': 'stopping'}}]}
         result = self.cloud.stop_instances(self.context, [instance_id])
         self.assertEqual(result, expected)
 
@@ -2242,8 +2242,8 @@ class CloudTestCase(test.TestCase):
                         {'instanceId': 'i-00000001',
                          'previousState': {'code': 80,
                                            'name': 'stopped'},
-                         'currentState': {'code': 16,
-                                           'name': 'running'}}]}
+                         'currentState': {'code': 0,
+                                           'name': 'pending'}}]}
         result = self.cloud.start_instances(self.context, [instance_id])
         self.assertEqual(result, expected)
 
@@ -2251,8 +2251,8 @@ class CloudTestCase(test.TestCase):
                         {'instanceId': 'i-00000001',
                          'previousState': {'code': 16,
                                            'name': 'running'},
-                         'currentState': {'code': 80,
-                                           'name': 'stopped'}}]}
+                         'currentState': {'code': 64,
+                                           'name': 'stopping'}}]}
         result = self.cloud.stop_instances(self.context, [instance_id])
         self.assertEqual(result, expected)
 
@@ -2278,8 +2278,8 @@ class CloudTestCase(test.TestCase):
                         {'instanceId': 'i-00000001',
                          'previousState': {'code': 80,
                                            'name': 'stopped'},
-                         'currentState': {'code': 16,
-                                           'name': 'running'}}]}
+                         'currentState': {'code': 0,
+                                           'name': 'pending'}}]}
         result = self.cloud.start_instances(self.context, [instance_id])
         self.assertEqual(result, expected)
 
@@ -2319,8 +2319,8 @@ class CloudTestCase(test.TestCase):
                         {'instanceId': 'i-00000001',
                          'previousState': {'code': 16,
                                            'name': 'running'},
-                         'currentState': {'code': 80,
-                                           'name': 'stopped'}}]}
+                         'currentState': {'code': 64,
+                                           'name': 'stopping'}}]}
         result = self.cloud.stop_instances(self.context, [instance_id])
         self.assertEqual(result, expected)
 
@@ -2426,8 +2426,8 @@ class CloudTestCase(test.TestCase):
                         {'instanceId': 'i-00000001',
                          'previousState': {'code': 16,
                                            'name': 'running'},
-                         'currentState': {'code': 80,
-                                           'name': 'stopped'}}]}
+                         'currentState': {'code': 64,
+                                           'name': 'stopping'}}]}
         result = self.cloud.stop_instances(self.context, [inst1])
         self.assertEqual(result, expected)
 

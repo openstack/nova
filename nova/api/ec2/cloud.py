@@ -1072,7 +1072,7 @@ class CloudController(object):
             i['instanceId'] = ec2_id
             i['previousState'] = _state_description(previous_state['vm_state'],
                                         previous_state['shutdown_terminate'])
-            i['currentState'] = _state_description(vm_states.STOPPED, True)
+            i['currentState'] = _state_description(inst_state.STOPPING, True)
             instances_set.append(i)
         return {'instancesSet': instances_set}
 
@@ -1083,7 +1083,7 @@ class CloudController(object):
             i['instanceId'] = ec2_id
             i['previousState'] = _state_description(previous_state['vm_state'],
                                         previous_state['shutdown_terminate'])
-            i['currentState'] = _state_description(vm_states.ACTIVE, True)
+            i['currentState'] = _state_description(None, True)
             instances_set.append(i)
         return {'instancesSet': instances_set}
 
