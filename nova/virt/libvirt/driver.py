@@ -5351,13 +5351,40 @@ class LibvirtDriver(driver.ComputeDriver):
                 old_xml_str = dom.XMLDesc(migratable_flag)
                 new_xml_str = self._correct_listen_addr(old_xml_str,
                                                         listen_addrs)
-
-                dom.migrateToURI2(CONF.libvirt.live_migration_uri % dest,
-                                  None,
-                                  new_xml_str,
-                                  logical_sum,
-                                  None,
-                                  CONF.libvirt.live_migration_bandwidth)
+                try:
+                    dom.migrateToURI2(CONF.libvirt.live_migration_uri % dest,
+                                      None,
+                                      new_xml_str,
+                                      logical_sum,
+                                      None,
+                                      CONF.libvirt.live_migration_bandwidth)
+                except libvirt.libvirtError as ex:
+                    # NOTE(mriedem): There is a bug in older versions of
+                    # libvirt where the VIR_DOMAIN_XML_MIGRATABLE flag causes
+                    # virDomainDefCheckABIStability to not compare the source
+                    # and target domain xml's correctly for the CPU model.
+                    # We try to handle that error here and attempt the legacy
+                    # migrateToURI path, which could fail if the console
+                    # addresses are not correct, but in that case we have the
+                    # _check_graphics_addresses_can_live_migrate check in place
+                    # to catch it.
+                    # TODO(mriedem): Remove this workaround when
+                    # Red Hat BZ #1141838 is closed.
+                    error_code = ex.get_error_code()
+                    if error_code == libvirt.VIR_ERR_CONFIG_UNSUPPORTED:
+                        LOG.warn(_LW('An error occurred trying to live '
+                                     'migrate. Falling back to legacy live '
+                                     'migrate flow. Error: %s'), ex,
+                                 instance=instance)
+                        self._check_graphics_addresses_can_live_migrate(
+                            listen_addrs)
+                        dom.migrateToURI(
+                            CONF.libvirt.live_migration_uri % dest,
+                            logical_sum,
+                            None,
+                            CONF.libvirt.live_migration_bandwidth)
+                    else:
+                        raise
 
         except Exception as e:
             with excutils.save_and_reraise_exception():
