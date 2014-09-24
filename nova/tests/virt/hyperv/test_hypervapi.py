@@ -229,6 +229,8 @@ class HyperVAPIBaseTestCase(test.NoDBTestCase):
                                   'get_device_number_for_target')
         self._mox.StubOutWithMock(basevolumeutils.BaseVolumeUtils,
                                   'get_target_from_disk_path')
+        self._mox.StubOutWithMock(basevolumeutils.BaseVolumeUtils,
+                                  'get_target_lun_count')
 
         self._mox.StubOutWithMock(volumeutils.VolumeUtils,
                                   'login_storage_target')
@@ -639,6 +641,10 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         self._mox.VerifyAll()
 
     def _setup_destroy_mocks(self, destroy_disks=True):
+        fake_volume_drives = ['fake_volume_drive']
+        fake_target_iqn = 'fake_target_iqn'
+        fake_target_lun = 'fake_target_lun'
+
         m = vmutils.VMUtils.vm_exists(mox.Func(self._check_instance_name))
         m.AndReturn(True)
 
@@ -648,9 +654,15 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         self._setup_delete_vm_log_mocks()
 
         m = vmutils.VMUtils.get_vm_storage_paths(func)
-        m.AndReturn(([], []))
+        m.AndReturn(([], fake_volume_drives))
 
         vmutils.VMUtils.destroy_vm(func)
+
+        m = self._conn._volumeops.get_target_from_disk_path(
+            fake_volume_drives[0])
+        m.AndReturn((fake_target_iqn, fake_target_lun))
+
+        self._mock_logout_storage_target(fake_target_iqn)
 
         if destroy_disks:
             m = fake.PathUtils.get_instance_dir(mox.IsA(str),
@@ -678,11 +690,16 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
     def test_live_migration_with_volumes(self):
         self._test_live_migration(with_volumes=True)
 
+    def test_live_migration_with_multiple_luns_per_target(self):
+        self._test_live_migration(with_volumes=True,
+                                  other_luns_available=True)
+
     def test_live_migration_with_target_failure(self):
         self._test_live_migration(test_failure=True)
 
     def _test_live_migration(self, test_failure=False,
                              with_volumes=False,
+                             other_luns_available=False,
                              unsupported_os=False):
         dest_server = 'fake_server'
 
@@ -700,7 +717,7 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
 
         if with_volumes:
             fake_target_iqn = 'fake_target_iqn'
-            fake_target_lun = 1
+            fake_target_lun_count = 1
 
         if not unsupported_os:
             m = fake.PathUtils.get_vm_console_log_paths(mox.IsA(str))
@@ -725,10 +742,12 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
                 m.AndRaise(vmutils.HyperVException('Simulated failure'))
 
             if with_volumes:
-                m.AndReturn([(fake_target_iqn, fake_target_lun)])
-                volumeutils.VolumeUtils.logout_storage_target(fake_target_iqn)
+                m.AndReturn({fake_target_iqn: fake_target_lun_count})
+
+                self._mock_logout_storage_target(fake_target_iqn,
+                                                 other_luns_available)
             else:
-                m.AndReturn([])
+                m.AndReturn({})
 
         self._mox.ReplayAll()
         try:
@@ -1349,7 +1368,7 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
                                                    fake_mounted_disk,
                                                    fake_device_number)
 
-        volumeutils.VolumeUtils.logout_storage_target(target_iqn)
+        self._mock_logout_storage_target(target_iqn)
 
     def test_attach_volume_logout(self):
         instance_data = self._get_instance_data()
@@ -1386,7 +1405,8 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         self.assertRaises(vmutils.HyperVException, self._conn.attach_volume,
                           None, connection_info, instance_data, mount_point)
 
-    def _mock_detach_volume(self, target_iqn, target_lun):
+    def _mock_detach_volume(self, target_iqn, target_lun,
+                            other_luns_available=False):
         fake_mounted_disk = "fake_mounted_disk"
         fake_device_number = 0
         m = volumeutils.VolumeUtils.get_device_number_for_target(target_iqn,
@@ -1399,9 +1419,18 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
 
         vmutils.VMUtils.detach_vm_disk(mox.IsA(str), fake_mounted_disk)
 
-        volumeutils.VolumeUtils.logout_storage_target(mox.IsA(str))
+        self._mock_logout_storage_target(target_iqn, other_luns_available)
 
-    def test_detach_volume(self):
+    def _mock_logout_storage_target(self, target_iqn,
+                                    other_luns_available=False):
+
+        m = volumeutils.VolumeUtils.get_target_lun_count(target_iqn)
+        m.AndReturn(1 + int(other_luns_available))
+
+        if not other_luns_available:
+            volumeutils.VolumeUtils.logout_storage_target(target_iqn)
+
+    def _test_detach_volume(self, other_luns_available=False):
         instance_data = self._get_instance_data()
         self.assertIn('name', instance_data)
 
@@ -1414,11 +1443,17 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
 
         mount_point = '/dev/sdc'
 
-        self._mock_detach_volume(target_iqn, target_lun)
-
+        self._mock_detach_volume(target_iqn, target_lun, other_luns_available)
         self._mox.ReplayAll()
         self._conn.detach_volume(connection_info, instance_data, mount_point)
         self._mox.VerifyAll()
+
+    def test_detach_volume(self):
+        self._test_detach_volume()
+
+    def test_detach_volume_multiple_luns_per_target(self):
+        # The iSCSI target should not be disconnected in this case.
+        self._test_detach_volume(other_luns_available=True)
 
     def test_boot_from_volume(self):
         block_device_info = db_fakes.get_fake_block_device_info(
