@@ -48,7 +48,6 @@ CONF.import_opt('ssl_only', 'nova.cmd.novnc')
 CONF.import_opt('source_is_ipv6', 'nova.cmd.novnc')
 CONF.import_opt('cert', 'nova.cmd.novnc')
 CONF.import_opt('key', 'nova.cmd.novnc')
-CONF.import_opt('web', 'nova.cmd.novnc')
 
 
 def exit_with_error(msg, errno=-1):
@@ -61,11 +60,6 @@ def main():
 
     if CONF.ssl_only and not os.path.exists(CONF.cert):
         exit_with_error("SSL only and %s not found" % CONF.cert)
-
-    # Check to see if tty html/js/css files are present
-    if not os.path.exists(CONF.web):
-        exit_with_error("Can not find serial terminal "
-                        "html/js files at %s." % CONF.web)
 
     logging.setup("nova")
     gmr.TextGuruMeditation.setup_autorun(version)
@@ -82,7 +76,6 @@ def main():
         daemon=CONF.daemon,
         record=CONF.record,
         traffic=CONF.verbose and not CONF.daemon,
-        web=CONF.web,
         file_only=True,
         RequestHandlerClass=websocketproxy.NovaProxyRequestHandler)
     server.start_server()
