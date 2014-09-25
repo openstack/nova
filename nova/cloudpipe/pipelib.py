@@ -61,6 +61,7 @@ cloudpipe_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(cloudpipe_opts)
+CONF.import_opt('keys_path', 'nova.crypto')
 
 LOG = logging.getLogger(__name__)
 
