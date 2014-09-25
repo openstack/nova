@@ -18,6 +18,7 @@
 import base64
 import contextlib
 import datetime
+import urllib
 import uuid
 
 import iso8601
@@ -891,6 +892,31 @@ class ServersControllerTest(ControllerTest):
                                     vm_state=[vm_states.ACTIVE,
                                               vm_states.ERROR],
                                     project_id='fake')
+        get_all_mock.assert_called_once_with(mock.ANY,
+                        search_opts=expected_search_opts, limit=mock.ANY,
+                        marker=mock.ANY, want_objects=mock.ANY)
+
+    @mock.patch.object(compute_api.API, 'get_all')
+    def test_get_servers_system_metadata_filter(self, get_all_mock):
+        server_uuid0 = str(uuid.uuid4())
+        server_uuid1 = str(uuid.uuid4())
+        expected_system_metadata = u'{"some_value": "some_key"}'
+        db_list = [fakes.stub_instance(100, uuid=server_uuid0),
+                        fakes.stub_instance(101, uuid=server_uuid1)]
+        get_all_mock.return_value = instance_obj._make_instance_list(
+                        context, instance_obj.InstanceList(), db_list, FIELDS)
+
+        req = fakes.HTTPRequest.blank(
+            '/fake/servers?status=active&status=error&system_metadata=' +
+            urllib.quote(expected_system_metadata),
+            use_admin_context=True)
+        servers = self.controller.index(req)['servers']
+        self.assertEqual(2, len(servers))
+        self.assertEqual(server_uuid0, servers[0]['id'])
+        self.assertEqual(server_uuid1, servers[1]['id'])
+        expected_search_opts = dict(
+            deleted=False, vm_state=[vm_states.ACTIVE, vm_states.ERROR],
+            system_metadata=expected_system_metadata, project_id='fake')
         get_all_mock.assert_called_once_with(mock.ANY,
                         search_opts=expected_search_opts, limit=mock.ANY,
                         marker=mock.ANY, want_objects=mock.ANY)

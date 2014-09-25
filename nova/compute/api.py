@@ -57,6 +57,7 @@ from nova.objects import base as obj_base
 from nova.objects import quotas as quotas_obj
 from nova.objects import security_group as security_group_obj
 from nova.openstack.common import excutils
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
@@ -1930,13 +1931,21 @@ class API(base.Base):
             # any character, we need to use regexp escaping for it.
             filters['ip'] = '^%s$' % fixed_ip.replace('.', '\\.')
 
+        def _remap_metadata_filter(metadata):
+            filters['metadata'] = jsonutils.loads(metadata)
+
+        def _remap_system_metadata_filter(metadata):
+            filters['system_metadata'] = jsonutils.loads(metadata)
+
         # search_option to filter_name mapping.
         filter_mapping = {
                 'image': 'image_ref',
                 'name': 'display_name',
                 'tenant_id': 'project_id',
                 'flavor': _remap_flavor_filter,
-                'fixed_ip': _remap_fixed_ip_filter}
+                'fixed_ip': _remap_fixed_ip_filter,
+                'metadata': _remap_metadata_filter,
+                'system_metadata': _remap_system_metadata_filter}
 
         # copy from search_opts, doing various remappings as necessary
         for opt, value in search_opts.iteritems():
