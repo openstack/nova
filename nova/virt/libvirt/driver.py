@@ -1564,7 +1564,7 @@ class LibvirtDriver(driver.ComputeDriver):
             virt_dom.attachDeviceFlags(cfg.to_xml(), flags)
         except libvirt.libvirtError:
             LOG.error(_LE('attaching network adapter failed.'),
-                     instance=instance)
+                     instance=instance, exc_info=True)
             self.vif_driver.unplug(instance, vif)
             raise exception.InterfaceAttachFailed(
                     instance_uuid=instance['uuid'])
