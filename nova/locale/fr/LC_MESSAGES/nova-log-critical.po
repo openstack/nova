@@ -3,13 +3,14 @@
 # This file is distributed under the same license as the nova project.
 #
 # Translators:
+# Frédéric <frosmont@free.fr>, 2014
 msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-09-11 06:01+0000\n"
-"PO-Revision-Date: 2014-05-30 06:26+0000\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"POT-Creation-Date: 2014-09-25 06:15+0000\n"
+"PO-Revision-Date: 2014-09-17 19:50+0000\n"
+"Last-Translator: Frédéric <frosmont@free.fr>\n"
 "Language-Team: French (http://www.transifex.com/projects/p/nova/language/"
 "fr/)\n"
 "Language: fr\n"
@@ -22,4 +23,4 @@ msgstr ""
 #: nova/api/openstack/__init__.py:339
 #, python-format
 msgid "Missing core API extensions: %s"
-msgstr ""
+msgstr "Extensions d'API de base manquantes : %s"
