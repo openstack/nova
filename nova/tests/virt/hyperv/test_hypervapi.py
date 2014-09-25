@@ -1508,7 +1508,39 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
                           flavor, network_info)
         self._mox.VerifyAll()
 
-    def _test_finish_migration(self, power_on, ephemeral_storage=False):
+    def _mock_attach_config_drive(self, instance, config_drive_format):
+        instance['config_drive'] = True
+        self._mox.StubOutWithMock(fake.PathUtils, 'lookup_configdrive_path')
+        m = fake.PathUtils.lookup_configdrive_path(
+            mox.Func(self._check_instance_name))
+
+        if config_drive_format in constants.DISK_FORMAT_MAP:
+            m.AndReturn(self._test_instance_dir + '/configdrive.' +
+                        config_drive_format)
+        else:
+            m.AndReturn(None)
+
+        m = vmutils.VMUtils.attach_ide_drive(
+            mox.Func(self._check_instance_name),
+            mox.IsA(str),
+            mox.IsA(int),
+            mox.IsA(int),
+            mox.IsA(str))
+        m.WithSideEffects(self._add_ide_disk).InAnyOrder()
+
+    def _verify_attach_config_drive(self, config_drive_format):
+        if config_drive_format == constants.IDE_DISK_FORMAT.lower():
+            self.assertEqual(self._instance_ide_disks[1],
+                self._test_instance_dir + '/configdrive.' +
+                config_drive_format)
+        elif config_drive_format == constants.IDE_DVD_FORMAT.lower():
+            self.assertEqual(self._instance_ide_dvds[0],
+                self._test_instance_dir + '/configdrive.' +
+                config_drive_format)
+
+    def _test_finish_migration(self, power_on, ephemeral_storage=False,
+                               config_drive=False,
+                               config_drive_format='iso'):
         self._instance_data = self._get_instance_data()
         instance = db.instance_create(self._context, self._instance_data)
         instance['system_metadata'] = {}
@@ -1557,10 +1589,16 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
             vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
                                          constants.HYPERV_VM_STATE_ENABLED)
 
+        if config_drive:
+            self._mock_attach_config_drive(instance, config_drive_format)
+
         self._mox.ReplayAll()
         self._conn.finish_migration(self._context, None, instance, "",
                                     network_info, None, False, None, power_on)
         self._mox.VerifyAll()
+
+        if config_drive:
+            self._verify_attach_config_drive(config_drive_format)
 
     def test_finish_migration_power_on(self):
         self._test_finish_migration(True)
@@ -1570,6 +1608,14 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
 
     def test_finish_migration_with_ephemeral_storage(self):
         self._test_finish_migration(False, ephemeral_storage=True)
+
+    def test_finish_migration_attach_config_drive_iso(self):
+        self._test_finish_migration(False, config_drive=True,
+            config_drive_format=constants.IDE_DVD_FORMAT.lower())
+
+    def test_finish_migration_attach_config_drive_vhd(self):
+        self._test_finish_migration(False, config_drive=True,
+            config_drive_format=constants.IDE_DISK_FORMAT.lower())
 
     def test_confirm_migration(self):
         self._instance_data = self._get_instance_data()
@@ -1582,7 +1628,9 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         self._conn.confirm_migration(None, instance, network_info)
         self._mox.VerifyAll()
 
-    def _test_finish_revert_migration(self, power_on, ephemeral_storage=False):
+    def _test_finish_revert_migration(self, power_on, ephemeral_storage=False,
+                                      config_drive=False,
+                                      config_drive_format='iso'):
         self._instance_data = self._get_instance_data()
         instance = db.instance_create(self._context, self._instance_data)
         network_info = fake_network.fake_get_instance_nw_info(self.stubs)
@@ -1620,11 +1668,17 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
             vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
                                          constants.HYPERV_VM_STATE_ENABLED)
 
+        if config_drive:
+            self._mock_attach_config_drive(instance, config_drive_format)
+
         self._mox.ReplayAll()
         self._conn.finish_revert_migration(self._context, instance,
                                            network_info, None,
                                            power_on)
         self._mox.VerifyAll()
+
+        if config_drive:
+            self._verify_attach_config_drive(config_drive_format)
 
     def test_finish_revert_migration_power_on(self):
         self._test_finish_revert_migration(True)
@@ -1640,6 +1694,14 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
 
     def test_finish_revert_migration_with_ephemeral_storage(self):
         self._test_finish_revert_migration(False, ephemeral_storage=True)
+
+    def test_finish_revert_migration_attach_config_drive_iso(self):
+        self._test_finish_revert_migration(False, config_drive=True,
+            config_drive_format=constants.IDE_DVD_FORMAT.lower())
+
+    def test_finish_revert_migration_attach_config_drive_vhd(self):
+        self._test_finish_revert_migration(False, config_drive=True,
+            config_drive_format=constants.IDE_DISK_FORMAT.lower())
 
     def test_plug_vifs(self):
         # Check to make sure the method raises NotImplementedError.
