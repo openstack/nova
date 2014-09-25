@@ -57,7 +57,7 @@ class CpuSetTestCase(test.NoDBTestCase):
     def test_get_vcpu_pin_set(self):
         self.flags(vcpu_pin_set="1-3,5,^2")
         cpuset_ids = hw.get_vcpu_pin_set()
-        self.assertEqual([1, 3, 5], cpuset_ids)
+        self.assertEqual(set([1, 3, 5]), cpuset_ids)
 
     def test_parse_cpu_spec_none_returns_none(self):
         self.flags(vcpu_pin_set=None)
