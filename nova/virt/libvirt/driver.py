@@ -3083,16 +3083,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                       'with error: %s'),
                                   e, instance=instance)
 
-                def dummy_fetch_func(target, *args, **kwargs):
-                    # NOTE(sileht): this is never called because the
-                    # the target have already been created by
-                    # cdb.make_drive call
-                    pass
-
-                raw('disk.config').cache(fetch_func=dummy_fetch_func,
-                                         context=context,
-                                         filename='disk.config' + suffix)
-
         # File injection only if needed
         elif inject_files and CONF.libvirt.inject_partition != -2:
             if booted_from_volume:
@@ -3478,19 +3468,11 @@ class LibvirtDriver(driver.ComputeDriver):
                         block_device.prepend_dev(diskswap.target_dev))
 
             if 'disk.config' in disk_mapping:
-                # NOTE(sileht): a configdrive is a raw image
-                # it works well with rbd, lvm and raw images_type
-                # but we must force to raw image_type if the desired
-                # images_type is qcow2
-                if CONF.libvirt.images_type not in ['rbd', 'lvm']:
-                    image_type = "raw"
-                else:
-                    image_type = None
                 diskconfig = self._get_guest_disk_config(instance,
                                                          'disk.config',
                                                          disk_mapping,
                                                          inst_type,
-                                                         image_type)
+                                                         'raw')
                 devices.append(diskconfig)
 
         for vol in block_device.get_bdms_to_connect(block_device_mapping,
@@ -5439,6 +5421,13 @@ class LibvirtDriver(driver.ComputeDriver):
                     'is_shared_instance_path', True)
             is_block_migration = migrate_data.get('block_migration', True)
             instance_relative_path = migrate_data.get('instance_relative_path')
+
+        if not (is_shared_instance_path and is_shared_block_storage):
+            # NOTE(mikal): live migration of instances using config drive is
+            # not supported because of a bug in libvirt (read only devices
+            # are not copied by libvirt). See bug/1246201
+            if configdrive.required_by(instance):
+                raise exception.NoLiveMigrationForConfigDriveInLibVirt()
 
         if not is_shared_instance_path:
             # NOTE(mikal): this doesn't use libvirt_utils.get_instance_path
