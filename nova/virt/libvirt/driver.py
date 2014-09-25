@@ -1589,7 +1589,7 @@ class LibvirtDriver(driver.ComputeDriver):
                          instance=instance)
             else:
                 LOG.error(_LE('detaching network adapter failed.'),
-                         instance=instance)
+                         instance=instance, exc_info=True)
                 raise exception.InterfaceDetachFailed(
                         instance_uuid=instance['uuid'])
 
