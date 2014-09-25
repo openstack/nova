@@ -32,6 +32,7 @@ import mox
 from oslo.config import cfg
 from oslo import messaging
 from oslo.utils import timeutils as db_timeutils
+from oslo.utils import units
 import six
 import testtools
 from testtools import matchers as testtools_matchers
@@ -581,9 +582,11 @@ class ComputeVolumeTestCase(BaseTestCase):
         def volume_api_get(*args, **kwargs):
             if metadata:
                 return {
+                    'size': 1,
                     'volume_image_metadata': {'vol_test_key': 'vol_test_value',
-                                              'min_ram': 128,
-                                              'min_disk': 256,
+                                              'min_ram': u'128',
+                                              'min_disk': u'256',
+                                              'size': u'536870912'
                                              },
                 }
             else:
@@ -611,6 +614,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                              'vol_test_value')
             self.assertEqual(128, image_meta['min_ram'])
             self.assertEqual(256, image_meta['min_disk'])
+            self.assertEqual(units.Gi, image_meta['size'])
         else:
             self.assertEqual(expected_no_metadata, image_meta)
 
@@ -630,6 +634,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                              'vol_test_value')
             self.assertEqual(128, image_meta['min_ram'])
             self.assertEqual(256, image_meta['min_disk'])
+            self.assertEqual(units.Gi, image_meta['size'])
         else:
             self.assertEqual(expected_no_metadata, image_meta)
 
