@@ -30,7 +30,7 @@ class ConsoleAuthTokensSampleJsonTests(test_servers.ServersSampleBase):
                                  'get-rdp-console-post-req',
                                  {'action': 'os-getRDPConsole'})
 
-        url = self._get_console_url(response.read())
+        url = self._get_console_url(response.content)
         return re.match('.+?token=([^&]+)', url).groups()[0]
 
     def test_get_console_connect_info(self):

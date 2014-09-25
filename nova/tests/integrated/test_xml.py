@@ -34,7 +34,7 @@ class XmlTests(integrated_helpers._IntegratedTestBase):
         headers['Accept'] = 'application/xml'
 
         response = self.api.api_request('/limits', headers=headers)
-        data = response.read()
+        data = response.content
         LOG.debug("data: %s" % data)
         root = etree.XML(data)
         self.assertEqual(root.nsmap.get(None), xmlutil.XMLNS_COMMON_V10)
@@ -45,7 +45,7 @@ class XmlTests(integrated_helpers._IntegratedTestBase):
         headers['Accept'] = 'application/xml'
 
         response = self.api.api_request('/servers', headers=headers)
-        data = response.read()
+        data = response.content
         LOG.debug("data: %s" % data)
         root = etree.XML(data)
         self.assertEqual(root.nsmap.get(None), common.XML_NS_V11)

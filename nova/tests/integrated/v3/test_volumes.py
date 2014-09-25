@@ -56,8 +56,8 @@ class SnapshotsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
                        fakes.stub_snapshot_delete)
         self._create_snapshot()
         response = self._do_delete('os-snapshots/100')
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')
 
     def test_snapshots_detail(self):
         response = self._do_get('os-snapshots/detail')
@@ -180,5 +180,5 @@ class VolumesSampleJsonTest(test_servers.ServersSampleBase):
         self._post_volume()
         vol_id = self._get_volume_id()
         response = self._do_delete('os-volumes/%s' % vol_id)
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')

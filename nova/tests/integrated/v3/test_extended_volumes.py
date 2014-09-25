@@ -103,8 +103,8 @@ class ExtendedVolumesSampleJsonTests(test_servers.ServersSampleBase):
         response = self._do_post('servers/%s/action'
                                  % server_id,
                                  'attach-volume-req', subs)
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')
 
     def test_detach_volume(self):
         server_id = self._post_server()
@@ -118,8 +118,8 @@ class ExtendedVolumesSampleJsonTests(test_servers.ServersSampleBase):
         }
         response = self._do_post('servers/%s/action'
                                  % server_id, 'detach-volume-req', subs)
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')
 
     def test_swap_volume(self):
         server_id = self._post_server()
@@ -147,5 +147,5 @@ class ExtendedVolumesSampleJsonTests(test_servers.ServersSampleBase):
         }
         response = self._do_post('servers/%s/action' % server_id,
                                  'swap-volume-req', subs)
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')

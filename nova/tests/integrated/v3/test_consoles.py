@@ -29,7 +29,7 @@ class ConsolesSamplesJsonTest(test_servers.ServersSampleBase):
     def _create_consoles(self, server_uuid):
         response = self._do_post('servers/%s/consoles' % server_uuid,
                                  'consoles-create-req', {})
-        self.assertEqual(response.status, 201)
+        self.assertEqual(response.status_code, 201)
 
     def test_create_consoles(self):
         uuid = self._post_server()
@@ -52,4 +52,4 @@ class ConsolesSamplesJsonTest(test_servers.ServersSampleBase):
         uuid = self._post_server()
         self._create_consoles(uuid)
         response = self._do_delete('servers/%s/consoles/1' % uuid)
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
