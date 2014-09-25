@@ -453,6 +453,9 @@ class API(base_api.NetworkAPI):
         ports_in_requested_order = []
         nets_in_requested_order = []
         for request in ordered_networks:
+            if security_groups and request.port_id:
+                raise exception.SecurityGroupNotAllowedTogetherWithPort()
+
             # Network lookup for available network_id
             network = None
             for net in nets:
