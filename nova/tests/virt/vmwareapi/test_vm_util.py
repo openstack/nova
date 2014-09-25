@@ -284,7 +284,14 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         config_spec = vm_util.create_controller_spec(fake.FakeFactory(), -101,
                           adapter_type="lsiLogicsas")
         self.assertEqual("ns0:VirtualLsiLogicSASController",
-                          config_spec.device.obj_name)
+                         config_spec.device.obj_name)
+
+    def test_paravirtual_controller_spec(self):
+        # Test controller spec returned for paraVirtual adapter type
+        config_spec = vm_util.create_controller_spec(fake.FakeFactory(), -101,
+                          adapter_type="paraVirtual")
+        self.assertEqual("ns0:ParaVirtualSCSIController",
+                         config_spec.device.obj_name)
 
     def _vmdk_path_and_adapter_type_devices(self, filename, parent=None):
         # Test the adapter_type returned for a lsiLogic sas controller
@@ -341,10 +348,13 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def test_get_vmdk_adapter_type(self):
         # Test for the adapter_type to be used in vmdk descriptor
-        # Adapter type in vmdk descriptor is same for LSI-SAS & LSILogic
+        # Adapter type in vmdk descriptor is same for LSI-SAS, LSILogic
+        # and ParaVirtual
         vmdk_adapter_type = vm_util.get_vmdk_adapter_type("lsiLogic")
         self.assertEqual("lsiLogic", vmdk_adapter_type)
         vmdk_adapter_type = vm_util.get_vmdk_adapter_type("lsiLogicsas")
+        self.assertEqual("lsiLogic", vmdk_adapter_type)
+        vmdk_adapter_type = vm_util.get_vmdk_adapter_type("paraVirtual")
         self.assertEqual("lsiLogic", vmdk_adapter_type)
         vmdk_adapter_type = vm_util.get_vmdk_adapter_type("dummyAdapter")
         self.assertEqual("dummyAdapter", vmdk_adapter_type)

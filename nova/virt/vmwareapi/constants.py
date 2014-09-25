@@ -34,5 +34,6 @@ DEFAULT_DISK_FORMAT = DISK_FORMAT_VMDK
 ADAPTER_TYPE_BUSLOGIC = "busLogic"
 ADAPTER_TYPE_IDE = "ide"
 ADAPTER_TYPE_LSILOGICSAS = "lsiLogicsas"
+ADAPTER_TYPE_PARAVIRTUAL = "paraVirtual"
 
 SUPPORTED_FLAT_VARIANTS = ["thin", "preallocated", "thick", "eagerZeroedThick"]
