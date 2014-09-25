@@ -30,6 +30,7 @@ from nova.objects import instance as instance_obj
 from nova.objects import instance_info_cache as info_cache_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import policy
 from nova import utils
@@ -57,8 +58,9 @@ def refresh_cache(f):
             msg = _('instance is a required argument to use @refresh_cache')
             raise Exception(msg)
 
-        update_instance_cache_with_nw_info(self, context, instance,
-                                           nw_info=res)
+        with lockutils.lock('refresh_cache-%s' % instance['uuid']):
+            update_instance_cache_with_nw_info(self, context, instance,
+                                               nw_info=res)
 
         # return the original function's return value
         return res
