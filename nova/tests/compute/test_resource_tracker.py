@@ -1422,6 +1422,20 @@ class TrackerPeriodicTestCase(BaseTrackerTestCase):
         self.tracker.update_available_resource(self.context)
         self.assertEqual(2, self.update_call_count)
 
+    def test_update_available_resource_calls_locked_inner(self):
+        @mock.patch.object(self.tracker, 'driver')
+        @mock.patch.object(self.tracker,
+                           '_update_available_resource')
+        @mock.patch.object(self.tracker, '_verify_resources')
+        @mock.patch.object(self.tracker, '_report_hypervisor_resource_view')
+        def _test(mock_rhrv, mock_vr, mock_uar, mock_driver):
+            resources = {'there is someone in my head': 'but it\'s not me'}
+            mock_driver.get_available_resource.return_value = resources
+            self.tracker.update_available_resource(self.context)
+            mock_uar.assert_called_once_with(self.context, resources)
+
+        _test()
+
 
 class StatsDictTestCase(BaseTrackerTestCase):
     """Test stats handling for a virt driver that provides
