@@ -520,10 +520,11 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 vm_ref, self._instance, self._ds.ref, str(upload_iso_path))
 
     @mock.patch.object(vmops.LOG, 'debug')
-    @mock.patch('nova.virt.vmwareapi.volumeops.VMwareVolumeOps'
-                '.attach_root_volume')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
+    @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
     def test_spawn_mask_block_device_info_password(self,
-                                                   mock_attach_root_volume,
+                                                   mock_build_virtual_machine,
+                                                   mock_get_vm_config_info,
                                                    mock_debug):
         # Very simple test that just ensures block_device_info auth_password
         # is masked when logged; the rest of the test just fails out early.
@@ -542,18 +543,19 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
         mock_debug.side_effect = fake_debug
         self.flags(flat_injected=False, vnc_enabled=False)
-        mock_attach_root_volume.side_effect = Exception
 
         # Call spawn(). We don't care what it does as long as it generates
         # the log message, which we check below.
-        try:
-            self._vmops.spawn(
-                self._context, self._instance, {},
-                injected_files=None, admin_password=None,
-                network_info=[], block_device_info=bdi
-            )
-        except Exception:
-            pass
+        with mock.patch.object(self._vmops, '_volumeops') as mock_volumeops:
+            mock_volumeops.attach_root_volume.side_effect = Exception
+            try:
+                self._vmops.spawn(
+                    self._context, self._instance, {},
+                    injected_files=None, admin_password=None,
+                    network_info=[], block_device_info=bdi
+                )
+            except Exception:
+                pass
 
         # Check that the relevant log message was generated, and therefore
         # that we checked it was scrubbed
