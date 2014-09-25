@@ -20,6 +20,7 @@ Leverages websockify.py by Joel Martin
 
 import Cookie
 import socket
+import urlparse
 
 import websockify
 
@@ -39,9 +40,21 @@ class NovaProxyRequestHandlerBase(object):
         from eventlet import hubs
         hubs.use_hub()
 
-        cookie = Cookie.SimpleCookie()
-        cookie.load(self.headers.getheader('cookie'))
-        token = cookie['token'].value
+        # The nova expected behavior is to have token
+        # passed to the method GET of the request
+        query = urlparse.urlparse(self.path).query
+        token = urlparse.parse_qs(query).get("token", [""]).pop()
+        if not token:
+            # NoVNC uses it's own convention that forward token
+            # from the request to a cookie header, we should check
+            # also for this behavior
+            hcookie = self.headers.getheader('cookie')
+            if hcookie:
+                cookie = Cookie.SimpleCookie()
+                cookie.load(hcookie)
+                if 'token' in cookie:
+                    token = cookie['token'].value
+
         ctxt = context.get_admin_context()
         rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
         connect_info = rpcapi.check_token(ctxt, token=token)
