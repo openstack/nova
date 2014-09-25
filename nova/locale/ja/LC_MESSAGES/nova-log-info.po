@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-09-16 06:06+0000\n"
+"POT-Creation-Date: 2014-09-25 06:14+0000\n"
 "PO-Revision-Date: 2014-06-30 04:40+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Japanese (http://www.transifex.com/projects/p/nova/language/"
@@ -44,16 +44,16 @@ msgstr ""
 msgid "Deleting network with id %s"
 msgstr ""
 
-#: nova/compute/manager.py:2516
+#: nova/compute/manager.py:2544
 msgid "Instance is already powered off in the hypervisor when stop is called."
 msgstr ""
 
-#: nova/compute/manager.py:2792
+#: nova/compute/manager.py:2820
 #, python-format
 msgid "bringing vm to original state: '%s'"
 msgstr ""
 
-#: nova/compute/manager.py:5682
+#: nova/compute/manager.py:5720
 #, python-format
 msgid ""
 "During sync_power_state the instance has a pending task (%(task)s). Skip."
@@ -165,117 +165,121 @@ msgstr ""
 msgid "instance chain %s disappeared during refresh, skipping"
 msgstr ""
 
-#: nova/virt/hyperv/vmops.py:457
+#: nova/virt/disk/vfs/api.py:66
+msgid "Unable to import guestfsfalling back to VFSLocalFS"
+msgstr ""
+
+#: nova/virt/hyperv/vmops.py:459
 msgid "Soft shutdown succeeded."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:908
+#: nova/virt/libvirt/driver.py:910
 #, python-format
 msgid ""
 "Unable to use bulk domain list APIs, falling back to slow code path: %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1024
+#: nova/virt/libvirt/driver.py:1026
 msgid "Instance destroyed successfully."
 msgstr "インスタンスが正常に破棄されました。"
 
-#: nova/virt/libvirt/driver.py:1034
+#: nova/virt/libvirt/driver.py:1036
 msgid "Instance may be started again."
 msgstr "インスタンスを再び開始できます。"
 
-#: nova/virt/libvirt/driver.py:1044
+#: nova/virt/libvirt/driver.py:1046
 msgid "Going to destroy instance again."
 msgstr "インスタンスの破棄を再び行います。"
 
-#: nova/virt/libvirt/driver.py:1695
+#: nova/virt/libvirt/driver.py:1704
 msgid "Beginning live snapshot process"
 msgstr "ライブ・スナップショット・プロセスを開始しています"
 
-#: nova/virt/libvirt/driver.py:1698
+#: nova/virt/libvirt/driver.py:1707
 msgid "Beginning cold snapshot process"
 msgstr "コールド・スナップショット・プロセスを開始しています"
 
-#: nova/virt/libvirt/driver.py:1728
+#: nova/virt/libvirt/driver.py:1737
 msgid "Snapshot extracted, beginning image upload"
 msgstr ""
 "スナップショットが抽出されました。イメージのアップロードを開始しています"
 
-#: nova/virt/libvirt/driver.py:1740
+#: nova/virt/libvirt/driver.py:1749
 msgid "Snapshot image upload complete"
 msgstr "スナップショット・イメージのアップロードが完了しました"
 
-#: nova/virt/libvirt/driver.py:2250
+#: nova/virt/libvirt/driver.py:2259
 msgid "Instance soft rebooted successfully."
 msgstr "インスタンスが正常にソフト・リブートされました。"
 
-#: nova/virt/libvirt/driver.py:2293
+#: nova/virt/libvirt/driver.py:2302
 msgid "Instance shutdown successfully."
 msgstr "インスタンスが正常にシャットダウンされました。"
 
-#: nova/virt/libvirt/driver.py:2301
+#: nova/virt/libvirt/driver.py:2310
 msgid "Instance may have been rebooted during soft reboot, so return now."
 msgstr ""
 "インスタンスはソフト・リブート時にリブートされた可能性があるため、ここで返し"
 "ます。"
 
-#: nova/virt/libvirt/driver.py:2370
+#: nova/virt/libvirt/driver.py:2379
 msgid "Instance rebooted successfully."
 msgstr "インスタンスが正常にリブートされました。"
 
-#: nova/virt/libvirt/driver.py:2413
+#: nova/virt/libvirt/driver.py:2422
 msgid "Instance already shutdown."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2429
+#: nova/virt/libvirt/driver.py:2438
 #, python-format
 msgid "Instance shutdown successfully after %d seconds."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2458
+#: nova/virt/libvirt/driver.py:2467
 #, python-format
 msgid "Instance failed to shutdown in %d seconds."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2616
+#: nova/virt/libvirt/driver.py:2625
 msgid "Instance spawned successfully."
 msgstr "インスタンスが正常に作成されました。"
 
-#: nova/virt/libvirt/driver.py:2632
+#: nova/virt/libvirt/driver.py:2641
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
 msgstr "データ: %(data)r, ファイルパス: %(fpath)r"
 
-#: nova/virt/libvirt/driver.py:2671 nova/virt/libvirt/driver.py:2698
+#: nova/virt/libvirt/driver.py:2680 nova/virt/libvirt/driver.py:2707
 #, python-format
 msgid "Truncated console log returned, %d bytes ignored"
 msgstr ""
 "切り捨てられたコンソール・ログが返されました。%d バイトが無視されました"
 
-#: nova/virt/libvirt/driver.py:2830
+#: nova/virt/libvirt/driver.py:2938
+msgid "Creating image"
+msgstr "イメージの作成中"
+
+#: nova/virt/libvirt/driver.py:3066
+msgid "Using config drive"
+msgstr "構成ドライブを使用中"
+
+#: nova/virt/libvirt/driver.py:3075
 #, python-format
 msgid "Creating config drive at %(path)s"
 msgstr "構成ドライブを %(path)s に作成しています"
 
-#: nova/virt/libvirt/driver.py:2953
-msgid "Creating image"
-msgstr "イメージの作成中"
-
-#: nova/virt/libvirt/driver.py:3081
-msgid "Using config drive"
-msgstr "構成ドライブを使用中"
-
-#: nova/virt/libvirt/driver.py:3912
+#: nova/virt/libvirt/driver.py:3915
 msgid "Configuring timezone for windows instance to localtime"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4901
+#: nova/virt/libvirt/driver.py:4902
 #, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. Instance="
 "%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4907
+#: nova/virt/libvirt/driver.py:4908
 #, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
@@ -284,26 +288,26 @@ msgstr ""
 "インスタンス %s 用のドメインが Libvirt 内で見つかりませんでした。デバイスのブ"
 "ロックの統計を取得できません"
 
-#: nova/virt/libvirt/driver.py:5149
+#: nova/virt/libvirt/driver.py:5150
 #, python-format
 msgid "Instance launched has CPU info: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5900
+#: nova/virt/libvirt/driver.py:5909
 msgid "Instance running successfully."
 msgstr "インスタンスが正常に実行されています。"
 
-#: nova/virt/libvirt/driver.py:6249
+#: nova/virt/libvirt/driver.py:6258
 #, python-format
 msgid "Deleting instance files %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:6262
+#: nova/virt/libvirt/driver.py:6271
 #, python-format
 msgid "Deletion of %s failed"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:6266
+#: nova/virt/libvirt/driver.py:6275
 #, python-format
 msgid "Deletion of %s complete"
 msgstr ""
@@ -321,6 +325,11 @@ msgid "Attempted to unfilter instance which is not filtered"
 msgstr ""
 "フィルター処理されていないインスタンスに対してフィルター処理の取り消しが試み"
 "られました"
+
+#: nova/virt/libvirt/imagebackend.py:365
+#, python-format
+msgid "Failed to get image info from path %(path)s; error: %(error)s"
+msgstr ""
 
 #: nova/virt/libvirt/imagecache.py:190
 #, python-format
@@ -383,7 +392,12 @@ msgstr "削除可能な基本ファイル: %s"
 msgid "findmnt tool is not installed"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:1320
+#: nova/virt/xenapi/vm_utils.py:684
+#, python-format
+msgid "Deleted %s snapshots."
+msgstr ""
+
+#: nova/virt/xenapi/vm_utils.py:1327
 #, python-format
 msgid ""
 "Image creation data, cacheable: %(cache)s, downloaded: %(downloaded)s "

@@ -3,12 +3,13 @@
 # This file is distributed under the same license as the nova project.
 #
 # Translators:
+# Frédéric <frosmont@free.fr>, 2014
 msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-09-16 06:06+0000\n"
-"PO-Revision-Date: 2014-08-15 05:00+0000\n"
+"POT-Creation-Date: 2014-09-25 06:14+0000\n"
+"PO-Revision-Date: 2014-09-25 04:53+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: French (http://www.transifex.com/projects/p/nova/language/"
 "fr/)\n"
@@ -26,7 +27,7 @@ msgstr "%(url)s retourné avec HTTP %(status)d"
 
 #: nova/api/openstack/__init__.py:298
 msgid "V3 API has been disabled by configuration"
-msgstr ""
+msgstr "L'API V3 a été désactivée par configuration "
 
 #: nova/api/openstack/wsgi.py:688
 #, python-format
@@ -44,20 +45,22 @@ msgstr "Exception HTTP générée : %s"
 msgid "Deleting network with id %s"
 msgstr "Suppression du réseau avec l'ID %s"
 
-#: nova/compute/manager.py:2516
+#: nova/compute/manager.py:2544
 msgid "Instance is already powered off in the hypervisor when stop is called."
 msgstr ""
+"L'instance est déjà éteinte dans l'hyperviseur quand l'arrêt est appelé."
 
-#: nova/compute/manager.py:2792
+#: nova/compute/manager.py:2820
 #, python-format
 msgid "bringing vm to original state: '%s'"
 msgstr "Restauration de l'état original de la machine virtuelle : '%s'"
 
-#: nova/compute/manager.py:5682
+#: nova/compute/manager.py:5720
 #, python-format
 msgid ""
 "During sync_power_state the instance has a pending task (%(task)s). Skip."
 msgstr ""
+"Durant sync_power_state l'instance à une tâche en attente (%(task)s). Passer."
 
 #: nova/db/sqlalchemy/migrate_repo/versions/234_add_expire_reservations_index.py:36
 #: nova/db/sqlalchemy/migrate_repo/versions/248_add_expire_reservations_index.py:36
@@ -65,6 +68,8 @@ msgid ""
 "Skipped adding reservations_deleted_expire_idx because an equivalent index "
 "already exists."
 msgstr ""
+"Passé l'ajout de reservations_deleted_expire_idx car un index équivalent "
+"existe déjà."
 
 #: nova/db/sqlalchemy/migrate_repo/versions/234_add_expire_reservations_index.py:58
 #: nova/db/sqlalchemy/migrate_repo/versions/248_add_expire_reservations_index.py:58
@@ -72,6 +77,7 @@ msgid ""
 "Skipped removing reservations_deleted_expire_idx because index does not "
 "exist."
 msgstr ""
+"Passé le retrait de reservations_deleted_expire_idx car l'index n'existe pas."
 
 #: nova/openstack/common/eventlet_backdoor.py:141
 #, python-format
@@ -148,123 +154,131 @@ msgstr "En attente %d enfants pour sortie"
 #: nova/scheduler/client/report.py:52
 #, python-format
 msgid "Compute_service record updated for %s"
-msgstr ""
+msgstr "Enregistrement de Compute_service mis à jour pour %s"
 
 #: nova/scheduler/filters/utils.py:50
 #, python-format
 msgid "%(num_values)d values found, of which the minimum value will be used."
 msgstr ""
+"%(num_values)d valeurs trouvées, et c'est la valeur minimale qui sera "
+"utilisée."
 
 #: nova/virt/block_device.py:221
 #, python-format
 msgid "preserve multipath_id %s"
-msgstr ""
+msgstr "conserver multipath_id %s"
 
 #: nova/virt/firewall.py:444
 #, python-format
 msgid "instance chain %s disappeared during refresh, skipping"
+msgstr "chaîne d'instance %s disparaît durant le rafraîchissement, à passer"
+
+#: nova/virt/disk/vfs/api.py:66
+msgid "Unable to import guestfsfalling back to VFSLocalFS"
 msgstr ""
 
-#: nova/virt/hyperv/vmops.py:457
+#: nova/virt/hyperv/vmops.py:459
 msgid "Soft shutdown succeeded."
-msgstr ""
+msgstr "Arrêt logiciel réussi."
 
-#: nova/virt/libvirt/driver.py:908
+#: nova/virt/libvirt/driver.py:910
 #, python-format
 msgid ""
 "Unable to use bulk domain list APIs, falling back to slow code path: %(ex)s"
 msgstr ""
+"Incapable d'utiliser les liste API de domaines par bloc, on revient au "
+"chemin : %(ex)s"
 
-#: nova/virt/libvirt/driver.py:1024
+#: nova/virt/libvirt/driver.py:1026
 msgid "Instance destroyed successfully."
 msgstr "Instance détruite avec succès."
 
-#: nova/virt/libvirt/driver.py:1034
+#: nova/virt/libvirt/driver.py:1036
 msgid "Instance may be started again."
 msgstr "L'instance peut être redémarrée."
 
-#: nova/virt/libvirt/driver.py:1044
+#: nova/virt/libvirt/driver.py:1046
 msgid "Going to destroy instance again."
 msgstr "Tentative de redestruction de l'instance."
 
-#: nova/virt/libvirt/driver.py:1695
+#: nova/virt/libvirt/driver.py:1704
 msgid "Beginning live snapshot process"
 msgstr "Démarrage du processus d'instantané en temps réel"
 
-#: nova/virt/libvirt/driver.py:1698
+#: nova/virt/libvirt/driver.py:1707
 msgid "Beginning cold snapshot process"
 msgstr "Démarrage du processus d'instantané à froid"
 
-#: nova/virt/libvirt/driver.py:1728
+#: nova/virt/libvirt/driver.py:1737
 msgid "Snapshot extracted, beginning image upload"
 msgstr "Instantané extrait, démarrage du téléchargement d'image"
 
-#: nova/virt/libvirt/driver.py:1740
+#: nova/virt/libvirt/driver.py:1749
 msgid "Snapshot image upload complete"
 msgstr "Téléchargement d'image instantanée terminé"
 
-#: nova/virt/libvirt/driver.py:2250
+#: nova/virt/libvirt/driver.py:2259
 msgid "Instance soft rebooted successfully."
 msgstr "Instance redémarrée par logiciel avec succès."
 
-#: nova/virt/libvirt/driver.py:2293
+#: nova/virt/libvirt/driver.py:2302
 msgid "Instance shutdown successfully."
 msgstr "L'instance s'est arrêtée avec succès."
 
-#: nova/virt/libvirt/driver.py:2301
+#: nova/virt/libvirt/driver.py:2310
 msgid "Instance may have been rebooted during soft reboot, so return now."
 msgstr "L'instance a sans doute été redémarrée par logiciel ; retour en cours."
 
-#: nova/virt/libvirt/driver.py:2370
+#: nova/virt/libvirt/driver.py:2379
 msgid "Instance rebooted successfully."
 msgstr "L'instance a redémarré avec succès."
 
-#: nova/virt/libvirt/driver.py:2413
+#: nova/virt/libvirt/driver.py:2422
 msgid "Instance already shutdown."
-msgstr ""
+msgstr "Instance déjà arrêtée."
 
-#: nova/virt/libvirt/driver.py:2429
+#: nova/virt/libvirt/driver.py:2438
 #, python-format
 msgid "Instance shutdown successfully after %d seconds."
-msgstr ""
+msgstr "Arrêt de l'instance réussie après %d secondes."
 
-#: nova/virt/libvirt/driver.py:2458
+#: nova/virt/libvirt/driver.py:2467
 #, python-format
 msgid "Instance failed to shutdown in %d seconds."
-msgstr ""
+msgstr "Échec de l'arrêt de l'instance dans %d seconds. "
 
-#: nova/virt/libvirt/driver.py:2616
+#: nova/virt/libvirt/driver.py:2625
 msgid "Instance spawned successfully."
 msgstr "Instance générée avec succès."
 
-#: nova/virt/libvirt/driver.py:2632
+#: nova/virt/libvirt/driver.py:2641
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
 msgstr "data: %(data)r, fpath: %(fpath)r"
 
-#: nova/virt/libvirt/driver.py:2671 nova/virt/libvirt/driver.py:2698
+#: nova/virt/libvirt/driver.py:2680 nova/virt/libvirt/driver.py:2707
 #, python-format
 msgid "Truncated console log returned, %d bytes ignored"
 msgstr "Journal de console tronqué retourné, %d octets ignorés"
 
-#: nova/virt/libvirt/driver.py:2830
+#: nova/virt/libvirt/driver.py:2938
+msgid "Creating image"
+msgstr "Création de l'image"
+
+#: nova/virt/libvirt/driver.py:3066
+msgid "Using config drive"
+msgstr "Utilisation de l'unité de config"
+
+#: nova/virt/libvirt/driver.py:3075
 #, python-format
 msgid "Creating config drive at %(path)s"
 msgstr "Création de l'unité de config à %(path)s"
 
-#: nova/virt/libvirt/driver.py:2953
-msgid "Creating image"
-msgstr "Création de l'image"
-
-#: nova/virt/libvirt/driver.py:3081
-msgid "Using config drive"
-msgstr "Utilisation de l'unité de config"
-
-#: nova/virt/libvirt/driver.py:3912
+#: nova/virt/libvirt/driver.py:3915
 msgid "Configuring timezone for windows instance to localtime"
-msgstr ""
+msgstr "Configurer le fuseau horaire pour l'instance windows en heure locale"
 
-#: nova/virt/libvirt/driver.py:4901
+#: nova/virt/libvirt/driver.py:4902
 #, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. Instance="
@@ -274,7 +288,7 @@ msgstr ""
 "être détaché. Instance=%(instance_name)s Disk=%(disk)s Code=%(errcode)s "
 "Erreur=%(e)s"
 
-#: nova/virt/libvirt/driver.py:4907
+#: nova/virt/libvirt/driver.py:4908
 #, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
@@ -283,29 +297,29 @@ msgstr ""
 "Domaine introuvable dans libvirt pour l'instance %s. Impossible d'obtenir "
 "les stats de bloc pour l'unité"
 
-#: nova/virt/libvirt/driver.py:5149
+#: nova/virt/libvirt/driver.py:5150
 #, python-format
 msgid "Instance launched has CPU info: %s"
-msgstr ""
+msgstr "L'instance lancée a l'info CPU : %s"
 
-#: nova/virt/libvirt/driver.py:5900
+#: nova/virt/libvirt/driver.py:5909
 msgid "Instance running successfully."
 msgstr "L'instance s'exécute avec succès."
 
-#: nova/virt/libvirt/driver.py:6249
+#: nova/virt/libvirt/driver.py:6258
 #, python-format
 msgid "Deleting instance files %s"
-msgstr ""
+msgstr "Suppression des fichiers d'instance %s "
 
-#: nova/virt/libvirt/driver.py:6262
+#: nova/virt/libvirt/driver.py:6271
 #, python-format
 msgid "Deletion of %s failed"
-msgstr ""
+msgstr "La suppression de %s a échoué "
 
-#: nova/virt/libvirt/driver.py:6266
+#: nova/virt/libvirt/driver.py:6275
 #, python-format
 msgid "Deletion of %s complete"
-msgstr ""
+msgstr "Suppression de %s est complète"
 
 #: nova/virt/libvirt/firewall.py:106
 msgid "Called setup_basic_filtering in nwfilter"
@@ -319,6 +333,13 @@ msgstr "Garantie des filtres statiques"
 msgid "Attempted to unfilter instance which is not filtered"
 msgstr ""
 "Vous avez essayé d'annuler le filtre d'une instance qui n'est pas filtrée"
+
+#: nova/virt/libvirt/imagebackend.py:365
+#, python-format
+msgid "Failed to get image info from path %(path)s; error: %(error)s"
+msgstr ""
+"Echec à obtenir les informations d'image du chemin %(path)s; erreur : "
+"%(error)s"
 
 #: nova/virt/libvirt/imagecache.py:190
 #, python-format
@@ -380,11 +401,18 @@ msgstr "Fichiers de base pouvant être retirés : %s"
 
 #: nova/virt/libvirt/utils.py:513
 msgid "findmnt tool is not installed"
+msgstr "L'outil findmnt n'est pas installé"
+
+#: nova/virt/xenapi/vm_utils.py:684
+#, python-format
+msgid "Deleted %s snapshots."
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:1320
+#: nova/virt/xenapi/vm_utils.py:1327
 #, python-format
 msgid ""
 "Image creation data, cacheable: %(cache)s, downloaded: %(downloaded)s "
 "duration: %(duration).2f secs for image %(image_id)s"
 msgstr ""
+"Données de création de l'image, capacité du cache : %(cache)s, téléchargé : "
+"%(downloaded)s durée : %(duration).2f secondes pour l'image %(image_id)s"

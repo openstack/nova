@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-09-16 06:06+0000\n"
+"POT-Creation-Date: 2014-09-25 06:14+0000\n"
 "PO-Revision-Date: 2014-08-07 07:51+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Italian (http://www.transifex.com/projects/p/nova/language/"
@@ -44,16 +44,16 @@ msgstr "Generata eccezione HTTP: %s"
 msgid "Deleting network with id %s"
 msgstr "Eliminazione della rete con id %s"
 
-#: nova/compute/manager.py:2516
+#: nova/compute/manager.py:2544
 msgid "Instance is already powered off in the hypervisor when stop is called."
 msgstr ""
 
-#: nova/compute/manager.py:2792
+#: nova/compute/manager.py:2820
 #, python-format
 msgid "bringing vm to original state: '%s'"
 msgstr ""
 
-#: nova/compute/manager.py:5682
+#: nova/compute/manager.py:5720
 #, python-format
 msgid ""
 "During sync_power_state the instance has a pending task (%(task)s). Skip."
@@ -166,115 +166,119 @@ msgstr ""
 msgid "instance chain %s disappeared during refresh, skipping"
 msgstr ""
 
-#: nova/virt/hyperv/vmops.py:457
+#: nova/virt/disk/vfs/api.py:66
+msgid "Unable to import guestfsfalling back to VFSLocalFS"
+msgstr ""
+
+#: nova/virt/hyperv/vmops.py:459
 msgid "Soft shutdown succeeded."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:908
+#: nova/virt/libvirt/driver.py:910
 #, python-format
 msgid ""
 "Unable to use bulk domain list APIs, falling back to slow code path: %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1024
+#: nova/virt/libvirt/driver.py:1026
 msgid "Instance destroyed successfully."
 msgstr "Istanza distrutta correttamente."
 
-#: nova/virt/libvirt/driver.py:1034
+#: nova/virt/libvirt/driver.py:1036
 msgid "Instance may be started again."
 msgstr "L'istanza può essere avviata di nuovo."
 
-#: nova/virt/libvirt/driver.py:1044
+#: nova/virt/libvirt/driver.py:1046
 msgid "Going to destroy instance again."
 msgstr "L'istanza verrà nuovamente distrutta."
 
-#: nova/virt/libvirt/driver.py:1695
+#: nova/virt/libvirt/driver.py:1704
 msgid "Beginning live snapshot process"
 msgstr "Inizio processo attivo istantanea"
 
-#: nova/virt/libvirt/driver.py:1698
+#: nova/virt/libvirt/driver.py:1707
 msgid "Beginning cold snapshot process"
 msgstr "Inizio processo di istantanea a freddo"
 
-#: nova/virt/libvirt/driver.py:1728
+#: nova/virt/libvirt/driver.py:1737
 msgid "Snapshot extracted, beginning image upload"
 msgstr "Istantanea estratta, inizio caricamento immagine"
 
-#: nova/virt/libvirt/driver.py:1740
+#: nova/virt/libvirt/driver.py:1749
 msgid "Snapshot image upload complete"
 msgstr "Caricamento immagine istantanea completato"
 
-#: nova/virt/libvirt/driver.py:2250
+#: nova/virt/libvirt/driver.py:2259
 msgid "Instance soft rebooted successfully."
 msgstr "Avvio a caldo dell'istanza eseguito correttamente."
 
-#: nova/virt/libvirt/driver.py:2293
+#: nova/virt/libvirt/driver.py:2302
 msgid "Instance shutdown successfully."
 msgstr "Chiusura dell'istanza eseguita correttamente."
 
-#: nova/virt/libvirt/driver.py:2301
+#: nova/virt/libvirt/driver.py:2310
 msgid "Instance may have been rebooted during soft reboot, so return now."
 msgstr ""
 "L'istanza potrebbe essere stat riavviata durante l'avvio a caldo, quindi "
 "ritornare adesso."
 
-#: nova/virt/libvirt/driver.py:2370
+#: nova/virt/libvirt/driver.py:2379
 msgid "Instance rebooted successfully."
 msgstr "Istanza riavviata correttamente."
 
-#: nova/virt/libvirt/driver.py:2413
+#: nova/virt/libvirt/driver.py:2422
 msgid "Instance already shutdown."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2429
+#: nova/virt/libvirt/driver.py:2438
 #, python-format
 msgid "Instance shutdown successfully after %d seconds."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2458
+#: nova/virt/libvirt/driver.py:2467
 #, python-format
 msgid "Instance failed to shutdown in %d seconds."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2616
+#: nova/virt/libvirt/driver.py:2625
 msgid "Instance spawned successfully."
 msgstr "Istanza generata correttamente."
 
-#: nova/virt/libvirt/driver.py:2632
+#: nova/virt/libvirt/driver.py:2641
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
 msgstr "dati: %(data)r, fpath: %(fpath)r"
 
-#: nova/virt/libvirt/driver.py:2671 nova/virt/libvirt/driver.py:2698
+#: nova/virt/libvirt/driver.py:2680 nova/virt/libvirt/driver.py:2707
 #, python-format
 msgid "Truncated console log returned, %d bytes ignored"
 msgstr "Restituito log della console troncato, %d byte ignorati"
 
-#: nova/virt/libvirt/driver.py:2830
+#: nova/virt/libvirt/driver.py:2938
+msgid "Creating image"
+msgstr "Creazione immagine"
+
+#: nova/virt/libvirt/driver.py:3066
+msgid "Using config drive"
+msgstr "Utilizzo unità di config"
+
+#: nova/virt/libvirt/driver.py:3075
 #, python-format
 msgid "Creating config drive at %(path)s"
 msgstr "Creazione unità config in %(path)s"
 
-#: nova/virt/libvirt/driver.py:2953
-msgid "Creating image"
-msgstr "Creazione immagine"
-
-#: nova/virt/libvirt/driver.py:3081
-msgid "Using config drive"
-msgstr "Utilizzo unità di config"
-
-#: nova/virt/libvirt/driver.py:3912
+#: nova/virt/libvirt/driver.py:3915
 msgid "Configuring timezone for windows instance to localtime"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4901
+#: nova/virt/libvirt/driver.py:4902
 #, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. Instance="
 "%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4907
+#: nova/virt/libvirt/driver.py:4908
 #, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
@@ -283,26 +287,26 @@ msgstr ""
 "Impossibile trovare il dominio in libvirt per l'istanza %s. Impossibile "
 "ottenere le statistiche del blocco per l'unità"
 
-#: nova/virt/libvirt/driver.py:5149
+#: nova/virt/libvirt/driver.py:5150
 #, python-format
 msgid "Instance launched has CPU info: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5900
+#: nova/virt/libvirt/driver.py:5909
 msgid "Instance running successfully."
 msgstr "Istanza in esecuzione correttamente."
 
-#: nova/virt/libvirt/driver.py:6249
+#: nova/virt/libvirt/driver.py:6258
 #, python-format
 msgid "Deleting instance files %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:6262
+#: nova/virt/libvirt/driver.py:6271
 #, python-format
 msgid "Deletion of %s failed"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:6266
+#: nova/virt/libvirt/driver.py:6275
 #, python-format
 msgid "Deletion of %s complete"
 msgstr ""
@@ -318,6 +322,11 @@ msgstr "Controllo dei filtri statici"
 #: nova/virt/libvirt/firewall.py:305
 msgid "Attempted to unfilter instance which is not filtered"
 msgstr "Si è tentato di rimuovere il filtro da un'istanza senza filtro"
+
+#: nova/virt/libvirt/imagebackend.py:365
+#, python-format
+msgid "Failed to get image info from path %(path)s; error: %(error)s"
+msgstr ""
 
 #: nova/virt/libvirt/imagecache.py:190
 #, python-format
@@ -380,7 +389,12 @@ msgstr "File di base rimovibili: %s"
 msgid "findmnt tool is not installed"
 msgstr ""
 
-#: nova/virt/xenapi/vm_utils.py:1320
+#: nova/virt/xenapi/vm_utils.py:684
+#, python-format
+msgid "Deleted %s snapshots."
+msgstr ""
+
+#: nova/virt/xenapi/vm_utils.py:1327
 #, python-format
 msgid ""
 "Image creation data, cacheable: %(cache)s, downloaded: %(downloaded)s "
