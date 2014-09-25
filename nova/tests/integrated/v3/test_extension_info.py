@@ -52,7 +52,7 @@ class ExtensionInfoFormatTest(api_sample_base.ApiSampleTestBaseV3):
 
             api_mock.side_effect = fake_soft_extension_authorizer
             response = self._do_get('extensions')
-            response = jsonutils.loads(response.read())
+            response = jsonutils.loads(response.content)
             extensions = response['extensions']
             pattern_comp = re.compile(pattern)
             for ext in extensions:

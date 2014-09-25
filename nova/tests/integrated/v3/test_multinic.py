@@ -35,7 +35,7 @@ class MultinicSampleJsonTest(test_servers.ServersSampleBase):
         subs = {"networkId": 1}
         response = self._do_post('servers/%s/action' % (self.uuid),
                                  'multinic-add-fixed-ip-req', subs)
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
 
     def test_add_fixed_ip(self):
         self._add_fixed_ip()
@@ -46,4 +46,4 @@ class MultinicSampleJsonTest(test_servers.ServersSampleBase):
         subs = {"ip": "10.0.0.4"}
         response = self._do_post('servers/%s/action' % (self.uuid),
                                  'multinic-remove-fixed-ip-req', subs)
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)

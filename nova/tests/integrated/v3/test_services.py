@@ -82,5 +82,5 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV3):
     def test_service_delete(self):
         """Delete an existing service."""
         response = self._do_delete('os-services/1')
-        self.assertEqual(response.status, 204)
-        self.assertEqual(response.read(), "")
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response.content, "")

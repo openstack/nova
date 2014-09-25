@@ -95,4 +95,4 @@ class AgentsJsonTest(api_sample_base.ApiSampleTestBaseV3):
         # Deletes an existing agent build.
         agent_id = 1
         response = self._do_delete('os-agents/%s' % agent_id)
-        self.assertEqual(response.status, 200)
+        self.assertEqual(response.status_code, 200)

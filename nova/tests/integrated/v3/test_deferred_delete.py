@@ -29,8 +29,8 @@ class DeferredDeleteSampleJsonTests(test_servers.ServersSampleBase):
 
         response = self._do_post('servers/%s/action' % uuid,
                                  'restore-post-req', {})
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')
 
     def test_force_delete(self):
         uuid = self._post_server()
@@ -38,5 +38,5 @@ class DeferredDeleteSampleJsonTests(test_servers.ServersSampleBase):
 
         response = self._do_post('servers/%s/action' % uuid,
                                  'force-delete-post-req', {})
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')

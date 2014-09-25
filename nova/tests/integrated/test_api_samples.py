@@ -127,7 +127,7 @@ class ApiSamplesTrap(ApiSampleTestBaseV2):
     def _get_extensions(self):
         extensions = []
         response = self._do_get('extensions')
-        for extension in jsonutils.loads(response.read())['extensions']:
+        for extension in jsonutils.loads(response.content)['extensions']:
             extensions.append(str(extension['alias']))
         return extensions
 
@@ -309,8 +309,8 @@ class ServersMetadataJsonTest(ServersSampleBase):
         subs = {'value': 'Foo Value'}
         uuid = self._create_and_set(subs)
         response = self._do_delete('servers/%s/metadata/foo' % uuid)
-        self.assertEqual(response.status, 204)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response.content, '')
 
 
 class ServersMetadataXmlTest(ServersMetadataJsonTest):
@@ -505,8 +505,8 @@ class ServersActionsJsonTest(ServersSampleBase):
             subs.update(self._get_regexes())
             self._verify_response(resp_tpl, subs, response, code)
         else:
-            self.assertEqual(response.status, code)
-            self.assertEqual(response.read(), "")
+            self.assertEqual(response.status_code, code)
+            self.assertEqual(response.content, "")
 
     def test_server_password(self):
         uuid = self._post_server()
@@ -581,8 +581,8 @@ class ServerStartStopJsonTest(ServersSampleBase):
         response = self._do_post('servers/%s/action' % uuid,
                                  'server_start_stop',
                                  {'action': action})
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), "")
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, "")
 
     def test_server_start(self):
         uuid = self._post_server()
@@ -805,8 +805,8 @@ class SecurityGroupsSampleJsonTest(ServersSampleBase):
         self._create_security_group()
         uuid = self._post_server()
         response = self._add_group(uuid)
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')
 
     def test_security_groups_remove(self):
         self._create_security_group()
@@ -817,8 +817,8 @@ class SecurityGroupsSampleJsonTest(ServersSampleBase):
         }
         response = self._do_post('servers/%s/action' % uuid,
                                  'security-group-remove-post-req', subs)
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')
 
 
 class SecurityGroupsSampleXmlTest(SecurityGroupsSampleJsonTest):
@@ -1004,8 +1004,8 @@ class FloatingIpsJsonTest(ApiSampleTestBaseV2):
     def test_floating_ips_delete(self):
         self.test_floating_ips_create()
         response = self._do_delete('os-floating-ips/%d' % 1)
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), "")
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, "")
 
 
 class ExtendedFloatingIpsJsonTest(FloatingIpsJsonTest):
@@ -1166,7 +1166,7 @@ class RescueJsonTest(ServersSampleBase):
     def _unrescue(self, uuid):
         response = self._do_post('servers/%s/action' % uuid,
                                  'server-unrescue-req', {})
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
 
     def test_server_rescue(self):
         uuid = self._post_server()
@@ -1253,8 +1253,8 @@ class ShelveJsonTest(ServersSampleBase):
     def _test_server_action(self, uuid, template, action):
         response = self._do_post('servers/%s/action' % uuid,
                                  template, {'action': action})
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), "")
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, "")
 
     def test_shelve(self):
         uuid = self._post_server()
@@ -1361,8 +1361,8 @@ class CloudPipeUpdateJsonTest(ApiSampleTestBaseV2):
         response = self._do_put('os-cloudpipe/configure-project',
                                 'cloud-pipe-update-req',
                                 subs)
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), "")
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, "")
 
 
 class CloudPipeUpdateXmlTest(CloudPipeUpdateJsonTest):
@@ -1462,7 +1462,7 @@ class AgentsJsonTest(ApiSampleTestBaseV2):
         # Deletes an existing agent build.
         agent_id = 1
         response = self._do_delete('os-agents/%s' % agent_id)
-        self.assertEqual(response.status, 200)
+        self.assertEqual(response.status_code, 200)
 
 
 class AgentsXmlTest(AgentsJsonTest):
@@ -1551,8 +1551,8 @@ class FixedIpJsonTest(ApiSampleTestBaseV2):
         response = self._do_post('os-fixed-ips/192.168.1.1/action',
                                  'fixedip-post-req',
                                  project)
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), "")
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, "")
 
     def test_get_fixed_ip(self):
         # Return data about the given fixed ip.
@@ -1783,7 +1783,7 @@ class ServicesJsonTest(ApiSampleTestBaseV2):
         self.stubs.Set(extensions.ExtensionManager, "is_loaded",
                 self.fake_load)
         response = self._do_get('os-services')
-        self.assertEqual(response.status, 200)
+        self.assertEqual(response.status_code, 200)
         subs = {'binary': 'nova-compute',
                 'host': 'host1',
                 'zone': 'nova',
@@ -1847,7 +1847,7 @@ class ExtendedServicesDeleteJsonTest(ApiSampleTestBaseV2):
         information if that exists.
         """
         response = self._do_get('os-services')
-        self.assertEqual(response.status, 200)
+        self.assertEqual(response.status_code, 200)
         subs = {'id': 1,
                 'binary': 'nova-compute',
                 'host': 'host1',
@@ -1860,8 +1860,8 @@ class ExtendedServicesDeleteJsonTest(ApiSampleTestBaseV2):
 
     def test_service_delete(self, *mocks):
         response = self._do_delete('os-services/1')
-        self.assertEqual(response.status, 204)
-        self.assertEqual(response.read(), "")
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response.content, "")
 
 
 class ExtendedServicesDeleteXmlTest(ExtendedServicesDeleteJsonTest):
@@ -1967,59 +1967,59 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
         # Get api samples to pause server request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-pause', {})
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
 
     def test_post_unpause(self):
         # Get api samples to unpause server request.
         self.test_post_pause()
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-unpause', {})
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
 
     def test_post_suspend(self):
         # Get api samples to suspend server request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-suspend', {})
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
 
     def test_post_resume(self):
         # Get api samples to server resume request.
         self.test_post_suspend()
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-resume', {})
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
 
     @mock.patch('nova.conductor.manager.ComputeTaskManager._cold_migrate')
     def test_post_migrate(self, mock_cold_migrate):
         # Get api samples to migrate server request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-migrate', {})
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
 
     def test_post_reset_network(self):
         # Get api samples to reset server network request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-reset-network', {})
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
 
     def test_post_inject_network_info(self):
         # Get api samples to inject network info request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-inject-network-info', {})
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
 
     def test_post_lock_server(self):
         # Get api samples to lock server request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-lock-server', {})
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
 
     def test_post_unlock_server(self):
         # Get api samples to unlock server request.
         self.test_post_lock_server()
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-unlock-server', {})
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
 
     def test_post_backup_server(self):
         # Get api samples to backup server request.
@@ -2034,7 +2034,7 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
 
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-backup-server', {})
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
 
     def test_post_live_migrate_server(self):
         # Get api samples to server live migrate request.
@@ -2064,13 +2064,13 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-live-migrate',
                                  {'hostname': self.compute.host})
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
 
     def test_post_reset_state(self):
         # get api samples to server reset state request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-reset-server-state', {})
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
 
 
 class AdminActionsSamplesXmlTest(AdminActionsSamplesJsonTest):
@@ -2149,7 +2149,7 @@ class ConsoleAuthTokensSampleJsonTests(ServersSampleBase):
                                  'get-rdp-console-post-req',
                                 {'action': 'os-getRDPConsole'})
 
-        url = self._get_console_url(response.read())
+        url = self._get_console_url(response.content)
         return re.match('.+?token=([^&]+)', url).groups()[0]
 
     def test_get_console_connect_info(self):
@@ -2190,8 +2190,8 @@ class DeferredDeleteSampleJsonTests(ServersSampleBase):
 
         response = self._do_post('servers/%s/action' % uuid,
                                  'restore-post-req', {})
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')
 
     def test_force_delete(self):
         uuid = self._post_server()
@@ -2199,8 +2199,8 @@ class DeferredDeleteSampleJsonTests(ServersSampleBase):
 
         response = self._do_post('servers/%s/action' % uuid,
                                  'force-delete-post-req', {})
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')
 
 
 class DeferredDeleteSampleXmlTests(DeferredDeleteSampleJsonTests):
@@ -2241,8 +2241,8 @@ class ExtendedQuotasSampleJsonTests(ApiSampleTestBaseV2):
     def test_delete_quotas(self):
         # Get api sample to delete quota.
         response = self._do_delete('os-quota-sets/fake_tenant')
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')
 
     def test_update_quotas(self):
         # Get api sample to update quotas.
@@ -2275,8 +2275,8 @@ class UserQuotasSampleJsonTests(ApiSampleTestBaseV2):
         self.stubs.Set(extensions.ExtensionManager, "is_loaded",
                 self.fake_load)
         response = self._do_delete('os-quota-sets/fake_tenant?user_id=1')
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')
 
     def test_update_quotas_for_user(self):
         # Get api sample to update quotas for user.
@@ -2324,7 +2324,7 @@ class ExtendedIpsMacSampleJsonTests(ServersSampleBase):
     def test_show(self):
         uuid = self._post_server()
         response = self._do_get('servers/%s' % uuid)
-        self.assertEqual(response.status, 200)
+        self.assertEqual(response.status_code, 200)
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
@@ -2335,7 +2335,7 @@ class ExtendedIpsMacSampleJsonTests(ServersSampleBase):
     def test_detail(self):
         uuid = self._post_server()
         response = self._do_get('servers/detail')
-        self.assertEqual(response.status, 200)
+        self.assertEqual(response.status_code, 200)
         subs = self._get_regexes()
         subs['id'] = uuid
         subs['hostid'] = '[a-f0-9]+'
@@ -2441,7 +2441,7 @@ class ExtendedVIFNetSampleJsonTests(ServersSampleBase):
         uuid = self._post_server()
 
         response = self._do_get('servers/%s/os-virtual-interfaces' % uuid)
-        self.assertEqual(response.status, 200)
+        self.assertEqual(response.status_code, 200)
 
         subs = self._get_regexes()
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
@@ -2477,8 +2477,8 @@ class FlavorManageSampleJsonTests(ApiSampleTestBaseV2):
         # Get api sample to delete a flavor.
         self._create_flavor()
         response = self._do_delete("flavors/10")
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')
 
 
 class FlavorManageSampleXmlTests(FlavorManageSampleJsonTests):
@@ -2510,7 +2510,7 @@ class ServerPasswordSampleJsonTests(ServersSampleBase):
     def test_reset_password(self):
         uuid = self._post_server()
         response = self._do_delete('servers/%s/os-server-password' % uuid)
-        self.assertEqual(response.status, 204)
+        self.assertEqual(response.status_code, 204)
 
 
 class ServerPasswordSampleXmlTests(ServerPasswordSampleJsonTests):
@@ -2549,10 +2549,10 @@ class DiskConfigJsonTest(ServersSampleBase):
         uuid = self._post_server()
         response = self._do_post('servers/%s/action' % uuid,
                                  'server-resize-post-req', {})
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
         # NOTE(tmello): Resize does not return response body
         # Bug #1085213.
-        self.assertEqual(response.read(), "")
+        self.assertEqual(response.content, "")
 
     def test_rebuild_server(self):
         uuid = self._post_server()
@@ -2614,11 +2614,11 @@ class OsNetworksJsonTests(ApiSampleTestBaseV2):
 
     def test_delete_network(self):
         response = self._do_post('os-tenant-networks', "networks-post-req", {})
-        net = jsonutils.loads(response.read())
+        net = jsonutils.loads(response.content)
         response = self._do_delete('os-tenant-networks/%s' %
                                                 net["network"]["id"])
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), "")
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, "")
 
 
 class OsNetworksXmlTests(OsNetworksJsonTests):
@@ -2626,11 +2626,11 @@ class OsNetworksXmlTests(OsNetworksJsonTests):
 
     def test_delete_network(self):
         response = self._do_post('os-tenant-networks', "networks-post-req", {})
-        net = etree.fromstring(response.read())
+        net = etree.fromstring(response.content)
         network_id = net.find('id').text
         response = self._do_delete('os-tenant-networks/%s' % network_id)
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), "")
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, "")
 
 
 class NetworksJsonTests(ApiSampleTestBaseV2):
@@ -2662,8 +2662,8 @@ class NetworksJsonTests(ApiSampleTestBaseV2):
         uuid = test_networks.FAKE_NETWORKS[0]['uuid']
         response = self._do_post('os-networks/%s/action' % uuid,
                                  'networks-disassociate-req', {})
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), "")
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, "")
 
     def test_network_show(self):
         uuid = test_networks.FAKE_NETWORKS[0]['uuid']
@@ -2680,13 +2680,13 @@ class NetworksJsonTests(ApiSampleTestBaseV2):
     def test_network_add(self):
         response = self._do_post("os-networks/add",
                                  'network-add-req', {})
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), "")
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, "")
 
     def test_network_delete(self):
         response = self._do_delete('os-networks/always_delete')
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), "")
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, "")
 
 
 class NetworksXmlTests(NetworksJsonTests):
@@ -2765,29 +2765,29 @@ class NetworksAssociateJsonTests(ApiSampleTestBaseV2):
         response = self._do_post('os-networks/1/action',
                                  'network-disassociate-req',
                                  {})
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), "")
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, "")
 
     def test_disassociate_host(self):
         response = self._do_post('os-networks/1/action',
                                  'network-disassociate-host-req',
                                  {})
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), "")
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, "")
 
     def test_disassociate_project(self):
         response = self._do_post('os-networks/1/action',
                                  'network-disassociate-project-req',
                                  {})
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), "")
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, "")
 
     def test_associate_host(self):
         response = self._do_post('os-networks/1/action',
                                  'network-associate-host-req',
                                  {"host": "testHost"})
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), "")
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, "")
 
 
 class NetworksAssociateXmlTests(NetworksAssociateJsonTests):
@@ -3010,7 +3010,7 @@ class BareMetalNodesJsonTest(ApiSampleTestBaseV2, bm_db_base.BMDBTestCase):
     def test_delete_node(self):
         node_id = self._create_node()
         response = self._do_delete("os-baremetal-nodes/%s" % node_id)
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
 
     def _add_interface(self, node_id):
         response = self._do_post("os-baremetal-nodes/%s/action" % node_id,
@@ -3030,8 +3030,8 @@ class BareMetalNodesJsonTest(ApiSampleTestBaseV2, bm_db_base.BMDBTestCase):
         response = self._do_post("os-baremetal-nodes/%s/action" % node_id,
                                  "baremetal-node-remove-interface-req",
                                  {'address': 'aa:aa:aa:aa:aa:aa'})
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), "")
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, "")
 
 
 class BareMetalNodesXmlTest(BareMetalNodesJsonTest):
@@ -3128,7 +3128,7 @@ class MultinicSampleJsonTest(ServersSampleBase):
         subs = {"networkId": 1}
         response = self._do_post('servers/%s/action' % (self.uuid),
                                  'multinic-add-fixed-ip-req', subs)
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
 
     def test_add_fixed_ip(self):
         self._add_fixed_ip()
@@ -3139,7 +3139,7 @@ class MultinicSampleJsonTest(ServersSampleBase):
         subs = {"ip": "10.0.0.4"}
         response = self._do_post('servers/%s/action' % (self.uuid),
                                  'multinic-remove-fixed-ip-req', subs)
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
 
 
 class MultinicSampleXmlTest(MultinicSampleJsonTest):
@@ -3213,8 +3213,8 @@ class FlavorExtraSpecsSampleJsonTests(ApiSampleTestBaseV2):
     def test_flavor_extra_specs_delete(self):
         self._flavor_extra_specs_create()
         response = self._do_delete('flavors/1/os-extra_specs/key1')
-        self.assertEqual(response.status, 200)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, '')
 
 
 class FlavorExtraSpecsSampleXmlTests(FlavorExtraSpecsSampleJsonTests):
@@ -3418,7 +3418,7 @@ class FloatingIpDNSJsonTest(ApiSampleTestBaseV2):
     def test_floating_ip_dns_delete(self):
         self._create_or_update()
         response = self._do_delete('os-floating-ip-dns/%s' % self.domain)
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
 
     def test_floating_ip_dns_create_or_update_entry(self):
         self._create_or_update_entry()
@@ -3437,7 +3437,7 @@ class FloatingIpDNSJsonTest(ApiSampleTestBaseV2):
         self._create_or_update_entry()
         response = self._do_delete('os-floating-ip-dns/%s/entries/%s'
                                    % (self.domain, self.name))
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
 
     def test_floating_ip_dns_entry_list(self):
         self._create_or_update_entry()
@@ -3941,8 +3941,8 @@ class AttachInterfacesSampleJsonTest(ServersSampleBase):
         port_id = 'ce531f90-199f-48c0-816c-13e38010b442'
         response = self._do_delete('servers/%s/os-interface/%s' %
                                 (instance_uuid, port_id))
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')
 
 
 class AttachInterfacesSampleXmlTest(AttachInterfacesSampleJsonTest):
@@ -3984,8 +3984,8 @@ class SnapshotsSampleJsonTests(ApiSampleTestBaseV2):
                        fakes.stub_snapshot_delete)
         self._create_snapshot()
         response = self._do_delete('os-snapshots/100')
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')
 
     def test_snapshots_detail(self):
         response = self._do_get('os-snapshots/detail')
@@ -4047,8 +4047,8 @@ class AssistedVolumeSnapshotsJsonTest(ApiSampleTestBaseV2):
                 'os-assisted-volume-snapshots/%s?delete_info='
                 '{"volume_id":"521752a6-acf6-4b2d-bc7a-119f9148cd8c"}'
                 % snapshot_id)
-        self.assertEqual(response.status, 204)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response.content, '')
 
 
 class AssistedVolumeSnapshotsXmlTest(AssistedVolumeSnapshotsJsonTest):
@@ -4153,8 +4153,8 @@ class VolumeAttachmentsSampleJsonTest(VolumeAttachmentsSampleBase):
         self.stubs.Set(compute_api.API, 'detach_volume', lambda *a, **k: None)
         response = self._do_delete('servers/%s/os-volume_attachments/%s'
                                    % (server_id, attach_id))
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')
 
 
 class VolumeAttachmentsSampleXmlTest(VolumeAttachmentsSampleJsonTest):
@@ -4182,8 +4182,8 @@ class VolumeAttachUpdateSampleJsonTest(VolumeAttachmentsSampleBase):
                                 % (server_id, attach_id),
                                 'update-volume-req',
                                 subs)
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')
 
 
 class VolumeAttachUpdateSampleXmlTest(VolumeAttachUpdateSampleJsonTest):
@@ -4291,8 +4291,8 @@ class VolumesSampleJsonTest(ServersSampleBase):
         self._post_volume()
         vol_id = self._get_volume_id()
         response = self._do_delete('os-volumes/%s' % vol_id)
-        self.assertEqual(response.status, 202)
-        self.assertEqual(response.read(), '')
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')
 
 
 class VolumesSampleXmlTest(VolumesSampleJsonTest):
@@ -4349,7 +4349,7 @@ class MigrationsSamplesJsonTest(ApiSampleTestBaseV2):
         response = self._do_get('os-migrations')
         subs = self._get_regexes()
 
-        self.assertEqual(response.status, 200)
+        self.assertEqual(response.status_code, 200)
         self._verify_response('migrations-get', subs, response, 200)
 
 
@@ -4373,8 +4373,8 @@ class PreserveEphemeralOnRebuildJsonTest(ServersSampleBase):
             subs.update(self._get_regexes())
             self._verify_response(resp_tpl, subs, response, code)
         else:
-            self.assertEqual(response.status, code)
-            self.assertEqual(response.read(), "")
+            self.assertEqual(response.status_code, code)
+            self.assertEqual(response.content, "")
 
     def test_rebuild_server_preserve_ephemeral_false(self):
         uuid = self._post_server()
@@ -4409,7 +4409,7 @@ class PreserveEphemeralOnRebuildJsonTest(ServersSampleBase):
         instance_uuid = self._post_server()
         response = self._do_post('servers/%s/action' % instance_uuid,
                                  'server-action-rebuild', subs)
-        self.assertEqual(response.status, 202)
+        self.assertEqual(response.status_code, 202)
 
 
 class PreserveEphemeralOnRebuildXmlTest(PreserveEphemeralOnRebuildJsonTest):
@@ -4447,7 +4447,7 @@ class ServerGroupsSampleJsonTest(ServersSampleBase):
         return {'name': 'test'}
 
     def _post_server_group(self):
-        """Verify the response status and returns the UUID of the
+        """Verify the response status code and returns the UUID of the
         newly created server group.
         """
         subs = self._get_create_subs()
@@ -4487,7 +4487,7 @@ class ServerGroupsSampleJsonTest(ServersSampleBase):
     def test_server_groups_delete(self):
         uuid = self._post_server_group()
         response = self._do_delete('os-server-groups/%s' % uuid)
-        self.assertEqual(response.status, 204)
+        self.assertEqual(response.status_code, 204)
 
 
 class ServerGroupsSampleXmlTest(ServerGroupsSampleJsonTest):
