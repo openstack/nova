@@ -5274,7 +5274,7 @@ class ComputeManager(manager.Manager):
             db_instances = objects.InstanceList.get_by_host(
                 context, self.host, expected_attrs=[], use_slave=True)
             for inst in db_instances:
-                # We don't want to refersh the cache for instances
+                # We don't want to refresh the cache for instances
                 # which are building or deleting so don't put them
                 # in the list. If they are building they will get
                 # added to the list next time we build it.
