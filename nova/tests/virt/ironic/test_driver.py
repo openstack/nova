@@ -126,6 +126,68 @@ class IronicDriverTestCase(test.NoDBTestCase):
                           ironic_driver._validate_instance_and_node,
                           icli, instance)
 
+    @mock.patch.object(ironic_driver, '_validate_instance_and_node')
+    def test__wait_for_active_pass(self, fake_validate):
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                uuid=uuidutils.generate_uuid())
+        node = ironic_utils.get_test_node(
+                provision_state=ironic_states.DEPLOYING)
+
+        fake_validate.return_value = node
+        self.driver._wait_for_active(FAKE_CLIENT, instance)
+        self.assertTrue(fake_validate.called)
+
+    @mock.patch.object(ironic_driver, '_validate_instance_and_node')
+    def test__wait_for_active_done(self, fake_validate):
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                uuid=uuidutils.generate_uuid())
+        node = ironic_utils.get_test_node(
+                provision_state=ironic_states.ACTIVE)
+
+        fake_validate.return_value = node
+        self.assertRaises(loopingcall.LoopingCallDone,
+                self.driver._wait_for_active,
+                FAKE_CLIENT, instance)
+        self.assertTrue(fake_validate.called)
+
+    @mock.patch.object(ironic_driver, '_validate_instance_and_node')
+    def test__wait_for_active_fail(self, fake_validate):
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                uuid=uuidutils.generate_uuid())
+        node = ironic_utils.get_test_node(
+                provision_state=ironic_states.DEPLOYFAIL)
+
+        fake_validate.return_value = node
+        self.assertRaises(exception.InstanceDeployFailure,
+                self.driver._wait_for_active,
+                FAKE_CLIENT, instance)
+        self.assertTrue(fake_validate.called)
+
+    @mock.patch.object(ironic_driver, '_validate_instance_and_node')
+    def test__wait_for_power_state_pass(self, fake_validate):
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                uuid=uuidutils.generate_uuid())
+        node = ironic_utils.get_test_node(
+                target_power_state=ironic_states.POWER_OFF)
+
+        fake_validate.return_value = node
+        self.driver._wait_for_power_state(
+                FAKE_CLIENT, instance, 'fake message')
+        self.assertTrue(fake_validate.called)
+
+    @mock.patch.object(ironic_driver, '_validate_instance_and_node')
+    def test__wait_for_power_state_ok(self, fake_validate):
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                uuid=uuidutils.generate_uuid())
+        node = ironic_utils.get_test_node(
+                target_power_state=ironic_states.NOSTATE)
+
+        fake_validate.return_value = node
+        self.assertRaises(loopingcall.LoopingCallDone,
+                self.driver._wait_for_power_state,
+                FAKE_CLIENT, instance, 'fake message')
+        self.assertTrue(fake_validate.called)
+
     def test__node_resource(self):
         node_uuid = uuidutils.generate_uuid()
         instance_uuid = uuidutils.generate_uuid()
@@ -863,45 +925,52 @@ class IronicDriverTestCase(test.NoDBTestCase):
                                                               'deleted')
         mock_node.get_by_instance_uuid.assert_called_with(instance.uuid)
 
-    @mock.patch.object(FAKE_CLIENT.node, 'set_power_state')
+    @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(ironic_driver, '_validate_instance_and_node')
-    def test_reboot(self, mock_val_inst, mock_set_power):
+    @mock.patch.object(FAKE_CLIENT.node, 'set_power_state')
+    def test_reboot(self, mock_sp, fake_validate, mock_looping):
         node = ironic_utils.get_test_node()
-        mock_val_inst.return_value = node
+        fake_validate.side_effect = [node, node]
+
+        fake_looping_call = FakeLoopingCall()
+        mock_looping.return_value = fake_looping_call
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node.uuid)
         self.driver.reboot(self.ctx, instance, None, None)
-        mock_set_power.assert_called_once_with(node.uuid, 'reboot')
+        mock_sp.assert_called_once_with(node.uuid, 'reboot')
 
+    @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(ironic_driver, '_validate_instance_and_node')
     @mock.patch.object(FAKE_CLIENT.node, 'set_power_state')
-    def test_power_off(self, mock_sp, fake_validate):
-        node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
-        node = ironic_utils.get_test_node(driver='fake', uuid=node_uuid)
+    def test_power_off(self, mock_sp, fake_validate, mock_looping):
+        node = ironic_utils.get_test_node()
+        fake_validate.side_effect = [node, node]
 
-        fake_validate.return_value = node
+        fake_looping_call = FakeLoopingCall()
+        mock_looping.return_value = fake_looping_call
         instance_uuid = uuidutils.generate_uuid()
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=instance_uuid)
 
         self.driver.power_off(instance)
-        mock_sp.assert_called_once_with(node_uuid, 'off')
+        mock_sp.assert_called_once_with(node.uuid, 'off')
 
+    @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(ironic_driver, '_validate_instance_and_node')
     @mock.patch.object(FAKE_CLIENT.node, 'set_power_state')
-    def test_power_on(self, mock_sp, fake_validate):
-        node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
-        node = ironic_utils.get_test_node(driver='fake', uuid=node_uuid)
+    def test_power_on(self, mock_sp, fake_validate, mock_looping):
+        node = ironic_utils.get_test_node()
+        fake_validate.side_effect = [node, node]
 
-        fake_validate.return_value = node
-
+        fake_looping_call = FakeLoopingCall()
+        mock_looping.return_value = fake_looping_call
         instance_uuid = uuidutils.generate_uuid()
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=instance_uuid)
 
         self.driver.power_on(self.ctx, instance,
                              utils.get_test_network_info())
-        mock_sp.assert_called_once_with(node_uuid, 'on')
+        mock_sp.assert_called_once_with(node.uuid, 'on')
 
     @mock.patch.object(FAKE_CLIENT.node, 'list_ports')
     @mock.patch.object(FAKE_CLIENT.port, 'update')

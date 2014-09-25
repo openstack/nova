@@ -128,15 +128,23 @@ def _get_nodes_supported_instances(cpu_arch=None):
 
 
 def _log_ironic_polling(what, node, instance):
+    power_state = (None if node.power_state is None else
+                   '"%s"' % node.power_state)
+    tgt_power_state = (None if node.target_power_state is None else
+                       '"%s"' % node.target_power_state)
     prov_state = (None if node.provision_state is None else
                   '"%s"' % node.provision_state)
     tgt_prov_state = (None if node.target_provision_state is None else
                       '"%s"' % node.target_provision_state)
     LOG.debug('Still waiting for ironic node %(node)s to %(what)s: '
+              'power_state=%(power_state)s, '
+              'target_power_state=%(tgt_power_state)s, '
               'provision_state=%(prov_state)s, '
               'target_provision_state=%(tgt_prov_state)s',
               dict(what=what,
                    node=node.uuid,
+                   power_state=power_state,
+                   tgt_power_state=tgt_power_state,
                    prov_state=prov_state,
                    tgt_prov_state=tgt_prov_state),
               instance=instance)
@@ -342,6 +350,15 @@ class IronicDriver(virt_driver.ComputeDriver):
             raise exception.InstanceDeployFailure(msg)
 
         _log_ironic_polling('become ACTIVE', node, instance)
+
+    def _wait_for_power_state(self, icli, instance, message):
+        """Wait for the node to complete a power state change."""
+        node = _validate_instance_and_node(icli, instance)
+
+        if node.target_power_state == ironic_states.NOSTATE:
+            raise loopingcall.LoopingCallDone()
+
+        _log_ironic_polling(message, node, instance)
 
     def init_host(self, host):
         """Initialize anything that is necessary for the driver to function.
@@ -729,6 +746,11 @@ class IronicDriver(virt_driver.ComputeDriver):
                block_device_info=None, bad_volumes_callback=None):
         """Reboot the specified instance.
 
+        NOTE: Ironic does not support soft-off, so this method
+              always performs a hard-reboot.
+        NOTE: Unlike the libvirt driver, this method does not delete
+              and recreate the instance; it preserves local state.
+
         :param context: The security context.
         :param instance: The instance object.
         :param network_info: Instance network information. Ignored by
@@ -745,8 +767,18 @@ class IronicDriver(virt_driver.ComputeDriver):
         node = _validate_instance_and_node(icli, instance)
         icli.call("node.set_power_state", node.uuid, 'reboot')
 
+        timer = loopingcall.FixedIntervalLoopingCall(
+                    self._wait_for_power_state,
+                    icli, instance, 'reboot')
+        timer.start(interval=CONF.ironic.api_retry_interval).wait()
+
     def power_off(self, instance, timeout=0, retry_interval=0):
         """Power off the specified instance.
+
+        NOTE: Ironic does not support soft-off, so this method ignores
+              timeout and retry_interval parameters.
+        NOTE: Unlike the libvirt driver, this method does not delete
+              and recreate the instance; it preserves local state.
 
         :param instance: The instance object.
         :param timeout: time to wait for node to shutdown. Ignored by
@@ -758,9 +790,17 @@ class IronicDriver(virt_driver.ComputeDriver):
         node = _validate_instance_and_node(icli, instance)
         icli.call("node.set_power_state", node.uuid, 'off')
 
+        timer = loopingcall.FixedIntervalLoopingCall(
+                    self._wait_for_power_state,
+                    icli, instance, 'power off')
+        timer.start(interval=CONF.ironic.api_retry_interval).wait()
+
     def power_on(self, context, instance, network_info,
                  block_device_info=None):
         """Power on the specified instance.
+
+        NOTE: Unlike the libvirt driver, this method does not delete
+              and recreate the instance; it preserves local state.
 
         :param context: The security context.
         :param instance: The instance object.
@@ -773,6 +813,11 @@ class IronicDriver(virt_driver.ComputeDriver):
         icli = client_wrapper.IronicClientWrapper()
         node = _validate_instance_and_node(icli, instance)
         icli.call("node.set_power_state", node.uuid, 'on')
+
+        timer = loopingcall.FixedIntervalLoopingCall(
+                    self._wait_for_power_state,
+                    icli, instance, 'power on')
+        timer.start(interval=CONF.ironic.api_retry_interval).wait()
 
     def get_host_stats(self, refresh=False):
         """Return the currently known stats for all Ironic nodes.
