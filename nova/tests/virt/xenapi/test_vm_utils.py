@@ -1812,6 +1812,7 @@ class SnapshotAttachedHereTestCase(VMUtilsTestBase):
         mock_impl.assert_called_once_with("session", "instance", "vm_ref",
                                           "label", '0', None)
 
+    @mock.patch.object(vm_utils, '_delete_snapshots_in_vdi_chain')
     @mock.patch.object(vm_utils, 'safe_destroy_vdis')
     @mock.patch.object(vm_utils, '_walk_vdi_chain')
     @mock.patch.object(vm_utils, '_wait_for_vhd_coalesce')
@@ -1821,7 +1822,7 @@ class SnapshotAttachedHereTestCase(VMUtilsTestBase):
     def test_snapshot_attached_here_impl(self, mock_get_vdi_for_vm_safely,
             mock_vdi_snapshot, mock_vdi_get_uuid,
             mock_wait_for_vhd_coalesce, mock_walk_vdi_chain,
-            mock_safe_destroy_vdis):
+            mock_safe_destroy_vdis, mock_delete_snapshots_in_vdi_chain):
         session = "session"
         instance = {"uuid": "uuid"}
         mock_callback = mock.Mock()
@@ -1853,6 +1854,8 @@ class SnapshotAttachedHereTestCase(VMUtilsTestBase):
         mock_callback.assert_called_once_with(
                 task_state="image_pending_upload")
         mock_safe_destroy_vdis.assert_called_once_with(session, ["snap_ref"])
+        mock_delete_snapshots_in_vdi_chain.assert_called_once_with(session,
+                instance, ['a', 'b'], "sr_ref")
 
     @mock.patch.object(greenthread, 'sleep')
     def test_wait_for_vhd_coalesce_leaf_node(self, mock_sleep):
@@ -2211,7 +2214,7 @@ class ChildVHDsTestCase(test.NoDBTestCase):
     def test_child_vhds_defaults(self, mock_get_all):
         mock_get_all.return_value = self.all_vdis
 
-        result = vm_utils._child_vhds("session", "sr_ref", "my-uuid")
+        result = vm_utils._child_vhds("session", "sr_ref", ["my-uuid"])
 
         self.assertEqual(['uuid-child', 'uuid-child-snap'], result)
 
@@ -2219,8 +2222,17 @@ class ChildVHDsTestCase(test.NoDBTestCase):
     def test_child_vhds_only_snapshots(self, mock_get_all):
         mock_get_all.return_value = self.all_vdis
 
-        result = vm_utils._child_vhds("session", "sr_ref", "my-uuid",
+        result = vm_utils._child_vhds("session", "sr_ref", ["my-uuid"],
                                       old_snapshots_only=True)
+
+        self.assertEqual(['uuid-child-snap'], result)
+
+    @mock.patch.object(vm_utils, '_get_all_vdis_in_sr')
+    def test_child_vhds_chain(self, mock_get_all):
+        mock_get_all.return_value = self.all_vdis
+
+        result = vm_utils._child_vhds("session", "sr_ref",
+                ["my-uuid", "other-uuid"], old_snapshots_only=True)
 
         self.assertEqual(['uuid-child-snap'], result)
 
@@ -2245,43 +2257,60 @@ class ChildVHDsTestCase(test.NoDBTestCase):
 
 class RemoveOldSnapshotsTestCase(test.NoDBTestCase):
 
-    @mock.patch.object(vm_utils, '_child_vhds')
-    @mock.patch.object(vm_utils, '_get_vhd_parent_uuid')
     @mock.patch.object(vm_utils, 'get_vdi_for_vm_safely')
-    @mock.patch.object(vm_utils, 'safe_find_sr')
-    def test_get_snapshots_for_vm(self, mock_find, mock_get_vdi,
-                                  mock_parent, mock_child_vhds):
-        session = mock.Mock()
-        instance = {"uuid": "uuid"}
-        mock_find.return_value = "sr_ref"
-        mock_get_vdi.return_value = ("vm_vdi_ref", "vm_vdi_rec")
-        mock_parent.return_value = "parent_uuid"
-        mock_child_vhds.return_value = []
+    @mock.patch.object(vm_utils, '_walk_vdi_chain')
+    @mock.patch.object(vm_utils, '_delete_snapshots_in_vdi_chain')
+    def test_remove_old_snapshots(self, mock_delete, mock_walk, mock_get):
+        instance = {"uuid": "fake"}
+        mock_get.return_value = ("ref", {"uuid": "vdi", "SR": "sr_ref"})
+        mock_walk.return_value = [{"uuid": "uuid1"}, {"uuid": "uuid2"}]
 
-        result = vm_utils._get_snapshots_for_vm(session, instance, "vm_ref")
+        vm_utils.remove_old_snapshots("session", instance, "vm_ref")
 
-        self.assertEqual([], result)
-        mock_find.assert_called_once_with(session)
-        mock_get_vdi.assert_called_once_with(session, "vm_ref")
-        mock_parent.assert_called_once_with(session, "vm_vdi_ref")
-        mock_child_vhds.assert_called_once_with(session, "sr_ref",
-                "parent_uuid", old_snapshots_only=True)
+        mock_delete.assert_called_once_with("session", instance,
+                ["uuid1", "uuid2"], "sr_ref")
+        mock_get.assert_called_once_with("session", "vm_ref")
+        mock_walk.assert_called_once_with("session", "vdi")
 
-    @mock.patch.object(vm_utils, 'scan_default_sr')
+    @mock.patch.object(vm_utils, '_child_vhds')
+    def test_delete_snapshots_in_vdi_chain_no_chain(self, mock_child):
+        instance = {"uuid": "fake"}
+
+        vm_utils._delete_snapshots_in_vdi_chain("session", instance,
+                ["uuid"], "sr")
+
+        self.assertFalse(mock_child.called)
+
+    @mock.patch.object(vm_utils, '_child_vhds')
+    def test_delete_snapshots_in_vdi_chain_no_snapshots(self, mock_child):
+        instance = {"uuid": "fake"}
+        mock_child.return_value = []
+
+        vm_utils._delete_snapshots_in_vdi_chain("session", instance,
+                ["uuid1", "uuid2"], "sr")
+
+        mock_child.assert_called_once_with("session", "sr", ["uuid2"],
+                old_snapshots_only=True)
+
+    @mock.patch.object(vm_utils, '_scan_sr')
     @mock.patch.object(vm_utils, 'safe_destroy_vdis')
-    @mock.patch.object(vm_utils, '_get_snapshots_for_vm')
-    def test_remove_old_snapshots(self, mock_get, mock_destroy, mock_scan):
+    @mock.patch.object(vm_utils, '_child_vhds')
+    def test_delete_snapshots_in_vdi_chain_calls_destroy(self, mock_child,
+                mock_destroy, mock_scan):
+        instance = {"uuid": "fake"}
+        mock_child.return_value = ["suuid1", "suuid2"]
         session = mock.Mock()
-        instance = {"uuid": "uuid"}
-        mock_get.return_value = ["vdi_uuid1", "vdi_uuid2"]
-        session.VDI.get_by_uuid.return_value = "vdi_ref"
+        session.VDI.get_by_uuid.side_effect = ["ref1", "ref2"]
 
-        vm_utils.remove_old_snapshots(session, instance, "vm_ref")
+        vm_utils._delete_snapshots_in_vdi_chain(session, instance,
+                ["uuid1", "uuid2"], "sr")
 
-        self.assertTrue(mock_scan.called)
-        session.VDI.get_by_uuid.assert_called_once_with("vdi_uuid1")
-        mock_destroy.assert_called_once_with(session, ["vdi_ref"])
-        mock_scan.assert_called_once_with(session)
+        mock_child.assert_called_once_with(session, "sr", ["uuid2"],
+                old_snapshots_only=True)
+        session.VDI.get_by_uuid.assert_has_calls([
+                mock.call("suuid1"), mock.call("suuid2")])
+        mock_destroy.assert_called_once_with(session, ["ref1", "ref2"])
+        mock_scan.assert_called_once_with(session, "sr")
 
 
 class ResizeFunctionTestCase(test.NoDBTestCase):
