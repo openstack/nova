@@ -144,8 +144,8 @@ class VCState(object):
                 str(about_info.version))
         data["hypervisor_hostname"] = self._host_name
         data["supported_instances"] = [
-            (arch.I686, hvtype.VMWARE, 'hvm'),
-            (arch.X86_64, hvtype.VMWARE, 'hvm')]
+            (arch.I686, hvtype.VMWARE, vm_mode.HVM),
+            (arch.X86_64, hvtype.VMWARE, vm_mode.HVM)]
 
         self._stats = data
         return data
