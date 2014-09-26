@@ -29,7 +29,8 @@ class DictKeysMismatch(object):
 
     def describe(self):
         return ('Keys in d1 and not d2: %(d1only)s.'
-                ' Keys in d2 and not d1: %(d2only)s' % self.__dict__)
+                ' Keys in d2 and not d1: %(d2only)s' %
+                {'d1only': self.d1only, 'd2only': self.d2only})
 
     def get_details(self):
         return {}
@@ -43,7 +44,9 @@ class DictMismatch(object):
 
     def describe(self):
         return ("Dictionaries do not match at %(key)s."
-                " d1: %(d1_value)s d2: %(d2_value)s" % self.__dict__)
+                " d1: %(d1_value)s d2: %(d2_value)s" %
+                {'key': self.key, 'd1_value': self.d1_value,
+                 'd2_value': self.d2_value})
 
     def get_details(self):
         return {}
@@ -113,7 +116,7 @@ class ListLengthMismatch(object):
 
     def describe(self):
         return ('Length mismatch: len(L1)=%(len1)d != '
-                'len(L2)=%(len2)d' % self.__dict__)
+                'len(L2)=%(len2)d' % {'len1': self.len1, 'len2': self.len2})
 
     def get_details(self):
         return {}
@@ -221,7 +224,7 @@ class XMLMismatch(object):
         self.actual = state.actual
 
     def describe(self):
-        return "%(path)s: XML does not match" % self.__dict__
+        return "%(path)s: XML does not match" % self.path
 
     def get_details(self):
         return {
@@ -242,7 +245,10 @@ class XMLTagMismatch(XMLMismatch):
     def describe(self):
         return ("%(path)s: XML tag mismatch at index %(idx)d: "
                 "expected tag <%(expected_tag)s>; "
-                "actual tag <%(actual_tag)s>" % self.__dict__)
+                "actual tag <%(actual_tag)s>" %
+                {'path': self.path, 'idx': self.idx,
+                 'expected_tag': self.expected_tag,
+                 'actual_tag': self.actual_tag})
 
 
 class XMLAttrKeysMismatch(XMLMismatch):
@@ -256,7 +262,9 @@ class XMLAttrKeysMismatch(XMLMismatch):
     def describe(self):
         return ("%(path)s: XML attributes mismatch: "
                 "keys only in expected: %(expected_only)s; "
-                "keys only in actual: %(actual_only)s" % self.__dict__)
+                "keys only in actual: %(actual_only)s" %
+                {'path': self.path, 'expected_only': self.expected_only,
+                 'actual_only': self.actual_only})
 
 
 class XMLAttrValueMismatch(XMLMismatch):
@@ -271,7 +279,10 @@ class XMLAttrValueMismatch(XMLMismatch):
     def describe(self):
         return ("%(path)s: XML attribute value mismatch: "
                 "expected value of attribute %(key)s: %(expected_value)r; "
-                "actual value: %(actual_value)r" % self.__dict__)
+                "actual value: %(actual_value)r" %
+                {'path': self.path, 'key': self.key,
+                 'expected_value': self.expected_value,
+                 'actual_value': self.actual_value})
 
 
 class XMLTextValueMismatch(XMLMismatch):
@@ -285,7 +296,9 @@ class XMLTextValueMismatch(XMLMismatch):
     def describe(self):
         return ("%(path)s: XML text value mismatch: "
                 "expected text value: %(expected_text)r; "
-                "actual value: %(actual_text)r" % self.__dict__)
+                "actual value: %(actual_text)r" %
+                {'path': self.path, 'expected_text': self.expected_text,
+                 'actual_text': self.actual_text})
 
 
 class XMLUnexpectedChild(XMLMismatch):
@@ -298,7 +311,8 @@ class XMLUnexpectedChild(XMLMismatch):
 
     def describe(self):
         return ("%(path)s: XML unexpected child element <%(tag)s> "
-                "present at index %(idx)d" % self.__dict__)
+                "present at index %(idx)d" %
+                {'path': self.path, 'tag': self.tag, 'idx': self.idx})
 
 
 class XMLExpectedChild(XMLMismatch):
@@ -311,7 +325,8 @@ class XMLExpectedChild(XMLMismatch):
 
     def describe(self):
         return ("%(path)s: XML expected child element <%(tag)s> "
-                "not present at index %(idx)d" % self.__dict__)
+                "not present at index %(idx)d" %
+                {'path': self.path, 'tag': self.tag, 'idx': self.idx})
 
 
 class XMLMatchState(object):
