@@ -102,4 +102,5 @@ class LuksEncryptor(cryptsetup.CryptsetupEncryptor):
         """Closes the device (effectively removes the dm-crypt mapping)."""
         LOG.debug("closing encrypted volume %s", self.dev_path)
         utils.execute('cryptsetup', 'luksClose', self.dev_name,
-                      run_as_root=True, check_exit_code=True)
+                      run_as_root=True, check_exit_code=True,
+                      attempts=3)
