@@ -18,6 +18,7 @@ Management class for migration / resize operations.
 """
 import os
 
+from nova import exception
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -102,11 +103,13 @@ class MigrationOps(object):
         curr_root_gb = instance['root_gb']
 
         if new_root_gb < curr_root_gb:
-            raise vmutils.VHDResizeException(
-                _("Cannot resize the root disk to a smaller size. Current "
-                  "size: %(curr_root_gb)s GB. Requested size: "
-                  "%(new_root_gb)s GB") %
-                {'curr_root_gb': curr_root_gb, 'new_root_gb': new_root_gb})
+            raise exception.InstanceFaultRollback(
+                vmutils.VHDResizeException(
+                    _("Cannot resize the root disk to a smaller size. "
+                      "Current size: %(curr_root_gb)s GB. Requested size: "
+                      "%(new_root_gb)s GB") %
+                    {'curr_root_gb': curr_root_gb,
+                     'new_root_gb': new_root_gb}))
 
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    flavor, network_info,

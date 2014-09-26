@@ -1502,7 +1502,7 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         (instance, fake_dest_ip, network_info, flavor) = args
 
         self._mox.ReplayAll()
-        self.assertRaises(vmutils.VHDResizeException,
+        self.assertRaises(exception.InstanceFaultRollback,
                           self._conn.migrate_disk_and_power_off,
                           self._context, instance, fake_dest_ip,
                           flavor, network_info)
