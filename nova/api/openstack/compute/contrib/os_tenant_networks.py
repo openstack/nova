@@ -26,7 +26,6 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
-from nova.i18n import _LI
 import nova.network
 from nova.openstack.common import log as logging
 from nova import quota
@@ -107,7 +106,7 @@ class NetworkController(object):
     def show(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
-        LOG.debug("Showing network with id %s", id)
+
         try:
             network = self.network_api.get(context, id)
         except exception.NetworkNotFound:
@@ -126,8 +125,6 @@ class NetworkController(object):
             reservation = None
             LOG.exception(_LE("Failed to update usages deallocating "
                               "network."))
-
-        LOG.info(_LI("Deleting network with id %s"), id)
 
         def _rollback_quota(reservation):
             if CONF.enable_network_quota and reservation:

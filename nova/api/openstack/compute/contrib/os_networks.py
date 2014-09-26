@@ -22,13 +22,10 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LI
 from nova import network
 from nova.objects import base as base_obj
 from nova.objects import fields as obj_fields
-from nova.openstack.common import log as logging
 
-LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'networks')
 authorize_view = extensions.extension_authorizer('compute',
                                                  'networks:view')
@@ -98,7 +95,6 @@ class NetworkController(wsgi.Controller):
     def _disassociate_host_and_project(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)
-        LOG.debug("Disassociating network with id %s", id)
 
         try:
             self.network_api.associate(context, id, host=None, project=None)
@@ -114,7 +110,7 @@ class NetworkController(wsgi.Controller):
     def show(self, req, id):
         context = req.environ['nova.context']
         authorize_view(context)
-        LOG.debug("Showing network with id %s", id)
+
         try:
             network = self.network_api.get(context, id)
         except exception.NetworkNotFound:
@@ -125,7 +121,6 @@ class NetworkController(wsgi.Controller):
     def delete(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
-        LOG.info(_LI("Deleting network with id %s"), id)
         try:
             self.network_api.delete(context, id)
         except exception.NetworkInUse as e:
@@ -156,8 +151,6 @@ class NetworkController(wsgi.Controller):
         if params.get("project_id") == "":
             params["project_id"] = None
 
-        LOG.debug("Creating network with label %s", params["label"])
-
         try:
             params["num_networks"] = 1
             try:
@@ -187,10 +180,7 @@ class NetworkController(wsgi.Controller):
 
         network_id = body.get('id', None)
         project_id = context.project_id
-        LOG.debug("Associating network %(network)s"
-                  " with project %(project)s",
-                  {"network": network_id or "",
-                   "project": project_id})
+
         try:
             self.network_api.add_network_to_project(
                 context, project_id, network_id)
