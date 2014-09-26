@@ -89,8 +89,15 @@ class TestCellsStateManager(test.TestCase):
         mock_find_file.return_value = "/etc/nova/cells.json"
         mock_read_cached_file.return_value = (False, six.StringIO({}))
         self.flags(cells_config='cells.json', group='cells')
-        self.assertIsInstance(state.CellStateManager(),
+        manager = state.CellStateManager()
+        self.assertIsInstance(manager,
                               state.CellStateManagerFile)
+        self.assertRaises(exception.CellsUpdateUnsupported,
+                          manager.cell_create, None, None)
+        self.assertRaises(exception.CellsUpdateUnsupported,
+                          manager.cell_update, None, None, None)
+        self.assertRaises(exception.CellsUpdateUnsupported,
+                          manager.cell_delete, None, None)
 
     def test_dbmanager_returned(self):
         self.assertIsInstance(state.CellStateManager(),
