@@ -1343,8 +1343,7 @@ class FakeVim(object):
                 result.file.append(matched)
             task_mdo = create_task(method, "success", result=result)
         else:
-            task_mdo = create_task(method, "error",
-                    error_fault=FileNotFound())
+            task_mdo = create_task(method, "error", error_fault=FileNotFound())
         return task_mdo.obj
 
     def _move_file(self, method, *args, **kwargs):
