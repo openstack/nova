@@ -218,17 +218,18 @@ class SimpleTenantUsageController(object):
             value = timeutils.utcnow()
         elif isinstance(dtstr, datetime.datetime):
             value = dtstr
-        for fmt in ["%Y-%m-%dT%H:%M:%S",
-                    "%Y-%m-%dT%H:%M:%S.%f",
-                    "%Y-%m-%d %H:%M:%S.%f"]:
-            try:
-                value = parse_strtime(dtstr, fmt)
-                break
-            except exception.InvalidStrTime:
-                pass
         else:
-            msg = _("Datetime is in invalid format")
-            raise exception.InvalidStrTime(reason=msg)
+            for fmt in ["%Y-%m-%dT%H:%M:%S",
+                        "%Y-%m-%dT%H:%M:%S.%f",
+                        "%Y-%m-%d %H:%M:%S.%f"]:
+                try:
+                    value = parse_strtime(dtstr, fmt)
+                    break
+                except exception.InvalidStrTime:
+                    pass
+            else:
+                msg = _("Datetime is in invalid format")
+                raise exception.InvalidStrTime(reason=msg)
 
         # NOTE(mriedem): Instance object DateTime fields are timezone-aware
         # so we have to force UTC timezone for comparing this datetime against
