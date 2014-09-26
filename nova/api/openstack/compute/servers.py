@@ -1194,12 +1194,12 @@ class Controller(wsgi.Controller):
             msg = _("Image that the instance was started "
                     "with could not be found.")
             raise exc.HTTPBadRequest(explanation=msg)
-        except exception.Invalid:
-            msg = _("Invalid instance image.")
-            raise exc.HTTPBadRequest(explanation=msg)
         except (exception.NoValidHost,
                 exception.AutoDiskConfigDisabledByImage) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
+        except exception.Invalid:
+            msg = _("Invalid instance image.")
+            raise exc.HTTPBadRequest(explanation=msg)
 
         return webob.Response(status_int=202)
 
