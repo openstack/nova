@@ -333,6 +333,10 @@ class InvalidSortKey(Invalid):
     msg_fmt = _("Sort key supplied was not valid.")
 
 
+class InvalidStrTime(Invalid):
+    msg_fmt = _("Invalid datetime string: %(reason)s")
+
+
 class InstanceInvalidState(Invalid):
     msg_fmt = _("Instance %(instance_uuid)s in %(attr)s %(state)s. Cannot "
                 "%(method)s while the instance is in this state.")
