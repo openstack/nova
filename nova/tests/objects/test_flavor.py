@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import contextlib
-
 import mock
 
 from nova import db
@@ -135,43 +133,48 @@ class _TestFlavor(object):
         self.assertRaises(exception.ObjectActionError, flavor.create,
                           self.context)
 
-    def test_save(self):
-        flavor = flavor_obj.Flavor._from_db_object(self.context,
-                                                   flavor_obj.Flavor(),
-                                                   fake_flavor)
-        flavor.flavorid = 'foo'
-        flavor.projects = ['project-1', 'project-2']
+    @mock.patch('nova.db.flavor_access_add')
+    @mock.patch('nova.db.flavor_access_remove')
+    @mock.patch('nova.db.flavor_extra_specs_delete')
+    @mock.patch('nova.db.flavor_extra_specs_update_or_create')
+    def test_save(self, mock_update, mock_delete, mock_remove, mock_add):
+        ctxt = self.context.elevated()
+        extra_specs = {'key1': 'value1', 'key2': 'value2'}
+        projects = ['project-1', 'project-2']
+        flavor = flavor_obj.Flavor(context=ctxt, flavorid='foo',
+                                   extra_specs=extra_specs, projects=projects)
         flavor.obj_reset_changes()
-        flavor.extra_specs = {'foo': 'baz'}
-        flavor.projects = ['project-1', 'project-3']
 
-        with contextlib.nested(
-            mock.patch.object(db, 'flavor_extra_specs_update_or_create'),
-            mock.patch.object(db, 'flavor_access_add'),
-            mock.patch.object(db, 'flavor_access_remove')) as (
-                extra_specs_update, access_add, access_remove):
-            flavor.save()
-            extra_specs_update.assert_called_once_with(self.context,
-                                                       flavor.flavorid,
-                                                       {'foo': 'baz'})
-            access_add.assert_called_once_with(self.context, flavor.flavorid,
-                                               'project-3')
-            access_remove.assert_called_once_with(self.context,
-                                                  flavor.flavorid,
-                                                  'project-2')
+        # Test deleting an extra_specs key and project
+        del flavor.extra_specs['key1']
+        del flavor.projects[-1]
+        self.assertEqual(set(['extra_specs', 'projects']),
+                         flavor.obj_what_changed())
+        flavor.save()
+        self.assertEqual({'key2': 'value2'}, flavor.extra_specs)
+        mock_delete.assert_called_once_with(ctxt, 'foo', 'key1')
+        self.assertEqual(['project-1'], flavor.projects)
+        mock_remove.assert_called_once_with(ctxt, 'foo', 'project-2')
 
-        self.assertEqual(set(), flavor.obj_what_changed())
+        # Test updating an extra_specs key value
+        flavor.extra_specs['key2'] = 'foobar'
+        self.assertEqual(set(['extra_specs']), flavor.obj_what_changed())
+        flavor.save()
+        self.assertEqual({'key2': 'foobar'}, flavor.extra_specs)
+        mock_update.assert_called_with(ctxt, 'foo', {'key2': 'foobar'})
+
+        # Test adding an extra_specs and project
+        flavor.extra_specs['key3'] = 'value3'
+        flavor.projects.append('project-3')
+        self.assertEqual(set(['extra_specs', 'projects']),
+                         flavor.obj_what_changed())
+        flavor.save()
+        self.assertEqual({'key2': 'foobar', 'key3': 'value3'},
+                         flavor.extra_specs)
+        mock_update.assert_called_with(ctxt, 'foo', {'key2': 'foobar',
+                                                     'key3': 'value3'})
         self.assertEqual(['project-1', 'project-3'], flavor.projects)
-
-        flavor.projects = []
-        with mock.patch.object(db, 'flavor_access_remove') as access_remove:
-            flavor.save()
-            access_remove.assert_any_call(self.context,
-                                          flavor.flavorid,
-                                          'project-1')
-            access_remove.assert_any_call(self.context,
-                                          flavor.flavorid,
-                                          'project-3')
+        mock_add.assert_called_once_with(ctxt, 'foo', 'project-3')
 
     @mock.patch('nova.db.flavor_create')
     @mock.patch('nova.db.flavor_extra_specs_delete')
@@ -189,6 +192,7 @@ class _TestFlavor(object):
         flavor.save()
         mock_delete.assert_called_once_with(ctxt, flavor.flavorid,
                                             'key1')
+        self.assertFalse(mock_update.called)
 
     def test_save_invalid_fields(self):
         flavor = flavor_obj.Flavor(id=123)
