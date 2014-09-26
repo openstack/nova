@@ -468,7 +468,6 @@ class API(base.Base):
         """Return the port for the client given the port id."""
         return neutronv2.get_client(context).show_port(port_id)
 
-    @refresh_cache
     def get_instance_nw_info(self, context, instance, networks=None,
                              port_ids=None, use_slave=False):
         """Return network information for specified instance
@@ -479,6 +478,8 @@ class API(base.Base):
         #                   the master. For now we just ignore this arg.
         result = self._get_instance_nw_info(context, instance, networks,
                                             port_ids)
+        update_instance_info_cache(self, context, instance,
+                                   result, update_cells=False)
         return result
 
     def _get_instance_nw_info(self, context, instance, networks=None,
