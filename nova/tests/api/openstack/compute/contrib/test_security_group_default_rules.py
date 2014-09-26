@@ -16,7 +16,10 @@ from lxml import etree
 from oslo.config import cfg
 import webob
 
-from nova.api.openstack.compute.contrib import security_group_default_rules
+from nova.api.openstack.compute.contrib import \
+    security_group_default_rules as security_group_default_rules_v2
+from nova.api.openstack.compute.plugins.v3 import \
+    security_group_default_rules as security_group_default_rules_v21
 from nova.api.openstack import wsgi
 from nova import context
 import nova.db
@@ -48,12 +51,14 @@ def security_group_default_rule_db(security_group_default_rule, id=None):
     return AttrDict(attrs)
 
 
-class TestSecurityGroupDefaultRulesNeutron(test.TestCase):
+class TestSecurityGroupDefaultRulesNeutronV21(test.TestCase):
+    controller_cls = (security_group_default_rules_v21.
+                      SecurityGroupDefaultRulesController)
+
     def setUp(self):
         self.flags(security_group_api='neutron')
-        super(TestSecurityGroupDefaultRulesNeutron, self).setUp()
-        self.controller = \
-            security_group_default_rules.SecurityGroupDefaultRulesController()
+        super(TestSecurityGroupDefaultRulesNeutronV21, self).setUp()
+        self.controller = self.controller_cls()
 
     def test_create_security_group_default_rule_not_implemented_neutron(self):
         sgr = security_group_default_rule_template()
@@ -81,11 +86,18 @@ class TestSecurityGroupDefaultRulesNeutron(test.TestCase):
                           req, '602ed77c-a076-4f9b-a617-f93b847b62c5')
 
 
-class TestSecurityGroupDefaultRules(test.TestCase):
+class TestSecurityGroupDefaultRulesNeutronV2(test.TestCase):
+    controller_cls = (security_group_default_rules_v2.
+                      SecurityGroupDefaultRulesController)
+
+
+class TestSecurityGroupDefaultRulesV21(test.TestCase):
+    controller_cls = (security_group_default_rules_v21.
+                      SecurityGroupDefaultRulesController)
+
     def setUp(self):
-        super(TestSecurityGroupDefaultRules, self).setUp()
-        self.controller = \
-            security_group_default_rules.SecurityGroupDefaultRulesController()
+        super(TestSecurityGroupDefaultRulesV21, self).setUp()
+        self.controller = self.controller_cls()
 
     def test_create_security_group_default_rule(self):
         sgr = security_group_default_rule_template()
@@ -323,10 +335,15 @@ class TestSecurityGroupDefaultRules(test.TestCase):
         self.assertEqual(sgr['cidr'], security_group_rule.cidr)
 
 
+class TestSecurityGroupDefaultRulesV2(test.TestCase):
+    controller_cls = (security_group_default_rules_v2.
+                      SecurityGroupDefaultRulesController)
+
+
 class TestSecurityGroupDefaultRulesXMLDeserializer(test.TestCase):
     def setUp(self):
         super(TestSecurityGroupDefaultRulesXMLDeserializer, self).setUp()
-        deserializer = security_group_default_rules.\
+        deserializer = security_group_default_rules_v2.\
             SecurityGroupDefaultRulesXMLDeserializer()
         self.deserializer = deserializer
 
@@ -423,9 +440,9 @@ class TestSecurityGroupDefaultRuleXMLSerializer(test.TestCase):
         super(TestSecurityGroupDefaultRuleXMLSerializer, self).setUp()
         self.namespace = wsgi.XMLNS_V11
         self.rule_serializer =\
-            security_group_default_rules.SecurityGroupDefaultRuleTemplate()
+            security_group_default_rules_v2.SecurityGroupDefaultRuleTemplate()
         self.index_serializer =\
-            security_group_default_rules.SecurityGroupDefaultRulesTemplate()
+            security_group_default_rules_v2.SecurityGroupDefaultRulesTemplate()
 
     def _tag(self, elem):
         tagname = elem.tag
