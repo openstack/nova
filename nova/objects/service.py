@@ -49,7 +49,7 @@ class Service(base.NovaPersistentObject, base.NovaObject):
         target_version = utils.convert_version_to_tuple(target_version)
         if target_version < (1, 3) and 'compute_node' in primitive:
             self.compute_node.obj_make_compatible(
-                    primitive['compute_node'], '1.4')
+                    primitive['compute_node']['nova_object.data'], '1.4')
             primitive['compute_node']['nova_object.version'] = '1.4'
 
     @staticmethod
