@@ -18,13 +18,12 @@ Starting point for routing EC2 requests.
 
 """
 
-from eventlet.green import httplib
 from oslo.config import cfg
 from oslo.serialization import jsonutils
 from oslo.utils import importutils
 from oslo.utils import timeutils
+import requests
 import six
-import six.moves.urllib.parse as urlparse
 import webob
 import webob.dec
 import webob.exc
@@ -71,11 +70,14 @@ ec2_opts = [
     cfg.IntOpt('ec2_timestamp_expiry',
                default=300,
                help='Time in seconds before ec2 timestamp expires'),
+    cfg.BoolOpt('keystone_ec2_insecure', default=False, help='Disable SSL '
+                'certificate verification.'),
     ]
 
 CONF = cfg.CONF
 CONF.register_opts(ec2_opts)
 CONF.import_opt('use_forwarded_for', 'nova.api.auth')
+CONF.import_group('ssl', 'nova.openstack.common.sslutils')
 
 
 # Fault Wrapper around all EC2 requests
@@ -216,23 +218,28 @@ class EC2KeystoneAuth(wsgi.Middleware):
         creds_json = jsonutils.dumps(creds)
         headers = {'Content-Type': 'application/json'}
 
-        o = urlparse.urlparse(CONF.keystone_ec2_url)
-        if o.scheme == "http":
-            conn = httplib.HTTPConnection(o.netloc)
-        else:
-            conn = httplib.HTTPSConnection(o.netloc)
-        conn.request('POST', o.path, body=creds_json, headers=headers)
-        response = conn.getresponse()
-        data = response.read()
-        if response.status != 200:
-            if response.status == 401:
+        verify = not CONF.keystone_ec2_insecure
+        if verify and CONF.ssl.ca_file:
+            verify = CONF.ssl.ca_file
+
+        cert = None
+        if CONF.ssl.cert_file and CONF.ssl.key_file:
+            cert = (CONF.ssl.cert_file, CONF.ssl.key_file)
+        elif CONF.ssl.cert_file:
+            cert = CONF.ssl.cert_file
+
+        response = requests.request('POST', CONF.keystone_ec2_url,
+                                    data=creds_json, headers=headers,
+                                    verify=verify, cert=cert)
+        status_code = response.status_code
+        if status_code != 200:
+            if status_code == 401:
                 msg = response.reason
             else:
                 msg = _("Failure communicating with keystone")
             return faults.ec2_error_response(request_id, "AuthFailure", msg,
-                                             status=response.status)
-        result = jsonutils.loads(data)
-        conn.close()
+                                             status=status_code)
+        result = response.json()
 
         try:
             token_id = result['access']['token']['id']

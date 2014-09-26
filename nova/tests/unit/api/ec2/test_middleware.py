@@ -14,11 +14,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from eventlet.green import httplib
 from lxml import etree
-from mox3 import mox
+import mock
 from oslo.config import cfg
 from oslo.utils import timeutils
+import requests
 import webob
 import webob.dec
 import webob.exc
@@ -153,11 +153,11 @@ class ExecutorTestCase(test.NoDBTestCase):
 class FakeResponse(object):
     reason = "Test Reason"
 
-    def __init__(self, status=400):
-        self.status = status
+    def __init__(self, status_code=400):
+        self.status_code = status_code
 
-    def read(self):
-        return '{}'
+    def json(self):
+        return {}
 
 
 class KeystoneAuthTestCase(test.NoDBTestCase):
@@ -188,38 +188,24 @@ class KeystoneAuthTestCase(test.NoDBTestCase):
         resp = self.kauth(req)
         self._validate_ec2_error(resp, 400, 'AuthFailure')
 
-    def test_communication_failure(self):
+    @mock.patch.object(requests, 'request', return_value=FakeResponse())
+    def test_communication_failure(self, mock_request):
         req = wsgi.Request.blank('/test')
         req.GET['Signature'] = 'test-signature'
         req.GET['AWSAccessKeyId'] = 'test-key-id'
-
-        conn = httplib.HTTPConnection('/mock')
-        self.mox.StubOutWithMock(httplib.HTTPConnection, 'request')
-        self.mox.StubOutWithMock(httplib.HTTPConnection, 'getresponse')
-        conn.request('POST', mox.IgnoreArg(), body=mox.IgnoreArg(),
-                     headers=mox.IgnoreArg())
-        resp = FakeResponse()
-        conn.getresponse().AndReturn(resp)
-        self.mox.ReplayAll()
-
         resp = self.kauth(req)
         self._validate_ec2_error(resp, 400, 'AuthFailure')
+        mock_request.assert_called_with('POST', CONF.keystone_ec2_url,
+                                        data=mock.ANY, headers=mock.ANY,
+                                        verify=mock.ANY, cert=mock.ANY)
 
-    def test_no_result_data(self):
+    @mock.patch.object(requests, 'request', return_value=FakeResponse(200))
+    def test_no_result_data(self, mock_request):
         req = wsgi.Request.blank('/test')
         req.GET['Signature'] = 'test-signature'
         req.GET['AWSAccessKeyId'] = 'test-key-id'
-
-        conn = httplib.HTTPConnection('/mock')
-        self.mox.StubOutWithMock(httplib.HTTPConnection, 'request')
-        self.mox.StubOutWithMock(httplib.HTTPConnection, 'getresponse')
-        self.mox.StubOutWithMock(httplib.HTTPConnection, 'close')
-        conn.request('POST', mox.IgnoreArg(), body=mox.IgnoreArg(),
-                     headers=mox.IgnoreArg())
-        resp = FakeResponse(200)
-        conn.getresponse().AndReturn(resp)
-        conn.close()
-        self.mox.ReplayAll()
-
         resp = self.kauth(req)
         self._validate_ec2_error(resp, 400, 'AuthFailure')
+        mock_request.assert_called_with('POST', CONF.keystone_ec2_url,
+                                        data=mock.ANY, headers=mock.ANY,
+                                        verify=mock.ANY, cert=mock.ANY)
