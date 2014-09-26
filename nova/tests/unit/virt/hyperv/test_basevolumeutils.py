@@ -85,12 +85,35 @@ class BaseVolumeUtilsTestCase(test.NoDBTestCase):
         self.assertTrue(self._volutils.volume_in_mapping(
             self._FAKE_MOUNT_DEVICE, mock.sentinel.FAKE_BLOCK_DEVICE_INFO))
 
+    def test_get_drive_number_from_disk_path(self):
+        fake_disk_path = (
+            '\\\\WIN-I5BTVHOIFGK\\root\\virtualization\\v2:Msvm_DiskDrive.'
+            'CreationClassName="Msvm_DiskDrive",DeviceID="Microsoft:353B3BE8-'
+            '310C-4cf4-839E-4E1B14616136\\\\1",SystemCreationClassName='
+            '"Msvm_ComputerSystem",SystemName="WIN-I5BTVHOIFGK"')
+        expected_disk_number = 1
+
+        ret_val = self._volutils._get_drive_number_from_disk_path(
+            fake_disk_path)
+
+        self.assertEqual(expected_disk_number, ret_val)
+
+    def test_get_drive_number_not_found(self):
+        fake_disk_path = 'fake_disk_path'
+
+        ret_val = self._volutils._get_drive_number_from_disk_path(
+            fake_disk_path)
+
+        self.assertFalse(ret_val)
+
     @mock.patch.object(basevolumeutils.BaseVolumeUtils,
                        "_get_drive_number_from_disk_path")
     def test_get_session_id_from_mounted_disk(self, mock_get_session_id):
         mock_get_session_id.return_value = mock.sentinel.FAKE_DEVICE_NUMBER
         mock_initiator_session = self._create_initiator_session()
-        self._volutils._conn_wmi.query.return_value = [mock_initiator_session]
+        mock_ses_class = self._volutils._conn_wmi.MSiSCSIInitiator_SessionClass
+        mock_ses_class.return_value = [mock_initiator_session]
+
         session_id = self._volutils.get_session_id_from_mounted_disk(
             self._FAKE_DISK_PATH)
 
@@ -98,14 +121,16 @@ class BaseVolumeUtilsTestCase(test.NoDBTestCase):
 
     def test_get_devices_for_target(self):
         init_session = self._create_initiator_session()
-        self._volutils._conn_wmi.query.return_value = [init_session]
+        mock_ses_class = self._volutils._conn_wmi.MSiSCSIInitiator_SessionClass
+        mock_ses_class.return_value = [init_session]
         devices = self._volutils._get_devices_for_target(
             mock.sentinel.FAKE_IQN)
 
         self.assertEqual(init_session.Devices, devices)
 
     def test_get_devices_for_target_not_found(self):
-        self._volutils._conn_wmi.query.return_value = None
+        mock_ses_class = self._volutils._conn_wmi.MSiSCSIInitiator_SessionClass
+        mock_ses_class.return_value = []
         devices = self._volutils._get_devices_for_target(
             mock.sentinel.FAKE_IQN)
 
@@ -116,6 +141,8 @@ class BaseVolumeUtilsTestCase(test.NoDBTestCase):
     def test_get_device_number_for_target(self, fake_get_devices):
         init_session = self._create_initiator_session()
         fake_get_devices.return_value = init_session.Devices
+        mock_ses_class = self._volutils._conn_wmi.MSiSCSIInitiator_SessionClass
+        mock_ses_class.return_value = [init_session]
         device_number = self._volutils.get_device_number_for_target(
             mock.sentinel.FAKE_IQN, mock.sentinel.FAKE_LUN)
 
