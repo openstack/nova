@@ -1089,7 +1089,7 @@ class Controller(wsgi.Controller):
 
         return self._view_builder.show(req, instance)
 
-    @wsgi.response(202)
+    @wsgi.response(204)
     @wsgi.serializers(xml=FullServerTemplate)
     @wsgi.deserializers(xml=ActionDeserializer)
     @wsgi.action('confirmResize')
@@ -1106,7 +1106,6 @@ class Controller(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'confirmResize')
-        return exc.HTTPNoContent()
 
     @wsgi.response(202)
     @wsgi.serializers(xml=FullServerTemplate)
