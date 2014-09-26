@@ -77,7 +77,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject):
         self.projects = [x['project_id'] for x in
                          db.flavor_access_get_by_flavor_id(context,
                                                            self.flavorid)]
-        self.obj_reset_changes('projects')
+        self.obj_reset_changes(['projects'])
 
     def obj_load_attr(self, attrname):
         # NOTE(danms): Only projects could be lazy-loaded right now

@@ -211,6 +211,7 @@ class _TestFlavor(object):
             projects = flavor.projects
 
         self.assertEqual(['project-1'], projects)
+        self.assertNotIn('projects', flavor.obj_what_changed())
 
     def test_load_anything_else(self):
         flavor = flavor_obj.Flavor()
