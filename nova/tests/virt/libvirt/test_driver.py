@@ -246,7 +246,7 @@ class FakeVirtDomain(object):
         pass
 
 
-class CacheConcurrencyTestCase(test.TestCase):
+class CacheConcurrencyTestCase(test.NoDBTestCase):
     def setUp(self):
         super(CacheConcurrencyTestCase, self).setUp()
 
