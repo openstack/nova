@@ -185,11 +185,11 @@ class VMwareVMOps(object):
                 files = [name.replace(".vmdk", "-flat.vmdk"), name]
                 for file in files:
                     ds_path = ds_util.DatastorePath.parse(file)
-                    self._delete_datastore_file(instance, ds_path, dc_ref)
+                    self._delete_datastore_file(ds_path, dc_ref)
 
         LOG.debug("Extended root virtual disk")
 
-    def _delete_datastore_file(self, instance, datastore_path, dc_ref):
+    def _delete_datastore_file(self, datastore_path, dc_ref):
         try:
             ds_util.file_delete(self._session, datastore_path, dc_ref)
         except (vexc.CannotDeleteFileException,
@@ -314,8 +314,7 @@ class VMwareVMOps(object):
         flat_vmdk_name = vi.cache_image_path.basename.replace('.vmdk',
                                                               '-flat.vmdk')
         flat_vmdk_ds_loc = tmp_dir_loc.join(vi.ii.image_id, flat_vmdk_name)
-        self._delete_datastore_file(vi.instance, str(flat_vmdk_ds_loc),
-                                    vi.dc_info.ref)
+        self._delete_datastore_file(str(flat_vmdk_ds_loc), vi.dc_info.ref)
         return tmp_dir_loc, flat_vmdk_ds_loc
 
     def _prepare_iso_image(self, vi):
@@ -351,8 +350,7 @@ class VMwareVMOps(object):
                 str(tmp_image_ds_loc),
                 str(converted_image_ds_loc))
 
-        self._delete_datastore_file(vi.instance, str(tmp_image_ds_loc),
-                                    vi.dc_info.ref)
+        self._delete_datastore_file(str(tmp_image_ds_loc), vi.dc_info.ref)
 
         self._move_to_cache(vi.dc_info.ref,
                             tmp_image_ds_loc.parent,
@@ -424,8 +422,7 @@ class VMwareVMOps(object):
                 LOG.debug("Caching image")
                 image_cache(vi, tmp_image_ds_loc)
                 LOG.debug("Cleaning up location %s", str(tmp_dir_loc))
-                self._delete_datastore_file(vi.instance, str(tmp_dir_loc),
-                                            vi.dc_info.ref)
+                self._delete_datastore_file(str(tmp_dir_loc), vi.dc_info.ref)
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None,
@@ -714,7 +711,7 @@ class VMwareVMOps(object):
             # is retained too by design since it makes little sense to remove
             # it when the data disk it refers to still lingers.
             for f in dest_vmdk_data_file_path, dest_vmdk_file_path:
-                self._delete_datastore_file(instance, f, dc_info.ref)
+                self._delete_datastore_file(f, dc_info.ref)
 
         _clean_temp_data()
 

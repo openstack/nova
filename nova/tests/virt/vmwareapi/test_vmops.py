@@ -1121,7 +1121,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 self._context, vi, tmp_image_path)
         mock_cache.assert_called_once_with(vi, tmp_image_path)
         mock_delete_datastore_file.assert_called_once_with(
-                vi.instance, str(tmp_dir_path), self._dc_info.ref)
+                str(tmp_dir_path), self._dc_info.ref)
 
     def test_fetch_image_if_missing(self):
         self._test_fetch_image_if_missing()
@@ -1207,7 +1207,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             DsPathMatcher(expected_path_to_create),
             image_info.file_size_in_kb)
         mock_delete_datastore_file.assert_called_once_with(
-                vi.instance, DsPathMatcher(expected_image_path),
+                DsPathMatcher(expected_image_path),
                 self._dc_info.ref)
 
     @mock.patch.object(ds_util, 'file_move')
