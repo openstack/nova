@@ -156,19 +156,20 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 name='fake-name',
                 vmFolder='fake-folder')
         path = ds_util.DatastorePath(ds_name, base_name)
-        ds_util.mkdir = mock.Mock()
         return ds_name, ds_ref, ops, path, dc_ref
 
-    def test_create_folder_if_missing(self):
+    @mock.patch.object(ds_util, 'mkdir')
+    def test_create_folder_if_missing(self, mock_mkdir):
         ds_name, ds_ref, ops, path, dc = self._setup_create_folder_mocks()
         ops._create_folder_if_missing(ds_name, ds_ref, 'folder')
-        ds_util.mkdir.assert_called_with(ops._session, path, dc)
+        mock_mkdir.assert_called_with(ops._session, path, dc)
 
-    def test_create_folder_if_missing_exception(self):
+    @mock.patch.object(ds_util, 'mkdir')
+    def test_create_folder_if_missing_exception(self, mock_mkdir):
         ds_name, ds_ref, ops, path, dc = self._setup_create_folder_mocks()
         ds_util.mkdir.side_effect = vexc.FileAlreadyExistsException()
         ops._create_folder_if_missing(ds_name, ds_ref, 'folder')
-        ds_util.mkdir.assert_called_with(ops._session, path, dc)
+        mock_mkdir.assert_called_with(ops._session, path, dc)
 
     @mock.patch.object(ds_util, 'file_exists', return_value=True)
     def test_check_if_folder_file_exists_with_existing(self,
