@@ -18,12 +18,12 @@
 """RequestContext: context for requests that persist through all of nova."""
 
 import copy
-import uuid
 
 import six
 
 from nova import exception
 from nova.i18n import _
+from nova.openstack.common import context
 from nova.openstack.common import local
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -31,10 +31,6 @@ from nova import policy
 
 
 LOG = logging.getLogger(__name__)
-
-
-def generate_request_id():
-    return 'req-' + str(uuid.uuid4())
 
 
 class RequestContext(object):
@@ -75,7 +71,7 @@ class RequestContext(object):
             timestamp = timeutils.parse_strtime(timestamp)
         self.timestamp = timestamp
         if not request_id:
-            request_id = generate_request_id()
+            request_id = context.generate_request_id()
         self.request_id = request_id
         self.auth_token = auth_token
 

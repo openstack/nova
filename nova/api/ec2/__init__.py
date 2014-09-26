@@ -35,6 +35,7 @@ from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
+from nova.openstack.common import context as common_context
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -182,7 +183,7 @@ class EC2KeystoneAuth(wsgi.Middleware):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
-        request_id = context.generate_request_id()
+        request_id = common_context.generate_request_id()
         signature = req.params.get('Signature')
         if not signature:
             msg = _("Signature not provided")
