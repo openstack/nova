@@ -32,6 +32,7 @@ from nova.network.neutronv2 import constants
 from nova.network.security_group import openstack_driver
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 
@@ -476,16 +477,20 @@ class API(base.Base):
         # NOTE(geekinutah): It would be nice if use_slave had us call
         #                   special APIs that pummeled slaves instead of
         #                   the master. For now we just ignore this arg.
-        result = self._get_instance_nw_info(context, instance, networks,
-                                            port_ids)
-        update_instance_info_cache(self, context, instance,
-                                   result, update_cells=False)
+        with lockutils.lock('refresh_cache-%s' % instance['uuid']):
+            result = self._get_instance_nw_info(context, instance, networks,
+                                                port_ids)
+            update_instance_info_cache(self, context,
+                                       instance,
+                                       nw_info=result,
+                                       update_cells=False)
         return result
 
     def _get_instance_nw_info(self, context, instance, networks=None,
                               port_ids=None):
-        # keep this caching-free version of the get_instance_nw_info method
-        # because it is used by the caching logic itself.
+        # NOTE(danms): This is an inner method intended to be called
+        # by other code that updates instance nwinfo. It *must* be
+        # called with the refresh_cache-%(instance_uuid) lock held!
         LOG.debug(_('get_instance_nw_info() for %s'), instance['display_name'])
         nw_info = self._build_network_info_model(context, instance, networks,
                                                  port_ids)
