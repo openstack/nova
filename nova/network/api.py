@@ -19,6 +19,8 @@
 import functools
 import inspect
 
+from oslo.config import cfg
+
 from nova.compute import flavors
 from nova.db import base
 from nova import exception
@@ -33,6 +35,8 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import policy
 from nova import utils
+
+CONF = cfg.CONF
 
 LOG = logging.getLogger(__name__)
 
@@ -126,12 +130,18 @@ class API(base.Base):
     def get_all(self, context):
         """Get all the networks.
 
-        If it is an admin user, api will return all the networks,
-        if it is a normal user, api will only return the networks which
+        If it is an admin user then api will return all the
+        networks. If it is a normal user and nova Flat or FlatDHCP
+        networking is being used then api will return all
+        networks. Otherwise api will only return the networks which
         belong to the user's project.
         """
+        if "nova.network.manager.Flat" in CONF.network_manager:
+            project_only = "allow_none"
+        else:
+            project_only = True
         try:
-            return self.db.network_get_all(context, project_only=True)
+            return self.db.network_get_all(context, project_only=project_only)
         except exception.NoNetworksFound:
             return []
 
