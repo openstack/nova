@@ -17,6 +17,7 @@ import re
 
 import mock
 from oslo.vmware import exceptions as vexc
+from testtools import matchers
 
 from nova import exception
 from nova.i18n import _
@@ -486,6 +487,14 @@ class DatastorePathTestCase(test.NoDBTestCase):
         for t in args:
             p = ds_util.DatastorePath(t[0], *t[1])
             self.assertNotEqual(str(canonical_p), str(p))
+
+    def test_ds_path_hashable(self):
+        ds1 = ds_util.DatastorePath('dsname', 'path')
+        ds2 = ds_util.DatastorePath('dsname', 'path')
+
+        # If the above objects have the same hash, they will only be added to
+        # the set once
+        self.assertThat(set([ds1, ds2]), matchers.HasLength(1))
 
     def test_equal(self):
         a = ds_util.DatastorePath('ds_name', 'a')

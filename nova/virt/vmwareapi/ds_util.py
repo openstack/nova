@@ -161,6 +161,9 @@ class DatastorePath(object):
                 self._datastore_name == other._datastore_name and
                 self._rel_path == other._rel_path)
 
+    def __hash__(self):
+        return str(self).__hash__()
+
     @classmethod
     def parse(cls, datastore_path):
         """Constructs a DatastorePath object given a datastore path string."""
