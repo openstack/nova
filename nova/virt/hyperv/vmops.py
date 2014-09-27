@@ -30,6 +30,7 @@ from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova.openstack.common import units
+from nova.openstack.common import uuidutils
 from nova import utils
 from nova.virt import configdrive
 from nova.virt.hyperv import constants
@@ -113,6 +114,16 @@ class VMOps(object):
             raise TypeError(_("VIF driver not found for "
                               "network_api_class: %s") %
                             CONF.network_api_class)
+
+    def list_instance_uuids(self):
+        instance_uuids = []
+        for (instance_name, notes) in self._vmutils.list_instance_notes():
+            if notes and uuidutils.is_uuid_like(notes[0]):
+                instance_uuids.append(str(notes[0]))
+            else:
+                LOG.debug("Notes not found or not resembling a GUID for "
+                          "instance: %s" % instance_name)
+        return instance_uuids
 
     def list_instances(self):
         return self._vmutils.list_instances()
@@ -242,7 +253,8 @@ class VMOps(object):
                                 instance['memory_mb'],
                                 instance['vcpus'],
                                 CONF.hyperv.limit_cpu_features,
-                                CONF.hyperv.dynamic_memory_ratio)
+                                CONF.hyperv.dynamic_memory_ratio,
+                                [instance['uuid']])
 
         ctrl_disk_addr = 0
         if root_vhd_path:

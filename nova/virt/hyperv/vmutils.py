@@ -80,6 +80,8 @@ class VMUtils(object):
     'Msvm_SyntheticEthernetPortSettingData'
     _AFFECTED_JOB_ELEMENT_CLASS = "Msvm_AffectedJobElement"
 
+    _VIRTUAL_SYSTEM_CURRENT_SETTINGS = 3
+
     _vm_power_states_map = {constants.HYPERV_VM_STATE_ENABLED: 2,
                             constants.HYPERV_VM_STATE_DISABLED: 3,
                             constants.HYPERV_VM_STATE_REBOOT: 10,
@@ -95,6 +97,17 @@ class VMUtils(object):
 
     def _init_hyperv_wmi_conn(self, host):
         self._conn = wmi.WMI(moniker='//%s/root/virtualization' % host)
+
+    def list_instance_notes(self):
+        instance_notes = []
+
+        for vs in self._conn.Msvm_VirtualSystemSettingData(
+                ['ElementName', 'Notes'],
+                SettingType=self._VIRTUAL_SYSTEM_CURRENT_SETTINGS):
+            instance_notes.append((vs.ElementName,
+                                  [v for v in vs.Notes.split('\n') if v]))
+
+        return instance_notes
 
     def list_instances(self):
         """Return the names of all the instances known to Hyper-V."""
@@ -222,12 +235,12 @@ class VMUtils(object):
             raise HyperVAuthorizationException(msg)
 
     def create_vm(self, vm_name, memory_mb, vcpus_num, limit_cpu_features,
-                  dynamic_memory_ratio):
+                  dynamic_memory_ratio, notes=None):
         """Creates a VM."""
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
 
         LOG.debug(_('Creating VM %s'), vm_name)
-        vm = self._create_vm_obj(vs_man_svc, vm_name)
+        vm = self._create_vm_obj(vs_man_svc, vm_name, notes)
 
         vmsetting = self._get_vm_setting_data(vm)
 
@@ -237,16 +250,30 @@ class VMUtils(object):
         LOG.debug(_('Set vCPUs for vm %s'), vm_name)
         self._set_vm_vcpus(vm, vmsetting, vcpus_num, limit_cpu_features)
 
-    def _create_vm_obj(self, vs_man_svc, vm_name):
+    def _create_vm_obj(self, vs_man_svc, vm_name, notes):
         vs_gs_data = self._conn.Msvm_VirtualSystemGlobalSettingData.new()
         vs_gs_data.ElementName = vm_name
 
-        (job_path,
+        (vm_path,
+         job_path,
          ret_val) = vs_man_svc.DefineVirtualSystem([], None,
-                                                   vs_gs_data.GetText_(1))[1:]
+                                                   vs_gs_data.GetText_(1))
         self.check_ret_val(ret_val, job_path)
 
-        return self._lookup_vm_check(vm_name)
+        vm = self._get_wmi_obj(vm_path)
+
+        if notes:
+            vmsetting = self._get_vm_setting_data(vm)
+            vmsetting.Notes = '\n'.join(notes)
+            self._modify_virtual_system(vs_man_svc, vm_path, vmsetting)
+
+        return self._get_wmi_obj(vm_path)
+
+    def _modify_virtual_system(self, vs_man_svc, vm_path, vmsetting):
+        (job_path, ret_val) = vs_man_svc.ModifyVirtualSystem(
+            ComputerSystem=vm_path,
+            SystemSettingData=vmsetting.GetText_(1))[1:]
+        self.check_ret_val(ret_val, job_path)
 
     def get_vm_scsi_controller(self, vm_name):
         vm = self._lookup_vm_check(vm_name)

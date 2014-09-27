@@ -46,6 +46,9 @@ class HyperVDriver(driver.ComputeDriver):
     def init_host(self, host):
         pass
 
+    def list_instance_uuids(self):
+        return self._vmops.list_instance_uuids()
+
     def list_instances(self):
         return self._vmops.list_instances()
 

@@ -69,9 +69,20 @@ class VMUtilsV2(vmutils.VMUtils):
     def _init_hyperv_wmi_conn(self, host):
         self._conn = wmi.WMI(moniker='//%s/root/virtualization/v2' % host)
 
-    def _create_vm_obj(self, vs_man_svc, vm_name):
+    def list_instance_notes(self):
+        instance_notes = []
+
+        for vs in self._conn.Msvm_VirtualSystemSettingData(
+                ['ElementName', 'Notes'],
+                VirtualSystemType=self._VIRTUAL_SYSTEM_TYPE_REALIZED):
+            instance_notes.append((vs.ElementName, [v for v in vs.Notes if v]))
+
+        return instance_notes
+
+    def _create_vm_obj(self, vs_man_svc, vm_name, notes):
         vs_data = self._conn.Msvm_VirtualSystemSettingData.new()
         vs_data.ElementName = vm_name
+        vs_data.Notes = notes
 
         (job_path,
          vm_path,
