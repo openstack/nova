@@ -3654,12 +3654,13 @@ class LibvirtDriver(driver.ComputeDriver):
                                              disk_info)
 
             # cache device_path in connection_info -- required by encryptors
-            if (not reboot and 'data' in connection_info and
-                    'volume_id' in connection_info['data']):
+            if 'data' in connection_info:
                 connection_info['data']['device_path'] = conf.source_path
                 vol['connection_info'] = connection_info
                 vol.save(context)
 
+            if (not reboot and 'data' in connection_info and
+                    'volume_id' in connection_info['data']):
                 volume_id = connection_info['data']['volume_id']
                 encryption = encryptors.get_encryption_metadata(
                     context, self._volume_api, volume_id, connection_info)
