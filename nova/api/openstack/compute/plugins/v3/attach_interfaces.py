@@ -188,7 +188,7 @@ class AttachInterfaces(extensions.V3APIExtensionBase):
     version = 1
 
     def get_resources(self):
-        res = [extensions.ResourceExtension(ALIAS,
+        res = [extensions.ResourceExtension('os-interface',
                                             InterfaceAttachmentController(),
                                             parent=dict(
                                                 member_name='server',
