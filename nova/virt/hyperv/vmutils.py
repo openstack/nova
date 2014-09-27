@@ -111,10 +111,10 @@ class VMUtils(object):
 
     def list_instances(self):
         """Return the names of all the instances known to Hyper-V."""
-        vm_names = [v.ElementName for v in
-                    self._conn.Msvm_ComputerSystem(['ElementName'],
-                                                   Caption="Virtual Machine")]
-        return vm_names
+        return [v.ElementName for v in
+                self._conn.Msvm_VirtualSystemSettingData(
+                    ['ElementName'],
+                    SettingType=self._VIRTUAL_SYSTEM_CURRENT_SETTINGS)]
 
     def get_vm_summary_info(self, vm_name):
         vm = self._lookup_vm_check(vm_name)

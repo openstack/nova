@@ -79,6 +79,13 @@ class VMUtilsV2(vmutils.VMUtils):
 
         return instance_notes
 
+    def list_instances(self):
+        """Return the names of all the instances known to Hyper-V."""
+        return [v.ElementName for v in
+                self._conn.Msvm_VirtualSystemSettingData(
+                    ['ElementName'],
+                    VirtualSystemType=self._VIRTUAL_SYSTEM_TYPE_REALIZED)]
+
     def _create_vm_obj(self, vs_man_svc, vm_name, notes):
         vs_data = self._conn.Msvm_VirtualSystemSettingData.new()
         vs_data.ElementName = vm_name
