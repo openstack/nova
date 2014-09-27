@@ -5682,8 +5682,9 @@ class ComputeManager(manager.Manager):
         num_db_instances = len(db_instances)
 
         if num_vm_instances != num_db_instances:
-            LOG.warn(_("Found %(num_db_instances)s in the database and "
-                       "%(num_vm_instances)s on the hypervisor."),
+            LOG.warn(_("While synchronizing instance power states, found "
+                       "%(num_db_instances)s instances in the database and "
+                       "%(num_vm_instances)s instances on the hypervisor."),
                      {'num_db_instances': num_db_instances,
                       'num_vm_instances': num_vm_instances})
 
