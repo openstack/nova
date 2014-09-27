@@ -506,7 +506,7 @@ class LibvirtConfigGuestCPUNUMA(LibvirtConfigObject):
         self.cells = []
 
     def parse_dom(self, xmldoc):
-        super(LibvirtConfigGuestCPUNUMA, self).parse_Dom(xmldoc)
+        super(LibvirtConfigGuestCPUNUMA, self).parse_dom(xmldoc)
 
         for child in xmldoc.getchildren():
             if child.tag == "cell":

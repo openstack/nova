@@ -232,6 +232,19 @@ class LibvirtConfigGuestCPUFeatureTest(LibvirtConfigBaseTest):
 
 class LibvirtConfigGuestCPUNUMATest(LibvirtConfigBaseTest):
 
+    def test_parse_dom(self):
+        xml = """
+            <numa>
+              <cell id="0" cpus="0-1" memory="1000000"/>
+              <cell id="1" cpus="2-3" memory="1500000"/>
+            </numa>
+        """
+        xmldoc = etree.fromstring(xml)
+        obj = config.LibvirtConfigGuestCPUNUMA()
+        obj.parse_dom(xmldoc)
+
+        self.assertEqual(2, len(obj.cells))
+
     def test_config_simple(self):
         obj = config.LibvirtConfigGuestCPUNUMA()
 
