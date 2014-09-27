@@ -415,8 +415,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
         instance = {'id': 'fake_id', 'uuid': 'fake_uuid'}
         connector = {'ip': 'fake_ip', 'host': 'fake_host'}
-        connection_info = {'data': {}}
-        expected_conn_info = {'data': {},
+        connection_info = {'data': {'multipath_id': 'fake_multipath_id'}}
+        expected_conn_info = {'data': {'multipath_id': 'fake_multipath_id'},
                               'serial': 'fake-volume-id-2'}
 
         self.mox.StubOutWithMock(test_bdm._bdm_obj, 'save')

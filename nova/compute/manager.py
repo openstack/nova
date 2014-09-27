@@ -4596,7 +4596,7 @@ class ComputeManager(manager.Manager):
 
         # Cleanup source host post live-migration
         block_device_info = self._get_instance_block_device_info(
-                            ctxt, instance, bdms)
+                            ctxt, instance, bdms=bdms)
         self.driver.post_live_migration(ctxt, instance, block_device_info,
                                         migrate_data)
 

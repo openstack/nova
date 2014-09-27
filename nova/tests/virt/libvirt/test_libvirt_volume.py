@@ -896,15 +896,22 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
             mount_device = "vde"
             conf = libvirt_driver.connect_volume(connection_info,
                                                  self.disk_info)
+            self.assertEqual('1234567890',
+                             connection_info['data']['multipath_id'])
             tree = conf.format_dom()
-            dev_str = '/dev/disk/by-path/pci-0000:05:00.2-fc-0x%s-lun-1' % wwn
-            self.assertEqual(tree.get('type'), 'block')
-            self.assertEqual(tree.find('./source').get('dev'),
-                             multipath_devname)
-            connection_info["data"]["devices"] = devices["devices"]
+            self.assertEqual('block', tree.get('type'))
+            self.assertEqual(multipath_devname,
+                             tree.find('./source').get('dev'))
+            # Test the scenario where multipath_id is returned
             libvirt_driver.disconnect_volume(connection_info, mount_device)
             expected_commands = []
-            self.assertEqual(self.executes, expected_commands)
+            self.assertEqual(expected_commands, self.executes)
+            # Test the scenario where multipath_id is not returned
+            connection_info["data"]["devices"] = devices["devices"]
+            del connection_info["data"]["multipath_id"]
+            libvirt_driver.disconnect_volume(connection_info, mount_device)
+            expected_commands = []
+            self.assertEqual(expected_commands, self.executes)
 
         # Should not work for anything other than string, unicode, and list
         connection_info = self.fibrechan_connection(self.vol,

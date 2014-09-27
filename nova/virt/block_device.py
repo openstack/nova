@@ -19,6 +19,7 @@ from nova import block_device
 from nova.objects import block_device as block_device_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _LI
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.volume import encryptors
@@ -209,6 +210,14 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         except TypeError:
             self['connection_info'] = None
 
+    def _preserve_multipath_id(self, connection_info):
+        if self['connection_info'] and 'data' in self['connection_info']:
+            if 'multipath_id' in self['connection_info']['data']:
+                connection_info['data']['multipath_id'] =\
+                    self['connection_info']['data']['multipath_id']
+                LOG.info(_LI('preserve multipath_id %s'),
+                         connection_info['data']['multipath_id'])
+
     @update_db
     def attach(self, context, instance, volume_api, virt_driver,
                do_check_attach=True, do_driver_attach=False):
@@ -225,6 +234,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                                                            connector)
         if 'serial' not in connection_info:
             connection_info['serial'] = self.volume_id
+        self._preserve_multipath_id(connection_info)
 
         # If do_driver_attach is False, we will attach a volume to an instance
         # at boot time. So actual attach is done by instance creation code.
@@ -267,6 +277,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                                                            connector)
         if 'serial' not in connection_info:
             connection_info['serial'] = self.volume_id
+        self._preserve_multipath_id(connection_info)
         self['connection_info'] = connection_info
 
     def save(self, context):
