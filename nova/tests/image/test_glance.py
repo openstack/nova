@@ -766,6 +766,40 @@ class TestShow(test.NoDBTestCase):
             trans_from_mock.assert_not_called()
             reraise_mock.assert_called_once_with(mock.sentinel.image_id)
 
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_show_queued_image_without_some_attrs(self, is_avail_mock):
+        is_avail_mock.return_value = True
+        client = mock.MagicMock()
+
+        # fake image cls without disk_format, container_format, name attributes
+        class fake_image_cls(object):
+            id = 'b31aa5dd-f07a-4748-8f15-398346887584'
+            deleted = False
+            protected = False
+            min_disk = 0
+            created_at = '2014-05-20T08:16:48'
+            size = 0
+            status = 'queued'
+            is_public = False
+            min_ram = 0
+            owner = '980ec4870033453ead65c0470a78b8a8'
+            updated_at = '2014-05-20T08:16:48'
+        glance_image = fake_image_cls()
+        client.call.return_value = glance_image
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageService(client)
+        image_info = service.show(ctx, glance_image.id)
+        client.call.assert_called_once_with(ctx, 1, 'get',
+                                            glance_image.id)
+        NOVA_IMAGE_ATTRIBUTES = set(['size', 'disk_format', 'owner',
+                                     'container_format', 'status', 'id',
+                                     'name', 'created_at', 'updated_at',
+                                     'deleted', 'deleted_at', 'checksum',
+                                     'min_disk', 'min_ram', 'is_public',
+                                     'properties'])
+
+        self.assertEqual(NOVA_IMAGE_ATTRIBUTES, set(image_info.keys()))
+
 
 class TestDetail(test.NoDBTestCase):
 
