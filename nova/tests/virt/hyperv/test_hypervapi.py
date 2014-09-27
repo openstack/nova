@@ -736,10 +736,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         m.AndReturn(True)
 
         if cow:
-            m = basevolumeutils.BaseVolumeUtils.volume_in_mapping(mox.IsA(str),
-                                                                  None)
-            m.AndReturn(False)
-
             self._setup_get_cached_image_mocks(cow)
 
         if with_volumes:
@@ -1019,9 +1015,10 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
                                             remove_dir=True)
         m.AndReturn(self._test_instance_dir)
 
-        m = basevolumeutils.BaseVolumeUtils.volume_in_mapping(
-            mox.IsA(str), block_device_info)
-        m.AndReturn(boot_from_volume)
+        if block_device_info:
+            m = basevolumeutils.BaseVolumeUtils.volume_in_mapping(
+                'fake_root_device_name', block_device_info)
+            m.AndReturn(boot_from_volume)
 
         if not boot_from_volume:
             m = fake.PathUtils.get_instance_dir(mox.Func(self._check_vm_name))
@@ -1549,10 +1546,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         instance['system_metadata'] = {}
         network_info = fake_network.fake_get_instance_nw_info(self.stubs)
 
-        m = basevolumeutils.BaseVolumeUtils.volume_in_mapping(mox.IsA(str),
-                                                              None)
-        m.AndReturn(False)
-
         m = fake.PathUtils.get_instance_dir(mox.IsA(str))
         m.AndReturn(self._test_instance_dir)
 
@@ -1640,10 +1633,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
 
         fake_revert_path = ('C:\\FakeInstancesPath\\%s\\_revert' %
                             instance['name'])
-
-        m = basevolumeutils.BaseVolumeUtils.volume_in_mapping(mox.IsA(str),
-                                                              None)
-        m.AndReturn(False)
 
         m = fake.PathUtils.get_instance_dir(mox.IsA(str),
                                             create_dir=False,
