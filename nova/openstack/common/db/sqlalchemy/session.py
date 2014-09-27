@@ -455,6 +455,10 @@ def _wrap_db_error(f):
             # unique constraint, from error message.
             _raise_if_duplicate_entry_error(e, self.bind.dialect.name)
             raise exception.DBError(e)
+        except exception.DBError:
+            # note(zzzeek) - if _wrap_db_error is applied to nested functions,
+            # ensure an existing DBError is propagated outwards
+            raise
         except Exception as e:
             LOG.exception(_LE('DB exception wrapped.'))
             raise exception.DBError(e)
@@ -691,6 +695,10 @@ class Session(sqlalchemy.orm.session.Session):
     @_wrap_db_error
     def execute(self, *args, **kwargs):
         return super(Session, self).execute(*args, **kwargs)
+
+    @_wrap_db_error
+    def commit(self, *args, **kwargs):
+        return super(Session, self).commit(*args, **kwargs)
 
 
 def get_maker(engine, autocommit=True, expire_on_commit=False):
