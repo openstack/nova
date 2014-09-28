@@ -12,7 +12,7 @@
 #    under the License.
 
 """
-Test suite for vmware_images.
+Test suite for images.
 """
 
 import contextlib
@@ -24,8 +24,8 @@ from nova import exception
 from nova import test
 import nova.tests.image.fake
 from nova.virt.vmwareapi import constants
+from nova.virt.vmwareapi import images
 from nova.virt.vmwareapi import read_write_util
-from nova.virt.vmwareapi import vmware_images
 
 
 class VMwareImagesTestCase(test.NoDBTestCase):
@@ -64,16 +64,16 @@ class VMwareImagesTestCase(test.NoDBTestCase):
                                side_effect=fake_read_handle),
              mock.patch.object(read_write_util, 'VMwareHTTPWriteFile',
                                side_effect=fake_write_handle),
-             mock.patch.object(vmware_images, 'start_transfer'),
-             mock.patch.object(vmware_images.IMAGE_API, 'get',
+             mock.patch.object(images, 'start_transfer'),
+             mock.patch.object(images.IMAGE_API, 'get',
                 return_value=image_data),
-             mock.patch.object(vmware_images.IMAGE_API, 'download',
+             mock.patch.object(images.IMAGE_API, 'download',
                      return_value=read_iter),
         ) as (glance_read, http_write, start_transfer, image_show,
                 image_download):
-            vmware_images.fetch_image(context, instance,
-                                      host, dc_name,
-                                      ds_name, file_path)
+            images.fetch_image(context, instance,
+                               host, dc_name,
+                               ds_name, file_path)
 
         glance_read.assert_called_once_with(read_iter)
         http_write.assert_called_once_with(host, dc_name, ds_name, None,
@@ -103,9 +103,9 @@ class VMwareImagesTestCase(test.NoDBTestCase):
                      "vmware_adaptertype": constants.DEFAULT_ADAPTER_TYPE,
                      "vmware_disktype": constants.DEFAULT_DISK_TYPE,
                      "hw_vif_model": constants.DEFAULT_VIF_MODEL,
-                     vmware_images.LINKED_CLONE_PROPERTY: True}}
+                     images.LINKED_CLONE_PROPERTY: True}}
 
-        img_props = vmware_images.VMwareImage.from_image(image_id, mdata)
+        img_props = images.VMwareImage.from_image(image_id, mdata)
 
         image_size_in_kb = raw_disk_size_in_bytes / units.Ki
 
@@ -139,9 +139,9 @@ class VMwareImagesTestCase(test.NoDBTestCase):
 
         if image_lc_setting is not None:
             mdata['properties'][
-                vmware_images.LINKED_CLONE_PROPERTY] = image_lc_setting
+                images.LINKED_CLONE_PROPERTY] = image_lc_setting
 
-        return vmware_images.VMwareImage.from_image(image_id, mdata)
+        return images.VMwareImage.from_image(image_id, mdata)
 
     def test_use_linked_clone_override_nf(self):
         image_props = self._image_build(None, False)
@@ -205,7 +205,7 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         self.assertFalse(image.linked_clone)
 
     def test_image_defaults(self):
-        image = vmware_images.VMwareImage(image_id='fake-image-id')
+        image = images.VMwareImage(image_id='fake-image-id')
 
         # N.B. We intentially don't use the defined constants here. Amongst
         # other potential failures, we're interested in changes to their

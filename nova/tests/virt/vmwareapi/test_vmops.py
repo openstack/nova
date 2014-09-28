@@ -33,10 +33,10 @@ from nova.tests.virt.vmwareapi import stubs
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import ds_util
+from nova.virt.vmwareapi import images
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
-from nova.virt.vmwareapi import vmware_images
 
 
 class DsPathMatcher:
@@ -605,7 +605,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                              mock_sized_image_exists,
                                              flavor_fits_image=False):
         file_size = 10 * units.Gi if flavor_fits_image else 5 * units.Gi
-        image_info = vmware_images.VMwareImage(
+        image_info = images.VMwareImage(
                 image_id=self._image_id,
                 file_size=file_size,
                 linked_clone=False)
@@ -655,7 +655,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                           mock_extend_virtual_disk,
                                           flavor_fits_image=False):
         file_size = 10 * units.Gi if flavor_fits_image else 5 * units.Gi
-        image_info = vmware_images.VMwareImage(
+        image_info = images.VMwareImage(
                 image_id=self._image_id,
                 file_size=file_size,
                 linked_clone=False)
@@ -699,7 +699,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                             mock_create_virtual_disk,
                             mock_attach_cdrom,
                             with_root_disk):
-        image_info = vmware_images.VMwareImage(
+        image_info = images.VMwareImage(
                 image_id=self._image_id,
                 file_size=10 * units.Mi,
                 linked_clone=True)
@@ -821,7 +821,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                   mock_call_method),
                 mock.patch.object(uuidutils, 'generate_uuid',
                                   return_value='tmp-uuid'),
-                mock.patch.object(vmware_images, 'fetch_image')
+                mock.patch.object(images, 'fetch_image')
         ) as (_wait_for_task, _call_method, _generate_uuid, _fetch_image):
             self._vmops.spawn(self._context, self._instance, image,
                               injected_files='fake_files',
@@ -927,7 +927,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                        mock_get_datastore,
                                        image_size_bytes=0,
                                        instance_name=None):
-        image_info = vmware_images.VMwareImage(
+        image_info = images.VMwareImage(
                 image_id=self._image_id,
                 file_size=image_size_bytes,
                 linked_clone=True)
@@ -992,7 +992,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     def test_build_virtual_machine(self):
         image_id = nova.tests.image.fake.get_valid_image_id()
-        image = vmware_images.VMwareImage(image_id=image_id)
+        image = images.VMwareImage(image_id=image_id)
 
         vm_ref = self._vmops.build_virtual_machine(self._instance,
                                                   'fake-instance-name',
@@ -1093,7 +1093,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         file_type = (constants.DISK_FORMAT_ISO if is_iso
                      else constants.DEFAULT_DISK_FORMAT)
 
-        image_info = vmware_images.VMwareImage(
+        image_info = images.VMwareImage(
                 image_id=self._image_id,
                 file_size=10 * units.Mi,
                 file_type=file_type,
@@ -1165,7 +1165,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._test_fetch_image_if_missing(
                 is_iso=True)
 
-    @mock.patch.object(vmware_images, 'fetch_image')
+    @mock.patch.object(images, 'fetch_image')
     def test_fetch_image_as_file(self, mock_fetch_image):
         vi = self._make_vm_config_info()
         image_ds_loc = mock.Mock()

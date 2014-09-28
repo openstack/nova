@@ -102,7 +102,7 @@ class VMwareImage(object):
         :param image_id - image id of image
         :param image_meta - image metadata we are working with
         :return: vmware image object
-        :rtype: nova.virt.vmwareapi.vmware_images.VmwareImage
+        :rtype: nova.virt.vmwareapi.images.VmwareImage
         """
         if image_meta is None:
             image_meta = {}
