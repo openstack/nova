@@ -222,6 +222,14 @@ class XMLDictSerializerTest(test.NoDBTestCase):
         result = result.replace('\n', '').replace(' ', '')
         self.assertEqual(result, expected_xml)
 
+    def test_xml_contains_unicode(self):
+        input_dict = dict(test=u'\u89e3\u7801')
+        expected_xml = '<test>\xe8\xa7\xa3\xe7\xa0\x81</test>'
+        serializer = wsgi.XMLDictSerializer()
+        result = serializer.serialize(input_dict)
+        result = result.replace('\n', '').replace(' ', '')
+        self.assertEqual(expected_xml, result)
+
 
 class JSONDictSerializerTest(test.NoDBTestCase):
     def test_json(self):
