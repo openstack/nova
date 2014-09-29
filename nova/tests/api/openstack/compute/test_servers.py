@@ -26,6 +26,7 @@ from lxml import etree
 import mock
 from oslo.config import cfg
 from oslo.utils import timeutils
+import six
 import six.moves.urllib.parse as urlparse
 import testtools
 import webob
@@ -4028,7 +4029,7 @@ class ServerXMLSerializationTest(test.TestCase):
                 'created': self.TIMESTAMP,
                 'updated': self.TIMESTAMP,
                 "progress": 0,
-                "name": "test_server",
+                "name": "test_server-" + u'\u89e3\u7801',
                 "status": "BUILD",
                 "hostId": 'e4d909c290d0fb1ca068ffaddf22cbd0',
                 "accessIPv4": "1.2.3.4",
@@ -4139,7 +4140,10 @@ class ServerXMLSerializationTest(test.TestCase):
 
     def _validate_required_attributes(self, root, server_dict, attributes):
         for key in attributes:
-            self.assertEqual(root.get(key), str(server_dict[key]))
+            expected = server_dict[key]
+            if not isinstance(expected, six.text_type):
+                expected = str(expected)
+            self.assertEqual(expected, root.get(key))
 
     def test_xml_declaration(self):
         serializer = servers.ServerTemplate()
@@ -4492,7 +4496,7 @@ class ServerXMLSerializationTest(test.TestCase):
     def test_action(self):
         serializer = servers.FullServerTemplate()
 
-        self.body["server"]["adminPass"] = "test_password"
+        self.body["server"]["adminPass"] = u'\u89e3\u7801'
         output = serializer.serialize(self.body)
         root = etree.XML(output)
         xmlutil.validate_schema(root, 'server')
