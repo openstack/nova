@@ -1,3 +1,3 @@
 {
-    "revert_resize" : null
+    "revertResize" : null
 }
