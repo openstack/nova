@@ -2234,6 +2234,7 @@ def _instance_metadata_update_in_place(context, instance, metadata_type, model,
         instance[metadata_type].append(newitem)
 
 
+@_retry_on_deadlock
 def _instance_update(context, instance_uuid, values, copy_old_instance=False,
                      columns_to_join=None):
     session = get_session()
