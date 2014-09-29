@@ -42,7 +42,7 @@ Adding hook object code
 
     entry_points = {
         'nova.hooks': [
-            'resize_hook': your_package.hooks.YourHookClass,
+            'resize_hook=your_package.hooks:YourHookClass',
         ]
     },
 
