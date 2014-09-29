@@ -1754,3 +1754,7 @@ class InvalidHypervisorVirtType(Invalid):
 
 class InvalidVirtualMachineMode(Invalid):
     msg_fmt = _("Virtual machine mode '%(vmmode)s' is not recognised")
+
+
+class InvalidToken(Invalid):
+    msg_fmt = _("The token '%(token)s' is invalid or has expired")

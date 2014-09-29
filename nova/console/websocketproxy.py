@@ -26,6 +26,7 @@ import websockify
 
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
+from nova import exception
 from nova.i18n import _
 from nova.openstack.common import log as logging
 
@@ -60,7 +61,7 @@ class NovaProxyRequestHandlerBase(object):
         connect_info = rpcapi.check_token(ctxt, token=token)
 
         if not connect_info:
-            raise Exception(_("Invalid Token"))
+            raise exception.InvalidToken(token=token)
 
         self.msg(_('connect info: %s'), str(connect_info))
         host = connect_info['host']
