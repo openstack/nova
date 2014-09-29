@@ -84,3 +84,40 @@ class NovaProxyRequestHandlerBaseTestCase(test.TestCase):
         self.assertRaises(exception.InvalidToken,
                           self.wh.new_websocket_client)
         check_token.assert_called_with(mock.ANY, token="XXX")
+
+    @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token')
+    def test_new_websocket_client_internal_access_path(self, check_token):
+        check_token.return_value = {
+            'host': 'node1',
+            'port': '10000',
+            'internal_access_path': 'vmid'
+        }
+
+        tsock = mock.MagicMock()
+        tsock.recv.return_value = "HTTP/1.1 200 OK\r\n\r\n"
+
+        self.wh.socket.return_value = tsock
+        self.wh.path = "ws://127.0.0.1/?token=123-456-789"
+
+        self.wh.new_websocket_client()
+
+        check_token.assert_called_with(mock.ANY, token="123-456-789")
+        self.wh.socket.assert_called_with('node1', 10000, connect=True)
+        self.wh.do_proxy.assert_called_with(tsock)
+
+    @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token')
+    def test_new_websocket_client_internal_access_path_err(self, check_token):
+        check_token.return_value = {
+            'host': 'node1',
+            'port': '10000',
+            'internal_access_path': 'xxx'
+        }
+
+        tsock = mock.MagicMock()
+        tsock.recv.return_value = "HTTP/1.1 500 Internal Server Error\r\n\r\n"
+
+        self.wh.socket.return_value = tsock
+        self.wh.path = "ws://127.0.0.1/?token=123-456-789"
+
+        self.assertRaises(Exception, self.wh.new_websocket_client)  # noqa
+        check_token.assert_called_with(mock.ANY, token="123-456-789")
