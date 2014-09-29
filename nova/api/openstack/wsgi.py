@@ -437,7 +437,9 @@ class XMLDictSerializer(DictSerializer):
                     result.appendChild(node)
         else:
             # Type is atom
-            node = doc.createTextNode(str(data))
+            if not isinstance(data, six.string_types):
+                data = six.text_type(data)
+            node = doc.createTextNode(data)
             result.appendChild(node)
         return result
 
