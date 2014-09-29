@@ -13,6 +13,12 @@
 #    under the License.
 
 
+EVENT_APPLIANCE = 0x1
+EVENT_LIBRARY = 0x2
+EVENT_WARNING = 0x3
+EVENT_TRACE = 0x4
+
+
 class GuestFS(object):
     SUPPORT_CLOSE_ON_EXIT = True
     SUPPORT_RETURN_DICT = True
@@ -33,6 +39,9 @@ class GuestFS(object):
         self.auginit = False
         self.root_mounted = False
         self.backend_settings = None
+        self.trace_enabled = False
+        self.verbose_enabled = False
+        self.event_callback = None
 
     def launch(self):
         self.running = True
@@ -168,3 +177,12 @@ class GuestFS(object):
         elif cfgpath == "/files/etc/group/admins/gid":
             return 600
         raise RuntimeError("Unknown path %s", cfgpath)
+
+    def set_trace(self, enabled):
+        self.trace_enabled = enabled
+
+    def set_verbose(self, enabled):
+        self.verbose_enabled = enabled
+
+    def set_event_callback(self, func, events):
+        self.event_callback = (func, events)

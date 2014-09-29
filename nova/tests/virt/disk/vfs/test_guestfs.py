@@ -247,3 +247,18 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         vfs.setup()
         self.assertNotIn('python_return_dict', vfs.handle.kwargs)
         vfs.teardown()
+
+    def test_setup_debug_disable(self):
+        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs.setup()
+        self.assertFalse(vfs.handle.trace_enabled)
+        self.assertFalse(vfs.handle.verbose_enabled)
+        self.assertIsNone(vfs.handle.event_callback)
+
+    def test_setup_debug_enabled(self):
+        self.flags(debug=True, group='guestfs')
+        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs.setup()
+        self.assertTrue(vfs.handle.trace_enabled)
+        self.assertTrue(vfs.handle.verbose_enabled)
+        self.assertIsNotNone(vfs.handle.event_callback)

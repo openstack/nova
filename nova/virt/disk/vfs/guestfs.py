@@ -13,6 +13,7 @@
 # under the License.
 
 from eventlet import tpool
+from oslo.config import cfg
 from oslo.utils import importutils
 import six
 
@@ -27,6 +28,15 @@ LOG = logging.getLogger(__name__)
 
 guestfs = None
 forceTCG = False
+
+guestfs_opts = [
+    cfg.BoolOpt('debug',
+                default=False,
+                help='Enable guestfs debug')
+]
+
+CONF = cfg.CONF
+CONF.register_opts(guestfs_opts, group='guestfs')
 
 
 def force_tcg(force=True):
@@ -71,6 +81,27 @@ class VFSGuestFS(vfs.VFS):
                 _("libguestfs installed but not usable (%s)") % e)
 
         return self
+
+    def configure_debug(self):
+        """Configures guestfs to be verbose."""
+        if not self.handle:
+            LOG.warning(_LW("Please consider to execute setup before trying "
+                            "to configure debug log message."))
+        else:
+            def log_callback(ev, eh, buf, array):
+                if ev == guestfs.EVENT_APPLIANCE:
+                    buf = buf.rstrip()
+                LOG.debug("event=%(event)s eh=%(eh)d buf='%(buf)s' "
+                          "array=%(array)s", {
+                              "event": guestfs.event_to_string(ev),
+                              "eh": eh, "buf": buf, "array": array})
+
+            events = (guestfs.EVENT_APPLIANCE | guestfs.EVENT_LIBRARY
+                      | guestfs.EVENT_WARNING | guestfs.EVENT_TRACE)
+
+            self.handle.set_trace(True)  # just traces libguestfs API calls
+            self.handle.set_verbose(True)
+            self.handle.set_event_callback(log_callback, events)
 
     def setup_os(self):
         if self.partition == -1:
@@ -148,6 +179,9 @@ class VFSGuestFS(vfs.VFS):
                 self.handle = tpool.Proxy(guestfs.GuestFS())
             else:
                 raise
+
+        if CONF.guestfs.debug:
+            self.configure_debug()
 
         try:
             if forceTCG:
