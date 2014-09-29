@@ -80,7 +80,7 @@ class NovaProxyRequestHandlerBase(object):
                 data = tsock.recv(4096, socket.MSG_PEEK)
                 if data.find("\r\n\r\n") != -1:
                     if data.split("\r\n")[0].find("200") == -1:
-                        raise Exception(_("Invalid Connection Info"))
+                        raise exception.InvalidConnectionInfo()
                     tsock.recv(len(data))
                     break
 

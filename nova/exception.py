@@ -1759,3 +1759,7 @@ class InvalidVirtualMachineMode(Invalid):
 
 class InvalidToken(Invalid):
     msg_fmt = _("The token '%(token)s' is invalid or has expired")
+
+
+class InvalidConnectionInfo(Invalid):
+    msg_fmt = _("Invalid Connection Info")
