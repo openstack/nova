@@ -41,4 +41,3 @@ nova/vcsversion.py
 tools/conf/nova.conf*
 tools/lintstack.head.py
 tools/pylint_exceptions
-etc/nova/nova.conf.sample
