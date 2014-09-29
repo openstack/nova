@@ -2423,6 +2423,15 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
             mock_destroy.assert_called_once_with(self.context,
                     "instance", [], None)
 
+    def test_get_instance_disk_info_is_implemented(self):
+        # Ensure that the method has been implemented in the driver
+        try:
+            disk_info = self.conn.get_instance_disk_info('fake_instance_name')
+            self.assertIsNone(disk_info)
+        except NotImplementedError:
+            self.fail("test_get_instance_disk_info() should not raise "
+                      "NotImplementedError")
+
     def test_destroy(self):
         self._create_vm()
         info = self.conn.get_info({'uuid': self.uuid,

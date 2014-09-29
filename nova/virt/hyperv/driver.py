@@ -163,6 +163,9 @@ class HyperVDriver(driver.ComputeDriver):
         return self._livemigrationops.check_can_live_migrate_source(
             ctxt, instance_ref, dest_check_data)
 
+    def get_instance_disk_info(self, instance_name, block_device_info=None):
+        pass
+
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
         msg = _("VIF plugging is not supported by the Hyper-V driver.")
