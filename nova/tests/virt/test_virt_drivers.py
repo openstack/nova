@@ -47,17 +47,17 @@ def catch_notimplementederror(f):
     """Decorator to simplify catching drivers raising NotImplementedError
 
     If a particular call makes a driver raise NotImplementedError, we
-    log it so that we can extract this information afterwards to
-    automatically generate a hypervisor/feature support matrix.
+    log it so that we can extract this information afterwards as needed.
     """
     def wrapped_func(self, *args, **kwargs):
         try:
             return f(self, *args, **kwargs)
         except NotImplementedError:
             frame = traceback.extract_tb(sys.exc_info()[2])[-1]
-            LOG.error('%(driver)s does not implement %(method)s' % {
-                                               'driver': type(self.connection),
-                                               'method': frame[2]})
+            LOG.error("%(driver)s does not implement %(method)s "
+                      "required for test %(test)s" %
+                      {'driver': type(self.connection),
+                       'method': frame[2], 'test': f.__name__})
 
     wrapped_func.__name__ = f.__name__
     wrapped_func.__doc__ = f.__doc__
