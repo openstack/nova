@@ -5624,6 +5624,61 @@ class LibvirtConnTestCase(test.TestCase):
 
         db.instance_destroy(self.context, instance_ref['uuid'])
 
+    @mock.patch.object(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE', 8675, create=True)
+    def test_live_migration_raises_unsupported_config_exception(self):
+        # Tests that when migrateToURI2 fails with VIR_ERR_CONFIG_UNSUPPORTED,
+        # migrateToURI is used instead.
+
+        # Preparing data
+        instance_ref = fake_instance.fake_instance_obj(
+            self.context, **self.test_instance)
+
+        # Preparing mocks
+        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        self.mox.StubOutWithMock(vdmock, 'migrateToURI2')
+        self.mox.StubOutWithMock(vdmock, 'migrateToURI')
+        _bandwidth = CONF.libvirt.live_migration_bandwidth
+        vdmock.XMLDesc(libvirt.VIR_DOMAIN_XML_MIGRATABLE).AndReturn(
+                FakeVirtDomain().XMLDesc(0))
+        unsupported_config_error = libvirt.libvirtError('ERR')
+        unsupported_config_error.err = (libvirt.VIR_ERR_CONFIG_UNSUPPORTED,)
+        # This is the first error we hit but since the error code is
+        # VIR_ERR_CONFIG_UNSUPPORTED we'll try migrateToURI.
+        vdmock.migrateToURI2(CONF.libvirt.live_migration_uri % 'dest', None,
+                             mox.IgnoreArg(), mox.IgnoreArg(), None,
+                             _bandwidth).AndRaise(unsupported_config_error)
+        # This is the second and final error that will actually kill the run,
+        # we use TestingException to make sure it's not the same libvirtError
+        # above.
+        vdmock.migrateToURI(CONF.libvirt.live_migration_uri % 'dest',
+                            mox.IgnoreArg(), None,
+                            _bandwidth).AndRaise(test.TestingException('oops'))
+
+        def fake_lookup(instance_name):
+            if instance_name == instance_ref.name:
+                return vdmock
+
+        self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+
+        def fake_recover_method(context, instance, dest, block_migration):
+            pass
+
+        graphics_listen_addrs = {'vnc': '0.0.0.0', 'spice': '127.0.0.1'}
+        migrate_data = {'pre_live_migration_result':
+                {'graphics_listen_addrs': graphics_listen_addrs}}
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        self.mox.StubOutWithMock(
+            conn, '_check_graphics_addresses_can_live_migrate')
+        conn._check_graphics_addresses_can_live_migrate(graphics_listen_addrs)
+        self.mox.ReplayAll()
+
+        # start test
+        self.assertRaises(test.TestingException, conn._live_migration,
+                          self.context, instance_ref, 'dest', post_method=None,
+                          recover_method=fake_recover_method,
+                          migrate_data=migrate_data)
+
     def test_rollback_live_migration_at_destination(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         with mock.patch.object(conn, "destroy") as mock_destroy:
