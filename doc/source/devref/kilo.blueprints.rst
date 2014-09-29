@@ -6,6 +6,7 @@ Blueprints in Kilo
 When is a blueprint needed?
 ===========================
 
+
 Juno
 -----
 
@@ -160,3 +161,88 @@ Juno blueprints where a spec would still be needed in Kilo:
 * websocket-proxy-to-host-security.rst
 * xenapi-set-ipxe-url-as-img-metadata.rst
 
+
+===================
+Project Priorities
+===================
+
+Icehouse
+--------
+
+Tried requiring cores to sign up to review specific blueprints during
+the blueprint approval process, but almost no one signed up so we abandoned
+the idea in Juno.
+
+Juno
+------
+
+* Poor prioritization of our 88 blueprints, attempts to get feedback via
+  etherpads largely went unnoticed
+* Implicit notion of what nova as a project would like to accomplish for the next
+  release. But it was too implicit and everyone had a slightly different list
+* Project priorities are not factored into the blueprint review process
+
+Problem
+--------
+
+* Poor job at prioritizing. Our current process doesn't provide the nova team
+  a good way to prioritize efforts. As a team we would like to identify and
+  prioritize blueprints that can we deem as project priorities
+* No easy way to communicate to contributors what the project as a whole
+  thinks we should be working on for a given release, making it hard to
+  focus our efforts in project priorities
+* Difficult for contributors to understand the importance of work that isn't
+  strictly about new features for new use cases
+
+Kilo
+-----
+
+* Pick several project priority themes, in the form of use cases, to help us
+  prioritize work
+
+  * Generate list of improvement blueprints based on the themes
+  * Produce rough draft of list going into summit and finalize the list at
+    the summit
+  * Publish list of project priorities and look for volunteers to work on them
+* Update spec template to include
+
+  * Specific use cases
+  * State if the spec is project priority or not
+* Keep an up to date list of project priority blueprints that need code review
+
+  * List will be a YAML file so it is both human and machine readable
+  * List will live in nova-specs
+  * Support ability to build tools to consume this list
+* Consumers of project priority and project priority blueprint lists:
+
+  * Reviewers looking for direction of where to spend their blueprint review
+    time.  If a large subset of nova-core doesn't use the project
+    priorities it means the core team is not aligned properly and should
+    revisit the list of project priorities
+  * The blueprint approval team, to help find the right balance of blueprints
+  * Contributors looking for something to work on
+  * People looking for what they can expect in the next release
+
+
+
+Examples
+---------
+
+Project priorities:
+
+* Stability. As a user I don't want things to randomly fail.
+* Debugging. As an operator when something goes wrong, the logs should
+  be helpful for debugging.
+* Improved python client. As a user, I want a friendly python SDK and CLI. It
+  should be easy to use as possible.
+* Live upgrades. As an operator I want to be able to upgrade nova
+  without any downtime.
+* Fault tolerance. As an operator I don't want any single hardware or software
+  failure to break nova.
+* Performance/Scalability. As a operator I want nova to scale and perform well.
+
+Project priority blueprints:
+
+* Convert X to Objects (Live upgrades -- via minimal db downtime upgrades)
+* Remove stacktraces from nova-api (Debugging)
+* Improve usage of SQLAlchemy: https://wiki.openstack.org/wiki/Openstack_and_SQLAlchemy#ORM_Quick_Wins_Proof_of_Concept (Performance)
