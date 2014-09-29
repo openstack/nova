@@ -1081,10 +1081,6 @@ class FileNotFound(NotFound):
     msg_fmt = _("File %(file_path)s could not be found.")
 
 
-class NoFilesFound(NotFound):
-    msg_fmt = _("Zero files could be found.")
-
-
 class SwitchNotFoundForNetworkAdapter(NotFound):
     msg_fmt = _("Virtual switch associated with the "
                 "network adapter %(adapter)s not found.")
