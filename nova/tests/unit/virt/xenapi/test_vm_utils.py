@@ -1944,6 +1944,23 @@ class ImportMigratedDisksTestCase(VMUtilsTestBase):
         mock_root.assert_called_once_with(session, instance)
         mock_ephemeral.assert_called_once_with(session, instance)
 
+    @mock.patch.object(vm_utils, '_import_migrate_ephemeral_disks')
+    @mock.patch.object(vm_utils, '_import_migrated_root_disk')
+    def test_import_all_migrated_disks_import_root_false(self, mock_root,
+            mock_ephemeral):
+        session = "session"
+        instance = "instance"
+        mock_root.return_value = "root_vdi"
+        mock_ephemeral.return_value = ["a", "b"]
+
+        result = vm_utils.import_all_migrated_disks(session, instance,
+                import_root=False)
+
+        expected = {'root': None, 'ephemerals': ["a", "b"]}
+        self.assertEqual(expected, result)
+        self.assertEqual(0, mock_root.call_count)
+        mock_ephemeral.assert_called_once_with(session, instance)
+
     @mock.patch.object(vm_utils, '_import_migrated_vhds')
     def test_import_migrated_root_disk(self, mock_migrate):
         mock_migrate.return_value = "foo"

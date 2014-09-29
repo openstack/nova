@@ -391,19 +391,32 @@ class SpawnTestCase(VMOpsTestBase):
                           throw_exception=test.TestingException())
 
     def _test_finish_migration(self, power_on=True, resize_instance=True,
-                               throw_exception=None):
+                               throw_exception=None, booted_from_volume=False):
         self._stub_out_common()
+        self.mox.StubOutWithMock(volumeops.VolumeOps, "connect_volume")
+        self.mox.StubOutWithMock(self.vmops._session, 'call_xenapi')
         self.mox.StubOutWithMock(vm_utils, "import_all_migrated_disks")
         self.mox.StubOutWithMock(self.vmops, "_attach_mapped_block_devices")
 
         context = "context"
         migration = {}
         name_label = "dummy"
-        instance = {"name": name_label, "uuid": "fake_uuid"}
+        instance = {"name": name_label, "uuid": "fake_uuid",
+                "root_device_name": "/dev/xvda"}
         disk_info = "disk_info"
         network_info = "net_info"
         image_meta = {"id": "image_id"}
-        block_device_info = "bdi"
+        block_device_info = {}
+        import_root = True
+        if booted_from_volume:
+            block_device_info = {'block_device_mapping': [
+                {'mount_device': '/dev/xvda',
+                 'connection_info': {'data': 'fake-data'}}]}
+            import_root = False
+            volumeops.VolumeOps.connect_volume(
+                    {'data': 'fake-data'}).AndReturn(('sr', 'vol-vdi-uuid'))
+            self.vmops._session.call_xenapi('VDI.get_by_uuid',
+                    'vol-vdi-uuid').AndReturn('vol-vdi-ref')
         session = self.vmops._session
 
         self.vmops._ensure_instance_name_unique(name_label)
@@ -415,8 +428,8 @@ class SpawnTestCase(VMOpsTestBase):
         root_vdi = {"ref": "fake_ref"}
         ephemeral_vdi = {"ref": "fake_ref_e"}
         vdis = {"root": root_vdi, "ephemerals": {4: ephemeral_vdi}}
-        vm_utils.import_all_migrated_disks(self.vmops._session,
-                                           instance).AndReturn(vdis)
+        vm_utils.import_all_migrated_disks(self.vmops._session, instance,
+                import_root=import_root).AndReturn(vdis)
 
         kernel_file = "kernel"
         ramdisk_file = "ramdisk"
@@ -474,6 +487,9 @@ class SpawnTestCase(VMOpsTestBase):
 
     def test_finish_migration_no_power_on(self):
         self._test_finish_migration(power_on=False, resize_instance=False)
+
+    def test_finish_migration_booted_from_volume(self):
+        self._test_finish_migration(booted_from_volume=True)
 
     def test_finish_migrate_performs_rollback_on_error(self):
         self.assertRaises(test.TestingException, self._test_finish_migration,
@@ -712,7 +728,10 @@ class MigrateDiskResizingUpTestCase(VMOpsTestBase):
             parent = userdevice + "-parent"
             yield [leaf, parent]
 
+    @mock.patch.object(volume_utils, 'is_booted_from_volume',
+            return_value=False)
     def test_migrate_disk_resizing_up_works_no_ephemeral(self,
+            mock_is_booted_from_volume,
             mock_apply_orig, mock_update_progress, mock_get_all_vdi_uuids,
             mock_shutdown, mock_migrate_vhd):
         context = "ctxt"
@@ -750,7 +769,10 @@ class MigrateDiskResizingUpTestCase(VMOpsTestBase):
             ]
         self.assertEqual(prog_expected, mock_update_progress.call_args_list)
 
+    @mock.patch.object(volume_utils, 'is_booted_from_volume',
+            return_value=False)
     def test_migrate_disk_resizing_up_works_with_two_ephemeral(self,
+            mock_is_booted_from_volume,
             mock_apply_orig, mock_update_progress, mock_get_all_vdi_uuids,
             mock_shutdown, mock_migrate_vhd):
         context = "ctxt"
@@ -796,8 +818,54 @@ class MigrateDiskResizingUpTestCase(VMOpsTestBase):
             ]
         self.assertEqual(prog_expected, mock_update_progress.call_args_list)
 
+    @mock.patch.object(volume_utils, 'is_booted_from_volume',
+            return_value=True)
+    def test_migrate_disk_resizing_up_booted_from_volume(self,
+            mock_is_booted_from_volume,
+            mock_apply_orig, mock_update_progress, mock_get_all_vdi_uuids,
+            mock_shutdown, mock_migrate_vhd):
+        context = "ctxt"
+        instance = {"name": "fake", "uuid": "uuid"}
+        dest = "dest"
+        vm_ref = "vm_ref"
+        sr_path = "sr_path"
+
+        mock_get_all_vdi_uuids.return_value = ["vdi-eph1", "vdi-eph2"]
+
+        with mock.patch.object(vm_utils, '_snapshot_attached_here_impl',
+                self._fake_snapshot_attached_here):
+            self.vmops._migrate_disk_resizing_up(context, instance, dest,
+                                                 vm_ref, sr_path)
+
+        mock_get_all_vdi_uuids.assert_called_once_with(self.vmops._session,
+                vm_ref, min_userdevice=4)
+        mock_apply_orig.assert_called_once_with(instance, vm_ref)
+        mock_shutdown.assert_called_once_with(instance, vm_ref)
+
+        m_vhd_expected = [mock.call(self.vmops._session, instance,
+                                    "4-parent", dest, sr_path, 1, 1),
+                          mock.call(self.vmops._session, instance,
+                                    "5-parent", dest, sr_path, 1, 2),
+                          mock.call(self.vmops._session, instance,
+                                    "4-leaf", dest, sr_path, 0, 1),
+                          mock.call(self.vmops._session, instance,
+                                    "5-leaf", dest, sr_path, 0, 2)]
+        self.assertEqual(m_vhd_expected, mock_migrate_vhd.call_args_list)
+
+        prog_expected = [
+            mock.call(context, instance, 1, 5),
+            mock.call(context, instance, 2, 5),
+            mock.call(context, instance, 3, 5),
+            mock.call(context, instance, 4, 5)
+            # 5/5: step to be executed by finish migration.
+            ]
+        self.assertEqual(prog_expected, mock_update_progress.call_args_list)
+
     @mock.patch.object(vmops.VMOps, '_restore_orig_vm_and_cleanup_orphan')
+    @mock.patch.object(volume_utils, 'is_booted_from_volume',
+            return_value=False)
     def test_migrate_disk_resizing_up_rollback(self,
+            mock_is_booted_from_volume,
             mock_restore,
             mock_apply_orig, mock_update_progress, mock_get_all_vdi_uuids,
             mock_shutdown, mock_migrate_vhd):

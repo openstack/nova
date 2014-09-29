@@ -2492,8 +2492,10 @@ def ensure_correct_host(session):
                           'specified by connection_url'))
 
 
-def import_all_migrated_disks(session, instance):
-    root_vdi = _import_migrated_root_disk(session, instance)
+def import_all_migrated_disks(session, instance, import_root=True):
+    root_vdi = None
+    if import_root:
+        root_vdi = _import_migrated_root_disk(session, instance)
     eph_vdis = _import_migrate_ephemeral_disks(session, instance)
     return {'root': root_vdi, 'ephemerals': eph_vdis}
 

@@ -325,3 +325,12 @@ def find_vbd_by_number(session, vm_ref, dev_number):
             except session.XenAPI.Failure:
                 msg = "Error looking up VBD %s for %s" % (vbd_ref, vm_ref)
                 LOG.debug(msg, exc_info=True)
+
+
+def is_booted_from_volume(session, vm_ref):
+    """Determine if the root device is a volume."""
+    vbd_ref = find_vbd_by_number(session, vm_ref, 0)
+    vbd_other_config = session.VBD.get_other_config(vbd_ref)
+    if vbd_other_config.get('osvol', False):
+        return True
+    return False
