@@ -3703,8 +3703,7 @@ class LibvirtDriver(driver.ComputeDriver):
                with the instance's requested topology. If the host does
                not support NUMA, then guest_cpu_tune will be None.
         """
-        caps = self._get_host_capabilities()
-        topology = caps.host.topology
+        topology = self._get_host_numa_topology()
         # We have instance NUMA so translate it to the config class
         guest_cpu_numa = self._get_cpu_numa_config_from_instance(
                 context, instance)
@@ -3712,13 +3711,15 @@ class LibvirtDriver(driver.ComputeDriver):
         if not guest_cpu_numa:
             # No NUMA topology defined for instance
             vcpus = flavor.vcpus
-            memory = flavor.memory_mb
+            memory = flavor.memory_mb * 1024
             if topology:
                 # Host is NUMA capable so try to keep the instance in a cell
-                viable_cells = [cell for cell in topology.cells
-                                if vcpus <= len(cell.cpus) and
-                                memory * 1024 <= cell.memory]
-                if not viable_cells:
+                viable_cells_cpus = []
+                for cell in topology.cells:
+                    if vcpus <= len(cell.cpuset) and memory <= cell.memory:
+                        viable_cells_cpus.append(cell.cpuset)
+
+                if not viable_cells_cpus:
                     # We can't contain the instance in a cell - do nothing for
                     # now.
                     # TODO(ndipanov): Attempt to spread the instance accross
@@ -3726,10 +3727,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     # optimisation
                     return allowed_cpus, None, None
                 else:
-                    cell = random.choice(viable_cells)
-                    pin_cpuset = set(cpu.id for cpu in cell.cpus)
-                    if allowed_cpus:
-                        pin_cpuset &= allowed_cpus
+                    pin_cpuset = random.choice(viable_cells_cpus)
                     return pin_cpuset, None, None
             else:
                 # We have no NUMA topology in the host either
@@ -3741,15 +3739,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 for host_cell in topology.cells:
                     for guest_cell in guest_cpu_numa.cells:
                         if guest_cell.id == host_cell.id:
-                            host_cpuset = set(cpu.id for cpu in host_cell.cpus)
-                            host_cpuset = (host_cpuset & allowed_cpus
-                                           if allowed_cpus else host_cpuset)
-
                             for cpu in guest_cell.cpus:
                                 pin_cpuset = (
                                     vconfig.LibvirtConfigGuestCPUTuneVCPUPin())
                                 pin_cpuset.id = cpu
-                                pin_cpuset.cpuset = host_cpuset
+                                pin_cpuset.cpuset = host_cell.cpuset
                             guest_cpu_tune.vcpupin.append(pin_cpuset)
                 return None, guest_cpu_tune, guest_cpu_numa
             else:
