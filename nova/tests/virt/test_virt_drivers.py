@@ -744,6 +744,13 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.assertRaises(NotImplementedError, self.connection.set_bootable,
                           'instance', True)
 
+    @catch_notimplementederror
+    def test_get_instance_disk_info(self):
+        # This should be implemented by any driver that supports live migrate.
+        instance_ref, network_info = self._get_running_instance()
+        self.connection.get_instance_disk_info(instance_ref['name'],
+                                               block_device_info={})
+
 
 class AbstractDriverTestCase(_VirtDriverTestCase, test.TestCase):
     def setUp(self):
