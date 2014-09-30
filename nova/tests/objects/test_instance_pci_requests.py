@@ -141,7 +141,7 @@ class _TestInstancePCIRequests(object):
             database.setdefault(uuid, {'instance_uuid': uuid})
             database[uuid].update(values)
 
-        def _get(context, uuid):
+        def _get(context, uuid, columns):
             return database.get(uuid, {})
 
         mock_update.side_effect = _save

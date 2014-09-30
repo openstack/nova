@@ -326,7 +326,7 @@ class BaseTestCase(test.TestCase):
         return [i for i in self._instances.values() if i['host'] == host]
 
     def _fake_instance_extra_get_by_instance_uuid(self, context,
-                                                          instance_uuid):
+                                                  instance_uuid, columns=None):
         return self._numa_topologies.get(instance_uuid)
 
     def _fake_flavor_get(self, ctxt, id_):

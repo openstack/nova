@@ -43,6 +43,7 @@ from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
 from sqlalchemy.orm import noload
+from sqlalchemy.orm import undefer
 from sqlalchemy.schema import Table
 from sqlalchemy import sql
 from sqlalchemy.sql.expression import asc
@@ -2493,9 +2494,14 @@ def _instance_extra_get_by_instance_uuid_query(context, instance_uuid):
                          .filter_by(instance_uuid=instance_uuid))
 
 
-def instance_extra_get_by_instance_uuid(context, instance_uuid):
+def instance_extra_get_by_instance_uuid(context, instance_uuid,
+                                        columns=None):
     query = _instance_extra_get_by_instance_uuid_query(
         context, instance_uuid)
+    if columns is None:
+        columns = ['numa_topology', 'pci_requests']
+    for column in columns:
+        query = query.options(undefer(column))
     instance_extra = query.first()
     return instance_extra
 

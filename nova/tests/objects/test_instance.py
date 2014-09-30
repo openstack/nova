@@ -136,7 +136,8 @@ class _TestInstanceObject(object):
                 ).AndReturn(fake_faults)
         fake_topology = test_instance_numa_topology.fake_db_topology
         db.instance_extra_get_by_instance_uuid(
-                self.context, self.fake_instance['uuid']
+                self.context, self.fake_instance['uuid'],
+                columns=['numa_topology']
                 ).AndReturn(fake_topology)
 
         self.mox.ReplayAll()

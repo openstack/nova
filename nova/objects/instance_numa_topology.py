@@ -76,7 +76,7 @@ class InstanceNUMATopology(base.NovaObject):
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, instance_uuid):
         db_topology = db.instance_extra_get_by_instance_uuid(
-                context, instance_uuid)
+                context, instance_uuid, columns=['numa_topology'])
         if not db_topology:
             raise exception.NumaTopologyNotFound(instance_uuid=instance_uuid)
 

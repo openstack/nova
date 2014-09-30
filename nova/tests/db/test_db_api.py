@@ -2213,6 +2213,13 @@ class InstanceExtraTestCase(test.TestCase):
             self.ctxt, self.instance['uuid'])
         self.assertEqual('changed', inst_extra.numa_topology)
 
+    def test_instance_extra_get_with_columns(self):
+        extra = db.instance_extra_get_by_instance_uuid(
+            self.ctxt, self.instance['uuid'],
+            columns=['numa_topology'])
+        self.assertNotIn('pci_requests', extra)
+        self.assertIn('numa_topology', extra)
+
 
 class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def setUp(self):

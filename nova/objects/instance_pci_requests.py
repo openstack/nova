@@ -74,7 +74,7 @@ class InstancePCIRequests(base.NovaObject):
         obj_pci_requests._context = context
 
         db_pci_requests = db.instance_extra_get_by_instance_uuid(
-                context, instance_uuid)
+                context, instance_uuid, columns=['pci_requests'])
         if db_pci_requests:
             try:
                 requests = jsonutils.loads(db_pci_requests['pci_requests'])

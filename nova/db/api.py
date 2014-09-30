@@ -888,12 +888,14 @@ def instance_info_cache_delete(context, instance_uuid):
 ###################
 
 
-def instance_extra_get_by_instance_uuid(context, instance_uuid):
+def instance_extra_get_by_instance_uuid(context, instance_uuid, columns=None):
     """Get the instance extra record
 
     :param instance_uuid: = uuid of the instance tied to the topology record
+    :param columns: A list of the columns to load, or None for 'all of them'
     """
-    return IMPL.instance_extra_get_by_instance_uuid(context, instance_uuid)
+    return IMPL.instance_extra_get_by_instance_uuid(
+        context, instance_uuid, columns=columns)
 
 
 def instance_extra_update_by_uuid(context, instance_uuid, updates):

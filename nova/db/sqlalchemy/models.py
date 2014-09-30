@@ -319,8 +319,8 @@ class InstanceExtra(BASE, NovaBase):
     id = Column(Integer, primary_key=True, autoincrement=True)
     instance_uuid = Column(String(36), ForeignKey('instances.uuid'),
                            nullable=False)
-    numa_topology = Column(Text)
-    pci_requests = Column(Text)
+    numa_topology = orm.deferred(Column(Text))
+    pci_requests = orm.deferred(Column(Text))
     instance = orm.relationship(Instance,
                             backref=orm.backref('extra',
                                                 uselist=False),
