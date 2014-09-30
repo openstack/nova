@@ -33,7 +33,8 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
     # Version 1.3: Instance 1.15
     # Version 1.4: Added default_route field
     # Version 1.5: Added floating_ips field
-    VERSION = '1.5'
+    # Version 1.6: Instance 1.16
+    VERSION = '1.6'
 
     fields = {
         'id': fields.IntegerField(),
@@ -62,6 +63,10 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
             del primitive['floating_ips']
         if target_version < (1, 4) and 'default_route' in primitive:
             del primitive['default_route']
+        if target_version < (1, 4) and 'instance' in primitive:
+            self.instance.obj_make_compatible(
+                    primitive['instance']['nova_object.data'], '1.15')
+            primitive['instance']['nova_object.version'] = '1.15'
         if target_version < (1, 3) and 'instance' in primitive:
             self.instance.obj_make_compatible(
                     primitive['instance']['nova_object.data'], '1.14')
@@ -203,7 +208,8 @@ class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     # Version 1.3: FixedIP <= version 1.3
     # Version 1.4: FixedIP <= version 1.4
     # Version 1.5: FixedIP <= version 1.5, added expected attrs to gets
-    VERSION = '1.5'
+    # Version 1.6: FixedIP <= version 1.6
+    VERSION = '1.6'
 
     fields = {
         'objects': fields.ListOfObjectsField('FixedIP'),
@@ -215,6 +221,7 @@ class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
         '1.3': '1.3',
         '1.4': '1.4',
         '1.5': '1.5',
+        '1.6': '1.6',
         }
 
     @obj_base.remotable_classmethod

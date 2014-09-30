@@ -812,7 +812,9 @@ class TestObjectListBase(test.TestCase):
         for item_class in base.NovaObject._obj_classes[item_obj_name]:
             self.assertIn(
                 item_class.VERSION,
-                list_obj_class.child_versions.values())
+                list_obj_class.child_versions.values(),
+                'Version mapping is incomplete for %s' % (
+                    list_obj_class.__name__))
 
     def test_object_version_mappings(self):
         # Find all object list classes and make sure that they at least handle
@@ -937,8 +939,8 @@ object_data = {
     'AggregateList': '1.2-4b02a285b8612bfb86a96ff80052fb0a',
     'BandwidthUsage': '1.1-bdab751673947f0ac7de108540a1a8ce',
     'BandwidthUsageList': '1.1-76898106a9db393cd5f42c557389c507',
-    'BlockDeviceMapping': '1.3-9968ffe513e7672484b0f528b034cd0f',
-    'BlockDeviceMappingList': '1.4-388b059a9d47ce71d4e8f3cc4f4b760c',
+    'BlockDeviceMapping': '1.4-9968ffe513e7672484b0f528b034cd0f',
+    'BlockDeviceMappingList': '1.5-83767968de6e91e9705bddaae02bc649',
     'ComputeNode': '1.6-d2ea9b8f4a6e95ff6a683266eebddbff',
     'ComputeNodeList': '1.6-205aa2ea08d49f6ce87df1fcd2407b4e',
     'DNSDomain': '1.0-5bdc288d7c3b723ce86ede998fd5c9ba',
@@ -946,14 +948,14 @@ object_data = {
     'EC2InstanceMapping': '1.0-627baaf4b12c9067200979bdc4558a99',
     'EC2SnapshotMapping': '1.0-26cf315be1f8abab4289d4147671c836',
     'EC2VolumeMapping': '1.0-2f8c3bf077c65a425294ec2b361c9143',
-    'FixedIP': '1.5-2472964d39e50da67202109eb85cd173',
-    'FixedIPList': '1.5-b150167937c905b207769a17e7201d15',
+    'FixedIP': '1.6-2472964d39e50da67202109eb85cd173',
+    'FixedIPList': '1.6-f2f740de66bc2d90627004bd311690ad',
     'Flavor': '1.1-096cfd023c35d07542cf732fb29b45e4',
     'FlavorList': '1.1-a3d5551267cb8f62ff38ded125900721',
-    'FloatingIP': '1.5-27eb68b7c9c620dd5f0561b5a3be0e82',
-    'FloatingIPList': '1.6-6b50a8954fbd03b2bdd01df088210e86',
+    'FloatingIP': '1.6-27eb68b7c9c620dd5f0561b5a3be0e82',
+    'FloatingIPList': '1.7-f376f63ed99243f9d90841b7f6732bbf',
     'HVSpec': '1.0-c4d8377cc4fe519930e60c1d8265a142',
-    'Instance': '1.15-1154dc29398bc3c57f053b8e449bb03d',
+    'Instance': '1.16-b00c09fb92ae80b393943f56e84abd9c',
     'InstanceAction': '1.1-6b1d0a6dbd522b5a83c20757ec659663',
     'InstanceActionEvent': '1.1-42dbdba74bd06e0619ca75cd3397cd1b',
     'InstanceActionEventList': '1.0-1d5cc958171d6ce07383c2ad6208318e',
@@ -964,11 +966,11 @@ object_data = {
     'InstanceGroup': '1.9-95ece99f092e8f4f88327cdbb44162c9',
     'InstanceGroupList': '1.6-c6b78f3c9d9080d33c08667e80589817',
     'InstanceInfoCache': '1.5-ef64b604498bfa505a8c93747a9d8b2f',
-    'InstanceList': '1.9-6f290799b0ac19eb9e72ed580520b883',
-    'InstancePCIRequest': '1.1-e082d174f4643e5756ba098c47c1510f',
-    'InstancePCIRequests': '1.1-bc7c6684d8579ee49d6a3b8aef756918',
+    'InstanceList': '1.10-03dd7839cd11cff75c3661c9e4227900',
     'InstanceNUMACell': '1.0-17e6ee0a24cb6651d1b084efa3027bda',
     'InstanceNUMATopology': '1.0-86b95d263c4c68411d44c6741b8d2bb0',
+    'InstancePCIRequest': '1.1-e082d174f4643e5756ba098c47c1510f',
+    'InstancePCIRequests': '1.1-bc7c6684d8579ee49d6a3b8aef756918',
     'KeyPair': '1.1-3410f51950d052d861c11946a6ae621a',
     'KeyPairList': '1.0-71132a568cc5d078ba1748a9c02c87b8',
     'Migration': '1.1-67c47726c2c71422058cd9d149d6d3ed',
@@ -997,16 +999,17 @@ object_data = {
 
 
 object_relationships = {
-    'BlockDeviceMapping': {'Instance': '1.15'},
-    'FixedIP': {'Instance': '1.15', 'Network': '1.2',
+    'BlockDeviceMapping': {'Instance': '1.16'},
+    'FixedIP': {'Instance': '1.16', 'Network': '1.2',
                 'VirtualInterface': '1.0',
-                'FloatingIPList': '1.6'},
-    'FloatingIP': {'FixedIP': '1.5'},
+                'FloatingIPList': '1.7'},
+    'FloatingIP': {'FixedIP': '1.6'},
     'Instance': {'InstanceFault': '1.2',
                  'InstanceInfoCache': '1.5',
                  'InstanceNUMATopology': '1.0',
                  'PciDeviceList': '1.1',
-                 'SecurityGroupList': '1.0'},
+                 'SecurityGroupList': '1.0',
+                 'InstancePCIRequests': '1.1'},
     'MyObj': {'MyOwnedObject': '1.0'},
     'SecurityGroupRule': {'SecurityGroup': '1.1'},
     'Service': {'ComputeNode': '1.6'},

@@ -26,6 +26,7 @@ from nova import db
 from nova import exception
 from nova.network import model as network_model
 from nova import notifications
+from nova import objects
 from nova.objects import instance
 from nova.objects import instance_info_cache
 from nova.objects import instance_numa_topology
@@ -37,6 +38,7 @@ from nova.tests import fake_instance
 from nova.tests.objects import test_instance_fault
 from nova.tests.objects import test_instance_info_cache
 from nova.tests.objects import test_instance_numa_topology
+from nova.tests.objects import test_instance_pci_requests
 from nova.tests.objects import test_objects
 from nova.tests.objects import test_security_group
 from nova import utils
@@ -72,7 +74,7 @@ class _TestInstanceObject(object):
         primitive = inst.obj_to_primitive()
         expected = {'nova_object.name': 'Instance',
                     'nova_object.namespace': 'nova',
-                    'nova_object.version': '1.15',
+                    'nova_object.version': '1.16',
                     'nova_object.data':
                         {'uuid': 'fake-uuid',
                          'launched_at': '1955-11-05T00:00:00Z'},
@@ -88,7 +90,7 @@ class _TestInstanceObject(object):
         primitive = inst.obj_to_primitive()
         expected = {'nova_object.name': 'Instance',
                     'nova_object.namespace': 'nova',
-                    'nova_object.version': '1.15',
+                    'nova_object.version': '1.16',
                     'nova_object.data':
                         {'uuid': 'fake-uuid',
                          'access_ip_v4': '1.2.3.4',
@@ -124,6 +126,7 @@ class _TestInstanceObject(object):
         exp_cols = instance.INSTANCE_OPTIONAL_ATTRS[:]
         exp_cols.remove('fault')
         exp_cols.remove('numa_topology')
+        exp_cols.remove('pci_requests')
 
         db.instance_get_by_uuid(
             self.context, 'uuid',
@@ -139,6 +142,11 @@ class _TestInstanceObject(object):
                 self.context, self.fake_instance['uuid'],
                 columns=['numa_topology']
                 ).AndReturn(fake_topology)
+        fake_requests = test_instance_pci_requests.fake_pci_requests
+        db.instance_extra_get_by_instance_uuid(
+                self.context, self.fake_instance['uuid'],
+                columns=['pci_requests']
+                ).AndReturn(fake_requests)
 
         self.mox.ReplayAll()
         inst = instance.Instance.get_by_uuid(
@@ -804,6 +812,18 @@ class _TestInstanceObject(object):
         self.assertEqual(
             '1.4',
             primitive['nova_object.data']['info_cache']['nova_object.version'])
+
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
+    def test_get_with_pci_requests(self, mock_get):
+        mock_get.return_value = objects.InstancePCIRequests()
+        db_instance = db.instance_create(self.context, {
+            'user_id': self.context.user_id,
+            'project_id': self.context.project_id})
+        instance = objects.Instance.get_by_uuid(
+            self.context, db_instance['uuid'],
+            expected_attrs=['pci_requests'])
+        self.assertTrue(instance.obj_attr_is_set('pci_requests'))
+        self.assertIsNotNone(instance.pci_requests)
 
     def _test_get_flavor(self, namespace):
         prefix = '%s_' % namespace if namespace is not None else ''
