@@ -2127,7 +2127,7 @@ class ConsolesSampleJsonTests(ServersSampleBase):
                                 {'action': 'os-getSerialConsole'})
         subs = self._get_regexes()
         subs["url"] = \
-            "((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"
+            "((ws?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"
         self._verify_response('get-serial-console-post-resp', subs,
                               response, 200)
 

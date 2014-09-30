@@ -39,7 +39,7 @@ serial_opts = [
                 help='Range of TCP ports to use for serial ports '
                      'on compute hosts'),
     cfg.StrOpt('base_url',
-               default='http://127.0.0.1:6083/',
+               default='ws://127.0.0.1:6083/',
                help='Location of serial console proxy.'),
     cfg.StrOpt('listen',
                default='127.0.0.1',
