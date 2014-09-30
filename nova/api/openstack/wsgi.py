@@ -389,43 +389,17 @@ class XMLDictSerializer(DictSerializer):
         """Recursive method to convert data members to XML nodes."""
         result = doc.createElement(nodename)
 
-        # Set the xml namespace if one is specified
-        # TODO(justinsb): We could also use prefixes on the keys
-        xmlns = metadata.get('xmlns', None)
-        if xmlns:
-            result.setAttribute('xmlns', xmlns)
-
         # TODO(bcwaldon): accomplish this without a type-check
         if isinstance(data, list):
-            collections = metadata.get('list_collections', {})
-            if nodename in collections:
-                metadata = collections[nodename]
-                for item in data:
-                    node = doc.createElement(metadata['item_name'])
-                    node.setAttribute(metadata['item_key'], str(item))
-                    result.appendChild(node)
-                return result
-            singular = metadata.get('plurals', {}).get(nodename, None)
-            if singular is None:
-                if nodename.endswith('s'):
-                    singular = nodename[:-1]
-                else:
-                    singular = 'item'
+            if nodename.endswith('s'):
+                singular = nodename[:-1]
+            else:
+                singular = 'item'
             for item in data:
                 node = self._to_xml_node(doc, metadata, singular, item)
                 result.appendChild(node)
         # TODO(bcwaldon): accomplish this without a type-check
         elif isinstance(data, dict):
-            collections = metadata.get('dict_collections', {})
-            if nodename in collections:
-                metadata = collections[nodename]
-                for k, v in data.items():
-                    node = doc.createElement(metadata['item_name'])
-                    node.setAttribute(metadata['item_key'], str(k))
-                    text = doc.createTextNode(str(v))
-                    node.appendChild(text)
-                    result.appendChild(node)
-                return result
             attrs = metadata.get('attributes', {}).get(nodename, {})
             for k, v in data.items():
                 if k in attrs:
