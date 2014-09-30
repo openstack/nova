@@ -1150,6 +1150,9 @@ class FakeObjectRetrievalSession(FakeSession):
         self.ind = 0
 
     def _call_method(self, module, method, *args, **kwargs):
+        if (method == 'continue_retrieval' or
+            method == 'cancel_retrieval'):
+            return
         # return fake objects in a circular manner
         self.ind = (self.ind + 1) % len(self.ret)
         return self.ret[self.ind - 1]
