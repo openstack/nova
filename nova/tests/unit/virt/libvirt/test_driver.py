@@ -10773,6 +10773,65 @@ Active:          8381604 kB
                 srcfile, 1 * units.Gi / units.Ki)
             mock_define.assert_called_once_with(xmldoc)
 
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._swap_volume')
+    @mock.patch('nova.virt.block_device.DriverVolumeBlockDevice.save')
+    @mock.patch('nova.objects.block_device.BlockDeviceMapping.'
+                'get_by_volume_id')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_config')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._connect_volume')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_disk_xml')
+    @mock.patch('nova.virt.libvirt.host.Host.get_domain')
+    def test_swap_volume_driver_bdm_save(self, get_domain, get_disk_xml,
+                                         connect_volume, get_volume_config,
+                                         get_by_volume_id, volume_save,
+                                         swap_volume, disconnect_volume):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        instance = objects.Instance(**self.test_instance)
+        old_connection_info = {'driver_volume_type': 'fake',
+                               'serial': 'old-volume-id',
+                               'data': {'device_path': '/fake-old-volume',
+                                        'access_mode': 'rw'}}
+        new_connection_info = {'driver_volume_type': 'fake',
+                               'serial': 'new-volume-id',
+                               'data': {'device_path': '/fake-new-volume',
+                                        'access_mode': 'rw'}}
+        mock_dom = mock.MagicMock()
+        mock_dom.XMLDesc.return_value = "<domain/>"
+        get_domain.return_value = mock_dom
+        mock_xml = \
+            """
+            <disk type='file'>
+                <source file='/fake-old-volume'/>
+                <target dev='vdb' bus='virtio'/>
+            </disk>
+            """
+        get_disk_xml.return_value = mock_xml
+        disk_info = {'bus': 'virtio', 'type': 'disk', 'dev': 'vdb'}
+        get_volume_config.return_value = mock.MagicMock(
+            source_path='/fake-new-volume')
+
+        bdm = objects.BlockDeviceMapping(self.context,
+            **fake_block_device.FakeDbBlockDeviceDict(
+                {'id': 2, 'instance_uuid': 'fake-instance',
+                 'device_name': '/dev/vdb',
+                 'source_type': 'volume',
+                 'destination_type': 'volume',
+                 'volume_id': 'fake-volume-id-2',
+                 'boot_index': 0}))
+        get_by_volume_id.return_value = bdm
+
+        conn.swap_volume(old_connection_info, new_connection_info, instance,
+                         '/dev/vdb', 1)
+
+        get_domain.assert_called_once_with(instance)
+        get_disk_xml.assert_called_once_with(mock_dom.XMLDesc(0), 'vdb')
+        connect_volume.assert_called_once_with(new_connection_info, disk_info)
+        self.assertTrue(volume_save.called)
+        swap_volume.assert_called_once_with(mock_dom, 'vdb',
+                                            '/fake-new-volume', 1)
+        disconnect_volume.assert_called_once_with(old_connection_info, 'vdb')
+
     def test_live_snapshot(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
 

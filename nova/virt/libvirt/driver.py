@@ -1094,6 +1094,14 @@ class LibvirtDriver(driver.ComputeDriver):
             self._disconnect_volume(new_connection_info, disk_dev)
             raise NotImplementedError(_("Swap only supports host devices"))
 
+        # Save updates made in connection_info when connect_volume was called
+        volume_id = new_connection_info.get('serial')
+        bdm = objects.BlockDeviceMapping.get_by_volume_id(
+            nova_context.get_admin_context(), volume_id)
+        driver_bdm = driver_block_device.DriverVolumeBlockDevice(bdm)
+        driver_bdm['connection_info'] = new_connection_info
+        driver_bdm.save(nova_context.get_admin_context())
+
         self._swap_volume(virt_dom, disk_dev, conf.source_path, resize_to)
         self._disconnect_volume(old_connection_info, disk_dev)
 
