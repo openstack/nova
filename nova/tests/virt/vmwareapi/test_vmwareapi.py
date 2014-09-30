@@ -1008,7 +1008,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                        fake_wait_for_task)
 
         # perform the revert on our stubbed methods
-        self.conn.finish_revert_migration(instance=self.instance,
+        self.conn.finish_revert_migration(self.context,
+                                          instance=self.instance,
                                           network_info=None,
                                           power_on=power_on)
 
@@ -1245,6 +1246,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertEqual(connector['host'], 'test_url')
         self.assertEqual(connector['initiator'], 'iscsi-name')
         self.assertNotIn('instance', connector)
+
+    def test_refresh_instance_security_rules(self):
+        self.assertRaises(NotImplementedError,
+                          self.conn.refresh_instance_security_rules,
+                          instance=None)
 
 
 class VMwareAPIHostTestCase(test.NoDBTestCase):

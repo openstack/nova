@@ -1914,8 +1914,8 @@
 # Driver to use for controlling virtualization. Options
 # include: libvirt.LibvirtDriver, xenapi.XenAPIDriver,
 # fake.FakeDriver, baremetal.BareMetalDriver,
-# vmwareapi.VMwareESXDriver, vmwareapi.VMwareVCDriver (string
-# value)
+# vmwareapi.VMwareESXDriver, vmwareapi.VMwareVCDriver,
+# hyperv.HyperVDriver (string value)
 #compute_driver=<None>
 
 # The default format an ephemeral_volume will be formatted
@@ -2050,7 +2050,7 @@
 #xen_hvmloader_path=/usr/lib/xen/boot/hvmloader
 
 # Specific cachemodes to use for different disk types e.g:
-# ["file=directsync","block=none"] (list value)
+# file=directsync,block=none (list value)
 #disk_cachemodes=
 
 # Which pcpus can be used by vcpus of instance e.g:

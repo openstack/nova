@@ -497,6 +497,17 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertRaises(exception.AggregateNotFound,
                           db.aggregate_update, ctxt, aggregate_id, new_values)
 
+    def test_aggregate_update_raise_name_exist(self):
+        ctxt = context.get_admin_context()
+        _create_aggregate(context=ctxt, values={'name': 'test1'},
+                          metadata={'availability_zone': 'fake_avail_zone'})
+        _create_aggregate(context=ctxt, values={'name': 'test2'},
+                          metadata={'availability_zone': 'fake_avail_zone'})
+        aggregate_id = 1
+        new_values = {'name': 'test2'}
+        self.assertRaises(exception.AggregateNameExists,
+                          db.aggregate_update, ctxt, aggregate_id, new_values)
+
     def test_aggregate_get_all(self):
         ctxt = context.get_admin_context()
         counter = 3
@@ -2722,6 +2733,21 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         inst_type_by_fid = db.flavor_get_by_flavor_id(self.ctxt,
                 inst_type['flavorid'], read_deleted='yes')
         self.assertEqual(inst_type['id'], inst_type_by_fid['id'])
+
+    def test_flavor_get_by_flavor_id_deleted_and_recreat(self):
+        # NOTE(wingwj): Aims to test difference between mysql and postgresql
+        # for bug 1288636
+        param_dict = {'name': 'abc', 'flavorid': '123'}
+
+        self._create_inst_type(param_dict)
+        db.flavor_destroy(self.ctxt, 'abc')
+
+        # Recreate the flavor with the same params
+        flavor = self._create_inst_type(param_dict)
+
+        flavor_by_fid = db.flavor_get_by_flavor_id(self.ctxt,
+                flavor['flavorid'], read_deleted='yes')
+        self.assertEqual(flavor['id'], flavor_by_fid['id'])
 
 
 class InstanceTypeExtraSpecsTestCase(BaseInstanceTypeTestCase):

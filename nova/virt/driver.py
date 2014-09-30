@@ -37,7 +37,8 @@ driver_opts = [
                help='Driver to use for controlling virtualization. Options '
                    'include: libvirt.LibvirtDriver, xenapi.XenAPIDriver, '
                    'fake.FakeDriver, baremetal.BareMetalDriver, '
-                   'vmwareapi.VMwareESXDriver, vmwareapi.VMwareVCDriver'),
+                   'vmwareapi.VMwareESXDriver, vmwareapi.VMwareVCDriver, '
+                   'hyperv.HyperVDriver'),
     cfg.StrOpt('default_ephemeral_format',
                help='The default format an ephemeral_volume will be '
                     'formatted with on creation.'),
@@ -401,11 +402,12 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def finish_revert_migration(self, instance, network_info,
+    def finish_revert_migration(self, context, instance, network_info,
                                 block_device_info=None, power_on=True):
         """
         Finish reverting a resize.
 
+        :param context: the context for the finish_revert_migration
         :param instance: the instance being migrated/resized
         :param network_info:
            :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
@@ -413,7 +415,6 @@ class ComputeDriver(object):
         :param power_on: True if the instance should be powered on, False
                          otherwise
         """
-        # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def pause(self, instance):
@@ -679,6 +680,15 @@ class ComputeDriver(object):
 
         """
         # TODO(Vek): Need to pass context in for access to auth_token
+        raise NotImplementedError()
+
+    def refresh_instance_security_rules(self, instance):
+        """Refresh security group rules
+
+        Gets called when an instance gets added to or removed from
+        the security group the instance is a member of or if the
+        group gains or looses a rule.
+        """
         raise NotImplementedError()
 
     def reset_network(self, instance):

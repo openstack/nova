@@ -1246,9 +1246,9 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         self._test_instance_action_method('unpause', (), {}, (), {}, False)
 
     def test_resize_instance(self):
-        kwargs = dict(flavor=dict(id=42),
+        kwargs = dict(flavor=dict(id=42, flavorid='orangemocchafrappuccino'),
                       extra_instance_updates=dict(cow='moo'))
-        expected_kwargs = dict(flavor_id=42, cow='moo')
+        expected_kwargs = dict(flavor_id='orangemocchafrappuccino', cow='moo')
         self._test_instance_action_method('resize', (), kwargs,
                                           (), expected_kwargs,
                                           False)
