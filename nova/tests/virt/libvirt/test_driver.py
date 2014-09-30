@@ -1323,8 +1323,9 @@ class LibvirtConnTestCase(test.TestCase):
     def test_get_guest_config_numa_host_instance_topo(self):
         instance_topology = objects.InstanceNUMATopology.obj_from_topology(
                 hardware.VirtNUMAInstanceTopology(
-                    cells=[hardware.VirtNUMATopologyCell(0, set([0]), 1024),
-                           hardware.VirtNUMATopologyCell(1, set([1]), 1024)]))
+                    cells=[hardware.VirtNUMATopologyCell(0, set([0, 1]), 1024),
+                           hardware.VirtNUMATopologyCell(1, set([2, 3]),
+                                                         1024)]))
         instance_ref = db.instance_create(self.context, self.test_instance)
         flavor = objects.Flavor(memory_mb=1, vcpus=2, root_gb=496,
                                 ephemeral_gb=8128, swap=33550336, name='fake',
@@ -1357,7 +1358,11 @@ class LibvirtConnTestCase(test.TestCase):
             self.assertEqual(0, cfg.cputune.vcpupin[0].id)
             self.assertEqual(set([0, 1]), cfg.cputune.vcpupin[0].cpuset)
             self.assertEqual(1, cfg.cputune.vcpupin[1].id)
-            self.assertEqual(set([2]), cfg.cputune.vcpupin[1].cpuset)
+            self.assertEqual(set([0, 1]), cfg.cputune.vcpupin[1].cpuset)
+            self.assertEqual(2, cfg.cputune.vcpupin[2].id)
+            self.assertEqual(set([2]), cfg.cputune.vcpupin[2].cpuset)
+            self.assertEqual(3, cfg.cputune.vcpupin[3].id)
+            self.assertEqual(set([2]), cfg.cputune.vcpupin[3].cpuset)
             self.assertIsNotNone(cfg.cpu.numa)
             for instance_cell, numa_cfg_cell in zip(
                     instance_topology.cells, cfg.cpu.numa.cells):

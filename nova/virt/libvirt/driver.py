@@ -3744,7 +3744,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                     vconfig.LibvirtConfigGuestCPUTuneVCPUPin())
                                 pin_cpuset.id = cpu
                                 pin_cpuset.cpuset = host_cell.cpuset
-                            guest_cpu_tune.vcpupin.append(pin_cpuset)
+                                guest_cpu_tune.vcpupin.append(pin_cpuset)
                 return None, guest_cpu_tune, guest_cpu_numa
             else:
                 return allowed_cpus, None, guest_cpu_numa
