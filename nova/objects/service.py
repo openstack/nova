@@ -31,7 +31,8 @@ class Service(base.NovaPersistentObject, base.NovaObject):
     # Version 1.2: String attributes updated to support unicode
     # Version 1.3: ComputeNode version 1.5
     # Version 1.4: Added use_slave to get_by_compute_host
-    VERSION = '1.4'
+    # Version 1.5: ComputeNode version 1.6
+    VERSION = '1.5'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -51,6 +52,10 @@ class Service(base.NovaPersistentObject, base.NovaObject):
             self.compute_node.obj_make_compatible(
                     primitive['compute_node']['nova_object.data'], '1.4')
             primitive['compute_node']['nova_object.version'] = '1.4'
+        elif target_version < (1, 5) and 'compute_node' in primitive:
+            self.compute_node.obj_make_compatible(
+                    primitive['compute_node']['nova_object.data'], '1.5')
+            primitive['compute_node']['nova_object.version'] = '1.5'
 
     @staticmethod
     def _do_compute_node(context, service, db_service):
@@ -140,7 +145,8 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
     #              Service <= version 1.2
     # Version 1.1  Service version 1.3
     # Version 1.2: Service version 1.4
-    VERSION = '1.2'
+    # Version 1.3: Service version 1.5
+    VERSION = '1.3'
 
     fields = {
         'objects': fields.ListOfObjectsField('Service'),
@@ -150,6 +156,7 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
         # NOTE(danms): Service was at 1.2 before we added this
         '1.1': '1.3',
         '1.2': '1.4',
+        '1.3': '1.5'
         }
 
     @base.remotable_classmethod
