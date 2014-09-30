@@ -2890,11 +2890,9 @@ class API(base.Base):
         #             the same time. When db access is removed from
         #             compute, the bdm will be created here and we will
         #             have to make sure that they are assigned atomically.
-        device = self.compute_rpcapi.reserve_block_device_name(
-            context, device=device, instance=instance, volume_id=volume_id,
-            disk_bus=disk_bus, device_type=device_type)
-        volume_bdm = objects.BlockDeviceMapping.get_by_volume_id(
-            context, volume_id)
+        volume_bdm = self.compute_rpcapi.reserve_block_device_name(
+            context, instance, device, volume_id, disk_bus=disk_bus,
+            device_type=device_type)
         try:
             volume = self.volume_api.get(context, volume_id)
             self.volume_api.check_attach(context, volume, instance=instance)
@@ -2905,7 +2903,7 @@ class API(base.Base):
             with excutils.save_and_reraise_exception():
                 volume_bdm.destroy(context)
 
-        return device
+        return volume_bdm.device_name
 
     @wrap_check_policy
     @check_instance_lock

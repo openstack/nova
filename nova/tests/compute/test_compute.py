@@ -1877,7 +1877,8 @@ class ComputeTestCase(BaseTestCase):
 
         bdms = []
 
-        def fake_rpc_reserve_block_device_name(self, context, **kwargs):
+        def fake_rpc_reserve_block_device_name(self, context, instance, device,
+                                               volume_id, **kwargs):
             bdm = objects.BlockDeviceMapping(
                         **{'source_type': 'volume',
                            'destination_type': 'volume',
@@ -1886,6 +1887,7 @@ class ComputeTestCase(BaseTestCase):
                            'device_name': '/dev/vdc'})
             bdm.create(context)
             bdms.append(bdm)
+            return bdm
 
         self.stubs.Set(cinder.API, 'get', fake_volume_get)
         self.stubs.Set(cinder.API, 'check_attach', fake_check_attach)
@@ -9139,6 +9141,10 @@ class ComputeAPITestCase(BaseTestCase):
         fake_bdm = fake_block_device.FakeDbBlockDeviceDict(
                 {'source_type': 'volume', 'destination_type': 'volume',
                  'volume_id': 'fake-volume-id', 'device_name': '/dev/vdb'})
+        bdm = block_device_obj.BlockDeviceMapping()._from_db_object(
+                self.context,
+                block_device_obj.BlockDeviceMapping(),
+                fake_bdm)
         instance = self._create_fake_instance()
         fake_volume = {'id': 'fake-volume-id'}
 
@@ -9147,23 +9153,18 @@ class ComputeAPITestCase(BaseTestCase):
             mock.patch.object(cinder.API, 'check_attach'),
             mock.patch.object(cinder.API, 'reserve_volume'),
             mock.patch.object(compute_rpcapi.ComputeAPI,
-                'reserve_block_device_name', return_value='/dev/vdb'),
-            mock.patch.object(db, 'block_device_mapping_get_by_volume_id',
-                return_value=fake_bdm),
+                'reserve_block_device_name', return_value=bdm),
             mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
         ) as (mock_get, mock_check_attach, mock_reserve_vol, mock_reserve_bdm,
-                mock_bdm_get, mock_attach):
+                mock_attach):
 
             self.compute_api.attach_volume(
                     self.context, instance, 'fake-volume-id',
                     '/dev/vdb', 'ide', 'cdrom')
 
             mock_reserve_bdm.assert_called_once_with(
-                    self.context, device='/dev/vdb', instance=instance,
-                    volume_id='fake-volume-id', disk_bus='ide',
-                    device_type='cdrom')
-            mock_bdm_get.assert_called_once_with(
-                    self.context, 'fake-volume-id', [])
+                    self.context, instance, '/dev/vdb', 'fake-volume-id',
+                    disk_bus='ide', device_type='cdrom')
             self.assertEqual(mock_get.call_args,
                              mock.call(self.context, 'fake-volume-id'))
             self.assertEqual(mock_check_attach.call_args,
@@ -9194,8 +9195,12 @@ class ComputeAPITestCase(BaseTestCase):
         def fake_rpc_attach_volume(self, context, **kwargs):
             called['fake_rpc_attach_volume'] = True
 
-        def fake_rpc_reserve_block_device_name(self, context, **kwargs):
+        def fake_rpc_reserve_block_device_name(self, context, instance, device,
+                                               volume_id, **kwargs):
             called['fake_rpc_reserve_block_device_name'] = True
+            bdm = block_device_obj.BlockDeviceMapping()
+            bdm['device_name'] = '/dev/vdb'
+            return bdm
 
         self.stubs.Set(cinder.API, 'get', fake_volume_get)
         self.stubs.Set(cinder.API, 'check_attach', fake_check_attach)
@@ -9207,17 +9212,11 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(compute_rpcapi.ComputeAPI, 'attach_volume',
                        fake_rpc_attach_volume)
 
-        self.mox.StubOutWithMock(objects.BlockDeviceMapping,
-                                 'get_by_volume_id')
-        objects.BlockDeviceMapping.get_by_volume_id(
-                self.context, mox.IgnoreArg()).AndReturn('fake-bdm')
-        self.mox.ReplayAll()
-
         instance = self._create_fake_instance()
         self.compute_api.attach_volume(self.context, instance, 1, device=None)
         self.assertTrue(called.get('fake_check_attach'))
         self.assertTrue(called.get('fake_reserve_volume'))
-        self.assertTrue(called.get('fake_reserve_volume'))
+        self.assertTrue(called.get('fake_volume_get'))
         self.assertTrue(called.get('fake_rpc_reserve_block_device_name'))
         self.assertTrue(called.get('fake_rpc_attach_volume'))
 

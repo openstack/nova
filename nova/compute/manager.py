@@ -591,7 +591,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.34')
+    target = messaging.Target(version='3.35')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to a instance during power off.  The overall
@@ -4482,7 +4482,8 @@ class ComputeManager(manager.Manager):
     @reverts_task_state
     @wrap_instance_fault
     def reserve_block_device_name(self, context, instance, device,
-                                  volume_id, disk_bus=None, device_type=None):
+                                  volume_id, disk_bus=None, device_type=None,
+                                  return_bdm_object=False):
         # NOTE(ndipanov): disk_bus and device_type will be set to None if not
         # passed (by older clients) and defaulted by the virt driver. Remove
         # default values on the next major RPC version bump.
@@ -4505,7 +4506,10 @@ class ComputeManager(manager.Manager):
                     disk_bus=disk_bus, device_type=device_type)
             bdm.create(context)
 
-            return device_name
+            if return_bdm_object:
+                return bdm
+            else:
+                return device_name
 
         return do_reserve()
 
