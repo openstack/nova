@@ -861,6 +861,33 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         self.assertColumnNotExists(
             engine, 'shadow_pci_devices', 'request_id')
 
+    def _check_265(self, engine, data):
+        # Assert that only one index exists that covers columns
+        # host and deleted
+        instances = oslodbutils.get_table(engine, 'instances')
+        self.assertEqual(1, len([i for i in instances.indexes
+                                 if [c.name for c in i.columns][:2] ==
+                                    ['host', 'deleted']]))
+        # and only one index covers host column
+        iscsi_targets = oslodbutils.get_table(engine, 'iscsi_targets')
+        self.assertEqual(1, len([i for i in iscsi_targets.indexes
+                                 if [c.name for c in i.columns][:1] ==
+                                    ['host']]))
+
+    def _post_downgrade_265(self, engine):
+        # The duplicated index is not created on downgrade, so this
+        # asserts that only one index exists that covers columns
+        # host and deleted
+        instances = oslodbutils.get_table(engine, 'instances')
+        self.assertEqual(1, len([i for i in instances.indexes
+                                 if [c.name for c in i.columns][:2] ==
+                                    ['host', 'deleted']]))
+        # and only one index covers host column
+        iscsi_targets = oslodbutils.get_table(engine, 'iscsi_targets')
+        self.assertEqual(1, len([i for i in iscsi_targets.indexes
+                                 if [c.name for c in i.columns][:1] ==
+                                    ['host']]))
+
 
 class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

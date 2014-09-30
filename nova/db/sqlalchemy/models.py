@@ -166,8 +166,6 @@ class Instance(BASE, NovaBase):
     __table_args__ = (
         Index('uuid', 'uuid', unique=True),
         Index('project_id', 'project_id'),
-        Index('instances_host_deleted_idx',
-              'host', 'deleted'),
         Index('instances_reservation_id_idx',
               'reservation_id'),
         Index('instances_terminated_at_launched_at_idx',
@@ -622,7 +620,6 @@ class IscsiTarget(BASE, NovaBase):
     __tablename__ = 'iscsi_targets'
     __table_args__ = (
         Index('iscsi_targets_volume_id_fkey', 'volume_id'),
-        Index('iscsi_targets_host_idx', 'host'),
         Index('iscsi_targets_host_volume_id_deleted_idx', 'host', 'volume_id',
               'deleted')
     )
