@@ -3670,7 +3670,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest_cell = vconfig.LibvirtConfigGuestCPUNUMACell()
                 guest_cell.id = instance_cell.id
                 guest_cell.cpus = instance_cell.cpuset
-                guest_cell.memory = instance_cell.memory
+                guest_cell.memory = instance_cell.memory * units.Ki
                 guest_cpu_numa.cells.append(guest_cell)
             return guest_cpu_numa
 
@@ -3711,7 +3711,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if not guest_cpu_numa:
             # No NUMA topology defined for instance
             vcpus = flavor.vcpus
-            memory = flavor.memory_mb * 1024
+            memory = flavor.memory_mb
             if topology:
                 # Host is NUMA capable so try to keep the instance in a cell
                 viable_cells_cpus = []
@@ -4824,7 +4824,7 @@ class LibvirtDriver(driver.ComputeDriver):
         topology = hardware.VirtNUMAHostTopology(
                 cells=[hardware.VirtNUMATopologyCellUsage(
                             cell.id, set(cpu.id for cpu in cell.cpus),
-                            cell.memory)
+                            cell.memory / units.Ki)
                        for cell in topology.cells])
 
         allowed_cpus = hardware.get_vcpu_pin_set()

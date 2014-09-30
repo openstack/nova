@@ -1217,7 +1217,7 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_get_guest_config_numa_host_instance_no_fit(self):
         instance_ref = db.instance_create(self.context, self.test_instance)
-        flavor = objects.Flavor(memory_mb=1, vcpus=4, root_gb=496,
+        flavor = objects.Flavor(memory_mb=4096, vcpus=4, root_gb=496,
                                 ephemeral_gb=8128, swap=33550336, name='fake',
                                 extra_specs={})
 
@@ -1249,7 +1249,7 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_get_guest_config_numa_host_instance_fit_w_cpu_pinset(self):
         instance_ref = db.instance_create(self.context, self.test_instance)
-        flavor = objects.Flavor(memory_mb=1, vcpus=2, root_gb=496,
+        flavor = objects.Flavor(memory_mb=1024, vcpus=2, root_gb=496,
                                 ephemeral_gb=8128, swap=33550336, name='fake',
                                 extra_specs={})
 
@@ -1288,7 +1288,7 @@ class LibvirtConnTestCase(test.TestCase):
                     cells=[hardware.VirtNUMATopologyCell(0, set([0]), 1024),
                            hardware.VirtNUMATopologyCell(1, set([2]), 1024)]))
         instance_ref = db.instance_create(self.context, self.test_instance)
-        flavor = objects.Flavor(memory_mb=1, vcpus=2, root_gb=496,
+        flavor = objects.Flavor(memory_mb=2048, vcpus=2, root_gb=496,
                                 ephemeral_gb=8128, swap=33550336, name='fake',
                                 extra_specs={})
 
@@ -1318,7 +1318,8 @@ class LibvirtConnTestCase(test.TestCase):
                     instance_topology.cells, cfg.cpu.numa.cells):
                 self.assertEqual(instance_cell.id, numa_cfg_cell.id)
                 self.assertEqual(instance_cell.cpuset, numa_cfg_cell.cpus)
-                self.assertEqual(instance_cell.memory, numa_cfg_cell.memory)
+                self.assertEqual(instance_cell.memory * units.Ki,
+                                 numa_cfg_cell.memory)
 
     def test_get_guest_config_numa_host_instance_topo(self):
         instance_topology = objects.InstanceNUMATopology.obj_from_topology(
@@ -1327,7 +1328,7 @@ class LibvirtConnTestCase(test.TestCase):
                            hardware.VirtNUMATopologyCell(1, set([2, 3]),
                                                          1024)]))
         instance_ref = db.instance_create(self.context, self.test_instance)
-        flavor = objects.Flavor(memory_mb=1, vcpus=2, root_gb=496,
+        flavor = objects.Flavor(memory_mb=2048, vcpus=2, root_gb=496,
                                 ephemeral_gb=8128, swap=33550336, name='fake',
                                 extra_specs={})
 
@@ -1368,7 +1369,8 @@ class LibvirtConnTestCase(test.TestCase):
                     instance_topology.cells, cfg.cpu.numa.cells):
                 self.assertEqual(instance_cell.id, numa_cfg_cell.id)
                 self.assertEqual(instance_cell.cpuset, numa_cfg_cell.cpus)
-                self.assertEqual(instance_cell.memory, numa_cfg_cell.memory)
+                self.assertEqual(instance_cell.memory * units.Ki,
+                                 numa_cfg_cell.memory)
 
     def test_get_guest_config_clock(self):
         self.flags(virt_type='kvm', group='libvirt')
@@ -7990,7 +7992,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         cell_0 = vconfig.LibvirtConfigCapsNUMACell()
         cell_0.id = 0
-        cell_0.memory = 1024
+        cell_0.memory = 1024 * units.Ki
         cpu_0_0 = vconfig.LibvirtConfigCapsNUMACPU()
         cpu_0_0.id = 0
         cpu_0_0.socket_id = 0
@@ -8005,7 +8007,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         cell_1 = vconfig.LibvirtConfigCapsNUMACell()
         cell_1.id = 1
-        cell_1.memory = 1024
+        cell_1.memory = 1024 * units.Ki
         cpu_1_0 = vconfig.LibvirtConfigCapsNUMACPU()
         cpu_1_0.id = 2
         cpu_1_0.socket_id = 1
