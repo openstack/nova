@@ -22,18 +22,29 @@ wiring in out of tree code, upstream doesn't actively make any guarantees
 about these extensibility points; we don't support them, make any guarantees
 about compatibility, stability, etc.
 
-APIs
-=====
+Public Contractual APIs
+========================
+
+Although nova has many internal APIs, they are not all public contractual
+APIs. Below is a list of our public contractual APIs:
+
+* All REST API
+
+Anything not in this list is considered private, not to be used outside of
+nova, and should not be considered stable.
+
+REST APIs
+==========
 
 Follow the guidelines set in: https://wiki.openstack.org/wiki/APIChangeGuidelines
 
-The canonical source for API behavior is the code *not* documentation.
+The canonical source for REST API behavior is the code *not* documentation.
 Documentation is manually generated after the code by folks looking at the
 code and writing up what they think it does, and it is very easy to get
 this wrong.
 
 This policy is in place to prevent us from making backwards incompatible
-changes to APIs.
+changes to REST APIs.
 
 Patches and Reviews
 ===================
