@@ -501,8 +501,12 @@ class BaseWalkMigrationTestCase(BaseMigrationTestCase):
 
         havana_placeholders = range(217, 227)
         icehouse_placeholders = range(235, 244)
+        juno_placeholders = range(255, 265)
 
-        return special + havana_placeholders + icehouse_placeholders
+        return (special +
+                havana_placeholders +
+                icehouse_placeholders +
+                juno_placeholders)
 
     def _migrate_up(self, engine, version, with_data=False):
         """migrate up to a new version of the db.
