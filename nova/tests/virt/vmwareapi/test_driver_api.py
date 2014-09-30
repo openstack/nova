@@ -1482,8 +1482,15 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             self.conn.destroy(self.context, self.instance,
                               self.network_info,
                               None, True)
-            mock_get.assert_called_once_with(self.conn._vmops._session,
-                                             self.instance['uuid'])
+            mock_get.assert_called_with(self.conn._vmops._session,
+                                        self.instance['uuid'])
+            expected_args = [((self.conn._vmops._session,
+                               self.instance['uuid'] + '-orig'),),
+                             ((self.conn._vmops._session,
+                               self.instance['uuid']),)]
+            # one for VM named uuid-orig, one for VM named uuid
+            self.assertEqual(expected_args, mock_get.call_args_list)
+            self.assertEqual(2, mock_get.call_count)
             self.assertFalse(mock_call.called)
 
     def _rescue(self, config_drive=False):
