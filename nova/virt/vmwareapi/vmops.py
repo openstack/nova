@@ -1072,9 +1072,6 @@ class VMwareVMOps(object):
     def power_on(self, instance):
         vm_util.power_on_instance(self._session, instance)
 
-    def _get_orig_vm_name_label(self, instance):
-        return instance.uuid + '-orig'
-
     def _update_instance_progress(self, context, instance, step, total_steps):
         """Update instance progress percent to reflect current step number
         """
