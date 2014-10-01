@@ -29,7 +29,6 @@ from nova import notifications
 from nova import objects
 from nova.objects import instance
 from nova.objects import instance_info_cache
-from nova.objects import instance_numa_topology
 from nova.objects import pci_device
 from nova.objects import security_group
 from nova import test
@@ -655,7 +654,8 @@ class _TestInstanceObject(object):
         self.mox.StubOutWithMock(db, 'instance_create')
         vals = {'host': 'foo-host',
                 'memory_mb': 128,
-                'system_metadata': {'foo': 'bar'}}
+                'system_metadata': {'foo': 'bar'},
+                'extra': {}}
         fake_inst = fake_instance.fake_db_instance(**vals)
         db.instance_create(self.context, vals).AndReturn(fake_inst)
         self.mox.ReplayAll()
@@ -665,7 +665,8 @@ class _TestInstanceObject(object):
 
     def test_create(self):
         self.mox.StubOutWithMock(db, 'instance_create')
-        db.instance_create(self.context, {}).AndReturn(self.fake_instance)
+        db.instance_create(self.context, {'extra': {}}).AndReturn(
+            self.fake_instance)
         self.mox.ReplayAll()
         inst = instance.Instance()
         inst.create(self.context)
@@ -680,18 +681,24 @@ class _TestInstanceObject(object):
         inst2 = instance.Instance.get_by_uuid(self.context, inst1.uuid)
         self.assertEqual(inst2.host, 'foo-host')
 
-    def test_create_with_numa_topology(self):
+    def test_create_with_extras(self):
         inst = instance.Instance(uuid=self.fake_instance['uuid'],
-                numa_topology=instance_numa_topology.InstanceNUMATopology
-                        .obj_from_topology(
-                            test_instance_numa_topology.fake_numa_topology))
+                numa_topology=objects.InstanceNUMATopology.obj_from_topology(
+                    test_instance_numa_topology.fake_numa_topology),
+                pci_requests=objects.InstancePCIRequests(
+                    requests=[
+                        objects.InstancePCIRequest(count=123,
+                                                   spec=[])]))
 
         inst.create(self.context)
         self.assertIsNotNone(inst.numa_topology)
-        got_numa_topo = (
-                instance_numa_topology.InstanceNUMATopology
-                .get_by_instance_uuid(self.context, inst.uuid))
+        self.assertIsNotNone(inst.pci_requests)
+        got_numa_topo = objects.InstanceNUMATopology.get_by_instance_uuid(
+            self.context, inst.uuid)
         self.assertEqual(inst.numa_topology.id, got_numa_topo.id)
+        got_pci_requests = objects.InstancePCIRequests.get_by_instance_uuid(
+            self.context, inst.uuid)
+        self.assertEqual(123, got_pci_requests.requests[0].count)
 
     def test_recreate_fails(self):
         inst = instance.Instance(user_id=self.context.user_id,
@@ -708,6 +715,7 @@ class _TestInstanceObject(object):
                            {'host': 'foo-host',
                             'security_groups': ['foo', 'bar'],
                             'info_cache': {'network_info': '[]'},
+                            'extra': {},
                             }
                            ).AndReturn(fake_inst)
         self.mox.ReplayAll()

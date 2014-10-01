@@ -1631,6 +1631,12 @@ def instance_create(context, values):
     if info_cache is not None:
         instance_ref['info_cache'].update(info_cache)
     security_groups = values.pop('security_groups', [])
+    instance_ref['extra'] = models.InstanceExtra()
+    instance_ref['extra'].update(
+        {'numa_topology': None,
+         'pci_requests': None,
+         })
+    instance_ref['extra'].update(values.pop('extra', {}))
     instance_ref.update(values)
 
     def _get_sec_group_models(session, security_groups):
@@ -1655,8 +1661,6 @@ def instance_create(context, values):
 
     # create the instance uuid to ec2_id mapping entry for instance
     ec2_instance_create(context, instance_ref['uuid'])
-
-    _instance_extra_create(context, {'instance_uuid': instance_ref['uuid']})
 
     return instance_ref
 
