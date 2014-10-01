@@ -40,7 +40,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.TestCase):
             'port': '10000'
         }
         self.wh.socket.return_value = '<socket>'
-        self.wh.path = "ws://127.0.0.1/?token=123-456-789"
+        self.wh.path = "http://127.0.0.1/?token=123-456-789"
 
         self.wh.new_websocket_client()
 
@@ -52,7 +52,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.TestCase):
     def test_new_websocket_client_token_invalid(self, check_token):
         check_token.return_value = False
 
-        self.wh.path = "ws://127.0.0.1/?token=XXX"
+        self.wh.path = "http://127.0.0.1/?token=XXX"
 
         self.assertRaises(exception.InvalidToken,
                           self.wh.new_websocket_client)
@@ -97,7 +97,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.TestCase):
         tsock.recv.return_value = "HTTP/1.1 200 OK\r\n\r\n"
 
         self.wh.socket.return_value = tsock
-        self.wh.path = "ws://127.0.0.1/?token=123-456-789"
+        self.wh.path = "http://127.0.0.1/?token=123-456-789"
 
         self.wh.new_websocket_client()
 
@@ -117,7 +117,40 @@ class NovaProxyRequestHandlerBaseTestCase(test.TestCase):
         tsock.recv.return_value = "HTTP/1.1 500 Internal Server Error\r\n\r\n"
 
         self.wh.socket.return_value = tsock
-        self.wh.path = "ws://127.0.0.1/?token=123-456-789"
+        self.wh.path = "http://127.0.0.1/?token=123-456-789"
 
         self.assertRaises(Exception, self.wh.new_websocket_client)  # noqa
         check_token.assert_called_with(mock.ANY, token="123-456-789")
+
+    @mock.patch('sys.version_info')
+    @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token')
+    def test_new_websocket_client_py273_good_scheme(
+            self, check_token, version_info):
+        version_info.return_value = (2, 7, 3)
+        check_token.return_value = {
+            'host': 'node1',
+            'port': '10000'
+        }
+        self.wh.socket.return_value = '<socket>'
+        self.wh.path = "http://127.0.0.1/?token=123-456-789"
+
+        self.wh.new_websocket_client()
+
+        check_token.assert_called_with(mock.ANY, token="123-456-789")
+        self.wh.socket.assert_called_with('node1', 10000, connect=True)
+        self.wh.do_proxy.assert_called_with('<socket>')
+
+    @mock.patch('sys.version_info')
+    @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token')
+    def test_new_websocket_client_py273_special_scheme(
+            self, check_token, version_info):
+        version_info.return_value = (2, 7, 3)
+        check_token.return_value = {
+            'host': 'node1',
+            'port': '10000'
+        }
+        self.wh.socket.return_value = '<socket>'
+        self.wh.path = "ws://127.0.0.1/?token=123-456-789"
+
+        self.assertRaises(exception.NovaException,
+                          self.wh.new_websocket_client)
