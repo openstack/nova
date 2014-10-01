@@ -19,6 +19,7 @@ import datetime
 import math
 import uuid
 
+import iso8601
 import mock
 import netaddr
 from oslo.config import cfg
@@ -38,11 +39,13 @@ import nova.utils
 
 CONF = cfg.CONF
 
+UTC = iso8601.iso8601.Utc()
 FAKE_NETWORKS = [
     {
         'bridge': 'br100', 'vpn_public_port': 1000,
         'dhcp_start': '10.0.0.3', 'bridge_interface': 'eth0',
-        'updated_at': datetime.datetime(2011, 8, 16, 9, 26, 13, 48257),
+        'updated_at': datetime.datetime(2011, 8, 16, 9, 26, 13, 48257,
+                                        tzinfo=UTC),
         'id': 1, 'uuid': '20c8acc0-f747-4d71-a389-46d078ebf047',
         'cidr_v6': None, 'deleted_at': None,
         'gateway': '10.0.0.1', 'label': 'mynet_0',
@@ -54,7 +57,8 @@ FAKE_NETWORKS = [
         'vpn_public_address': '127.0.0.1', 'multi_host': False,
         'dns1': None, 'dns2': None, 'host': 'nsokolov-desktop',
         'gateway_v6': None, 'netmask_v6': None, 'priority': None,
-        'created_at': datetime.datetime(2011, 8, 15, 6, 19, 19, 387525),
+        'created_at': datetime.datetime(2011, 8, 15, 6, 19, 19, 387525,
+                                        tzinfo=UTC),
         'mtu': None, 'dhcp_server': '10.0.0.1', 'enable_dhcp': True,
         'share_address': False,
     },
@@ -71,7 +75,8 @@ FAKE_NETWORKS = [
         'cidr': '10.0.0.10/29', 'vpn_public_address': None,
         'multi_host': False, 'dns1': None, 'dns2': None, 'host': None,
         'gateway_v6': None, 'netmask_v6': None, 'priority': None,
-        'created_at': datetime.datetime(2011, 8, 15, 6, 19, 19, 885495),
+        'created_at': datetime.datetime(2011, 8, 15, 6, 19, 19, 885495,
+                                        tzinfo=UTC),
         'mtu': None, 'dhcp_server': '10.0.0.9', 'enable_dhcp': True,
         'share_address': False,
     },
@@ -99,6 +104,12 @@ NEW_NETWORK = {
         "cidr": "10.20.105.0/24",
         "label": "new net 111",
         "vlan_start": 111,
+        "injected": False,
+        "multi_host": False,
+        'mtu': None,
+        'dhcp_server': '10.0.0.1',
+        'enable_dhcp': True,
+        'share_address': False,
     }
 }
 
@@ -172,12 +183,18 @@ class FakeNetworkAPI(object):
             else:
                 nets = [n for n in self.networks
                         if n['project_id'] == project_id]
-        return nets
+        objs = [objects.Network._from_db_object(context,
+                                                objects.Network(),
+                                                net)
+                for net in nets]
+        return objects.NetworkList(objects=objs)
 
     def get(self, context, network_id):
         for network in self.networks:
             if network.get('uuid') == network_id:
-                return network
+                return objects.Network._from_db_object(context,
+                                                       objects.Network(),
+                                                       network)
         raise exception.NetworkNotFound(network_id=network_id)
 
     def create(self, context, **kwargs):
@@ -310,7 +327,7 @@ class NetworksTest(test.NoDBTestCase):
         expected = [FAKE_USER_NETWORKS[0]]
         for network in expected:
             self.network_uuid_to_id(network)
-        self.assertEqual(res_dict, {'networks': expected})
+        self.assertEqual({'networks': expected}, res_dict)
 
     def test_network_list_all_as_admin(self):
         req = fakes.HTTPRequest.blank('/v2/1234/os-networks')
@@ -319,7 +336,7 @@ class NetworksTest(test.NoDBTestCase):
         expected = copy.deepcopy(FAKE_NETWORKS)
         for network in expected:
             self.network_uuid_to_id(network)
-        self.assertEqual(res_dict, {'networks': expected})
+        self.assertEqual({'networks': expected}, res_dict)
 
     def test_network_disassociate(self):
         uuid = FAKE_NETWORKS[0]['uuid']
@@ -360,7 +377,7 @@ class NetworksTest(test.NoDBTestCase):
         res_dict = self.controller.show(req, uuid)
         expected = {'network': copy.deepcopy(FAKE_USER_NETWORKS[0])}
         self.network_uuid_to_id(expected['network'])
-        self.assertEqual(res_dict, expected)
+        self.assertEqual(expected, res_dict)
 
     def test_network_get_as_admin(self):
         uuid = FAKE_NETWORKS[0]['uuid']
@@ -369,7 +386,7 @@ class NetworksTest(test.NoDBTestCase):
         res_dict = self.controller.show(req, uuid)
         expected = {'network': copy.deepcopy(FAKE_NETWORKS[0])}
         self.network_uuid_to_id(expected['network'])
-        self.assertEqual(res_dict, expected)
+        self.assertEqual(expected, res_dict)
 
     def test_network_get_not_found(self):
         req = fakes.HTTPRequest.blank('/v2/1234/os-networks/100')
