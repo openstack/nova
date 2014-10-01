@@ -179,9 +179,10 @@ class HyperVDriver(driver.ComputeDriver):
     def confirm_migration(self, migration, instance, network_info):
         self._migrationops.confirm_migration(migration, instance, network_info)
 
-    def finish_revert_migration(self, instance, network_info,
+    def finish_revert_migration(self, context, instance, network_info,
                                 block_device_info=None, power_on=True):
-        self._migrationops.finish_revert_migration(instance, network_info,
+        self._migrationops.finish_revert_migration(context, instance,
+                                                   network_info,
                                                    block_device_info, power_on)
 
     def finish_migration(self, context, migration, instance, disk_info,

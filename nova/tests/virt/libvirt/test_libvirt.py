@@ -4357,13 +4357,81 @@ class LibvirtConnTestCase(test.TestCase):
         conn._create_images_and_backing(self.context, instance,
                                 libvirt_utils.get_instance_path(instance),
                                 disk_info_json)
-        conn._create_domain_and_network(dummyxml, instance,
+        conn._create_domain_and_network(self.context, dummyxml, instance,
                                         network_info, block_device_info,
-                                        context=self.context, reboot=True)
+                                        reboot=True)
         self.mox.ReplayAll()
 
         conn._hard_reboot(self.context, instance, network_info,
                           block_device_info)
+
+    def test_power_on(self):
+
+        def _check_xml_bus(name, xml, block_info):
+            tree = etree.fromstring(xml)
+            got_disks = tree.findall('./devices/disk')
+            got_disk_targets = tree.findall('./devices/disk/target')
+            system_meta = utils.instance_sys_meta(instance)
+            image_meta = utils.get_image_from_system_metadata(system_meta)
+            want_device_bus = image_meta.get('hw_disk_bus')
+            if not want_device_bus:
+                want_device_bus = self.fake_img['properties']['hw_disk_bus']
+            got_device_bus = got_disk_targets[0].get('bus')
+            self.assertEqual(got_device_bus, want_device_bus)
+
+        def fake_get_info(instance_name):
+            called['count'] += 1
+            if called['count'] == 1:
+                state = power_state.SHUTDOWN
+            else:
+                state = power_state.RUNNING
+            return dict(state=state)
+
+        def _get_inst(with_meta=True):
+            inst_ref = self.test_instance
+            inst_ref['uuid'] = uuidutils.generate_uuid()
+            if with_meta:
+                inst_ref['system_metadata']['image_hw_disk_bus'] = 'ide'
+            instance = db.instance_create(self.context, inst_ref)
+            instance['image_ref'] = '70a599e0-31e7-49b7-b260-868f221a761e'
+            return instance
+
+        called = {'count': 0}
+        self.fake_img = {'id': '70a599e0-31e7-49b7-b260-868f221a761e',
+                         'name': 'myfakeimage',
+                         'created_at': '',
+                         'updated_at': '',
+                         'deleted_at': None,
+                         'deleted': False,
+                         'status': 'active',
+                         'is_public': False,
+                         'container_format': 'bare',
+                         'disk_format': 'qcow2',
+                         'size': '74185822',
+                         'properties': {'hw_disk_bus': 'ide'}}
+
+        instance = _get_inst()
+        network_info = _fake_network_info(self.stubs, 1)
+        block_device_info = None
+        image_service_mock = mock.Mock()
+        image_service_mock.show.return_value = self.fake_img
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        with contextlib.nested(
+            mock.patch.object(conn, '_destroy', return_value=None),
+            mock.patch.object(conn, '_create_images_and_backing'),
+            mock.patch.object(conn, '_create_domain_and_network'),
+            mock.patch('nova.image.glance.get_remote_image_service',
+                       return_value=(image_service_mock,
+                       instance['image_ref']))):
+            conn.get_info = fake_get_info
+            conn.get_instance_disk_info = _check_xml_bus
+            conn._hard_reboot(self.context, instance, network_info,
+                              block_device_info)
+
+            instance = _get_inst(with_meta=False)
+            conn._hard_reboot(self.context, instance, network_info,
+                              block_device_info)
 
     def test_resume(self):
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
@@ -4393,10 +4461,10 @@ class LibvirtConnTestCase(test.TestCase):
                         block_device_info)
             _get_existing_domain_xml.assert_has_calls([mock.call(instance,
                                             network_info, block_device_info)])
-            _create_domain_and_network.assert_has_calls([mock.call(dummyxml,
-                                          instance, network_info,
-                                          block_device_info=block_device_info,
-                                          context=self.context)])
+            _create_domain_and_network.assert_has_calls([mock.call(
+                                        self.context, dummyxml,
+                                        instance, network_info,
+                                        block_device_info=block_device_info)])
             _attach_pci_devices.assert_has_calls([mock.call('fake_dom',
                                                  'fake_pci_devs')])
 
@@ -5176,8 +5244,31 @@ class LibvirtConnTestCase(test.TestCase):
         conn.lookupByID(2).AndReturn(DiagFakeDomain(5))
 
         self.mox.ReplayAll()
-
         self.assertEqual(5, driver.get_vcpu_used())
+
+    def test_failing_vcpu_count_none(self):
+        """Domain will return zero if the current number of vcpus used
+        is None. This is in case of VM state starting up or shutting
+        down. None type returned is counted as zero.
+        """
+
+        class DiagFakeDomain(object):
+            def __init__(self):
+                pass
+
+            def vcpus(self):
+                return None
+
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        conn = driver._conn
+        self.mox.StubOutWithMock(driver, 'list_instance_ids')
+        conn.lookupByID = self.mox.CreateMockAnything()
+
+        driver.list_instance_ids().AndReturn([1])
+        conn.lookupByID(1).AndReturn(DiagFakeDomain())
+
+        self.mox.ReplayAll()
+        self.assertEqual(0, driver.get_vcpu_used())
 
     def test_get_instance_capabilities(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -6165,20 +6256,45 @@ class IptablesFirewallTestCase(test.TestCase):
         self.mox.StubOutWithMock(self.fw,
                                  'add_filters_for_instance',
                                  use_mock_anything=True)
+        self.mox.StubOutWithMock(self.fw.iptables.ipv4['filter'],
+                                 'has_chain')
 
         self.fw.instance_rules(instance_ref,
                                mox.IgnoreArg()).AndReturn((None, None))
         self.fw.add_filters_for_instance(instance_ref, mox.IgnoreArg(),
-                                         mox.IgnoreArg())
+                                         mox.IgnoreArg(), mox.IgnoreArg())
         self.fw.instance_rules(instance_ref,
                                mox.IgnoreArg()).AndReturn((None, None))
+        self.fw.iptables.ipv4['filter'].has_chain(mox.IgnoreArg()
+                                                  ).AndReturn(True)
         self.fw.add_filters_for_instance(instance_ref, mox.IgnoreArg(),
-                                         mox.IgnoreArg())
+                                         mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
 
         self.fw.prepare_instance_filter(instance_ref, mox.IgnoreArg())
-        self.fw.instances[instance_ref['id']] = instance_ref
+        self.fw.instance_info[instance_ref['id']] = (instance_ref, None)
         self.fw.do_refresh_security_group_rules("fake")
+
+    def test_do_refresh_security_group_rules_instance_disappeared(self):
+        instance1 = {'id': 0, 'uuid': 'fake-uuid1'}
+        instance2 = {'id': 1, 'uuid': 'fake-uuid2'}
+        network_infos = _fake_network_info(self.stubs, 2)
+        self.fw.instance_info[instance1['id']] = (instance1, network_infos[0])
+        self.fw.instance_info[instance2['id']] = (instance2, network_infos[1])
+        mock_filter = mock.MagicMock()
+        with mock.patch.dict(self.fw.iptables.ipv4, {'filter': mock_filter}):
+            mock_filter.has_chain.return_value = False
+            with mock.patch.object(self.fw, 'instance_rules') as mock_ir:
+                mock_ir.return_value = (None, None)
+                self.fw.do_refresh_security_group_rules('secgroup')
+                self.assertEqual(2, mock_ir.call_count)
+            # NOTE(danms): Make sure that it is checking has_chain each time,
+            # continuing to process all the instances, and never adding the
+            # new chains back if has_chain() is False
+            mock_filter.has_chain.assert_has_calls([mock.call('inst-0'),
+                                                    mock.call('inst-1')],
+                                                   any_order=True)
+            self.assertEqual(0, mock_filter.add_chain.call_count)
 
     def test_unfilter_instance_undefines_nwfilter(self):
         admin_ctxt = context.get_admin_context()
@@ -7135,8 +7251,9 @@ class LibvirtDriverTestCase(test.TestCase):
             f = open(libvirt_xml_path, 'w')
             f.close()
 
-            self.libvirtconnection.finish_revert_migration(ins_ref, None,
-                                                           None, power_on)
+            self.libvirtconnection.finish_revert_migration(
+                                       context.get_admin_context(), ins_ref,
+                                       None, None, power_on)
             self.assertTrue(self.fake_create_domain_called)
 
     def test_finish_revert_migration_power_on(self):
@@ -7153,6 +7270,7 @@ class LibvirtDriverTestCase(test.TestCase):
 
             def wait(self):
                 return None
+        context = 'fake_context'
 
         self.mox.StubOutWithMock(libvirt_utils, 'get_instance_path')
         self.mox.StubOutWithMock(os.path, 'exists')
@@ -7178,7 +7296,7 @@ class LibvirtDriverTestCase(test.TestCase):
 
         self.mox.ReplayAll()
 
-        self.libvirtconnection.finish_revert_migration({}, [])
+        self.libvirtconnection.finish_revert_migration(context, {}, [])
 
     def test_finish_revert_migration_after_crash(self):
         self._test_finish_revert_migration_after_crash(backup_made=True)

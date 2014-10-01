@@ -203,7 +203,7 @@ systool: CommandFilter, systool, root
 sginfo: CommandFilter, sginfo, root
 sg_scan: CommandFilter, sg_scan, root
 cryptsetup: CommandFilter, cryptsetup, root
-ln: RegExpFilter, ln, root, ln, --symbolic, --force, /dev/mapper/ip-.*-iscsi-iqn.2010-10.org.openstack:volume-.*, /dev/disk/by-path/ip-.*-iscsi-iqn.2010-10.org.openstack:volume-.*
+ln: RegExpFilter, ln, root, ln, --symbolic, --force, /dev/mapper/ip-.*-iscsi-iqn.*, /dev/disk/by-path/ip-.*-iscsi-iqn.*
 
 # nova/virt/xenapi/vm_utils.py:
 xenstore-read: CommandFilter, xenstore-read, root

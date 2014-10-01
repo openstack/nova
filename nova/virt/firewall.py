@@ -141,8 +141,7 @@ class IptablesFirewallDriver(FirewallDriver):
     def __init__(self, virtapi, **kwargs):
         super(IptablesFirewallDriver, self).__init__(virtapi)
         self.iptables = linux_net.iptables_manager
-        self.instances = {}
-        self.network_infos = {}
+        self.instance_info = {}
         self.basically_filtered = False
 
         # Flags for DHCP request rule
@@ -168,9 +167,7 @@ class IptablesFirewallDriver(FirewallDriver):
         self.iptables.defer_apply_off()
 
     def unfilter_instance(self, instance, network_info):
-        if self.instances.pop(instance['id'], None):
-            # NOTE(vish): use the passed info instead of the stored info
-            self.network_infos.pop(instance['id'])
+        if self.instance_info.pop(instance['id'], None):
             self.remove_filters_for_instance(instance)
             self.iptables.apply()
         else:
@@ -178,10 +175,10 @@ class IptablesFirewallDriver(FirewallDriver):
                      'filtered'), instance=instance)
 
     def prepare_instance_filter(self, instance, network_info):
-        self.instances[instance['id']] = instance
-        self.network_infos[instance['id']] = network_info
+        self.instance_info[instance['id']] = (instance, network_info)
         ipv4_rules, ipv6_rules = self.instance_rules(instance, network_info)
-        self.add_filters_for_instance(instance, ipv4_rules, ipv6_rules)
+        self.add_filters_for_instance(instance, network_info, ipv4_rules,
+                                      ipv6_rules)
         LOG.debug(_('Filters added to instance'), instance=instance)
         self.refresh_provider_fw_rules()
         LOG.debug(_('Provider Firewall Rules refreshed'), instance=instance)
@@ -238,9 +235,8 @@ class IptablesFirewallDriver(FirewallDriver):
             for rule in ipv6_rules:
                 self.iptables.ipv6['filter'].add_rule(chain_name, rule)
 
-    def add_filters_for_instance(self, instance, inst_ipv4_rules,
+    def add_filters_for_instance(self, instance, network_info, inst_ipv4_rules,
                                  inst_ipv6_rules):
-        network_info = self.network_infos[instance['id']]
         chain_name = self._instance_chain_name(instance)
         if CONF.use_ipv6:
             self.iptables.ipv6['filter'].add_chain(chain_name)
@@ -439,22 +435,38 @@ class IptablesFirewallDriver(FirewallDriver):
         self.iptables.apply()
 
     @utils.synchronized('iptables', external=True)
-    def _inner_do_refresh_rules(self, instance, ipv4_rules,
-                                               ipv6_rules):
+    def _inner_do_refresh_rules(self, instance, network_info, ipv4_rules,
+                                ipv6_rules):
+        chain_name = self._instance_chain_name(instance)
+        if not self.iptables.ipv4['filter'].has_chain(chain_name):
+            LOG.info(
+                _('instance chain %s disappeared during refresh, '
+                    'skipping') % chain_name,
+                instance=instance)
+            return
         self.remove_filters_for_instance(instance)
-        self.add_filters_for_instance(instance, ipv4_rules, ipv6_rules)
+        self.add_filters_for_instance(instance, network_info, ipv4_rules,
+                                      ipv6_rules)
 
     def do_refresh_security_group_rules(self, security_group):
-        for instance in self.instances.values():
-            network_info = self.network_infos[instance['id']]
+        id_list = self.instance_info.keys()
+        for instance_id in id_list:
+            try:
+                instance, network_info = self.instance_info[instance_id]
+            except KeyError:
+                # NOTE(danms): instance cache must have been modified,
+                # ignore this deleted instance and move on
+                continue
             ipv4_rules, ipv6_rules = self.instance_rules(instance,
                                                          network_info)
-            self._inner_do_refresh_rules(instance, ipv4_rules, ipv6_rules)
+            self._inner_do_refresh_rules(instance, network_info, ipv4_rules,
+                                         ipv6_rules)
 
     def do_refresh_instance_rules(self, instance):
-        network_info = self.network_infos[instance['id']]
+        _instance, network_info = self.instance_info[instance['id']]
         ipv4_rules, ipv6_rules = self.instance_rules(instance, network_info)
-        self._inner_do_refresh_rules(instance, ipv4_rules, ipv6_rules)
+        self._inner_do_refresh_rules(instance, network_info, ipv4_rules,
+                                     ipv6_rules)
 
     def refresh_provider_fw_rules(self):
         """See :class:`FirewallDriver` docs."""

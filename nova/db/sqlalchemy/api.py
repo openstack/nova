@@ -475,6 +475,7 @@ def service_create(context, values):
 
 
 @require_admin_context
+@_retry_on_deadlock
 def service_update(context, service_id, values):
     session = get_session()
     with session.begin():
@@ -4305,6 +4306,7 @@ def flavor_get_by_flavor_id(context, flavor_id, read_deleted):
     """Returns a dict describing specific flavor_id."""
     result = _instance_type_get_query(context, read_deleted=read_deleted).\
                         filter_by(flavorid=flavor_id).\
+                        order_by(asc("deleted"), asc("id")).\
                         first()
     if not result:
         raise exception.FlavorNotFound(flavor_id=flavor_id)
@@ -5031,6 +5033,18 @@ def aggregate_host_get_by_metadata_key(context, key):
 @require_admin_context
 def aggregate_update(context, aggregate_id, values):
     session = get_session()
+
+    if "name" in values:
+        aggregate_by_name = (_aggregate_get_query(context,
+                                                  models.Aggregate,
+                                                  models.Aggregate.name,
+                                                  values['name'],
+                                                  session=session,
+                                                  read_deleted='no').first())
+        if aggregate_by_name and aggregate_by_name.id != aggregate_id:
+            # there is another aggregate with the new name
+            raise exception.AggregateNameExists(aggregate_name=values['name'])
+
     aggregate = (_aggregate_get_query(context,
                                      models.Aggregate,
                                      models.Aggregate.id,

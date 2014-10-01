@@ -655,9 +655,11 @@ class Rbd(Image):
 
         return False
 
-    def _resize(self, size):
-        with RBDVolumeProxy(self, self.rbd_name) as vol:
-            vol.resize(int(size))
+    def _resize(self, volume_name, size):
+        size = int(size)
+
+        with RBDVolumeProxy(self, volume_name) as vol:
+            vol.resize(size)
 
     def _size(self):
         return self.get_disk_size(self.rbd_name)
@@ -693,6 +695,11 @@ class Rbd(Image):
 
         if size and self._size() < size:
             self._resize(size)
+
+        base_size = disk.get_disk_size(base)
+
+        if size and size > base_size:
+            self._resize(self.rbd_name, size)
 
     def snapshot_extract(self, target, out_format):
         images.convert_image(self.path, target, out_format)

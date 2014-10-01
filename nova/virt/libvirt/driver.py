@@ -213,7 +213,7 @@ libvirt_opts = [
     cfg.ListOpt('disk_cachemodes',
                  default=[],
                  help='Specific cachemodes to use for different disk types '
-                      'e.g: ["file=directsync","block=none"]'),
+                      'e.g: file=directsync,block=none'),
     cfg.StrOpt('vcpu_pin_set',
                 help='Which pcpus can be used by vcpus of instance '
                      'e.g: "4-12,^8,15"'),
@@ -1929,9 +1929,25 @@ class LibvirtDriver(driver.ComputeDriver):
         """
 
         self._destroy(instance)
+
+        # Get the system metadata from the instance
+        system_meta = utils.instance_sys_meta(instance)
+
+        # Convert the system metadata to image metadata
+        image_meta = utils.get_image_from_system_metadata(system_meta)
+        if not image_meta:
+            image_ref = instance.get('image_ref')
+            service, image_id = glance.get_remote_image_service(context,
+                                                                image_ref)
+            image_meta = compute_utils.get_image_metadata(context,
+                                                          service,
+                                                          image_id,
+                                                          instance)
+
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance,
-                                            block_device_info)
+                                            block_device_info,
+                                            image_meta)
         # NOTE(vish): This could generate the wrong device_format if we are
         #             using the raw backend and the images don't exist yet.
         #             The create_images_and_backing below doesn't properly
@@ -1951,9 +1967,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Initialize all the necessary networking, block devices and
         # start the instance.
-        self._create_domain_and_network(xml, instance, network_info,
-                                        block_device_info, context=context,
-                                        reboot=True)
+        self._create_domain_and_network(context, xml, instance, network_info,
+                                        block_device_info, reboot=True)
         self._prepare_pci_devices_for_use(
             pci_manager.get_instance_pci_devs(instance))
 
@@ -2002,8 +2017,8 @@ class LibvirtDriver(driver.ComputeDriver):
         """resume the specified instance."""
         xml = self._get_existing_domain_xml(instance, network_info,
                                             block_device_info)
-        dom = self._create_domain_and_network(xml, instance, network_info,
-                         block_device_info=block_device_info, context=context)
+        dom = self._create_domain_and_network(context, xml, instance,
+                           network_info, block_device_info=block_device_info)
         self._attach_pci_devices(dom,
             pci_manager.get_instance_pci_devs(instance))
 
@@ -2110,8 +2125,8 @@ class LibvirtDriver(driver.ComputeDriver):
                           block_device_info=block_device_info,
                           write_to_disk=True)
 
-        self._create_domain_and_network(xml, instance, network_info,
-                                        block_device_info, context=context)
+        self._create_domain_and_network(context, xml, instance, network_info,
+                                        block_device_info)
         LOG.debug(_("Instance is running"), instance=instance)
 
         def _wait_for_boot():
@@ -3239,9 +3254,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return domain
 
-    def _create_domain_and_network(self, xml, instance, network_info,
+    def _create_domain_and_network(self, context, xml, instance, network_info,
                                    block_device_info=None, power_on=True,
-                                   context=None, reboot=False):
+                                   reboot=False):
 
         """Do required network setup and create domain."""
         block_device_mapping = driver.block_device_info_get_mapping(
@@ -3461,7 +3476,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def get_vcpu_used(self):
         """Get vcpu usage number of physical computer.
 
-        :returns: The total number of vcpu that currently used.
+        :returns: The total number of vcpu(s) that are currently being used.
 
         """
 
@@ -3480,7 +3495,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                " %(id)s, exception: %(ex)s") %
                                {"id": dom_id, "ex": e})
                 else:
-                    total += len(vcpus[1])
+                    if vcpus is not None and len(vcpus) > 1:
+                        total += len(vcpus[1])
+
             except exception.InstanceNotFound:
                 LOG.info(_("libvirt can't find a domain with id: %s") % dom_id)
                 continue
@@ -4653,9 +4670,8 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = self.to_xml(context, instance, network_info, disk_info,
                           block_device_info=block_device_info,
                           write_to_disk=True)
-        self._create_domain_and_network(xml, instance, network_info,
-                                        block_device_info, power_on,
-                                        context=context)
+        self._create_domain_and_network(context, xml, instance, network_info,
+                                        block_device_info, power_on)
         if power_on:
             timer = loopingcall.FixedIntervalLoopingCall(
                                                     self._wait_for_running,
@@ -4672,7 +4688,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if e.errno != errno.ENOENT:
                 raise
 
-    def finish_revert_migration(self, instance, network_info,
+    def finish_revert_migration(self, context, instance, network_info,
                                 block_device_info=None, power_on=True):
         LOG.debug(_("Starting finish_revert_migration"),
                    instance=instance)
@@ -4691,10 +4707,9 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance,
                                             block_device_info)
-        xml = self.to_xml(nova_context.get_admin_context(),
-                          instance, network_info, disk_info,
+        xml = self.to_xml(context, instance, network_info, disk_info,
                           block_device_info=block_device_info)
-        self._create_domain_and_network(xml, instance, network_info,
+        self._create_domain_and_network(context, xml, instance, network_info,
                                         block_device_info, power_on)
 
         if power_on:

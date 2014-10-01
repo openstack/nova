@@ -185,6 +185,12 @@ class IptablesTable(object):
         self.remove_chains = set()
         self.dirty = True
 
+    def has_chain(self, name, wrap=True):
+        if wrap:
+            return name in self.chains
+        else:
+            return name in self.unwrapped_chains
+
     def add_chain(self, name, wrap=True):
         """Adds a named chain to the table.
 
@@ -1530,7 +1536,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             for line in out.split('\n'):
                 fields = line.split()
                 if fields and fields[0] == 'inet':
-                    if fields[-2] == 'secondary':
+                    if fields[-2] in ('secondary', 'dynamic', ):
                         params = fields[1:-2]
                     else:
                         params = fields[1:-1]

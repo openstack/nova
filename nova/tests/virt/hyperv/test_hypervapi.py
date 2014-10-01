@@ -1610,7 +1610,8 @@ class HyperVAPITestCase(test.NoDBTestCase):
                                          constants.HYPERV_VM_STATE_ENABLED)
 
         self._mox.ReplayAll()
-        self._conn.finish_revert_migration(instance, network_info, None,
+        self._conn.finish_revert_migration(self._context, instance,
+                                           network_info, None,
                                            power_on)
         self._mox.VerifyAll()
 
@@ -1628,6 +1629,11 @@ class HyperVAPITestCase(test.NoDBTestCase):
 
     def test_finish_revert_migration_with_ephemeral_storage(self):
         self._test_finish_revert_migration(False, ephemeral_storage=True)
+
+    def test_refresh_instance_security_rules(self):
+        self.assertRaises(NotImplementedError,
+                          self._conn.refresh_instance_security_rules,
+                          instance=None)
 
 
 class VolumeOpsTestCase(HyperVAPITestCase):
