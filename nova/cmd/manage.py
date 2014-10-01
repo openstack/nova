@@ -61,7 +61,6 @@ import sys
 import decorator
 import netaddr
 from oslo.config import cfg
-from oslo.db import exception as db_exc
 from oslo import messaging
 import six
 
@@ -920,142 +919,6 @@ class DbCommands(object):
         db.archive_deleted_rows(admin_context, max_rows)
 
 
-class FlavorCommands(object):
-    """Class for managing flavors.
-
-    Note instance type is a deprecated synonym for flavor.
-    """
-
-    description = ('DEPRECATED: Use the nova flavor-* commands from '
-                   'python-novaclient instead. The flavor subcommand will be '
-                   'removed in the 2015.1 release')
-
-    def _print_flavors(self, val):
-        is_public = ('private', 'public')[val["is_public"] == 1]
-        print(("%s: Memory: %sMB, VCPUS: %s, Root: %sGB, Ephemeral: %sGb, "
-            "FlavorID: %s, Swap: %sMB, RXTX Factor: %s, %s, ExtraSpecs %s") % (
-            val["name"], val["memory_mb"], val["vcpus"], val["root_gb"],
-            val["ephemeral_gb"], val["flavorid"], val["swap"],
-            val["rxtx_factor"], is_public, val["extra_specs"]))
-
-    @args('--name', metavar='<name>',
-            help='Name of flavor')
-    @args('--memory', metavar='<memory size>', help='Memory size')
-    @args('--cpu', dest='vcpus', metavar='<num cores>', help='Number cpus')
-    @args('--root_gb', metavar='<root_gb>', help='Root disk size')
-    @args('--ephemeral_gb', metavar='<ephemeral_gb>',
-            help='Ephemeral disk size')
-    @args('--flavor', dest='flavorid', metavar='<flavor  id>',
-            help='Flavor ID')
-    @args('--swap', metavar='<swap>', help='Swap')
-    @args('--rxtx_factor', metavar='<rxtx_factor>', help='rxtx_factor')
-    @args('--is_public', metavar='<is_public>',
-            help='Make flavor accessible to the public')
-    def create(self, name, memory, vcpus, root_gb, ephemeral_gb=0,
-               flavorid=None, swap=0, rxtx_factor=1.0, is_public=True):
-        """Creates flavors."""
-        try:
-            flavors.create(name, memory, vcpus, root_gb,
-                           ephemeral_gb=ephemeral_gb, flavorid=flavorid,
-                           swap=swap, rxtx_factor=rxtx_factor,
-                           is_public=is_public)
-        except exception.InvalidInput as e:
-            print(_("Must supply valid parameters to create flavor"))
-            print(e)
-            return 1
-        except exception.FlavorExists:
-            print(_("Flavor exists."))
-            print(_("Please ensure flavor name and flavorid are "
-                    "unique."))
-            print(_("Currently defined flavor names and flavorids:"))
-            print()
-            self.list()
-            return 2
-        except Exception:
-            print(_("Unknown error"))
-            return 3
-        else:
-            print(_("%s created") % name)
-
-    @args('--name', metavar='<name>', help='Name of flavor')
-    def delete(self, name):
-        """Marks flavors as deleted."""
-        try:
-            flavors.destroy(name)
-        except exception.FlavorNotFound:
-            print(_("Valid flavor name is required"))
-            return 1
-        except db_exc.DBError as e:
-            print(_("DB Error: %s") % e)
-            return(2)
-        except Exception:
-            return(3)
-        else:
-            print(_("%s deleted") % name)
-
-    @args('--name', metavar='<name>', help='Name of flavor')
-    def list(self, name=None):
-        """Lists all active or specific flavors."""
-        try:
-            if name is None:
-                inst_types = flavors.get_all_flavors()
-            else:
-                inst_types = flavors.get_flavor_by_name(name)
-        except db_exc.DBError as e:
-            _db_error(e)
-        if isinstance(inst_types.values()[0], dict):
-            for k, v in inst_types.iteritems():
-                self._print_flavors(v)
-        else:
-            self._print_flavors(inst_types)
-
-    @args('--name', metavar='<name>', help='Name of flavor')
-    @args('--key', metavar='<key>', help='The key of the key/value pair')
-    @args('--value', metavar='<value>', help='The value of the key/value pair')
-    def set_key(self, name, key, value=None):
-        """Add key/value pair to specified flavor's extra_specs."""
-        try:
-            try:
-                inst_type = flavors.get_flavor_by_name(name)
-            except exception.FlavorNotFoundByName as e:
-                print(e)
-                return(2)
-
-            ctxt = context.get_admin_context()
-            ext_spec = {key: value}
-            db.flavor_extra_specs_update_or_create(
-                            ctxt,
-                            inst_type["flavorid"],
-                            ext_spec)
-            print((_("Key %(key)s set to %(value)s on instance "
-                     "type %(name)s") %
-                   {'key': key, 'value': value, 'name': name}))
-        except db_exc.DBError as e:
-            _db_error(e)
-
-    @args('--name', metavar='<name>', help='Name of flavor')
-    @args('--key', metavar='<key>', help='The key to be deleted')
-    def unset_key(self, name, key):
-        """Delete the specified extra spec for flavor."""
-        try:
-            try:
-                inst_type = flavors.get_flavor_by_name(name)
-            except exception.FlavorNotFoundByName as e:
-                print(e)
-                return(2)
-
-            ctxt = context.get_admin_context()
-            db.flavor_extra_specs_delete(
-                        ctxt,
-                        inst_type["flavorid"],
-                        key)
-
-            print((_("Key %(key)s on flavor %(name)s unset") %
-                   {'key': key, 'name': name}))
-        except db_exc.DBError as e:
-            _db_error(e)
-
-
 class AgentBuildCommands(object):
     """Class for managing agent builds."""
 
@@ -1269,7 +1132,6 @@ CATEGORIES = {
     'cell': CellCommands,
     'db': DbCommands,
     'fixed': FixedIpCommands,
-    'flavor': FlavorCommands,
     'floating': FloatingIpCommands,
     'host': HostCommands,
     'logs': GetLogCommands,
