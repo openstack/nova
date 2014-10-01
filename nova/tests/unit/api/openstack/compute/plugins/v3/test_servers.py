@@ -1882,6 +1882,8 @@ class ServersControllerCreateTest(test.TestCase):
                 "task_state": "",
                 "vm_state": "",
                 "root_device_name": inst.get('root_device_name', 'vda'),
+                "extra": {"pci_requests": None,
+                          "numa_topology": None},
             })
 
             self.instance_cache_by_id[instance['id']] = instance

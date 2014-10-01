@@ -39,12 +39,14 @@ _INSTANCE_OPTIONAL_JOINED_FIELDS = ['metadata', 'system_metadata',
                                     'info_cache', 'security_groups',
                                     'pci_devices']
 # These are fields that are optional but don't translate to db columns
-_INSTANCE_OPTIONAL_NON_COLUMN_FIELDS = ['fault', 'numa_topology',
-                                        'pci_requests']
+_INSTANCE_OPTIONAL_NON_COLUMN_FIELDS = ['fault']
+# These are fields that are optional and in instance_extra
+_INSTANCE_EXTRA_FIELDS = ['numa_topology', 'pci_requests']
 
 # These are fields that can be specified as expected_attrs
 INSTANCE_OPTIONAL_ATTRS = (_INSTANCE_OPTIONAL_JOINED_FIELDS +
-                           _INSTANCE_OPTIONAL_NON_COLUMN_FIELDS)
+                           _INSTANCE_OPTIONAL_NON_COLUMN_FIELDS +
+                           _INSTANCE_EXTRA_FIELDS)
 # These are fields that most query calls load by default
 INSTANCE_DEFAULT_FIELDS = ['metadata', 'system_metadata',
                            'info_cache', 'security_groups']
@@ -54,8 +56,15 @@ def _expected_cols(expected_attrs):
     """Return expected_attrs that are columns needing joining."""
     if not expected_attrs:
         return expected_attrs
-    return [attr for attr in expected_attrs
-                 if attr in _INSTANCE_OPTIONAL_JOINED_FIELDS]
+    simple_cols = [attr for attr in expected_attrs
+                   if attr in _INSTANCE_OPTIONAL_JOINED_FIELDS]
+
+    complex_cols = ['extra.%s' % field
+                    for field in _INSTANCE_EXTRA_FIELDS
+                    if field in expected_attrs]
+    if complex_cols:
+        simple_cols.append('extra')
+    return simple_cols + complex_cols
 
 
 class Instance(base.NovaPersistentObject, base.NovaObject):
@@ -292,9 +301,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                 objects.InstanceFault.get_latest_for_instance(
                     context, instance.uuid))
         if 'numa_topology' in expected_attrs:
-            instance._load_numa_topology()
+            instance._load_numa_topology(
+                db_inst.get('extra').get('numa_topology'))
         if 'pci_requests' in expected_attrs:
-            instance._load_pci_requests()
+            instance._load_pci_requests(
+                db_inst.get('extra').get('pci_requests'))
 
         if 'info_cache' in expected_attrs:
             if db_inst['info_cache'] is None:
@@ -568,18 +579,28 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         self.fault = objects.InstanceFault.get_latest_for_instance(
             self._context, self.uuid)
 
-    def _load_numa_topology(self):
-        try:
+    def _load_numa_topology(self, db_topology=None):
+        if db_topology is not None:
             self.numa_topology = \
-                objects.InstanceNUMATopology.get_by_instance_uuid(
-                    self._context, self.uuid)
-        except exception.NumaTopologyNotFound:
-            self.numa_topology = None
+                objects.InstanceNUMATopology.obj_from_db_obj(self.uuid,
+                                                             db_topology)
+        else:
+            try:
+                self.numa_topology = \
+                    objects.InstanceNUMATopology.get_by_instance_uuid(
+                        self._context, self.uuid)
+            except exception.NumaTopologyNotFound:
+                self.numa_topology = None
 
-    def _load_pci_requests(self):
-        self.pci_requests = \
-            objects.InstancePCIRequests.get_by_instance_uuid(
-                self._context, self.uuid)
+    def _load_pci_requests(self, db_requests=None):
+        # FIXME: also do this if none!
+        if db_requests is not None:
+            self.pci_requests = objects.InstancePCIRequests.obj_from_db(
+                self._context, self.uuid, db_requests)
+        else:
+            self.pci_requests = \
+                objects.InstancePCIRequests.get_by_instance_uuid(
+                    self._context, self.uuid)
 
     def obj_load_attr(self, attrname):
         if attrname not in INSTANCE_OPTIONAL_ATTRS:

@@ -67,30 +67,29 @@ class InstancePCIRequests(base.NovaObject):
                     primitive['requests'][index]['nova_object.data'], '1.0')
                 primitive['requests'][index]['nova_object.version'] = '1.0'
 
+    @classmethod
+    def obj_from_db(cls, context, instance_uuid, db_requests):
+        self = cls(context=context, requests=[],
+                   instance_uuid=instance_uuid)
+        try:
+            requests = jsonutils.loads(db_requests['pci_requests'])
+        except TypeError:
+            requests = []
+        for request in requests:
+            request_obj = InstancePCIRequest(
+                count=request['count'], spec=request['spec'],
+                alias_name=request['alias_name'], is_new=request['is_new'],
+                request_id=request['request_id'])
+            request_obj.obj_reset_changes()
+            self.requests.append(request_obj)
+        self.obj_reset_changes()
+        return self
+
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, instance_uuid):
-        obj_pci_requests = cls(instance_uuid=instance_uuid)
-        obj_pci_requests.requests = []
-        obj_pci_requests._context = context
-
         db_pci_requests = db.instance_extra_get_by_instance_uuid(
                 context, instance_uuid, columns=['pci_requests'])
-        if db_pci_requests:
-            try:
-                requests = jsonutils.loads(db_pci_requests['pci_requests'])
-            except TypeError:
-                requests = []
-            for request in requests:
-                request_obj = InstancePCIRequest(
-                    count=request['count'], spec=request['spec'],
-                    alias_name=request['alias_name'], is_new=request['is_new'],
-                    request_id=request['request_id'])
-                request_obj.obj_reset_changes()
-                obj_pci_requests.requests.append(request_obj)
-
-            obj_pci_requests.obj_reset_changes()
-
-        return obj_pci_requests
+        return cls.obj_from_db(context, instance_uuid, db_pci_requests)
 
     @classmethod
     def get_by_instance_uuid_and_newness(cls, context, instance_uuid, is_new):

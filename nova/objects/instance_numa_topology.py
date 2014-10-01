@@ -46,6 +46,17 @@ class InstanceNUMATopology(base.NovaObject):
         }
 
     @classmethod
+    def obj_from_db_obj(cls, instance_uuid, db_obj):
+        topo = hardware.VirtNUMAInstanceTopology.from_json(db_obj)
+        obj_topology = cls.obj_from_topology(topo)
+        obj_topology.instance_uuid = instance_uuid
+        # NOTE (ndipanov) not really needed as we never save, but left for
+        # consistency
+        obj_topology.id = 0
+        obj_topology.obj_reset_changes()
+        return obj_topology
+
+    @classmethod
     def obj_from_topology(cls, topology):
         if not isinstance(topology, hardware.VirtNUMAInstanceTopology):
             raise exception.ObjectActionError(action='obj_from_topology',
@@ -86,20 +97,12 @@ class InstanceNUMATopology(base.NovaObject):
 
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, instance_uuid):
-        db_topology = db.instance_extra_get_by_instance_uuid(
+        db_extra = db.instance_extra_get_by_instance_uuid(
                 context, instance_uuid, columns=['numa_topology'])
-        if not db_topology:
+        if not db_extra:
             raise exception.NumaTopologyNotFound(instance_uuid=instance_uuid)
 
-        if db_topology['numa_topology'] is None:
+        if db_extra['numa_topology'] is None:
             return None
 
-        topo = hardware.VirtNUMAInstanceTopology.from_json(
-                db_topology['numa_topology'])
-        obj_topology = cls.obj_from_topology(topo)
-        obj_topology.id = db_topology['id']
-        obj_topology.instance_uuid = db_topology['instance_uuid']
-        # NOTE (ndipanov) not really needed as we never save, but left for
-        # consistency
-        obj_topology.obj_reset_changes()
-        return obj_topology
+        return cls.obj_from_db_obj(instance_uuid, db_extra['numa_topology'])

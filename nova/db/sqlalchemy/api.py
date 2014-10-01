@@ -1768,7 +1768,10 @@ def _build_instance_get(context, session=None,
         if column in ['info_cache', 'security_groups']:
             # Already always joined above
             continue
-        query = query.options(joinedload(column))
+        if 'extra.' in column:
+            query = query.options(undefer(column))
+        else:
+            query = query.options(joinedload(column))
     # NOTE(alaski) Stop lazy loading of columns not needed.
     for col in ['metadata', 'system_metadata']:
         if col not in columns_to_join:
@@ -2205,8 +2208,11 @@ def _instance_get_all_query(context, project_only=False,
                         models.Instance,
                         project_only=project_only,
                         use_slave=use_slave)
-    for join in joins:
-        query = query.options(joinedload(join))
+    for column in joins:
+        if 'extra.' in column:
+            query = query.options(undefer(column))
+        else:
+            query = query.options(joinedload(column))
     return query
 
 
