@@ -30,7 +30,7 @@ import webob
 
 from nova.api.openstack import compute
 from nova.api.openstack.compute import plugins
-from nova.api.openstack.compute.plugins.v3 import access_ips
+from nova.api.openstack.compute.plugins.v3 import disk_config
 from nova.api.openstack.compute.plugins.v3 import ips
 from nova.api.openstack.compute.plugins.v3 import keypairs
 from nova.api.openstack.compute.plugins.v3 import servers
@@ -3240,8 +3240,8 @@ class ServersInvalidRequestTestCase(test.TestCase):
 
 
 class FakeExt(extensions.V3APIExtensionBase):
-    name = "AccessIPs"
-    alias = 'os-access-ips'
+    name = "DiskConfig"
+    alias = 'os-disk-config'
     version = 1
 
     def fake_extension_point(self, *args, **kwargs):
@@ -3257,9 +3257,9 @@ class FakeExt(extensions.V3APIExtensionBase):
 class TestServersExtensionPoint(test.NoDBTestCase):
     def setUp(self):
         super(TestServersExtensionPoint, self).setUp()
-        CONF.set_override('extensions_whitelist', ['os-access-ips'],
+        CONF.set_override('extensions_whitelist', ['os-disk-config'],
                           'osapi_v3')
-        self.stubs.Set(access_ips, 'AccessIPs', FakeExt)
+        self.stubs.Set(disk_config, 'DiskConfig', FakeExt)
 
     def _test_load_extension_point(self, name):
         setattr(FakeExt, 'server_%s' % name,
@@ -3267,7 +3267,7 @@ class TestServersExtensionPoint(test.NoDBTestCase):
         ext_info = plugins.LoadedExtensionInfo()
         controller = servers.ServersController(extension_info=ext_info)
         self.assertEqual(
-            'os-access-ips',
+            'os-disk-config',
             list(getattr(controller,
                          '%s_extension_manager' % name))[0].obj.alias)
         delattr(FakeExt, 'server_%s' % name)
@@ -3280,6 +3280,9 @@ class TestServersExtensionPoint(test.NoDBTestCase):
 
     def test_load_create_extension_point(self):
         self._test_load_extension_point('create')
+
+    def test_load_resize_extension_point(self):
+        self._test_load_extension_point('resize')
 
 
 class TestServersExtensionSchema(test.NoDBTestCase):

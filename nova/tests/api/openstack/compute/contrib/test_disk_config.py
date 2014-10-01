@@ -38,14 +38,11 @@ def instance_addresses(context, instance_id):
     return None
 
 
-class DiskConfigTestCase(test.TestCase):
+class DiskConfigTestCaseV21(test.TestCase):
 
     def setUp(self):
-        super(DiskConfigTestCase, self).setUp()
-        self.flags(verbose=True,
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Disk_config'])
+        super(DiskConfigTestCaseV21, self).setUp()
+        self._set_up_app()
         self._setup_fake_image_service()
 
         fakes.stub_out_nw_api(self.stubs)
@@ -129,7 +126,9 @@ class DiskConfigTestCase(test.TestCase):
 
         self.stubs.Set(db, 'instance_create', fake_instance_create)
 
-        self.app = compute.APIRouter(init_only=('servers', 'images'))
+    def _set_up_app(self):
+        self.app = compute.APIRouterV21(init_only=('servers', 'images',
+                                                   'os-disk-config'))
 
     def _setup_fake_image_service(self):
         self.image_service = nova.tests.image.fake.stub_out_image_service(
@@ -150,7 +149,7 @@ class DiskConfigTestCase(test.TestCase):
         self.image_service.create(None, image)
 
     def tearDown(self):
-        super(DiskConfigTestCase, self).tearDown()
+        super(DiskConfigTestCaseV21, self).tearDown()
         nova.tests.image.fake.FakeImageService_reset()
 
     def assertDiskConfig(self, dict_, value):
@@ -376,15 +375,19 @@ class DiskConfigTestCase(test.TestCase):
                   'flavorRef': '1',
                   API_DISK_CONFIG: 'AUTO'
                }}
+        old_create = compute_api.API.create
 
         def create(*args, **kwargs):
             self.assertIn('auto_disk_config', kwargs)
             self.assertEqual(True, kwargs['auto_disk_config'])
+            return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
 
         req.body = jsonutils.dumps(body)
-        req.get_response(self.app)
+        res = req.get_response(self.app)
+        server_dict = jsonutils.loads(res.body)['server']
+        self.assertDiskConfig(server_dict, 'AUTO')
 
     def test_rebuild_server_with_auto_disk_config(self):
         req = fakes.HTTPRequest.blank(
@@ -403,7 +406,9 @@ class DiskConfigTestCase(test.TestCase):
         self.stubs.Set(compute_api.API, 'rebuild', rebuild)
 
         req.body = jsonutils.dumps(body)
-        req.get_response(self.app)
+        res = req.get_response(self.app)
+        server_dict = jsonutils.loads(res.body)['server']
+        self.assertDiskConfig(server_dict, 'AUTO')
 
     def test_resize_server_with_auto_disk_config(self):
         req = fakes.HTTPRequest.blank(
@@ -423,3 +428,13 @@ class DiskConfigTestCase(test.TestCase):
 
         req.body = jsonutils.dumps(body)
         req.get_response(self.app)
+
+
+class DiskConfigTestCaseV2(DiskConfigTestCaseV21):
+    def _set_up_app(self):
+        self.flags(verbose=True,
+        osapi_compute_extension=[
+            'nova.api.openstack.compute.contrib.select_extensions'],
+        osapi_compute_ext_list=['Disk_config'])
+
+        self.app = compute.APIRouter(init_only=('servers', 'images'))

@@ -12,13 +12,6 @@
                 "href": "%(host)s/servers/%(uuid)s",
                 "rel": "bookmark"
             }
-        ],
-        "security_groups": [
-            {
-                "name": "default"
-            }
-        ],
-        "accessIPv4": "",
-        "accessIPv6": ""
+        ]
     }
 }
