@@ -63,4 +63,4 @@ class ServerGroupsSampleJsonTest(test_servers.ServersSampleBase):
     def test_server_groups_delete(self):
         uuid = self._post_server_group()
         response = self._do_delete('os-server-groups/%s' % uuid)
-        self.assertEqual(response.status, 204)
+        self.assertEqual(response.status_code, 204)

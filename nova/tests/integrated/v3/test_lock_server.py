@@ -31,11 +31,11 @@ class LockServerSamplesJsonTest(test_servers.ServersSampleBase):
         # Get api samples to lock server request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'lock-server', {})
-        self.assertEqual(202, response.status)
+        self.assertEqual(202, response.status_code)
 
     def test_post_unlock_server(self):
         # Get api samples to unlock server request.
         self.test_post_lock_server()
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'unlock-server', {})
-        self.assertEqual(202, response.status)
+        self.assertEqual(202, response.status_code)

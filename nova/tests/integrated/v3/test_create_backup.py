@@ -35,4 +35,4 @@ class CreateBackupSamplesJsonTest(test_servers.ServersSampleBase):
         # Get api samples to backup server request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'create-backup-req', {})
-        self.assertEqual(202, response.status)
+        self.assertEqual(202, response.status_code)

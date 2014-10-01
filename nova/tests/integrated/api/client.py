@@ -12,10 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import httplib
 import urllib
 
-import six.moves.urllib.parse as urlparse
+import requests
 
 from nova.i18n import _
 from nova.openstack.common import jsonutils
@@ -33,8 +32,8 @@ class OpenStackApiException(Exception):
             message = 'Unspecified error'
 
         if response:
-            _status = response.status
-            _body = response.read()
+            _status = response.status_code
+            _body = response.content
 
             message = (_('%(message)s\nStatus Code: %(_status)s\n'
                          'Body: %(_body)s') %
@@ -88,30 +87,7 @@ class TestOpenStackClient(object):
         _headers = {'Content-Type': 'application/json'}
         _headers.update(headers or {})
 
-        parsed_url = urlparse.urlparse(url)
-        port = parsed_url.port
-        hostname = parsed_url.hostname
-        scheme = parsed_url.scheme
-
-        if scheme == 'http':
-            conn = httplib.HTTPConnection(hostname,
-                                          port=port)
-        elif scheme == 'https':
-            conn = httplib.HTTPSConnection(hostname,
-                                           port=port)
-        else:
-            raise OpenStackApiException("Unknown scheme: %s" % url)
-
-        relative_url = parsed_url.path
-        if parsed_url.query:
-            relative_url = relative_url + "?" + parsed_url.query
-        LOG.info(_("Doing %(method)s on %(relative_url)s") %
-                 {'method': method, 'relative_url': relative_url})
-        if body:
-            LOG.info(_("Body: %s") % body)
-
-        conn.request(method, relative_url, body, _headers)
-        response = conn.getresponse()
+        response = requests.request(method, url, data=body, headers=_headers)
         return response
 
     def _authenticate(self):
@@ -125,18 +101,14 @@ class TestOpenStackClient(object):
         response = self.request(auth_uri,
                                 headers=headers)
 
-        http_status = response.status
+        http_status = response.status_code
         LOG.debug("%(auth_uri)s => code %(http_status)s",
                   {'auth_uri': auth_uri, 'http_status': http_status})
 
         if http_status == 401:
             raise OpenStackApiAuthenticationException(response=response)
 
-        auth_headers = {}
-        for k, v in response.getheaders():
-            auth_headers[k] = v
-
-        self.auth_result = auth_headers
+        self.auth_result = response.headers
         return self.auth_result
 
     def api_request(self, relative_uri, check_response_status=None,
@@ -156,7 +128,7 @@ class TestOpenStackClient(object):
 
         response = self.request(full_uri, **kwargs)
 
-        http_status = response.status
+        http_status = response.status_code
         LOG.debug("%(relative_uri)s => code %(http_status)s",
                   {'relative_uri': relative_uri, 'http_status': http_status})
 
@@ -174,7 +146,7 @@ class TestOpenStackClient(object):
         return response
 
     def _decode_json(self, response):
-        body = response.read()
+        body = response.content
         LOG.debug("Decoding JSON: %s", body)
         if body:
             return jsonutils.loads(body)
