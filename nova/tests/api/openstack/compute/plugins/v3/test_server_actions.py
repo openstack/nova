@@ -601,6 +601,21 @@ class ServerActionsControllerTest(test.TestCase):
     def test_rebuild_preserve_ephemeral_default(self):
         self._test_rebuild_preserve_ephemeral()
 
+    @mock.patch.object(compute_api.API, 'rebuild',
+                       side_effect=exception.AutoDiskConfigDisabledByImage(
+                           image='dummy'))
+    def test_rebuild_instance_raise_auto_disk_config_exc(self, mock_rebuild):
+        body = {
+            "rebuild": {
+                "imageRef": self._image_href,
+            },
+        }
+
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_rebuild,
+                          req, FAKE_UUID, body=body)
+
     def test_resize_server(self):
 
         body = dict(resize=dict(flavorRef="http://localhost/3"))
@@ -654,6 +669,10 @@ class ServerActionsControllerTest(test.TestCase):
             (exception.ImageNotFound(image_id=image_id),
              webob.exc.HTTPBadRequest),
             (exception.Invalid, webob.exc.HTTPBadRequest),
+            (exception.NoValidHost(reason='Bad host'),
+             webob.exc.HTTPBadRequest),
+            (exception.AutoDiskConfigDisabledByImage(image=image_id),
+             webob.exc.HTTPBadRequest),
         ]
 
         raised, expected = map(iter, zip(*exceptions))
@@ -666,9 +685,19 @@ class ServerActionsControllerTest(test.TestCase):
 
         for call_no in range(len(exceptions)):
             req = fakes.HTTPRequestV3.blank(self.url)
-            self.assertRaises(expected.next(),
+            next_exception = expected.next()
+            actual = self.assertRaises(next_exception,
                               self.controller._action_resize,
                               req, FAKE_UUID, body)
+            if (isinstance(exceptions[call_no][0],
+                           exception.NoValidHost)):
+                self.assertEqual(actual.explanation,
+                                 'No valid host was found. Bad host')
+            elif (isinstance(exceptions[call_no][0],
+                             exception.AutoDiskConfigDisabledByImage)):
+                self.assertEqual(actual.explanation,
+                                 'Requested image fake_image_id has automatic'
+                                 ' disk resize disabled.')
             self.assertEqual(self.resize_called, call_no + 1)
 
     def test_resize_with_too_many_instances(self):
