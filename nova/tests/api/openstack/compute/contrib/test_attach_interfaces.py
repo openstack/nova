@@ -24,6 +24,7 @@ from nova.compute import api as compute_api
 from nova import context
 from nova import exception
 from nova.network import api as network_api
+from nova import objects
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests import fake_network_cache_model
@@ -92,6 +93,8 @@ def fake_show_port(self, context, port_id, **kwargs):
     for port in ports:
         if port['id'] == port_id:
             return {'port': port}
+    else:
+        raise exception.PortNotFound(port_id=port_id)
 
 
 def fake_attach_interface(self, context, instance, network_id, port_id,
@@ -119,7 +122,7 @@ def fake_detach_interface(self, context, instance, port_id):
 
 
 def fake_get_instance(self, *args, **kwargs):
-    return {}
+    return objects.Instance(uuid=FAKE_UUID1)
 
 
 class InterfaceAttachTestsV21(test.NoDBTestCase):
@@ -357,7 +360,8 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     def test_attach_interface_fixed_ip_already_in_use(self,
                                                       attach_mock,
                                                       get_mock):
-        get_mock.side_effect = fake_get_instance
+        fake_instance = objects.Instance(uuid=FAKE_UUID1)
+        get_mock.return_value = fake_instance
         attach_mock.side_effect = exception.FixedIpAlreadyInUse(
             address='10.0.2.2', instance_uuid=FAKE_UUID1)
         req = webob.Request.blank(self.url + '/attach')
@@ -368,7 +372,8 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         self.assertRaises(exc.HTTPBadRequest,
                           self.attachments.create, req, FAKE_UUID1,
                           body=jsonutils.loads(req.body))
-        attach_mock.assert_called_once_with(self.context, {}, None, None, None)
+        attach_mock.assert_called_once_with(self.context, fake_instance, None,
+                                            None, None)
         get_mock.assert_called_once_with(self.context, FAKE_UUID1,
                                          want_objects=True,
                                          expected_attrs=None)
