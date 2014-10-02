@@ -153,11 +153,13 @@ def generate_key_pair(bits=None):
         fingerprint = _generate_fingerprint('%s.pub' % (keyfile))
         if not os.path.exists(keyfile):
             raise exception.FileNotFound(keyfile)
-        private_key = open(keyfile).read()
+        with open(keyfile) as f:
+            private_key = f.read()
         public_key_path = keyfile + '.pub'
         if not os.path.exists(public_key_path):
             raise exception.FileNotFound(public_key_path)
-        public_key = open(public_key_path).read()
+        with open(public_key_path) as f:
+            public_key = f.read()
 
     return (private_key, public_key, fingerprint)
 
@@ -332,8 +334,10 @@ def generate_x509_cert(user_id, project_id, bits=2048):
         utils.execute('openssl', 'genrsa', '-out', keyfile, str(bits))
         utils.execute('openssl', 'req', '-new', '-key', keyfile, '-out',
                       csrfile, '-batch', '-subj', subject)
-        private_key = open(keyfile).read()
-        csr = open(csrfile).read()
+        with open(keyfile) as f:
+            private_key = f.read()
+        with open(csrfile) as f:
+            csr = f.read()
 
     (serial, signed_csr) = sign_csr(csr, project_id)
     fname = os.path.join(ca_folder(project_id), 'newcerts/%s.pem' % serial)
