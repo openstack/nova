@@ -713,9 +713,10 @@ class LibvirtDriver(driver.ComputeDriver):
             major = MIN_LIBVIRT_VERSION[0]
             minor = MIN_LIBVIRT_VERSION[1]
             micro = MIN_LIBVIRT_VERSION[2]
-            LOG.error(_LE('Nova requires libvirt version '
-                          '%(major)i.%(minor)i.%(micro)i or greater.'),
-                      {'major': major, 'minor': minor, 'micro': micro})
+            raise exception.NovaException(
+                _('Nova requires libvirt version '
+                  '%(major)i.%(minor)i.%(micro)i or greater.') %
+                {'major': major, 'minor': minor, 'micro': micro})
 
         self._init_events()
 
