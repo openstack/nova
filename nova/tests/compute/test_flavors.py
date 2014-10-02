@@ -21,9 +21,6 @@ from nova import test
 
 
 class ExtraSpecTestCase(test.NoDBTestCase):
-    def setUp(self):
-        super(ExtraSpecTestCase, self).setUp()
-
     def _flavor_validate_extra_spec_keys_invalid_input(self, key_name_list):
         self.assertRaises(exception.InvalidInput,
             flavors.validate_extra_spec_keys, key_name_list)
@@ -39,9 +36,6 @@ class ExtraSpecTestCase(test.NoDBTestCase):
 
 
 class CreateFlavorTestCase(test.TestCase):
-    def setUp(self):
-        super(CreateFlavorTestCase, self).setUp()
-
     def test_create_flavor_ram_error(self):
         args = ("ram_test", "9999999999", "1", "10", "1")
         try:

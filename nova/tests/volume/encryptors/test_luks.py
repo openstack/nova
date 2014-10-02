@@ -31,9 +31,6 @@ class LuksEncryptorTestCase(test_cryptsetup.CryptsetupEncryptorTestCase):
     def _create(self, connection_info):
         return luks.LuksEncryptor(connection_info)
 
-    def setUp(self):
-        super(LuksEncryptorTestCase, self).setUp()
-
     def test__format_volume(self):
         self.encryptor._format_volume("passphrase")
 

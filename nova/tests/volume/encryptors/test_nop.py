@@ -21,9 +21,6 @@ class NoOpEncryptorTestCase(test_base.VolumeEncryptorTestCase):
     def _create(self, connection_info):
         return nop.NoOpEncryptor(connection_info)
 
-    def setUp(self):
-        super(NoOpEncryptorTestCase, self).setUp()
-
     def test_attach_volume(self):
         self.encryptor.attach_volume(None)
 

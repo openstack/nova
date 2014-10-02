@@ -103,9 +103,6 @@ class PciAddressTestCase(test.NoDBTestCase):
 
 
 class PciDevSpecTestCase(test.NoDBTestCase):
-    def setUp(self):
-        super(PciDevSpecTestCase, self).setUp()
-
     def test_spec_match(self):
         pci_info = ('{"vendor_id": "8086","address": "*: *: *.5",' +
                    '"product_id": "5057", "physical_network": "hr_net"}')

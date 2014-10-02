@@ -142,9 +142,6 @@ class VMOpsTestCase(VMOpsTestBase):
 
 
 class InjectAutoDiskConfigTestCase(VMOpsTestBase):
-    def setUp(self):
-        super(InjectAutoDiskConfigTestCase, self).setUp()
-
     def test_inject_auto_disk_config_when_present(self):
         vm, vm_ref = self.create_vm("dummy")
         instance = {"name": "dummy", "uuid": "1234", "auto_disk_config": True}
@@ -161,9 +158,6 @@ class InjectAutoDiskConfigTestCase(VMOpsTestBase):
 
 
 class GetConsoleOutputTestCase(VMOpsTestBase):
-    def setUp(self):
-        super(GetConsoleOutputTestCase, self).setUp()
-
     def test_get_console_output_works(self):
         self.mox.StubOutWithMock(self.vmops, '_get_dom_id')
 

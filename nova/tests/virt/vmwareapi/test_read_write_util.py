@@ -24,9 +24,6 @@ CONF = cfg.CONF
 
 
 class ReadWriteUtilTestCase(test.NoDBTestCase):
-    def setUp(self):
-        super(ReadWriteUtilTestCase, self).setUp()
-
     def test_ipv6_host(self):
         ipv6_host = 'fd8c:215d:178e:c51e:200:c9ff:fed1:584c'
         self.mox.StubOutWithMock(httplib.HTTPConnection, 'endheaders')

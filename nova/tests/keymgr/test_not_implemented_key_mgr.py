@@ -26,9 +26,6 @@ class NotImplementedKeyManagerTestCase(test_key_mgr.KeyManagerTestCase):
     def _create_key_manager(self):
         return not_implemented_key_mgr.NotImplementedKeyManager()
 
-    def setUp(self):
-        super(NotImplementedKeyManagerTestCase, self).setUp()
-
     def test_create_key(self):
         self.assertRaises(NotImplementedError,
                           self.key_mgr.create_key, None)

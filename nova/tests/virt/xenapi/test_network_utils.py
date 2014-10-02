@@ -21,9 +21,6 @@ from nova.virt.xenapi import network_utils
 
 
 class NetworkUtilsTestCase(stubs.XenAPITestBaseNoDB):
-    def setUp(self):
-        super(NetworkUtilsTestCase, self).setUp()
-
     def test_find_network_with_name_label_works(self):
         session = mock.Mock()
         session.network.get_by_name_label.return_value = ["net"]

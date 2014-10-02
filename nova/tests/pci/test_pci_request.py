@@ -54,10 +54,6 @@ _fake_alias3 = """{
 
 
 class AliasTestCase(test.NoDBTestCase):
-
-    def setUp(self):
-        super(AliasTestCase, self).setUp()
-
     def test_good_alias(self):
         self.flags(pci_alias=[_fake_alias1])
         als = pci_request._get_alias_from_config()
