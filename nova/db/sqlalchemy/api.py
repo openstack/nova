@@ -3082,7 +3082,7 @@ def quota_usage_get_all_by_project(context, project_id):
     return _quota_usage_get_all(context, project_id)
 
 
-def _quota_usage_create(context, project_id, user_id, resource, in_use,
+def _quota_usage_create(project_id, user_id, resource, in_use,
                         reserved, until_refresh, session=None):
     quota_usage_ref = models.QuotaUsage()
     quota_usage_ref.project_id = project_id
@@ -3121,7 +3121,7 @@ def quota_usage_update(context, project_id, user_id, resource, **kwargs):
 ###################
 
 
-def _reservation_create(context, uuid, usage, project_id, user_id, resource,
+def _reservation_create(uuid, usage, project_id, user_id, resource,
                         delta, expire, session=None):
     reservation_ref = models.Reservation()
     reservation_ref.uuid = uuid
@@ -3192,7 +3192,7 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
             refresh = False
             if ((resource not in PER_PROJECT_QUOTAS) and
                     (resource not in user_usages)):
-                user_usages[resource] = _quota_usage_create(elevated,
+                user_usages[resource] = _quota_usage_create(
                                                       project_id,
                                                       user_id,
                                                       resource,
@@ -3202,7 +3202,7 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
                 refresh = True
             elif ((resource in PER_PROJECT_QUOTAS) and
                     (resource not in user_usages)):
-                user_usages[resource] = _quota_usage_create(elevated,
+                user_usages[resource] = _quota_usage_create(
                                                       project_id,
                                                       None,
                                                       resource,
@@ -3232,7 +3232,7 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
                     # Make sure we have a destination for the usage!
                     if ((res not in PER_PROJECT_QUOTAS) and
                             (res not in user_usages)):
-                        user_usages[res] = _quota_usage_create(elevated,
+                        user_usages[res] = _quota_usage_create(
                                                          project_id,
                                                          user_id,
                                                          res,
@@ -3241,7 +3241,7 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
                                                          session=session)
                     if ((res in PER_PROJECT_QUOTAS) and
                             (res not in user_usages)):
-                        user_usages[res] = _quota_usage_create(elevated,
+                        user_usages[res] = _quota_usage_create(
                                                          project_id,
                                                          None,
                                                          res,
@@ -3309,7 +3309,7 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
         if not overs:
             reservations = []
             for res, delta in deltas.items():
-                reservation = _reservation_create(elevated,
+                reservation = _reservation_create(
                                                  str(uuid.uuid4()),
                                                  user_usages[res],
                                                  project_id,
@@ -3899,9 +3899,7 @@ def _security_group_ensure_default(context, session=None):
                      filter_by(resource='security_groups')
             # Create quota usage for auto created default security group
             if not usage.first():
-                elevated = context.elevated()
-                _quota_usage_create(elevated,
-                                    context.project_id,
+                _quota_usage_create(context.project_id,
                                     context.user_id,
                                     'security_groups',
                                     1, 0,
