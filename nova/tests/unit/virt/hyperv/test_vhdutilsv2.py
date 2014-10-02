@@ -110,6 +110,23 @@ class VHDUtilsV2TestCase(test.NoDBTestCase):
                          vhd_info['MaxInternalSize'])
         self.assertEqual(self._FAKE_TYPE, vhd_info['Type'])
 
+    def test_get_vhd_info_no_parent(self):
+        fake_vhd_xml_no_parent = self._fake_vhd_info_xml.replace(
+            self._FAKE_PARENT_VHD_PATH, "")
+
+        mock_img_svc = self._vhdutils._conn.Msvm_ImageManagementService()[0]
+        mock_img_svc.GetVirtualHardDiskSettingData.return_value = (
+            self._FAKE_JOB_PATH, self._FAKE_RET_VAL, fake_vhd_xml_no_parent)
+
+        vhd_info = self._vhdutils.get_vhd_info(self._FAKE_VHD_PATH)
+
+        self.assertEqual(self._FAKE_VHD_PATH, vhd_info['Path'])
+        self.assertIsNone(vhd_info['ParentPath'])
+        self.assertEqual(self._FAKE_FORMAT, vhd_info['Format'])
+        self.assertEqual(self._FAKE_MAK_INTERNAL_SIZE,
+                         vhd_info['MaxInternalSize'])
+        self.assertEqual(self._FAKE_TYPE, vhd_info['Type'])
+
     def test_create_dynamic_vhd(self):
         self._vhdutils.get_vhd_info = mock.MagicMock(
             return_value={'Format': self._FAKE_FORMAT})
