@@ -841,10 +841,11 @@ class VMwareVMOps(object):
         # triggered by the revert resize api call. This prevents
         # the uuid-orig VM to be deleted to be able to associate it later.
         if instance.task_state != task_states.RESIZE_REVERTING:
-            # When VM deletion is triggered in middle of VM resize before VM
-            # arrive RESIZED state, uuid-orig VM need to deleted to avoid
-            # VM leak. Within method _destroy_instance it will check vmref
-            # exist or not before attempt deletion.
+            # When a VM deletion is triggered in the middle of VM resize and
+            # before the state is set to RESIZED, the uuid-orig VM needs
+            # to be deleted. This will avoid VM leaks.
+            # The method _destroy_instance will check that the vmref
+            # exists before attempting the deletion.
             resize_orig_vmname = instance.uuid + self._migrate_suffix
             vm_orig_ref = vm_util.get_vm_ref_from_name(self._session,
                                                        resize_orig_vmname)
