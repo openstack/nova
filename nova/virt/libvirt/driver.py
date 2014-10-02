@@ -39,6 +39,7 @@ import tempfile
 import threading
 import time
 import uuid
+from xml.dom import minidom
 
 import eventlet
 from eventlet import greenio
@@ -79,7 +80,6 @@ from nova.openstack.common import loopingcall
 from nova.openstack.common import processutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import units
-from nova.openstack.common import xmlutils
 from nova.pci import pci_manager
 from nova.pci import pci_utils
 from nova.pci import pci_whitelist
@@ -2719,7 +2719,7 @@ class LibvirtDriver(driver.ComputeDriver):
         def get_vnc_port_for_instance(instance_name):
             virt_dom = self._lookup_by_name(instance_name)
             xml = virt_dom.XMLDesc(0)
-            dom = xmlutils.safe_minidom_parse_string(xml)
+            dom = minidom.parseString(xml)
 
             for graphic in dom.getElementsByTagName('graphics'):
                 if graphic.getAttribute('type') == 'vnc':
@@ -2738,7 +2738,7 @@ class LibvirtDriver(driver.ComputeDriver):
             virt_dom = self._lookup_by_name(instance_name)
             xml = virt_dom.XMLDesc(0)
             # TODO(sleepsonthefloor): use etree instead of minidom
-            dom = xmlutils.safe_minidom_parse_string(xml)
+            dom = minidom.parseString(xml)
 
             for graphic in dom.getElementsByTagName('graphics'):
                 if graphic.getAttribute('type') == 'spice':

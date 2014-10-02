@@ -24,6 +24,7 @@ import os
 import time
 import urllib
 import uuid
+from xml.dom import minidom
 from xml.parsers import expat
 
 from eventlet import greenthread
@@ -47,7 +48,6 @@ from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import units
 from nova.openstack.common import versionutils
-from nova.openstack.common import xmlutils
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import diagnostics
@@ -1792,7 +1792,7 @@ def compile_diagnostics(vm_rec):
         vm_uuid = vm_rec["uuid"]
         xml = _get_rrd(_get_rrd_server(), vm_uuid)
         if xml:
-            rrd = xmlutils.safe_minidom_parse_string(xml)
+            rrd = minidom.parseString(xml)
             for i, node in enumerate(rrd.firstChild.childNodes):
                 # Provide the last update of the information
                 if node.localName == 'lastupdate':

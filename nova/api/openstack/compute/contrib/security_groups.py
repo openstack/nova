@@ -17,6 +17,7 @@
 """The security groups extension."""
 
 import contextlib
+from xml.dom import minidom
 
 import webob
 from webob import exc
@@ -33,7 +34,6 @@ from nova.network.security_group import neutron_driver
 from nova.network.security_group import openstack_driver
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import xmlutils
 from nova.virt import netutils
 
 
@@ -571,7 +571,7 @@ class SecurityGroupsOutputController(wsgi.Controller):
                     servers[0][key] = req_obj['server'].get(
                         key, [{'name': 'default'}])
                 except ValueError:
-                    root = xmlutils.safe_minidom_parse_string(req.body)
+                    root = minidom.parseString(req.body)
                     sg_root = root.getElementsByTagName(key)
                     groups = []
                     if sg_root:
