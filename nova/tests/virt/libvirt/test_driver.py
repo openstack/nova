@@ -10014,7 +10014,7 @@ Active:          8381604 kB
                           lambda x: x)
 
 
-class HostStateTestCase(test.TestCase):
+class HostStateTestCase(test.NoDBTestCase):
 
     cpu_info = ('{"vendor": "Intel", "model": "pentium", "arch": "i686", '
                  '"features": ["ssse3", "monitor", "pni", "sse2", "sse", '
