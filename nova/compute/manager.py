@@ -4988,7 +4988,10 @@ class ComputeManager(manager.Manager):
         migrate_data = dict(migrate_data or {})
         try:
             if block_migration:
-                disk = self.driver.get_instance_disk_info(instance.name)
+                block_device_info = self._get_instance_block_device_info(
+                    context, instance)
+                disk = self.driver.get_instance_disk_info(
+                    instance.name, block_device_info=block_device_info)
             else:
                 disk = None
 

@@ -5491,8 +5491,11 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
                                  'rollback_live_migration_at_destination')
 
+        block_device_info = {
+                'swap': None, 'ephemerals': [], 'block_device_mapping': []}
         self.compute.driver.get_instance_disk_info(
-                instance.name).AndReturn('fake_disk')
+                instance.name,
+                block_device_info=block_device_info).AndReturn('fake_disk')
         self.compute.compute_rpcapi.pre_live_migration(c,
                 instance, True, 'fake_disk', dest_host,
                 {}).AndRaise(test.TestingException())
@@ -5500,7 +5503,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.network_api.setup_networks_on_host(c,
                 instance, self.compute.host)
         objects.BlockDeviceMappingList.get_by_instance_uuid(c,
-                instance.uuid).AndReturn(fake_bdms)
+                instance.uuid).MultipleTimes().AndReturn(fake_bdms)
         self.compute.compute_rpcapi.remove_volume_connection(
                 c, instance, 'vol1-id', dest_host)
         self.compute.compute_rpcapi.remove_volume_connection(
