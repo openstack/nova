@@ -2896,6 +2896,22 @@ class TestNeutronv2WithMock(test.TestCase):
         # make sure that we didn't try to reload nw info
         self.assertFalse(get_nw_info.called)
 
+    @mock.patch.object(neutronv2, 'get_client', return_value=mock.Mock())
+    def _test_show_port_exceptions(self, client_exc, expected_nova_exc,
+                                   get_client_mock):
+        show_port_mock = mock.Mock(side_effect=client_exc)
+        get_client_mock.return_value.show_port = show_port_mock
+        self.assertRaises(expected_nova_exc, self.api.show_port,
+                          self.context, 'fake_port_id')
+
+    def test_show_port_not_found(self):
+        self._test_show_port_exceptions(exceptions.PortNotFoundClient,
+                                        exception.PortNotFound)
+
+    def test_show_port_forbidden(self):
+        self._test_show_port_exceptions(exceptions.Unauthorized,
+                                        exception.Forbidden)
+
 
 class TestNeutronv2ModuleMethods(test.TestCase):
 
