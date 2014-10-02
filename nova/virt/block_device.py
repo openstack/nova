@@ -360,17 +360,14 @@ class DriverBlankBlockDevice(DriverVolumeBlockDevice):
 
 
 def _convert_block_devices(device_type, block_device_mapping):
-    def _is_transformable(bdm):
+    devices = []
+    for bdm in block_device_mapping:
         try:
-            device_type(bdm)
+            devices.append(device_type(bdm))
         except _NotTransformable:
-            return False
-        return True
+            pass
 
-    return [device_type(bdm)
-            for bdm in block_device_mapping
-            if _is_transformable(bdm)]
-
+    return devices
 
 convert_swap = functools.partial(_convert_block_devices,
                                  DriverSwapBlockDevice)
