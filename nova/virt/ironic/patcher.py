@@ -22,11 +22,8 @@ Helper classes for Ironic HTTP PATCH creation.
 
 from oslo.config import cfg
 
-from nova.openstack.common import log as logging
-
 CONF = cfg.CONF
 CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
-LOG = logging.getLogger(__name__)
 
 
 def create(node):
