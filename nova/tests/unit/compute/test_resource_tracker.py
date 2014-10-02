@@ -91,19 +91,70 @@ class FakeVirtDriver(driver.ComputeDriver):
         self.memory_mb_used = 0
         self.local_gb_used = 0
         self.pci_support = pci_support
-        self.pci_devices = [{
-            'label': 'forza-napoli',
-            'dev_type': 'foo',
-            'compute_node_id': 1,
-            'address': '0000:00:00.1',
-            'product_id': 'p1',
-            'vendor_id': 'v1',
-            'status': 'available',
-            'extra_k1': 'v1'}] if self.pci_support else []
-        self.pci_stats = [{
-            'count': 1,
-            'vendor_id': 'v1',
-            'product_id': 'p1'}] if self.pci_support else []
+        self.pci_devices = [
+            {
+                'label': 'label_8086_0443',
+                'dev_type': 'type-VF',
+                'compute_node_id': 1,
+                'address': '0000:00:01.1',
+                'product_id': '0443',
+                'vendor_id': '8086',
+                'status': 'available',
+                'extra_k1': 'v1'
+            },
+            {
+                'label': 'label_8086_0443',
+                'dev_type': 'type-VF',
+                'compute_node_id': 1,
+                'address': '0000:00:01.2',
+                'product_id': '0443',
+                'vendor_id': '8086',
+                'status': 'available',
+                'extra_k1': 'v1'
+            },
+            {
+                'label': 'label_8086_0443',
+                'dev_type': 'type-PF',
+                'compute_node_id': 1,
+                'address': '0000:00:01.0',
+                'product_id': '0443',
+                'vendor_id': '8086',
+                'status': 'available',
+                'extra_k1': 'v1'
+            },
+            {
+                'label': 'label_8086_0123',
+                'dev_type': 'type-PCI',
+                'compute_node_id': 1,
+                'address': '0000:00:01.0',
+                'product_id': '0123',
+                'vendor_id': '8086',
+                'status': 'available',
+                'extra_k1': 'v1'
+            },
+            {
+                'label': 'label_8086_7891',
+                'dev_type': 'type-VF',
+                'compute_node_id': 1,
+                'address': '0000:00:01.0',
+                'product_id': '7891',
+                'vendor_id': '8086',
+                'status': 'available',
+                'extra_k1': 'v1'
+            },
+        ] if self.pci_support else []
+        self.pci_stats = [
+            {
+                'count': 2,
+                'vendor_id': '8086',
+                'product_id': '0443'
+            },
+            {
+                'count': 1,
+                'vendor_id': '8086',
+                'product_id': '7891'
+            },
+        ] if self.pci_support else []
         if stats is not None:
             self.stats = stats
 
@@ -149,6 +200,9 @@ class BaseTestCase(test.TestCase):
 
         self.context = context.get_admin_context()
 
+        self.flags(pci_passthrough_whitelist=[
+            '{"vendor_id": "8086", "product_id": "0443"}',
+            '{"vendor_id": "8086", "product_id": "7891"}'])
         self.flags(use_local=True, group='conductor')
         self.conductor = self.start_service('conductor',
                                             manager=CONF.conductor.manager)

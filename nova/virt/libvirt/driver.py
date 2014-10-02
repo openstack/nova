@@ -78,7 +78,6 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
-from nova.pci import whitelist as pci_whitelist
 from nova import rpc
 from nova import utils
 from nova import version
@@ -391,8 +390,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self.volume_drivers = driver.driver_dict_from_config(
             CONF.libvirt.volume_drivers, self)
-
-        self.dev_filter = pci_whitelist.get_pci_devices_filter()
 
         self._disk_cachemode = None
         self.image_cache_manager = imagecache.ImageCacheManager()
@@ -4556,11 +4553,6 @@ class LibvirtDriver(driver.ComputeDriver):
         device.update(_get_device_type(cfgdev))
         return device
 
-    def _pci_device_assignable(self, device):
-        if device['dev_type'] == 'type-PF':
-            return False
-        return self.dev_filter.device_assignable(device)
-
     def _get_pci_passthrough_devices(self):
         """Get host PCI devices information.
 
@@ -4596,9 +4588,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         pci_info = []
         for name in dev_names:
-            pci_dev = self._get_pcidev_info(name)
-            if self._pci_device_assignable(pci_dev):
-                pci_info.append(pci_dev)
+            pci_info.append(self._get_pcidev_info(name))
 
         return jsonutils.dumps(pci_info)
 

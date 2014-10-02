@@ -8410,17 +8410,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.assertEqual(actualvf, expect_vf)
 
-    def test_pci_device_assignable(self):
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(conn.dev_filter, 'device_assignable', lambda x: True)
-
-        fake_dev = {'dev_type': 'type-PF'}
-        self.assertFalse(conn._pci_device_assignable(fake_dev))
-        fake_dev = {'dev_type': 'type-VF'}
-        self.assertTrue(conn._pci_device_assignable(fake_dev))
-        fake_dev = {'dev_type': 'type-PCI'}
-        self.assertTrue(conn._pci_device_assignable(fake_dev))
-
     def test_list_devices_not_supported(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
@@ -8464,13 +8453,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         libvirt_driver.LibvirtDriver._conn.nodeDeviceLookupByName =\
                                              fake_nodeDeviceLookupByName
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(conn.dev_filter, 'device_assignable', lambda x: x)
         actjson = conn._get_pci_passthrough_devices()
 
         expectvfs = [
             {
                 "dev_id": "pci_0000_04_00_3",
-                "address": "0000:04:10.3",
+                "address": "0000:04:00.3",
                 "product_id": '1521',
                 "vendor_id": '8086',
                 "dev_type": 'type-PF',
@@ -8486,10 +8474,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             }
         ]
 
-        actctualvfs = jsonutils.loads(actjson)
-        for key in actctualvfs[0].keys():
-            if key not in ['phys_function', 'virt_functions', 'label']:
-                self.assertEqual(actctualvfs[0][key], expectvfs[1][key])
+        actualvfs = jsonutils.loads(actjson)
+        for dev in range(len(actualvfs)):
+            for key in actualvfs[dev].keys():
+                if key not in ['phys_function', 'virt_functions', 'label']:
+                    self.assertEqual(actualvfs[dev][key], expectvfs[dev][key])
 
     def _fake_caps_numa_topology(self):
         topology = vconfig.LibvirtConfigCapsNUMATopology()
