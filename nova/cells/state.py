@@ -485,10 +485,10 @@ class CellStateManagerFile(CellStateManager):
             self._update_our_capacity()
 
     def cell_create(self, ctxt, values):
-        raise exception.CellsUpdateProhibited()
+        raise exception.CellsUpdateUnsupported()
 
     def cell_update(self, ctxt, cell_name, values):
-        raise exception.CellsUpdateProhibited()
+        raise exception.CellsUpdateUnsupported()
 
     def cell_delete(self, ctxt, cell_name):
-        raise exception.CellsUpdateProhibited()
+        raise exception.CellsUpdateUnsupported()
