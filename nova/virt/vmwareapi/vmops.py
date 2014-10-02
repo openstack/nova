@@ -204,7 +204,7 @@ class VMwareVMOps(object):
     def _extend_if_required(self, dc_info, image_info, instance,
                             root_vmdk_path):
         """Increase the size of the root vmdk if necessary."""
-        if instance.root_gb > image_info.file_size_in_gb:
+        if instance.root_gb * units.Gi > image_info.file_size:
             size_in_kb = instance.root_gb * units.Mi
             self._extend_virtual_disk(instance, size_in_kb,
                                       root_vmdk_path, dc_info.ref)
@@ -372,7 +372,7 @@ class VMwareVMOps(object):
         """Captures all relevant information from the spawn parameters."""
 
         if (instance.root_gb != 0 and
-                image_info.file_size_in_gb > instance.root_gb):
+                image_info.file_size > instance.root_gb * units.Gi):
             reason = _("Image disk size greater than requested disk size")
             raise exception.InstanceUnacceptable(instance_id=instance.uuid,
                                                  reason=reason)

@@ -88,10 +88,6 @@ class VMwareImage(object):
         return self.file_size / units.Ki
 
     @property
-    def file_size_in_gb(self):
-        return self.file_size / units.Gi
-
-    @property
     def is_sparse(self):
         return self.disk_type == constants.DISK_TYPE_SPARSE
 

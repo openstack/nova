@@ -108,7 +108,6 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         img_props = vmware_images.VMwareImage.from_image(image_id, mdata)
 
         image_size_in_kb = raw_disk_size_in_bytes / units.Ki
-        image_size_in_gb = raw_disk_size_in_bytes / units.Gi
 
         # assert that defaults are set and no value returned is left empty
         self.assertEqual(constants.DEFAULT_OS_TYPE, img_props.os_type)
@@ -118,7 +117,6 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         self.assertEqual(constants.DEFAULT_VIF_MODEL, img_props.vif_model)
         self.assertTrue(img_props.linked_clone)
         self.assertEqual(image_size_in_kb, img_props.file_size_in_kb)
-        self.assertEqual(image_size_in_gb, img_props.file_size_in_gb)
 
     def _image_build(self, image_lc_setting, global_lc_setting,
                      disk_format=constants.DEFAULT_DISK_FORMAT,
