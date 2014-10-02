@@ -18,6 +18,7 @@
 import mock
 
 from nova.console import websocketproxy
+from nova import exception
 from nova import test
 
 
@@ -53,7 +54,8 @@ class NovaProxyRequestHandlerBaseTestCase(test.TestCase):
 
         self.wh.path = "ws://127.0.0.1/?token=XXX"
 
-        self.assertRaises(Exception, self.wh.new_websocket_client)  # noqa
+        self.assertRaises(exception.InvalidToken,
+                          self.wh.new_websocket_client)
         check_token.assert_called_with(mock.ANY, token="XXX")
 
     @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token')
@@ -79,5 +81,6 @@ class NovaProxyRequestHandlerBaseTestCase(test.TestCase):
         self.wh.path = "http://127.0.0.1/"
         self.wh.headers.getheader.return_value = "token=XXX"
 
-        self.assertRaises(Exception, self.wh.new_websocket_client)  # noqa
+        self.assertRaises(exception.InvalidToken,
+                          self.wh.new_websocket_client)
         check_token.assert_called_with(mock.ANY, token="XXX")
