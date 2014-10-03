@@ -97,12 +97,17 @@ class CellsAPI(object):
 
         * 1.28 - Make bdm_update_or_create_at_top and use bdm objects
         * 1.29 - Adds set_admin_password()
+
+        ... Juno supports message version 1.29.  So, any changes to
+        existing methods in 1.x after that point should be done such that they
+        can handle the version_cap being set to 1.29.
     '''
 
     VERSION_ALIASES = {
         'grizzly': '1.6',
         'havana': '1.24',
         'icehouse': '1.27',
+        'juno': '1.29',
     }
 
     def __init__(self):
