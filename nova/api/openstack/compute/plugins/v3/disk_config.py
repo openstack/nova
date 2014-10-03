@@ -14,12 +14,12 @@
 
 """Disk Config extension."""
 
+from oslo.utils import strutils
 from webob import exc
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.i18n import _
-from nova.openstack.common import strutils
 
 ALIAS = 'os-disk-config'
 API_DISK_CONFIG = "OS-DCF:diskConfig"
