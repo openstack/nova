@@ -13,8 +13,8 @@
 #    under the License.
 
 from oslo_config import cfg
+from stevedore import driver
 
-from nova import utils
 
 ipv6_backend_opt = cfg.StrOpt('ipv6_backend',
                               default='rfc2462',
@@ -27,9 +27,8 @@ IMPL = None
 
 def reset_backend():
     global IMPL
-    IMPL = utils.LazyPluggable('ipv6_backend',
-               rfc2462='nova.ipv6.rfc2462',
-               account_identifier='nova.ipv6.account_identifier')
+    IMPL = driver.DriverManager("nova.ipv6_backend",
+                                CONF.ipv6_backend).driver
 
 
 def to_global(prefix, mac, project_id):
