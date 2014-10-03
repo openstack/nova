@@ -2259,6 +2259,14 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create,
                           self.req, self.body)
 
+    @mock.patch.object(compute_api.API, 'create',
+                       side_effect=exception.InstanceExists(
+                           name='instance-name'))
+    def test_create_instance_raise_instance_exists(self, mock_create):
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller.create,
+                          self.req, self.body)
+
     def test_create_instance_with_network_with_no_subnet(self):
         self.flags(network_api_class='nova.network.neutronv2.api.API')
         network = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
