@@ -728,7 +728,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_by_host_and_node(cls, context, host, node, expected_attrs=None):
         db_inst_list = db.instance_get_all_by_host_and_node(
-            context, host, node)
+            context, host, node,
+            columns_to_join=_expected_cols(expected_attrs))
         return _make_instance_list(context, cls(), db_inst_list,
                                    expected_attrs)
 

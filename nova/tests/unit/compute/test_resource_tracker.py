@@ -322,7 +322,8 @@ class BaseTestCase(test.TestCase):
         self._instance_types[id_] = instance_type
         return instance_type
 
-    def _fake_instance_get_all_by_host_and_node(self, context, host, nodename):
+    def _fake_instance_get_all_by_host_and_node(self, context, host, nodename,
+                                                columns_to_join=None):
         return [i for i in self._instances.values() if i['host'] == host]
 
     def _fake_instance_extra_get_by_instance_uuid(self, context,

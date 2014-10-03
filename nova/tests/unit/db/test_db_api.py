@@ -1943,6 +1943,29 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(result[0]['uuid'], instance['uuid'])
         self.assertEqual(result[0]['system_metadata'], [])
 
+    def test_instance_get_all_by_host_and_node(self):
+        instance = self.create_instance_with_args(
+            system_metadata={'foo': 'bar'})
+        result = db.instance_get_all_by_host_and_node(
+            self.ctxt, 'h1', 'n1',
+            columns_to_join=['system_metadata', 'extra'])
+        self.assertEqual(instance['uuid'], result[0]['uuid'])
+        self.assertEqual('bar', result[0]['system_metadata'][0]['value'])
+        self.assertEqual(instance['uuid'], result[0]['extra']['instance_uuid'])
+
+    @mock.patch('nova.db.sqlalchemy.api._instances_fill_metadata')
+    @mock.patch('nova.db.sqlalchemy.api._instance_get_all_query')
+    def test_instance_get_all_by_host_and_node_fills_manually(self,
+                                                              mock_getall,
+                                                              mock_fill):
+        db.instance_get_all_by_host_and_node(
+            self.ctxt, 'h1', 'n1',
+            columns_to_join=['metadata', 'system_metadata', 'extra', 'foo'])
+        self.assertEqual(sorted(['extra', 'foo']),
+                         sorted(mock_getall.call_args[1]['joins']))
+        self.assertEqual(sorted(['metadata', 'system_metadata']),
+                         sorted(mock_fill.call_args[1]['manual_joins']))
+
     def test_instance_get_all_hung_in_rebooting(self):
         # Ensure no instances are returned.
         results = db.instance_get_all_hung_in_rebooting(self.ctxt, 10)
