@@ -693,9 +693,6 @@ class Rbd(Image):
             args += self._ceph_args()
             libvirt_utils.import_rbd_image(*args)
 
-        if size and self._size() < size:
-            self._resize(size)
-
         base_size = disk.get_disk_size(base)
 
         if size and size > base_size:
