@@ -838,17 +838,21 @@ class VMwareVMOps(object):
                 self._destroy_instance(instance,
                                        destroy_disks=destroy_disks,
                                        instance_name=rescue_name)
-        # When VM deletion is triggered in middle of VM resize before VM
-        # arrive RESIZED state, uuid-orig VM need to deleted to avoid
-        # VM leak. Within method _destroy_instance it will check vmref
-        # exist or not before attempt deletion.
-        resize_orig_vmname = instance['uuid'] + self._migrate_suffix
-        vm_orig_ref = vm_util.get_vm_ref_from_name(self._session,
-                                                   resize_orig_vmname)
-        if vm_orig_ref:
-            self._destroy_instance(instance,
-                                   destroy_disks=destroy_disks,
-                                   instance_name=resize_orig_vmname)
+        # NOTE(arnaud): Destroy uuid-orig and uuid VMs iff it is not
+        # triggered by the revert resize api call. This prevents
+        # the uuid-orig VM to be deleted to be able to associate it later.
+        if instance.task_state != task_states.RESIZE_REVERTING:
+            # When VM deletion is triggered in middle of VM resize before VM
+            # arrive RESIZED state, uuid-orig VM need to deleted to avoid
+            # VM leak. Within method _destroy_instance it will check vmref
+            # exist or not before attempt deletion.
+            resize_orig_vmname = instance['uuid'] + self._migrate_suffix
+            vm_orig_ref = vm_util.get_vm_ref_from_name(self._session,
+                                                       resize_orig_vmname)
+            if vm_orig_ref:
+                self._destroy_instance(instance,
+                                       destroy_disks=destroy_disks,
+                                       instance_name=resize_orig_vmname)
         self._destroy_instance(instance, destroy_disks=destroy_disks)
         LOG.debug("Instance destroyed", instance=instance)
 
