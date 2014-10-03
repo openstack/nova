@@ -120,7 +120,7 @@ class KeyValueView(object):
                     if self.before_dict is not None:
                         res.insert(0, self.before_dict)
 
-                for key in root:
+                for key in sorted(root):
                     res.extend(serialize(root[key], key, indent + 1))
             elif (isinstance(root, col.Sequence) and
                     not isinstance(root, six.string_types)):
@@ -129,7 +129,7 @@ class KeyValueView(object):
                     if self.before_list is not None:
                         res.insert(0, self.before_list)
 
-                for val in root:
+                for val in sorted(root, key=str):
                     res.extend(serialize(val, None, indent + 1))
             else:
                 str_root = str(root)
@@ -172,7 +172,7 @@ class TableView(object):
         self.table_prop_name = table_prop_name
         self.column_names = column_names
         self.column_values = column_values
-        self.column_width = (72 - len(column_names) + 1) / len(column_names)
+        self.column_width = (72 - len(column_names) + 1) // len(column_names)
 
         column_headers = "|".join(
             "{ch[" + str(n) + "]: ^" + str(self.column_width) + "}"

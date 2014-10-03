@@ -17,7 +17,7 @@ import time
 from oslo.config import cfg
 import six
 
-from nova.openstack.common.gettextutils import _, _LE, _LI
+from nova.openstack.common._i18n import _, _LE, _LI
 from nova.openstack.common import log as logging
 
 

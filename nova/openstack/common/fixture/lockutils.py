@@ -48,4 +48,4 @@ class LockFixture(fixtures.Fixture):
     def setUp(self):
         super(LockFixture, self).setUp()
         self.addCleanup(self.mgr.__exit__, None, None, None)
-        self.mgr.__enter__()
+        self.lock = self.mgr.__enter__()

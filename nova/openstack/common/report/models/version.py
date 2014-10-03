@@ -12,14 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Provides Openstack Version Info Model
+"""Provides OpenStack Version Info Model
 
 This module defines a class representing the data
-model for Openstack package and version information
+model for OpenStack package and version information
 """
 
-import nova.openstack.common.report.models.with_default_views as mwdv
-import nova.openstack.common.report.views.text.generic as generic_text_views
+from nova.openstack.common.report.models import with_default_views as mwdv
+from nova.openstack.common.report.views.text import generic as generic_text_views
 
 
 class PackageModel(mwdv.ModelWithDefaultViews):

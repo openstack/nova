@@ -22,6 +22,7 @@ import time
 import urllib2
 
 from oslo.config import cfg
+from oslo.utils import strutils
 import six
 import six.moves.urllib.parse as urlparse
 
@@ -238,7 +239,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                {'command': iscsi_command, 'out': out, 'err': err})
         # NOTE(bpokorny): iscsi_command can contain passwords so we need to
         # sanitize the password in the message.
-        LOG.debug(logging.mask_password(msg))
+        LOG.debug(strutils.mask_password(msg))
         return (out, err)
 
     def _iscsiadm_update(self, iscsi_properties, property_key, property_value,

@@ -12,15 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Provides Openstack version generators
+"""Provides OpenStack version generators
 
-This module defines a class for Openstack
+This module defines a class for OpenStack
 version and package information
 generators for generating the model in
 :mod:`openstack.common.report.models.version`.
 """
 
-import nova.openstack.common.report.models.version as vm
+from nova.openstack.common.report.models import version as vm
 
 
 class PackageReportGenerator(object):

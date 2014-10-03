@@ -29,7 +29,7 @@ import xml.etree.ElementTree as ET
 
 import six
 
-import nova.openstack.common.report.utils as utils
+from nova.openstack.common.report import utils as utils
 
 
 class KeyValueView(object):
@@ -66,11 +66,11 @@ class KeyValueView(object):
             res = ET.Element(rootkeyname)
 
             if isinstance(rootmodel, col.Mapping):
-                for key in rootmodel:
+                for key in sorted(rootmodel):
                     res.append(serialize(rootmodel[key], key))
             elif (isinstance(rootmodel, col.Sequence)
                     and not isinstance(rootmodel, six.string_types)):
-                for val in rootmodel:
+                for val in sorted(rootmodel, key=str):
                     res.append(serialize(val, 'item'))
             elif ET.iselement(rootmodel):
                 res.append(rootmodel)
@@ -79,7 +79,9 @@ class KeyValueView(object):
 
             return res
 
-        res = utils.StringWithAttrs(ET.tostring(serialize(cpy,
-                                                          self.wrapper_name)))
+        str_ = ET.tostring(serialize(cpy,
+                                     self.wrapper_name),
+                           encoding="utf-8").decode("utf-8")
+        res = utils.StringWithAttrs(str_)
         res.__is_xml__ = True
         return res

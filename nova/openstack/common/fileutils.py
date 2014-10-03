@@ -18,7 +18,8 @@ import errno
 import os
 import tempfile
 
-from nova.openstack.common import excutils
+from oslo.utils import excutils
+
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)

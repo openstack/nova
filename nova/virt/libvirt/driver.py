@@ -51,6 +51,7 @@ from lxml import etree
 from oslo.config import cfg
 from oslo.utils import excutils
 from oslo.utils import importutils
+from oslo.utils import strutils
 from oslo.utils import timeutils
 from oslo.utils import units
 import six
@@ -4133,7 +4134,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 'block_device_info': block_device_info})
         # NOTE(mriedem): block_device_info can contain auth_password so we
         # need to sanitize the password in the message.
-        LOG.debug(logging.mask_password(msg), instance=instance)
+        LOG.debug(strutils.mask_password(msg), instance=instance)
         conf = self._get_guest_config(instance, network_info, image_meta,
                                       disk_info, rescue, block_device_info,
                                       context)

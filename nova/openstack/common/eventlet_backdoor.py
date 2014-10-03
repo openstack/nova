@@ -29,7 +29,7 @@ import eventlet.backdoor
 import greenlet
 from oslo.config import cfg
 
-from nova.openstack.common.gettextutils import _LI
+from nova.openstack.common._i18n import _LI
 from nova.openstack.common import log as logging
 
 help_for_backdoor_port = (
@@ -41,7 +41,6 @@ help_for_backdoor_port = (
     "chosen port is displayed in the service's log file.")
 eventlet_backdoor_opts = [
     cfg.StrOpt('backdoor_port',
-               default=None,
                help="Enable eventlet backdoor.  %s" % help_for_backdoor_port)
 ]
 

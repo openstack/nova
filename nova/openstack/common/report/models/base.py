@@ -81,6 +81,11 @@ class ReportModel(col.MutableMapping):
         return self.data.__contains__(key)
 
     def __getattr__(self, attrname):
+        # Needed for deepcopy in Python3. That will avoid an infinite loop
+        # in __getattr__ .
+        if 'data' not in self.__dict__:
+            self.data = {}
+
         try:
             return self.data[attrname]
         except KeyError:

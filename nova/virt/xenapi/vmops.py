@@ -345,7 +345,7 @@ class VMOps(object):
             msg = "block device info: %s" % block_device_info
             # NOTE(mriedem): block_device_info can contain an auth_password
             # so we have to scrub the message before logging it.
-            LOG.debug(logging.mask_password(msg), instance=instance)
+            LOG.debug(strutils.mask_password(msg), instance=instance)
             root_device_name = block_device_info['root_device_name']
 
             for bdm in block_device_info['block_device_mapping']:
