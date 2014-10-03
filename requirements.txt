@@ -11,7 +11,6 @@ decorator>=3.4.0
 eventlet>=0.15.1
 Jinja2
 keystonemiddleware>=1.0.0
-kombu>=2.5.0
 lxml>=2.3
 Routes>=1.12.3,!=2.0
 WebOb>=1.2.3
