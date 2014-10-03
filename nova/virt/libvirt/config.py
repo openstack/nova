@@ -1825,10 +1825,10 @@ class LibvirtConfigNodeDevicePciCap(LibvirtConfigObject):
                 self.function = int(c.text)
             elif c.tag == "product":
                 self.product = c.text
-                self.product_id = c.get('id')
+                self.product_id = int(c.get('id'), 16)
             elif c.tag == "vendor":
                 self.vendor = c.text
-                self.vendor_id = c.get('id')
+                self.vendor_id = int(c.get('id'), 16)
             elif c.tag == "capability" and c.get('type') in \
                             ('virt_functions', 'phys_function'):
                 funcap = LibvirtConfigNodeDevicePciSubFunctionCap()
