@@ -210,7 +210,7 @@ def _format_mappings(properties, result):
     # NOTE(yamahata): overwrite mappings with block_device_mapping
     for bdm in block_device_mapping:
         for i in range(len(mappings)):
-            if bdm['deviceName'] == mappings[i]['deviceName']:
+            if bdm.get('deviceName') == mappings[i].get('deviceName'):
                 del mappings[i]
                 break
         mappings.append(bdm)
