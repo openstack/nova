@@ -390,6 +390,10 @@ class VIFTests(test.NoDBTestCase):
         vif2 = model.VIF(profile={'pci_slot': '0000:0a:00.2'})
         self.assertNotEqual(vif1, vif2)
 
+        vif1 = model.VIF(preserve_on_delete=True)
+        vif2 = model.VIF(preserve_on_delete=False)
+        self.assertNotEqual(vif1, vif2)
+
     def test_create_vif_with_type(self):
         vif_dict = dict(
             id=1,

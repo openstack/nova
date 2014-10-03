@@ -82,6 +82,45 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock_sync.assert_called_with(mock.ANY, mock_get.return_value,
                                          pwr_state)
 
+    def test_delete_instance_info_cache_delete_ordering(self):
+        call_tracker = mock.Mock()
+        call_tracker.clear_events_for_instance.return_value = None
+        mgr_class = self.compute.__class__
+        orig_delete = mgr_class._delete_instance
+        specd_compute = mock.create_autospec(mgr_class)
+        # spec out everything except for the method we really want
+        # to test, then use call_tracker to verify call sequence
+        specd_compute._delete_instance = orig_delete
+
+        mock_inst = mock.Mock()
+        mock_inst.uuid = 'inst-1'
+        mock_inst.save = mock.Mock()
+        mock_inst.destroy = mock.Mock()
+        mock_inst.system_metadata = mock.Mock()
+
+        def _mark_notify(*args, **kwargs):
+            call_tracker._notify_about_instance_usage(*args, **kwargs)
+
+        def _mark_shutdown(*args, **kwargs):
+            call_tracker._shutdown_instance(*args, **kwargs)
+
+        specd_compute.instance_events = call_tracker
+        specd_compute._notify_about_instance_usage = _mark_notify
+        specd_compute._shutdown_instance = _mark_shutdown
+        mock_inst.info_cache = call_tracker
+
+        specd_compute._delete_instance(specd_compute,
+                                       self.context,
+                                       mock_inst,
+                                       mock.Mock(),
+                                       mock.Mock())
+
+        methods_called = [n for n, a, k in call_tracker.mock_calls]
+        self.assertEqual(['clear_events_for_instance',
+                          '_notify_about_instance_usage',
+                          '_shutdown_instance', 'delete'],
+                         methods_called)
+
     def test_allocate_network_succeeds_after_retries(self):
         self.flags(network_allocate_retries=8)
 

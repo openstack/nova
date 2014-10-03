@@ -2542,10 +2542,15 @@ class ComputeManager(manager.Manager):
                 LOG.debug('Events pending at deletion: %(events)s',
                           {'events': ','.join(events.keys())},
                           instance=instance)
-            instance.info_cache.delete()
             self._notify_about_instance_usage(context, instance,
                                               "delete.start")
             self._shutdown_instance(context, instance, bdms)
+            # NOTE(dims): instance.info_cache.delete() should be called after
+            # _shutdown_instance in the compute manager as shutdown calls
+            # deallocate_for_instance so the info_cache is still needed
+            # at this point.
+            instance.info_cache.delete()
+
             # NOTE(vish): We have already deleted the instance, so we have
             #             to ignore problems cleaning up the volumes. It
             #             would be nice to let the user know somehow that
