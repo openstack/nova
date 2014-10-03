@@ -271,10 +271,14 @@ class ComputeAPI(object):
         * 3.34 - Add get_serial_console method
         * 3.35 - Make reserve_block_device_name return a BDM object
 
+        ... Juno supports message version 3.35.  So, any changes to
+        existing methods in 3.x after that point should be done such that they
+        can handle the version_cap being set to 3.35.
     '''
 
     VERSION_ALIASES = {
         'icehouse': '3.23',
+        'juno': '3.35',
     }
 
     def __init__(self):
