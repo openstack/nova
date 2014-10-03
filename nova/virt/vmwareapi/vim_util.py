@@ -65,10 +65,6 @@ def object_to_dict(obj, list_depth=1):
     return d
 
 
-def get_moref(value, type):
-    return vutil.get_moref(value, type)
-
-
 def get_object_properties(vim, collector, mobj, type, properties):
     """Gets the properties of the Managed object specified."""
     client_factory = vim.client.factory
