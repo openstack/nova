@@ -1855,8 +1855,8 @@ class LibvirtConfigNodeDevicePciCapTest(LibvirtConfigBaseTest):
 
         self.assertEqual(obj.fun_capability[0].type, 'virt_functions')
         self.assertEqual(obj.fun_capability[0].device_addrs,
-                         [("0000", "0x0a", "0x1", "0x1"),
-                          ("0001", "0x0a", "0x02", "0x03"), ])
+                         [(0, 10, 1, 1),
+                          (1, 10, 2, 3), ])
 
     def test_config_device_pci_2cap(self):
         xmlin = """
@@ -1891,11 +1891,11 @@ class LibvirtConfigNodeDevicePciCapTest(LibvirtConfigBaseTest):
 
         self.assertEqual(obj.fun_capability[0].type, 'virt_functions')
         self.assertEqual(obj.fun_capability[0].device_addrs,
-                         [("0000", '0x0a', '0x1', "0x1"),
-                          ("0001", "0x0a", "0x02", "0x03"), ])
+                         [(0, 10, 1, 1),
+                          (1, 10, 2, 3), ])
         self.assertEqual(obj.fun_capability[1].type, 'phys_function')
         self.assertEqual(obj.fun_capability[1].device_addrs,
-                         [("0000", '0x0a', '0x1', "0x1"), ])
+                         [(0, 10, 1, 1), ])
 
         def test_config_read_only_disk(self):
             obj = config.LibvirtConfigGuestDisk()
@@ -1934,8 +1934,8 @@ class LibvirtConfigNodeDevicePciSubFunctionCap(LibvirtConfigBaseTest):
         fun_capability = config.LibvirtConfigNodeDevicePciSubFunctionCap()
         fun_capability.parse_str(xmlin)
         self.assertEqual('virt_functions', fun_capability.type)
-        self.assertEqual([("0000", "0x0a", "0x1", "0x1"),
-                          ("0001", "0x0a", "0x02", "0x03"), ],
+        self.assertEqual([(0, 10, 1, 1),
+                          (1, 10, 2, 3)],
                          fun_capability.device_addrs)
 
 

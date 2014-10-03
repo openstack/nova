@@ -1847,10 +1847,10 @@ class LibvirtConfigNodeDevicePciSubFunctionCap(LibvirtConfigObject):
         self.type = xmldoc.get("type")
         for c in xmldoc.getchildren():
             if c.tag == "address":
-                self.device_addrs.append((c.get('domain'),
-                                          c.get('bus'),
-                                          c.get('slot'),
-                                          c.get('function')))
+                self.device_addrs.append((int(c.get('domain'), 16),
+                                          int(c.get('bus'), 16),
+                                          int(c.get('slot'), 16),
+                                          int(c.get('function'), 16)))
 
 
 class LibvirtConfigGuestRng(LibvirtConfigGuestDevice):
