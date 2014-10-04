@@ -3423,22 +3423,15 @@ class AggregateAPI(base.Base):
         if availability_zone:
             aggregate.metadata = {'availability_zone': availability_zone}
         aggregate.create(context)
-
-        aggregate = self._reformat_aggregate_info(aggregate)
-        # To maintain the same API result as before.
-        del aggregate['hosts']
-        del aggregate['metadata']
         return aggregate
 
     def get_aggregate(self, context, aggregate_id):
         """Get an aggregate by id."""
-        aggregate = objects.Aggregate.get_by_id(context, aggregate_id)
-        return self._reformat_aggregate_info(aggregate)
+        return objects.Aggregate.get_by_id(context, aggregate_id)
 
     def get_aggregate_list(self, context):
         """Get all the aggregates."""
-        aggregates = objects.AggregateList.get_all(context)
-        return [self._reformat_aggregate_info(agg) for agg in aggregates]
+        return objects.AggregateList.get_all(context)
 
     @wrap_exception()
     def update_aggregate(self, context, aggregate_id, values):
@@ -3455,7 +3448,7 @@ class AggregateAPI(base.Base):
         # which stored availability_zones and host need to be reset
         if values.get('availability_zone'):
             availability_zones.reset_cache()
-        return self._reformat_aggregate_info(aggregate)
+        return aggregate
 
     @wrap_exception()
     def update_aggregate_metadata(self, context, aggregate_id, metadata):
@@ -3587,7 +3580,7 @@ class AggregateAPI(base.Base):
         compute_utils.notify_about_aggregate_update(context,
                                                     "addhost.end",
                                                     aggregate_payload)
-        return self._reformat_aggregate_info(aggregate)
+        return aggregate
 
     @wrap_exception()
     def remove_host_from_aggregate(self, context, aggregate_id, host_name):
@@ -3607,11 +3600,7 @@ class AggregateAPI(base.Base):
         compute_utils.notify_about_aggregate_update(context,
                                                     "removehost.end",
                                                     aggregate_payload)
-        return self._reformat_aggregate_info(aggregate)
-
-    def _reformat_aggregate_info(self, aggregate):
-        """Builds a dictionary with aggregate props, metadata and hosts."""
-        return dict(aggregate.iteritems())
+        return aggregate
 
 
 class KeypairAPI(base.Base):
