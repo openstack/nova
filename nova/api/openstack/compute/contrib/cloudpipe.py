@@ -32,6 +32,8 @@ from nova.openstack.common import timeutils
 from nova import utils
 
 CONF = cfg.CONF
+CONF.import_opt('keys_path', 'nova.crypto')
+
 authorize = extensions.extension_authorizer('compute', 'cloudpipe')
 
 
