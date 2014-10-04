@@ -9612,7 +9612,10 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self._objectify(instance)
 
         rpcapi = self.compute_api.compute_task_api
+        self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(rpcapi, 'live_migrate_instance')
+        self.compute_api._record_action_start(self.context, instance,
+                                              'live-migration')
         rpcapi.live_migrate_instance(self.context, instance, 'fake_dest_host',
                                      block_migration=True,
                                      disk_over_commit=True)
