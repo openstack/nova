@@ -15,10 +15,9 @@
 Tests For Scheduler Host Filters.
 """
 
-import httplib
-
 import mock
 from oslo.config import cfg
+import requests
 import six
 import stubout
 
@@ -253,7 +252,7 @@ class HostFiltersTestCase(test.NoDBTestCase):
         """Stubs out the response from OAT service."""
         self.oat_attested = True
         self.oat_hosts = args[2]
-        return httplib.OK, self.oat_data
+        return requests.codes.OK, self.oat_data
 
     def setUp(self):
         super(HostFiltersTestCase, self).setUp()
