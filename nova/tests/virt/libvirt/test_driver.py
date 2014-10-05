@@ -1199,6 +1199,7 @@ class LibvirtConnTestCase(test.TestCase):
         with contextlib.nested(
                 mock.patch.object(
                     objects.Flavor, "get_by_id", return_value=flavor),
+                mock.patch.object(conn, '_has_min_version', return_value=True),
                 mock.patch.object(
                     conn, "_get_host_capabilities", return_value=caps),
                 mock.patch.object(
@@ -1259,13 +1260,14 @@ class LibvirtConnTestCase(test.TestCase):
         with contextlib.nested(
                 mock.patch.object(
                     objects.Flavor, "get_by_id", return_value=flavor),
+                mock.patch.object(conn, '_has_min_version', return_value=True),
                 mock.patch.object(
                     conn, "_get_host_capabilities", return_value=caps),
                 mock.patch.object(
                     hardware, 'get_vcpu_pin_set', return_value=set([2, 3])),
                 mock.patch.object(
                     random, 'choice', side_effect=lambda cells: cells[0])
-                ) as (get_by_id_mock, get_host_cap_mock,
+                ) as (get_by_id_mock, has_min_version_mock, get_host_cap_mock,
                         get_vcpu_pin_set_mock, choice_mock):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
             # NOTE(ndipanov): we make sure that pin_set was taken into account
@@ -1301,6 +1303,7 @@ class LibvirtConnTestCase(test.TestCase):
                 mock.patch.object(
                     objects.InstanceNUMATopology, "get_by_instance_uuid",
                     return_value=instance_topology),
+                mock.patch.object(conn, '_has_min_version', return_value=True),
                 mock.patch.object(
                     conn, "_get_host_capabilities", return_value=caps)):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
@@ -1341,6 +1344,7 @@ class LibvirtConnTestCase(test.TestCase):
                 mock.patch.object(
                     objects.InstanceNUMATopology, "get_by_instance_uuid",
                     return_value=instance_topology),
+                mock.patch.object(conn, '_has_min_version', return_value=True),
                 mock.patch.object(
                     conn, "_get_host_capabilities", return_value=caps),
                 mock.patch.object(
@@ -8030,6 +8034,7 @@ class LibvirtConnTestCase(test.TestCase):
                                   'mem': {'total': 1024, 'used': 0},
                                   'id': 1}]}
         with contextlib.nested(
+                mock.patch.object(conn, '_has_min_version', return_value=True),
                 mock.patch.object(
                     conn, '_get_host_capabilities', return_value=caps),
                 mock.patch.object(
@@ -8046,8 +8051,18 @@ class LibvirtConnTestCase(test.TestCase):
         caps.host.topology = None
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        with mock.patch.object(
-                conn, '_get_host_capabilities', return_value=caps):
+        with contextlib.nested(
+            mock.patch.object(conn, '_has_min_version', return_value=True),
+            mock.patch.object(conn, '_get_host_capabilities',
+                              return_value=caps)
+        ) as (has_min_version, get_caps):
+            self.assertIsNone(conn._get_host_numa_topology())
+        get_caps.assert_called_once_with()
+
+    def test_get_host_numa_topology_not_supported(self):
+        # Tests that libvirt isn't new enough to support numa topology.
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        with mock.patch.object(conn, '_has_min_version', return_value=False):
             self.assertIsNone(conn._get_host_numa_topology())
 
     def test_diagnostic_vcpus_exception(self):
