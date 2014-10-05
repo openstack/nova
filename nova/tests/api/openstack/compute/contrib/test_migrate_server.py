@@ -229,3 +229,7 @@ class MigrateServerTests(admin_only_action_common.CommonTests):
     def test_migrate_live_pre_check_error(self):
         self._test_migrate_live_failed_with_exception(
             exception.MigrationPreCheckError(reason=''))
+
+    def test_migrate_live_migration_with_old_nova_not_safe(self):
+        self._test_migrate_live_failed_with_exception(
+            exception.LiveMigrationWithOldNovaNotSafe(server=''))

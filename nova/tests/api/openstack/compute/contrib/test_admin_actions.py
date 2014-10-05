@@ -416,6 +416,10 @@ class AdminActionsTestV2(AdminActionsTestV21):
         self._test_migrate_live_failed_with_exception(
             exception.MigrationPreCheckError(reason=''))
 
+    def test_migrate_live_migration_with_old_nova_not_safe(self):
+        self._test_migrate_live_failed_with_exception(
+            exception.LiveMigrationWithOldNovaNotSafe(server=''))
+
     def test_unlock_not_authorized(self):
         self.mox.StubOutWithMock(self.compute_api, 'unlock')
 
