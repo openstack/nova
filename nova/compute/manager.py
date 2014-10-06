@@ -1975,7 +1975,10 @@ class ComputeManager(manager.Manager):
         # Get swap out of the list
         swap = driver_block_device.get_swap(swap)
 
+        root_device_name = instance.get('root_device_name')
+
         return {'swap': swap,
+                'root_device_name': root_device_name,
                 'ephemerals': ephemerals,
                 'block_device_mapping': block_device_mapping}
 
