@@ -20,7 +20,6 @@ import shutil
 import tempfile
 
 import fixtures
-import mock
 from oslo.config import cfg
 
 from inspect import getargspec
@@ -833,9 +832,6 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.rbd.RBD_FEATURE_LAYERING = 1
 
-        self.mox.StubOutWithMock(imagebackend.disk, 'get_disk_size')
-        imagebackend.disk.get_disk_size(self.TEMPLATE_PATH
-                                       ).AndReturn(self.SIZE)
         rbd_name = "%s/%s" % (self.INSTANCE['name'], self.NAME)
         cmd = ('--pool', self.POOL, self.TEMPLATE_PATH,
                rbd_name, '--new-format', '--id', self.USER,
@@ -995,15 +991,6 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
                                                 user, conf)
 
         self.assertEqual(image.path, rbd_path)
-
-    def test_resize(self):
-        image = self.image_class(self.INSTANCE, self.NAME)
-        with mock.patch.object(imagebackend, "RBDVolumeProxy") as mock_proxy:
-            volume_mock = mock.Mock()
-            mock_proxy.side_effect = [mock_proxy]
-            mock_proxy.__enter__.side_effect = [volume_mock]
-            image._resize(image.rbd_name, self.SIZE)
-            volume_mock.resize.assert_called_once_with(self.SIZE)
 
 
 class BackendTestCase(test.NoDBTestCase):
