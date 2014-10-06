@@ -11366,7 +11366,7 @@ class LibvirtDriverTestCase(test.TestCase):
                                1, 20000, 10)
 
 
-class LibvirtVolumeUsageTestCase(test.TestCase):
+class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
     """Test for LibvirtDriver.get_all_volume_usage."""
 
     def setUp(self):
@@ -11374,10 +11374,10 @@ class LibvirtVolumeUsageTestCase(test.TestCase):
         self.conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.c = context.get_admin_context()
 
-        # creating instance
-        inst = {}
-        inst['uuid'] = '875a8070-d0b9-4949-8b31-104d125c9a64'
-        self.ins_ref = db.instance_create(self.c, inst)
+        self.ins_ref = objects.Instance(
+            id=1729,
+            uuid='875a8070-d0b9-4949-8b31-104d125c9a64'
+        )
 
         # verify bootable volume device path also
         self.bdms = [{'volume_id': 1,
