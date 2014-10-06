@@ -39,7 +39,7 @@ from oslo import messaging
 from nova import conductor
 from nova import context
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LW
 from nova import ipv6
 from nova import manager
 from nova.network import api as network_api
@@ -870,9 +870,16 @@ class NetworkManager(manager.Manager):
             quotas.reserve(context, fixed_ips=1, project_id=quota_project,
                            user_id=quota_user)
             cleanup.append(functools.partial(quotas.rollback, context))
-        except exception.OverQuota:
-            LOG.debug("Quota exceeded for %s, tried to allocate "
-                      "fixed IP", context.project_id)
+        except exception.OverQuota as exc:
+            quotas = exc.kwargs['quotas']
+            headroom = exc.kwargs['headroom']
+            allowed = quotas['fixed_ips']
+            used = allowed - headroom['fixed_ips']
+            LOG.warn(_LW("Quota exceeded for project %(pid)s, tried to "
+                         "allocate fixed IP. %(used)s of %(allowed)s are in "
+                         "use or are already reserved."),
+                     {'pid': quota_project, 'used': used, 'allowed': allowed},
+                     instance_uuid=instance_id)
             raise exception.FixedIpLimitExceeded()
 
         try:

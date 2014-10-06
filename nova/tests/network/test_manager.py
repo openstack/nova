@@ -701,7 +701,9 @@ class FlatNetworkTestCase(test.TestCase):
         inst = objects.Instance()
         inst['uuid'] = 'nosuch'
         get_by_uuid.return_value = inst
-        reserve.side_effect = exception.OverQuota(overs='testing')
+        reserve.side_effect = exception.OverQuota(overs='testing',
+                                                  quotas={'fixed_ips': 10},
+                                                  headroom={'fixed_ips': 0})
         util_method.return_value = ('foo', 'bar')
         self.assertRaises(exception.FixedIpLimitExceeded,
                           self.network.allocate_fixed_ip,
