@@ -3165,6 +3165,58 @@ def _get_project_user_quota_usages(context, session, project_id,
     return proj_result, user_result
 
 
+def _create_quota_usage_if_missing(user_usages, resource, until_refresh,
+                                   project_id, user_id, session):
+    """Creates a QuotaUsage record and adds to user_usages if not present.
+
+    :param user_usages:   dict of resource keys to QuotaUsage records. This is
+                          updated if resource is not in user_usages yet or
+                          until_refresh is not None.
+    :param resource:      The resource being checked for quota usage.
+    :param until_refresh: Count of reservations until usage is refreshed,
+                          int or None
+    :param max_age:       Number of seconds between subsequent usage refreshes.
+    :param project_id:    The project being checked for quota usage.
+    :param user_id:       The user being checked for quota usage.
+    :param session:       DB session holding a transaction lock.
+    :return:              True if a new QuotaUsage record was created and added
+                          to user_usages, False otherwise.
+    """
+    new_usage = None
+    if resource not in user_usages:
+        user_id_to_use = user_id
+        if resource in PER_PROJECT_QUOTAS:
+            user_id_to_use = None
+        new_usage = _quota_usage_create(project_id, user_id_to_use, resource,
+                                        0, 0, until_refresh or None,
+                                        session=session)
+        user_usages[resource] = new_usage
+    return new_usage is not None
+
+
+def _is_quota_refresh_needed(quota_usage, max_age):
+    """Determines if a quota usage refresh is needed.
+
+    :param quota_usage:   A QuotaUsage object for a given resource.
+    :param max_age:       Number of seconds between subsequent usage refreshes.
+    :return:              True if a refresh is needed, False otherwise.
+    """
+    refresh = False
+    if quota_usage.in_use < 0:
+        # Negative in_use count indicates a desync, so try to
+        # heal from that...
+        refresh = True
+    elif quota_usage.until_refresh is not None:
+        quota_usage.until_refresh -= 1
+        if quota_usage.until_refresh <= 0:
+            refresh = True
+    elif max_age and (timeutils.utcnow() -
+            quota_usage.updated_at).seconds >= max_age:
+        refresh = True
+
+    return refresh
+
+
 @require_context
 @_retry_on_deadlock
 def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
@@ -3189,38 +3241,11 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
             resource = work.pop()
 
             # Do we need to refresh the usage?
-            refresh = False
-            if ((resource not in PER_PROJECT_QUOTAS) and
-                    (resource not in user_usages)):
-                user_usages[resource] = _quota_usage_create(
-                                                      project_id,
-                                                      user_id,
-                                                      resource,
-                                                      0, 0,
-                                                      until_refresh or None,
-                                                      session=session)
-                refresh = True
-            elif ((resource in PER_PROJECT_QUOTAS) and
-                    (resource not in user_usages)):
-                user_usages[resource] = _quota_usage_create(
-                                                      project_id,
-                                                      None,
-                                                      resource,
-                                                      0, 0,
-                                                      until_refresh or None,
-                                                      session=session)
-                refresh = True
-            elif user_usages[resource].in_use < 0:
-                # Negative in_use count indicates a desync, so try to
-                # heal from that...
-                refresh = True
-            elif user_usages[resource].until_refresh is not None:
-                user_usages[resource].until_refresh -= 1
-                if user_usages[resource].until_refresh <= 0:
-                    refresh = True
-            elif max_age and (timeutils.utcnow() -
-                    user_usages[resource].updated_at).seconds >= max_age:
-                refresh = True
+            created = _create_quota_usage_if_missing(user_usages, resource,
+                                                     until_refresh, project_id,
+                                                     user_id, session)
+            refresh = created or _is_quota_refresh_needed(
+                                        user_usages[resource], max_age)
 
             # OK, refresh the usage
             if refresh:

@@ -5582,6 +5582,86 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           'project1', 'resource1', 42)
 
 
+class QuotaReserveNoDbTestCase(test.NoDBTestCase):
+    """Tests quota reserve/refresh operations using mock."""
+
+    def test_create_quota_usage_if_missing_not_created(self):
+        # Tests that QuotaUsage isn't created if it's already in user_usages.
+        resource = 'fake-resource'
+        project_id = 'fake-project'
+        user_id = 'fake_user'
+        session = mock.sentinel
+        quota_usage = mock.sentinel
+        user_usages = {resource: quota_usage}
+        with mock.patch.object(sqlalchemy_api, '_quota_usage_create') as quc:
+            self.assertFalse(sqlalchemy_api._create_quota_usage_if_missing(
+                                user_usages, resource, None,
+                                project_id, user_id, session))
+        self.assertFalse(quc.called)
+
+    def _test_create_quota_usage_if_missing_created(self, per_project_quotas):
+        # Tests that the QuotaUsage is created.
+        user_usages = {}
+        if per_project_quotas:
+            resource = sqlalchemy_api.PER_PROJECT_QUOTAS[0]
+        else:
+            resource = 'fake-resource'
+        project_id = 'fake-project'
+        user_id = 'fake_user'
+        session = mock.sentinel
+        quota_usage = mock.sentinel
+        with mock.patch.object(sqlalchemy_api, '_quota_usage_create',
+                               return_value=quota_usage) as quc:
+            self.assertTrue(sqlalchemy_api._create_quota_usage_if_missing(
+                                user_usages, resource, None,
+                                project_id, user_id, session))
+        self.assertEqual(quota_usage, user_usages[resource])
+        # Now test if the QuotaUsage was created with a user_id or not.
+        if per_project_quotas:
+            quc.assert_called_once_with(
+                project_id, None, resource, 0, 0, None, session=session)
+        else:
+            quc.assert_called_once_with(
+                project_id, user_id, resource, 0, 0, None, session=session)
+
+    def test_create_quota_usage_if_missing_created_per_project_quotas(self):
+        self._test_create_quota_usage_if_missing_created(True)
+
+    def test_create_quota_usage_if_missing_created_user_quotas(self):
+        self._test_create_quota_usage_if_missing_created(False)
+
+    def test_is_quota_refresh_needed_in_use(self):
+        # Tests when a quota refresh is needed based on the in_use value.
+        for in_use in range(-1, 1):
+            # We have to set until_refresh=None otherwise mock will give it
+            # a value which runs some code we don't want.
+            quota_usage = mock.MagicMock(in_use=in_use, until_refresh=None)
+            if in_use < 0:
+                self.assertTrue(sqlalchemy_api._is_quota_refresh_needed(
+                                                    quota_usage, max_age=0))
+            else:
+                self.assertFalse(sqlalchemy_api._is_quota_refresh_needed(
+                                                    quota_usage, max_age=0))
+
+    def test_is_quota_refresh_needed_until_refresh_none(self):
+        quota_usage = mock.MagicMock(in_use=0, until_refresh=None)
+        self.assertFalse(sqlalchemy_api._is_quota_refresh_needed(quota_usage,
+                                                                 max_age=0))
+
+    def test_is_quota_refresh_needed_until_refresh_not_none(self):
+        # Tests different values for the until_refresh counter.
+        for until_refresh in range(3):
+            quota_usage = mock.MagicMock(in_use=0, until_refresh=until_refresh)
+            refresh = sqlalchemy_api._is_quota_refresh_needed(quota_usage,
+                                                              max_age=0)
+            until_refresh -= 1
+            if until_refresh <= 0:
+                self.assertTrue(refresh)
+            else:
+                self.assertFalse(refresh)
+            self.assertEqual(until_refresh, quota_usage.until_refresh)
+
+
 class QuotaClassTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def setUp(self):
