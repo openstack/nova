@@ -22,7 +22,6 @@ from oslo.vmware import vim_util as vutil
 
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LI
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
@@ -310,10 +309,11 @@ class VMwareVolumeOps(object):
                         "VirtualMachine", "config.hardware.device")
         return vm_util.get_vmdk_volume_disk(hardware_devices)
 
-    def _attach_volume_vmdk(self, connection_info, instance, mountpoint):
+    def _attach_volume_vmdk(self, connection_info, instance):
         """Attach vmdk volume storage to VM instance."""
-        instance_name = instance['name']
         vm_ref = vm_util.get_vm_ref(self._session, instance)
+        LOG.debug("_attach_volume_vmdk: %s", connection_info,
+                  instance=instance)
         data = connection_info['data']
 
         # Get volume details from volume ref
@@ -337,21 +337,13 @@ class VMwareVolumeOps(object):
         # Store the uuid of the volume_device
         self._update_volume_details(vm_ref, instance, data['volume_id'])
 
-        LOG.info(_LI("Mountpoint %(mountpoint)s attached to "
-                     "vmdk instance %(instance_name)s"),
-                 {'mountpoint': mountpoint, 'instance_name': instance_name},
-                 instance=instance)
+        LOG.debug("Attached VMDK: %s", connection_info, instance=instance)
 
-    def _attach_volume_iscsi(self, connection_info, instance, mountpoint):
+    def _attach_volume_iscsi(self, connection_info, instance):
         """Attach iscsi volume storage to VM instance."""
-        instance_name = instance['name']
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         # Attach Volume to VM
-        LOG.debug("Attach_volume: %(connection_info)s, %(instance_name)s, "
-                  "%(mountpoint)s",
-                  {'connection_info': connection_info,
-                   'instance_name': instance_name,
-                   'mountpoint': mountpoint},
+        LOG.debug("_attach_volume_iscsi: %s", connection_info,
                   instance=instance)
 
         data = connection_info['data']
@@ -372,20 +364,17 @@ class VMwareVolumeOps(object):
         self.attach_disk_to_vm(vm_ref, instance,
                                adapter_type, 'rdmp',
                                device_name=device_name)
-        LOG.info(_LI("Mountpoint %(mountpoint)s attached to "
-                     "iscsi instance %(instance_name)s"),
-                 {'mountpoint': mountpoint, 'instance_name': instance_name},
-                 instance=instance)
+        LOG.debug("Attached ISCSI: %s", connection_info, instance=instance)
 
-    def attach_volume(self, connection_info, instance, mountpoint):
+    def attach_volume(self, connection_info, instance):
         """Attach volume storage to VM instance."""
         driver_type = connection_info['driver_volume_type']
         LOG.debug("Volume attach. Driver type: %s", driver_type,
                   instance=instance)
         if driver_type == 'vmdk':
-            self._attach_volume_vmdk(connection_info, instance, mountpoint)
+            self._attach_volume_vmdk(connection_info, instance)
         elif driver_type == 'iscsi':
-            self._attach_volume_iscsi(connection_info, instance, mountpoint)
+            self._attach_volume_iscsi(connection_info, instance)
         else:
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
 
@@ -495,13 +484,11 @@ class VMwareVolumeOps(object):
             raise exception.StorageError(reason=_("Unable to find volume"))
         return device
 
-    def _detach_volume_vmdk(self, connection_info, instance, mountpoint):
+    def _detach_volume_vmdk(self, connection_info, instance):
         """Detach volume storage to VM instance."""
-        instance_name = instance['name']
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         # Detach Volume from VM
-        LOG.debug("Detach_volume: %(instance_name)s, %(mountpoint)s",
-                  {'mountpoint': mountpoint, 'instance_name': instance_name},
+        LOG.debug("_detach_volume_vmdk: %s", connection_info,
                   instance=instance)
         data = connection_info['data']
 
@@ -512,18 +499,13 @@ class VMwareVolumeOps(object):
         self._consolidate_vmdk_volume(instance, vm_ref, device, volume_ref)
 
         self.detach_disk_from_vm(vm_ref, instance, device)
-        LOG.info(_LI("Mountpoint %(mountpoint)s detached from "
-                     "vmdk instance %(instance_name)s"),
-                 {'mountpoint': mountpoint, 'instance_name': instance_name},
-                 instance=instance)
+        LOG.debug("Detached VMDK: %s", connection_info, instance=instance)
 
-    def _detach_volume_iscsi(self, connection_info, instance, mountpoint):
+    def _detach_volume_iscsi(self, connection_info, instance):
         """Detach volume storage to VM instance."""
-        instance_name = instance['name']
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         # Detach Volume from VM
-        LOG.debug("Detach_volume: %(instance_name)s, %(mountpoint)s",
-                  {'mountpoint': mountpoint, 'instance_name': instance_name},
+        LOG.debug("_detach_volume_iscsi: %s", connection_info,
                   instance=instance)
         data = connection_info['data']
 
@@ -541,24 +523,21 @@ class VMwareVolumeOps(object):
         if device is None:
             raise exception.StorageError(reason=_("Unable to find volume"))
         self.detach_disk_from_vm(vm_ref, instance, device, destroy_disk=True)
-        LOG.info(_LI("Mountpoint %(mountpoint)s detached from "
-                     "iscsi instance %(instance_name)s"),
-                 {'mountpoint': mountpoint, 'instance_name': instance_name},
-                 instance=instance)
+        LOG.debug("Detached ISCSI: %s", connection_info, instance=instance)
 
-    def detach_volume(self, connection_info, instance, mountpoint):
+    def detach_volume(self, connection_info, instance):
         """Detach volume storage to VM instance."""
         driver_type = connection_info['driver_volume_type']
         LOG.debug("Volume detach. Driver type: %s", driver_type,
                   instance=instance)
         if driver_type == 'vmdk':
-            self._detach_volume_vmdk(connection_info, instance, mountpoint)
+            self._detach_volume_vmdk(connection_info, instance)
         elif driver_type == 'iscsi':
-            self._detach_volume_iscsi(connection_info, instance, mountpoint)
+            self._detach_volume_iscsi(connection_info, instance)
         else:
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
 
-    def attach_root_volume(self, connection_info, instance, mountpoint,
+    def attach_root_volume(self, connection_info, instance,
                            datastore):
         """Attach a root volume to the VM instance."""
         driver_type = connection_info['driver_volume_type']
@@ -574,4 +553,4 @@ class VMwareVolumeOps(object):
             res_pool = self._get_res_pool_of_vm(vm_ref)
             self._relocate_vmdk_volume(volume_ref, res_pool, datastore)
 
-        self.attach_volume(connection_info, instance, mountpoint)
+        self.attach_volume(connection_info, instance)

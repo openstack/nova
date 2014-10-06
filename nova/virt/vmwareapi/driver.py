@@ -492,16 +492,14 @@ class VMwareVCDriver(driver.ComputeDriver):
         """Attach volume storage to VM instance."""
         _volumeops = self._get_volumeops_for_compute_node(instance['node'])
         return _volumeops.attach_volume(connection_info,
-                                             instance,
-                                             mountpoint)
+                                        instance)
 
     def detach_volume(self, connection_info, instance, mountpoint,
                       encryption=None):
         """Detach volume storage to VM instance."""
         _volumeops = self._get_volumeops_for_compute_node(instance['node'])
         return _volumeops.detach_volume(connection_info,
-                                             instance,
-                                             mountpoint)
+                                        instance)
 
     def get_volume_connector(self, instance):
         """Return volume connector information."""
