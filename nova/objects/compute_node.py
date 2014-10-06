@@ -30,11 +30,13 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
     # Version 1.4: Added host ip field
     # Version 1.5: Added numa_topology field
     # Version 1.6: Added supported_instances
-    VERSION = '1.6'
+    # Version 1.7: Added host field
+    VERSION = '1.7'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
         'service_id': fields.IntegerField(),
+        'host': fields.StringField(nullable=True),
         'vcpus': fields.IntegerField(),
         'memory_mb': fields.IntegerField(),
         'local_gb': fields.IntegerField(),
@@ -61,6 +63,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
 
     def obj_make_compatible(self, primitive, target_version):
         target_version = utils.convert_version_to_tuple(target_version)
+        if target_version < (1, 7) and 'host' in primitive:
+            del primitive['host']
         if target_version < (1, 6) and 'supported_hv_specs' in primitive:
             del primitive['supported_hv_specs']
         if target_version < (1, 5) and 'numa_topology' in primitive:
@@ -72,9 +76,39 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
             del primitive['stats']
 
     @staticmethod
+    def _host_from_db_object(compute, db_compute):
+        if (('host' not in db_compute or db_compute['host'] is None)
+                and 'service_id' in db_compute
+                and db_compute['service_id'] is not None):
+            # FIXME(sbauza) : Unconverted compute record, provide compatibility
+            # This has to stay until we can be sure that any/all compute nodes
+            # in the database have been converted to use the host field
+
+            # Service field of ComputeNode could be deprecated in a next patch,
+            # so let's use directly the Service object
+            try:
+                service = objects.Service.get_by_id(
+                    compute._context, db_compute['service_id'])
+            except exception.ServiceNotFound:
+                compute['host'] = None
+                return
+            try:
+                compute['host'] = service.host
+            except (AttributeError, exception.OrphanedObjectError):
+                # Host can be nullable in Service
+                compute['host'] = None
+        elif 'host' in db_compute and db_compute['host'] is not None:
+            # New-style DB having host as a field
+            compute['host'] = db_compute['host']
+        else:
+            # We assume it should not happen but in case, let's set it to None
+            compute['host'] = None
+
+    @staticmethod
     def _from_db_object(context, compute, db_compute):
 
-        fields = set(compute.fields) - set(['stats', 'supported_hv_specs'])
+        fields = set(compute.fields) - set(['stats', 'supported_hv_specs',
+                                            'host'])
         for key in fields:
             compute[key] = db_compute[key]
 
@@ -90,6 +124,11 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
             compute['supported_hv_specs'] = hv_specs
 
         compute._context = context
+
+        # Make sure that we correctly set the host field depending on either
+        # host column is present in the table or not
+        compute._host_from_db_object(compute, db_compute)
+
         compute.obj_reset_changes()
         return compute
 
@@ -166,7 +205,8 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     # Version 1.4 ComputeNode version 1.5
     # Version 1.5 Add use_slave to get_by_service
     # Version 1.6 ComputeNode version 1.6
-    VERSION = '1.6'
+    # Version 1.7 ComputeNode version 1.7
+    VERSION = '1.7'
     fields = {
         'objects': fields.ListOfObjectsField('ComputeNode'),
         }
@@ -178,7 +218,8 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
         '1.3': '1.4',
         '1.4': '1.5',
         '1.5': '1.5',
-        '1.6': '1.6'
+        '1.6': '1.6',
+        '1.7': '1.7',
         }
 
     @base.remotable_classmethod

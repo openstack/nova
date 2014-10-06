@@ -3105,7 +3105,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             'running_vms': 0,
             'cpu_info': '',
             'current_workload': 0,
-            'service_id': service_ref['id']
+            'service_id': service_ref['id'],
+            'host': service_ref['host']
         }
         compute_ref = objects.ComputeNode(**compute_info)
         return (service_ref, compute_ref)

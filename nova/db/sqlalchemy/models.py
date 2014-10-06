@@ -77,7 +77,11 @@ class ComputeNode(BASE, NovaBase):
     """Represents a running compute service on a host."""
 
     __tablename__ = 'compute_nodes'
-    __table_args__ = ()
+    __table_args__ = (
+        schema.UniqueConstraint(
+            'host', 'hypervisor_hostname',
+            name="uniq_compute_nodes0host0hypervisor_hostname"),
+    )
     id = Column(Integer, primary_key=True)
     service_id = Column(Integer, ForeignKey('services.id'), nullable=False)
     service = orm.relationship(Service,
@@ -87,6 +91,12 @@ class ComputeNode(BASE, NovaBase):
                                 'ComputeNode.service_id == Service.id,'
                                 'ComputeNode.deleted == 0)')
 
+    # FIXME(sbauza: Host field is nullable because some old Juno compute nodes
+    # can still report stats from an old ResourceTracker without setting this
+    # field.
+    # This field has to be set non-nullable in a later cycle (probably Lxxx)
+    # once we are sure that all compute nodes in production report it.
+    host = Column(String(255), nullable=True)
     vcpus = Column(Integer, nullable=False)
     memory_mb = Column(Integer, nullable=False)
     local_gb = Column(Integer, nullable=False)

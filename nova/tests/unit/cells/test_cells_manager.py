@@ -33,7 +33,7 @@ CONF = cfg.CONF
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 
 
-FAKE_COMPUTE_NODES = [dict(id=1), dict(id=2)]
+FAKE_COMPUTE_NODES = [dict(id=1, host='host1'), dict(id=2, host='host2')]
 FAKE_SERVICES = [dict(id=1, host='host1',
                       compute_node=[FAKE_COMPUTE_NODES[0]]),
                  dict(id=2, host='host2',

@@ -107,6 +107,7 @@ class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
                                   "vcpus": 1,
                                   "vcpus_used": 0,
                                   "service_id": 2,
+                                  "host": '043b3cacf6f34c90a7245151fc8ebcda',
                                   "pci_stats": [
                                       {"count": 5,
                                        "vendor_id": "8086",

@@ -41,6 +41,7 @@ TEST_HYPERS = [
                       disabled=False,
                       disabled_reason=None,
                       availability_zone="nova"),
+         host="compute1",
          vcpus=4,
          memory_mb=10 * 1024,
          local_gb=250,
@@ -67,6 +68,7 @@ TEST_HYPERS = [
                       disabled=False,
                       disabled_reason=None,
                       availability_zone="nova"),
+         host="compute2",
          vcpus=4,
          memory_mb=10 * 1024,
          local_gb=250,
@@ -142,6 +144,8 @@ class HypervisorsTestV21(test.NoDBTestCase):
     DETAIL_HYPERS_DICTS = copy.deepcopy(TEST_HYPERS)
     del DETAIL_HYPERS_DICTS[0]['service_id']
     del DETAIL_HYPERS_DICTS[1]['service_id']
+    del DETAIL_HYPERS_DICTS[0]['host']
+    del DETAIL_HYPERS_DICTS[1]['host']
     DETAIL_HYPERS_DICTS[0].update({'state': 'up',
                            'status': 'enabled',
                            'service': dict(id=1, host='compute1',
