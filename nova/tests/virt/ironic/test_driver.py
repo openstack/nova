@@ -1065,7 +1065,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
     def test_unplug_vifs(self, mock_node, mock_update):
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = ironic_utils.get_test_node(uuid=node_uuid)
-        port = ironic_utils.get_test_port()
+        port = ironic_utils.get_test_port(extra={'vif_port_id': 'fake-vif'})
 
         mock_node.get.return_value = node
         mock_node.list_ports.return_value = [port]
@@ -1079,8 +1079,25 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         # asserts
         mock_node.get.assert_called_once_with(node_uuid)
-        mock_node.list_ports.assert_called_once_with(node_uuid)
+        mock_node.list_ports.assert_called_once_with(node_uuid, detail=True)
         mock_update.assert_called_once_with(port.uuid, expected_patch)
+
+    @mock.patch.object(FAKE_CLIENT.port, 'update')
+    @mock.patch.object(FAKE_CLIENT, 'node')
+    def test_unplug_vifs_port_not_associated(self, mock_node, mock_update):
+        node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+        node = ironic_utils.get_test_node(uuid=node_uuid)
+        port = ironic_utils.get_test_port(extra={})
+
+        mock_node.get.return_value = node
+        mock_node.list_ports.return_value = [port]
+        instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
+        self.driver.unplug_vifs(instance, utils.get_test_network_info())
+
+        mock_node.get.assert_called_once_with(node_uuid)
+        mock_node.list_ports.assert_called_once_with(node_uuid, detail=True)
+        # assert port.update() was not called
+        self.assertFalse(mock_update.called)
 
     @mock.patch.object(FAKE_CLIENT.port, 'update')
     def test_unplug_vifs_no_network_info(self, mock_update):

@@ -934,16 +934,17 @@ class IronicDriver(virt_driver.ComputeDriver):
                    'network_info': network_info_str})
         if network_info and len(network_info) > 0:
             icli = client_wrapper.IronicClientWrapper()
-            ports = icli.call("node.list_ports", node.uuid)
+            ports = icli.call("node.list_ports", node.uuid, detail=True)
 
             # not needed if no vif are defined
             for vif, pif in zip(network_info, ports):
-                # we can not attach a dict directly
-                patch = [{'op': 'remove', 'path': '/extra/vif_port_id'}]
-                try:
-                    icli.call("port.update", pif.uuid, patch)
-                except ironic.exc.BadRequest:
-                    pass
+                if 'vif_port_id' in pif.extra:
+                    # we can not attach a dict directly
+                    patch = [{'op': 'remove', 'path': '/extra/vif_port_id'}]
+                    try:
+                        icli.call("port.update", pif.uuid, patch)
+                    except ironic.exc.BadRequest:
+                        pass
 
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks.
