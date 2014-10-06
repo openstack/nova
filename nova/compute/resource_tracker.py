@@ -460,8 +460,8 @@ class ResourceTracker(object):
         else:
             LOG.debug("Hypervisor: VCPU information unavailable")
 
-        if 'pci_passthrough_devices' in resources and \
-                resources['pci_passthrough_devices']:
+        if ('pci_passthrough_devices' in resources and
+                resources['pci_passthrough_devices']):
             LOG.debug("Hypervisor: assignable PCI devices: %s" %
                 resources['pci_passthrough_devices'])
         else:
