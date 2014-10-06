@@ -484,7 +484,11 @@ class LibvirtGenericVIFDriver(object):
         pass
 
     def plug_hw_veb(self, instance, vif):
-        pass
+        if vif['vnic_type'] == network_model.VNIC_TYPE_MACVTAP:
+            linux_net.set_vf_interface_vlan(
+                vif['profile']['pci_slot'],
+                mac_addr=vif['address'],
+                vlan=vif['details'][network_model.VIF_DETAILS_VLAN])
 
     def plug_midonet(self, instance, vif):
         """Plug into MidoNet's network port
@@ -632,7 +636,12 @@ class LibvirtGenericVIFDriver(object):
         pass
 
     def unplug_hw_veb(self, instance, vif):
-        pass
+        if vif['vnic_type'] == network_model.VNIC_TYPE_MACVTAP:
+            # The ip utility doesn't accept the MAC 00:00:00:00:00:00.
+            # Therefore, keep the MAC unchanged.  Later operations on
+            # the same VF will not be affected by the existing MAC.
+            linux_net.set_vf_interface_vlan(vif['profile']['pci_slot'],
+                                            mac_addr=vif['address'])
 
     def unplug_midonet(self, instance, vif):
         """Unplug from MidoNet network port

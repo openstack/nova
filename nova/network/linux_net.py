@@ -37,6 +37,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova.openstack.common import timeutils
 from nova import paths
+from nova.pci import pci_utils
 from nova import utils
 
 LOG = logging.getLogger(__name__)
@@ -1825,3 +1826,25 @@ class NeutronLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 QuantumLinuxBridgeInterfaceDriver = NeutronLinuxBridgeInterfaceDriver
 
 iptables_manager = IptablesManager()
+
+
+def set_vf_interface_vlan(pci_addr, mac_addr, vlan=0):
+    pf_ifname = pci_utils.get_ifname_by_pci_address(pci_addr,
+                                                    pf_interface=True)
+    vf_ifname = pci_utils.get_ifname_by_pci_address(pci_addr)
+    vf_num = pci_utils.get_vf_num_by_pci_address(pci_addr)
+
+    # Set the VF's mac address and vlan
+    exit_code = [0, 2, 254]
+    port_state = 'up' if vlan > 0 else 'down'
+    utils.execute('ip', 'link', 'set', pf_ifname,
+                  'vf', vf_num,
+                  'mac', mac_addr,
+                  'vlan', vlan,
+                  run_as_root=True,
+                  check_exit_code=exit_code)
+    # Bring up/down the VF's interface
+    utils.execute('ip', 'link', 'set', vf_ifname,
+                  port_state,
+                  run_as_root=True,
+                  check_exit_code=exit_code)
