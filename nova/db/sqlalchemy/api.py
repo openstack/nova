@@ -3217,6 +3217,32 @@ def _is_quota_refresh_needed(quota_usage, max_age):
     return refresh
 
 
+def _refresh_quota_usages(quota_usage, until_refresh, in_use):
+    """Refreshes quota usage for the given resource.
+
+    :param quota_usage:   A QuotaUsage object for a given resource.
+    :param until_refresh: Count of reservations until usage is refreshed,
+                          int or None
+    :param in_use:        Actual quota usage for the resource.
+    """
+    if quota_usage.in_use != in_use:
+        LOG.debug('quota_usages out of sync, updating. '
+                  'project_id: %(project_id)s, '
+                  'user_id: %(user_id)s, '
+                  'resource: %(res)s, '
+                  'tracked usage: %(tracked_use)s, '
+                  'actual usage: %(in_use)s',
+            {'project_id': quota_usage.project_id,
+             'user_id': quota_usage.user_id,
+             'res': quota_usage.resource,
+             'tracked_use': quota_usage.in_use,
+             'in_use': in_use})
+
+    # Update the usage
+    quota_usage.in_use = in_use
+    quota_usage.until_refresh = until_refresh or None
+
+
 @require_context
 @_retry_on_deadlock
 def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
@@ -3255,41 +3281,11 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
                 updates = sync(elevated, project_id, user_id, session)
                 for res, in_use in updates.items():
                     # Make sure we have a destination for the usage!
-                    if ((res not in PER_PROJECT_QUOTAS) and
-                            (res not in user_usages)):
-                        user_usages[res] = _quota_usage_create(
-                                                         project_id,
-                                                         user_id,
-                                                         res,
-                                                         0, 0,
-                                                         until_refresh or None,
-                                                         session=session)
-                    if ((res in PER_PROJECT_QUOTAS) and
-                            (res not in user_usages)):
-                        user_usages[res] = _quota_usage_create(
-                                                         project_id,
-                                                         None,
-                                                         res,
-                                                         0, 0,
-                                                         until_refresh or None,
-                                                         session=session)
-
-                    if user_usages[res].in_use != in_use:
-                        LOG.debug('quota_usages out of sync, updating. '
-                                  'project_id: %(project_id)s, '
-                                  'user_id: %(user_id)s, '
-                                  'resource: %(res)s, '
-                                  'tracked usage: %(tracked_use)s, '
-                                  'actual usage: %(in_use)s',
-                            {'project_id': project_id,
-                             'user_id': user_id,
-                             'res': res,
-                             'tracked_use': user_usages[res].in_use,
-                             'in_use': in_use})
-
-                    # Update the usage
-                    user_usages[res].in_use = in_use
-                    user_usages[res].until_refresh = until_refresh or None
+                    _create_quota_usage_if_missing(user_usages, res,
+                                                   until_refresh, project_id,
+                                                   user_id, session)
+                    _refresh_quota_usages(user_usages[res], until_refresh,
+                                          in_use)
 
                     # Because more than one resource may be refreshed
                     # by the call to the sync routine, and we don't

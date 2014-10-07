@@ -5661,6 +5661,15 @@ class QuotaReserveNoDbTestCase(test.NoDBTestCase):
                 self.assertFalse(refresh)
             self.assertEqual(until_refresh, quota_usage.until_refresh)
 
+    def test_refresh_quota_usages(self):
+        quota_usage = mock.Mock(spec=models.QuotaUsage)
+        quota_usage.in_use = 5
+        quota_usage.until_refresh = None
+        sqlalchemy_api._refresh_quota_usages(quota_usage, until_refresh=5,
+                                             in_use=6)
+        self.assertEqual(6, quota_usage.in_use)
+        self.assertEqual(5, quota_usage.until_refresh)
+
 
 class QuotaClassTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
@@ -5717,6 +5726,11 @@ class QuotaClassTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_quota_class_update_nonexistent(self):
         self.assertRaises(exception.QuotaClassNotFound, db.quota_class_update,
                                 self.ctxt, 'class name', 'resource', 42)
+
+    def test_refresh_quota_usages(self):
+        quota_usages = mock.Mock()
+        sqlalchemy_api._refresh_quota_usages(quota_usages, until_refresh=5,
+                                             in_use=6)
 
 
 class S3ImageTestCase(test.TestCase):
