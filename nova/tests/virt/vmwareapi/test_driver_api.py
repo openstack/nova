@@ -1471,27 +1471,45 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                               None, self.destroy_disks)
             self.assertFalse(mock_destroy.called)
 
-    def test_destroy_instance_without_vm_ref(self):
+    def _destroy_instance_without_vm_ref(self, resize_exists=False,
+                                         task_state=None):
+
+        def fake_vm_ref_from_name(session, vm_name):
+            if resize_exists:
+                return 'fake-ref'
+
         self._create_instance()
         with contextlib.nested(
              mock.patch.object(vm_util, 'get_vm_ref_from_name',
-                               return_value=None),
+                               fake_vm_ref_from_name),
              mock.patch.object(self.conn._session,
-                               '_call_method')
-        ) as (mock_get, mock_call):
+                               '_call_method'),
+             mock.patch.object(self.conn._vmops,
+                               '_destroy_instance')
+        ) as (mock_get, mock_call, mock_destroy):
+            self.instance.task_state = task_state
             self.conn.destroy(self.context, self.instance,
                               self.network_info,
                               None, True)
-            mock_get.assert_called_with(self.conn._vmops._session,
-                                        self.instance['uuid'])
-            expected_args = [((self.conn._vmops._session,
-                               self.instance['uuid'] + '-orig'),),
-                             ((self.conn._vmops._session,
-                               self.instance['uuid']),)]
-            # one for VM named uuid-orig, one for VM named uuid
-            self.assertEqual(expected_args, mock_get.call_args_list)
-            self.assertEqual(2, mock_get.call_count)
+            if resize_exists:
+                if task_state == task_states.RESIZE_REVERTING:
+                    expected = 1
+                else:
+                    expected = 2
+            else:
+                expected = 1
+            self.assertEqual(expected, mock_destroy.call_count)
             self.assertFalse(mock_call.called)
+
+    def test_destroy_instance_without_vm_ref(self):
+        self._destroy_instance_without_vm_ref()
+
+    def test_destroy_instance_without_vm_ref_with_resize(self):
+        self._destroy_instance_without_vm_ref(resize_exists=True)
+
+    def test_destroy_instance_without_vm_ref_with_resize_revert(self):
+        self._destroy_instance_without_vm_ref(resize_exists=True,
+            task_state=task_states.RESIZE_REVERTING)
 
     def _rescue(self, config_drive=False):
         # validate that the power on is only called once
