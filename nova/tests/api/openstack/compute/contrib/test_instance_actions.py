@@ -77,8 +77,8 @@ class InstanceActionsPolicyTestV21(test.NoDBTestCase):
         self.controller = self.instance_actions.InstanceActionsController()
 
     def _get_http_req(self, action):
-        fake_url = '/servers/12/%s' % action
-        return fakes.HTTPRequestV3.blank(fake_url)
+        fake_url = '/123/servers/12/%s' % action
+        return fakes.HTTPRequest.blank(fake_url)
 
     def _set_policy_rules(self):
         rules = {'compute:get': common_policy.parse_rule(''),
@@ -120,10 +120,6 @@ class InstanceActionsPolicyTestV21(test.NoDBTestCase):
 class InstanceActionsPolicyTestV2(InstanceActionsPolicyTestV21):
     instance_actions = instance_actions_v2
 
-    def _get_http_req(self, action):
-        fake_url = '/123/servers/12/%s' % action
-        return fakes.HTTPRequest.blank(fake_url)
-
     def _set_policy_rules(self):
         rules = {'compute:get': common_policy.parse_rule(''),
                  'compute_extension:instance_actions':
@@ -151,8 +147,8 @@ class InstanceActionsTestV21(test.NoDBTestCase):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
 
     def _get_http_req(self, action, use_admin_context=False):
-        fake_url = '/servers/12/%s' % action
-        return fakes.HTTPRequestV3.blank(fake_url,
+        fake_url = '/123/servers/12/%s' % action
+        return fakes.HTTPRequest.blank(fake_url,
                                         use_admin_context=use_admin_context)
 
     def _set_policy_rules(self):
@@ -251,11 +247,6 @@ class InstanceActionsTestV21(test.NoDBTestCase):
 
 class InstanceActionsTestV2(InstanceActionsTestV21):
     instance_actions = instance_actions_v2
-
-    def _get_http_req(self, action, use_admin_context=False):
-        fake_url = '/123/servers/12/%s' % action
-        return fakes.HTTPRequest.blank(fake_url,
-                                        use_admin_context=use_admin_context)
 
     def _set_policy_rules(self):
         rules = {'compute:get': common_policy.parse_rule(''),

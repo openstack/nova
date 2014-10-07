@@ -62,9 +62,9 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
     flavorextraspecs = flavorextraspecs_v21
 
     def _get_request(self, url, use_admin_context=False):
-        req_url = '/flavors/' + url
-        return fakes.HTTPRequestV3.blank(req_url,
-                                         use_admin_context=use_admin_context)
+        req_url = '/v2/fake/flavors/' + url
+        return fakes.HTTPRequest.blank(req_url,
+                                       use_admin_context=use_admin_context)
 
     def setUp(self):
         super(FlavorsExtraSpecsTestV21, self).setUp()
@@ -375,11 +375,6 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
 class FlavorsExtraSpecsTestV2(FlavorsExtraSpecsTestV21):
     bad_request = webob.exc.HTTPBadRequest
     flavorextraspecs = flavorextraspecs_v2
-
-    def _get_request(self, url, use_admin_context=False):
-        req_url = '/v2/fake/flavors/' + url
-        return fakes.HTTPRequest.blank(req_url,
-                                       use_admin_context=use_admin_context)
 
 
 class FlavorsExtraSpecsXMLSerializerTest(test.TestCase):

@@ -62,10 +62,10 @@ def db_key_pair_create_duplicate(context, keypair):
 
 
 class KeypairsTestV21(test.TestCase):
-    base_url = '/v3'
+    base_url = '/v2/fake'
 
     def _setup_app(self):
-        self.app = fakes.wsgi_app_v3(init_only=('os-keypairs', 'servers'))
+        self.app = fakes.wsgi_app_v21(init_only=('os-keypairs', 'servers'))
         self.app_server = self.app
 
     def setUp(self):
@@ -327,7 +327,7 @@ class KeypairsTestV21(test.TestCase):
 class KeypairPolicyTestV21(test.TestCase):
     KeyPairController = keypairs_v21.KeypairController()
     policy_path = 'compute_extension:v3:os-keypairs'
-    base_url = '/v3'
+    base_url = '/v2/fake'
 
     def setUp(self):
         super(KeypairPolicyTestV21, self).setUp()
@@ -486,7 +486,6 @@ class KeypairsXMLSerializerTest(test.TestCase):
 
 
 class KeypairsTestV2(KeypairsTestV21):
-    base_url = '/v2/fake'
 
     def _setup_app(self):
         self.app = fakes.wsgi_app(init_only=('os-keypairs',))
@@ -496,4 +495,3 @@ class KeypairsTestV2(KeypairsTestV21):
 class KeypairPolicyTestV2(KeypairPolicyTestV21):
     KeyPairController = keypairs_v2.KeypairController()
     policy_path = 'compute_extension:keypairs'
-    base_url = '/v2/fake'

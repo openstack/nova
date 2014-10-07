@@ -53,7 +53,7 @@ def fake_get_all_flavors_sorted_list(context=None, inactive=False,
 
 
 class FlavorExtraDataTestV21(test.NoDBTestCase):
-    base_url = '/v3/flavors'
+    base_url = '/v2/fake/flavors'
 
     def setUp(self):
         super(FlavorExtraDataTestV21, self).setUp()
@@ -67,7 +67,7 @@ class FlavorExtraDataTestV21(test.NoDBTestCase):
         self._setup_app()
 
     def _setup_app(self):
-        self.app = fakes.wsgi_app_v3(init_only=('flavors'))
+        self.app = fakes.wsgi_app_v21(init_only=('flavors'))
 
     def _verify_flavor_response(self, flavor, expected):
         for key in expected:
@@ -122,7 +122,6 @@ class FlavorExtraDataTestV21(test.NoDBTestCase):
 
 
 class FlavorExtraDataTestV2(FlavorExtraDataTestV21):
-    base_url = '/v2/fake/flavors'
 
     def _setup_app(self):
         self.app = fakes.wsgi_app(init_only=('flavors',))

@@ -59,7 +59,7 @@ def fake_get_all_flavors_sorted_list(context=None, inactive=False,
 
 
 class FlavorSwapTestV21(test.NoDBTestCase):
-    base_url = '/v3/flavors'
+    base_url = '/v2/fake/flavors'
     content_type = 'application/json'
     prefix = ''
 
@@ -78,7 +78,7 @@ class FlavorSwapTestV21(test.NoDBTestCase):
     def _make_request(self, url):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app_v3(init_only=('flavors')))
+        res = req.get_response(fakes.wsgi_app_v21(init_only=('flavors')))
         return res
 
     def _get_flavor(self, body):
@@ -108,7 +108,6 @@ class FlavorSwapTestV21(test.NoDBTestCase):
 
 
 class FlavorSwapTestV2(FlavorSwapTestV21):
-    base_url = '/v2/fake/flavors'
 
     def _make_request(self, url):
         req = webob.Request.blank(url)

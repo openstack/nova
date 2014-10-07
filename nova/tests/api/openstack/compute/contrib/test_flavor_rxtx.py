@@ -61,7 +61,7 @@ def fake_get_all_flavors_sorted_list(context=None, inactive=False,
 
 class FlavorRxtxTestV21(test.NoDBTestCase):
     content_type = 'application/json'
-    _prefix = '/v3'
+    _prefix = "/v2/fake"
 
     def setUp(self):
         super(FlavorRxtxTestV21, self).setUp()
@@ -82,7 +82,7 @@ class FlavorRxtxTestV21(test.NoDBTestCase):
         return res
 
     def _get_app(self):
-        return fakes.wsgi_app_v3(init_only=('servers',
+        return fakes.wsgi_app_v21(init_only=('servers',
             'flavors', 'os-flavor-rxtx'))
 
     def _get_flavor(self, body):
@@ -112,7 +112,6 @@ class FlavorRxtxTestV21(test.NoDBTestCase):
 
 
 class FlavorRxtxTestV20(FlavorRxtxTestV21):
-    _prefix = "/v2/fake"
 
     def _get_app(self):
         return fakes.wsgi_app()

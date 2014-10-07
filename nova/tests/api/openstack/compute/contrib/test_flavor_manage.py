@@ -94,7 +94,7 @@ def fake_create(context, kwargs, projects=None):
 class FlavorManageTestV21(test.NoDBTestCase):
     controller = flavormanage_v21.FlavorManageController()
     validation_error = exception.ValidationError
-    base_url = '/v3/flavors'
+    base_url = '/v2/fake/flavors'
 
     def setUp(self):
         super(FlavorManageTestV21, self).setUp()
@@ -123,9 +123,9 @@ class FlavorManageTestV21(test.NoDBTestCase):
         self.expected_flavor = self.request_body
 
     def _setup_app(self):
-        return fakes.wsgi_app_v3(init_only=('flavor-manage', 'os-flavor-rxtx',
-                                            'os-flavor-access', 'flavors',
-                                            'os-flavor-extra-data'))
+        return fakes.wsgi_app_v21(init_only=('flavor-manage', 'os-flavor-rxtx',
+                                             'os-flavor-access', 'flavors',
+                                             'os-flavor-extra-data'))
 
     def test_delete(self):
         req = fakes.HTTPRequest.blank(self.base_url + '/1234')
@@ -366,7 +366,7 @@ class FakeRequest(object):
 
 class PrivateFlavorManageTestV21(test.TestCase):
     controller = flavormanage_v21.FlavorManageController()
-    base_url = '/v3/flavors'
+    base_url = '/v2/fake/flavors'
 
     def setUp(self):
         super(PrivateFlavorManageTestV21, self).setUp()
@@ -387,10 +387,10 @@ class PrivateFlavorManageTestV21(test.TestCase):
         }
 
     def _setup_app(self):
-        return fakes.wsgi_app_v3(init_only=('flavor-manage',
-                                            'os-flavor-access',
-                                            'os-flavor-rxtx', 'flavors',
-                                            'os-flavor-extra-data'),
+        return fakes.wsgi_app_v21(init_only=('flavor-manage',
+                                             'os-flavor-access',
+                                             'os-flavor-rxtx', 'flavors',
+                                             'os-flavor-extra-data'),
                                  fake_auth_context=self.ctxt)
 
     def _get_response(self):
@@ -427,7 +427,6 @@ class PrivateFlavorManageTestV21(test.TestCase):
 class FlavorManageTestV2(FlavorManageTestV21):
     controller = flavormanage_v2.FlavorManageController()
     validation_error = webob.exc.HTTPBadRequest
-    base_url = '/v2/fake/flavors'
 
     def setUp(self):
         super(FlavorManageTestV2, self).setUp()
@@ -444,7 +443,6 @@ class FlavorManageTestV2(FlavorManageTestV21):
 
 class PrivateFlavorManageTestV2(PrivateFlavorManageTestV21):
     controller = flavormanage_v2.FlavorManageController()
-    base_url = '/v2/fake/flavors'
 
     def setUp(self):
         super(PrivateFlavorManageTestV2, self).setUp()

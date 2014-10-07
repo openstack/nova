@@ -65,10 +65,10 @@ class FixedIpTestV21(test.NoDBTestCase):
         self.app = self._get_app()
 
     def _get_app(self):
-        return fakes.wsgi_app_v3(init_only=('servers', 'os-multinic'))
+        return fakes.wsgi_app_v21(init_only=('servers', 'os-multinic'))
 
     def _get_url(self):
-        return '/v3'
+        return '/v2/fake'
 
     def test_add_fixed_ip(self):
         global last_add_fixed_ip
@@ -197,9 +197,6 @@ class FixedIpTestV2(FixedIpTestV21):
 
     def _get_app(self):
         return fakes.wsgi_app(init_only=('servers',))
-
-    def _get_url(self):
-        return '/v2/fake'
 
     def test_remove_fixed_ip_invalid_address(self):
         # NOTE(cyeoh): This test is disabled for the V2 API because it is
