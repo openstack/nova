@@ -31,7 +31,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
     # Version 1.5: Added numa_topology field
     # Version 1.6: Added supported_instances
     # Version 1.7: Added host field
-    VERSION = '1.7'
+    # Version 1.8: Added get_by_host_and_nodename()
+    VERSION = '1.8'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -142,6 +143,25 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         db_compute = db.compute_node_get_by_service_id(context, service_id)
         return cls._from_db_object(context, cls(), db_compute)
 
+    @base.remotable_classmethod
+    def get_by_host_and_nodename(cls, context, host, nodename):
+        try:
+            db_compute = db.compute_node_get_by_host_and_nodename(
+                context, host, nodename)
+        except exception.ComputeHostNotFound:
+            # FIXME(sbauza): Some old computes can still have no host record
+            # We need to provide compatibility by using the old service_id
+            # record.
+            # We assume the compatibility as an extra penalty of one more DB
+            # call but that's necessary until all nodes are upgraded.
+            service = objects.Service.get_by_compute_host(context, host)
+            # NOTE(sbauza): Here, the old model is buggy because there can only
+            # be one compute node per service_id
+            db_compute = db.compute_node_get_by_service_id(context, service.id)
+            # We can avoid an extra call to Service object in _from_db_object
+            db_compute['host'] = service.host
+        return cls._from_db_object(context, cls(), db_compute)
+
     def _convert_stats_to_db_format(self, updates):
         stats = updates.pop('stats', None)
         if stats is not None:
@@ -206,7 +226,8 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     # Version 1.5 Add use_slave to get_by_service
     # Version 1.6 ComputeNode version 1.6
     # Version 1.7 ComputeNode version 1.7
-    VERSION = '1.7'
+    # Version 1.8 ComputeNode version 1.8 + add get_all_by_host()
+    VERSION = '1.8'
     fields = {
         'objects': fields.ListOfObjectsField('ComputeNode'),
         }
@@ -220,6 +241,7 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
         '1.5': '1.5',
         '1.6': '1.6',
         '1.7': '1.7',
+        '1.8': '1.8',
         }
 
     @base.remotable_classmethod
@@ -246,3 +268,26 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     @classmethod
     def get_by_service(cls, context, service, use_slave=False):
         return cls._get_by_service(context, service.id, use_slave=use_slave)
+
+    @base.remotable_classmethod
+    def get_all_by_host(cls, context, host, use_slave=False):
+        try:
+            db_computes = db.compute_node_get_all_by_host(context, host,
+                                                          use_slave)
+        except exception.ComputeHostNotFound:
+            # FIXME(sbauza): Some old computes can still have no host record
+            # We need to provide compatibility by using the old service_id
+            # record.
+            # We assume the compatibility as an extra penalty of one more DB
+            # call but that's necessary until all nodes are upgraded.
+            service = objects.Service.get_by_compute_host(context, host,
+                                                          use_slave)
+            db_compute = db.compute_node_get_by_service_id(context,
+                                                           service.id)
+            # We can avoid an extra call to Service object in _from_db_object
+            db_compute['host'] = service.host
+            # NOTE(sbauza): Yeah, the old model sucks, because there can only
+            # be one node per host...
+            db_computes = [db_compute]
+        return base.obj_make_list(context, cls(context), objects.ComputeNode,
+                                  db_computes)
