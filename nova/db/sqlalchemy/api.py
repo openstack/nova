@@ -1186,19 +1186,13 @@ def fixed_ip_create(context, values):
 
 @require_context
 def fixed_ip_bulk_create(context, ips):
-    session = get_session()
-    with session.begin():
-        for ip in ips:
-            model = models.FixedIp()
-            model.update(ip)
-            try:
-                # NOTE (vsergeyev): To get existing address we have to do each
-                #                   time session.flush().
-                #                   See related note at line 697.
-                session.add(model)
-                session.flush()
-            except db_exc.DBDuplicateEntry:
-                raise exception.FixedIpExists(address=ip['address'])
+    engine = get_engine()
+    with engine.begin() as conn:
+        try:
+            tab = models.FixedIp.__table__  # pylint: disable=E1101
+            conn.execute(tab.insert(), ips)
+        except db_exc.DBDuplicateEntry as e:
+            raise exception.FixedIpExists(address=e.value)
 
 
 @require_context
