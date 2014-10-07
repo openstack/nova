@@ -2624,6 +2624,14 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPConflict,
                           self._test_create_extra, {})
 
+    @mock.patch.object(compute_api.API, 'create',
+                       side_effect=exception.InstanceExists(
+                           name='instance-name'))
+    def test_create_instance_raise_instance_exists(self, mock_create):
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller.create,
+                          self.req, body=self.body)
+
 
 class ServersControllerCreateTestWithMock(test.TestCase):
     image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'

@@ -1002,6 +1002,7 @@ class Controller(wsgi.Controller):
                 exception.ImageNUMATopologyMemoryOutOfRange) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except (exception.PortInUse,
+                exception.InstanceExists,
                 exception.NoUniqueMatch) as error:
             raise exc.HTTPConflict(explanation=error.format_message())
         except exception.Invalid as error:
