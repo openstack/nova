@@ -974,7 +974,7 @@ object_data = {
     'MyOwnedObject': '1.0-0f3d6c028543d7f3715d121db5b8e298',
     'Network': '1.2-2ea21ede5e45bb80e7b7ac7106915c4e',
     'NetworkList': '1.2-aa4ad23f035b97a41732ea8b3445fc5e',
-    'NetworkRequest': '1.0-f31192f5a725017707f989585e12d7dc',
+    'NetworkRequest': '1.1-f31192f5a725017707f989585e12d7dc',
     'NetworkRequestList': '1.1-beeab521ac9450f1f5ef4eaa945a783c',
     'PciDevice': '1.2-29e35c3199f3b98ce66e5d1212612818',
     'PciDeviceList': '1.1-2896df4f5b06579e5f35adba5fcae9db',

@@ -20,7 +20,7 @@ from nova import utils
 class NetworkRequest(obj_base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added pci_request_id
-    VERSION = '1.0'
+    VERSION = '1.1'
     fields = {
         'network_id': fields.StringField(nullable=True),
         'address': fields.IPAddressField(nullable=True),
