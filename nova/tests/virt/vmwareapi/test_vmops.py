@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import contextlib
-import copy
 
 import mock
 from oslo.vmware import exceptions as vexc
@@ -367,7 +366,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
         path = mock.Mock()
         path_and_type = (path, mock.Mock(), mock.Mock())
-        r_instance = copy.deepcopy(self._instance)
         with contextlib.nested(
                 mock.patch.object(vm_util, 'get_vmdk_path_and_adapter_type',
                                   return_value=path_and_type),
@@ -380,10 +378,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                   fake_call_method),
                 mock.patch.object(vm_util, 'power_off_instance'),
                 mock.patch.object(self._vmops, '_destroy_instance'),
-                mock.patch.object(copy, 'deepcopy', return_value=r_instance)
         ) as (_get_vmdk_path_and_adapter_type, _get_vmdk_volume_disk,
               _power_on_instance, _get_vm_ref, _get_vm_ref_from_name,
-              _call_method, _power_off, _destroy_instance, _deep_copy):
+              _call_method, _power_off, _destroy_instance):
             self._vmops.unrescue(self._instance, power_on=power_on)
 
             _get_vmdk_path_and_adapter_type.assert_called_once_with(
@@ -399,9 +396,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                                 self._instance)
             _get_vm_ref_from_name.assert_called_once_with(self._session,
                                                           'fake_uuid-rescue')
-            _power_off.assert_called_once_with(self._session, r_instance,
+            _power_off.assert_called_once_with(self._session, self._instance,
                                                vm_rescue_ref)
-            _destroy_instance.assert_called_once_with(r_instance,
+            _destroy_instance.assert_called_once_with(self._instance,
                 instance_name='fake_uuid-rescue')
 
     def _test_finish_migration(self, power_on=True, resize_instance=False):

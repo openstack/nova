@@ -20,7 +20,6 @@ Class for VM tasks like spawn, snapshot, suspend, resume etc.
 """
 
 import collections
-import copy
 import os
 import time
 
@@ -914,9 +913,8 @@ class VMwareVMOps(object):
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
         self.power_off(instance)
-        r_instance = copy.deepcopy(instance)
-        instance_name = r_instance.uuid + self._rescue_suffix
-        self.spawn(context, r_instance, image_meta,
+        instance_name = instance.uuid + self._rescue_suffix
+        self.spawn(context, instance, image_meta,
                    None, None, network_info,
                    instance_name=instance_name,
                    power_on=False)
@@ -931,9 +929,9 @@ class VMwareVMOps(object):
         rescue_vm_ref = vm_util.get_vm_ref_from_name(self._session,
                                                      instance_name)
         self._volumeops.attach_disk_to_vm(
-                                rescue_vm_ref, r_instance,
+                                rescue_vm_ref, instance,
                                 adapter_type, disk_type, vmdk_path)
-        vm_util.power_on_instance(self._session, r_instance,
+        vm_util.power_on_instance(self._session, instance,
                                   vm_ref=rescue_vm_ref)
 
     def unrescue(self, instance, power_on=True):
@@ -947,8 +945,7 @@ class VMwareVMOps(object):
          disk_type) = vm_util.get_vmdk_path_and_adapter_type(
                 hardware_devices, uuid=instance.uuid)
 
-        r_instance = copy.deepcopy(instance)
-        instance_name = r_instance.uuid + self._rescue_suffix
+        instance_name = instance.uuid + self._rescue_suffix
         # detach the original instance disk from the rescue disk
         vm_rescue_ref = vm_util.get_vm_ref_from_name(self._session,
                                                      instance_name)
@@ -956,9 +953,9 @@ class VMwareVMOps(object):
                         "get_dynamic_property", vm_rescue_ref,
                         "VirtualMachine", "config.hardware.device")
         device = vm_util.get_vmdk_volume_disk(hardware_devices, path=vmdk_path)
-        vm_util.power_off_instance(self._session, r_instance, vm_rescue_ref)
-        self._volumeops.detach_disk_from_vm(vm_rescue_ref, r_instance, device)
-        self._destroy_instance(r_instance, instance_name=instance_name)
+        vm_util.power_off_instance(self._session, instance, vm_rescue_ref)
+        self._volumeops.detach_disk_from_vm(vm_rescue_ref, instance, device)
+        self._destroy_instance(instance, instance_name=instance_name)
         if power_on:
             vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
 
