@@ -98,7 +98,7 @@ class CellsTestV21(BaseCellsTest):
         return cells_ext_v21.CellsController()
 
     def _get_request(self, resource):
-        return fakes.HTTPRequestV3.blank('/' + resource)
+        return fakes.HTTPRequest.blank('/v2/fake/' + resource)
 
     def setUp(self):
         super(CellsTestV21, self).setUp()
@@ -599,9 +599,6 @@ class CellsTestV2(CellsTestV21):
 
     def _get_cell_controller(self, ext_mgr):
         return cells_ext_v2.Controller(ext_mgr)
-
-    def _get_request(self, resource):
-        return fakes.HTTPRequest.blank('/v2/fake/' + resource)
 
     def test_cell_create_name_with_dot_raises(self):
         body = {'cell': {'name': 'moo.cow',

@@ -60,7 +60,7 @@ def fake_service_get_by_compute_host(self, context, host):
 class EvacuateTestV21(test.NoDBTestCase):
 
     _methods = ('resize', 'evacuate')
-    fake_url = '/v3'
+    fake_url = '/v2/fake'
 
     def setUp(self):
         super(EvacuateTestV21, self).setUp()
@@ -72,7 +72,7 @@ class EvacuateTestV21(test.NoDBTestCase):
             self.stubs.Set(compute_api.API, _method, fake_compute_api)
 
     def _fake_wsgi_app(self, ctxt):
-        return fakes.wsgi_app_v3(fake_auth_context=ctxt)
+        return fakes.wsgi_app_v21(fake_auth_context=ctxt)
 
     def _gen_resource_with_app(self, json_load, is_admin=True, uuid=None):
         ctxt = context.get_admin_context()
@@ -236,7 +236,6 @@ class EvacuateTestV21(test.NoDBTestCase):
 
 
 class EvacuateTestV2(EvacuateTestV21):
-    fake_url = '/v2/fake'
 
     def setUp(self):
         super(EvacuateTestV2, self).setUp()

@@ -152,7 +152,7 @@ class CommonMixin(object):
 
 class AdminActionsTestV21(CommonMixin, test.NoDBTestCase):
     admin_actions = admin_actions_v21
-    fake_url = '/v3'
+    fake_url = '/v2/fake'
 
     def setUp(self):
         super(AdminActionsTestV21, self).setUp()
@@ -170,9 +170,9 @@ class AdminActionsTestV21(CommonMixin, test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute_api, 'get')
 
     def _get_app(self):
-        return fakes.wsgi_app_v3(init_only=('servers',
-                                            'os-admin-actions'),
-                                 fake_auth_context=self.context)
+        return fakes.wsgi_app_v21(init_only=('servers',
+                                             'os-admin-actions'),
+                                  fake_auth_context=self.context)
 
     def test_actions(self):
         actions = ['resetNetwork', 'injectNetworkInfo']
@@ -211,7 +211,6 @@ class AdminActionsTestV21(CommonMixin, test.NoDBTestCase):
 
 class AdminActionsTestV2(AdminActionsTestV21):
     admin_actions = admin_actions_v2
-    fake_url = '/v2/fake'
 
     def setUp(self):
         super(AdminActionsTestV2, self).setUp()
@@ -646,7 +645,7 @@ class ResetStateTestsV21(test.NoDBTestCase):
         self.context = self.request.environ['nova.context']
 
     def _get_request(self, url):
-        return fakes.HTTPRequestV3.blank(url)
+        return fakes.HTTPRequest.blank(url)
 
     def test_no_state(self):
         self.assertRaises(self.bad_request,
@@ -720,6 +719,3 @@ class ResetStateTestsV2(ResetStateTestsV21):
     admin_act = admin_actions_v2
     bad_request = webob.exc.HTTPBadRequest
     fake_url = '/fake/servers'
-
-    def _get_request(self, url):
-        return fakes.HTTPRequest.blank(url)

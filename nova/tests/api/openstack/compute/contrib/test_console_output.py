@@ -55,7 +55,7 @@ def fake_get_not_found(*args, **kwargs):
 
 class ConsoleOutputExtensionTestV21(test.NoDBTestCase):
     application_type = "application/json"
-    action_url = '/v3/servers/1/action'
+    action_url = '/v2/fake/servers/1/action'
 
     def setUp(self):
         super(ConsoleOutputExtensionTestV21, self).setUp()
@@ -65,8 +65,8 @@ class ConsoleOutputExtensionTestV21(test.NoDBTestCase):
         self.app = self._get_app()
 
     def _get_app(self):
-        return fakes.wsgi_app_v3(init_only=('servers',
-                                            'os-console-output'))
+        return fakes.wsgi_app_v21(init_only=('servers',
+                                             'os-console-output'))
 
     def _get_response(self, length_dict=None):
         length_dict = length_dict or {}
@@ -162,7 +162,6 @@ class ConsoleOutputExtensionTestV21(test.NoDBTestCase):
 
 class ConsoleOutputExtensionTestV2(ConsoleOutputExtensionTestV21):
     need_osapi_compute_extension = True
-    action_url = '/v2/fake/servers/1/action'
 
     def _get_app(self):
         self.flags(osapi_compute_extension=[
