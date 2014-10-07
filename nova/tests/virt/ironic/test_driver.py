@@ -656,9 +656,21 @@ class IronicDriverTestCase(test.NoDBTestCase):
                           self.driver._add_driver_fields,
                           node, instance, image_meta, flavor)
 
+    @mock.patch.object(FAKE_CLIENT.node, 'update')
+    def test__cleanup_deploy_good_with_flavor(self, mock_update):
+        node = ironic_utils.get_test_node(driver='fake',
+                                          instance_uuid='fake-id')
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node.uuid)
+        flavor = ironic_utils.get_test_flavor(extra_specs={})
+        self.driver._cleanup_deploy(self.ctx, node, instance, None,
+                                    flavor=flavor)
+        expected_patch = [{'path': '/instance_uuid', 'op': 'remove'}]
+        mock_update.assert_called_once_with(node.uuid, expected_patch)
+
     @mock.patch.object(objects.Flavor, 'get_by_id')
     @mock.patch.object(FAKE_CLIENT.node, 'update')
-    def test__cleanup_deploy_good(self, mock_update, mock_flavor):
+    def test__cleanup_deploy_without_flavor(self, mock_update, mock_flavor):
         mock_flavor.return_value = ironic_utils.get_test_flavor(extra_specs={})
         node = ironic_utils.get_test_node(driver='fake',
                                           instance_uuid='fake-id')
@@ -713,7 +725,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
         mock_node.get.return_value = node
         mock_node.validate.return_value = ironic_utils.get_test_validation()
-        mock_flavor.return_value = ironic_utils.get_test_flavor()
+        flavor = ironic_utils.get_test_flavor()
+        mock_flavor.return_value = flavor
         image_meta = ironic_utils.get_test_image_meta()
 
         class TestException(Exception):
@@ -727,7 +740,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_node.validate.assert_called_once_with(node_uuid)
         mock_flavor.assert_called_once_with(self.ctx,
                                             instance['instance_type_id'])
-        mock_cleanup_deploy.assert_called_with(self.ctx, node, instance, None)
+        mock_cleanup_deploy.assert_called_with(self.ctx, node, instance, None,
+                                               flavor=flavor)
 
     @mock.patch.object(FAKE_CLIENT, 'node')
     @mock.patch.object(objects.Flavor, 'get_by_id')
@@ -740,7 +754,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = ironic_utils.get_test_node(driver='fake', uuid=node_uuid)
         instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
-        mock_flavor.return_value = ironic_utils.get_test_flavor()
+        flavor = ironic_utils.get_test_flavor()
+        mock_flavor.return_value = flavor
         image_meta = ironic_utils.get_test_image_meta()
 
         mock_node.get.return_value = node
@@ -755,7 +770,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_flavor.assert_called_once_with(self.ctx,
                                             instance['instance_type_id'])
         mock_cleanup_deploy.assert_called_once_with(self.ctx, node,
-                                                    instance, None)
+                                                    instance, None,
+                                                    flavor=flavor)
 
     @mock.patch.object(FAKE_CLIENT, 'node')
     @mock.patch.object(objects.Flavor, 'get_by_id')
@@ -768,7 +784,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = ironic_utils.get_test_node(driver='fake', uuid=node_uuid)
         instance = fake_instance.fake_instance_obj(self.ctx, node=node_uuid)
-        mock_flavor.return_value = ironic_utils.get_test_flavor()
+        flavor = ironic_utils.get_test_flavor()
+        mock_flavor.return_value = flavor
         image_meta = ironic_utils.get_test_image_meta()
 
         mock_node.get.return_value = node
@@ -783,7 +800,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_flavor.assert_called_once_with(self.ctx,
                                             instance['instance_type_id'])
         mock_cleanup_deploy.assert_called_once_with(self.ctx, node,
-                                                    instance, None)
+                                                    instance, None,
+                                                    flavor=flavor)
 
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(FAKE_CLIENT, 'node')

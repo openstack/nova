@@ -303,12 +303,14 @@ class IronicDriver(virt_driver.ComputeDriver):
             LOG.error(msg)
             raise exception.InstanceDeployFailure(msg)
 
-    def _cleanup_deploy(self, context, node, instance, network_info):
+    def _cleanup_deploy(self, context, node, instance, network_info,
+                        flavor=None):
         icli = client_wrapper.IronicClientWrapper()
-        # TODO(mrda): It would be better to use instance.get_flavor() here
-        # but right now that doesn't include extra_specs which are required
-        flavor = objects.Flavor.get_by_id(context,
-                                          instance['instance_type_id'])
+        if flavor is None:
+            # TODO(mrda): It would be better to use instance.get_flavor() here
+            # but right now that doesn't include extra_specs which are required
+            flavor = objects.Flavor.get_by_id(context,
+                                              instance['instance_type_id'])
         patch = patcher.create(node).get_cleanup_patch(instance, network_info,
                                                        flavor)
 
@@ -622,7 +624,8 @@ class IronicDriver(virt_driver.ComputeDriver):
         validate_chk = icli.call("node.validate", node_uuid)
         if not validate_chk.deploy or not validate_chk.power:
             # something is wrong. undo what we have done
-            self._cleanup_deploy(context, node, instance, network_info)
+            self._cleanup_deploy(context, node, instance, network_info,
+                                 flavor=flavor)
             raise exception.ValidationError(_(
                 "Ironic node: %(id)s failed to validate."
                 " (deploy: %(deploy)s, power: %(power)s)")
@@ -640,7 +643,8 @@ class IronicDriver(virt_driver.ComputeDriver):
                               "%(instance)s on baremetal node %(node)s."),
                           {'instance': instance['uuid'],
                            'node': node_uuid})
-                self._cleanup_deploy(context, node, instance, network_info)
+                self._cleanup_deploy(context, node, instance, network_info,
+                                     flavor=flavor)
 
         # trigger the node deploy
         try:
@@ -653,7 +657,8 @@ class IronicDriver(virt_driver.ComputeDriver):
                            {'inst': instance['uuid'],
                             'reason': six.text_type(e)})
                 LOG.error(msg)
-                self._cleanup_deploy(context, node, instance, network_info)
+                self._cleanup_deploy(context, node, instance, network_info,
+                                     flavor=flavor)
 
         timer = loopingcall.FixedIntervalLoopingCall(self._wait_for_active,
                                                      icli, instance)
