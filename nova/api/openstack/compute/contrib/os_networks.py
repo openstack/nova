@@ -24,6 +24,8 @@ from nova import exception
 from nova.i18n import _
 from nova.i18n import _LI
 from nova import network
+from nova.objects import base as base_obj
+from nova.objects import fields as obj_fields
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
@@ -49,7 +51,24 @@ def network_dict(context, network, extended):
             fields += admin_fields
             if extended:
                 fields += extended_fields
-        result = dict((field, network.get(field)) for field in fields)
+        # TODO(mriedem): Remove the NovaObject type check once the
+        # neutronv2 API is returning Network objects from get/get_all.
+        is_obj = isinstance(network, base_obj.NovaObject)
+        result = {}
+        for field in fields:
+            # NOTE(mriedem): If network is an object, IPAddress fields need to
+            # be cast to a string so they look the same in the response as
+            # before the objects conversion.
+            if is_obj and isinstance(network.fields[field].AUTO_TYPE,
+                                     obj_fields.IPAddress):
+                val = network.get(field)
+                if val is not None:
+                    result[field] = str(network.get(field))
+                else:
+                    result[field] = val
+            else:
+                # It's either not an object or it's not an IPAddress field.
+                result[field] = network.get(field)
         uuid = network.get('uuid')
         if uuid:
             result['id'] = uuid
