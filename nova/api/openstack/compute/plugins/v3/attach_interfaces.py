@@ -60,7 +60,7 @@ class InterfaceAttachmentController(object):
         return self._items(req, server_id,
             entity_maker=_translate_interface_attachment_view)
 
-    @extensions.expected_errors(404)
+    @extensions.expected_errors((403, 404))
     def show(self, req, server_id, id):
         """Return data about the given interface attachment."""
         context = req.environ['nova.context']
@@ -74,8 +74,10 @@ class InterfaceAttachmentController(object):
 
         try:
             port_info = self.network_api.show_port(context, port_id)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        except exception.NotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.Forbidden as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())
 
         if port_info['port']['device_id'] != server_id:
             raise exc.HTTPNotFound()

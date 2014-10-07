@@ -70,6 +70,8 @@ class InterfaceAttachmentController(object):
             port_info = self.network_api.show_port(context, port_id)
         except exception.NotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.Forbidden as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())
 
         if port_info['port']['device_id'] != server_id:
             msg = _("Instance %(instance)s does not have a port with id"
