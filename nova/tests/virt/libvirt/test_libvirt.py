@@ -83,7 +83,7 @@ from nova.virt import netutils
 try:
     import libvirt
 except ImportError:
-    import nova.tests.virt.libvirt.fakelibvirt as libvirt
+    libvirt = fakelibvirt
 libvirt_driver.libvirt = libvirt
 
 
