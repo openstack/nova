@@ -30,8 +30,6 @@ Reference
    nova-api-metadata
    nova-api-os-compute
    nova-api
-   nova-baremetal-deploy-helper
-   nova-baremetal-manage
    nova-cert
    nova-compute
    nova-conductor
