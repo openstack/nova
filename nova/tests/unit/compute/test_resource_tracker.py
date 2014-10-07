@@ -29,6 +29,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import db
+from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
 from nova import rpc
@@ -241,10 +242,17 @@ class BaseTestCase(test.TestCase):
             "running_vms": 0,
             "cpu_info": None,
             "numa_topology": None,
-            "stats": {
-                "num_instances": "1",
-            },
+            "stats": '{"num_instances": "1"}',
             "hypervisor_hostname": "fakenode",
+            'hypervisor_version': 1,
+            'hypervisor_type': 'fake-hyp',
+            'disk_available_least': None,
+            'host_ip': None,
+            'metrics': None,
+            'created_at': None,
+            'updated_at': None,
+            'deleted_at': None,
+            'deleted': False,
         }
         if values:
             compute.update(values)
@@ -260,6 +268,13 @@ class BaseTestCase(test.TestCase):
             "binary": "nova-compute",
             "topic": "compute",
             "compute_node": compute,
+            "report_count": 0,
+            'disabled': False,
+            'disabled_reason': None,
+            'created_at': None,
+            'updated_at': None,
+            'deleted_at': None,
+            'deleted': False,
         }
         return service
 
@@ -499,6 +514,8 @@ class MissingComputeNodeTestCase(BaseTestCase):
 
         self.stubs.Set(db, 'service_get_by_compute_host',
                 self._fake_service_get_by_compute_host)
+        self.stubs.Set(db, 'compute_node_get_by_host_and_nodename',
+                self._fake_compute_node_get_by_host_and_nodename)
         self.stubs.Set(db, 'compute_node_create',
                 self._fake_create_compute_node)
         self.tracker.scheduler_client.update_resource_stats = mock.Mock()
@@ -511,6 +528,10 @@ class MissingComputeNodeTestCase(BaseTestCase):
         # return a service with no joined compute
         service = self._create_service()
         return service
+
+    def _fake_compute_node_get_by_host_and_nodename(self, ctx, host, nodename):
+        # return no compute node
+        raise exception.ComputeHostNotFound(host=host)
 
     def test_create_compute_node(self):
         self.tracker.update_available_resource(self.context)
@@ -537,6 +558,8 @@ class BaseTrackerTestCase(BaseTestCase):
 
         self.stubs.Set(db, 'service_get_by_compute_host',
                 self._fake_service_get_by_compute_host)
+        self.stubs.Set(db, 'compute_node_get_by_host_and_nodename',
+                self._fake_compute_node_get_by_host_and_nodename)
         self.stubs.Set(db, 'compute_node_update',
                 self._fake_compute_node_update)
         self.stubs.Set(db, 'compute_node_delete',
@@ -557,6 +580,10 @@ class BaseTrackerTestCase(BaseTestCase):
         self.compute = self._create_compute_node()
         self.service = self._create_service(host, compute=self.compute)
         return self.service
+
+    def _fake_compute_node_get_by_host_and_nodename(self, ctx, host, nodename):
+        self.compute = self._create_compute_node()
+        return self.compute
 
     def _fake_compute_node_update(self, ctx, compute_node_id, values,
             prune_stats=False):

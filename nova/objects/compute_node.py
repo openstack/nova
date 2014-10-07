@@ -36,7 +36,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
     # Version 1.7: Added host field
     # Version 1.8: Added get_by_host_and_nodename()
     # Version 1.9: Added pci_device_pools
-    VERSION = '1.9'
+    # Version 1.10: Added get_first_node_per_host_for_old_compat()
+    VERSION = '1.10'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -194,6 +195,16 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
                 raise exception.ComputeHostNotFound(host=host)
         return cls._from_db_object(context, cls(), db_compute)
 
+    @base.remotable_classmethod
+    def get_first_node_by_host_for_old_compat(cls, context, host,
+                                              use_slave=False):
+        computes = ComputeNodeList.get_all_by_host(context, host, use_slave)
+        # FIXME(sbauza): Some hypervisors (VMware, Ironic) can return multiple
+        # nodes per host, we should return all the nodes and modify the callers
+        # instead.
+        # Arbitrarily returning the first node.
+        return computes[0]
+
     @staticmethod
     def _convert_stats_to_db_format(updates):
         stats = updates.pop('stats', None)
@@ -271,7 +282,8 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     # Version 1.7 ComputeNode version 1.7
     # Version 1.8 ComputeNode version 1.8 + add get_all_by_host()
     # Version 1.9 ComputeNode version 1.9
-    VERSION = '1.9'
+    # Version 1.10 ComputeNode version 1.10
+    VERSION = '1.10'
     fields = {
         'objects': fields.ListOfObjectsField('ComputeNode'),
         }
@@ -287,6 +299,7 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
         '1.7': '1.7',
         '1.8': '1.8',
         '1.9': '1.9',
+        '1.10': '1.10',
         }
 
     @base.remotable_classmethod

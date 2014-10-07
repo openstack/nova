@@ -19,6 +19,7 @@ from nova import db
 from nova import exception
 from nova.i18n import _
 from nova import image
+from nova import objects
 from nova.openstack.common import log as logging
 from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils
@@ -118,8 +119,8 @@ class LiveMigrationTask(object):
                     mem_inst=mem_inst))
 
     def _get_compute_info(self, host):
-        service_ref = db.service_get_by_compute_host(self.context, host)
-        return service_ref['compute_node'][0]
+        return objects.ComputeNode.get_first_node_by_host_for_old_compat(
+            self.context, host)
 
     def _check_compatible_with_source_hypervisor(self, destination):
         source_info = self._get_compute_info(self.source)
