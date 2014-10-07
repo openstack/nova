@@ -3634,8 +3634,9 @@ class LibvirtDriver(driver.ComputeDriver):
         return id_maps
 
     def _get_cpu_numa_config_from_instance(self, context, instance):
-        # TODO(ndipanov): Remove this check once the tests are fixed, in
-        # reality all code paths should be using instance objects now.
+        # TODO(ndipanov): Remove this check once the test_virt_drivers.py
+        # is using objects for all calls to _get_running_instance, as this
+        # will confirm all code paths are using objects.
         if isinstance(instance, objects.Instance):
             instance_topology = instance.numa_topology
         else:
