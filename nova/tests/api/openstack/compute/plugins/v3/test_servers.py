@@ -340,9 +340,11 @@ class ServersControllerTest(ControllerTest):
                 "addresses": {
                     'test1': [
                         {'version': 4, 'addr': '192.168.1.100',
-                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
                         {'version': 6, 'addr': '2001:db8:0:1::1',
-                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'}
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'}
                     ]
                 },
                 "metadata": {
@@ -453,19 +455,25 @@ class ServersControllerTest(ControllerTest):
             'addresses': {
                 'private': [
                     {'version': 4, 'addr': '192.168.0.3',
-                     'type': 'fixed', 'mac_addr': 'bb:bb:bb:bb:bb:bb'},
+                     'OS-EXT-IPS:type': 'fixed',
+                     'OS-EXT-IPS-MAC:mac_addr': 'bb:bb:bb:bb:bb:bb'},
                     {'version': 4, 'addr': '192.168.0.4',
-                     'type': 'fixed', 'mac_addr': 'bb:bb:bb:bb:bb:bb'},
+                     'OS-EXT-IPS:type': 'fixed',
+                     'OS-EXT-IPS-MAC:mac_addr': 'bb:bb:bb:bb:bb:bb'},
                 ],
                 'public': [
                     {'version': 4, 'addr': '172.19.0.1',
-                     'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                     'OS-EXT-IPS:type': 'fixed',
+                     'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
                     {'version': 4, 'addr': '172.19.0.2',
-                     'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                     'OS-EXT-IPS:type': 'fixed',
+                     'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
                     {'version': 4, 'addr': '1.2.3.4',
-                     'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                     'OS-EXT-IPS:type': 'fixed',
+                     'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
                     {'version': 6, 'addr': 'b33f::fdee:ddff:fecc:bbaa',
-                     'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                     'OS-EXT-IPS:type': 'fixed',
+                     'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
                 ],
             },
         }
@@ -2810,9 +2818,11 @@ class ServersViewBuilderTest(test.TestCase):
                 "addresses": {
                     'test1': [
                         {'version': 4, 'addr': '192.168.1.100',
-                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
                         {'version': 6, 'addr': '2001:db8:0:1::1',
-                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'}
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'}
                     ]
                 },
                 "metadata": {},
@@ -2872,9 +2882,11 @@ class ServersViewBuilderTest(test.TestCase):
                 "addresses": {
                     'test1': [
                         {'version': 4, 'addr': '192.168.1.100',
-                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
                         {'version': 6, 'addr': '2001:db8:0:1::1',
-                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'}
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'}
                     ]
                 },
                 "metadata": {},
@@ -3022,9 +3034,11 @@ class ServersViewBuilderTest(test.TestCase):
                 "addresses": {
                     'test1': [
                         {'version': 4, 'addr': '192.168.1.100',
-                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
                         {'version': 6, 'addr': '2001:db8:0:1::1',
-                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'}
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'}
                     ]
                 },
                 "metadata": {},
@@ -3087,9 +3101,11 @@ class ServersViewBuilderTest(test.TestCase):
                 "addresses": {
                     'test1': [
                         {'version': 4, 'addr': '192.168.1.100',
-                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
                         {'version': 6, 'addr': '2001:db8:0:1::1',
-                         'type': 'fixed', 'mac_addr': 'aa:aa:aa:aa:aa:aa'},
+                         'OS-EXT-IPS:type': 'fixed',
+                         'OS-EXT-IPS-MAC:mac_addr': 'aa:aa:aa:aa:aa:aa'},
                     ]
                 },
                 "metadata": {"Open": "Stack"},

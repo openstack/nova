@@ -111,24 +111,20 @@ def fake_compute_get_all(*args, **kwargs):
                                             db_list, fields)
 
 
-class ExtendedIpsMacTest(test.TestCase):
+class ExtendedIpsMacTestV21(test.TestCase):
     content_type = 'application/json'
     prefix = '%s:' % extended_ips_mac.Extended_ips_mac.alias
 
     def setUp(self):
-        super(ExtendedIpsMacTest, self).setUp()
+        super(ExtendedIpsMacTestV21, self).setUp()
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Extended_ips_mac'])
 
     def _make_request(self, url):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
+        res = req.get_response(fakes.wsgi_app_v21(init_only=('servers',)))
         return res
 
     def _get_server(self, body):
@@ -166,7 +162,25 @@ class ExtendedIpsMacTest(test.TestCase):
             self.assertServerStates(server)
 
 
-class ExtendedIpsMacXmlTest(ExtendedIpsMacTest):
+class ExtendedIpsMacTestV2(ExtendedIpsMacTestV21):
+    content_type = 'application/json'
+    prefix = '%s:' % extended_ips_mac.Extended_ips_mac.alias
+
+    def setUp(self):
+        super(ExtendedIpsMacTestV2, self).setUp()
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Extended_ips_mac'])
+
+    def _make_request(self, url):
+        req = webob.Request.blank(url)
+        req.headers['Accept'] = self.content_type
+        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
+        return res
+
+
+class ExtendedIpsMacXmlTest(ExtendedIpsMacTestV2):
     content_type = 'application/xml'
     prefix = '{%s}' % extended_ips_mac.Extended_ips_mac.namespace
 
