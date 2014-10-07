@@ -89,7 +89,7 @@ class EvacuateController(wsgi.Controller):
                                       on_shared_storage, password)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'evacuate')
+                    'evacuate', id)
         except exception.ComputeServiceInUse as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 

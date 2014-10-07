@@ -55,7 +55,7 @@ class ServerDiagnosticsController(object):
             return self.compute_api.get_diagnostics(context, instance)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'get_diagnostics')
+                    'get_diagnostics', server_id)
         except NotImplementedError:
             msg = _("Unable to get diagnostics, functionality not implemented")
             raise webob.exc.HTTPNotImplemented(explanation=msg)

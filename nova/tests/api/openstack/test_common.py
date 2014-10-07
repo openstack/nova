@@ -378,10 +378,11 @@ class MiscFunctionsTest(test.TestCase):
                 instance_uuid='fake')
         try:
             common.raise_http_conflict_for_instance_invalid_state(exc,
-                    'meow')
+                    'meow', 'fake_server_id')
         except webob.exc.HTTPConflict as e:
             self.assertEqual(unicode(e),
-                "Cannot 'meow' while instance is in fake_attr fake_state")
+                "Cannot 'meow' instance fake_server_id while it is in "
+                "fake_attr fake_state")
         else:
             self.fail("webob.exc.HTTPConflict was not raised")
 

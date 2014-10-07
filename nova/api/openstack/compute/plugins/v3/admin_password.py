@@ -54,7 +54,7 @@ class AdminPasswordController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as e:
             raise common.raise_http_conflict_for_instance_invalid_state(
-                e, 'changePassword')
+                e, 'changePassword', id)
         except NotImplementedError:
             msg = _("Unable to set password on instance")
             raise exc.HTTPNotImplemented(explanation=msg)

@@ -69,7 +69,7 @@ class CreateBackupController(wsgi.Controller):
                     backup_type, rotation, extra_properties=props)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'createBackup')
+                    'createBackup', id)
 
         resp = webob.Response(status_int=202)
 

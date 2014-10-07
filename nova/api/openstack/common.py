@@ -390,7 +390,7 @@ def get_networks_for_instance(context, instance):
     return get_networks_for_instance_from_nw_info(nw_info)
 
 
-def raise_http_conflict_for_instance_invalid_state(exc, action):
+def raise_http_conflict_for_instance_invalid_state(exc, action, server_id):
     """Raises a webob.exc.HTTPConflict instance containing a message
     appropriate to return via the API based on the original
     InstanceInvalidState exception.
@@ -399,13 +399,17 @@ def raise_http_conflict_for_instance_invalid_state(exc, action):
     state = exc.kwargs.get('state')
     not_launched = exc.kwargs.get('not_launched')
     if attr and state:
-        msg = _("Cannot '%(action)s' while instance is in %(attr)s "
-                "%(state)s") % {'action': action, 'attr': attr, 'state': state}
+        msg = _("Cannot '%(action)s' instance %(server_id)s while it is in "
+                "%(attr)s %(state)s") % {'action': action, 'attr': attr,
+                                         'state': state,
+                                         'server_id': server_id}
     elif not_launched:
-        msg = _("Cannot '%s' an instance which has never been active") % action
+        msg = _("Cannot '%(action)' instance %(server_id)s which has never "
+                "been active") % {'action': action, 'server_id': server_id}
     else:
         # At least give some meaningful message
-        msg = _("Instance is in an invalid state for '%s'") % action
+        msg = _("Instance %(server_id)s is in an invalid state for "
+                "'%(action)s'") % {'action': action, 'server_id': server_id}
     raise webob.exc.HTTPConflict(explanation=msg)
 
 

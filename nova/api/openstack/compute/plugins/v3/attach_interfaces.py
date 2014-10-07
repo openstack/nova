@@ -128,7 +128,7 @@ class InterfaceAttachmentController(object):
                 explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'attach_interface')
+                    'attach_interface', server_id)
 
         return self.show(req, server_id, vif['id'])
 
@@ -153,7 +153,7 @@ class InterfaceAttachmentController(object):
             raise webob.exc.HTTPNotImplemented(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'detach_interface')
+                    'detach_interface', server_id)
 
         return webob.Response(status_int=202)
 

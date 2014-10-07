@@ -92,7 +92,8 @@ class ExtendedVolumesController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                                                              'swap_volume')
+                                                              'swap_volume',
+                                                              id)
 
         if not found:
             msg = _("The volume was either invalid or not attached to the "
@@ -156,7 +157,7 @@ class ExtendedVolumesController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(
-                state_error, 'attach_volume')
+                state_error, 'attach_volume', server_id)
         except exception.InvalidVolume as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InvalidDevicePath as e:
@@ -213,7 +214,7 @@ class ExtendedVolumesController(wsgi.Controller):
                 raise exc.HTTPConflict(explanation=e.format_message())
             except exception.InstanceInvalidState as state_error:
                 common.raise_http_conflict_for_instance_invalid_state(
-                    state_error, 'detach_volume')
+                    state_error, 'detach_volume', server_id)
         else:
             msg = _("Volume %(volume_id)s is not attached to the "
                     "instance %(server_id)s") % {'server_id': server_id,

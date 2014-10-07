@@ -50,7 +50,7 @@ class SuspendServerController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'suspend')
+                    'suspend', id)
         return webob.Response(status_int=202)
 
     @extensions.expected_errors((404, 409))
@@ -67,7 +67,7 @@ class SuspendServerController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'resume')
+                    'resume', id)
         return webob.Response(status_int=202)
 
 

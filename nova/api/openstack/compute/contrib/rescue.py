@@ -68,7 +68,7 @@ class RescueController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                                                                  'rescue')
+                                                                  'rescue', id)
         except exception.InvalidVolume as volume_error:
             raise exc.HTTPConflict(explanation=volume_error.format_message())
         except exception.InstanceNotRescuable as non_rescuable:
@@ -89,7 +89,8 @@ class RescueController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                                                                  'unrescue')
+                                                                  'unrescue',
+                                                                  id)
 
         return webob.Response(status_int=202)
 

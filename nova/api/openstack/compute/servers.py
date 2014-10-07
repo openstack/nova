@@ -1105,7 +1105,7 @@ class Controller(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'confirmResize')
+                    'confirmResize', id)
 
     @wsgi.response(202)
     @wsgi.serializers(xml=FullServerTemplate)
@@ -1126,7 +1126,7 @@ class Controller(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'revertResize')
+                    'revertResize', id)
         return webob.Response(status_int=202)
 
     @wsgi.response(202)
@@ -1159,7 +1159,7 @@ class Controller(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'reboot')
+                    'reboot', id)
         return webob.Response(status_int=202)
 
     def _resize(self, req, instance_id, flavor_id, **kwargs):
@@ -1184,7 +1184,7 @@ class Controller(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'resize')
+                    'resize', instance_id)
         except exception.ImageNotAuthorized:
             msg = _("You are not authorized to access the image "
                     "the instance was started with.")
@@ -1214,7 +1214,7 @@ class Controller(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'delete')
+                    'delete', id)
 
     def _image_ref_from_req_data(self, data):
         try:
@@ -1391,7 +1391,7 @@ class Controller(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'rebuild')
+                    'rebuild', id)
         except exception.InstanceNotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
@@ -1477,7 +1477,7 @@ class Controller(wsgi.Controller):
                                                   extra_properties=props)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                        'createImage')
+                        'createImage', id)
         except exception.Invalid as err:
             raise exc.HTTPBadRequest(explanation=err.format_message())
 

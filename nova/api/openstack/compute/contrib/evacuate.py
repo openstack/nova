@@ -89,7 +89,7 @@ class Controller(wsgi.Controller):
                                       on_shared_storage, password)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'evacuate')
+                    'evacuate', id)
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.ComputeServiceInUse as e:
