@@ -358,6 +358,8 @@ MIN_LIBVIRT_BLOCKCOMMIT_RELATIVE_VERSION = (1, 2, 7)
 MIN_LIBVIRT_DISCARD_VERSION = (1, 0, 6)
 MIN_QEMU_DISCARD_VERSION = (1, 6, 0)
 REQ_HYPERVISOR_DISCARD = "QEMU"
+# libvirt numa topology support
+MIN_LIBVIRT_NUMA_TOPOLOGY_VERSION = (1, 0, 4)
 
 
 def libvirt_error_handler(context, err):
@@ -4815,6 +4817,9 @@ class LibvirtDriver(driver.ComputeDriver):
         return jsonutils.dumps(pci_info)
 
     def _get_host_numa_topology(self):
+        if not self._has_min_version(MIN_LIBVIRT_NUMA_TOPOLOGY_VERSION):
+            return
+
         caps = self._get_host_capabilities()
         topology = caps.host.topology
 
