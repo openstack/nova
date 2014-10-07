@@ -547,15 +547,15 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
         # Call spawn(). We don't care what it does as long as it generates
         # the log message, which we check below.
-        with mock.patch.object(self._vmops, '_volumeops') as mock_volumeops:
-            mock_volumeops.attach_root_volume.side_effect = Exception
+        with mock.patch.object(self._vmops, '_volumeops') as mock_vo:
+            mock_vo.attach_root_volume.side_effect = test.TestingException
             try:
                 self._vmops.spawn(
                     self._context, self._instance, {},
                     injected_files=None, admin_password=None,
                     network_info=[], block_device_info=bdi
                 )
-            except Exception:
+            except test.TestingException:
                 pass
 
         # Check that the relevant log message was generated, and therefore
