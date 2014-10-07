@@ -119,5 +119,6 @@ class NovaProxyRequestHandlerBaseTestCase(test.TestCase):
         self.wh.socket.return_value = tsock
         self.wh.path = "ws://127.0.0.1/?token=123-456-789"
 
-        self.assertRaises(Exception, self.wh.new_websocket_client)  # noqa
+        self.assertRaises(exception.InvalidConnectionInfo,
+                          self.wh.new_websocket_client)
         check_token.assert_called_with(mock.ANY, token="123-456-789")
