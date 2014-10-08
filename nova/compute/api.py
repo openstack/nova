@@ -933,6 +933,15 @@ class API(base.Base):
             elif not legacy_bdm and bdm.get('boot_index') != 0:
                 continue
 
+            volume_id = bdm.get('volume_id')
+            snapshot_id = bdm.get('snapshot_id')
+            if snapshot_id:
+                # NOTE(alaski): A volume snapshot inherits metadata from the
+                # originating volume, but the API does not expose metadata
+                # on the snapshot itself.  So we query the volume for it below.
+                snapshot = self.volume_api.get_snapshot(context, snapshot_id)
+                volume_id = snapshot['volume_id']
+
             if bdm.get('image_id'):
                 try:
                     image_id = bdm['image_id']
@@ -940,9 +949,8 @@ class API(base.Base):
                     return image_meta
                 except Exception:
                     raise exception.InvalidBDMImage(id=image_id)
-            elif bdm.get('volume_id'):
+            elif volume_id:
                 try:
-                    volume_id = bdm['volume_id']
                     volume = self.volume_api.get(context, volume_id)
                 except exception.CinderConnectionFailed:
                     raise
