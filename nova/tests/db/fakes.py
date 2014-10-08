@@ -168,7 +168,7 @@ def stub_out_db_network_api(stubs):
         ips = filter(lambda i: i['address'] == address,
                      fixed_ips)
         if not ips:
-            raise exception.NoMoreFixedIps()
+            raise exception.NoMoreFixedIps(net='fake_net')
         ips[0]['instance'] = True
         ips[0]['instance_id'] = instance_id
 
@@ -177,7 +177,7 @@ def stub_out_db_network_api(stubs):
                                 i['network_id'] is None) and not i['instance'],
                      fixed_ips)
         if not ips:
-            raise exception.NoMoreFixedIps()
+            raise exception.NoMoreFixedIps(net=network_id)
         ips[0]['instance'] = True
         ips[0]['instance_id'] = instance_id
         return ips[0]['address']

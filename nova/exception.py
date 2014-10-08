@@ -760,7 +760,7 @@ class FixedIpInvalid(Invalid):
 
 class NoMoreFixedIps(NovaException):
     ec2_code = 'UnsupportedOperation'
-    msg_fmt = _("Zero fixed ips available.")
+    msg_fmt = _("No fixed IP addresses available for network: %(net)s")
 
 
 class NoFixedIpsDefined(NotFound):

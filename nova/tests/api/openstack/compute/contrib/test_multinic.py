@@ -119,7 +119,7 @@ class FixedIpTestV21(test.NoDBTestCase):
 
     @mock.patch.object(compute.api.API, 'add_fixed_ip')
     def test_add_fixed_ip_no_more_ips_available(self, mock_add_fixed_ip):
-        mock_add_fixed_ip.side_effect = exception.NoMoreFixedIps
+        mock_add_fixed_ip.side_effect = exception.NoMoreFixedIps(net='netid')
 
         body = dict(addFixedIp=dict(networkId='test_net'))
         req = webob.Request.blank(
