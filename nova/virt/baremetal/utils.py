@@ -21,7 +21,7 @@ import shutil
 from nova.i18n import _
 from nova.openstack.common import log as logging
 from nova.virt.disk import api as disk_api
-from nova.virt.libvirt import utils as libvirt_utils
+from nova.virt import images
 
 LOG = logging.getLogger(__name__)
 
@@ -30,8 +30,7 @@ def cache_image(context, target, image_id, user_id, project_id, clean=False):
     if clean and os.path.exists(target):
         os.unlink(target)
     if not os.path.exists(target):
-        libvirt_utils.fetch_image(context, target, image_id,
-                                  user_id, project_id)
+        images.fetch_to_raw(context, image_id, target, user_id, project_id)
 
 
 def inject_into_image(image, key, net, metadata, admin_password, files,
