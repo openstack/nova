@@ -77,7 +77,7 @@ def fake_get_no_host_availability_zone(context, host):
 class ExtendedAvailabilityZoneTestV21(test.TestCase):
     content_type = 'application/json'
     prefix = 'OS-EXT-AZ:'
-    base_url = '/v3/servers/'
+    base_url = '/v2/fake/servers/'
 
     def setUp(self):
         super(ExtendedAvailabilityZoneTestV21, self).setUp()
@@ -93,7 +93,7 @@ class ExtendedAvailabilityZoneTestV21(test.TestCase):
     def _make_request(self, url):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app_v3(init_only=None))
+        res = req.get_response(fakes.wsgi_app_v21(init_only=None))
         return res
 
     def _get_server(self, body):
@@ -156,8 +156,6 @@ class ExtendedAvailabilityZoneTestV21(test.TestCase):
 
 
 class ExtendedAvailabilityZoneTestV2(ExtendedAvailabilityZoneTestV21):
-
-    base_url = '/v2/fake/servers/'
 
     def setUp(self):
         super(ExtendedAvailabilityZoneTestV2, self).setUp()

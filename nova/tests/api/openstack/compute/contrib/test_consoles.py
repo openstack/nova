@@ -104,11 +104,11 @@ def fake_get_not_found(self, context, instance_uuid, want_objects=False,
 
 
 class ConsolesExtensionTestV21(test.NoDBTestCase):
-    url = '/v3/servers/1/action'
+    url = '/v2/fake/servers/1/action'
 
     def _setup_wsgi(self):
-        self.app = fakes.wsgi_app_v3(init_only=('servers',
-                                                'os-remote-consoles'))
+        self.app = fakes.wsgi_app_v21(init_only=('servers',
+                                                 'os-remote-consoles'))
 
     def setUp(self):
         super(ConsolesExtensionTestV21, self).setUp()
@@ -433,7 +433,6 @@ class ConsolesExtensionTestV21(test.NoDBTestCase):
 
 
 class ConsolesExtensionTestV2(ConsolesExtensionTestV21):
-    url = '/v2/fake/servers/1/action'
 
     def _setup_wsgi(self):
         self.flags(

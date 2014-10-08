@@ -87,7 +87,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
         body = self._get_servers_body(no_image)
         body['server'].update(params)
 
-        req = fakes.HTTPRequestV3.blank('/servers')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers')
         req.method = 'POST'
         req.headers['content-type'] = 'application/json'
 

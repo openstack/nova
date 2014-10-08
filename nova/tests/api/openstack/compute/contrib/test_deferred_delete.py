@@ -77,7 +77,7 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
                 side_effect=exception.InstanceIsLocked(
                     instance_uuid='fake_uuid'))
     def test_force_delete_instance_locked(self, mock_force_delete, mock_get):
-        req = fakes.HTTPRequestV3.blank('/servers/fake_uuid/action')
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/fake_uuid/action')
         ex = self.assertRaises(webob.exc.HTTPConflict,
                             self.extension._force_delete,
                             req, 'fake_uuid', '')

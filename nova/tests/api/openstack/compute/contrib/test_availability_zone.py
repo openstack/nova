@@ -99,7 +99,7 @@ CONF = cfg.CONF
 
 class AvailabilityZoneApiTestV21(test.NoDBTestCase):
     availability_zone = az_v21
-    url = '/v3/os-availability-zone'
+    url = '/v2/fake/os-availability-zone'
 
     def setUp(self):
         super(AvailabilityZoneApiTestV21, self).setUp()
@@ -110,7 +110,8 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
         self.stubs.Set(servicegroup.API, 'service_is_up', fake_service_is_up)
 
     def _get_wsgi_instance(self):
-        return fakes.wsgi_app_v3(init_only=('os-availability-zone', 'servers'))
+        return fakes.wsgi_app_v21(init_only=('os-availability-zone',
+                                             'servers'))
 
     def test_filtered_availability_zones(self):
         az = self.availability_zone.AvailabilityZoneController()
@@ -254,14 +255,13 @@ class AvailabilityZoneApiTestV21(test.NoDBTestCase):
 
 class AvailabilityZoneApiTestV2(AvailabilityZoneApiTestV21):
     availability_zone = az_v2
-    url = '/v2/fake/os-availability-zone'
 
     def _get_wsgi_instance(self):
         return fakes.wsgi_app()
 
 
 class ServersControllerCreateTestV21(test.TestCase):
-    base_url = '/v3/'
+    base_url = '/v2/fake/'
 
     def setUp(self):
         """Shared implementation for tests below that create instance."""
@@ -424,7 +424,6 @@ class ServersControllerCreateTestV21(test.TestCase):
 
 
 class ServersControllerCreateTestV2(ServersControllerCreateTestV21):
-    base_url = '/v2/fake/'
 
     def _set_up_controller(self):
         ext_mgr = extensions.ExtensionManager()
