@@ -1857,7 +1857,7 @@ class ServersControllerCreateTest(test.TestCase):
                 'id': self.instance_cache_num,
                 'display_name': inst['display_name'] or 'test',
                 'uuid': FAKE_UUID,
-                'instance_type': dict(inst_type),
+                'instance_type': inst_type,
                 'image_ref': inst.get('image_ref', def_image_ref),
                 'user_id': 'fake',
                 'project_id': 'fake',
