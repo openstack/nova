@@ -322,7 +322,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def test_configuration_linked_clone(self):
         self.flags(use_linked_clone=None, group='vmware')
-        self.assertRaises(error_util.UseLinkedCloneConfigurationFault,
+        self.assertRaises(vexc.UseLinkedCloneConfigurationFault,
                           self.conn._validate_configuration)
 
     @mock.patch.object(pbm, 'get_profile_id_by_name')

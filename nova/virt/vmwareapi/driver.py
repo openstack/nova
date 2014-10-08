@@ -23,6 +23,7 @@ import re
 
 from oslo.config import cfg
 from oslo.vmware import api
+from oslo.vmware import exceptions as vexc
 from oslo.vmware import pbm
 from oslo.vmware import vim
 from oslo.vmware import vim_util
@@ -204,7 +205,7 @@ class VMwareVCDriver(driver.ComputeDriver):
 
     def _validate_configuration(self):
         if CONF.vmware.use_linked_clone is None:
-            raise error_util.UseLinkedCloneConfigurationFault()
+            raise vexc.UseLinkedCloneConfigurationFault()
 
         if CONF.vmware.pbm_enabled:
             if not CONF.vmware.pbm_default_policy:
