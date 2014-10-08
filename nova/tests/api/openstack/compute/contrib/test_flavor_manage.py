@@ -31,15 +31,8 @@ from nova import test
 from nova.tests.api.openstack import fakes
 
 
-def fake_get_flavor_by_flavor_id(flavorid, ctxt=None, read_deleted='yes'):
-    if flavorid == 'failtest':
-        raise exception.FlavorNotFound(flavor_id=flavorid)
-    elif not str(flavorid) == '1234':
-        raise Exception("This test expects flavorid 1234, not %s" % flavorid)
-    if read_deleted != 'no':
-        raise test.TestingException("Should not be reading deleted")
-
-    return {
+def fake_db_flavor(**updates):
+    db_flavor = {
         'root_gb': 1,
         'ephemeral_gb': 1,
         'name': u'frob',
@@ -48,7 +41,7 @@ def fake_get_flavor_by_flavor_id(flavorid, ctxt=None, read_deleted='yes'):
         'updated_at': None,
         'memory_mb': 256,
         'vcpus': 1,
-        'flavorid': flavorid,
+        'flavorid': 1,
         'swap': 0,
         'rxtx_factor': 1.0,
         'extra_specs': {},
@@ -58,18 +51,33 @@ def fake_get_flavor_by_flavor_id(flavorid, ctxt=None, read_deleted='yes'):
         'is_public': True,
         'disabled': False,
     }
+    if updates:
+        db_flavor.update(updates)
+    return db_flavor
+
+
+def fake_get_flavor_by_flavor_id(flavorid, ctxt=None, read_deleted='yes'):
+    if flavorid == 'failtest':
+        raise exception.FlavorNotFound(flavor_id=flavorid)
+    elif not str(flavorid) == '1234':
+        raise Exception("This test expects flavorid 1234, not %s" % flavorid)
+    if read_deleted != 'no':
+        raise test.TestingException("Should not be reading deleted")
+    return fake_db_flavor(flavorid=flavorid)
 
 
 def fake_destroy(flavorname):
     pass
 
 
-def fake_create(context, kwargs):
+def fake_create(context, kwargs, projects=None):
+    newflavor = fake_db_flavor()
+
     flavorid = kwargs.get('flavorid')
     if flavorid is None:
         flavorid = 1234
 
-    newflavor = {'flavorid': flavorid}
+    newflavor['flavorid'] = flavorid
     newflavor["name"] = kwargs.get('name')
     newflavor["memory_mb"] = int(kwargs.get('memory_mb'))
     newflavor["vcpus"] = int(kwargs.get('vcpus'))
