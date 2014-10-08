@@ -167,7 +167,9 @@ interval_opts = [
     cfg.IntOpt('instance_delete_interval',
                default=300,
                help=('Interval in seconds for retrying failed instance file '
-                     'deletes')),
+                     'deletes. Set to -1 to disable. '
+                     'Setting this to 0 will disable, but this will change in '
+                     'the K release to mean "run at the default rate".')),
     cfg.IntOpt('block_device_allocate_retries_interval',
                default=3,
                help='Waiting time interval (seconds) between block'
@@ -6181,6 +6183,7 @@ class ComputeManager(manager.Manager):
 
         self.driver.manage_image_cache(context, filtered_instances)
 
+    @compute_utils.periodic_task_spacing_warn("instance_delete_interval")
     @periodic_task.periodic_task(spacing=CONF.instance_delete_interval)
     def _run_pending_deletes(self, context):
         """Retry any pending instance file deletes."""
