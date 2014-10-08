@@ -104,7 +104,7 @@ class IronicHostManager(host_manager.HostManager):
     def host_state_cls(self, host, node, **kwargs):
         """Factory function/property to create a new HostState."""
         compute = kwargs.get('compute')
-        if compute and compute.get('cpu_info') == 'baremetal cpu':
+        if compute and compute.get('hypervisor_type') == 'ironic':
             return IronicNodeState(host, node, **kwargs)
         else:
             return host_manager.HostState(host, node, **kwargs)
