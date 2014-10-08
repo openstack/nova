@@ -16,6 +16,8 @@
 
 """Stubouts, mocks and fixtures for the test suite."""
 
+import datetime
+
 from nova import db
 from nova import exception
 
@@ -333,8 +335,32 @@ def stub_out_db_network_api(stubs):
 def stub_out_db_instance_api(stubs, injected=True):
     """Stubs out the db API for creating Instances."""
 
+    def _create_instance_type(**updates):
+        instance_type = {'id': 2,
+                         'name': 'm1.tiny',
+                         'memory_mb': 512,
+                         'vcpus': 1,
+                         'vcpu_weight': None,
+                         'root_gb': 0,
+                         'ephemeral_gb': 10,
+                         'flavorid': 1,
+                         'rxtx_factor': 1.0,
+                         'swap': 0,
+                         'deleted_at': None,
+                         'created_at': datetime.datetime(2014, 8, 8, 0, 0, 0),
+                         'updated_at': None,
+                         'deleted': False,
+                         'disabled': False,
+                         'is_public': True,
+                         'extra_specs': {},
+                        }
+        if updates:
+            instance_type.update(updates)
+        return instance_type
+
     INSTANCE_TYPES = {
-        'm1.tiny': dict(id=2,
+        'm1.tiny': _create_instance_type(
+                        id=2,
                         name='m1.tiny',
                         memory_mb=512,
                         vcpus=1,
@@ -344,28 +370,30 @@ def stub_out_db_instance_api(stubs, injected=True):
                         flavorid=1,
                         rxtx_factor=1.0,
                         swap=0),
-        'm1.small': dict(id=5,
-                         name='m1.small',
-                         memory_mb=2048,
-                         vcpus=1,
+        'm1.small': _create_instance_type(
+                        id=5,
+                        name='m1.small',
+                        memory_mb=2048,
+                        vcpus=1,
+                        vcpu_weight=None,
+                        root_gb=20,
+                        ephemeral_gb=0,
+                        flavorid=2,
+                        rxtx_factor=1.0,
+                        swap=1024),
+        'm1.medium': _create_instance_type(
+                        id=1,
+                         name='m1.medium',
+                         memory_mb=4096,
+                         vcpus=2,
                          vcpu_weight=None,
-                         root_gb=20,
-                         ephemeral_gb=0,
-                         flavorid=2,
+                         root_gb=40,
+                         ephemeral_gb=40,
+                         flavorid=3,
                          rxtx_factor=1.0,
-                         swap=1024),
-        'm1.medium':
-            dict(id=1,
-                 name='m1.medium',
-                 memory_mb=4096,
-                 vcpus=2,
-                 vcpu_weight=None,
-                 root_gb=40,
-                 ephemeral_gb=40,
-                 flavorid=3,
-                 rxtx_factor=1.0,
-                 swap=0),
-        'm1.large': dict(id=3,
+                         swap=0),
+        'm1.large': _create_instance_type(
+                        id=3,
                          name='m1.large',
                          memory_mb=8192,
                          vcpus=4,
@@ -375,17 +403,17 @@ def stub_out_db_instance_api(stubs, injected=True):
                          flavorid=4,
                          rxtx_factor=1.0,
                          swap=0),
-        'm1.xlarge':
-            dict(id=4,
-                 name='m1.xlarge',
-                 memory_mb=16384,
-                 vcpus=8,
-                 vcpu_weight=None,
-                 root_gb=160,
-                 ephemeral_gb=160,
-                 flavorid=5,
-                 rxtx_factor=1.0,
-                 swap=0)}
+        'm1.xlarge': _create_instance_type(
+                         id=4,
+                         name='m1.xlarge',
+                         memory_mb=16384,
+                         vcpus=8,
+                         vcpu_weight=None,
+                         root_gb=160,
+                         ephemeral_gb=160,
+                         flavorid=5,
+                         rxtx_factor=1.0,
+                         swap=0)}
 
     fixed_ip_fields = {'address': '10.0.0.3',
                        'address_v6': 'fe80::a00:3',
