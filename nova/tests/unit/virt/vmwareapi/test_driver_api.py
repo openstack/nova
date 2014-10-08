@@ -28,7 +28,6 @@ from eventlet import greenthread
 import mock
 from mox3 import mox
 from oslo.config import cfg
-from oslo.serialization import jsonutils
 from oslo.utils import timeutils
 from oslo.utils import units
 from oslo.vmware import exceptions as vexc
@@ -2192,10 +2191,6 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
 
     def test_get_available_resource(self):
         stats = self.conn.get_available_resource(self.node_name)
-        cpu_info = {"model": ["Intel(R) Xeon(R)", "Intel(R) Xeon(R)"],
-                    "vendor": ["Intel", "Intel"],
-                    "topology": {"cores": 16,
-                                 "threads": 32}}
         self.assertEqual(stats['vcpus'], 32)
         self.assertEqual(stats['local_gb'], 1024)
         self.assertEqual(stats['local_gb_used'], 1024 - 500)
@@ -2204,7 +2199,7 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self.assertEqual(stats['hypervisor_type'], 'VMware vCenter Server')
         self.assertEqual(stats['hypervisor_version'], 5001000)
         self.assertEqual(stats['hypervisor_hostname'], self.node_name)
-        self.assertEqual(stats['cpu_info'], jsonutils.dumps(cpu_info))
+        self.assertIsNone(stats['cpu_info'])
         self.assertEqual(stats['supported_instances'],
                 '[["i686", "vmware", "hvm"], ["x86_64", "vmware", "hvm"]]')
 

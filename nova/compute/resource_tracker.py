@@ -322,6 +322,13 @@ class ResourceTracker(object):
             return
         resources['host_ip'] = CONF.my_ip
 
+        # We want the 'cpu_info' to be None from the POV of the
+        # virt driver, but the DB requires it to be non-null so
+        # just force it to empty string
+        if ("cpu_info" not in resources or
+            resources["cpu_info"] is None):
+            resources["cpu_info"] = ''
+
         # TODO(berrange): remove this once all virt drivers are updated
         # to report topology
         if "numa_topology" not in resources:
