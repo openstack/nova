@@ -151,12 +151,17 @@ class ConductorAPI(object):
     * Remove instance_get_by_uuid()
     * Remove agent_build_get_by_triple()
 
+    ... Juno supports message version 2.0.  So, any changes to
+    existing methods in 2.x after that point should be done such
+    that they can handle the version_cap being set to 2.0.
+
     """
 
     VERSION_ALIASES = {
         'grizzly': '1.48',
         'havana': '1.58',
         'icehouse': '2.0',
+        'juno': '2.0',
     }
 
     def __init__(self):
