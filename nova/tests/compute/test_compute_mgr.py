@@ -1092,10 +1092,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                   'status': 'available',
                                   'size': 2}
 
-        def fake_vol_api_begin_detaching(context, volume_id):
-            self.assertTrue(uuidutils.is_uuid_like(volume_id))
-            volumes[volume_id]['status'] = 'detaching'
-
         def fake_vol_api_roll_detaching(context, volume_id):
             self.assertTrue(uuidutils.is_uuid_like(volume_id))
             if volumes[volume_id]['status'] == 'detaching':
@@ -1114,30 +1110,16 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.assertTrue(uuidutils.is_uuid_like(volume_id))
             return volumes[volume_id]
 
-        def fake_vol_attach(context, volume_id, instance_uuid, connector):
-            self.assertTrue(uuidutils.is_uuid_like(volume_id))
-            self.assertIn(volumes[volume_id]['status'],
-                          ['available', 'attaching'])
-            volumes[volume_id]['status'] = 'in-use'
-
-        def fake_vol_api_reserve(context, volume_id):
-            self.assertTrue(uuidutils.is_uuid_like(volume_id))
-            self.assertEqual(volumes[volume_id]['status'], 'available')
-            volumes[volume_id]['status'] = 'attaching'
-
         def fake_vol_unreserve(context, volume_id):
             self.assertTrue(uuidutils.is_uuid_like(volume_id))
             if volumes[volume_id]['status'] == 'attaching':
                 volumes[volume_id]['status'] = 'available'
 
-        def fake_vol_detach(context, volume_id):
-            self.assertTrue(uuidutils.is_uuid_like(volume_id))
-            volumes[volume_id]['status'] = 'available'
-
         def fake_vol_migrate_volume_completion(context, old_volume_id,
                                                new_volume_id, error=False):
             self.assertTrue(uuidutils.is_uuid_like(old_volume_id))
-            self.assertTrue(uuidutils.is_uuid_like(old_volume_id))
+            self.assertTrue(uuidutils.is_uuid_like(new_volume_id))
+            volumes[old_volume_id]['status'] = 'in-use'
             return {'save_volume_id': new_volume_id}
 
         def fake_func_exc(*args, **kwargs):
@@ -1147,21 +1129,15 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                              instance, mountpoint, resize_to):
             self.assertEqual(resize_to, 2)
 
-        self.stubs.Set(self.compute.volume_api, 'begin_detaching',
-                       fake_vol_api_begin_detaching)
         self.stubs.Set(self.compute.volume_api, 'roll_detaching',
                        fake_vol_api_roll_detaching)
         self.stubs.Set(self.compute.volume_api, 'get', fake_vol_get)
         self.stubs.Set(self.compute.volume_api, 'initialize_connection',
                        fake_vol_api_func)
-        self.stubs.Set(self.compute.volume_api, 'attach', fake_vol_attach)
-        self.stubs.Set(self.compute.volume_api, 'reserve_volume',
-                       fake_vol_api_reserve)
         self.stubs.Set(self.compute.volume_api, 'unreserve_volume',
                        fake_vol_unreserve)
         self.stubs.Set(self.compute.volume_api, 'terminate_connection',
                        fake_vol_api_func)
-        self.stubs.Set(self.compute.volume_api, 'detach', fake_vol_detach)
         self.stubs.Set(db, 'block_device_mapping_get_by_volume_id',
                        lambda x, y, z: fake_bdm)
         self.stubs.Set(self.compute.driver, 'get_volume_connector',
@@ -1181,8 +1157,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.compute.swap_volume(self.context, old_volume_id, new_volume_id,
                 fake_instance.fake_instance_obj(
                     self.context, **{'uuid': 'fake'}))
-        self.assertEqual(volumes[old_volume_id]['status'], 'available')
-        self.assertEqual(volumes[new_volume_id]['status'], 'in-use')
+        self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
 
         # Error paths
         volumes[old_volume_id]['status'] = 'detaching'
