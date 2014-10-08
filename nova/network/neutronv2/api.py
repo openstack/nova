@@ -583,7 +583,12 @@ class API(base_api.NetworkAPI):
 
     def show_port(self, context, port_id):
         """Return the port for the client given the port id."""
-        return neutronv2.get_client(context).show_port(port_id)
+        try:
+            return neutronv2.get_client(context).show_port(port_id)
+        except neutron_client_exc.PortNotFoundClient:
+            raise exception.PortNotFound(port_id=port_id)
+        except neutron_client_exc.Unauthorized:
+            raise exception.Forbidden()
 
     def get_instance_nw_info(self, context, instance, networks=None,
                              port_ids=None, use_slave=False):
