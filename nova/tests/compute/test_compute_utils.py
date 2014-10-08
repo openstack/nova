@@ -48,6 +48,7 @@ from nova.tests import fake_notifier
 from nova.tests import fake_server_actions
 import nova.tests.image.fake
 from nova.tests import matchers
+from nova import utils
 from nova.virt import driver
 
 CONF = cfg.CONF
@@ -687,6 +688,29 @@ class ComputeGetImageMetadataTestCase(test.TestCase):
 
         self.image['properties'] = 'DONTCARE'
         self.assertThat(self.image, matchers.DictMatches(image_meta))
+
+    def test_get_image_meta_with_image_id_none(self):
+        self.image['properties'] = {'fake_property': 'fake_value'}
+
+        with mock.patch.object(flavors,
+                               "extract_flavor") as mock_extract_flavor:
+            with mock.patch.object(utils, "get_system_metadata_from_image"
+                                   ) as mock_get_sys_metadata:
+                image_meta = compute_utils.get_image_metadata(
+                    self.ctx, self.mock_image_api, None, self.instance_obj)
+
+                self.assertEqual(0, self.mock_image_api.get.call_count)
+                self.assertEqual(0, mock_extract_flavor.call_count)
+                self.assertEqual(0, mock_get_sys_metadata.call_count)
+                self.assertNotIn('fake_property', image_meta['properties'])
+
+        # Checking mock_image_api_get is called with 0 image_id
+        # as 0 is a valid image ID
+        image_meta = compute_utils.get_image_metadata(self.ctx,
+                                                      self.mock_image_api,
+                                                      0, self.instance_obj)
+        self.assertEqual(1, self.mock_image_api.get.call_count)
+        self.assertIn('fake_property', image_meta['properties'])
 
     def _test_get_image_meta_exception(self, error):
         self.mock_image_api.get.side_effect = error

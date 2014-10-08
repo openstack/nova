@@ -196,19 +196,22 @@ def _get_unused_letter(used_letters):
 
 
 def get_image_metadata(context, image_api, image_id_or_uri, instance):
-    # If the base image is still available, get its metadata
-    try:
-        image = image_api.get(context, image_id_or_uri)
-    except (exception.ImageNotAuthorized,
-            exception.ImageNotFound,
-            exception.Invalid) as e:
-        LOG.warning(_LW("Can't access image %(image_id)s: %(error)s"),
-                    {"image_id": image_id_or_uri, "error": e},
-                    instance=instance)
-        image_system_meta = {}
-    else:
-        flavor = flavors.extract_flavor(instance)
-        image_system_meta = utils.get_system_metadata_from_image(image, flavor)
+    image_system_meta = {}
+    # In case of boot from volume, image_id_or_uri may be None
+    if image_id_or_uri is not None:
+        # If the base image is still available, get its metadata
+        try:
+            image = image_api.get(context, image_id_or_uri)
+        except (exception.ImageNotAuthorized,
+                exception.ImageNotFound,
+                exception.Invalid) as e:
+            LOG.warning(_LW("Can't access image %(image_id)s: %(error)s"),
+                        {"image_id": image_id_or_uri, "error": e},
+                        instance=instance)
+        else:
+            flavor = flavors.extract_flavor(instance)
+            image_system_meta = utils.get_system_metadata_from_image(image,
+                                                                     flavor)
 
     # Get the system metadata from the instance
     system_meta = utils.instance_sys_meta(instance)
