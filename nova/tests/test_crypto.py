@@ -136,12 +136,12 @@ class RevokeCertsTest(test.TestCase):
 
     @mock.patch.object(utils, 'execute',
                        side_effect=processutils.ProcessExecutionError)
-    @mock.patch.object(os, 'chdir', return_value=True)
+    @mock.patch.object(os, 'chdir', return_value=None)
     def test_revoke_cert_process_execution_error(self, *args, **kargs):
         self.assertRaises(exception.RevokeCertFailure, crypto.revoke_cert,
                           2, 'test_file')
 
-    @mock.patch.object(os, 'chdir', return_value=False)
+    @mock.patch.object(os, 'chdir', mock.Mock(side_effect=OSError))
     def test_revoke_cert_project_not_found_chdir_fails(self, *args, **kargs):
         self.assertRaises(exception.ProjectNotFound, crypto.revoke_cert,
                           2, 'test_file')
