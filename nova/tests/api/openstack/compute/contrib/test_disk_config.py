@@ -16,7 +16,9 @@
 import datetime
 
 from nova.api.openstack import compute
+from nova.compute import api as compute_api
 from nova import db
+from nova import objects
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -79,6 +81,14 @@ class DiskConfigTestCase(test.TestCase):
         self.stubs.Set(db, 'instance_get_all', fake_instance_get_all)
         self.stubs.Set(db, 'instance_get_all_by_filters',
                        fake_instance_get_all)
+
+        self.stubs.Set(objects.Instance, 'save',
+                       lambda *args, **kwargs: None)
+
+        def fake_rebuild(*args, **kwargs):
+            pass
+
+        self.stubs.Set(compute_api.API, 'rebuild', fake_rebuild)
 
         def fake_instance_create(context, inst_, session=None):
             inst = fake_instance.fake_db_instance(**{
@@ -304,6 +314,23 @@ class DiskConfigTestCase(test.TestCase):
         server_dict = jsonutils.loads(res.body)['server']
         self.assertDiskConfig(server_dict, 'MANUAL')
 
+    def _test_update_server_disk_config(self, uuid, disk_config):
+        req = fakes.HTTPRequest.blank(
+            '/fake/servers/%s' % uuid)
+        req.method = 'PUT'
+        req.content_type = 'application/json'
+        body = {'server': {API_DISK_CONFIG: disk_config}}
+        req.body = jsonutils.dumps(body)
+        res = req.get_response(self.app)
+        server_dict = jsonutils.loads(res.body)['server']
+        self.assertDiskConfig(server_dict, disk_config)
+
+    def test_update_server_override_auto(self):
+        self._test_update_server_disk_config(AUTO_INSTANCE_UUID, 'AUTO')
+
+    def test_update_server_override_manual(self):
+        self._test_update_server_disk_config(MANUAL_INSTANCE_UUID, 'MANUAL')
+
     def test_update_server_invalid_disk_config(self):
         # Return BadRequest if user passes an invalid diskConfig value.
         req = fakes.HTTPRequest.blank(
@@ -318,3 +345,81 @@ class DiskConfigTestCase(test.TestCase):
                         ' \'MANUAL\' or \'AUTO\'.", "code": 400}}' %
                         API_DISK_CONFIG)
         self.assertEqual(res.body, expected_msg)
+
+    def _test_rebuild_server_disk_config(self, uuid, disk_config):
+        req = fakes.HTTPRequest.blank(
+            '/fake/servers/%s/action' % uuid)
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        body = {"rebuild": {
+                  'imageRef': 'cedef40a-ed67-4d10-800e-17455edce175',
+                  API_DISK_CONFIG: disk_config
+               }}
+        req.body = jsonutils.dumps(body)
+        res = req.get_response(self.app)
+        server_dict = jsonutils.loads(res.body)['server']
+        self.assertDiskConfig(server_dict, disk_config)
+
+    def test_rebuild_server_override_auto(self):
+        self._test_rebuild_server_disk_config(AUTO_INSTANCE_UUID, 'AUTO')
+
+    def test_rebuild_server_override_manual(self):
+        self._test_rebuild_server_disk_config(MANUAL_INSTANCE_UUID, 'MANUAL')
+
+    def test_create_server_with_auto_disk_config(self):
+        req = fakes.HTTPRequest.blank('/fake/servers')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        body = {'server': {
+                  'name': 'server_test',
+                  'imageRef': 'cedef40a-ed67-4d10-800e-17455edce175',
+                  'flavorRef': '1',
+                  API_DISK_CONFIG: 'AUTO'
+               }}
+
+        def create(*args, **kwargs):
+            self.assertIn('auto_disk_config', kwargs)
+            self.assertEqual(True, kwargs['auto_disk_config'])
+
+        self.stubs.Set(compute_api.API, 'create', create)
+
+        req.body = jsonutils.dumps(body)
+        req.get_response(self.app)
+
+    def test_rebuild_server_with_auto_disk_config(self):
+        req = fakes.HTTPRequest.blank(
+            '/fake/servers/%s/action' % AUTO_INSTANCE_UUID)
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        body = {"rebuild": {
+                  'imageRef': 'cedef40a-ed67-4d10-800e-17455edce175',
+                  API_DISK_CONFIG: 'AUTO'
+               }}
+
+        def rebuild(*args, **kwargs):
+            self.assertIn('auto_disk_config', kwargs)
+            self.assertEqual(True, kwargs['auto_disk_config'])
+
+        self.stubs.Set(compute_api.API, 'rebuild', rebuild)
+
+        req.body = jsonutils.dumps(body)
+        req.get_response(self.app)
+
+    def test_resize_server_with_auto_disk_config(self):
+        req = fakes.HTTPRequest.blank(
+            '/fake/servers/%s/action' % AUTO_INSTANCE_UUID)
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        body = {"resize": {
+                    "flavorRef": "3",
+                    API_DISK_CONFIG: 'AUTO'
+               }}
+
+        def resize(*args, **kwargs):
+            self.assertIn('auto_disk_config', kwargs)
+            self.assertEqual(True, kwargs['auto_disk_config'])
+
+        self.stubs.Set(compute_api.API, 'resize', resize)
+
+        req.body = jsonutils.dumps(body)
+        req.get_response(self.app)
