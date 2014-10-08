@@ -29,6 +29,8 @@ import string
 import struct
 
 from oslo.config import cfg
+from oslo.utils import excutils
+from oslo.utils import timeutils
 from pyasn1.codec.der import encoder as der_encoder
 from pyasn1.type import univ
 
@@ -36,11 +38,9 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
-from nova.openstack.common import timeutils
 from nova import paths
 from nova import utils
 

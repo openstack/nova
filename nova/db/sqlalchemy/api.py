@@ -30,6 +30,8 @@ from oslo.config import cfg
 from oslo.db import exception as db_exc
 from oslo.db.sqlalchemy import session as db_session
 from oslo.db.sqlalchemy import utils as sqlalchemyutils
+from oslo.utils import excutils
+from oslo.utils import timeutils
 import six
 from sqlalchemy import and_
 from sqlalchemy import Boolean
@@ -58,9 +60,7 @@ import nova.context
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import quota
 

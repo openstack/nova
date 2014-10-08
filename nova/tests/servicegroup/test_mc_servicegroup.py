@@ -16,10 +16,10 @@
 #    under the License.
 
 import fixtures
+from oslo.utils import timeutils
 
 from nova import context
 from nova import db
-from nova.openstack.common import timeutils
 from nova import service
 from nova import servicegroup
 from nova import test

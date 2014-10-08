@@ -21,6 +21,8 @@ import time
 
 from oslo.config import cfg
 from oslo import messaging as oslo_messaging
+from oslo.utils import importutils
+from oslo.utils import timeutils
 
 from nova.cells import messaging
 from nova.cells import state as cells_state
@@ -31,10 +33,8 @@ from nova.i18n import _
 from nova import manager
 from nova import objects
 from nova.objects import base as base_obj
-from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task
-from nova.openstack.common import timeutils
 
 cell_manager_opts = [
         cfg.StrOpt('driver',

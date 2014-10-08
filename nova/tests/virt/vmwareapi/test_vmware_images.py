@@ -18,9 +18,9 @@ Test suite for vmware_images.
 import contextlib
 
 import mock
+from oslo.utils import units
 
 from nova import exception
-from nova.openstack.common import units
 from nova import test
 import nova.tests.image.fake
 from nova.virt.vmwareapi import constants

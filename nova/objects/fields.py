@@ -17,11 +17,11 @@ import datetime
 
 import iso8601
 import netaddr
+from oslo.utils import timeutils
 import six
 
 from nova.i18n import _
 from nova.network import model as network_model
-from nova.openstack.common import timeutils
 
 
 class KeyTypeError(TypeError):

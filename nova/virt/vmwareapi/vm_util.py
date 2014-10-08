@@ -22,13 +22,13 @@ import copy
 import functools
 
 from oslo.config import cfg
+from oslo.utils import units
 from oslo.vmware import exceptions as vexc
 
 from nova import exception
 from nova.i18n import _
 from nova.network import model as network_model
 from nova.openstack.common import log as logging
-from nova.openstack.common import units
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import vim_util
 

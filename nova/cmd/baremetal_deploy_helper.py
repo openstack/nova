@@ -27,14 +27,15 @@ import threading
 import time
 from wsgiref import simple_server
 
+from oslo.utils import excutils
+from oslo.utils import units
+
 from nova import config
 from nova import context as nova_context
 from nova.i18n import _
 from nova import objects
-from nova.openstack.common import excutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
-from nova.openstack.common import units
 from nova import utils
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import db

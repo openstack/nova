@@ -14,9 +14,9 @@
 #    under the License.
 
 import mock
+from oslo.utils import timeutils
 
 from nova import exception
-from nova.openstack.common import timeutils
 from nova.scheduler import caching_scheduler
 from nova.scheduler import host_manager
 from nova.tests.scheduler import test_scheduler

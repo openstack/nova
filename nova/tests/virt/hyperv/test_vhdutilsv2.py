@@ -13,8 +13,8 @@
 #    under the License.
 
 import mock
+from oslo.utils import units
 
-from nova.openstack.common import units
 from nova import test
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import vhdutilsv2

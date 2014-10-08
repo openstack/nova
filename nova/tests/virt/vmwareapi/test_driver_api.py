@@ -28,6 +28,8 @@ from eventlet import greenthread
 import mock
 import mox
 from oslo.config import cfg
+from oslo.utils import timeutils
+from oslo.utils import units
 from oslo.vmware import exceptions as vexc
 from oslo.vmware import vim
 import suds
@@ -42,8 +44,6 @@ from nova import exception
 from nova.image import glance
 from nova.network import model as network_model
 from nova.openstack.common import jsonutils
-from nova.openstack.common import timeutils
-from nova.openstack.common import units
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests import fake_instance

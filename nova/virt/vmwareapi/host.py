@@ -17,11 +17,12 @@
 Management class for host-related functions (start, reboot, etc).
 """
 
+from oslo.utils import units
+
 from nova.compute import arch
 from nova.compute import hvtype
 from nova.compute import vm_mode
 from nova import exception
-from nova.openstack.common import units
 from nova import utils
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import vim_util

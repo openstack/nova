@@ -25,6 +25,8 @@ import uuid as uuid_lib
 from lxml import etree
 import mock
 from oslo.config import cfg
+from oslo.utils import importutils
+from oslo.utils import timeutils
 
 from nova.api.metadata import password
 from nova.api.openstack.compute.contrib import fping
@@ -44,10 +46,8 @@ from nova.db.sqlalchemy import models
 from nova import exception
 from nova.network import api as network_api
 from nova import objects
-from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
 import nova.quota
 from nova.servicegroup import api as service_group_api
 from nova import test

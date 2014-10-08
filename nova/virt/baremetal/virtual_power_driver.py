@@ -16,11 +16,11 @@
 # Virtual power driver
 
 from oslo.config import cfg
+from oslo.utils import importutils
 
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova.virt.baremetal import baremetal_states

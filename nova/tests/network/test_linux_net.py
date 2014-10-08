@@ -21,6 +21,7 @@ import os
 import mock
 import mox
 from oslo.config import cfg
+from oslo.utils import timeutils
 
 from nova import context
 from nova import db
@@ -32,7 +33,6 @@ from nova.openstack.common import fileutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
-from nova.openstack.common import timeutils
 from nova import test
 from nova import utils
 

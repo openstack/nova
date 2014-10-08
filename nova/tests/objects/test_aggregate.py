@@ -13,11 +13,11 @@
 #    under the License.
 
 import mock
+from oslo.utils import timeutils
 
 from nova import db
 from nova import exception
 from nova.objects import aggregate
-from nova.openstack.common import timeutils
 from nova.tests import fake_notifier
 from nova.tests.objects import test_objects
 

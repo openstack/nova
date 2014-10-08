@@ -17,10 +17,11 @@ import datetime
 import time
 import zlib
 
+from oslo.utils import timeutils
+
 from nova import context
 from nova import exception
 from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
 from nova.tests import fake_network
 from nova.tests.integrated.api import client
 from nova.tests.integrated import integrated_helpers

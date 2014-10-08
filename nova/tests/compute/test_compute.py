@@ -31,7 +31,8 @@ import mock
 import mox
 from oslo.config import cfg
 from oslo import messaging
-from oslo.utils import timeutils as db_timeutils
+from oslo.utils import importutils
+from oslo.utils import timeutils
 import six
 import testtools
 from testtools import matchers as testtools_matchers
@@ -63,10 +64,8 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
-from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import policy
 from nova import quota
@@ -272,7 +271,6 @@ class BaseTestCase(test.TestCase):
 
     def tearDown(self):
         timeutils.clear_time_override()
-        db_timeutils.clear_time_override()
         ctxt = context.get_admin_context()
         fake_image.FakeImageService_reset()
         instances = db.instance_get_all(ctxt)
@@ -3761,20 +3759,12 @@ class ComputeTestCase(BaseTestCase):
         old_time = datetime.datetime(2012, 4, 1)
         cur_time = datetime.datetime(2012, 12, 21, 12, 21)
 
-        # TODO(ekudryashova): remove this after both nova and oslo.db
-        # will use oslo.utils library
-        # NOTE: Both projects(nova and oslo.db) use `timeutils.utcnow`,
-        # which returns specified time(if override_time is set).
-        # So time overriding should be done for both timeutils to make
-        # them equal.
-        db_timeutils.set_time_override(old_time)
         timeutils.set_time_override(old_time)
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance, {}, {}, [], None,
                 None, True, None, False)
         fake_notifier.NOTIFICATIONS = []
-        db_timeutils.set_time_override(cur_time)
         timeutils.set_time_override(cur_time)
         self.compute.terminate_instance(self.context,
                 self._objectify(instance), [], [])

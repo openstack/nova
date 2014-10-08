@@ -16,6 +16,7 @@
 import copy
 
 from lxml import etree
+from oslo.utils import timeutils
 from webob import exc
 
 from nova.api.openstack.compute.contrib import cells as cells_ext_v2
@@ -25,7 +26,6 @@ from nova.api.openstack import xmlutil
 from nova.cells import rpcapi as cells_rpcapi
 from nova import context
 from nova import exception
-from nova.openstack.common import timeutils
 from nova import rpc
 from nova import test
 from nova.tests.api.openstack import fakes

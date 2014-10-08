@@ -17,6 +17,7 @@ Tests For Scheduler Host Filters.
 
 import mock
 from oslo.config import cfg
+from oslo.utils import timeutils
 import requests
 import six
 import stubout
@@ -29,7 +30,6 @@ from nova import db
 from nova import objects
 from nova.objects import base as obj_base
 from nova.openstack.common import jsonutils
-from nova.openstack.common import timeutils
 from nova.pci import pci_stats
 from nova.scheduler import filters
 from nova.scheduler.filters import extra_specs_ops

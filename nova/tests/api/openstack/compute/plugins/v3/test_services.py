@@ -17,6 +17,7 @@ import datetime
 
 import iso8601
 import mock
+from oslo.utils import timeutils
 import webob.exc
 
 from nova.api.openstack.compute.plugins.v3 import services
@@ -25,7 +26,6 @@ from nova.compute import cells_api
 from nova import context
 from nova import db
 from nova import exception
-from nova.openstack.common import timeutils
 from nova.servicegroup.drivers import db as db_driver
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -142,6 +142,9 @@ def fake_service_update(context, service_id, values):
 
 def fake_utcnow():
     return datetime.datetime(2012, 10, 29, 13, 42, 11)
+
+
+fake_utcnow.override_time = None
 
 
 def fake_utcnow_ts():

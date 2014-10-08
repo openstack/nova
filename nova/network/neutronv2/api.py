@@ -20,6 +20,7 @@ import uuid
 
 from neutronclient.common import exceptions as neutron_client_exc
 from oslo.config import cfg
+from oslo.utils import excutils
 
 from nova.api.openstack import extensions
 from nova.compute import flavors
@@ -33,7 +34,6 @@ from nova.network import neutronv2
 from nova.network.neutronv2 import constants
 from nova.network.security_group import openstack_driver
 from nova import objects
-from nova.openstack.common import excutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils

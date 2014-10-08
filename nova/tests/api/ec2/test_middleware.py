@@ -18,6 +18,7 @@ from eventlet.green import httplib
 from lxml import etree
 import mox
 from oslo.config import cfg
+from oslo.utils import timeutils
 import webob
 import webob.dec
 import webob.exc
@@ -25,7 +26,6 @@ import webob.exc
 from nova.api import ec2
 from nova import context
 from nova import exception
-from nova.openstack.common import timeutils
 from nova import test
 from nova import wsgi
 

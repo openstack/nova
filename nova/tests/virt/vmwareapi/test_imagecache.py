@@ -17,8 +17,8 @@ import datetime
 
 import mock
 from oslo.config import cfg
+from oslo.utils import timeutils
 
-from nova.openstack.common import timeutils
 from nova import test
 from nova.tests import fake_instance
 from nova.tests.virt.vmwareapi import fake

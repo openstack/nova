@@ -19,12 +19,12 @@ Internal implementation of request Body validating middleware.
 import base64
 
 import jsonschema
+from oslo.utils import timeutils
 import rfc3986
 import six
 
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 
 

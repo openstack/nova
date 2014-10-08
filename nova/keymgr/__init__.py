@@ -15,8 +15,7 @@
 
 
 from oslo.config import cfg
-
-from nova.openstack.common import importutils
+from oslo.utils import importutils
 
 
 keymgr_opts = [

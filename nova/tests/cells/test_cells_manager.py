@@ -20,11 +20,11 @@ import datetime
 
 import mock
 from oslo.config import cfg
+from oslo.utils import timeutils
 
 from nova.cells import messaging
 from nova.cells import utils as cells_utils
 from nova import context
-from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.cells import fakes
 from nova.tests import fake_server_actions

@@ -25,13 +25,13 @@ helpers for populating up config object instances.
 
 import time
 
+from lxml import etree
+from oslo.utils import units
+
 from nova import exception
 from nova.openstack.common import log as logging
-from nova.openstack.common import units
 from nova.pci import pci_utils
 from nova.virt import hardware
-
-from lxml import etree
 
 
 LOG = logging.getLogger(__name__)

@@ -15,7 +15,7 @@
 
 import functools
 
-from nova.openstack.common import importutils
+from oslo.utils import importutils
 
 
 class LazyLoader(object):

@@ -15,11 +15,11 @@
 
 from lxml import etree
 from oslo.config import cfg
+from oslo.utils import timeutils
 
 from nova.api.openstack.compute.views import versions as views_versions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova.openstack.common import timeutils
 
 
 CONF = cfg.CONF

@@ -15,10 +15,10 @@
 import traceback
 
 import mock
+from oslo.utils import timeutils
 
 from nova import db
 from nova.objects import instance_action
-from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.objects import test_objects
 

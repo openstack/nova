@@ -38,6 +38,7 @@ import math
 import re
 import time
 
+from oslo.utils import importutils
 import webob.dec
 import webob.exc
 
@@ -45,7 +46,6 @@ from nova.api.openstack.compute.views import limits as limits_views
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova.i18n import _
-from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova import quota
 from nova import utils

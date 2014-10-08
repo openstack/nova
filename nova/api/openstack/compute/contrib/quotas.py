@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.utils import strutils
 import six.moves.urllib.parse as urlparse
 import webob
 
@@ -24,7 +25,6 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.openstack.common import log as logging
-from nova.openstack.common import strutils
 from nova import quota
 from nova import utils
 

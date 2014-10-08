@@ -18,7 +18,7 @@
 
 from oslo.config import cfg
 
-from nova.openstack.common import timeutils
+from oslo.utils import timeutils
 
 memcache_opts = [
     cfg.ListOpt('memcached_servers',

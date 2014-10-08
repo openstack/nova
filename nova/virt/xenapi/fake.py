@@ -56,12 +56,13 @@ import uuid
 from xml.sax import saxutils
 import zlib
 
+from oslo.utils import timeutils
+from oslo.utils import units
+
 from nova import exception
 from nova.i18n import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import timeutils
-from nova.openstack.common import units
 from nova.virt.xenapi.client import session as xenapi_session
 
 

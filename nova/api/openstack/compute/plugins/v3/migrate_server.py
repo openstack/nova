@@ -13,6 +13,7 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
+from oslo.utils import strutils
 import webob
 from webob import exc
 
@@ -23,7 +24,6 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova import exception
-from nova.openstack.common import strutils
 
 ALIAS = "os-migrate-server"
 

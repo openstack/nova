@@ -14,8 +14,9 @@
 
 from nova import exception
 from nova.i18n import _LI
-from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+
+from oslo.utils import importutils
 
 LOG = logging.getLogger(__name__)
 

@@ -20,10 +20,10 @@ import time
 
 import mock
 import mox
+from oslo.utils import units
 
 from nova.cmd import baremetal_deploy_helper as bmdh
 from nova.openstack.common import log as logging
-from nova.openstack.common import units
 from nova import test
 from nova.tests.virt.baremetal.db import base as bm_db_base
 from nova.virt.baremetal import db as bm_db

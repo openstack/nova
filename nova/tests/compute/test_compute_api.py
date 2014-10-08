@@ -20,6 +20,7 @@ import datetime
 import iso8601
 import mock
 import mox
+from oslo.utils import timeutils
 
 from nova.compute import api as compute_api
 from nova.compute import arch
@@ -36,7 +37,6 @@ from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import quotas as quotas_obj
-from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import quota
 from nova import test

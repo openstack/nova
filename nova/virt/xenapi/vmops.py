@@ -25,6 +25,11 @@ import zlib
 from eventlet import greenthread
 import netaddr
 from oslo.config import cfg
+from oslo.utils import excutils
+from oslo.utils import importutils
+from oslo.utils import strutils
+from oslo.utils import timeutils
+from oslo.utils import units
 
 from nova import block_device
 from nova import compute
@@ -38,13 +43,8 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.openstack.common import excutils
-from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import strutils
-from nova.openstack.common import timeutils
-from nova.openstack.common import units
 from nova.pci import pci_manager
 from nova import utils
 from nova.virt import configdrive

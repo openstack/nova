@@ -17,6 +17,8 @@
 import functools
 import re
 
+from oslo.utils import timeutils
+
 from nova import availability_zones
 from nova import context
 from nova import exception
@@ -26,7 +28,6 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.openstack.common import log as logging
 from nova.openstack.common import memorycache
-from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 
 LOG = logging.getLogger(__name__)

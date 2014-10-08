@@ -19,6 +19,7 @@ import datetime
 from lxml import etree
 import mock
 from oslo.config import cfg
+from oslo.utils import timeutils
 import webob
 from webob import exc
 
@@ -34,7 +35,6 @@ from nova import db
 from nova import exception
 from nova import objects
 from nova.openstack.common import jsonutils
-from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_block_device

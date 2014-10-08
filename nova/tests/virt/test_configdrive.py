@@ -12,7 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.openstack.common import strutils
+from oslo.utils import strutils
+
 from nova import test
 from nova.virt import configdrive
 

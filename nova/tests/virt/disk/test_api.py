@@ -66,7 +66,7 @@ class APITestCase(test.NoDBTestCase):
         def fake_import_fails(*args, **kwargs):
             raise Exception('Failed')
         self.useFixture(fixtures.MonkeyPatch(
-                'nova.openstack.common.importutils.import_module',
+                'oslo.utils.import_module',
                 fake_import_fails))
 
         imgfile = tempfile.NamedTemporaryFile()

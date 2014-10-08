@@ -38,16 +38,16 @@ import eventlet
 import netaddr
 from oslo.config import cfg
 from oslo import messaging
+from oslo.utils import excutils
+from oslo.utils import importutils
+from oslo.utils import timeutils
 import six
 
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import excutils
-from nova.openstack.common import importutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
-from nova.openstack.common import timeutils
 
 notify_decorator = 'nova.notifications.notify_decorator'
 

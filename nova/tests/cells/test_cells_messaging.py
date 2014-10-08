@@ -23,6 +23,7 @@ import mock
 import mox
 from oslo.config import cfg
 from oslo import messaging as oslo_messaging
+from oslo.utils import timeutils
 
 from nova.cells import messaging
 from nova.cells import utils as cells_utils
@@ -36,7 +37,6 @@ from nova import objects
 from nova.objects import base as objects_base
 from nova.objects import fields as objects_fields
 from nova.openstack.common import jsonutils
-from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import rpc
 from nova import test

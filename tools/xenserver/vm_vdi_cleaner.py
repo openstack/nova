@@ -31,7 +31,7 @@ from nova import config
 from nova import context
 from nova import db
 from nova import exception
-from nova.openstack.common import timeutils
+from oslo.utils import timeutils
 from nova.virt import virtapi
 from nova.virt.xenapi import driver as xenapi_driver
 

@@ -24,6 +24,7 @@ import iso8601
 import mock
 import mox
 from oslo.config import cfg
+from oslo.utils import timeutils
 import six.moves.urllib.parse as urlparse
 import testtools
 import webob
@@ -54,7 +55,6 @@ from nova import objects
 from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common import policy as common_policy
-from nova.openstack.common import timeutils
 from nova import policy
 from nova import test
 from nova.tests.api.openstack import fakes

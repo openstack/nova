@@ -16,11 +16,11 @@ import datetime
 
 import iso8601
 import netaddr
+from oslo.utils import timeutils
 
 from nova.network import model as network_model
 from nova.objects import base as obj_base
 from nova.objects import fields
-from nova.openstack.common import timeutils
 from nova import test
 
 

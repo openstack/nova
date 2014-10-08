@@ -33,6 +33,9 @@ from lxml import etree
 import mock
 import mox
 from oslo.config import cfg
+from oslo.utils import importutils
+from oslo.utils import timeutils
+from oslo.utils import units
 import six
 
 from nova.api.metadata import base as instance_metadata
@@ -49,13 +52,10 @@ from nova import exception
 from nova.network import model as network_model
 from nova import objects
 from nova.openstack.common import fileutils
-from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import lockutils
 from nova.openstack.common import loopingcall
 from nova.openstack.common import processutils
-from nova.openstack.common import timeutils
-from nova.openstack.common import units
 from nova.openstack.common import uuidutils
 from nova.pci import pci_manager
 from nova import test

@@ -26,8 +26,9 @@ if sys.platform == 'win32':
 
 from xml.etree import ElementTree
 
+from oslo.utils import units
+
 from nova.i18n import _
-from nova.openstack.common import units
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import vhdutils
 from nova.virt.hyperv import vmutils

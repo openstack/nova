@@ -40,6 +40,9 @@ from eventlet import greenthread
 import eventlet.timeout
 from oslo.config import cfg
 from oslo import messaging
+from oslo.utils import excutils
+from oslo.utils import strutils
+from oslo.utils import timeutils
 import six
 
 from nova import block_device
@@ -72,12 +75,9 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
 from nova.objects import quotas as quotas_obj
-from nova.openstack.common import excutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task
-from nova.openstack.common import strutils
-from nova.openstack.common import timeutils
 from nova import paths
 from nova import rpc
 from nova import safe_utils

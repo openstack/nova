@@ -22,13 +22,13 @@ import platform
 import time
 
 from oslo.config import cfg
+from oslo.utils import units
 
 from nova.compute import arch
 from nova.compute import hvtype
 from nova.compute import vm_mode
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import units
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import utilsfactory
 

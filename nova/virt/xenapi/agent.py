@@ -22,6 +22,7 @@ import time
 import uuid
 
 from oslo.config import cfg
+from oslo.utils import strutils
 
 from nova.api.metadata import password
 from nova.compute import utils as compute_utils
@@ -32,7 +33,6 @@ from nova.i18n import _
 from nova import objects
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import strutils
 from nova import utils
 
 

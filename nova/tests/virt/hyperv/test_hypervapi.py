@@ -28,6 +28,7 @@ import uuid
 import mock
 import mox
 from oslo.config import cfg
+from oslo.utils import units
 
 from nova.api.metadata import base as instance_metadata
 from nova.compute import power_state
@@ -38,7 +39,6 @@ from nova import exception
 from nova.i18n import _
 from nova.image import glance
 from nova.openstack.common import fileutils
-from nova.openstack.common import units
 from nova import test
 from nova.tests import fake_network
 from nova.tests.image import fake as fake_image

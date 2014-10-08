@@ -15,6 +15,7 @@
 
 """The volumes extension."""
 
+from oslo.utils import strutils
 import webob
 from webob import exc
 
@@ -24,7 +25,6 @@ from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _
 from nova.openstack.common import log as logging
-from nova.openstack.common import strutils
 from nova import volume
 
 ALIAS = "os-volumes"

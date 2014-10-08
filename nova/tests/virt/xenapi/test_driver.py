@@ -16,9 +16,9 @@
 import math
 
 import mock
+from oslo.utils import units
 
 from nova.compute import arch
-from nova.openstack.common import units
 from nova.tests.virt.xenapi import stubs
 from nova.virt import driver
 from nova.virt import fake

@@ -20,6 +20,8 @@ import re
 
 from oslo.config import cfg
 from oslo import messaging
+from oslo.utils import strutils
+from oslo.utils import timeutils
 import six
 import webob
 from webob import exc
@@ -37,8 +39,6 @@ from nova.i18n import _
 from nova.i18n import _LW
 from nova import objects
 from nova.openstack.common import log as logging
-from nova.openstack.common import strutils
-from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import policy
 from nova import utils

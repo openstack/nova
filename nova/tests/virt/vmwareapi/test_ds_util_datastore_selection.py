@@ -14,7 +14,8 @@
 import collections
 import re
 
-from nova.openstack.common import units
+from oslo.utils import units
+
 from nova import test
 from nova.virt.vmwareapi import ds_util
 

@@ -14,6 +14,7 @@ import iso8601
 import mock
 import mox
 from oslo.config import cfg
+from oslo.utils import timeutils
 
 from nova.compute import claims
 from nova.compute import task_states
@@ -21,7 +22,6 @@ from nova.compute import vm_states
 from nova import db
 from nova import objects
 from nova.openstack.common import jsonutils
-from nova.openstack.common import timeutils
 from nova.tests.compute import test_compute
 from nova.tests.image import fake as fake_image
 from nova import utils
