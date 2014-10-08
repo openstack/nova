@@ -91,6 +91,9 @@ _STATE_MAP = {
         task_states.RESIZE_MIGRATING: 'RESIZE',
         task_states.RESIZE_MIGRATED: 'RESIZE',
         task_states.RESIZE_FINISH: 'RESIZE',
+        task_states.REBUILDING: 'REBUILD',
+        task_states.REBUILD_BLOCK_DEVICE_MAPPING: 'REBUILD',
+        task_states.REBUILD_SPAWNING: 'REBUILD',
     },
     vm_states.RESIZED: {
         'default': 'VERIFY_RESIZE',
@@ -110,6 +113,9 @@ _STATE_MAP = {
     },
     vm_states.ERROR: {
         'default': 'ERROR',
+        task_states.REBUILDING: 'REBUILD',
+        task_states.REBUILD_BLOCK_DEVICE_MAPPING: 'REBUILD',
+        task_states.REBUILD_SPAWNING: 'REBUILD',
     },
     vm_states.DELETED: {
         'default': 'DELETED',
