@@ -274,7 +274,9 @@ def ssh_encrypt_text(ssh_public_key, text):
 def revoke_cert(project_id, file_name):
     """Revoke a cert by file name."""
     start = os.getcwd()
-    if not os.chdir(ca_folder(project_id)):
+    try:
+        os.chdir(ca_folder(project_id))
+    except OSError:
         raise exception.ProjectNotFound(project_id=project_id)
     try:
         # NOTE(vish): potential race condition here
