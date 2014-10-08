@@ -591,6 +591,21 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         return objects.Service(**service_ref)
 
+    def _get_launch_flags(self, conn, network_info, power_on=True,
+                          vifs_already_plugged=False):
+        timeout = CONF.vif_plugging_timeout
+
+        events = []
+        if (conn._conn_supports_start_paused and
+            utils.is_neutron() and
+            not vifs_already_plugged and
+            power_on and timeout):
+            events = conn._get_neutron_events(network_info)
+
+        launch_flags = events and libvirt.VIR_DOMAIN_START_PAUSED or 0
+
+        return launch_flags
+
     def test_public_api_signatures(self):
         baseinst = driver.ComputeDriver(None)
         inst = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -10013,9 +10028,8 @@ Active:          8381604 kB
                                                      instance, vifs,
                                                      power_on=power_on)
             plug_vifs.assert_called_with(instance, vifs)
-            event = (utils.is_neutron() and CONF.vif_plugging_timeout and
-                     power_on)
-            flag = event and libvirt.VIR_DOMAIN_START_PAUSED or 0
+
+            flag = self._get_launch_flags(conn, vifs, power_on=power_on)
             self.assertEqual(flag,
                              create.call_args_list[0][1]['launch_flags'])
             if flag:
@@ -10162,8 +10176,9 @@ Active:          8381604 kB
                                                           network_info)
             prepare_instance_filter.assert_called_once_with(instance,
                                                           network_info)
+            flags = self._get_launch_flags(conn, network_info)
             create_domain.assert_called_once_with(fake_xml, instance=instance,
-                                                  launch_flags=0,
+                                                  launch_flags=flags,
                                                   power_on=True)
             self.assertEqual(mock_dom, domain)
 
