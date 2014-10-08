@@ -164,10 +164,10 @@ class VMwareVMOps(object):
                                                         self._base_folder)
 
     def _extend_virtual_disk(self, instance, requested_size, name, dc_ref):
-        service_content = self._session._get_vim().service_content
+        service_content = self._session.vim.service_content
         LOG.debug("Extending root virtual disk to %s", requested_size)
         vmdk_extend_task = self._session._call_method(
-                self._session._get_vim(),
+                self._session.vim,
                 "ExtendVirtualDisk_Task",
                 service_content.virtualDiskManager,
                 name=name,
@@ -210,7 +210,7 @@ class VMwareVMOps(object):
 
     def _configure_config_drive(self, instance, vm_ref, dc_info, datastore,
                                 injected_files, admin_password):
-        session_vim = self._session._get_vim()
+        session_vim = self._session.vim
         cookies = session_vim.client.options.transport.cookiejar
 
         uploaded_iso_path = self._create_config_drive(instance,
@@ -240,7 +240,7 @@ class VMwareVMOps(object):
         allocations = self._get_cpu_allocations(instance.instance_type_id)
 
         # Get the create vm config spec
-        client_factory = self._session._get_vim().client.factory
+        client_factory = self._session.vim.client.factory
         config_spec = vm_util.get_vm_create_spec(client_factory,
                                                  instance,
                                                  instance_name,
@@ -271,7 +271,7 @@ class VMwareVMOps(object):
     def _fetch_image_as_file(self, context, vi, image_ds_loc):
         """Download image as an individual file to host via HTTP PUT."""
         session = self._session
-        session_vim = session._get_vim()
+        session_vim = session.vim
         cookies = session_vim.client.options.transport.cookiejar
 
         LOG.debug("Downloading image file data %(image_id)s to "
@@ -430,7 +430,7 @@ class VMwareVMOps(object):
               admin_password, network_info, block_device_info=None,
               instance_name=None, power_on=True):
 
-        client_factory = self._session._get_vim().client.factory
+        client_factory = self._session.vim.client.factory
         image_info = vmware_images.VMwareImage.from_image(instance.image_ref,
                                                           image_meta)
         vi = self._get_vm_config_info(instance, image_info, instance_name)
@@ -538,7 +538,7 @@ class VMwareVMOps(object):
     def _attach_cdrom_to_vm(self, vm_ref, instance,
                             datastore, file_path):
         """Attach cdrom to VM by reconfiguration."""
-        client_factory = self._session._get_vim().client.factory
+        client_factory = self._session.vim.client.factory
         devices = self._session._call_method(vim_util,
                                     "get_dynamic_property", vm_ref,
                                     "VirtualMachine", "config.hardware.device")
@@ -562,7 +562,7 @@ class VMwareVMOps(object):
     def _create_vm_snapshot(self, instance, vm_ref):
         LOG.debug("Creating Snapshot of the VM instance", instance=instance)
         snapshot_task = self._session._call_method(
-                    self._session._get_vim(),
+                    self._session.vim,
                     "CreateSnapshot_Task", vm_ref,
                     name="%s-snapshot" % instance.uuid,
                     description="Taking Snapshot of the VM",
@@ -580,7 +580,7 @@ class VMwareVMOps(object):
     def _delete_vm_snapshot(self, instance, vm_ref, snapshot):
         LOG.debug("Deleting Snapshot of the VM instance", instance=instance)
         delete_snapshot_task = self._session._call_method(
-                    self._session._get_vim(),
+                    self._session.vim,
                     "RemoveSnapshot_Task", snapshot,
                     removeChildren=False, consolidate=True)
         self._session._wait_for_task(delete_snapshot_task)
@@ -602,7 +602,7 @@ class VMwareVMOps(object):
         5. Delete the coalesced .vmdk and -flat.vmdk created.
         """
         vm_ref = vm_util.get_vm_ref(self._session, instance)
-        service_content = self._session._get_vim().service_content
+        service_content = self._session.vim.service_content
 
         def _get_vm_and_vmdk_attribs():
             # Get the vmdk file name that the VM is pointing to
@@ -660,7 +660,7 @@ class VMwareVMOps(object):
                       vmdk_file_path_before_snapshot,
                       instance=instance)
             copy_disk_task = self._session._call_method(
-                self._session._get_vim(),
+                self._session.vim,
                 "CopyVirtualDisk_Task",
                 service_content.virtualDiskManager,
                 sourceName=vmdk_file_path_before_snapshot,
@@ -676,7 +676,7 @@ class VMwareVMOps(object):
         _copy_vmdk_content()
         self._delete_vm_snapshot(instance, vm_ref, snapshot)
 
-        cookies = self._session._get_vim().client.options.transport.cookiejar
+        cookies = self._session.vim.client.options.transport.cookiejar
 
         def _upload_vmdk_to_image_repository():
             # Upload the contents of -flat.vmdk file which has the disk data.
@@ -739,12 +739,12 @@ class VMwareVMOps(object):
         if (tools_status == "toolsOk" and
                 tools_running_status == "guestToolsRunning"):
             LOG.debug("Rebooting guest OS of VM", instance=instance)
-            self._session._call_method(self._session._get_vim(), "RebootGuest",
+            self._session._call_method(self._session.vim, "RebootGuest",
                                        vm_ref)
             LOG.debug("Rebooted guest OS of VM", instance=instance)
         else:
             LOG.debug("Doing hard reboot of VM", instance=instance)
-            reset_task = self._session._call_method(self._session._get_vim(),
+            reset_task = self._session._call_method(self._session.vim,
                                                     "ResetVM_Task", vm_ref)
             self._session._wait_for_task(reset_task)
             LOG.debug("Did hard reboot of VM", instance=instance)
@@ -784,7 +784,7 @@ class VMwareVMOps(object):
             # Un-register the VM
             try:
                 LOG.debug("Unregistering the VM", instance=instance)
-                self._session._call_method(self._session._get_vim(),
+                self._session._call_method(self._session.vim,
                                            "UnregisterVM", vm_ref)
                 LOG.debug("Unregistered the VM", instance=instance)
             except Exception as excep:
@@ -874,7 +874,7 @@ class VMwareVMOps(object):
         # Only PoweredOn VMs can be suspended.
         if pwr_state == "poweredOn":
             LOG.debug("Suspending the VM", instance=instance)
-            suspend_task = self._session._call_method(self._session._get_vim(),
+            suspend_task = self._session._call_method(self._session.vim,
                     "SuspendVM_Task", vm_ref)
             self._session._wait_for_task(suspend_task)
             LOG.debug("Suspended the VM", instance=instance)
@@ -895,7 +895,7 @@ class VMwareVMOps(object):
         if pwr_state.lower() == "suspended":
             LOG.debug("Resuming the VM", instance=instance)
             suspend_task = self._session._call_method(
-                                        self._session._get_vim(),
+                                        self._session.vim,
                                        "PowerOnVM_Task", vm_ref)
             self._session._wait_for_task(suspend_task)
             LOG.debug("Resumed the VM", instance=instance)
@@ -1052,7 +1052,7 @@ class VMwareVMOps(object):
         try:
             LOG.debug("Destroying the VM", instance=instance)
             destroy_task = self._session._call_method(
-                                        self._session._get_vim(),
+                                        self._session.vim,
                                         "Destroy_Task", vm_ref)
             self._session._wait_for_task(destroy_task)
             LOG.debug("Destroyed the VM", instance=instance)
@@ -1075,7 +1075,7 @@ class VMwareVMOps(object):
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
         if resize_instance:
-            client_factory = self._session._get_vim().client.factory
+            client_factory = self._session.vim.client.factory
             vm_resize_spec = vm_util.get_vm_resize_spec(client_factory,
                                                         instance)
             vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
@@ -1114,7 +1114,7 @@ class VMwareVMOps(object):
         LOG.debug("Migrating VM to host %s", dest, instance=instance_ref)
         try:
             vm_migrate_task = self._session._call_method(
-                                    self._session._get_vim(),
+                                    self._session.vim,
                                     "MigrateVM_Task", vm_ref,
                                     host=host_ref,
                                     priority="defaultPriority")
@@ -1350,7 +1350,7 @@ class VMwareVMOps(object):
         """inject network info for specified instance."""
         # Set the machine.id parameter of the instance to inject
         # the NIC configuration inside the VM
-        client_factory = self._session._get_vim().client.factory
+        client_factory = self._session.vim.client.factory
         self._set_machine_id(client_factory, instance, network_info)
 
     def manage_image_cache(self, context, instances):
@@ -1411,7 +1411,7 @@ class VMwareVMOps(object):
         with lockutils.lock(instance.uuid,
                             lock_file_prefix='nova-vmware-hot-plug'):
             port_index = vm_util.get_attach_port_index(self._session, vm_ref)
-            client_factory = self._session._get_vim().client.factory
+            client_factory = self._session.vim.client.factory
             attach_config_spec = vm_util.get_network_attach_config_spec(
                                         client_factory, vif_info, port_index)
             LOG.debug("Reconfiguring VM to attach interface",
@@ -1451,7 +1451,7 @@ class VMwareVMOps(object):
                         "VM") % vif['address']
                 raise exception.NotFound(msg)
 
-            client_factory = self._session._get_vim().client.factory
+            client_factory = self._session.vim.client.factory
             detach_config_spec = vm_util.get_network_detach_config_spec(
                                         client_factory, device, port_index)
             LOG.debug("Reconfiguring VM to detach interface",

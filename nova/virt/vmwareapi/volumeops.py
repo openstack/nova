@@ -43,7 +43,7 @@ class VMwareVolumeOps(object):
                           device_name=None):
         """Attach disk to VM by reconfiguration."""
         instance_name = instance['name']
-        client_factory = self._session._get_vim().client.factory
+        client_factory = self._session.vim.client.factory
         devices = self._session._call_method(vim_util,
                                     "get_dynamic_property", vm_ref,
                                     "VirtualMachine", "config.hardware.device")
@@ -85,7 +85,7 @@ class VMwareVolumeOps(object):
         volume_option = 'volume-%s' % volume_uuid
         extra_opts = {volume_option: device_uuid}
 
-        client_factory = self._session._get_vim().client.factory
+        client_factory = self._session.vim.client.factory
         extra_config_specs = vm_util.get_vm_extra_config_spec(
                                     client_factory, extra_opts)
         vm_util.reconfigure_vm(self._session, vm_ref, extra_config_specs)
@@ -103,7 +103,7 @@ class VMwareVolumeOps(object):
                             destroy_disk=False):
         """Detach disk from VM by reconfiguration."""
         instance_name = instance['name']
-        client_factory = self._session._get_vim().client.factory
+        client_factory = self._session.vim.client.factory
         vmdk_detach_config_spec = vm_util.get_vmdk_detach_config_spec(
                                     client_factory, device, destroy_disk)
         disk_key = device.key
@@ -191,12 +191,12 @@ class VMwareVolumeOps(object):
     def _iscsi_add_send_target_host(self, storage_system_mor, hba_device,
                                     target_portal):
         """Adds the iscsi host to send target host list."""
-        client_factory = self._session._get_vim().client.factory
+        client_factory = self._session.vim.client.factory
         send_tgt = client_factory.create('ns0:HostInternetScsiHbaSendTarget')
         (send_tgt.address, send_tgt.port) = target_portal.split(':')
         LOG.debug("Adding iSCSI host %s to send targets", send_tgt.address)
         self._session._call_method(
-            self._session._get_vim(), "AddInternetScsiSendTargets",
+            self._session.vim, "AddInternetScsiSendTargets",
             storage_system_mor, iScsiHbaDevice=hba_device, targets=[send_tgt])
 
     def _iscsi_rescan_hba(self, target_portal):
@@ -233,7 +233,7 @@ class VMwareVolumeOps(object):
         else:
             return
         LOG.debug("Rescanning HBA %s", hba_device)
-        self._session._call_method(self._session._get_vim(),
+        self._session._call_method(self._session.vim,
             "RescanHba", storage_system_mor, hbaDevice=hba_device)
         LOG.debug("Rescanned HBA %s ", hba_device)
 
@@ -393,11 +393,11 @@ class VMwareVolumeOps(object):
 
         The move type will be moveAllDiskBackingsAndAllowSharing.
         """
-        client_factory = self._session._get_vim().client.factory
+        client_factory = self._session.vim.client.factory
         spec = vm_util.relocate_vm_spec(client_factory,
                                         datastore=datastore)
         spec.pool = res_pool
-        task = self._session._call_method(self._session._get_vim(),
+        task = self._session._call_method(self._session.vim,
                                           "RelocateVM_Task", volume_ref,
                                           spec=spec)
         self._session._wait_for_task(task)

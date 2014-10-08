@@ -2529,10 +2529,10 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
                                        power_on=power_on)
             if resize_instance:
                 fake_vm_resize_spec.assert_called_once_with(
-                    self.conn._session._get_vim().client.factory,
+                    self.conn._session.vim.client.factory,
                     self.instance)
                 fake_call_method.assert_any_call(
-                    self.conn._session._get_vim(),
+                    self.conn._session.vim,
                     "ReconfigVM_Task",
                     vm_ref,
                     spec='fake-spec')

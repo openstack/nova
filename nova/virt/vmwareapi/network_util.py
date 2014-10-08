@@ -146,7 +146,7 @@ def create_port_group(session, pg_name, vswitch_name, vlan_id=0, cluster=None):
     """Creates a port group on the host system with the vlan tags
     supplied. VLAN id 0 means no vlan id association.
     """
-    client_factory = session._get_vim().client.factory
+    client_factory = session.vim.client.factory
     add_prt_grp_spec = vm_util.get_add_vswitch_port_group_spec(
                     client_factory,
                     vswitch_name,
@@ -159,7 +159,7 @@ def create_port_group(session, pg_name, vswitch_name, vlan_id=0, cluster=None):
     LOG.debug("Creating Port Group with name %s on "
               "the ESX host", pg_name)
     try:
-        session._call_method(session._get_vim(),
+        session._call_method(session.vim,
                 "AddPortGroup", network_system_mor,
                 portgrp=add_prt_grp_spec)
     except vexc.AlreadyExistsException:
