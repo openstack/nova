@@ -2543,9 +2543,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                             None,
                                             image_meta,
                                             rescue=True)
-        self._create_image(context, instance,
-                           disk_info['mapping'],
-                           '.rescue', rescue_images,
+        self._create_image(context, instance, disk_info['mapping'],
+                           suffix='.rescue', disk_images=rescue_images,
                            network_info=network_info,
                            admin_pass=rescue_password)
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
@@ -5990,8 +5989,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                             block_device_info,
                                             image_meta)
         # assume _create_image do nothing if a target file exists.
-        self._create_image(context, instance,
-                           disk_mapping=disk_info['mapping'],
+        self._create_image(context, instance, disk_info['mapping'],
                            network_info=network_info,
                            block_device_info=None, inject_files=False)
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
