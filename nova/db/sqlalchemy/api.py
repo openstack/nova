@@ -59,7 +59,7 @@ from nova.compute import vm_states
 import nova.context
 from nova.db.sqlalchemy import models
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LI
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova import quota
@@ -3226,12 +3226,12 @@ def _refresh_quota_usages(quota_usage, until_refresh, in_use):
     :param in_use:        Actual quota usage for the resource.
     """
     if quota_usage.in_use != in_use:
-        LOG.debug('quota_usages out of sync, updating. '
-                  'project_id: %(project_id)s, '
-                  'user_id: %(user_id)s, '
-                  'resource: %(res)s, '
-                  'tracked usage: %(tracked_use)s, '
-                  'actual usage: %(in_use)s',
+        LOG.info(_LI('quota_usages out of sync, updating. '
+                     'project_id: %(project_id)s, '
+                     'user_id: %(user_id)s, '
+                     'resource: %(res)s, '
+                     'tracked usage: %(tracked_use)s, '
+                     'actual usage: %(in_use)s'),
             {'project_id': quota_usage.project_id,
              'user_id': quota_usage.user_id,
              'res': quota_usage.resource,
