@@ -146,7 +146,9 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
             conn = httplib.HTTPSConnection(glance_host, glance_port)
         else:
             conn = httplib.HTTPConnection(glance_host, glance_port)
+        conn.connect()
     except Exception, error:
+        logging.exception('Failed to connect %(url)s' % locals())
         raise RetryableError(error)
 
     try:
@@ -154,38 +156,40 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
             # NOTE(sirp): httplib under python2.4 won't accept
             # a file-like object to request
             conn.putrequest('PUT', '/v1/images/%s' % image_id)
+
+            # NOTE(sirp): There is some confusion around OVF. Here's a summary
+            # of where we currently stand:
+            #   1. OVF as a container format is misnamed. We really should be
+            #      using OVA since that is the name for the container format;
+            #      OVF is the standard applied to the manifest file contained
+            #      within.
+            #   2. We're currently uploading a vanilla tarball. In order to be
+            #      OVF/OVA compliant, we'll need to embed a minimal OVF
+            #      manifest as the first file.
+
+            # NOTE(dprince): In order to preserve existing Glance properties
+            # we set X-Glance-Registry-Purge-Props on this request.
+            headers = {
+                'content-type': 'application/octet-stream',
+                'transfer-encoding': 'chunked',
+                'x-image-meta-is-public': 'False',
+                'x-image-meta-status': 'queued',
+                'x-image-meta-disk-format': 'vhd',
+                'x-image-meta-container-format': 'ovf',
+                'x-glance-registry-purge-props': 'False'}
+
+            headers.update(**extra_headers)
+
+            for key, value in properties.iteritems():
+                header_key = "x-image-meta-property-%s" % key.replace('_', '-')
+                headers[header_key] = str(value)
+
+            for header, value in headers.iteritems():
+                conn.putheader(header, value)
+            conn.endheaders()
         except Exception, error:
+            logging.exception('Failed to upload %(url)s' % locals())
             raise RetryableError(error)
-
-        # NOTE(sirp): There is some confusion around OVF. Here's a summary of
-        # where we currently stand:
-        #   1. OVF as a container format is misnamed. We really should be using
-        #      OVA since that is the name for the container format; OVF is the
-        #      standard applied to the manifest file contained within.
-        #   2. We're currently uploading a vanilla tarball. In order to be
-        #      OVF/OVA compliant, we'll need to embed a minimal OVF manifest
-        #      as the first file.
-
-        # NOTE(dprince): In order to preserve existing Glance properties
-        # we set X-Glance-Registry-Purge-Props on this request.
-        headers = {
-            'content-type': 'application/octet-stream',
-            'transfer-encoding': 'chunked',
-            'x-image-meta-is-public': 'False',
-            'x-image-meta-status': 'queued',
-            'x-image-meta-disk-format': 'vhd',
-            'x-image-meta-container-format': 'ovf',
-            'x-glance-registry-purge-props': 'False'}
-
-        headers.update(**extra_headers)
-
-        for key, value in properties.iteritems():
-            header_key = "x-image-meta-property-%s" % key.replace('_', '-')
-            headers[header_key] = str(value)
-
-        for header, value in headers.iteritems():
-            conn.putheader(header, value)
-        conn.endheaders()
 
         callback_data = {'bytes_written': 0}
 
@@ -195,6 +199,7 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
             try:
                 conn.send("%x\r\n%s\r\n" % (chunk_len, chunk))
             except Exception, error:
+                logging.exception('Failed to upload when sending chunks')
                 raise RetryableError(error)
 
         compression_level = properties.get('xenapi_image_compression_level')
