@@ -17,6 +17,7 @@
 Constants used in ops classes
 """
 
+from nova.compute import arch
 from nova.compute import power_state
 
 HYPERV_VM_STATE_ENABLED = 2
@@ -35,13 +36,13 @@ HYPERV_POWER_STATE = {
 }
 
 WMI_WIN32_PROCESSOR_ARCHITECTURE = {
-    0: 'x86',
-    1: 'MIPS',
-    2: 'Alpha',
-    3: 'PowerPC',
-    5: 'ARM',
-    6: 'Itanium-based systems',
-    9: 'x64',
+    0: arch.I686,
+    1: arch.MIPS,
+    2: arch.ALPHA,
+    3: arch.PPC,
+    5: arch.ARMV7,
+    6: arch.IA64,
+    9: arch.X86_64,
 }
 
 PROCESSOR_FEATURE = {
