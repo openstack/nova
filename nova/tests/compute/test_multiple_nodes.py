@@ -41,11 +41,6 @@ class FakeDriverSingleNodeTestCase(BaseTestCase):
         self.driver = fake.FakeDriver(virtapi=None)
         fake.set_nodes(['xyz'])
 
-    def test_get_host_stats(self):
-        stats = self.driver.get_host_stats()
-        self.assertIsInstance(stats, dict)
-        self.assertEqual(stats['hypervisor_hostname'], 'xyz')
-
     def test_get_available_resource(self):
         res = self.driver.get_available_resource('xyz')
         self.assertEqual(res['hypervisor_hostname'], 'xyz')
@@ -56,13 +51,6 @@ class FakeDriverMultiNodeTestCase(BaseTestCase):
         super(FakeDriverMultiNodeTestCase, self).setUp()
         self.driver = fake.FakeDriver(virtapi=None)
         fake.set_nodes(['aaa', 'bbb'])
-
-    def test_get_host_stats(self):
-        stats = self.driver.get_host_stats()
-        self.assertIsInstance(stats, list)
-        self.assertEqual(len(stats), 2)
-        self.assertEqual(stats[0]['hypervisor_hostname'], 'aaa')
-        self.assertEqual(stats[1]['hypervisor_hostname'], 'bbb')
 
     def test_get_available_resource(self):
         res_a = self.driver.get_available_resource('aaa')

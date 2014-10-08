@@ -39,7 +39,6 @@ LOG = logging.getLogger(__name__)
 
 class HostOps(object):
     def __init__(self):
-        self._stats = None
         self._hostutils = utilsfactory.get_hostutils()
         self._pathutils = utilsfactory.get_pathutils()
 
@@ -138,40 +137,6 @@ class HostOps(object):
                }
 
         return dic
-
-    def _update_stats(self):
-        LOG.debug("Updating host stats")
-
-        (total_mem_mb, free_mem_mb, used_mem_mb) = self._get_memory_info()
-        (total_hdd_gb,
-         free_hdd_gb,
-         used_hdd_gb) = self._get_local_hdd_info_gb()
-
-        data = {}
-        data["disk_total"] = total_hdd_gb
-        data["disk_used"] = used_hdd_gb
-        data["disk_available"] = free_hdd_gb
-        data["host_memory_total"] = total_mem_mb
-        data["host_memory_overhead"] = used_mem_mb
-        data["host_memory_free"] = free_mem_mb
-        data["host_memory_free_computed"] = free_mem_mb
-        data["supported_instances"] = [
-            (arch.I686, hvtype.HYPERV, 'hvm'),
-            (arch.X86_64, hvtype.HYPERV, 'hvm')]
-        data["hypervisor_hostname"] = platform.node()
-
-        self._stats = data
-
-    def get_host_stats(self, refresh=False):
-        """Return the current state of the host.
-
-           If 'refresh' is True, run the update first.
-        """
-        LOG.debug("get_host_stats called")
-
-        if refresh or not self._stats:
-            self._update_stats()
-        return self._stats
 
     def host_power_action(self, host, action):
         """Reboots, shuts down or powers up the host."""

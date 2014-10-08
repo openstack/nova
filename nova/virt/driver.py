@@ -1050,21 +1050,6 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def get_host_stats(self, refresh=False):
-        """Return currently known host stats.
-
-        If the hypervisor supports pci passthrough, the returned
-        dictionary includes a key-value pair for it.
-        The key of pci passthrough device is "pci_passthrough_devices"
-        and the value is a json string for the list of assignable
-        pci devices. Each device is a dictionary, with mandatory
-        keys of 'address', 'vendor_id', 'product_id', 'dev_type',
-        'dev_id', 'label' and other optional device specific information.
-
-        Refer to the objects/pci_device.py for more idea of these keys.
-        """
-        raise NotImplementedError()
-
     def get_host_cpu_stats(self):
         """Get the currently known host CPU stats.
 
@@ -1234,10 +1219,7 @@ class ComputeDriver(object):
         by the service. Otherwise, this method should return
         [hypervisor_hostname].
         """
-        stats = self.get_host_stats(refresh=refresh)
-        if not isinstance(stats, list):
-            stats = [stats]
-        return [s['hypervisor_hostname'] for s in stats]
+        raise NotImplementedError()
 
     def node_is_available(self, nodename):
         """Return whether this compute service manages a particular node."""
