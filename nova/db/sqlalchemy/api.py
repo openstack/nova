@@ -3290,6 +3290,35 @@ def _raise_overquota_exception(project_quotas, user_quotas, deltas, overs,
                               usages=usages, headroom=headroom)
 
 
+def _calculate_overquota(project_quotas, user_quotas, deltas,
+                         project_usages, user_usages):
+    """Checks if any resources will go over quota based on the request.
+
+    :param project_quotas: dict of resource quotas (limits) for the project.
+    :param user_quotas:    dict of resource quotas (limits) for the user.
+    :param deltas:         dict of resource keys to positive/negative quota
+                           changes for the resources in a given operation.
+    :param project_usages: dict of resource keys to QuotaUsage records for the
+                           project.
+    :param user_usages:    dict of resource keys to QuotaUsage records for the
+                           user.
+    :return:               list of resources that are over-quota for the
+                           operation.
+    """
+    overs = []
+    for res, delta in deltas.items():
+        # We can't go over-quota if we're not reserving anything or if
+        # we have unlimited quotas.
+        if user_quotas[res] >= 0 and delta >= 0:
+            # over if the project usage + delta is more than project quota
+            if project_quotas[res] < delta + project_usages[res]['total']:
+                overs.append(res)
+            # over if the user usage + delta is more than user quota
+            elif user_quotas[res] < delta + user_usages[res]['total']:
+                overs.append(res)
+    return overs
+
+
 @require_context
 @_retry_on_deadlock
 def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
@@ -3359,12 +3388,9 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
         for key, value in user_usages.items():
             if key not in project_usages:
                 project_usages[key] = value
-        overs = [res for res, delta in deltas.items()
-                 if user_quotas[res] >= 0 and delta >= 0 and
-                 (project_quotas[res] < delta +
-                  project_usages[res]['total'] or
-                  user_quotas[res] < delta +
-                  user_usages[res].total)]
+
+        overs = _calculate_overquota(project_quotas, user_quotas, deltas,
+                                     project_usages, user_usages)
 
         # NOTE(Vek): The quota check needs to be in the transaction,
         #            but the transaction doesn't fail just because

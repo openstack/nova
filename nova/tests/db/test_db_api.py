@@ -5670,6 +5670,45 @@ class QuotaReserveNoDbTestCase(test.NoDBTestCase):
         self.assertEqual(6, quota_usage.in_use)
         self.assertEqual(5, quota_usage.until_refresh)
 
+    def test_calculate_overquota_no_delta(self):
+        deltas = {'foo': -1}
+        user_quotas = {'foo': 10}
+        overs = sqlalchemy_api._calculate_overquota({}, user_quotas, deltas,
+                                                    {}, {})
+        self.assertFalse(overs)
+
+    def test_calculate_overquota_unlimited_quota(self):
+        deltas = {'foo': 1}
+        project_quotas = {}
+        user_quotas = {'foo': -1}
+        project_usages = {}
+        user_usages = {'foo': 10}
+        overs = sqlalchemy_api._calculate_overquota(
+            project_quotas, user_quotas, deltas, project_usages, user_usages)
+        self.assertFalse(overs)
+
+    def _test_calculate_overquota(self, resource, project_usages, user_usages):
+        deltas = {resource: 1}
+        project_quotas = {resource: 10}
+        user_quotas = {resource: 10}
+        overs = sqlalchemy_api._calculate_overquota(
+            project_quotas, user_quotas, deltas, project_usages, user_usages)
+        self.assertEqual(resource, overs[0])
+
+    def test_calculate_overquota_per_project_quota_overquota(self):
+        # In this test, user quotas are fine but project quotas are over.
+        resource = 'foo'
+        project_usages = {resource: {'total': 10}}
+        user_usages = {resource: {'total': 5}}
+        self._test_calculate_overquota(resource, project_usages, user_usages)
+
+    def test_calculate_overquota_per_user_quota_overquota(self):
+        # In this test, project quotas are fine but user quotas are over.
+        resource = 'foo'
+        project_usages = {resource: {'total': 5}}
+        user_usages = {resource: {'total': 10}}
+        self._test_calculate_overquota(resource, project_usages, user_usages)
+
 
 class QuotaClassTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
