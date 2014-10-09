@@ -165,7 +165,7 @@ class TestSecurityGroups(test.TestCase):
         del sg['name']
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, sg)
 
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
@@ -246,7 +246,7 @@ class TestSecurityGroups(test.TestCase):
 
     def test_create_security_group_with_no_body(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, None)
 
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
@@ -255,7 +255,7 @@ class TestSecurityGroups(test.TestCase):
         body = {'no-securityGroup': None}
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, body)
 
         self._assert_no_security_groups_reserved(req.environ['nova.context'])
@@ -986,13 +986,13 @@ class TestSecurityGroupRules(test.TestCase):
 
     def test_create_with_no_body(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, None)
 
     def test_create_with_no_security_group_rule_in_body(self):
         rules = {'test': 'test'}
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, rules)
 
     def test_create_with_invalid_parent_group_id(self):

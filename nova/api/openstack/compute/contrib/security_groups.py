@@ -262,10 +262,12 @@ class SecurityGroupControllerBase(object):
 
     def _from_body(self, body, key):
         if not body:
-            raise exc.HTTPUnprocessableEntity()
+            raise exc.HTTPBadRequest(
+                explanation=_("The request body can't be empty"))
         value = body.get(key, None)
         if value is None:
-            raise exc.HTTPUnprocessableEntity()
+            raise exc.HTTPBadRequest(
+                explanation=_("Missing parameter %s") % key)
         return value
 
 
