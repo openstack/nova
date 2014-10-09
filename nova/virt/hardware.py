@@ -610,18 +610,36 @@ class VirtNUMATopologyCell(object):
 class VirtNUMATopologyCellInstance(VirtNUMATopologyCell):
     """Class for reporting NUMA resources in an iinstance cell."""
 
-    def __init__(self, id, cpuset, memory):
+    def __init__(self, id, cpuset, memory, pagesize=None):
         """Create a new NUMA Cell Instance
 
         :param id: integer identifier of cell
         :param cpuset: set containing list of CPU indexes
         :param memory: RAM measured in Mib
+        :param pagesize: a VirtPageSize
 
         :returns: a new NUMA cell instance object
         """
 
         super(VirtNUMATopologyCellInstance, self).__init__(
             id, cpuset, memory)
+
+        self.pagesize = pagesize
+
+    def _to_dict(self):
+        return {'cpus': format_cpu_spec(self.cpuset, allow_ranges=False),
+                'mem': {'total': self.memory},
+                'id': self.id,
+                'pagesize': self.pagesize and self.pagesize.size_kb or None}
+
+    @classmethod
+    def _from_dict(cls, data_dict):
+        cpuset = parse_cpu_spec(data_dict.get('cpus', ''))
+        memory = data_dict.get('mem', {}).get('total', 0)
+        cell_id = data_dict.get('id')
+        pagesize = (data_dict.get('pagesize')
+                    and VirtPageSize(data_dict['pagesize']) or None)
+        return cls(cell_id, cpuset, memory, pagesize)
 
 
 class VirtNUMATopologyCellLimit(VirtNUMATopologyCell):

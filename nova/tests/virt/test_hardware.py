@@ -1064,7 +1064,18 @@ class NUMATopologyTest(test.NoDBTestCase):
         cell = hw.VirtNUMATopologyCellInstance(1, set([1, 2]), 512)
         cell_dict = {'cpus': '1,2',
                      'mem': {'total': 512},
-                     'id': 1}
+                     'id': 1,
+                     'pagesize': None}
+        self._test_to_dict(cell, cell_dict)
+        self._test_cell_from_dict(cell_dict, cell)
+
+    def test_numa_cell_pagesize_dict(self):
+        cell = hw.VirtNUMATopologyCellInstance(
+            1, set([1, 2]), 512, hw.VirtPageSize(2048))
+        cell_dict = {'cpus': '1,2',
+                     'mem': {'total': 512},
+                     'id': 1,
+                     'pagesize': 2048}
         self._test_to_dict(cell, cell_dict)
         self._test_cell_from_dict(cell_dict, cell)
 
@@ -1092,10 +1103,12 @@ class NUMATopologyTest(test.NoDBTestCase):
         topo_dict = {'cells': [
                         {'cpus': '1,2',
                           'mem': {'total': 1024},
-                          'id': 1},
+                          'id': 1,
+                         'pagesize': None},
                         {'cpus': '3,4',
                           'mem': {'total': 1024},
-                          'id': 2}]}
+                          'id': 2,
+                         'pagesize': None}]}
         self._test_to_dict(topo, topo_dict)
         self._test_topo_from_dict(topo_dict, topo)
 
@@ -1414,3 +1427,13 @@ class VirtMemoryPagesTestCase(test.NoDBTestCase):
         self.assertEqual(4, pages.size_kb)
         self.assertEqual(1024, pages.total)
         self.assertEqual(512, pages.used)
+
+    def test_cell_instance_pagesize(self):
+        pagesize = hw.VirtPageSize(2048)
+        cell = hw.VirtNUMATopologyCellInstance(
+            0, set([0]), 1024, pagesize)
+
+        self.assertEqual(0, cell.id)
+        self.assertEqual(set([0]), cell.cpuset)
+        self.assertEqual(1024, cell.memory)
+        self.assertEqual(2048, cell.pagesize.size_kb)
