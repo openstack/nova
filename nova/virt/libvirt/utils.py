@@ -308,20 +308,26 @@ def list_rbd_volumes(pool):
 
 def remove_rbd_volumes(pool, *names):
     """Remove one or more rbd volume."""
+    deletion_marker = '_to_be_deleted_by_glance'
     client, ioctx = _connect_to_rados(pool)
     rbd_inst = rbd.RBD()
     for name in names:
+        if deletion_marker in name or 'clone' in name:
+            continue
         try:
             # Retry if ImageBusy raised
             rbd_inst.remove(ioctx, name)
-        except rbd.ImageNotFound, rbd.ImageHasSnapshots:
+        except rbd.ImageHasSnapshots:
+            new_name = name + deletion_marker
+            rbd_inst.rename(ioctx, name, new_name)
+        except rbd.ImageNotFound, rbd.ImageBusy:
             LOG.warn(_("rbd remove %(name)s in pool %(pool)s failed"),
                      {'name': name, 'pool': pool})
 
 
 def get_rbd_pool_info(pool):
     client, ioctx = _connect_to_rados(pool)
-    stats = client.cluster.get_cluster_stats()
+    stats = client.get_cluster_stats()
     return {'total': stats['kb'] * 1024,
             'free': stats['kb_avail'] * 1024,
             'used': stats['kb_used'] * 1024}
