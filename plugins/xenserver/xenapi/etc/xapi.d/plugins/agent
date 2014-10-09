@@ -46,6 +46,10 @@ class TimeoutError(StandardError):
     pass
 
 
+class RebootDetectedError(StandardError):
+    pass
+
+
 def version(self, arg_dict):
     """Get version of agent."""
     timeout = int(arg_dict.pop('timeout', DEFAULT_TIMEOUT))
@@ -210,6 +214,7 @@ def _wait_for_agent(self, request_id, arg_dict, timeout):
     arg_dict["path"] = "data/guest/%s" % request_id
     arg_dict["ignore_missing_path"] = True
     start = time.time()
+    reboot_detected = False
     while time.time() - start < timeout:
         ret = xenstore.read_record(self, arg_dict)
         # Note: the response for None with be a string that includes
@@ -220,12 +225,30 @@ def _wait_for_agent(self, request_id, arg_dict, timeout):
 
         time.sleep(.5)
 
+        # NOTE(johngarbutt) If we can't find this domid, then
+        # the VM has rebooted, so we must trigger domid refresh.
+        # Check after the sleep to give xenstore time to update
+        # after the VM reboot.
+        exists_args = {
+            "dom_id": arg_dict["dom_id"],
+            "path": "name",
+        }
+        dom_id_is_present = xenstore.record_exists(exists_args)
+        if not dom_id_is_present:
+            reboot_detected = True
+            break
+
     # No response within the timeout period; bail out
     # First, delete the request record
     arg_dict["path"] = "data/host/%s" % request_id
     xenstore.delete_record(self, arg_dict)
-    raise TimeoutError(_("TIMEOUT: No response from agent within"
-                         " %s seconds.") % timeout)
+
+    if reboot_detected:
+        raise RebootDetectedError(_("REBOOT: dom_id %s no longer "
+                                    "present") % arg_dict["dom_id"])
+    else:
+        raise TimeoutError(_("TIMEOUT: No response from agent within"
+                             " %s seconds.") % timeout)
 
 
 if __name__ == "__main__":
