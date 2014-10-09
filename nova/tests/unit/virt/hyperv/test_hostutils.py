@@ -15,6 +15,7 @@
 import mock
 
 from nova import test
+from nova.virt.hyperv import constants
 from nova.virt.hyperv import hostutils
 
 
@@ -95,3 +96,31 @@ class HostUtilsTestCase(test.NoDBTestCase):
         self._hostutils._conn_cimv2.Win32_OperatingSystem.return_value = [os]
         self.assertEqual(expected,
                          self._hostutils.check_min_windows_version(6, 2))
+
+    def _test_host_power_action(self, action):
+        fake_win32 = mock.MagicMock()
+        fake_win32.Win32Shutdown = mock.MagicMock()
+
+        self._hostutils._conn_cimv2.Win32_OperatingSystem.return_value = [
+            fake_win32]
+
+        if action == constants.HOST_POWER_ACTION_SHUTDOWN:
+            self._hostutils.host_power_action(action)
+            fake_win32.Win32Shutdown.assert_called_with(
+                self._hostutils._HOST_FORCED_SHUTDOWN)
+        elif action == constants.HOST_POWER_ACTION_REBOOT:
+            self._hostutils.host_power_action(action)
+            fake_win32.Win32Shutdown.assert_called_with(
+                self._hostutils._HOST_FORCED_REBOOT)
+        else:
+            self.assertRaises(NotImplementedError,
+                              self._hostutils.host_power_action, action)
+
+    def test_host_shutdown(self):
+        self._test_host_power_action(constants.HOST_POWER_ACTION_SHUTDOWN)
+
+    def test_host_reboot(self):
+        self._test_host_power_action(constants.HOST_POWER_ACTION_REBOOT)
+
+    def test_host_startup(self):
+        self._test_host_power_action(constants.HOST_POWER_ACTION_STARTUP)
