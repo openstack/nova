@@ -2067,6 +2067,31 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
 
+    # This test when sending an icehouse compatible rpc call to juno compute
+    # node, NetworkRequest object can load from three items tuple.
+    @mock.patch('nova.objects.InstanceActionEvent.event_finish_with_failure')
+    @mock.patch('nova.objects.InstanceActionEvent.event_start')
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.compute.manager.ComputeManager._build_and_run_instance')
+    def test_build_and_run_instance_with_icehouse_requested_network(
+            self, mock_build_and_run, mock_save, mock_event_start,
+            mock_event_finish):
+        mock_save.return_value = self.instance
+        self.compute.build_and_run_instance(self.context, self.instance,
+                self.image, request_spec={},
+                filter_properties=self.filter_properties,
+                injected_files=self.injected_files,
+                admin_password=self.admin_pass,
+                requested_networks=[('fake_network_id', '10.0.0.1',
+                                     'fake_port_id')],
+                security_groups=self.security_groups,
+                block_device_mapping=self.block_device_mapping, node=self.node,
+                limits=self.limits)
+        requested_network = mock_build_and_run.call_args[0][5][0]
+        self.assertEqual('fake_network_id', requested_network.network_id)
+        self.assertEqual('10.0.0.1', str(requested_network.address))
+        self.assertEqual('fake_port_id', requested_network.port_id)
+
     def test_build_abort_exception(self):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')

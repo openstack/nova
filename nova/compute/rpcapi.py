@@ -884,7 +884,9 @@ class ComputeAPI(object):
         if not self.client.can_send_version(version):
             version = '3.23'
             if requested_networks is not None:
-                requested_networks = requested_networks.as_tuples()
+                requested_networks = [(network_id, address, port_id)
+                    for (network_id, address, port_id, _) in
+                        requested_networks.as_tuples()]
 
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'build_and_run_instance', instance=instance,
