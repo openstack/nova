@@ -24,6 +24,7 @@ from oslo.config import cfg
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
 from nova.objects import block_device as objects_block_dev
+from nova.objects import network_request as objects_network_request
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests import fake_block_device
@@ -62,6 +63,14 @@ class ComputeRpcAPITestCase(test.TestCase):
         expected_version = kwargs.pop('version', rpcapi.client.target.version)
 
         expected_kwargs = kwargs.copy()
+        if ('requested_networks' in expected_kwargs and
+               expected_version == '3.23'):
+            expected_kwargs['requested_networks'] = []
+            for requested_network in kwargs['requested_networks']:
+                expected_kwargs['requested_networks'].append(
+                    (requested_network.network_id,
+                     str(requested_network.address),
+                     requested_network.port_id))
         if 'host_param' in expected_kwargs:
             expected_kwargs['host'] = expected_kwargs.pop('host_param')
         else:
@@ -460,3 +469,18 @@ class ComputeRpcAPITestCase(test.TestCase):
                 requested_networks=['network1'], security_groups=None,
                 block_device_mapping=None, node='node', limits=[],
                 version='3.33')
+
+    @mock.patch('nova.utils.is_neutron', return_value=True)
+    def test_build_and_run_instance_icehouse_compat(self, is_neutron):
+        self.flags(compute='icehouse', group='upgrade_levels')
+        self._test_compute_api('build_and_run_instance', 'cast',
+                instance=self.fake_instance_obj, host='host', image='image',
+                request_spec={'request': 'spec'}, filter_properties=[],
+                admin_password='passwd', injected_files=None,
+                requested_networks= objects_network_request.NetworkRequestList(
+                    objects=[objects_network_request.NetworkRequest(
+                        network_id="fake_network_id", address="10.0.0.1",
+                        port_id="fake_port_id")]),
+                security_groups=None,
+                block_device_mapping=None, node='node', limits=[],
+                version='3.23')
