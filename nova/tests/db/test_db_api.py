@@ -7092,6 +7092,18 @@ class InstanceGroupDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           db.instance_group_update, self.context,
                           'invalid_id', values)
 
+    def test_instance_group_get_by_instance(self):
+        values = self._get_default_values()
+        group1 = self._create_instance_group(self.context, values)
+
+        members = ['instance_id1', 'instance_id2']
+        db.instance_group_members_add(self.context, group1.uuid, members)
+
+        group2 = db.instance_group_get_by_instance(self.context,
+                                                   'instance_id1')
+
+        self.assertEqual(group2.uuid, group1.uuid)
+
 
 class InstanceGroupMembersDBApiTestCase(InstanceGroupDBApiTestCase):
     def test_instance_group_members_on_create(self):

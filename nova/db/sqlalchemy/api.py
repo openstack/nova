@@ -5932,6 +5932,25 @@ def instance_group_get(context, group_uuid):
     return group
 
 
+def instance_group_get_by_instance(context, instance_uuid):
+    session = get_session()
+    with session.begin():
+        group_member = model_query(context, models.InstanceGroupMember,
+                                   session=session).\
+                                   filter_by(instance_id=instance_uuid).\
+                                   first()
+        if not group_member:
+            raise exception.InstanceGroupNotFound(group_uuid='')
+        group = _instance_group_get_query(context, models.InstanceGroup,
+                                          models.InstanceGroup.id,
+                                          group_member.group_id,
+                                          session=session).first()
+        if not group:
+            raise exception.InstanceGroupNotFound(
+                    group_uuid=group_member.group_id)
+        return group
+
+
 def instance_group_update(context, group_uuid, values):
     """Update the attributes of an group.
 
