@@ -459,11 +459,11 @@ def prepend_dev(device_name):
     return device_name and '/dev/' + strip_dev(device_name)
 
 
-_pref = re.compile('^((x?v|s)d)')
+_pref = re.compile('^((x?v|s|h)d)')
 
 
 def strip_prefix(device_name):
-    """remove both leading /dev/ and xvd or sd or vd."""
+    """remove both leading /dev/ and xvd or sd or vd or hd."""
     device_name = strip_dev(device_name)
     return _pref.sub('', device_name)
 
