@@ -152,6 +152,7 @@ policy_data = """
     "compute_extension:v3:os-certificates:create": "",
     "compute_extension:v3:os-certificates:show": "",
     "compute_extension:cloudpipe": "",
+    "compute_extension:v3:os-cloudpipe": "",
     "compute_extension:cloudpipe_update": "",
     "compute_extension:config_drive": "",
     "compute_extension:v3:os-config-drive": "",
