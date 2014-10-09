@@ -117,8 +117,11 @@ class VMUtilsV2(vmutils.VMUtils):
         return [s for s in vmsettings if
                 s.VirtualSystemType == self._VIRTUAL_SYSTEM_TYPE_REALIZED][0]
 
-    def _attach_drive(self, vm, path, ctrller_path, drive_addr, drive_type):
+    def attach_drive(self, vm_name, path, ctrller_path, drive_addr,
+                     drive_type=constants.DISK):
         """Create a drive and attach it to the vm."""
+
+        vm = self._lookup_vm_check(vm_name)
 
         if drive_type == constants.DISK:
             res_sub_type = self._DISK_DRIVE_RES_SUB_TYPE

@@ -18,28 +18,22 @@ import os
 import mock
 
 from nova.compute import task_states
-from nova import test
 from nova.tests.unit import fake_instance
+from nova.tests.unit.virt.hyperv import test_base
 from nova.virt.hyperv import snapshotops
 
 
-class SnapshotOpsTestCase(test.NoDBTestCase):
+class SnapshotOpsTestCase(test_base.HyperVBaseTestCase):
     """Unit tests for the Hyper-V SnapshotOps class."""
 
     def setUp(self):
-        # utilsfactory will check the host OS version via get_hostutils,
-        # in order to return the proper Utils Class, so it must be mocked.
-        patched_func = mock.patch.object(snapshotops.utilsfactory,
-                                         'get_hostutils')
-        patched_func.start()
-        self.addCleanup(patched_func.stop)
+        super(SnapshotOpsTestCase, self).setUp()
 
         self.context = 'fake_context'
         self._snapshotops = snapshotops.SnapshotOps()
         self._snapshotops._pathutils = mock.MagicMock()
         self._snapshotops._vmutils = mock.MagicMock()
         self._snapshotops._vhdutils = mock.MagicMock()
-        super(SnapshotOpsTestCase, self).setUp()
 
     @mock.patch('nova.image.glance.get_remote_image_service')
     def test_save_glance_image(self, mock_get_remote_image_service):

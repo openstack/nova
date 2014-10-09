@@ -396,11 +396,8 @@ class VMOps(object):
                 # Stop the VM first.
                 self.power_off(instance)
 
-                storage = self._vmutils.get_vm_storage_paths(instance_name)
-                (disk_files, volume_drives) = storage
-
                 self._vmutils.destroy_vm(instance_name)
-                self._volumeops.disconnect_volumes(volume_drives)
+                self._volumeops.disconnect_volumes(block_device_info)
             else:
                 LOG.debug("Instance not found", instance=instance)
 

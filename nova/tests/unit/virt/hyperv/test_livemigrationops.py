@@ -16,40 +16,31 @@
 import mock
 from oslo.config import cfg
 
-from nova import test
 from nova.tests.unit import fake_instance
+from nova.tests.unit.virt.hyperv import test_base
 from nova.virt.hyperv import livemigrationops
 from nova.virt.hyperv import vmutils
 
 CONF = cfg.CONF
 
 
-class LiveMigrationOpsTestCase(test.NoDBTestCase):
+class LiveMigrationOpsTestCase(test_base.HyperVBaseTestCase):
     """Unit tests for the Hyper-V LiveMigrationOps class."""
 
     def setUp(self):
-        hostutils_patcher = mock.patch('nova.virt.hyperv.utilsfactory'
-                                       '.get_hostutils')
-
-        hostutils_patcher.start()
-        self.addCleanup(hostutils_patcher.stop)
-
+        super(LiveMigrationOpsTestCase, self).setUp()
         self.context = 'fake_context'
         self._livemigrops = livemigrationops.LiveMigrationOps()
         self._livemigrops._livemigrutils = mock.MagicMock()
-        super(LiveMigrationOpsTestCase, self).setUp()
 
-    @mock.patch('nova.virt.hyperv.volumeops.VolumeOps.logout_storage_target')
     @mock.patch('nova.virt.hyperv.vmops.VMOps.copy_vm_console_logs')
-    def _test_live_migration(self, mock_copy_logs, mock_logout_storage_target,
-                             side_effect):
+    def _test_live_migration(self, mock_copy_logs, side_effect):
         mock_instance = fake_instance.fake_instance_obj(self.context)
         mock_post = mock.MagicMock()
         mock_recover = mock.MagicMock()
         fake_dest = mock.sentinel.DESTINATION
-        self._livemigrops._livemigrutils.live_migrate_vm.return_value = {
-            mock.sentinel.IQN: mock.sentinel.LUN_COUNT}
-        mock_logout_storage_target.side_effect = [side_effect]
+        self._livemigrops._livemigrutils.live_migrate_vm.side_effect = [
+            side_effect]
         if side_effect is vmutils.HyperVException:
             self.assertRaises(vmutils.HyperVException,
                               self._livemigrops.live_migration,
@@ -69,8 +60,6 @@ class LiveMigrationOpsTestCase(test.NoDBTestCase):
             mock_live_migr = self._livemigrops._livemigrutils.live_migrate_vm
             mock_live_migr.assert_called_once_with(mock_instance.name,
                                                    fake_dest)
-            mock_logout_storage_target.assert_called_once_with(
-                mock.sentinel.IQN, mock.sentinel.LUN_COUNT)
             mock_post.assert_called_once_with(self.context, mock_instance,
                                               fake_dest, False)
 
@@ -93,8 +82,8 @@ class LiveMigrationOpsTestCase(test.NoDBTestCase):
                 '.ebs_root_in_block_devices')
     @mock.patch('nova.virt.hyperv.imagecache.ImageCache.get_cached_image')
     @mock.patch('nova.virt.hyperv.volumeops.VolumeOps'
-                '.login_storage_targets')
-    def test_pre_live_migration(self, mock_login_storage_targets,
+                '.initialize_volumes_connection')
+    def test_pre_live_migration(self, mock_initialize_connection,
                                 mock_get_cached_image,
                                 mock_ebs_root_in_block_devices):
         mock_instance = fake_instance.fake_instance_obj(self.context)
@@ -112,8 +101,16 @@ class LiveMigrationOpsTestCase(test.NoDBTestCase):
             mock.sentinel.BLOCK_INFO)
         mock_get_cached_image.assert_called_once_with(self.context,
                                                       mock_instance)
-        mock_login_storage_targets.assert_called_once_with(
+        mock_initialize_connection.assert_called_once_with(
             mock.sentinel.BLOCK_INFO)
+
+    @mock.patch('nova.virt.hyperv.volumeops.VolumeOps.disconnect_volumes')
+    def test_post_live_migration(self, mock_disconnect_volumes):
+        self._livemigrops.post_live_migration(
+            self.context, mock.sentinel.instance,
+            mock.sentinel.block_device_info)
+        mock_disconnect_volumes.assert_called_once_with(
+            mock.sentinel.block_device_info)
 
     @mock.patch('nova.virt.hyperv.vmops.VMOps.log_vm_serial_output')
     def test_post_live_migration_at_destination(self, mock_log_vm):

@@ -66,11 +66,8 @@ class LiveMigrationOps(object):
 
         try:
             self._vmops.copy_vm_console_logs(instance_name, dest)
-            iscsi_targets = self._livemigrutils.live_migrate_vm(instance_name,
-                                                                dest)
-            for target_iqn, target_luns_count in iscsi_targets.items():
-                self._volumeops.logout_storage_target(target_iqn,
-                                                      target_luns_count)
+            self._livemigrutils.live_migrate_vm(instance_name,
+                                                dest)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.debug("Calling live migration recover_method "
@@ -93,7 +90,11 @@ class LiveMigrationOps(object):
             if not boot_from_volume:
                 self._imagecache.get_cached_image(context, instance)
 
-        self._volumeops.login_storage_targets(block_device_info)
+        self._volumeops.initialize_volumes_connection(block_device_info)
+
+    @check_os_version_requirement
+    def post_live_migration(self, context, instance, block_device_info):
+        self._volumeops.disconnect_volumes(block_device_info)
 
     @check_os_version_requirement
     def post_live_migration_at_destination(self, ctxt, instance_ref,

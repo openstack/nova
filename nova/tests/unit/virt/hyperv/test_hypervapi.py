@@ -16,7 +16,6 @@
 Test suite for the Hyper-V driver and related APIs.
 """
 
-import contextlib
 import os
 import shutil
 import time
@@ -170,6 +169,7 @@ class HyperVAPIBaseTestCase(test.NoDBTestCase):
         self._mox.StubOutWithMock(vmutils.VMUtils, 'get_vm_storage_paths')
         self._mox.StubOutWithMock(vmutils.VMUtils,
                                   'get_controller_volume_paths')
+        self._mox.StubOutWithMock(vmutils.VMUtils, 'get_free_controller_slot')
         self._mox.StubOutWithMock(vmutils.VMUtils,
                                   'enable_vm_metrics_collection')
         self._mox.StubOutWithMock(vmutils.VMUtils, 'get_vm_id')
@@ -449,10 +449,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         self._mox.VerifyAll()
 
     def _setup_destroy_mocks(self, destroy_disks=True):
-        fake_volume_drives = ['fake_volume_drive']
-        fake_target_iqn = 'fake_target_iqn'
-        fake_target_lun = 'fake_target_lun'
-
         m = vmutils.VMUtils.vm_exists(mox.Func(self._check_instance_name))
         m.AndReturn(True)
 
@@ -461,16 +457,7 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
 
         self._setup_delete_vm_log_mocks()
 
-        m = vmutils.VMUtils.get_vm_storage_paths(func)
-        m.AndReturn(([], fake_volume_drives))
-
         vmutils.VMUtils.destroy_vm(func)
-
-        m = self._conn._volumeops.get_target_from_disk_path(
-            fake_volume_drives[0])
-        m.AndReturn((fake_target_iqn, fake_target_lun))
-
-        self._mock_logout_storage_target(fake_target_iqn)
 
         if destroy_disks:
             m = fake.PathUtils.get_instance_dir(mox.IsA(str),
@@ -776,8 +763,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         fake_mounted_disk = "fake_mounted_disk"
         fake_device_number = 0
         fake_controller_path = 'fake_scsi_controller_path'
-        self._mox.StubOutWithMock(self._conn._volumeops,
-                                  '_get_free_controller_slot')
 
         self._mock_login_storage_target(target_iqn, target_lun,
                                         target_portal,
@@ -797,7 +782,7 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
             m.AndReturn(fake_controller_path)
 
             fake_free_slot = 1
-            m = self._conn._volumeops._get_free_controller_slot(
+            m = vmutils.VMUtils.get_free_controller_slot(
                 fake_controller_path)
             m.AndReturn(fake_free_slot)
 
@@ -879,10 +864,10 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
             self._volume_target_portal, self._volume_id)
         mount_point = '/dev/sdc'
 
-        def fake_login_storage_target(connection_info):
+        def fake_login_storage_target(self, connection_info):
             raise vmutils.HyperVException('Fake connection exception')
 
-        self.stubs.Set(self._conn._volumeops, '_login_storage_target',
+        self.stubs.Set(volumeops.ISCSIVolumeDriver, 'login_storage_target',
                        fake_login_storage_target)
         self.assertRaises(vmutils.HyperVException, self._conn.attach_volume,
                           None, connection_info, instance_data, mount_point)
@@ -1337,101 +1322,3 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         self.assertEqual(CONF.my_ip, connect_info.host)
         self.assertEqual(fake_port, connect_info.port)
         self.assertEqual(fake_vm_id, connect_info.internal_access_path)
-
-
-class VolumeOpsTestCase(HyperVAPIBaseTestCase):
-    """Unit tests for VolumeOps class."""
-
-    def setUp(self):
-        super(VolumeOpsTestCase, self).setUp()
-        self.volumeops = volumeops.VolumeOps()
-
-    def test_get_mounted_disk_from_lun(self):
-        with contextlib.nested(
-            mock.patch.object(self.volumeops._volutils,
-                              'get_device_number_for_target'),
-            mock.patch.object(self.volumeops._vmutils,
-                              'get_mounted_disk_by_drive_number')
-            ) as (mock_get_device_number_for_target,
-                  mock_get_mounted_disk_by_drive_number):
-
-            mock_get_device_number_for_target.return_value = 0
-            mock_get_mounted_disk_by_drive_number.return_value = 'disk_path'
-
-            block_device_info = db_fakes.get_fake_block_device_info(
-                self._volume_target_portal, self._volume_id)
-
-            mapping = driver.block_device_info_get_mapping(block_device_info)
-            data = mapping[0]['connection_info']['data']
-            target_lun = data['target_lun']
-            target_iqn = data['target_iqn']
-
-            disk = self.volumeops._get_mounted_disk_from_lun(target_iqn,
-                                                             target_lun)
-            self.assertEqual(disk, 'disk_path')
-
-    def test_get_mounted_disk_from_lun_failure(self):
-        self.flags(mounted_disk_query_retry_count=1, group='hyperv')
-
-        with mock.patch.object(self.volumeops._volutils,
-                               'get_device_number_for_target') as m_device_num:
-            m_device_num.side_effect = [None, -1]
-
-            block_device_info = db_fakes.get_fake_block_device_info(
-                self._volume_target_portal, self._volume_id)
-
-            mapping = driver.block_device_info_get_mapping(block_device_info)
-            data = mapping[0]['connection_info']['data']
-            target_lun = data['target_lun']
-            target_iqn = data['target_iqn']
-
-            for attempt in xrange(1):
-                self.assertRaises(exception.NotFound,
-                                  self.volumeops._get_mounted_disk_from_lun,
-                                  target_iqn, target_lun)
-
-    def test_get_free_controller_slot_exception(self):
-        fake_drive = mock.MagicMock()
-        type(fake_drive).AddressOnParent = mock.PropertyMock(
-            side_effect=xrange(constants.SCSI_CONTROLLER_SLOTS_NUMBER))
-        fake_scsi_controller_path = 'fake_scsi_controller_path'
-
-        with mock.patch.object(self.volumeops._vmutils,
-                'get_attached_disks') as fake_get_attached_disks:
-            fake_get_attached_disks.return_value = (
-                [fake_drive] * constants.SCSI_CONTROLLER_SLOTS_NUMBER)
-            self.assertRaises(vmutils.HyperVException,
-                              self.volumeops._get_free_controller_slot,
-                              fake_scsi_controller_path)
-
-    def test_fix_instance_volume_disk_paths(self):
-        block_device_info = db_fakes.get_fake_block_device_info(
-            self._volume_target_portal, self._volume_id)
-
-        with contextlib.nested(
-            mock.patch.object(self.volumeops,
-                              '_get_mounted_disk_from_lun'),
-            mock.patch.object(self.volumeops._vmutils,
-                              'get_vm_scsi_controller'),
-            mock.patch.object(self.volumeops._vmutils,
-                              'set_disk_host_resource'),
-            mock.patch.object(self.volumeops,
-                              'ebs_root_in_block_devices')
-            ) as (mock_get_mounted_disk_from_lun,
-                  mock_get_vm_scsi_controller,
-                  mock_set_disk_host_resource,
-                  mock_ebs_in_block_devices):
-
-            mock_ebs_in_block_devices.return_value = False
-            mock_get_mounted_disk_from_lun.return_value = "fake_mounted_path"
-            mock_set_disk_host_resource.return_value = "fake_controller_path"
-
-            self.volumeops.fix_instance_volume_disk_paths(
-                "test_vm_name",
-                block_device_info)
-
-            mock_get_mounted_disk_from_lun.assert_called_with(
-                'iqn.2010-10.org.openstack:volume-' + self._volume_id, 1, True)
-            mock_get_vm_scsi_controller.assert_called_with("test_vm_name")
-            mock_set_disk_host_resource("test_vm_name", "fake_controller_path",
-                                        0, "fake_mounted_path")
