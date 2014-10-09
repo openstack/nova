@@ -54,6 +54,17 @@ class _TestInstanceGroupObjects(test.TestCase):
         self.assertEqual(obj_result.members, members)
         self.assertEqual(obj_result.policies, policies)
 
+    def test_get_by_instance_uuid(self):
+        values = self._get_default_values()
+        policies = ['policy1', 'policy2']
+        members = ['instance_id1', 'instance_id2']
+        db_result = self._create_instance_group(self.context, values,
+                                                policies=policies,
+                                                members=members)
+        obj_result = instance_group.InstanceGroup.get_by_instance_uuid(
+                self.context, 'instance_id1')
+        self.assertEqual(obj_result.uuid, db_result.uuid)
+
     def test_refresh(self):
         values = self._get_default_values()
         db_result = self._create_instance_group(self.context, values)
