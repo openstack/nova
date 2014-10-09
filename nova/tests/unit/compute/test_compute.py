@@ -7122,6 +7122,32 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(vol_bdm.disk_bus, 'virtio')
         self.assertEqual(vol_bdm.device_type, 'disk')
 
+    def test_reserve_block_device_name_with_iso_instance(self):
+        instance = self._create_fake_instance_obj(
+                params={'root_device_name': '/dev/hda'})
+        bdm = objects.BlockDeviceMapping(
+                **{'source_type': 'image', 'destination_type': 'local',
+                   'image_id': 'fake-image-id', 'device_name': '/dev/hda',
+                   'instance_uuid': instance.uuid})
+        bdm.create(self.context)
+
+        self.compute.reserve_block_device_name(self.context, instance,
+                                               '/dev/vdb', 'fake-volume-id',
+                                               'ide', 'disk')
+
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                self.context, instance.uuid)
+        bdms = list(bdms)
+        self.assertEqual(2, len(bdms))
+        bdms.sort(key=operator.attrgetter('device_name'))
+        vol_bdm = bdms[1]
+        self.assertEqual('volume', vol_bdm.source_type)
+        self.assertEqual('volume', vol_bdm.destination_type)
+        self.assertEqual('/dev/hdb', vol_bdm.device_name)
+        self.assertEqual('fake-volume-id', vol_bdm.volume_id)
+        self.assertEqual('ide', vol_bdm.disk_bus)
+        self.assertEqual('disk', vol_bdm.device_type)
+
 
 class ComputeAPITestCase(BaseTestCase):
     def setUp(self):
