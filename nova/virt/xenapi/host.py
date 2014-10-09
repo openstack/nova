@@ -244,6 +244,9 @@ class HostState(object):
             data["supported_instances"] = to_supported_instances(
                 data.get("host_capabilities")
             )
+            data["cpu_model"] = to_cpu_model(
+                data.get("host_cpu_info")
+            )
             host_memory = data.get('host_memory', None)
             if host_memory:
                 data["host_memory_total"] = host_memory.get('total', 0)
@@ -290,6 +293,59 @@ def to_supported_instances(host_capabilities):
                         capability)
 
     return result
+
+
+def to_cpu_model(host_cpu_info):
+    # The XenAPI driver returns data in the format
+    #
+    # {"physical_features": "0098e3fd-bfebfbff-00000001-28100800",
+    #  "modelname": "Intel(R) Xeon(R) CPU           X3430  @ 2.40GHz",
+    #  "vendor": "GenuineIntel",
+    #  "features": "0098e3fd-bfebfbff-00000001-28100800",
+    #  "family": 6,
+    #  "maskable": "full",
+    #  "cpu_count": 4,
+    #  "socket_count": "1",
+    #  "flags": "fpu de tsc msr pae mce cx8 apic sep mtrr mca cmov
+    #            pat clflush acpi mmx fxsr sse sse2 ss ht nx
+    #            constant_tsc nonstop_tsc aperfmperf pni vmx est
+    #            ssse3 sse4_1 sse4_2 popcnt hypervisor ida
+    #            tpr_shadow vnmi flexpriority ept vpid",
+    #  "stepping": 5,
+    #  "model": 30,
+    #  "features_after_reboot": "0098e3fd-bfebfbff-00000001-28100800",
+    #  "speed": "2394.086"}
+
+    if host_cpu_info is None:
+        return None
+
+    cpu_info = dict()
+    # TODO(berrange) the data we're putting in model is not
+    # exactly comparable to what libvirt puts in model. The
+    # libvirt model names are a well defined short string
+    # which is really an aliass for a particular set of
+    # feature flags. The Xen model names are raw printable
+    # strings from the kernel with no specific semantics
+    cpu_info["model"] = host_cpu_info["modelname"]
+    cpu_info["vendor"] = host_cpu_info["vendor"]
+    # TODO(berrange) perhaps we could fill in 'arch' field too
+    # by looking at 'host_capabilities' for the Xen host ?
+
+    topology = dict()
+    topology["sockets"] = int(host_cpu_info["socket_count"])
+    topology["cores"] = (int(host_cpu_info["cpu_count"]) /
+                         int(host_cpu_info["socket_count"]))
+    # TODO(berrange): if 'ht' is present in the 'flags' list
+    # is it possible to infer that the 'cpu_count' is in fact
+    # sockets * cores * threads ? Unclear if 'ht' would remain
+    # visible when threads are disabled in BIOS ?
+    topology["threads"] = 1
+
+    cpu_info["topology"] = topology
+
+    cpu_info["features"] = host_cpu_info["flags"].split(" ")
+
+    return cpu_info
 
 
 def call_xenhost(session, method, arg_dict):

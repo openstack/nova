@@ -681,13 +681,47 @@ class SessionBase(object):
     _plugin_migration_move_vhds_into_sr = _plugin_noop
 
     def _plugin_xenhost_host_data(self, method, args):
-            return jsonutils.dumps({'host_memory': {'total': 10,
-                                                    'overhead': 20,
-                                                    'free': 30,
-                                                    'free-computed': 40},
-                                    'host_hostname': 'fake-xenhost',
-                                    'host_cpu_info': {'cpu_count': 50},
-                                    })
+        return jsonutils.dumps({
+            'host_memory': {'total': 10,
+                            'overhead': 20,
+                            'free': 30,
+                            'free-computed': 40},
+            'host_uuid': 'fb97583b-baa1-452d-850e-819d95285def',
+            'host_name-label': 'fake-xenhost',
+            'host_name-description': 'Default install of XenServer',
+            'host_hostname': 'fake-xenhost',
+            'host_ip_address': '10.219.10.24',
+            'enabled': 'true',
+            'host_capabilities': ['xen-3.0-x86_64',
+                                  'xen-3.0-x86_32p',
+                                  'hvm-3.0-x86_32',
+                                  'hvm-3.0-x86_32p',
+                                  'hvm-3.0-x86_64'],
+            'host_other-config': {
+                'agent_start_time': '1412774967.',
+                'iscsi_iqn': 'iqn.2014-10.org.example:39fa9ee3',
+                'boot_time': '1412774885.',
+            },
+            'host_cpu_info': {
+                'physical_features': '0098e3fd-bfebfbff-00000001-28100800',
+                'modelname': 'Intel(R) Xeon(R) CPU           X3430  @ 2.40GHz',
+                'vendor': 'GenuineIntel',
+                'features': '0098e3fd-bfebfbff-00000001-28100800',
+                'family': 6,
+                'maskable': 'full',
+                'cpu_count': 4,
+                'socket_count': '1',
+                'flags': 'fpu de tsc msr pae mce cx8 apic sep mtrr mca '
+                         'cmov pat clflush acpi mmx fxsr sse sse2 ss ht '
+                         'nx constant_tsc nonstop_tsc aperfmperf pni vmx '
+                         'est ssse3 sse4_1 sse4_2 popcnt hypervisor ida '
+                         'tpr_shadow vnmi flexpriority ept vpid',
+                'stepping': 5,
+                'model': 30,
+                'features_after_reboot': '0098e3fd-bfebfbff-00000001-28100800',
+                'speed': '2394.086'
+            },
+        })
 
     def _plugin_poweraction(self, method, args):
         return jsonutils.dumps({"power_action": method[5:]})
