@@ -41,7 +41,7 @@ def fake_compute_get(*args, **kwargs):
 
 
 class RescueTestV21(test.NoDBTestCase):
-    _prefix = "/v3"
+    _prefix = '/v2/fake'
 
     def setUp(self):
         super(RescueTestV21, self).setUp()
@@ -52,7 +52,7 @@ class RescueTestV21(test.NoDBTestCase):
         self.app = self._get_app()
 
     def _get_app(self):
-        return fakes.wsgi_app_v3(init_only=('servers', 'os-rescue'))
+        return fakes.wsgi_app_v21(init_only=('servers', 'os-rescue'))
 
     def test_rescue_from_locked_server(self):
         def fake_rescue_from_locked_server(self, context,
@@ -251,7 +251,6 @@ class RescueTestV21(test.NoDBTestCase):
 
 
 class RescueTestV20(RescueTestV21):
-    _prefix = '/v2/fake'
 
     def _get_app(self):
         self.flags(

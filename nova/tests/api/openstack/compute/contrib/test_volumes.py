@@ -219,7 +219,7 @@ class BootFromVolumeTest(test.TestCase):
 
 
 class VolumeApiTestV21(test.TestCase):
-    url_prefix = '/v3'
+    url_prefix = '/v2/fake'
 
     def setUp(self):
         super(VolumeApiTestV21, self).setUp()
@@ -238,7 +238,7 @@ class VolumeApiTestV21(test.TestCase):
         self.app = self._get_app()
 
     def _get_app(self):
-        return fakes.wsgi_app_v3()
+        return fakes.wsgi_app_v21()
 
     def test_volume_create(self):
         self.stubs.Set(cinder.API, "create", fakes.stub_volume_create)
@@ -324,7 +324,6 @@ class VolumeApiTestV21(test.TestCase):
 
 
 class VolumeApiTestV2(VolumeApiTestV21):
-    url_prefix = '/v2/fake'
 
     def setUp(self):
         super(VolumeApiTestV2, self).setUp()

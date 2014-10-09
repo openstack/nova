@@ -60,7 +60,7 @@ def fake_compute_get_all(*args, **kwargs):
 class ServerUsageTestV21(test.TestCase):
     content_type = 'application/json'
     prefix = 'OS-SRV-USG:'
-    _prefix = "/v3"
+    _prefix = "/v2/fake"
 
     def setUp(self):
         super(ServerUsageTestV21, self).setUp()
@@ -81,7 +81,7 @@ class ServerUsageTestV21(test.TestCase):
         return res
 
     def _get_app(self):
-        return fakes.wsgi_app_v3(init_only=('servers', 'os-server-usage'))
+        return fakes.wsgi_app_v21(init_only=('servers', 'os-server-usage'))
 
     def _get_server(self, body):
         return jsonutils.loads(body).get('server')
@@ -136,7 +136,6 @@ class ServerUsageTestV21(test.TestCase):
 
 
 class ServerUsageTestV20(ServerUsageTestV21):
-    _prefix = "/v2/fake"
 
     def setUp(self):
         super(ServerUsageTestV20, self).setUp()
