@@ -1501,7 +1501,8 @@ class _ComputeAPIUnitTestMixIn(object):
     def _test_snapshot_and_backup(self, is_snapshot=True,
                                   with_base_ref=False, min_ram=None,
                                   min_disk=None,
-                                  create_fails=False):
+                                  create_fails=False,
+                                  instance_vm_state=vm_states.ACTIVE):
         # 'cache_in_nova' is for testing non-inheritable properties
         # 'user_id' should also not be carried from sys_meta into
         # image property...since it should be set explicitly by
@@ -1514,6 +1515,7 @@ class _ComputeAPIUnitTestMixIn(object):
             fake_sys_meta['image_base_image_ref'] = 'fake-base-ref'
         params = dict(system_metadata=fake_sys_meta, locked=True)
         instance = self._create_instance_obj(params=params)
+        instance.vm_state = instance_vm_state
         fake_sys_meta.update(instance.system_metadata)
         extra_props = dict(cow='moo', cat='meow')
 
@@ -1600,6 +1602,7 @@ class _ComputeAPIUnitTestMixIn(object):
         except test.TestingException:
             got_exc = True
         self.assertEqual(create_fails, got_exc)
+        self.mox.UnsetStubs()
 
     def test_snapshot(self):
         self._test_snapshot_and_backup()
@@ -1635,7 +1638,10 @@ class _ComputeAPIUnitTestMixIn(object):
         self._test_snapshot_and_backup(min_disk=42)
 
     def test_backup(self):
-        self._test_snapshot_and_backup(is_snapshot=False)
+        for state in [vm_states.ACTIVE, vm_states.STOPPED,
+                      vm_states.PAUSED, vm_states.SUSPENDED]:
+            self._test_snapshot_and_backup(is_snapshot=False,
+                                           instance_vm_state=state)
 
     def test_backup_fails(self):
         self._test_snapshot_and_backup(is_snapshot=False, create_fails=True)

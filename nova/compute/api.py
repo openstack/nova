@@ -2016,7 +2016,8 @@ class API(base.Base):
     #                intended to prevent accidental change/delete of instances
     @wrap_check_policy
     @check_instance_cell
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
+                                    vm_states.PAUSED, vm_states.SUSPENDED])
     def backup(self, context, instance, name, backup_type, rotation,
                extra_properties=None):
         """Backup the given instance
