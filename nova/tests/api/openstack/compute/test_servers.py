@@ -4218,7 +4218,7 @@ class ServerXMLSerializationTest(test.TestCase):
 
         output = serializer.serialize(fixture)
         root = etree.XML(output)
-        xmlutil.validate_schema(root, 'servers_index')
+        xmlutil.validate_schema(root, 'servers')
         server_elems = root.findall('{0}server'.format(NS))
         self.assertEqual(len(server_elems), 2)
         for i, server_elem in enumerate(server_elems):
@@ -4281,7 +4281,7 @@ class ServerXMLSerializationTest(test.TestCase):
 
         output = serializer.serialize(fixture)
         root = etree.XML(output)
-        xmlutil.validate_schema(root, 'servers_index')
+        xmlutil.validate_schema(root, 'servers')
         server_elems = root.findall('{0}server'.format(NS))
         self.assertEqual(len(server_elems), 2)
         for i, server_elem in enumerate(server_elems):
