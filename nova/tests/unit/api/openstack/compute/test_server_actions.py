@@ -265,6 +265,15 @@ class ServerActionsControllerTestV21(test.TestCase):
                                         task_state=task_states.REBOOTING_HARD))
         self.controller._action_reboot(self.req, FAKE_UUID, body=body)
 
+    def test_reboot_soft_with_hard_in_progress_raises_conflict(self):
+        body = dict(reboot=dict(type="SOFT"))
+        self.stubs.Set(db, 'instance_get_by_uuid',
+                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
+                                        task_state=task_states.REBOOTING_HARD))
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller._action_reboot,
+                          self.req, FAKE_UUID, body=body)
+
     def _test_rebuild_preserve_ephemeral(self, value=None):
         self._set_fake_extension()
         return_server = fakes.fake_instance_get(image_ref='2',

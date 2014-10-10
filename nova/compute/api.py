@@ -2364,50 +2364,45 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
-    @check_instance_state(vm_state=set(
-                    vm_states.ALLOW_SOFT_REBOOT + vm_states.ALLOW_HARD_REBOOT),
-                          task_state=[None, task_states.REBOOTING,
-                                      task_states.REBOOT_PENDING,
-                                      task_states.REBOOT_STARTED,
-                                      task_states.REBOOTING_HARD,
-                                      task_states.RESUMING,
-                                      task_states.UNPAUSING,
-                                      task_states.PAUSING,
-                                      task_states.SUSPENDING])
     def reboot(self, context, instance, reboot_type):
         """Reboot the given instance."""
-        if (reboot_type == 'SOFT' and
-            (instance.vm_state not in vm_states.ALLOW_SOFT_REBOOT)):
-            raise exception.InstanceInvalidState(
-                attr='vm_state',
-                instance_uuid=instance.uuid,
-                state=instance.vm_state,
-                method='soft reboot')
-        if reboot_type == 'SOFT' and instance.task_state is not None:
-            raise exception.InstanceInvalidState(
-                attr='task_state',
-                instance_uuid=instance.uuid,
-                state=instance.task_state,
-                method='reboot')
+        if reboot_type == 'SOFT':
+            self._soft_reboot(context, instance)
+        else:
+            self._hard_reboot(context, instance)
+
+    @check_instance_state(vm_state=set(vm_states.ALLOW_SOFT_REBOOT),
+                          task_state=[None])
+    def _soft_reboot(self, context, instance):
         expected_task_state = [None]
-        if reboot_type == 'HARD':
-            expected_task_state.extend([task_states.REBOOTING,
-                                        task_states.REBOOT_PENDING,
-                                        task_states.REBOOT_STARTED,
-                                        task_states.REBOOTING_HARD,
-                                        task_states.RESUMING,
-                                        task_states.UNPAUSING,
-                                        task_states.SUSPENDING])
-        state = {'SOFT': task_states.REBOOTING,
-                 'HARD': task_states.REBOOTING_HARD}[reboot_type]
-        instance.task_state = state
+        instance.task_state = task_states.REBOOTING
         instance.save(expected_task_state=expected_task_state)
 
         self._record_action_start(context, instance, instance_actions.REBOOT)
 
         self.compute_rpcapi.reboot_instance(context, instance=instance,
                                             block_device_info=None,
-                                            reboot_type=reboot_type)
+                                            reboot_type='SOFT')
+
+    @check_instance_state(vm_state=set(vm_states.ALLOW_HARD_REBOOT),
+                          task_state=task_states.ALLOW_REBOOT)
+    def _hard_reboot(self, context, instance):
+        instance.task_state = task_states.REBOOTING_HARD
+        expected_task_state = [None,
+                               task_states.REBOOTING,
+                               task_states.REBOOT_PENDING,
+                               task_states.REBOOT_STARTED,
+                               task_states.REBOOTING_HARD,
+                               task_states.RESUMING,
+                               task_states.UNPAUSING,
+                               task_states.SUSPENDING]
+        instance.save(expected_task_state = expected_task_state)
+
+        self._record_action_start(context, instance, instance_actions.REBOOT)
+
+        self.compute_rpcapi.reboot_instance(context, instance=instance,
+                                            block_device_info=None,
+                                            reboot_type='HARD')
 
     @wrap_check_policy
     @check_instance_lock
