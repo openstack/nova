@@ -1189,6 +1189,24 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               </bandwidth>
             </interface>""")
 
+    def test_config_driver_options(self):
+        obj = config.LibvirtConfigGuestInterface()
+        obj.net_type = "ethernet"
+        obj.mac_addr = "DE:AD:BE:EF:CA:FE"
+        obj.model = "virtio"
+        obj.target_dev = "vnet0"
+        obj.driver_name = "vhost"
+        obj.vhost_queues = 4
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <interface type="ethernet">
+              <mac address="DE:AD:BE:EF:CA:FE"/>
+              <model type="virtio"/>
+              <driver name="vhost" queues="4"/>
+              <target dev="vnet0"/>
+            </interface>""")
+
     def test_config_bridge(self):
         obj = config.LibvirtConfigGuestInterface()
         obj.net_type = "bridge"

@@ -1131,6 +1131,7 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         self.vhostuser_mode = None
         self.vhostuser_path = None
         self.vhostuser_type = None
+        self.vhost_queues = None
         self.vif_inbound_peak = None
         self.vif_inbound_burst = None
         self.vif_inbound_average = None
@@ -1150,7 +1151,10 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
             dev.append(etree.Element("model", type=self.model))
 
         if self.driver_name:
-            dev.append(etree.Element("driver", name=self.driver_name))
+            drv_elem = etree.Element("driver", name=self.driver_name)
+            if self.vhost_queues is not None:
+                drv_elem.set('queues', str(self.vhost_queues))
+            dev.append(drv_elem)
 
         if self.net_type == "ethernet":
             if self.script is not None:
