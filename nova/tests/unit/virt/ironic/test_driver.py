@@ -200,6 +200,19 @@ class IronicDriverTestCase(test.NoDBTestCase):
                                           properties=props)
 
         result = self.driver._node_resource(node)
+
+        wantkeys = ["hypervisor_hostname", "hypervisor_type",
+                    "hypervisor_version", "cpu_info",
+                    "vcpus", "vcpus_used",
+                    "memory_mb", "memory_mb_used",
+                    "local_gb", "local_gb_used",
+                    "disk_available_least",
+                    "supported_instances",
+                    "stats"]
+        wantkeys.sort()
+        gotkeys = result.keys()
+        gotkeys.sort()
+        self.assertEqual(wantkeys, gotkeys)
         self.assertEqual(props['cpus'], result['vcpus'])
         self.assertEqual(props['cpus'], result['vcpus_used'])
         self.assertEqual(props['memory_mb'], result['memory_mb'])
