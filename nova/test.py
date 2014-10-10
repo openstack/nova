@@ -281,6 +281,9 @@ class TestCase(testtools.TestCase):
             self.useFixture(fixtures.LogHandler(handler, nuke_handlers=False))
             handler.setLevel(logging.DEBUG)
 
+        # Don't log every single DB migration step
+        logging.getLogger('migrate.versioning.api').setLevel(logging.WARNING)
+
         self.useFixture(conf_fixture.ConfFixture(CONF))
 
         self.messaging_conf = messaging_conffixture.ConfFixture(CONF)
