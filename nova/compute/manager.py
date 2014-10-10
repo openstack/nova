@@ -5425,6 +5425,16 @@ class ComputeManager(manager.Manager):
                 LOG.debug(msg, instance=instance)
                 continue
 
+            # race condition: This condition is hit when this method is
+            # called between the save of the migration record with a status of
+            # finished and the save of the instance object with a state of
+            # RESIZED. The migration record should not be set to error.
+            if instance.task_state == task_states.RESIZE_FINISH:
+                msg = ("Instance still resizing during resize "
+                       "confirmation. Skipping.")
+                LOG.debug(msg, instance=instance)
+                continue
+
             vm_state = instance['vm_state']
             task_state = instance['task_state']
             if vm_state != vm_states.RESIZED or task_state is not None:
