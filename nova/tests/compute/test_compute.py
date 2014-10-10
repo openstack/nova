@@ -6328,7 +6328,10 @@ class ComputeTestCase(BaseTestCase):
                                            task_state='deleting'),
             fake_instance.fake_db_instance(uuid='fake_uuid7',
                                            vm_state=vm_states.RESIZED,
-                                           task_state='soft-deleting')]
+                                           task_state='soft-deleting'),
+            fake_instance.fake_db_instance(uuid='fake_uuid8',
+                                           vm_state=vm_states.ACTIVE,
+                                           task_state='resize_finish')]
         expected_migration_status = {'fake_uuid1': 'confirmed',
                                      'noexist': 'error',
                                      'fake_uuid2': 'error',
@@ -6336,7 +6339,8 @@ class ComputeTestCase(BaseTestCase):
                                      'fake_uuid4': None,
                                      'fake_uuid5': 'error',
                                      'fake_uuid6': None,
-                                     'fake_uuid7': None}
+                                     'fake_uuid7': None,
+                                     'fake_uuid8': None}
         migrations = []
         for i, instance in enumerate(instances, start=1):
             fake_mig = test_migration.fake_db_migration()
