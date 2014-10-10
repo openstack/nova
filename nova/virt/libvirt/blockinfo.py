@@ -76,7 +76,6 @@ from oslo.config import cfg
 
 from nova import block_device
 from nova.compute import arch
-from nova.compute import flavors
 from nova import exception
 from nova.i18n import _
 from nova.objects import base as obj_base
@@ -493,7 +492,7 @@ def get_disk_mapping(virt_type, instance,
        Returns the guest disk mapping for the devices.
     """
 
-    inst_type = flavors.extract_flavor(instance)
+    inst_type = instance.get_flavor()
 
     mapping = {}
 

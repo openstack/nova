@@ -33,8 +33,10 @@ from nova.compute import vm_mode
 from nova import context
 from nova import exception
 from nova.i18n import _
+from nova import objects
 from nova.openstack.common.fixture import config as config_fixture
 from nova import test
+from nova.tests.unit.objects import test_flavor
 from nova.tests.unit.virt.xenapi import stubs
 from nova.tests.unit.virt.xenapi import test_xenapi
 from nova import utils
@@ -595,47 +597,43 @@ class CheckVDISizeTestCase(VMUtilsTestBase):
         super(CheckVDISizeTestCase, self).setUp()
         self.context = 'fakecontext'
         self.session = 'fakesession'
-        self.instance = dict(uuid='fakeinstance')
+        self.instance = objects.Instance(uuid=str(uuid.uuid4()))
+        self.flavor = objects.Flavor()
         self.vdi_uuid = 'fakeuuid'
 
     def test_not_too_large(self):
-        self.mox.StubOutWithMock(flavors, 'extract_flavor')
-        flavors.extract_flavor(self.instance).AndReturn(
-                dict(root_gb=1))
-
         self.mox.StubOutWithMock(vm_utils, '_get_vdi_chain_size')
         vm_utils._get_vdi_chain_size(self.session,
                 self.vdi_uuid).AndReturn(1073741824)
 
         self.mox.ReplayAll()
 
-        vm_utils._check_vdi_size(self.context, self.session, self.instance,
-                self.vdi_uuid)
+        with mock.patch.object(self.instance, 'get_flavor') as get:
+            self.flavor.root_gb = 1
+            get.return_value = self.flavor
+            vm_utils._check_vdi_size(self.context, self.session, self.instance,
+                                     self.vdi_uuid)
 
     def test_too_large(self):
-        self.mox.StubOutWithMock(flavors, 'extract_flavor')
-        flavors.extract_flavor(self.instance).AndReturn(
-                dict(root_gb=1))
-
         self.mox.StubOutWithMock(vm_utils, '_get_vdi_chain_size')
         vm_utils._get_vdi_chain_size(self.session,
                 self.vdi_uuid).AndReturn(11811160065)  # 10GB overhead allowed
 
         self.mox.ReplayAll()
 
-        self.assertRaises(exception.FlavorDiskTooSmall,
-                vm_utils._check_vdi_size, self.context, self.session,
-                self.instance, self.vdi_uuid)
+        with mock.patch.object(self.instance, 'get_flavor') as get:
+            self.flavor.root_gb = 1
+            get.return_value = self.flavor
+            self.assertRaises(exception.FlavorDiskTooSmall,
+                              vm_utils._check_vdi_size, self.context,
+                              self.session, self.instance, self.vdi_uuid)
 
     def test_zero_root_gb_disables_check(self):
-        self.mox.StubOutWithMock(flavors, 'extract_flavor')
-        flavors.extract_flavor(self.instance).AndReturn(
-                dict(root_gb=0))
-
-        self.mox.ReplayAll()
-
-        vm_utils._check_vdi_size(self.context, self.session, self.instance,
-                self.vdi_uuid)
+        with mock.patch.object(self.instance, 'get_flavor') as get:
+            self.flavor.root_gb = 0
+            get.return_value = self.flavor
+            vm_utils._check_vdi_size(self.context, self.session, self.instance,
+                                     self.vdi_uuid)
 
 
 class GetInstanceForVdisForSrTestCase(VMUtilsTestBase):
@@ -1498,21 +1496,24 @@ class CreateVmTestCase(VMUtilsTestBase):
     def test_vss_provider(self, mock_extract):
         self.flags(vcpu_pin_set="2,3")
         session = _get_fake_session()
-        instance = {
-            "uuid": "uuid", "os_type": "windows"
-        }
+        instance = objects.Instance(uuid="uuid",
+                                    os_type="windows",
+                                    system_metadata={})
 
-        vm_utils.create_vm(session, instance, "label",
-                           "kernel", "ramdisk")
+        with mock.patch.object(instance, 'get_flavor') as get:
+            get.return_value = objects.Flavor._from_db_object(
+                None, objects.Flavor(), test_flavor.fake_flavor)
+            vm_utils.create_vm(session, instance, "label",
+                               "kernel", "ramdisk")
 
         vm_rec = {
-            'VCPUs_params': {'cap': '0', 'mask': '2,3', 'weight': '1.0'},
+            'VCPUs_params': {'cap': '0', 'mask': '2,3', 'weight': '1'},
             'PV_args': '',
             'memory_static_min': '0',
             'ha_restart_priority': '',
             'HVM_boot_policy': 'BIOS order',
             'PV_bootloader': '', 'tags': [],
-            'VCPUs_max': '1',
+            'VCPUs_max': '4',
             'memory_static_max': '1073741824',
             'actions_after_shutdown': 'destroy',
             'memory_dynamic_max': '1073741824',
@@ -1530,7 +1531,7 @@ class CreateVmTestCase(VMUtilsTestBase):
             'other_config': {'nova_uuid': 'uuid'},
             'name_label': 'label',
             'actions_after_reboot': 'restart',
-            'VCPUs_at_startup': '1',
+            'VCPUs_at_startup': '4',
             'HVM_boot_params': {'order': 'dc'},
             'platform': {'nx': 'true', 'pae': 'true', 'apic': 'true',
                          'timeoffset': '0', 'viridian': 'true',
@@ -1546,19 +1547,19 @@ class CreateVmTestCase(VMUtilsTestBase):
     def test_invalid_cpu_mask_raises(self, mock_extract):
         self.flags(vcpu_pin_set="asdf")
         session = mock.Mock()
-        instance = {
-            "uuid": "uuid",
-        }
-        self.assertRaises(exception.Invalid,
-                          vm_utils.create_vm,
-                          session, instance, "label",
-                          "kernel", "ramdisk")
+        instance = objects.Instance(uuid=str(uuid.uuid4()),
+                                    system_metadata={})
+        with mock.patch.object(instance, 'get_flavor') as get:
+            get.return_value = objects.Flavor._from_db_object(
+                None, objects.Flavor(), test_flavor.fake_flavor)
+            self.assertRaises(exception.Invalid,
+                              vm_utils.create_vm,
+                              session, instance, "label",
+                              "kernel", "ramdisk")
 
     def test_destroy_vm(self, mock_extract):
         session = mock.Mock()
-        instance = {
-            "uuid": "uuid",
-        }
+        instance = objects.Instance(uuid=str(uuid.uuid4()))
 
         vm_utils.destroy_vm(session, instance, "vm_ref")
 
@@ -1569,9 +1570,7 @@ class CreateVmTestCase(VMUtilsTestBase):
         exc = test.TestingException()
         session.XenAPI.Failure = test.TestingException
         session.VM.destroy.side_effect = exc
-        instance = {
-            "uuid": "uuid",
-        }
+        instance = objects.Instance(uuid=str(uuid.uuid4()))
 
         vm_utils.destroy_vm(session, instance, "vm_ref")
 
@@ -2116,13 +2115,18 @@ class DeviceIdTestCase(VMUtilsTestBase):
 class CreateVmRecordTestCase(VMUtilsTestBase):
     @mock.patch.object(flavors, 'extract_flavor')
     def test_create_vm_record_linux(self, mock_extract_flavor):
-        instance = {"uuid": "uuid123", "os_type": "linux"}
+        instance = objects.Instance(uuid="uuid123",
+                                    os_type="linux")
         self._test_create_vm_record(mock_extract_flavor, instance, False)
 
     @mock.patch.object(flavors, 'extract_flavor')
     def test_create_vm_record_windows(self, mock_extract_flavor):
-        instance = {"uuid": "uuid123", "os_type": "windows"}
-        self._test_create_vm_record(mock_extract_flavor, instance, True)
+        instance = objects.Instance(uuid="uuid123",
+                                    os_type="windows")
+        with mock.patch.object(instance, 'get_flavor') as get:
+            get.return_value = objects.Flavor._from_db_object(
+                None, objects.Flavor(), test_flavor.fake_flavor)
+            self._test_create_vm_record(mock_extract_flavor, instance, True)
 
     def _test_create_vm_record(self, mock_extract_flavor, instance,
                                is_viridian):
@@ -2130,8 +2134,12 @@ class CreateVmRecordTestCase(VMUtilsTestBase):
         flavor = {"memory_mb": 1024, "vcpus": 1, "vcpu_weight": 2}
         mock_extract_flavor.return_value = flavor
 
-        vm_utils.create_vm(session, instance, "name", "kernel", "ramdisk",
-                           device_id="0002")
+        with mock.patch.object(instance, 'get_flavor') as get:
+            get.return_value = objects.Flavor(memory_mb=1024,
+                                              vcpus=1,
+                                              vcpu_weight=2)
+            vm_utils.create_vm(session, instance, "name", "kernel", "ramdisk",
+                               device_id="0002")
 
         is_viridian_str = str(is_viridian).lower()
 

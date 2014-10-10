@@ -62,7 +62,6 @@ import six
 from nova.api.metadata import base as instance_metadata
 from nova import block_device
 from nova.compute import arch
-from nova.compute import flavors
 from nova.compute import hvtype
 from nova.compute import power_state
 from nova.compute import task_states
@@ -2994,7 +2993,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                      user_id=instance['user_id'],
                                      project_id=instance['project_id'])
 
-        inst_type = flavors.extract_flavor(instance)
+        inst_type = instance.get_flavor()
 
         # NOTE(ndipanov): Even if disk_mapping was passed in, which
         # currently happens only on rescue - we still don't want to
@@ -5688,8 +5687,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                 size=info['virt_disk_size'],
                                 ephemeral_size=instance['ephemeral_gb'])
                 elif cache_name.startswith('swap'):
-                    inst_type = flavors.extract_flavor(instance)
-                    swap_mb = inst_type['swap']
+                    inst_type = instance.get_flavor()
+                    swap_mb = inst_type.swap
                     image.cache(fetch_func=self._create_swap,
                                 filename="swap_%s" % swap_mb,
                                 size=swap_mb * units.Mi,
@@ -5997,7 +5996,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 dest = None
                 utils.execute('mkdir', '-p', inst_base)
 
-            active_flavor = flavors.extract_flavor(instance)
+            active_flavor = instance.get_flavor()
             for info in disk_info:
                 # assume inst_base == dirname(info['path'])
                 img_path = info['path']

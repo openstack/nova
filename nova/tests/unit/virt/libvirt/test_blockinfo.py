@@ -818,24 +818,26 @@ class DefaultDeviceNamesTestCase(test.NoDBTestCase):
     def setUp(self):
         super(DefaultDeviceNamesTestCase, self).setUp()
         self.context = context.get_admin_context()
-        self.instance = {
-                'uuid': '32dfcb37-5af1-552b-357c-be8c3aa38310',
-                'memory_kb': '1024000',
-                'basepath': '/some/path',
-                'bridge_name': 'br100',
-                'vcpus': 2,
-                'project_id': 'fake',
-                'bridge': 'br101',
-                'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
-                'root_gb': 10,
-                'ephemeral_gb': 20,
-                'instance_type_id': 2}
+        self.instance = objects.Instance(
+                uuid='32dfcb37-5af1-552b-357c-be8c3aa38310',
+                memory_kb='1024000',
+                basepath='/some/path',
+                bridge_name='br100',
+                vcpus=2,
+                project_id='fake',
+                bridge='br101',
+                image_ref='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                root_gb=10,
+                ephemeral_gb=20,
+                instance_type_id=2,
+                config_drive=False,
+                system_metadata={})
         self.root_device_name = '/dev/vda'
         self.virt_type = 'kvm'
-        self.flavor = {'swap': 4}
+        self.flavor = objects.Flavor(swap=4)
         self.patchers = []
-        self.patchers.append(mock.patch('nova.compute.flavors.extract_flavor',
-                            return_value=self.flavor))
+        self.patchers.append(mock.patch.object(self.instance, 'get_flavor',
+                                               return_value=self.flavor))
         self.patchers.append(mock.patch(
                 'nova.objects.block_device.BlockDeviceMapping.save'))
         for patcher in self.patchers:

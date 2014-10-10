@@ -39,7 +39,6 @@ import six
 import six.moves.urllib.parse as urlparse
 
 from nova.api.metadata import base as instance_metadata
-from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
@@ -230,11 +229,11 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
 
         3. Using hardware virtualization
     """
-    flavor = flavors.extract_flavor(instance)
-    mem = str(long(flavor['memory_mb']) * units.Mi)
-    vcpus = str(flavor['vcpus'])
+    flavor = instance.get_flavor()
+    mem = str(long(flavor.memory_mb) * units.Mi)
+    vcpus = str(flavor.vcpus)
 
-    vcpu_weight = flavor['vcpu_weight']
+    vcpu_weight = flavor.vcpu_weight
     vcpu_params = {}
     if vcpu_weight is not None:
         # NOTE(johngarbutt) bug in XenServer 6.1 and 6.2 means
@@ -360,8 +359,8 @@ def is_vm_shutdown(session, vm_ref):
 
 
 def is_enough_free_mem(session, instance):
-    flavor = flavors.extract_flavor(instance)
-    mem = long(flavor['memory_mb']) * units.Mi
+    flavor = instance.get_flavor()
+    mem = long(flavor.memory_mb) * units.Mi
     host_free_mem = long(session.call_xenapi("host.compute_free_memory",
                                              session.host_ref))
     return host_free_mem >= mem
@@ -1480,10 +1479,10 @@ def _get_vdi_chain_size(session, vdi_uuid):
 
 
 def _check_vdi_size(context, session, instance, vdi_uuid):
-    flavor = flavors.extract_flavor(instance)
-    allowed_size = (flavor['root_gb'] +
+    flavor = instance.get_flavor()
+    allowed_size = (flavor.root_gb +
                     VHD_SIZE_CHECK_FUDGE_FACTOR_GB) * units.Gi
-    if not flavor['root_gb']:
+    if not flavor.root_gb:
         # root_gb=0 indicates that we're disabling size checks
         return
 

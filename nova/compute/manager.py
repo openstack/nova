@@ -50,7 +50,6 @@ from nova import block_device
 from nova.cells import rpcapi as cells_rpcapi
 from nova.cloudpipe import pipelib
 from nova import compute
-from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import resource_tracker
 from nova.compute import rpcapi as compute_rpcapi
@@ -3337,15 +3336,15 @@ class ComputeManager(manager.Manager):
         """
         sys_meta = instance.system_metadata
         if restore_old:
-            instance_type = flavors.extract_flavor(instance, 'old_')
-            drop_instance_type = flavors.extract_flavor(instance)
-            sys_meta = flavors.save_flavor_info(sys_meta, instance_type)
+            instance_type = instance.get_flavor('old')
+            drop_instance_type = instance.get_flavor()
+            instance.set_flavor(instance_type)
         else:
-            instance_type = flavors.extract_flavor(instance)
-            drop_instance_type = flavors.extract_flavor(instance, 'old_')
+            instance_type = instance.get_flavor()
+            drop_instance_type = instance.get_flavor('old')
 
-        flavors.delete_flavor_info(sys_meta, 'old_')
-        flavors.delete_flavor_info(sys_meta, 'new_')
+        instance.delete_flavor('old')
+        instance.delete_flavor('new')
 
         return sys_meta, instance_type, drop_instance_type
 
@@ -3612,13 +3611,12 @@ class ComputeManager(manager.Manager):
 
         # NOTE(danms): Stash the new instance_type to avoid having to
         # look it up in the database later
-        sys_meta = instance.system_metadata
-        flavors.save_flavor_info(sys_meta, instance_type, prefix='new_')
+        instance.set_flavor(instance_type, 'new')
         # NOTE(mriedem): Stash the old vm_state so we can set the
         # resized/reverted instance back to the same state later.
         vm_state = instance['vm_state']
         LOG.debug('Stashing vm_state: %s', vm_state, instance=instance)
-        sys_meta['old_vm_state'] = vm_state
+        instance.system_metadata['old_vm_state'] = vm_state
         instance.save()
 
         limits = filter_properties.get('limits', {})
@@ -3798,34 +3796,30 @@ class ComputeManager(manager.Manager):
                                                      connector)
 
     @staticmethod
-    def _save_instance_info(instance, instance_type, sys_meta):
-        flavors.save_flavor_info(sys_meta, instance_type)
+    def _set_instance_info(instance, instance_type):
         instance.instance_type_id = instance_type['id']
         instance.memory_mb = instance_type['memory_mb']
         instance.vcpus = instance_type['vcpus']
         instance.root_gb = instance_type['root_gb']
         instance.ephemeral_gb = instance_type['ephemeral_gb']
-        instance.system_metadata = sys_meta
-        instance.save()
+        instance.set_flavor(instance_type)
 
     def _finish_resize(self, context, instance, migration, disk_info,
                        image):
         resize_instance = False
         old_instance_type_id = migration['old_instance_type_id']
         new_instance_type_id = migration['new_instance_type_id']
-        old_instance_type = flavors.extract_flavor(instance)
-        sys_meta = instance.system_metadata
+        old_instance_type = instance.get_flavor()
         # NOTE(mriedem): Get the old_vm_state so we know if we should
         # power on the instance. If old_vm_state is not set we need to default
         # to ACTIVE for backwards compatibility
-        old_vm_state = sys_meta.get('old_vm_state', vm_states.ACTIVE)
-        flavors.save_flavor_info(sys_meta,
-                                 old_instance_type,
-                                 prefix='old_')
+        old_vm_state = instance.system_metadata.get('old_vm_state',
+                                                    vm_states.ACTIVE)
+        instance.set_flavor(old_instance_type, 'old')
 
         if old_instance_type_id != new_instance_type_id:
-            instance_type = flavors.extract_flavor(instance, prefix='new_')
-            self._save_instance_info(instance, instance_type, sys_meta)
+            instance_type = instance.get_flavor('new')
+            self._set_instance_info(instance, instance_type)
             resize_instance = True
 
         # NOTE(tr3buchet): setup networks on destination host
@@ -3841,7 +3835,6 @@ class ComputeManager(manager.Manager):
         network_info = self._get_instance_nw_info(context, instance)
 
         instance.task_state = task_states.RESIZE_FINISH
-        instance.system_metadata = sys_meta
         instance.save(expected_task_state=task_states.RESIZE_MIGRATED)
 
         self._notify_about_instance_usage(
@@ -3864,8 +3857,8 @@ class ComputeManager(manager.Manager):
         except Exception:
             with excutils.save_and_reraise_exception():
                 if resize_instance:
-                    self._save_instance_info(instance,
-                                             old_instance_type, sys_meta)
+                    self._set_instance_info(instance,
+                                            old_instance_type)
 
         migration.status = 'finished'
         migration.save(context.elevated())
