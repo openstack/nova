@@ -3629,7 +3629,8 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         ]
 
         db.fixed_ip_bulk_create(self.ctxt, params)
-        ignored_keys = ['created_at', 'id', 'deleted_at', 'updated_at']
+        ignored_keys = ['created_at', 'id', 'deleted_at', 'updated_at',
+                        'virtual_interface', 'network', 'floating_ips']
         fixed_ip_data = db.fixed_ip_get_by_instance(self.ctxt, instance_uuid)
 
         # we have no `id` in incoming data so we can not use

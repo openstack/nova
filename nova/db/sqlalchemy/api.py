@@ -1357,8 +1357,17 @@ def fixed_ip_get_by_instance(context, instance_uuid):
     if not uuidutils.is_uuid_like(instance_uuid):
         raise exception.InvalidUUID(uuid=instance_uuid)
 
+    vif_and = and_(models.VirtualInterface.id ==
+                   models.FixedIp.virtual_interface_id,
+                   models.VirtualInterface.deleted == 0)
     result = model_query(context, models.FixedIp, read_deleted="no").\
                  filter_by(instance_uuid=instance_uuid).\
+                 outerjoin(models.VirtualInterface, vif_and).\
+                 options(contains_eager("virtual_interface")).\
+                 options(joinedload('network')).\
+                 options(joinedload('floating_ips')).\
+                 order_by(asc(models.VirtualInterface.created_at),
+                          asc(models.VirtualInterface.id)).\
                  all()
 
     if not result:
@@ -1398,6 +1407,8 @@ def fixed_ip_get_by_network_host(context, network_id, host):
 def fixed_ips_by_virtual_interface(context, vif_id):
     result = model_query(context, models.FixedIp, read_deleted="no").\
                  filter_by(virtual_interface_id=vif_id).\
+                 options(joinedload('network')).\
+                 options(joinedload('floating_ips')).\
                  all()
 
     return result
