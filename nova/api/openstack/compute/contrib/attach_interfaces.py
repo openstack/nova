@@ -61,6 +61,9 @@ class InterfaceAttachmentController(object):
         authorize(context)
 
         port_id = id
+        # NOTE(mriedem): We need to verify the instance actually exists from
+        # the server_id even though we're not using the instance for anything,
+        # just the port id.
         common.get_instance(self.compute_api, context, server_id)
 
         try:
@@ -158,9 +161,10 @@ class InterfaceAttachmentController(object):
         """Returns a list of attachments, transformed through entity_maker."""
         context = req.environ['nova.context']
         authorize(context)
-        instance = common.get_instance(self.compute_api, context, server_id)
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       want_objects=True)
         results = []
-        search_opts = {'device_id': instance['uuid']}
+        search_opts = {'device_id': instance.uuid}
 
         try:
             data = self.network_api.list_ports(context, **search_opts)
