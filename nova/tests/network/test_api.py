@@ -297,18 +297,13 @@ class ApiTestCase(test.TestCase):
         def fake_mig_inst_method(*args, **kwargs):
             info['kwargs'] = kwargs
 
-        def fake_is_multi_host(*args, **kwargs):
-            return multi_host
-
-        def fake_get_floaters(*args, **kwargs):
-            return ['fake_float1', 'fake_float2']
+        def fake_get_multi_addresses(*args, **kwargs):
+            return multi_host, ['fake_float1', 'fake_float2']
 
         self.stubs.Set(network_rpcapi.NetworkAPI, method,
                 fake_mig_inst_method)
-        self.stubs.Set(self.network_api, '_is_multi_host',
-                fake_is_multi_host)
-        self.stubs.Set(self.network_api, '_get_floating_ip_addresses',
-                fake_get_floaters)
+        self.stubs.Set(self.network_api, '_get_multi_addresses',
+                fake_get_multi_addresses)
 
         expected = {'instance_uuid': 'fake_uuid',
                     'source_compute': 'fake_compute_source',
@@ -356,20 +351,22 @@ class ApiTestCase(test.TestCase):
         self.stubs.Set(self.network_api.db, 'fixed_ip_get_by_instance',
                        fake_fixed_ip_get_by_instance)
         instance = {'uuid': FAKE_UUID}
-        self.assertFalse(self.network_api._is_multi_host(self.context,
-                                                         instance))
+        result, floats = self.network_api._get_multi_addresses(self.context,
+                                                               instance)
+        self.assertFalse(result)
 
     @mock.patch('nova.objects.fixed_ip.FixedIPList.get_by_instance_uuid')
-    @mock.patch('nova.objects.network.Network.get_by_id')
     def _test_is_multi_host_network_has_no_project_id(self, is_multi_host,
-                                                      net_get, fip_get):
-        net_get.return_value = objects.Network(id=123,
-                                                   project_id=None,
-                                                   multi_host=is_multi_host)
-        fip_get.return_value = [objects.FixedIP(
-                network_id=123, instance_uuid=FAKE_UUID)]
+                                                      fip_get):
+        network = objects.Network(
+            id=123, project_id=None,
+            multi_host=is_multi_host)
+        fip_get.return_value = [
+            objects.FixedIP(instance_uuid=FAKE_UUID, network=network,
+                            floating_ips=objects.FloatingIPList())]
         instance = {'uuid': FAKE_UUID}
-        result = self.network_api._is_multi_host(self.context, instance)
+        result, floats = self.network_api._get_multi_addresses(self.context,
+                                                               instance)
         self.assertEqual(is_multi_host, result)
 
     def test_is_multi_host_network_has_no_project_id_multi(self):
@@ -379,16 +376,17 @@ class ApiTestCase(test.TestCase):
         self._test_is_multi_host_network_has_no_project_id(False)
 
     @mock.patch('nova.objects.fixed_ip.FixedIPList.get_by_instance_uuid')
-    @mock.patch('nova.objects.network.Network.get_by_id')
     def _test_is_multi_host_network_has_project_id(self, is_multi_host,
-                                                   net_get, fip_get):
-        net_get.return_value = objects.Network(
+                                                   fip_get):
+        network = objects.Network(
             id=123, project_id=self.context.project_id,
             multi_host=is_multi_host)
         fip_get.return_value = [
-            objects.FixedIP(network_id=123, instance_uuid=FAKE_UUID)]
+            objects.FixedIP(instance_uuid=FAKE_UUID, network=network,
+                            floating_ips=objects.FloatingIPList())]
         instance = {'uuid': FAKE_UUID}
-        result = self.network_api._is_multi_host(self.context, instance)
+        result, floats = self.network_api._get_multi_addresses(self.context,
+                                                               instance)
         self.assertEqual(is_multi_host, result)
 
     def test_is_multi_host_network_has_project_id_multi(self):

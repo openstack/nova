@@ -503,20 +503,17 @@ class API(base_api.NetworkAPI):
 
         self.network_rpcapi.setup_networks_on_host(context, **args)
 
-    def _is_multi_host(self, context, instance):
+    def _get_multi_addresses(self, context, instance):
         try:
             fixed_ips = objects.FixedIPList.get_by_instance_uuid(
                 context, instance['uuid'])
         except exception.FixedIpNotFoundForInstance:
-            return False
-        network = objects.Network.get_by_id(context,
-                                            fixed_ips[0].network_id,
-                                            project_only='allow_none')
-        return network.multi_host
-
-    def _get_floating_ip_addresses(self, context, instance):
-        return objects.FloatingIP.get_addresses_by_instance(
-            context, instance)
+            return False, []
+        addresses = []
+        for fixed in fixed_ips:
+            for floating in fixed.floating_ips:
+                addresses.append(floating.address)
+        return fixed_ips[0].network.multi_host, addresses
 
     @wrap_check_policy
     def migrate_instance_start(self, context, instance, migration):
@@ -531,9 +528,9 @@ class API(base_api.NetworkAPI):
             floating_addresses=None,
         )
 
-        if self._is_multi_host(context, instance):
-            args['floating_addresses'] = \
-                self._get_floating_ip_addresses(context, instance)
+        multi_host, addresses = self._get_multi_addresses(context, instance)
+        if multi_host:
+            args['floating_addresses'] = addresses
             args['host'] = migration['source_compute']
 
         self.network_rpcapi.migrate_instance_start(context, **args)
@@ -551,9 +548,9 @@ class API(base_api.NetworkAPI):
             floating_addresses=None,
         )
 
-        if self._is_multi_host(context, instance):
-            args['floating_addresses'] = \
-                self._get_floating_ip_addresses(context, instance)
+        multi_host, addresses = self._get_multi_addresses(context, instance)
+        if multi_host:
+            args['floating_addresses'] = addresses
             args['host'] = migration['dest_compute']
 
         self.network_rpcapi.migrate_instance_finish(context, **args)
