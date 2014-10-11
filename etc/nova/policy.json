@@ -82,6 +82,8 @@
     "compute_extension:v3:os-certificates:show": "",
     "compute_extension:v3:os-certificates:discoverable": "",
     "compute_extension:cloudpipe": "rule:admin_api",
+    "compute_extension:v3:os-cloudpipe": "rule:admin_api",
+    "compute_extension:v3:os-cloudpipe:discoverable": "",
     "compute_extension:cloudpipe_update": "rule:admin_api",
     "compute_extension:console_output": "",
     "compute_extension:v3:consoles:discoverable": "",
