@@ -951,6 +951,7 @@ def create_cluster(name, ds_ref):
     cluster._add_datastore(ds_ref)
     cluster._add_root_resource_pool(create_res_pool())
     _create_object('ClusterComputeResource', cluster)
+    return cluster
 
 
 def create_vm(uuid=None, name=None,

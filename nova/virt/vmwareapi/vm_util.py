@@ -1057,25 +1057,14 @@ def get_vmdk_volume_disk(hardware_devices, path=None):
                 return device
 
 
-def get_res_pool_ref(session, cluster, node_mo_id):
+def get_res_pool_ref(session, cluster):
     """Get the resource pool."""
-    if cluster is None:
-        # With no cluster named, use the root resource pool.
-        results = session._call_method(vim_util, "get_objects",
-                                       "ResourcePool")
-        _cancel_retrieve_if_necessary(session, results)
-        # The 0th resource pool is always the root resource pool on both ESX
-        # and vCenter.
-        res_pool_ref = results.objects[0].obj
-    else:
-        if cluster.value == node_mo_id:
-            # Get the root resource pool of the cluster
-            res_pool_ref = session._call_method(vim_util,
-                                                  "get_dynamic_property",
-                                                  cluster,
-                                                  "ClusterComputeResource",
-                                                  "resourcePool")
-
+    # Get the root resource pool of the cluster
+    res_pool_ref = session._call_method(vim_util,
+                                        "get_dynamic_property",
+                                        cluster,
+                                        "ClusterComputeResource",
+                                        "resourcePool")
     return res_pool_ref
 
 
@@ -1174,18 +1163,6 @@ def get_dict_mor(session, list_obj):
                                         'name': path,
                                         }
     return dict_mors
-
-
-def get_mo_id_from_instance(instance):
-    """Return the managed object ID from the instance.
-
-    The instance['node'] will have the hypervisor_hostname field of the
-    compute node on which the instance exists or will be provisioned.
-    This will be of the form
-    'respool-1001(MyResPoolName)'
-    'domain-1001(MyClusterName)'
-    """
-    return instance['node'].partition('(')[0]
 
 
 def get_vmdk_adapter_type(adapter_type):
