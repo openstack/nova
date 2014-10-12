@@ -148,6 +148,8 @@ class VMwareVMOps(object):
         self._virtapi = virtapi
         self._volumeops = volumeops
         self._cluster = cluster
+        self._root_resource_pool = vm_util.get_res_pool_ref(self._session,
+                                                            self._cluster)
         self._datastore_regex = datastore_regex
         # Ensure that the base folder is unique per compute node
         if CONF.remove_unused_base_images:
@@ -229,8 +231,6 @@ class VMwareVMOps(object):
 
     def build_virtual_machine(self, instance, instance_name, image_info,
                               dc_info, datastore, network_info, extra_specs):
-        res_pool_ref = vm_util.get_res_pool_ref(self._session,
-                                                self._cluster)
         vif_infos = vmwarevif.get_vif_info(self._session,
                                            self._cluster,
                                            utils.is_neutron(),
@@ -254,7 +254,7 @@ class VMwareVMOps(object):
                                                  profile_spec=profile_spec)
         # Create the VM
         vm_ref = vm_util.create_vm(self._session, instance, dc_info.vmFolder,
-                                   config_spec, res_pool_ref)
+                                   config_spec, self._root_resource_pool)
         return vm_ref
 
     def _get_extra_specs(self, flavor):
@@ -1644,12 +1644,9 @@ class VMwareVMOps(object):
         LOG.debug("Getting list of instances from cluster %s",
                   self._cluster)
         vms = []
-        root_res_pool = self._session._call_method(
-            vim_util, "get_dynamic_property", self._cluster,
-            'ClusterComputeResource', 'resourcePool')
-        if root_res_pool:
+        if self._root_resource_pool:
             vms = self._session._call_method(
-                vim_util, 'get_inner_objects', root_res_pool, 'vm',
+                vim_util, 'get_inner_objects', self._root_resource_pool, 'vm',
                 'VirtualMachine', properties)
         lst_vm_names = self._get_valid_vms_from_retrieve_result(vms)
 
