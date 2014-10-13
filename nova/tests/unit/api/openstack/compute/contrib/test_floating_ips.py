@@ -538,7 +538,7 @@ class FloatingIpTestV21(test.TestCase):
         body = dict(removeFloatingIp=dict(address='10.10.10.10'))
 
         req = self._get_fake_server_request()
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+        self.assertRaises(webob.exc.HTTPConflict,
                           self.manager._remove_floating_ip,
                           req, 'test_inst', body)
 
@@ -589,7 +589,7 @@ class FloatingIpTestV21(test.TestCase):
         body = dict(removeFloatingIp=dict(address='10.10.10.10'))
 
         req = self._get_fake_server_request()
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+        self.assertRaises(webob.exc.HTTPConflict,
                           self.manager._remove_floating_ip,
                           req, wrong_uuid, body)
 
@@ -604,7 +604,7 @@ class FloatingIpTestV21(test.TestCase):
         body = dict(removeFloatingIp=dict(address='10.10.10.10'))
 
         req = self._get_fake_server_request()
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+        self.assertRaises(webob.exc.HTTPConflict,
                           self.manager._remove_floating_ip,
                           req, 'test_inst', body)
 

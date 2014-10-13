@@ -303,7 +303,7 @@ class FloatingIPActionController(wsgi.Controller):
         else:
             msg = _("Floating ip %(address)s is not associated with instance "
                     "%(id)s.") % {'address': address, 'id': id}
-            raise webob.exc.HTTPUnprocessableEntity(explanation=msg)
+            raise webob.exc.HTTPConflict(explanation=msg)
 
 
 class Floating_ips(extensions.ExtensionDescriptor):
