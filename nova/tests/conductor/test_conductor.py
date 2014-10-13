@@ -1344,7 +1344,7 @@ class _BaseTaskTestCase(object):
                 legacy_bdm=False)
 
     def test_unshelve_instance_on_host(self):
-        db_instance = jsonutils.to_primitive(self._create_fake_instance())
+        db_instance = self._create_fake_instance()
         instance = objects.Instance.get_by_uuid(self.context,
                 db_instance['uuid'], expected_attrs=['system_metadata'])
         instance.vm_state = vm_states.SHELVED
@@ -1372,7 +1372,7 @@ class _BaseTaskTestCase(object):
     def test_unshelve_offloaded_instance_glance_image_not_found(self):
         shelved_image_id = "image_not_found"
 
-        db_instance = jsonutils.to_primitive(self._create_fake_instance())
+        db_instance = self._create_fake_instance()
         instance = objects.Instance.get_by_uuid(
             self.context,
             db_instance['uuid'],
@@ -1400,7 +1400,7 @@ class _BaseTaskTestCase(object):
         self.assertEqual(instance.vm_state, vm_states.ERROR)
 
     def test_unshelve_instance_schedule_and_rebuild(self):
-        db_instance = jsonutils.to_primitive(self._create_fake_instance())
+        db_instance = self._create_fake_instance()
         instance = objects.Instance.get_by_uuid(self.context,
                 db_instance['uuid'], expected_attrs=['system_metadata'])
         instance.vm_state = vm_states.SHELVED_OFFLOADED
@@ -1431,7 +1431,7 @@ class _BaseTaskTestCase(object):
         self.conductor_manager.unshelve_instance(self.context, instance)
 
     def test_unshelve_instance_schedule_and_rebuild_novalid_host(self):
-        db_instance = jsonutils.to_primitive(self._create_fake_instance())
+        db_instance = self._create_fake_instance()
         instance = objects.Instance.get_by_uuid(self.context,
                 db_instance['uuid'], expected_attrs=['system_metadata'])
         instance.vm_state = vm_states.SHELVED_OFFLOADED
@@ -1457,7 +1457,7 @@ class _BaseTaskTestCase(object):
             self.assertEqual(vm_states.SHELVED_OFFLOADED, instance.vm_state)
 
     def test_unshelve_instance_schedule_and_rebuild_volume_backed(self):
-        db_instance = jsonutils.to_primitive(self._create_fake_instance())
+        db_instance = self._create_fake_instance()
         instance = objects.Instance.get_by_uuid(self.context,
                 db_instance['uuid'], expected_attrs=['system_metadata'])
         instance.vm_state = vm_states.SHELVED_OFFLOADED
@@ -1488,7 +1488,7 @@ class _BaseTaskTestCase(object):
         self.conductor_manager.unshelve_instance(self.context, instance)
 
     def test_rebuild_instance(self):
-        db_instance = jsonutils.to_primitive(self._create_fake_instance())
+        db_instance = self._create_fake_instance()
         inst_obj = objects.Instance.get_by_uuid(self.context,
                                                 db_instance['uuid'])
         rebuild_args = self._prepare_rebuild_args({'host': inst_obj.host})
@@ -1508,7 +1508,7 @@ class _BaseTaskTestCase(object):
                                **rebuild_args)
 
     def test_rebuild_instance_with_scheduler(self):
-        db_instance = jsonutils.to_primitive(self._create_fake_instance())
+        db_instance = self._create_fake_instance()
         inst_obj = objects.Instance.get_by_uuid(self.context,
                                                 db_instance['uuid'])
         inst_obj.host = 'noselect'
@@ -1538,7 +1538,7 @@ class _BaseTaskTestCase(object):
                                             **rebuild_args)
 
     def test_rebuild_instance_with_scheduler_no_host(self):
-        db_instance = jsonutils.to_primitive(self._create_fake_instance())
+        db_instance = self._create_fake_instance()
         inst_obj = objects.Instance.get_by_uuid(self.context,
                                                 db_instance['uuid'])
         inst_obj.host = 'noselect'
