@@ -54,6 +54,10 @@ class BlockDeviceMappingV1(extensions.V3APIExtensionBase):
                      'is not allowed in the same request.')
             raise exc.HTTPBadRequest(explanation=expl)
 
+        if not isinstance(block_device_mapping, list):
+            msg = _('block_device_mapping must be a list')
+            raise exc.HTTPBadRequest(explanation=msg)
+
         for bdm in block_device_mapping:
             try:
                 block_device.validate_device_name(bdm.get("device_name"))

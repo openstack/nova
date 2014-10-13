@@ -180,6 +180,12 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self.assertRaises(exc.HTTPBadRequest,
                           self._test_create, self.params)
 
+    @mock.patch.object(compute_api.API, 'create')
+    def test_create_instance_with_bdm_param_not_list(self, mock_create):
+        self.params = {'block_device_mapping': '/dev/vdb'}
+        self.assertRaises(exc.HTTPBadRequest,
+                          self._test_create, self.params)
+
     def test_create_instance_with_device_name_empty(self):
         self.bdm[0]['device_name'] = ''
         params = {'block_device_mapping': self.bdm}
