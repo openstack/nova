@@ -30,6 +30,7 @@ from nova import objects
 from nova.openstack.common import log as logging
 from nova.openstack.common import versionutils
 from nova import utils
+from nova import version
 from nova.virt.xenapi.client import objects as cli_objects
 from nova.virt.xenapi import pool
 from nova.virt.xenapi import pool_states
@@ -74,6 +75,11 @@ class XenAPISession(object):
     PLUGIN_REQUIRED_VERSION = '1.2'
 
     def __init__(self, url, user, pw):
+        version_string = version.version_string_with_package()
+        self.nova_version = _('%(vendor)s %(product)s %(version)s') % \
+                              {'vendor': version.vendor_string(),
+                               'product': version.product_string(),
+                               'version': version_string}
         import XenAPI
         self.XenAPI = XenAPI
         self._sessions = queue.Queue()
@@ -105,14 +111,16 @@ class XenAPISession(object):
         try:
             session = self._create_session(url)
             with timeout.Timeout(CONF.xenserver.login_timeout, exception):
-                session.login_with_password(user, pw)
+                session.login_with_password(user, pw,
+                                            self.nova_version, 'OpenStack')
         except self.XenAPI.Failure as e:
             # if user and pw of the master are different, we're doomed!
             if e.details[0] == 'HOST_IS_SLAVE':
                 master = e.details[1]
                 url = pool.swap_xapi_host(url, master)
                 session = self.XenAPI.Session(url)
-                session.login_with_password(user, pw)
+                session.login_with_password(user, pw,
+                                            self.nova_version, 'OpenStack')
                 self.is_slave = True
             else:
                 raise
@@ -123,7 +131,8 @@ class XenAPISession(object):
         for i in xrange(CONF.xenserver.connection_concurrent - 1):
             session = self._create_session(url)
             with timeout.Timeout(CONF.xenserver.login_timeout, exception):
-                session.login_with_password(user, pw)
+                session.login_with_password(user, pw,
+                                            self.nova_version, 'OpenStack')
             self._sessions.put(session)
 
     def _get_host_uuid(self):
