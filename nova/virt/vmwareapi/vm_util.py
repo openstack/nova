@@ -255,16 +255,14 @@ def _create_vif_spec(client_factory, vif_info):
     mac_address = vif_info['mac_address']
     backing = None
     if network_ref and network_ref['type'] == 'OpaqueNetwork':
-        backing_name = ''.join(['ns0:VirtualEthernetCard',
-                                'OpaqueNetworkBackingInfo'])
-        backing = client_factory.create(backing_name)
+        backing = client_factory.create(
+                'ns0:VirtualEthernetCardOpaqueNetworkBackingInfo')
         backing.opaqueNetworkId = network_ref['network-id']
         backing.opaqueNetworkType = network_ref['network-type']
     elif (network_ref and
             network_ref['type'] == "DistributedVirtualPortgroup"):
-        backing_name = ''.join(['ns0:VirtualEthernetCardDistributed',
-                                'VirtualPortBackingInfo'])
-        backing = client_factory.create(backing_name)
+        backing = client_factory.create(
+                'ns0:VirtualEthernetCardDistributedVirtualPortBackingInfo')
         portgroup = client_factory.create(
                     'ns0:DistributedVirtualSwitchPortConnection')
         portgroup.switchUuid = network_ref['dvsw']
