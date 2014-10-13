@@ -2319,6 +2319,31 @@ class ServersControllerCreateTest(test.TestCase):
         self._check_admin_password_missing(server)
         self.assertEqual(FAKE_UUID, server['id'])
 
+    @mock.patch('nova.virt.hardware.numa_get_constraints')
+    def _test_create_instance_numa_topology_wrong(self, exc,
+                                                  numa_constraints_mock):
+        numa_constraints_mock.side_effect = exc(**{'name': None,
+                                                   'cpunum': 0,
+                                                   'cpumax': 0,
+                                                   'cpuset': None,
+                                                   'memsize': 0,
+                                                   'memtotal': 0})
+        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
+        self.body['server']['imageRef'] = image_href
+        self.req.body = jsonutils.dumps(self.body)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create, self.req, body=self.body)
+
+    def test_create_instance_numa_topology_wrong(self):
+        for exc in [exception.ImageNUMATopologyIncomplete,
+                    exception.ImageNUMATopologyForbidden,
+                    exception.ImageNUMATopologyAsymmetric,
+                    exception.ImageNUMATopologyCPUOutOfRange,
+                    exception.ImageNUMATopologyCPUDuplicates,
+                    exception.ImageNUMATopologyCPUsUnassigned,
+                    exception.ImageNUMATopologyMemoryOutOfRange]:
+            self._test_create_instance_numa_topology_wrong(exc)
+
     def test_create_instance_too_much_metadata(self):
         self.flags(quota_metadata_items=1)
         image_href = 'http://localhost/v2/images/%s' % self.image_uuid
