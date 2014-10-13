@@ -231,7 +231,7 @@ class TestSecurityGroupDefaultRules(test.TestCase):
     def test_create_security_group_default_rule_with_no_body(self):
         req = fakes.HTTPRequest.blank(
             '/v2/fake/os-security-group-default-rules', use_admin_context=True)
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, None)
 
     def test_create_duplicate_security_group_default_rule(self):
