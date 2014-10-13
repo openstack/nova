@@ -235,6 +235,8 @@ class NetworkCreateExceptionsTestV21(test.TestCase):
             self.network_manager = manager.FlatDHCPManager()
 
         def create(self, *args, **kwargs):
+            if kwargs['label'] == 'fail_NetworkNotCreated':
+                raise exception.NetworkNotCreated(req='fake_fail')
             return self.network_manager.create_networks(*args, **kwargs)
 
     def setUp(self):
@@ -271,6 +273,13 @@ class NetworkCreateExceptionsTestV21(test.TestCase):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-networks')
         net = copy.deepcopy(NEW_NETWORK)
         net['network']['allowed_start'] = 'foo'
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create, req, net)
+
+    def test_network_create_handle_network_not_created(self):
+        req = fakes.HTTPRequest.blank(self.url_prefix + '/os-networks')
+        net = copy.deepcopy(NEW_NETWORK)
+        net['network']['label'] = 'fail_NetworkNotCreated'
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, net)
 
@@ -422,6 +431,24 @@ class NetworksTestV21(test.NoDBTestCase):
         req.environ["nova.context"].is_admin = True
         res_dict = self.controller.show(req, uuid)
         self.assertEqual(res_dict['network']['project_id'], 'fake')
+
+    @mock.patch('nova.tests.api.openstack.compute.contrib.test_networks.'
+                'FakeNetworkAPI.add_network_to_project',
+                side_effect=exception.NoMoreNetworks)
+    def test_network_add_no_more_networks_fail(self, mock_add):
+        uuid = FAKE_NETWORKS[1]['uuid']
+        req = fakes.HTTPRequest.blank(self.url_prefix + '/os-networks/add')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.add, req,
+                          {'id': uuid})
+
+    @mock.patch('nova.tests.api.openstack.compute.contrib.test_networks.'
+                'FakeNetworkAPI.add_network_to_project',
+                side_effect=exception.NetworkNotFoundForUUID(uuid='fake_uuid'))
+    def test_network_add_network_not_found_networks_fail(self, mock_add):
+        uuid = FAKE_NETWORKS[1]['uuid']
+        req = fakes.HTTPRequest.blank(self.url_prefix + '/os-networks/add')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.add, req,
+                          {'id': uuid})
 
     def test_network_create(self):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-networks')
