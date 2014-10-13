@@ -444,11 +444,6 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         for policy in policies:
             self._group_filter_with_filter_not_configured(policy)
 
-    def test_group_uuid_details_in_filter_properties(self):
-        group = self._create_server_group()
-        self._group_details_in_filter_properties(group, 'get_by_uuid',
-                                                 group.uuid, 'anti-affinity')
-
     def test_group_name_details_in_filter_properties(self):
         group = self._create_server_group()
         self._group_details_in_filter_properties(group, 'get_by_name',
