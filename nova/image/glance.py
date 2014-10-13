@@ -69,7 +69,8 @@ glance_opts = [
                deprecated_name='glance_api_insecure'),
     cfg.IntOpt('num_retries',
                default=0,
-               help='Number of retries when downloading an image from glance',
+               help='Number of retries when uploading / downloading an image '
+                    'to / from glance.',
                deprecated_group='DEFAULT',
                deprecated_name='glance_num_retries'),
     cfg.ListOpt('allowed_direct_url_schemes',

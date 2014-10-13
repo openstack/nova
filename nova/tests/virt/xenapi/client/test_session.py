@@ -112,14 +112,16 @@ class CallPluginTestCase(stubs.XenAPITestBaseNoDB):
         fn = 'download_vhd'
         num_retries = 1
         callback = None
+        retry_cb = mock.Mock()
         with mock.patch.object(self.session, 'call_plugin_serialized',
                 autospec=True) as call_plugin_serialized:
             call_plugin_serialized.side_effect = exc
             self.assertRaises(exception.PluginRetriesExceeded,
                     self.session.call_plugin_serialized_with_retry, plugin, fn,
-                    num_retries, callback)
+                    num_retries, callback, retry_cb)
             call_plugin_serialized.assert_called_with(plugin, fn)
             self.assertEqual(2, call_plugin_serialized.call_count)
+            self.assertEqual(2, retry_cb.call_count)
 
     def test_serialized_with_retry_socket_error_reraised(self):
         exc = socket.error
@@ -128,10 +130,29 @@ class CallPluginTestCase(stubs.XenAPITestBaseNoDB):
         fn = 'download_vhd'
         num_retries = 1
         callback = None
+        retry_cb = mock.Mock()
         with mock.patch.object(self.session, 'call_plugin_serialized',
                 autospec=True) as call_plugin_serialized:
             call_plugin_serialized.side_effect = exc
             self.assertRaises(socket.error,
                     self.session.call_plugin_serialized_with_retry, plugin, fn,
-                    num_retries, callback)
+                    num_retries, callback, retry_cb)
             call_plugin_serialized.assert_called_once_with(plugin, fn)
+            self.assertEqual(0, retry_cb.call_count)
+
+    def test_serialized_with_retry_socket_reset_reraised(self):
+        exc = socket.error
+        exc.errno = errno.ECONNRESET
+        plugin = 'glance'
+        fn = 'download_vhd'
+        num_retries = 1
+        callback = None
+        retry_cb = mock.Mock()
+        with mock.patch.object(self.session, 'call_plugin_serialized',
+                autospec=True) as call_plugin_serialized:
+            call_plugin_serialized.side_effect = exc
+            self.assertRaises(exception.PluginRetriesExceeded,
+                    self.session.call_plugin_serialized_with_retry, plugin, fn,
+                    num_retries, callback, retry_cb)
+            call_plugin_serialized.assert_called_with(plugin, fn)
+            self.assertEqual(2, call_plugin_serialized.call_count)

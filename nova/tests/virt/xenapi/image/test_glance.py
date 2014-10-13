@@ -17,7 +17,9 @@ import random
 import time
 
 import mock
+from mox3 import mox
 
+from nova.compute import utils as compute_utils
 from nova import context
 from nova import exception
 from nova.openstack.common import log as logging
@@ -93,11 +95,11 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
     @mock.patch.object(vm_utils, '_make_uuid_stack', return_value=['uuid1'])
     @mock.patch.object(random, 'shuffle')
     @mock.patch.object(time, 'sleep')
+    @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
     @mock.patch.object(logging.getLogger('nova.virt.xenapi.client.session'),
                        'debug')
-    def test_download_image_retry(self, mock_log_debug,
-                                  mock_sleep, mock_shuffle,
-                                  mock_make_uuid_stack):
+    def test_download_image_retry(self, mock_log_debug, mock_fault, mock_sleep,
+                                  mock_shuffle, mock_make_uuid_stack):
         params = self._get_download_params()
         self.flags(num_retries=2, group='glance')
 
@@ -131,6 +133,8 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
 
             mock_call_plugin_serialized.assert_has_calls(calls)
             mock_log_debug.assert_has_calls(log_calls, any_order=True)
+
+            self.assertEqual(1, mock_fault.call_count)
 
     def _get_upload_params(self, auto_disk_config=True,
                            expected_os_type='default'):
@@ -186,16 +190,29 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
 
         self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
         self.mox.StubOutWithMock(time, 'sleep')
+        self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
         error_details = ["", "", "RetryableError", ""]
         error = self.session.XenAPI.Failure(details=error_details)
         self.session.call_plugin_serialized('glance', 'upload_vhd',
                                             **params).AndRaise(error)
+        compute_utils.add_instance_fault_from_exc(self.context, self.instance,
+                                                  error, (fake.Failure,
+                                                          error,
+                                                          mox.IgnoreArg()))
         time.sleep(0.5)
         self.session.call_plugin_serialized('glance', 'upload_vhd',
                                             **params).AndRaise(error)
+        compute_utils.add_instance_fault_from_exc(self.context, self.instance,
+                                                  error, (fake.Failure,
+                                                          error,
+                                                          mox.IgnoreArg()))
         time.sleep(1)
         self.session.call_plugin_serialized('glance', 'upload_vhd',
                                             **params).AndRaise(error)
+        compute_utils.add_instance_fault_from_exc(self.context, self.instance,
+                                                  error, (fake.Failure,
+                                                          error,
+                                                          mox.IgnoreArg()))
         self.mox.ReplayAll()
 
         self.assertRaises(exception.CouldNotUploadImage,
@@ -210,16 +227,25 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
 
         self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
         self.mox.StubOutWithMock(time, 'sleep')
+        self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
         error_details = ["", "task signaled", "", ""]
         error = self.session.XenAPI.Failure(details=error_details)
         self.session.call_plugin_serialized('glance', 'upload_vhd',
                                             **params).AndRaise(error)
+        compute_utils.add_instance_fault_from_exc(self.context, self.instance,
+                                                  error, (fake.Failure,
+                                                          error,
+                                                          mox.IgnoreArg()))
         time.sleep(0.5)
         # Note(johngarbutt) XenServer 6.1 and later has this error
         error_details = ["", "signal: SIGTERM", "", ""]
         error = self.session.XenAPI.Failure(details=error_details)
         self.session.call_plugin_serialized('glance', 'upload_vhd',
                                             **params).AndRaise(error)
+        compute_utils.add_instance_fault_from_exc(self.context, self.instance,
+                                                  error, (fake.Failure,
+                                                          error,
+                                                          mox.IgnoreArg()))
         time.sleep(1)
         self.session.call_plugin_serialized('glance', 'upload_vhd',
                                             **params)
