@@ -17,6 +17,7 @@
 
 import mock
 
+from nova import objects
 from nova import servicegroup
 from nova import test
 
@@ -46,22 +47,11 @@ class MemcachedServiceGroupTestCase(test.NoDBTestCase):
         self.assertTrue(self.servicegroup_api.service_is_up(service_ref))
         self.mc_client.get.assert_called_once_with('compute:fake-host')
 
-    @mock.patch('nova.conductor.api.LocalAPI.service_get_all_by_topic')
+    @mock.patch.object(objects.ServiceList, 'get_by_topic')
     def test_get_all(self, ga_mock):
-        service_refs = [
-            {
-                'host': 'fake-host1',
-                'topic': 'compute'
-            },
-            {
-                'host': 'fake-host2',
-                'topic': 'compute'
-            },
-            {
-                'host': 'fake-host3',
-                'topic': 'compute'
-            },
-        ]
+        hosts = ['fake-host1', 'fake-host2', 'fake-host3']
+        service_refs = objects.ServiceList(objects=[
+            objects.Service(host=host, topic='compute') for host in hosts])
         ga_mock.return_value = service_refs
         self.mc_client.get.side_effect = [
             None,

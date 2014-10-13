@@ -33,6 +33,7 @@ from nova import context
 from nova import debugger
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
+from nova import objects
 from nova.objects import base as objects_base
 from nova.openstack.common import service
 from nova import rpc
@@ -136,14 +137,7 @@ class Service(service.Service):
         self.binary = binary
         self.topic = topic
         self.manager_class_name = manager
-        # NOTE(russellb) We want to make sure to create the servicegroup API
-        # instance early, before creating other things such as the manager,
-        # that will also create a servicegroup API instance.  Internally, the
-        # servicegroup only allocates a single instance of the driver API and
-        # we want to make sure that our value of db_allowed is there when it
-        # gets created.  For that to happen, this has to be the first instance
-        # of the servicegroup API.
-        self.servicegroup_api = servicegroup.API(db_allowed=db_allowed)
+        self.servicegroup_api = servicegroup.API()
         manager_class = importutils.import_class(self.manager_class_name)
         self.manager = manager_class(host=self.host, *args, **kwargs)
         self.rpcserver = None
@@ -164,21 +158,17 @@ class Service(service.Service):
         self.manager.init_host()
         self.model_disconnected = False
         ctxt = context.get_admin_context()
-        try:
-            self.service_ref = (
-                self.conductor_api.service_get_by_host_and_binary(
-                    ctxt, self.host, self.binary))
-            self.service_id = self.service_ref['id']
-        except exception.NotFound:
+        self.service_ref = objects.Service.get_by_host_and_binary(
+            ctxt, self.host, self.binary)
+        if not self.service_ref:
             try:
                 self.service_ref = self._create_service_ref(ctxt)
             except (exception.ServiceTopicExists,
                     exception.ServiceBinaryExists):
                 # NOTE(danms): If we race to create a record with a sibling
                 # worker, don't fail here.
-                self.service_ref = (
-                    self.conductor_api.service_get_by_host_and_binary(
-                        ctxt, self.host, self.binary))
+                self.service_ref = objects.Service.get_by_host_and_binary(
+                    ctxt, self.host, self.binary)
 
         self.manager.pre_start_hook()
 
@@ -219,14 +209,12 @@ class Service(service.Service):
                                         self.periodic_interval_max)
 
     def _create_service_ref(self, context):
-        svc_values = {
-            'host': self.host,
-            'binary': self.binary,
-            'topic': self.topic,
-            'report_count': 0,
-        }
-        service = self.conductor_api.service_create(context, svc_values)
-        self.service_id = service['id']
+        service = objects.Service(context)
+        service.host = self.host
+        service.binary = self.binary
+        service.topic = self.topic
+        service.report_count = 0
+        service.create()
         return service
 
     def __getattr__(self, key):
@@ -282,8 +270,7 @@ class Service(service.Service):
         """Destroy the service object in the datastore."""
         self.stop()
         try:
-            self.conductor_api.service_destroy(context.get_admin_context(),
-                                               self.service_id)
+            self.service_ref.destroy()
         except exception.NotFound:
             LOG.warning(_LW('Service killed that has no database entry'))
 

@@ -2782,6 +2782,11 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         for key, value in self._get_base_values().iteritems():
             self.assertEqual(value, service[key])
 
+    def test_service_create_disabled(self):
+        self.flags(enable_new_services=False)
+        service = self._create_service({})
+        self.assertTrue(service['disabled'])
+
     def test_service_destroy(self):
         service1 = self._create_service({})
         service2 = self._create_service({'host': 'fake_host2'})

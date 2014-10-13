@@ -21,9 +21,9 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import timeutils
 
-from nova import conductor
 from nova import context
 from nova.i18n import _, _LE
+from nova import objects
 from nova.openstack.common import memorycache
 from nova.servicegroup import api
 from nova.servicegroup.drivers import base
@@ -42,8 +42,6 @@ class MemcachedDriver(base.Driver):
         if not CONF.memcached_servers:
             raise RuntimeError(_('memcached_servers not defined'))
         self.mc = memorycache.get_client()
-        self.db_allowed = kwargs.get('db_allowed', True)
-        self.conductor_api = conductor.API(use_local=self.db_allowed)
 
     def join(self, member_id, group_id, service=None):
         """Join the given service with its group."""
@@ -80,10 +78,10 @@ class MemcachedDriver(base.Driver):
                   group_id)
         rs = []
         ctxt = context.get_admin_context()
-        services = self.conductor_api.service_get_all_by_topic(ctxt, group_id)
+        services = objects.ServiceList.get_by_topic(ctxt, group_id)
         for service in services:
             if self.is_up(service):
-                rs.append(service['host'])
+                rs.append(service.host)
         return rs
 
     def _report_state(self, service):
