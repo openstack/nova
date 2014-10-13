@@ -738,6 +738,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         recorded_methods = [c[1][1] for c in mock_call_method.mock_calls]
         self.assertEqual(expected_methods, recorded_methods)
 
+    @mock.patch(
+        'nova.virt.vmwareapi.vmops.VMwareVMOps._configure_config_drive')
     @mock.patch('nova.virt.vmwareapi.ds_util.get_datastore')
     @mock.patch(
         'nova.virt.vmwareapi.vmops.VMwareVMOps.get_datacenter_ref_and_name')
@@ -777,9 +779,11 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                    mock_get_mo_id_for_instance,
                    mock_get_datacenter_ref_and_name,
                    mock_get_datastore,
+                   mock_configure_config_drive,
                    block_device_info=None,
                    power_on=True,
-                   allocations=None):
+                   allocations=None,
+                   config_drive=False):
 
         self._vmops._volumeops = mock.Mock()
         image = {
@@ -892,6 +896,10 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                                           dc_ref,
                                                           source_file,
                                                           dest_file)
+            if config_drive:
+                mock_configure_config_drive.assert_called_once_with(
+                        self._instance, 'fake_vm_ref', self._dc_info,
+                        self._ds, 'fake_files', 'password')
 
     @mock.patch.object(ds_util, 'get_datastore')
     @mock.patch.object(vmops.VMwareVMOps, 'get_datacenter_ref_and_name')
@@ -954,6 +962,14 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             'block_device_mapping': [{'connection_info': 'fake'}]
         }
         self._test_spawn(block_device_info=block_device_info)
+
+    def test_spawn_with_block_device_info_with_config_drive(self):
+        self.flags(force_config_drive=True)
+        block_device_info = {
+            'block_device_mapping': [{'connection_info': 'fake'}]
+        }
+        self._test_spawn(block_device_info=block_device_info,
+                         config_drive=True)
 
     def test_build_virtual_machine(self):
         image_id = nova.tests.image.fake.get_valid_image_id()

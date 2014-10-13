@@ -493,10 +493,10 @@ class VMwareVMOps(object):
             else:
                 self._use_disk_image_as_full_clone(vm_ref, vi)
 
-            if configdrive.required_by(instance):
-                self._configure_config_drive(
-                        instance, vm_ref, vi.dc_info, vi.datastore,
-                        injected_files, admin_password)
+        if configdrive.required_by(instance):
+            self._configure_config_drive(
+                    instance, vm_ref, vi.dc_info, vi.datastore,
+                    injected_files, admin_password)
 
         if power_on:
             vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
