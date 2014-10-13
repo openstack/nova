@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-09-25 06:14+0000\n"
+"POT-Creation-Date: 2014-10-13 06:11+0000\n"
 "PO-Revision-Date: 2014-07-16 14:42+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Portuguese (Brazil) (http://www.transifex.com/projects/p/nova/"
@@ -28,27 +28,27 @@ msgstr ""
 msgid "V3 API has been disabled by configuration"
 msgstr ""
 
-#: nova/api/openstack/wsgi.py:688
+#: nova/api/openstack/wsgi.py:664
 #, python-format
 msgid "Fault thrown: %s"
 msgstr ""
 
-#: nova/api/openstack/wsgi.py:691
+#: nova/api/openstack/wsgi.py:667
 #, python-format
 msgid "HTTP exception thrown: %s"
 msgstr ""
 
-#: nova/api/openstack/compute/contrib/os_networks.py:109
+#: nova/api/openstack/compute/contrib/os_networks.py:128
 #: nova/api/openstack/compute/contrib/os_tenant_networks.py:130
 #, python-format
 msgid "Deleting network with id %s"
 msgstr ""
 
-#: nova/compute/manager.py:2544
+#: nova/compute/manager.py:2546
 msgid "Instance is already powered off in the hypervisor when stop is called."
 msgstr ""
 
-#: nova/compute/manager.py:2820
+#: nova/compute/manager.py:2822
 #, python-format
 msgid "bringing vm to original state: '%s'"
 msgstr ""
@@ -57,6 +57,14 @@ msgstr ""
 #, python-format
 msgid ""
 "During sync_power_state the instance has a pending task (%(task)s). Skip."
+msgstr ""
+
+#: nova/db/sqlalchemy/api.py:3241
+#, python-format
+msgid ""
+"quota_usages out of sync, updating. project_id: %(project_id)s, user_id: "
+"%(user_id)s, resource: %(res)s, tracked usage: %(tracked_use)s, actual "
+"usage: %(in_use)s"
 msgstr ""
 
 #: nova/db/sqlalchemy/migrate_repo/versions/234_add_expire_reservations_index.py:36
@@ -155,7 +163,7 @@ msgstr ""
 msgid "%(num_values)d values found, of which the minimum value will be used."
 msgstr ""
 
-#: nova/virt/block_device.py:221
+#: nova/virt/block_device.py:222
 #, python-format
 msgid "preserve multipath_id %s"
 msgstr ""
@@ -165,7 +173,7 @@ msgstr ""
 msgid "instance chain %s disappeared during refresh, skipping"
 msgstr ""
 
-#: nova/virt/disk/vfs/api.py:66
+#: nova/virt/disk/vfs/api.py:67
 msgid "Unable to import guestfsfalling back to VFSLocalFS"
 msgstr ""
 
@@ -173,111 +181,111 @@ msgstr ""
 msgid "Soft shutdown succeeded."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:910
+#: nova/virt/libvirt/driver.py:912
 #, python-format
 msgid ""
 "Unable to use bulk domain list APIs, falling back to slow code path: %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1026
+#: nova/virt/libvirt/driver.py:1028
 msgid "Instance destroyed successfully."
 msgstr "Instância destruída com êxito."
 
-#: nova/virt/libvirt/driver.py:1036
+#: nova/virt/libvirt/driver.py:1038
 msgid "Instance may be started again."
 msgstr "A instância pode ser iniciada novamente."
 
-#: nova/virt/libvirt/driver.py:1046
+#: nova/virt/libvirt/driver.py:1048
 msgid "Going to destroy instance again."
 msgstr "Destruindo a instância novamente."
 
-#: nova/virt/libvirt/driver.py:1704
+#: nova/virt/libvirt/driver.py:1689
 msgid "Beginning live snapshot process"
 msgstr "Começando o processo de captura instantânea em tempo real"
 
-#: nova/virt/libvirt/driver.py:1707
+#: nova/virt/libvirt/driver.py:1692
 msgid "Beginning cold snapshot process"
 msgstr "Iniciando processo de captura instantânea a frio"
 
-#: nova/virt/libvirt/driver.py:1737
+#: nova/virt/libvirt/driver.py:1722
 msgid "Snapshot extracted, beginning image upload"
 msgstr "Captura instantânea extraída, iniciando upload da imagem"
 
-#: nova/virt/libvirt/driver.py:1749
+#: nova/virt/libvirt/driver.py:1734
 msgid "Snapshot image upload complete"
 msgstr "Upload da imagem de captura instantânea concluído"
 
-#: nova/virt/libvirt/driver.py:2259
+#: nova/virt/libvirt/driver.py:2244
 msgid "Instance soft rebooted successfully."
 msgstr "Reinicialização virtual da instância bem-sucedida."
 
-#: nova/virt/libvirt/driver.py:2302
+#: nova/virt/libvirt/driver.py:2287
 msgid "Instance shutdown successfully."
 msgstr "A instância foi encerrada com êxito."
 
-#: nova/virt/libvirt/driver.py:2310
+#: nova/virt/libvirt/driver.py:2295
 msgid "Instance may have been rebooted during soft reboot, so return now."
 msgstr ""
 "A instância pode ter sido reinicializada durante a reinicialização virtual, "
 "portanto retorne agora."
 
-#: nova/virt/libvirt/driver.py:2379
+#: nova/virt/libvirt/driver.py:2364
 msgid "Instance rebooted successfully."
 msgstr "Instância reinicializada com êxito."
 
-#: nova/virt/libvirt/driver.py:2422
+#: nova/virt/libvirt/driver.py:2407
 msgid "Instance already shutdown."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2438
+#: nova/virt/libvirt/driver.py:2423
 #, python-format
 msgid "Instance shutdown successfully after %d seconds."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2467
+#: nova/virt/libvirt/driver.py:2452
 #, python-format
 msgid "Instance failed to shutdown in %d seconds."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2625
+#: nova/virt/libvirt/driver.py:2609
 msgid "Instance spawned successfully."
 msgstr "Feito spawn da instância com êxito."
 
-#: nova/virt/libvirt/driver.py:2641
+#: nova/virt/libvirt/driver.py:2625
 #, python-format
 msgid "data: %(data)r, fpath: %(fpath)r"
 msgstr "dados: %(data)r, fpath: %(fpath)r"
 
-#: nova/virt/libvirt/driver.py:2680 nova/virt/libvirt/driver.py:2707
+#: nova/virt/libvirt/driver.py:2664 nova/virt/libvirt/driver.py:2691
 #, python-format
 msgid "Truncated console log returned, %d bytes ignored"
 msgstr "Log do console truncado retornado, %d bytes ignorados"
 
-#: nova/virt/libvirt/driver.py:2938
+#: nova/virt/libvirt/driver.py:2922
 msgid "Creating image"
 msgstr "Criando imagem"
 
-#: nova/virt/libvirt/driver.py:3066
+#: nova/virt/libvirt/driver.py:3050
 msgid "Using config drive"
 msgstr "Usando unidade de configuração"
 
-#: nova/virt/libvirt/driver.py:3075
+#: nova/virt/libvirt/driver.py:3059
 #, python-format
 msgid "Creating config drive at %(path)s"
 msgstr "Criando unidade de configuração em %(path)s"
 
-#: nova/virt/libvirt/driver.py:3915
+#: nova/virt/libvirt/driver.py:3876
 msgid "Configuring timezone for windows instance to localtime"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4902
+#: nova/virt/libvirt/driver.py:4874
 #, python-format
 msgid ""
 "Getting block stats failed, device might have been detached. Instance="
 "%(instance_name)s Disk=%(disk)s Code=%(errcode)s Error=%(e)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4908
+#: nova/virt/libvirt/driver.py:4880
 #, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
@@ -286,43 +294,43 @@ msgstr ""
 "Não foi possível localizar o domínio em libvirt para a instância %s. Não é "
 "possível obter estatísticas do bloco para o dispositivo"
 
-#: nova/virt/libvirt/driver.py:5150
+#: nova/virt/libvirt/driver.py:5127
 #, python-format
 msgid "Instance launched has CPU info: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5909
+#: nova/virt/libvirt/driver.py:5916
 msgid "Instance running successfully."
 msgstr "Instância executando com êxito."
 
-#: nova/virt/libvirt/driver.py:6258
+#: nova/virt/libvirt/driver.py:6264
 #, python-format
 msgid "Deleting instance files %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:6271
+#: nova/virt/libvirt/driver.py:6277
 #, python-format
 msgid "Deletion of %s failed"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:6275
+#: nova/virt/libvirt/driver.py:6281
 #, python-format
 msgid "Deletion of %s complete"
 msgstr ""
 
-#: nova/virt/libvirt/firewall.py:106
+#: nova/virt/libvirt/firewall.py:108
 msgid "Called setup_basic_filtering in nwfilter"
 msgstr "Chamada setup_basic_filtering em nwfilter"
 
-#: nova/virt/libvirt/firewall.py:114
+#: nova/virt/libvirt/firewall.py:116
 msgid "Ensuring static filters"
 msgstr "Assegurando filtros estáticos"
 
-#: nova/virt/libvirt/firewall.py:305
+#: nova/virt/libvirt/firewall.py:326
 msgid "Attempted to unfilter instance which is not filtered"
 msgstr "Tentou cancelar a filtragem da instância que não foi filtrada"
 
-#: nova/virt/libvirt/imagebackend.py:365
+#: nova/virt/libvirt/imagebackend.py:363
 #, python-format
 msgid "Failed to get image info from path %(path)s; error: %(error)s"
 msgstr ""
