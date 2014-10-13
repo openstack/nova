@@ -973,6 +973,10 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_spawn(self):
         self._test_spawn()
 
+    def test_spawn_config_drive_enabled(self):
+        self.flags(force_config_drive=True)
+        self._test_spawn(config_drive=True)
+
     def test_spawn_no_power_on(self):
         self._test_spawn(power_on=False)
 
