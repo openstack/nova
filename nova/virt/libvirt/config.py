@@ -1568,7 +1568,7 @@ class LibvirtConfigGuestMemoryBacking(LibvirtConfigObject):
         super(LibvirtConfigGuestMemoryBacking, self).__init__(
             root_name="memoryBacking", **kwargs)
 
-        self.hugepages = False
+        self.hugepages = []
         self.sharedpages = True
         self.locked = False
 
@@ -1576,13 +1576,35 @@ class LibvirtConfigGuestMemoryBacking(LibvirtConfigObject):
         root = super(LibvirtConfigGuestMemoryBacking, self).format_dom()
 
         if self.hugepages:
-            root.append(etree.Element("hugepages"))
+            hugepages = etree.Element("hugepages")
+            for item in self.hugepages:
+                hugepages.append(item.format_dom())
+            root.append(hugepages)
         if not self.sharedpages:
             root.append(etree.Element("nosharedpages"))
         if self.locked:
             root.append(etree.Element("locked"))
 
         return root
+
+
+class LibvirtConfigGuestMemoryBackingPage(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestMemoryBackingPage, self).__init__(
+            root_name="page", **kwargs)
+
+        self.size_kb = None
+        self.nodeset = None
+
+    def format_dom(self):
+        page = super(LibvirtConfigGuestMemoryBackingPage, self).format_dom()
+
+        page.set("size", str(self.size_kb))
+        page.set("nodeset", hardware.format_cpu_spec(self.nodeset))
+        page.set("unit", "KiB")
+
+        return page
 
 
 class LibvirtConfigGuestMemoryTune(LibvirtConfigObject):

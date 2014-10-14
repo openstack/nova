@@ -1424,7 +1424,14 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.cputune.period = 25000
 
         obj.membacking = config.LibvirtConfigGuestMemoryBacking()
-        obj.membacking.hugepages = True
+        page1 = config.LibvirtConfigGuestMemoryBackingPage()
+        page1.size_kb = 2048
+        page1.nodeset = [0, 1, 2, 3, 5]
+        page2 = config.LibvirtConfigGuestMemoryBackingPage()
+        page2.size_kb = 1048576
+        page2.nodeset = [4]
+        obj.membacking.hugepages.append(page1)
+        obj.membacking.hugepages.append(page2)
 
         obj.memtune = config.LibvirtConfigGuestMemoryTune()
         obj.memtune.hard_limit = 496
@@ -1487,7 +1494,10 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <name>demo</name>
               <memory>104857600</memory>
               <memoryBacking>
-                <hugepages/>
+                <hugepages>
+                  <page size="2048" unit="KiB" nodeset="0-3,5"/>
+                  <page size="1048576" unit="KiB" nodeset="4"/>
+                </hugepages>
               </memoryBacking>
               <memtune>
                 <hard_limit units="K">496</hard_limit>
@@ -2141,12 +2151,17 @@ class LibvirtConfigGuestMemoryBackingTest(LibvirtConfigBaseTest):
         obj = config.LibvirtConfigGuestMemoryBacking()
         obj.locked = True
         obj.sharedpages = False
-        obj.hugepages = True
+        page = config.LibvirtConfigGuestMemoryBackingPage()
+        page.size_kb = 2048
+        page.nodeset = [2, 3]
+        obj.hugepages.append(page)
 
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
           <memoryBacking>
-            <hugepages/>
+            <hugepages>
+              <page size="2048" unit="KiB" nodeset="2-3"/>
+            </hugepages>
             <nosharedpages/>
             <locked/>
           </memoryBacking>""")
