@@ -22,6 +22,7 @@ from oslo.config import cfg
 from nova import exception
 from nova.network import linux_net
 from nova.network import model as network_model
+from nova import objects
 from nova import test
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova import utils
@@ -348,15 +349,18 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         return conf
 
     def _get_instance_xml(self, driver, vif, image_meta=None):
-        default_inst_type = {
-            'memory_mb': 128, 'root_gb': 0, 'deleted_at': None,
-            'name': 'm1.micro', 'deleted': 0, 'created_at': None,
-            'ephemeral_gb': 0, 'updated_at': None,
-            'disabled': False, 'vcpus': 1,
-            'swap': 0, 'rxtx_factor': 1.0, 'is_public': True,
-            'flavorid': '1', 'vcpu_weight': None, 'id': 2,
-            'extra_specs': dict(self.bandwidth)
-        }
+        default_inst_type = objects.Flavor(name='m1.small',
+                                memory_mb=128,
+                                vcpus=1,
+                                root_gb=0,
+                                ephemeral_gb=0,
+                                swap=0,
+                                extra_specs=dict(self.bandwidth),
+                                deleted_at=None,
+                                deleted=0,
+                                created_at=None, flavorid=1,
+                                is_public=True, vcpu_weight=None,
+                                id=2, disabled=False, rxtx_factor=1.0)
         conf = self._get_conf()
         nic = driver.get_config(self.instance, vif, image_meta,
                                 default_inst_type, CONF.libvirt.virt_type)
