@@ -33,33 +33,23 @@ from nova import quota
 
 CONF = cfg.CONF
 
-try:
-    os_network_opts = [
-        cfg.BoolOpt("enable_network_quota",
-                    default=False,
-                    help=('Enables or disables quota checking for tenant '
-                          'networks')),
-        cfg.StrOpt('use_neutron_default_nets',
-                         default="False",
-                         help=('Control for checking for default networks')),
-        cfg.StrOpt('neutron_default_tenant_id',
-                         default="default",
-                         help=('Default tenant id when creating neutron '
-                               'networks'))
-    ]
-    CONF.register_opts(os_network_opts)
-except cfg.DuplicateOptError:
-    # NOTE(jkoelker) These options are verbatim elsewhere this is here
-    #                to make sure they are registered for our use.
-    pass
-
-if CONF.enable_network_quota:
-    opts = [
-        cfg.IntOpt('quota_networks',
-                   default=3,
-                   help='Number of private networks allowed per project'),
-        ]
-    CONF.register_opts(opts)
+os_network_opts = [
+    cfg.BoolOpt("enable_network_quota",
+                default=False,
+                help=('Enables or disables quota checking for tenant '
+                      'networks')),
+    cfg.StrOpt('use_neutron_default_nets',
+                     default="False",
+                     help=('Control for checking for default networks')),
+    cfg.StrOpt('neutron_default_tenant_id',
+                     default="default",
+                     help=('Default tenant id when creating neutron '
+                           'networks')),
+    cfg.IntOpt('quota_networks',
+               default=3,
+               help='Number of private networks allowed per project'),
+]
+CONF.register_opts(os_network_opts)
 
 QUOTAS = quota.QUOTAS
 LOG = logging.getLogger(__name__)
