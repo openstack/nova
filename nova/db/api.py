@@ -781,6 +781,11 @@ def instance_group_get(context, group_uuid):
     return IMPL.instance_group_get(context, group_uuid)
 
 
+def instance_group_get_by_instance(context, instance_uuid):
+    """Get the group an instance is a member of."""
+    return IMPL.instance_group_get_by_instance(context, instance_uuid)
+
+
 def instance_group_update(context, group_uuid, values):
     """Update the attributes of an group."""
     return IMPL.instance_group_update(context, group_uuid, values)
