@@ -125,7 +125,7 @@ class InstallVenv(object):
         parser.add_option('-n', '--no-site-packages',
                           action='store_true',
                           help="Do not inherit packages from global Python "
-                               "install")
+                               "install.")
         return parser.parse_args(argv[1:])[0]
 
 

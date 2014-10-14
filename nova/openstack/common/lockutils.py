@@ -29,7 +29,7 @@ import weakref
 from oslo.config import cfg
 
 from nova.openstack.common import fileutils
-from nova.openstack.common.gettextutils import _, _LE, _LI
+from nova.openstack.common._i18n import _, _LE, _LI
 
 
 LOG = logging.getLogger(__name__)

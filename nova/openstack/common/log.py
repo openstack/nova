@@ -38,18 +38,15 @@ import sys
 import traceback
 
 from oslo.config import cfg
+from oslo.serialization import jsonutils
+from oslo.utils import importutils
 import six
 from six import moves
 
 _PY26 = sys.version_info[0:2] == (2, 6)
 
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import importutils
-from nova.openstack.common import jsonutils
+from nova.openstack.common._i18n import _
 from nova.openstack.common import local
-# NOTE(flaper87): Pls, remove when graduating this module
-# from the incubator.
-from nova.openstack.common.strutils import mask_password  # noqa
 
 
 _DEFAULT_LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -554,7 +551,7 @@ def _setup_logging_from_conf(project, version):
                 syslog = logging.handlers.SysLogHandler(facility=facility)
             log_root.addHandler(syslog)
         except socket.error:
-            log_root.error('Unable to add syslog handler. Verify that syslog'
+            log_root.error('Unable to add syslog handler. Verify that syslog '
                            'is running.')
 
 

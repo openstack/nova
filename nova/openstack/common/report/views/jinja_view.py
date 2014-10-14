@@ -19,6 +19,8 @@ system for serialization.  For more information on Jinja, please
 see http://jinja.pocoo.org/ .
 """
 
+import copy
+
 import jinja2
 
 
@@ -78,6 +80,16 @@ class JinjaView(object):
 
     def __call__(self, model):
         return self.template.render(**model)
+
+    def __deepcopy__(self, memodict):
+        res = object.__new__(JinjaView)
+        res._text = copy.deepcopy(self._text, memodict)
+
+        # regenerate the template on a deepcopy
+        res._regentemplate = True
+        res._templatecache = None
+
+        return res
 
     @property
     def template(self):

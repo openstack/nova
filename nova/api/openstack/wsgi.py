@@ -20,6 +20,7 @@ import time
 from xml.dom import minidom
 
 from lxml import etree
+from oslo.utils import strutils
 import six
 import webob
 
@@ -905,7 +906,7 @@ class Resource(wsgi.Application):
                     "%(body)s") % {'action': action,
                                    'body': unicode(body, 'utf-8'),
                                    'meth': str(meth)}
-            LOG.debug(logging.mask_password(msg))
+            LOG.debug(strutils.mask_password(msg))
         else:
             LOG.debug("Calling method '%(meth)s'",
                       {'meth': str(meth)})

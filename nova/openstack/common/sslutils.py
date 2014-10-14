@@ -17,7 +17,7 @@ import ssl
 
 from oslo.config import cfg
 
-from nova.openstack.common.gettextutils import _
+from nova.openstack.common._i18n import _
 
 
 ssl_opts = [

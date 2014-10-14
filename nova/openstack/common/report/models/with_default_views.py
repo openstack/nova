@@ -14,10 +14,10 @@
 
 import copy
 
-import nova.openstack.common.report.models.base as base_model
-import nova.openstack.common.report.views.json.generic as jsonviews
-import nova.openstack.common.report.views.text.generic as textviews
-import nova.openstack.common.report.views.xml.generic as xmlviews
+from nova.openstack.common.report.models import base as base_model
+from nova.openstack.common.report.views.json import generic as jsonviews
+from nova.openstack.common.report.views.text import generic as textviews
+from nova.openstack.common.report.views.xml import generic as xmlviews
 
 
 class ModelWithDefaultViews(base_model.ReportModel):
@@ -28,18 +28,18 @@ class ModelWithDefaultViews(base_model.ReportModel):
     when a submodel should have an attached view, but the view
     differs depending on the serialization format
 
-    Paramaters are as the superclass, with the exception
-    of any parameters ending in '_view': these parameters
+    Parameters are as the superclass, except for any
+    parameters ending in '_view': these parameters
     get stored as default views.
 
     The default 'default views' are
 
     text
-        :class:`openstack.common.views.text.generic.KeyValueView`
+        :class:`openstack.common.report.views.text.generic.KeyValueView`
     xml
-        :class:`openstack.common.views.xml.generic.KeyValueView`
+        :class:`openstack.common.report.views.xml.generic.KeyValueView`
     json
-        :class:`openstack.common.views.json.generic.KeyValueView`
+        :class:`openstack.common.report.views.json.generic.KeyValueView`
 
     .. function:: to_type()
 

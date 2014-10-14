@@ -51,8 +51,12 @@ where stderr is logged for that given service.
 
 from __future__ import print_function
 
+import inspect
+import os
 import signal
 import sys
+
+from oslo.utils import timeutils
 
 from nova.openstack.common.report.generators import conf as cgen
 from nova.openstack.common.report.generators import threading as tgen
@@ -73,6 +77,8 @@ class GuruMeditation(object):
     always come first in the class list to ensure the
     MRO is correct.
     """
+
+    timestamp_fmt = "%Y%m%d%H%M%S"
 
     def __init__(self, version_obj, *args, **kwargs):
         self.version_obj = version_obj
@@ -97,13 +103,17 @@ class GuruMeditation(object):
             cls.persistent_sections = [[section_title, generator]]
 
     @classmethod
-    def setup_autorun(cls, version, signum=None):
+    def setup_autorun(cls, version, service_name=None,
+                      log_dir=None, signum=None):
         """Set Up Auto-Run
 
         This method sets up the Guru Meditation Report to automatically
-        get dumped to stderr when the given signal is received.
+        get dumped to stderr or a file in a given dir when the given signal
+        is received.
 
         :param version: the version object for the current product
+        :param service_name: this program name used to construct logfile name
+        :param logdir: path to a log directory where to create a file
         :param signum: the signal to associate with running the report
         """
 
@@ -113,18 +123,25 @@ class GuruMeditation(object):
 
         if signum:
             signal.signal(signum,
-                          lambda *args: cls.handle_signal(version, *args))
+                          lambda *args: cls.handle_signal(
+                              version, service_name, log_dir, *args))
 
     @classmethod
-    def handle_signal(cls, version, *args):
+    def handle_signal(cls, version, service_name, log_dir, *args):
         """The Signal Handler
 
         This method (indirectly) handles receiving a registered signal and
-        dumping the Guru Meditation Report to stderr.  This method is designed
-        to be curried into a proper signal handler by currying out the version
+        dumping the Guru Meditation Report to stderr or a file in a given dir.
+        If service name and log dir are not None, the report will be dumped to
+        a file named $service_name_gurumeditation_$current_time in the log_dir
+        directory.
+        This method is designed to be curried into a proper signal handler by
+        currying out the version
         parameter.
 
         :param version: the version object for the current product
+        :param service_name: this program name used to construct logfile name
+        :param logdir: path to a log directory where to create a file
         """
 
         try:
@@ -133,7 +150,20 @@ class GuruMeditation(object):
             print("Unable to run Guru Meditation Report!",
                   file=sys.stderr)
         else:
-            print(res, file=sys.stderr)
+            if log_dir:
+                service_name = service_name or os.path.basename(
+                    inspect.stack()[-1][1])
+                filename = "%s_gurumeditation_%s" % (
+                    service_name, timeutils.strtime(fmt=cls.timestamp_fmt))
+                filepath = os.path.join(log_dir, filename)
+                try:
+                    with open(filepath, "w") as dumpfile:
+                        dumpfile.write(res)
+                except Exception:
+                    print("Unable to dump Guru Meditation Report to file %s" %
+                          (filepath,), file=sys.stderr)
+            else:
+                print(res, file=sys.stderr)
 
     def _readd_sections(self):
         del self.sections[self.start_section_index:]

@@ -25,8 +25,9 @@ such strings specially)
 
 import copy
 
-from nova.openstack.common import jsonutils as json
-import nova.openstack.common.report.utils as utils
+from oslo.serialization import jsonutils as json
+
+from nova.openstack.common.report import utils as utils
 
 
 class BasicKeyValueView(object):
@@ -56,10 +57,10 @@ class KeyValueView(object):
     def __call__(self, model):
         # this part deals with subviews that were already serialized
         cpy = copy.deepcopy(model)
-        for key, valstr in model.items():
-            if getattr(valstr, '__is_json__', False):
-                cpy[key] = json.loads(valstr)
+        for key in model.keys():
+            if getattr(model[key], '__is_json__', False):
+                cpy[key] = json.loads(model[key])
 
-        res = utils.StringWithAttrs(json.dumps(cpy.data))
+        res = utils.StringWithAttrs(json.dumps(cpy.data, sort_keys=True))
         res.__is_json__ = True
         return res

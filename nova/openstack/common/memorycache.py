@@ -17,7 +17,6 @@
 """Super simple fake memcache client."""
 
 from oslo.config import cfg
-
 from oslo.utils import timeutils
 
 memcache_opts = [

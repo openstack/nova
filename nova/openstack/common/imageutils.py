@@ -21,8 +21,9 @@ Helper methods to deal with images.
 
 import re
 
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import strutils
+from oslo.utils import strutils
+
+from nova.openstack.common._i18n import _
 
 
 class QemuImgInfo(object):
@@ -62,7 +63,7 @@ class QemuImgInfo(object):
         # Standardize on underscores/lc/no dash and no spaces
         # since qemu seems to have mixed outputs here... and
         # this format allows for better integration with python
-        # - ie for usage in kwargs and such...
+        # - i.e. for usage in kwargs and such...
         field = field.lower().strip()
         for c in (" ", "-"):
             field = field.replace(c, '_')

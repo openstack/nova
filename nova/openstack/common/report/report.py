@@ -14,12 +14,12 @@
 
 """Provides Report classes
 
-This module defines various classes representing
-reports and report sections.  All reports take the
-form of a report class containing various report sections.
+This module defines various classes representing reports and report sections.
+All reports take the form of a report class containing various report
+sections.
 """
 
-import nova.openstack.common.report.views.text.header as header_views
+from nova.openstack.common.report.views.text import header as header_views
 
 
 class BasicReport(object):
@@ -28,7 +28,7 @@ class BasicReport(object):
     A Basic Report consists of a collection of :class:`ReportSection`
     objects, each of which contains a top-level model and generator.
     It collects these sections into a cohesive report which may then
-    be serialized by calling :func:`run`
+    be serialized by calling :func:`run`.
     """
 
     def __init__(self):
@@ -78,10 +78,9 @@ class BasicReport(object):
 class ReportSection(object):
     """A Report Section
 
-    A report section contains a generator and a top-level view.
-    When something attempts to serialize the section by calling
-    str() on it, the section runs the generator and calls the view
-    on the resulting model.
+    A report section contains a generator and a top-level view. When something
+    attempts to serialize the section by calling str() on it, the section runs
+    the generator and calls the view on the resulting model.
 
     .. seealso::
 
@@ -89,9 +88,8 @@ class ReportSection(object):
            :func:`BasicReport.add_section`
 
     :param view: the top-level view for this section
-    :param generator: the generator for this section which could be
-                      any callable object which takes
-                      no parameters and returns a data model
+    :param generator: the generator for this section
+      (any callable object which takes no parameters and returns a data model)
     """
 
     def __init__(self, view, generator):

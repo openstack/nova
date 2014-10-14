@@ -13,32 +13,34 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Middleware that ensures request ID.
+"""Middleware that provides high-level error handling.
 
-It ensures to assign request ID for each API request and set it to
-request environment. The request ID is also added to API response.
+It catches all exceptions from subsequent applications in WSGI pipeline
+to hide internal errors from API response.
 """
+import logging
 
 import webob.dec
+import webob.exc
 
-from nova.openstack.common import context
+from nova.openstack.common._i18n import _LE
 from nova.openstack.common.middleware import base
 from nova.openstack.common import versionutils
 
 
-ENV_REQUEST_ID = 'openstack.request_id'
-HTTP_RESP_HEADER_REQUEST_ID = 'x-openstack-request-id'
+LOG = logging.getLogger(__name__)
 
 
 @versionutils.deprecated(as_of=versionutils.deprecated.JUNO,
-                         in_favor_of='oslo.middleware.RequestId')
-class RequestIdMiddleware(base.Middleware):
+                         in_favor_of='oslo.middleware.CatchErrors')
+class CatchErrorsMiddleware(base.Middleware):
 
     @webob.dec.wsgify
     def __call__(self, req):
-        req_id = context.generate_request_id()
-        req.environ[ENV_REQUEST_ID] = req_id
-        response = req.get_response(self.application)
-        if HTTP_RESP_HEADER_REQUEST_ID not in response.headers:
-            response.headers.add(HTTP_RESP_HEADER_REQUEST_ID, req_id)
+        try:
+            response = req.get_response(self.application)
+        except Exception:
+            LOG.exception(_LE('An error occurred during '
+                              'processing the request: %s'))
+            response = webob.exc.HTTPInternalServerError()
         return response

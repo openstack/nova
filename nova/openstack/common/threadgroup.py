@@ -85,7 +85,7 @@ class ThreadGroup(object):
     def thread_done(self, thread):
         self.threads.remove(thread)
 
-    def stop(self):
+    def _stop_threads(self):
         current = threading.current_thread()
 
         # Iterate over a copy of self.threads so thread_done doesn't
@@ -99,12 +99,30 @@ class ThreadGroup(object):
             except Exception as ex:
                 LOG.exception(ex)
 
+    def stop_timers(self):
         for x in self.timers:
             try:
                 x.stop()
             except Exception as ex:
                 LOG.exception(ex)
         self.timers = []
+
+    def stop(self, graceful=False):
+        """stop function has the option of graceful=True/False.
+
+        * In case of graceful=True, wait for all threads to be finished.
+          Never kill threads.
+        * In case of graceful=False, kill threads immediately.
+        """
+        self.stop_timers()
+        if graceful:
+            # In case of graceful=True, wait for all threads to be
+            # finished, never kill threads
+            self.wait()
+        else:
+            # In case of graceful=False(Default), kill threads
+            # immediately
+            self._stop_threads()
 
     def wait(self):
         for x in self.timers:

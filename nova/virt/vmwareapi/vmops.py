@@ -26,6 +26,7 @@ import time
 import decorator
 from oslo.config import cfg
 from oslo.utils import excutils
+from oslo.utils import strutils
 from oslo.utils import units
 from oslo.vmware import exceptions as vexc
 
@@ -467,7 +468,7 @@ class VMwareVMOps(object):
             msg = "Block device information present: %s" % block_device_info
             # NOTE(mriedem): block_device_info can contain an auth_password
             # so we have to scrub the message before logging it.
-            LOG.debug(logging.mask_password(msg), instance=instance)
+            LOG.debug(strutils.mask_password(msg), instance=instance)
 
             for root_disk in block_device_mapping:
                 connection_info = root_disk['connection_info']
