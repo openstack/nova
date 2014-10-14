@@ -91,7 +91,7 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
   different ratio settings), the minimum value will be used.
 * |DiskFilter| - filters hosts by their disk allocation. Only hosts with sufficient
   disk space to host the instance are passed.
-  ``disk_allocation_ration`` setting. It's virtual disk to physical disk
+  ``disk_allocation_ratio`` setting. It's virtual disk to physical disk
   allocation ratio and it's 1.0 by default. The total allow allocated disk size will
   be physical disk multiplied this ratio.
 * |AggregateDiskFilter| - filters hosts by disk allocation with per-aggregate
