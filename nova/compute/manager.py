@@ -2494,7 +2494,7 @@ class ComputeManager(manager.Manager):
                                                   reservations,
                                                   instance=instance)
 
-        @utils.synchronized(instance['uuid'])
+        @utils.synchronized(instance.uuid)
         def do_terminate_instance(instance, bdms):
             try:
                 self._delete_instance(context, instance, bdms, quotas)
