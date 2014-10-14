@@ -42,3 +42,11 @@ class NoRootDiskDefined(vexc.VMwareDriverException):
 
 class TaskInProgress(vexc.VMwareDriverException):
     msg_fmt = _("Virtual machine is busy.")
+
+
+class PbmDefaultPolicyUnspecified(VMwareDriverConfigurationException):
+    msg_fmt = _("Default PBM policy is required if PBM is enabled.")
+
+
+class PbmDefaultPolicyDoesNotExist(VMwareDriverConfigurationException):
+    msg_fmt = _("The default PBM policy doesn't exist on the backend.")
