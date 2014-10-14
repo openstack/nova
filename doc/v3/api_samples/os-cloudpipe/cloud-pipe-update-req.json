@@ -1,0 +1,6 @@
+{
+    "configure_project": {
+        "vpn_ip": "192.168.1.1",
+        "vpn_port": "2000"
+    }
+}

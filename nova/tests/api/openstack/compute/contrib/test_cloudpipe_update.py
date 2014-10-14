@@ -14,8 +14,10 @@
 
 import webob
 
-from nova.api.openstack.compute.contrib import cloudpipe_update
+from nova.api.openstack.compute.contrib import cloudpipe_update as clup_v2
+from nova.api.openstack.compute.plugins.v3 import cloudpipe as clup_v21
 from nova import db
+from nova import exception
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_network
@@ -36,13 +38,20 @@ def fake_network_update(context, network_id, values):
                 network[key] = values[key]
 
 
-class CloudpipeUpdateTest(test.NoDBTestCase):
+class CloudpipeUpdateTestV21(test.NoDBTestCase):
+    bad_request = exception.ValidationError
 
     def setUp(self):
-        super(CloudpipeUpdateTest, self).setUp()
-        self.controller = cloudpipe_update.CloudpipeUpdateController()
+        super(CloudpipeUpdateTestV21, self).setUp()
         self.stubs.Set(db, "project_get_networks", fake_project_get_networks)
         self.stubs.Set(db, "network_update", fake_network_update)
+        self._setup()
+
+    def _setup(self):
+        self.controller = clup_v21.CloudpipeController()
+
+    def _check_status(self, expected_status, res, controller_methord):
+        self.assertEqual(expected_status, controller_methord.wsgi_code)
 
     def test_cloudpipe_configure_project(self):
         req = fakes.HTTPRequest.blank(
@@ -50,7 +59,7 @@ class CloudpipeUpdateTest(test.NoDBTestCase):
         body = {"configure_project": {"vpn_ip": "1.2.3.4", "vpn_port": 222}}
         result = self.controller.update(req, 'configure-project',
                                                body=body)
-        self.assertEqual('202 Accepted', result.status)
+        self._check_status(202, result, self.controller.update)
         self.assertEqual(fake_networks[0]['vpn_public_address'], "1.2.3.4")
         self.assertEqual(fake_networks[0]['vpn_public_port'], 222)
 
@@ -60,21 +69,31 @@ class CloudpipeUpdateTest(test.NoDBTestCase):
         body = {"configure_project": {"vpn_ip": "1.2.3.4", "vpn_port": 222}}
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.update, req,
-                          'configure-projectx', body)
+                          'configure-projectx', body=body)
 
     def test_cloudpipe_configure_project_bad_data(self):
         req = fakes.HTTPRequest.blank(
             '/v2/fake/os-cloudpipe/configure-project')
         body = {"configure_project": {"vpn_ipxx": "1.2.3.4", "vpn_port": 222}}
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(self.bad_request,
                           self.controller.update, req,
-                          'configure-project', body)
+                          'configure-project', body=body)
 
     def test_cloudpipe_configure_project_bad_vpn_port(self):
         req = fakes.HTTPRequest.blank(
             '/v2/fake/os-cloudpipe/configure-project')
         body = {"configure_project": {"vpn_ipxx": "1.2.3.4",
                                       "vpn_port": "foo"}}
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(self.bad_request,
                           self.controller.update, req,
-                          'configure-project', body)
+                          'configure-project', body=body)
+
+
+class CloudpipeUpdateTestV2(CloudpipeUpdateTestV21):
+    bad_request = webob.exc.HTTPBadRequest
+
+    def _setup(self):
+        self.controller = clup_v2.CloudpipeUpdateController()
+
+    def _check_status(self, expected_status, res, controller_methord):
+        self.assertEqual(expected_status, res.status_int)

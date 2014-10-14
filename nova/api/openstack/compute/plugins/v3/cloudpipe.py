@@ -18,8 +18,10 @@ from oslo.config import cfg
 from oslo.utils import timeutils
 from webob import exc
 
+from nova.api.openstack.compute.schemas.v3 import cloudpipe
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova.cloudpipe import pipelib
 from nova import compute
 from nova.compute import utils as compute_utils
@@ -27,6 +29,7 @@ from nova.compute import vm_states
 from nova import exception
 from nova.i18n import _
 from nova import network
+from nova import objects
 from nova.openstack.common import fileutils
 from nova import utils
 
@@ -142,6 +145,30 @@ class CloudpipeController(wsgi.Controller):
         vpns = [self._vpn_dict(context, x['project_id'], x)
                 for x in self._get_all_cloudpipes(context)]
         return {'cloudpipes': vpns}
+
+    @wsgi.response(202)
+    @extensions.expected_errors(400)
+    @validation.schema(cloudpipe.update)
+    def update(self, req, id, body):
+        """Configure cloudpipe parameters for the project."""
+
+        context = req.environ['nova.context']
+        authorize(context)
+
+        if id != "configure-project":
+            msg = _("Unknown action %s") % id
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        project_id = context.project_id
+        networks = objects.NetworkList.get_by_project(context, project_id)
+
+        params = body['configure_project']
+        vpn_ip = params['vpn_ip']
+        vpn_port = params['vpn_port']
+        for nw in networks:
+            nw.vpn_public_address = vpn_ip
+            nw.vpn_public_port = vpn_port
+            nw.save()
 
 
 class Cloudpipe(extensions.V3APIExtensionBase):
