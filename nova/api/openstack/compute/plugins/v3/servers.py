@@ -70,6 +70,8 @@ class ServersController(wsgi.Controller):
 
     EXTENSION_UPDATE_NAMESPACE = 'nova.api.v3.extensions.server.update'
 
+    EXTENSION_RESIZE_NAMESPACE = 'nova.api.v3.extensions.server.resize'
+
     _view_builder_class = views_servers.ViewBuilderV3
 
     schema_server_create = schema_servers.base_create
@@ -172,6 +174,17 @@ class ServersController(wsgi.Controller):
                 propagate_map_exceptions=True)
         if not list(self.update_extension_manager):
             LOG.debug("Did not find any server update extensions")
+
+        # Look for implementation of extension point of server resize
+        self.resize_extension_manager = \
+            stevedore.enabled.EnabledExtensionManager(
+                namespace=self.EXTENSION_RESIZE_NAMESPACE,
+                check_func=_check_load_extension('server_resize'),
+                invoke_on_load=True,
+                invoke_kwds={"extension_info": self.extension_info},
+                propagate_map_exceptions=True)
+        if not list(self.resize_extension_manager):
+            LOG.debug("Did not find any server resize extensions")
 
         # Look for API schema of server create extension
         self.create_schema_manager = \
@@ -561,7 +574,8 @@ class ServersController(wsgi.Controller):
                 exception.InvalidBDMImage,
                 exception.InvalidBDMBootSequence,
                 exception.InvalidBDMLocalsLimit,
-                exception.InvalidBDMVolumeNotBootable) as error:
+                exception.InvalidBDMVolumeNotBootable,
+                exception.AutoDiskConfigDisabledByImage) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except (exception.PortInUse,
                 exception.InstanceExists,
@@ -774,7 +788,8 @@ class ServersController(wsgi.Controller):
         except exception.CannotResizeToSameFlavor:
             msg = _("Resize requires a flavor change.")
             raise exc.HTTPBadRequest(explanation=msg)
-        except exception.CannotResizeDisk as e:
+        except (exception.CannotResizeDisk,
+                exception.AutoDiskConfigDisabledByImage) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
@@ -861,6 +876,10 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
 
         resize_kwargs = {}
+
+        if list(self.resize_extension_manager):
+            self.resize_extension_manager.map(self._resize_extension_point,
+                                              resize_dict, resize_kwargs)
 
         return self._resize(req, id, flavor_ref, **resize_kwargs)
 
