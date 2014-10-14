@@ -918,6 +918,15 @@ class ServersControllerTest(ControllerTest):
                         marker=mock.ANY, want_objects=mock.ANY)
 
     @mock.patch.object(compute_api.API, 'get_all')
+    def test_get_servers_flavor_not_found(self, get_all_mock):
+        get_all_mock.side_effect = exception.FlavorNotFound(flavor_id=1)
+
+        req = fakes.HTTPRequest.blank(
+                        '/fake/servers?status=active&flavor=abc')
+        servers = self.controller.index(req)['servers']
+        self.assertEqual(0, len(servers))
+
+    @mock.patch.object(compute_api.API, 'get_all')
     def test_get_servers_allows_invalid_status(self, get_all_mock):
         server_uuid0 = str(uuid.uuid4())
         server_uuid1 = str(uuid.uuid4())

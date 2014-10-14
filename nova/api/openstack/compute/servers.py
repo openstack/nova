@@ -607,8 +607,7 @@ class Controller(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
         except exception.FlavorNotFound:
             LOG.debug("Flavor '%s' could not be found", search_opts['flavor'])
-            # TODO(mriedem): Move to ObjectListBase.__init__ for empty lists.
-            instance_list = objects.InstanceList(objects=[])
+            instance_list = objects.InstanceList()
 
         if is_detail:
             instance_list.fill_faults()
