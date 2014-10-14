@@ -1810,3 +1810,11 @@ class InvalidConnectionInfo(Invalid):
 class InstanceQuiesceNotSupported(Invalid):
     msg_fmt = _('Quiescing is not supported in instance %(instance_id)s: '
                 '%(reason)s')
+
+
+class MemoryPageSizeInvalid(Invalid):
+    msg_fmt = _("Invalid memory page size '%(pagesize)s'")
+
+
+class MemoryPageSizeForbidden(Invalid):
+    msg_fmt = _("Page size %(pagesize)s forbidden against '%(against)s'")

@@ -1448,3 +1448,61 @@ class VirtMemoryPagesTestCase(test.NoDBTestCase):
         self.assertEqual(2048, topo[0].size_kb)
         self.assertEqual(512, topo[0].total)
         self.assertEqual(256, topo[0].used)
+
+    def _test_get_requested_mempages_pagesize(self, spec=None, props=None):
+        flavor = objects.Flavor(vcpus=16, memory_mb=2048,
+                                extra_specs=spec or {})
+        image_meta = {"properties": props or {}}
+        return hw._numa_get_pagesize_constraints(flavor, image_meta)
+
+    def test_get_requested_mempages_pagesize_from_flavor_swipe(self):
+        self.assertEqual(
+            hw.MEMPAGES_SMALL, self._test_get_requested_mempages_pagesize(
+                spec={"hw:mem_page_size": "small"}))
+
+        self.assertEqual(
+            hw.MEMPAGES_LARGE, self._test_get_requested_mempages_pagesize(
+                spec={"hw:mem_page_size": "large"}))
+
+        self.assertEqual(
+            hw.MEMPAGES_ANY, self._test_get_requested_mempages_pagesize(
+                spec={"hw:mem_page_size": "any"}))
+
+    def test_get_requested_mempages_pagesize_from_flavor_specific(self):
+        self.assertEqual(
+            2048,
+            self._test_get_requested_mempages_pagesize(
+                spec={"hw:mem_page_size": "2048"}))
+
+    def test_get_requested_mempages_pagesize_from_flavor_invalid(self):
+        self.assertRaises(
+            exception.MemoryPageSizeInvalid,
+            self._test_get_requested_mempages_pagesize,
+            {"hw:mem_page_size": "foo"})
+
+    def test_get_requested_mempages_pagesize_from_image_flavor_any(self):
+        self.assertEqual(
+            2048,
+            self._test_get_requested_mempages_pagesize(
+                spec={"hw:mem_page_size": "any"},
+                props={"hw_mem_page_size": "2048"}))
+
+    def test_get_requested_mempages_pagesize_from_image_flavor_large(self):
+        self.assertEqual(
+            2048,
+            self._test_get_requested_mempages_pagesize(
+                spec={"hw:mem_page_size": "large"},
+                props={"hw_mem_page_size": "2048"}))
+
+    def test_get_requested_mempages_pagesize_from_image_forbidden(self):
+        self.assertRaises(
+            exception.MemoryPageSizeForbidden,
+            self._test_get_requested_mempages_pagesize,
+            {"hw:mem_page_size": "small"},
+            {"hw_mem_page_size": "2048"})
+
+    def test_get_requested_mempages_pagesize_from_image_forbidden2(self):
+        self.assertRaises(
+            exception.MemoryPageSizeForbidden,
+            self._test_get_requested_mempages_pagesize,
+            {}, {"hw_mem_page_size": "2048"})

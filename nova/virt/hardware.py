@@ -37,6 +37,10 @@ CONF.register_opts(virt_cpu_opts)
 
 LOG = logging.getLogger(__name__)
 
+MEMPAGES_SMALL = -1
+MEMPAGES_LARGE = -2
+MEMPAGES_ANY = -3
+
 
 def get_vcpu_pin_set():
     """Parsing vcpu_pin_set config.
@@ -711,6 +715,60 @@ def _numa_get_flavor_or_image_prop(flavor, image_meta, propname):
         return flavor_val
     else:
         return image_val
+
+
+def _numa_get_pagesize_constraints(flavor, image_meta):
+    """Return the requested memory page size
+
+    :param flavor: a Flavor object to read extra specs from
+    :param image_meta: an Image object to read meta data from
+
+    :raises: MemoryPagesSizeInvalid or MemoryPageSizeForbidden
+    :returns: a page size requested or MEMPAGES_*
+    """
+
+    def check_and_return_pages_size(request):
+        if request == "any":
+            return MEMPAGES_ANY
+        elif request == "large":
+            return MEMPAGES_LARGE
+        elif request == "small":
+            return MEMPAGES_SMALL
+        else:
+            try:
+                request = int(request)
+            except ValueError:
+                request = 0
+
+        if request <= 0:
+            raise exception.MemoryPageSizeInvalid(pagesize=request)
+
+        return request
+
+    image_meta_prop = (image_meta or {}).get("properties", {})
+
+    flavor_request = flavor.get('extra_specs', {}).get("hw:mem_page_size", "")
+    image_request = image_meta_prop.get("hw_mem_page_size", "")
+
+    if not flavor_request and image_request:
+        raise exception.MemoryPageSizeForbidden(
+            pagesize=image_request,
+            against="<empty>")
+
+    if not flavor_request:
+        # Nothing was specified for hugepages,
+        # let's the default process running.
+        return None
+
+    pagesize = check_and_return_pages_size(flavor_request)
+    if image_request and (pagesize in (MEMPAGES_ANY, MEMPAGES_LARGE)):
+        return check_and_return_pages_size(image_request)
+    elif image_request:
+        raise exception.MemoryPageSizeForbidden(
+            pagesize=image_request,
+            against=flavor_request)
+
+    return pagesize
 
 
 def _numa_get_constraints_manual(nodes, flavor, image_meta):
