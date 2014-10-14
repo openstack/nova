@@ -1651,7 +1651,7 @@ class _ComputeAPIUnitTestMixIn(object):
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = task_states.IMAGE_SNAPSHOT
         self.assertRaises(exception.InstanceInvalidState,
-                          self.compute_api.snapshot,
+                          self.compute_api.backup,
                           self.context, instance, 'fake-name',
                           'fake', 'fake')
         instance.vm_state = vm_states.ACTIVE
@@ -1663,7 +1663,7 @@ class _ComputeAPIUnitTestMixIn(object):
         instance.vm_state = vm_states.BUILDING
         instance.task_state = None
         self.assertRaises(exception.InstanceInvalidState,
-                          self.compute_api.snapshot,
+                          self.compute_api.backup,
                           self.context, instance, 'fake-name',
                           'fake', 'fake')
 
