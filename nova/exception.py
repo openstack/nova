@@ -1221,6 +1221,11 @@ class InstanceInfoCacheNotFound(NotFound):
                 "found.")
 
 
+class InvalidAssociation(NotFound):
+    ec2_code = 'InvalidAssociationID.NotFound'
+    msg_fmt = _("Invalid association.")
+
+
 class NodeNotFound(NotFound):
     msg_fmt = _("Node %(node_id)s could not be found.")
 

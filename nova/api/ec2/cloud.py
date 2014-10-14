@@ -1271,6 +1271,9 @@ class CloudController(object):
             LOG.audit(_("Disassociate address %s"), public_ip, context=context)
             self.network_api.disassociate_floating_ip(context, instance,
                                                       address=public_ip)
+        else:
+            msg = _('Floating ip is not associated.')
+            raise exception.InvalidAssociation(message=msg)
         return {'return': "true"}
 
     def run_instances(self, context, **kwargs):
