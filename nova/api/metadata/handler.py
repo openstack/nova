@@ -133,7 +133,11 @@ class MetadataRequestHandler(wsgi.Application):
             return data(req, meta_data)
 
         resp = base.ec2_md_print(data)
-        req.response.body = resp
+        if isinstance(resp, six.text_type):
+            req.response.text = resp
+        else:
+            req.response.body = resp
+
         req.response.content_type = meta_data.get_mimetype()
         return req.response
 
