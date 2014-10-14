@@ -14,11 +14,11 @@
 
 import mock
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 import webob
 
 from nova import compute
 from nova import exception
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 

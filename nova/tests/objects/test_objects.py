@@ -20,6 +20,7 @@ import os
 import pprint
 
 import mock
+from oslo.serialization import jsonutils
 from oslo.utils import timeutils
 import six
 from testtools import matchers
@@ -30,7 +31,6 @@ from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log
 from nova import rpc
 from nova import test

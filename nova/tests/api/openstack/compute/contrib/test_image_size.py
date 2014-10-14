@@ -14,11 +14,11 @@
 #    under the License.
 
 from lxml import etree
+from oslo.serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute.contrib import image_size
 from nova.image import glance
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 

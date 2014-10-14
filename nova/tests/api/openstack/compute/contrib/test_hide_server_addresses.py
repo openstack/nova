@@ -16,6 +16,7 @@
 import itertools
 
 from lxml import etree
+from oslo.serialization import jsonutils
 import webob
 
 from nova.api.openstack import wsgi
@@ -25,7 +26,6 @@ from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import instance as instance_obj
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance

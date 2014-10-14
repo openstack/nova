@@ -15,6 +15,7 @@
 
 import mock
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 
 from nova.api.openstack.compute.contrib import attach_interfaces \
     as attach_interfaces_v2
@@ -25,7 +26,6 @@ from nova import context
 from nova import exception
 from nova.network import api as network_api
 from nova import objects
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests import fake_network_cache_model
 

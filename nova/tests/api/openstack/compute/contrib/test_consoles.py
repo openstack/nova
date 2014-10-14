@@ -14,11 +14,11 @@
 #    under the License.
 
 import mock
+from oslo.serialization import jsonutils
 import webob
 
 from nova.compute import api as compute_api
 from nova import exception
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 

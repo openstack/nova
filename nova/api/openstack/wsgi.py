@@ -20,6 +20,7 @@ import time
 from xml.dom import minidom
 
 from lxml import etree
+from oslo.serialization import jsonutils
 from oslo.utils import strutils
 import six
 import webob
@@ -30,7 +31,6 @@ from nova import i18n
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LI
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova import wsgi

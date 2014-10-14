@@ -23,6 +23,7 @@ except ImportError:
     rados = None
     rbd = None
 
+from oslo.serialization import jsonutils
 from oslo.utils import excutils
 from oslo.utils import units
 
@@ -30,7 +31,6 @@ from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import utils
 

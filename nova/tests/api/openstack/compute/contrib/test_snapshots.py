@@ -14,12 +14,12 @@
 #    under the License.
 
 from lxml import etree
+from oslo.serialization import jsonutils
 from oslo.utils import timeutils
 import webob
 
 from nova.api.openstack.compute.contrib import volumes
 from nova import context
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.volume import cinder

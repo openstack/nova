@@ -13,13 +13,13 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+from oslo.serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute.plugins.v3 import admin_password \
                                            as admin_password_v21
 from nova.compute import api as compute_api
 from nova import exception
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 

@@ -22,6 +22,7 @@ A connection to the VMware vCenter platform.
 import re
 
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 from oslo.vmware import api
 from oslo.vmware import pbm
 from oslo.vmware import vim
@@ -30,7 +31,6 @@ import suds
 
 from nova import exception
 from nova.i18n import _, _LW
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova.virt import driver

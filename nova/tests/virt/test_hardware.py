@@ -15,13 +15,13 @@
 import uuid
 
 import mock
+from oslo.serialization import jsonutils
 import six
 
 from nova import context
 from nova import exception
 from nova import objects
 from nova.objects import base as base_obj
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests import matchers
 from nova.virt import hardware as hw

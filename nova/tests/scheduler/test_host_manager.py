@@ -17,6 +17,7 @@ Tests For HostManager
 """
 
 import mock
+from oslo.serialization import jsonutils
 from oslo.utils import timeutils
 import six
 
@@ -25,7 +26,6 @@ from nova.compute import vm_states
 from nova import db
 from nova import exception
 from nova.i18n import _LW
-from nova.openstack.common import jsonutils
 from nova.scheduler import filters
 from nova.scheduler import host_manager
 from nova import test

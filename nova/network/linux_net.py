@@ -24,6 +24,7 @@ import re
 
 import netaddr
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 from oslo.utils import excutils
 from oslo.utils import importutils
 from oslo.utils import timeutils
@@ -33,7 +34,6 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.openstack.common import fileutils
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova import paths

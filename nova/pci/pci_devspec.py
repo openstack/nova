@@ -14,8 +14,9 @@
 import ast
 import re
 
+from oslo.serialization import jsonutils
+
 from nova import exception
-from nova.openstack.common import jsonutils
 from nova.pci import pci_utils
 
 MAX_VENDOR_ID = 0xFFFF

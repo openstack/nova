@@ -17,12 +17,13 @@
 Claim objects for use with resource tracking.
 """
 
+from oslo.serialization import jsonutils
+
 from nova import context
 from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.objects import base as obj_base
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.virt import hardware
 

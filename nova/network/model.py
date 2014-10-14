@@ -17,11 +17,11 @@ import functools
 
 import eventlet
 import netaddr
+from oslo.serialization import jsonutils
 import six
 
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import jsonutils
 
 
 def ensure_string_keys(d):

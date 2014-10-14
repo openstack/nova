@@ -23,6 +23,7 @@ from xml.dom import minidom
 
 from lxml import etree
 import mock
+from oslo.serialization import jsonutils
 import six
 import webob
 
@@ -32,7 +33,6 @@ from nova.api.openstack.compute import views
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 import nova.context
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import matchers

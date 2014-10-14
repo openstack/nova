@@ -31,12 +31,12 @@ if os.name != 'nt':
     import crypt
 
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova import utils

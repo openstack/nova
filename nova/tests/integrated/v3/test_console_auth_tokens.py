@@ -14,7 +14,8 @@
 
 import re
 
-from nova.openstack.common import jsonutils
+from oslo.serialization import jsonutils
+
 from nova.tests.integrated.v3 import test_servers
 
 

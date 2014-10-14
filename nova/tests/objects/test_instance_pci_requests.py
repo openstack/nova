@@ -11,9 +11,9 @@
 #    under the License.
 
 import mock
+from oslo.serialization import jsonutils
 
 from nova import objects
-from nova.openstack.common import jsonutils
 from nova.tests.objects import test_objects
 
 

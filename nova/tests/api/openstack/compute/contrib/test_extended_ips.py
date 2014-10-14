@@ -14,6 +14,7 @@
 #    under the License.
 
 from lxml import etree
+from oslo.serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute.contrib import extended_ips
@@ -21,7 +22,6 @@ from nova.api.openstack import xmlutil
 from nova import compute
 from nova import objects
 from nova.objects import instance as instance_obj
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance

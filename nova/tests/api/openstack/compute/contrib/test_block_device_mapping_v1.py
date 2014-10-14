@@ -16,6 +16,7 @@
 import mock
 import mox
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 from webob import exc
 
 from nova.api.openstack.compute import extensions
@@ -26,7 +27,6 @@ from nova.api.openstack.compute.plugins.v3 import servers as servers_v3
 from nova.api.openstack.compute import servers as servers_v2
 from nova.compute import api as compute_api
 from nova import exception
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests.image import fake

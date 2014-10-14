@@ -17,6 +17,7 @@
 import sys
 
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
@@ -25,7 +26,6 @@ from nova import exception
 from nova.i18n import _, _LW
 from nova import notifications
 from nova.objects import base as obj_base
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import rpc
 

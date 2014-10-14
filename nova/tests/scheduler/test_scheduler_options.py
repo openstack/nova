@@ -19,7 +19,8 @@ Tests For PickledScheduler.
 import datetime
 import StringIO
 
-from nova.openstack.common import jsonutils
+from oslo.serialization import jsonutils
+
 from nova.scheduler import scheduler_options
 from nova import test
 

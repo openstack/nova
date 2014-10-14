@@ -17,9 +17,9 @@
 
 from oslo.config import cfg
 from oslo import messaging
+from oslo.serialization import jsonutils
 
 from nova.objects import base as objects_base
-from nova.openstack.common import jsonutils
 from nova import rpc
 
 CONF = cfg.CONF

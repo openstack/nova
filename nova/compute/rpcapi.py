@@ -18,12 +18,12 @@ Client side of the compute RPC API.
 
 from oslo.config import cfg
 from oslo import messaging
+from oslo.serialization import jsonutils
 
 from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.objects import base as objects_base
-from nova.openstack.common import jsonutils
 from nova import rpc
 
 rpcapi_opts = [

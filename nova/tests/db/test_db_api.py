@@ -30,6 +30,7 @@ from oslo.config import cfg
 from oslo.db import exception as db_exc
 from oslo.db.sqlalchemy import test_base
 from oslo.db.sqlalchemy import utils as sqlalchemyutils
+from oslo.serialization import jsonutils
 from oslo.utils import timeutils
 import six
 from sqlalchemy import Column
@@ -50,7 +51,6 @@ from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy import types as col_types
 from nova.db.sqlalchemy import utils as db_utils
 from nova import exception
-from nova.openstack.common import jsonutils
 from nova.openstack.common import uuidutils
 from nova import quota
 from nova import test

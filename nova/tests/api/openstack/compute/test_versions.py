@@ -18,12 +18,12 @@ import uuid as stdlib_uuid
 
 import feedparser
 from lxml import etree
+from oslo.serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute import versions
 from nova.api.openstack.compute import views
 from nova.api.openstack import xmlutil
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes

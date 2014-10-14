@@ -18,7 +18,8 @@
 Manage hosts in the current zone.
 """
 
-from nova.openstack.common import jsonutils
+from oslo.serialization import jsonutils
+
 from nova.scheduler import host_manager
 
 

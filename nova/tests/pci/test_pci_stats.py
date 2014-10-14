@@ -14,10 +14,10 @@
 #    under the License.
 
 import mock
+from oslo.serialization import jsonutils
 
 from nova import exception
 from nova import objects
-from nova.openstack.common import jsonutils
 from nova.pci import pci_stats as pci
 from nova.pci import pci_whitelist
 from nova import test

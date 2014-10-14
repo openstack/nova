@@ -14,13 +14,13 @@
 #    under the License.
 from lxml import etree
 import mock
+from oslo.serialization import jsonutils
 
 from nova.api.openstack import compute
 from nova.api.openstack.compute.contrib import server_diagnostics
 from nova.api.openstack import wsgi
 from nova.compute import api as compute_api
 from nova import exception
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 

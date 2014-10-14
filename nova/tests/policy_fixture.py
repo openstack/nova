@@ -16,8 +16,8 @@ import os
 
 import fixtures
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 
-from nova.openstack.common import jsonutils
 from nova.openstack.common import policy as common_policy
 import nova.policy
 from nova.tests import fake_policy

@@ -23,8 +23,9 @@ library to work with nova.
 
 import fnmatch
 
+from oslo.serialization import jsonutils
+
 from nova.i18n import _
-from nova.openstack.common import jsonutils
 
 
 class Store(object):

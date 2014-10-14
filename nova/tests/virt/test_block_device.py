@@ -15,10 +15,10 @@
 import contextlib
 
 import mock
+from oslo.serialization import jsonutils
 
 from nova import block_device
 from nova import context
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests import fake_instance
 from nova.tests import matchers

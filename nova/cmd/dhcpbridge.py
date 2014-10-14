@@ -25,6 +25,7 @@ import sys
 import traceback
 
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 from oslo.utils import importutils
 
 from nova.conductor import rpcapi as conductor_rpcapi
@@ -36,7 +37,6 @@ from nova.i18n import _
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.objects import base as objects_base
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import rpc
 

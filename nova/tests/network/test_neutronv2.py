@@ -24,6 +24,7 @@ import mox
 from neutronclient.common import exceptions
 from neutronclient.v2_0 import client
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 import six
 
 from nova.compute import flavors
@@ -34,7 +35,6 @@ from nova.network import neutronv2
 from nova.network.neutronv2 import api as neutronapi
 from nova.network.neutronv2 import constants
 from nova import objects
-from nova.openstack.common import jsonutils
 from nova.openstack.common import policy as common_policy
 from nova.pci import pci_manager
 from nova.pci import pci_whitelist

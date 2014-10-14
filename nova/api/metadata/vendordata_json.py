@@ -18,10 +18,10 @@
 import errno
 
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 
 from nova.api.metadata import base
 from nova.i18n import _LW
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 
 file_opt = cfg.StrOpt('vendordata_jsonfile_path',

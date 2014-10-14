@@ -24,6 +24,7 @@ import logging as py_logging
 import time
 
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 from oslo.utils import excutils
 from oslo.utils import importutils
 import six
@@ -39,7 +40,6 @@ from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
 from nova import objects
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.virt import driver as virt_driver

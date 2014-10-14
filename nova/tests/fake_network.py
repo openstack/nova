@@ -14,6 +14,7 @@
 # under the License.
 
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 
 from nova.compute import api as compute_api
 from nova.compute import manager as compute_manager
@@ -28,7 +29,6 @@ from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import virtual_interface as vif_obj
-from nova.openstack.common import jsonutils
 from nova.pci import pci_device
 from nova.tests.objects import test_fixed_ip
 from nova.tests.objects import test_instance_info_cache

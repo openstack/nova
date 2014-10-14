@@ -16,9 +16,9 @@
 import re
 
 import mock
+from oslo.serialization import jsonutils
 
 from nova.api.openstack import extensions as api_extensions
-from nova.openstack.common import jsonutils
 from nova.tests.integrated.v3 import api_sample_base
 
 

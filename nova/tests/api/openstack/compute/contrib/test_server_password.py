@@ -15,11 +15,11 @@
 
 from lxml import etree
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 import webob
 
 from nova.api.metadata import password
 from nova import compute
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance

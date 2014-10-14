@@ -15,12 +15,12 @@
 import uuid
 
 import mock
+from oslo.serialization import jsonutils
 import webob
 
 from nova.compute import vm_states
 from nova import context
 from nova.objects import instance as instance_obj
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance

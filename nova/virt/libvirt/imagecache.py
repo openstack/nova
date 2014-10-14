@@ -26,12 +26,12 @@ import re
 import time
 
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 
 from nova.i18n import _LE
 from nova.i18n import _LI
 from nova.i18n import _LW
 from nova.openstack.common import fileutils
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova import utils

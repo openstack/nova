@@ -49,6 +49,7 @@ from eventlet import tpool
 from eventlet import util as eventlet_util
 from lxml import etree
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 from oslo.utils import excutils
 from oslo.utils import importutils
 from oslo.utils import strutils
@@ -77,7 +78,6 @@ from nova import image
 from nova.network import model as network_model
 from nova import objects
 from nova.openstack.common import fileutils
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.openstack.common import processutils

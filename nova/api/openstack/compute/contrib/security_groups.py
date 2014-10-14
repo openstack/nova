@@ -19,6 +19,7 @@
 import contextlib
 from xml.dom import minidom
 
+from oslo.serialization import jsonutils
 import webob
 from webob import exc
 
@@ -32,7 +33,6 @@ from nova import exception
 from nova.i18n import _
 from nova.network.security_group import neutron_driver
 from nova.network.security_group import openstack_driver
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.virt import netutils
 

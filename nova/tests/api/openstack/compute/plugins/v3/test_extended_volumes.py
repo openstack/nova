@@ -14,6 +14,7 @@
 #    under the License.
 
 import mock
+from oslo.serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute.plugins.v3 import extended_volumes
@@ -23,7 +24,6 @@ from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import instance as instance_obj
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_block_device

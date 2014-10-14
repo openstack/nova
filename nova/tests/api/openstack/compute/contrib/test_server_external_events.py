@@ -13,13 +13,13 @@
 #    under the License.
 
 import mock
+from oslo.serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute.contrib import server_external_events
 from nova import context
 from nova import exception
 from nova import objects
-from nova.openstack.common import jsonutils
 from nova import test
 
 fake_instances = {

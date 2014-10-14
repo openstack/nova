@@ -19,6 +19,7 @@ import uuid
 
 from lxml import etree
 import mock
+from oslo.serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute.contrib import floating_ips
@@ -29,7 +30,6 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import network
-from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_network
