@@ -48,12 +48,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
     driver_cls = filter_scheduler.FilterScheduler
 
     def test_run_instance_no_hosts(self):
-
-        def _fake_empty_call_zone_method(*args, **kwargs):
-            return []
-
         sched = fakes.FakeFilterScheduler()
-
         uuid = 'fake-uuid1'
         fake_context = context.RequestContext('user', 'project')
         instance_properties = {'project_id': 1, 'os_type': 'Linux'}
