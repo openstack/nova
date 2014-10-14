@@ -109,22 +109,23 @@ class IronicDriverTestCase(test.NoDBTestCase):
                                           instance_uuid=instance_uuid)
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    uuid=instance_uuid)
-        icli = cw.IronicClientWrapper()
+        ironicclient = cw.IronicClientWrapper()
 
         mock_gbiui.return_value = node
-        result = ironic_driver._validate_instance_and_node(icli, instance)
+        result = ironic_driver._validate_instance_and_node(ironicclient,
+                                                           instance)
         self.assertEqual(result.uuid, node_uuid)
 
     @mock.patch.object(FAKE_CLIENT.node, 'get_by_instance_uuid')
     def test__validate_instance_and_node_failed(self, mock_gbiui):
-        icli = cw.IronicClientWrapper()
+        ironicclient = cw.IronicClientWrapper()
         mock_gbiui.side_effect = ironic_exception.NotFound()
         instance_uuid = uuidutils.generate_uuid(),
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    uuid=instance_uuid)
         self.assertRaises(exception.InstanceNotFound,
                           ironic_driver._validate_instance_and_node,
-                          icli, instance)
+                          ironicclient, instance)
 
     @mock.patch.object(ironic_driver, '_validate_instance_and_node')
     def test__wait_for_active_pass(self, fake_validate):

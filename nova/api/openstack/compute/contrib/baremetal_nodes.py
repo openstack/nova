@@ -88,8 +88,8 @@ def _get_ironic_client():
               'os_endpoint_type': 'public',
               'insecure': 'true',
               'ironic_url': CONF.ironic.api_endpoint}
-    icli = ironic_client.get_client(CONF.ironic.api_version, **kwargs)
-    return icli
+    ironicclient = ironic_client.get_client(CONF.ironic.api_version, **kwargs)
+    return ironicclient
 
 
 def _no_ironic_proxy(cmd):
@@ -151,8 +151,8 @@ class BareMetalNodeController(wsgi.Controller):
         authorize(context)
         nodes = []
         # proxy command to Ironic
-        icli = _get_ironic_client()
-        ironic_nodes = icli.node.list(detail=True)
+        ironicclient = _get_ironic_client()
+        ironic_nodes = ironicclient.node.list(detail=True)
         for inode in ironic_nodes:
             node = {'id': inode.uuid,
                     'interfaces': [],
