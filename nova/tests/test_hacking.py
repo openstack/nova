@@ -82,6 +82,30 @@ class HackingTestCase(test.NoDBTestCase):
             "'nova.virt.libvirt.driver', group='libvirt')",
             "./nova/virt/libvirt/volume.py"))
 
+    def test_no_vi_headers(self):
+
+        lines = ['Line 1\n', 'Line 2\n', 'Line 3\n', 'Line 4\n', 'Line 5\n',
+                 'Line 6\n', 'Line 7\n', 'Line 8\n', 'Line 9\n', 'Line 10\n',
+                 'Line 11\n', 'Line 12\n', 'Line 13\n', 'Line14\n', 'Line15\n']
+
+        self.assertIsNone(checks.no_vi_headers(
+            "Test string foo", 1, lines))
+        self.assertEqual(len(list(checks.no_vi_headers(
+            "# vim: et tabstop=4 shiftwidth=4 softtabstop=4",
+            2, lines))), 2)
+        self.assertIsNone(checks.no_vi_headers(
+            "# vim: et tabstop=4 shiftwidth=4 softtabstop=4",
+            6, lines))
+        self.assertIsNone(checks.no_vi_headers(
+            "# vim: et tabstop=4 shiftwidth=4 softtabstop=4",
+            9, lines))
+        self.assertEqual(len(list(checks.no_vi_headers(
+            "# vim: et tabstop=4 shiftwidth=4 softtabstop=4",
+            14, lines))), 2)
+        self.assertIsNone(checks.no_vi_headers(
+            "Test end string for vi",
+            15, lines))
+
     def test_no_author_tags(self):
         self.assertIsInstance(checks.no_author_tags("# author: jogo"), tuple)
         self.assertIsInstance(checks.no_author_tags("# @author: jogo"), tuple)
