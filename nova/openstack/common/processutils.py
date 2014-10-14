@@ -237,7 +237,8 @@ def trycmd(*args, **kwargs):
 
 def ssh_execute(ssh, cmd, process_input=None,
                 addl_env=None, check_exit_code=True):
-    LOG.debug(_('Running cmd (SSH): %s'), cmd)
+    sanitized_cmd = strutils.mask_password(cmd)
+    LOG.debug(_('Running cmd (SSH): %s'), sanitized_cmd)
     if addl_env:
         raise InvalidArgumentError(_('Environment not supported over SSH'))
 
@@ -251,7 +252,10 @@ def ssh_execute(ssh, cmd, process_input=None,
     # NOTE(justinsb): This seems suspicious...
     # ...other SSH clients have buffering issues with this approach
     stdout = stdout_stream.read()
+    sanitized_stdout = strutils.mask_password(stdout)
     stderr = stderr_stream.read()
+    sanitized_stderr = strutils.mask_password(stderr)
+
     stdin_stream.close()
 
     exit_status = channel.recv_exit_status()
@@ -261,8 +265,8 @@ def ssh_execute(ssh, cmd, process_input=None,
         LOG.debug(_('Result was %s') % exit_status)
         if check_exit_code and exit_status != 0:
             raise ProcessExecutionError(exit_code=exit_status,
-                                        stdout=stdout,
-                                        stderr=stderr,
-                                        cmd=cmd)
+                                        stdout=sanitized_stdout,
+                                        stderr=sanitized_stderr,
+                                        cmd=sanitized_cmd)
 
-    return (stdout, stderr)
+    return (sanitized_stdout, sanitized_stderr)
