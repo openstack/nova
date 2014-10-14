@@ -41,6 +41,7 @@ FAKE_UUID2 = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
 FAKE_PORT_ID1 = '11111111-1111-1111-1111-111111111111'
 FAKE_PORT_ID2 = '22222222-2222-2222-2222-222222222222'
 FAKE_PORT_ID3 = '33333333-3333-3333-3333-333333333333'
+FAKE_NOT_FOUND_PORT_ID = '00000000-0000-0000-0000-000000000000'
 
 FAKE_NET_ID1 = '44444444-4444-4444-4444-444444444444'
 FAKE_NET_ID2 = '55555555-5555-5555-5555-555555555555'
@@ -107,6 +108,8 @@ def fake_attach_interface(self, context, instance, network_id, port_id,
         raise exception.NetworkNotFound(network_id=network_id)
     if not port_id:
         port_id = ports[fake_networks.index(network_id)]['id']
+    if port_id == FAKE_NOT_FOUND_PORT_ID:
+        raise exception.PortNotFound(port_id=port_id)
     vif = fake_network_cache_model.new_vif()
     vif['id'] = port_id
     vif['network']['id'] = network_id
@@ -129,6 +132,8 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     url = '/v3/os-interfaces'
     controller_cls = attach_interfaces_v3.InterfaceAttachmentController
     validate_exc = exception.ValidationError
+    in_use_exc = exc.HTTPConflict
+    not_found_exc = exc.HTTPNotFound
 
     def setUp(self):
         super(InterfaceAttachTestsV21, self).setUp()
@@ -322,6 +327,18 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
                           self.attachments.create, req, FAKE_UUID1,
                           body=jsonutils.loads(req.body))
 
+    def _attach_interface_not_found_case(self, body):
+        self.stubs.Set(compute_api.API, 'attach_interface',
+                       fake_attach_interface)
+        req = webob.Request.blank(self.url + '/attach')
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+        self.assertRaises(self.not_found_exc,
+                          self.attachments.create, req, FAKE_UUID1,
+                          body=jsonutils.loads(req.body))
+
     def test_attach_interface_with_port_and_network_id(self):
         body = {
             'interfaceAttachment': {
@@ -331,13 +348,21 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         }
         self._attach_interface_bad_request_case(body)
 
-    def test_attach_interface_with_invalid_data(self):
+    def test_attach_interface_with_not_found_network_id(self):
         body = {
             'interfaceAttachment': {
                 'net_id': FAKE_BAD_NET_ID
             }
         }
-        self._attach_interface_bad_request_case(body)
+        self._attach_interface_not_found_case(body)
+
+    def test_attach_interface_with_not_found_port_id(self):
+        body = {
+            'interfaceAttachment': {
+                'port_id': FAKE_NOT_FOUND_PORT_ID
+            }
+        }
+        self._attach_interface_not_found_case(body)
 
     def test_attach_interface_with_invalid_state(self):
         def fake_attach_interface_invalid_state(*args, **kwargs):
@@ -406,7 +431,30 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(self.in_use_exc,
+                          self.attachments.create, req, FAKE_UUID1,
+                          body=jsonutils.loads(req.body))
+        attach_mock.assert_called_once_with(self.context, fake_instance, None,
+                                            None, None)
+        get_mock.assert_called_once_with(self.context, FAKE_UUID1,
+                                         want_objects=True,
+                                         expected_attrs=None)
+
+    @mock.patch.object(compute_api.API, 'get')
+    @mock.patch.object(compute_api.API, 'attach_interface')
+    def test_attach_interface_port_in_use(self,
+                                          attach_mock,
+                                          get_mock):
+        fake_instance = objects.Instance(uuid=FAKE_UUID1)
+        get_mock.return_value = fake_instance
+        attach_mock.side_effect = exception.PortInUse(
+            port_id=FAKE_PORT_ID1)
+        req = webob.Request.blank(self.url + '/attach')
+        req.method = 'POST'
+        req.body = jsonutils.dumps({})
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+        self.assertRaises(self.in_use_exc,
                           self.attachments.create, req, FAKE_UUID1,
                           body=jsonutils.loads(req.body))
         attach_mock.assert_called_once_with(self.context, fake_instance, None,
@@ -444,6 +492,8 @@ class InterfaceAttachTestsV2(InterfaceAttachTestsV21):
     url = '/v2/fake/os-interfaces'
     controller_cls = attach_interfaces_v2.InterfaceAttachmentController
     validate_exc = exc.HTTPBadRequest
+    in_use_exc = exc.HTTPBadRequest
+    not_found_exc = exc.HTTPBadRequest
 
     def test_attach_interface_instance_with_non_uuid_net_id(self):
         pass
