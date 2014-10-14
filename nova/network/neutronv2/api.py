@@ -25,14 +25,12 @@ from oslo.utils import excutils
 from nova.api.openstack import extensions
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
-from nova import conductor
 from nova import exception
 from nova.i18n import _, _LE, _LW
 from nova.network import base_api
 from nova.network import model as network_model
 from nova.network import neutronv2
 from nova.network.neutronv2 import constants
-from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
@@ -137,9 +135,6 @@ class API(base_api.NetworkAPI):
         super(API, self).__init__()
         self.last_neutron_extension_sync = None
         self.extensions = {}
-        self.conductor_api = conductor.API()
-        self.security_group_api = (
-            openstack_driver.get_openstack_security_group_driver())
 
     def setup_networks_on_host(self, context, instance, host=None,
                                teardown=False):
