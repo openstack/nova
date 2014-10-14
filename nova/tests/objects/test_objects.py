@@ -937,8 +937,8 @@ object_data = {
     'BandwidthUsageList': '1.1-76898106a9db393cd5f42c557389c507',
     'BlockDeviceMapping': '1.3-9968ffe513e7672484b0f528b034cd0f',
     'BlockDeviceMappingList': '1.4-388b059a9d47ce71d4e8f3cc4f4b760c',
-    'ComputeNode': '1.5-57ce5a07c727ffab6c51723bb8dccbfe',
-    'ComputeNodeList': '1.5-a1641ab314063538470d57daaa5c7831',
+    'ComputeNode': '1.6-d2ea9b8f4a6e95ff6a683266eebddbff',
+    'ComputeNodeList': '1.6-205aa2ea08d49f6ce87df1fcd2407b4e',
     'DNSDomain': '1.0-5bdc288d7c3b723ce86ede998fd5c9ba',
     'DNSDomainList': '1.0-cfb3e7e82be661501c31099523154db4',
     'EC2InstanceMapping': '1.0-627baaf4b12c9067200979bdc4558a99',
@@ -950,6 +950,7 @@ object_data = {
     'FlavorList': '1.1-a3d5551267cb8f62ff38ded125900721',
     'FloatingIP': '1.5-27eb68b7c9c620dd5f0561b5a3be0e82',
     'FloatingIPList': '1.6-6b50a8954fbd03b2bdd01df088210e86',
+    'HVSpec': '1.0-c4d8377cc4fe519930e60c1d8265a142',
     'Instance': '1.15-1154dc29398bc3c57f053b8e449bb03d',
     'InstanceAction': '1.1-6b1d0a6dbd522b5a83c20757ec659663',
     'InstanceActionEvent': '1.1-42dbdba74bd06e0619ca75cd3397cd1b',
@@ -985,8 +986,8 @@ object_data = {
     'SecurityGroupList': '1.0-528e6448adfeeb78921ebeda499ab72f',
     'SecurityGroupRule': '1.1-a9175baf7664439af1a16c2010b55576',
     'SecurityGroupRuleList': '1.1-667fca3a9928f23d2d10e61962c55f3c',
-    'Service': '1.4-82bbfd46a744a9c89bc44b47a1b81683',
-    'ServiceList': '1.2-7529974a2565ec1eda23124a16aebe43',
+    'Service': '1.5-82bbfd46a744a9c89bc44b47a1b81683',
+    'ServiceList': '1.3-4a1a5822dea268d0d7f892f5106bb2e1',
     'TestSubclassedObject': '1.6-c63feb2f2533b7d075490c04a2cc10dd',
     'VirtualInterface': '1.0-10fdac4c704102b6d57d6936d6d790d2',
     'VirtualInterfaceList': '1.0-accbf02628a8063c1d885077a2bf49b6',
@@ -1006,7 +1007,7 @@ object_relationships = {
                  'SecurityGroupList': '1.0'},
     'MyObj': {'MyOwnedObject': '1.0'},
     'SecurityGroupRule': {'SecurityGroup': '1.1'},
-    'Service': {'ComputeNode': '1.5'},
+    'Service': {'ComputeNode': '1.6'},
     'TestSubclassedObject': {'MyOwnedObject': '1.0'}
 }
 

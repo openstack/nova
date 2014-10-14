@@ -28,7 +28,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
     # Version 1.3: Added stats field
     # Version 1.4: Added host ip field
     # Version 1.5: Added numa_topology field
-    VERSION = '1.5'
+    # Version 1.6: Added supported_instances
+    VERSION = '1.6'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -52,10 +53,15 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         'stats': fields.DictOfNullableStringsField(nullable=True),
         'host_ip': fields.IPAddressField(nullable=True),
         'numa_topology': fields.StringField(nullable=True),
+        # NOTE(pmurray): the supported_hv_specs field maps to the
+        # supported_instances field in the database
+        'supported_hv_specs': fields.ListOfObjectsField('HVSpec'),
         }
 
     def obj_make_compatible(self, primitive, target_version):
         target_version = utils.convert_version_to_tuple(target_version)
+        if target_version < (1, 6) and 'supported_hv_specs' in primitive:
+            del primitive['supported_hv_specs']
         if target_version < (1, 5) and 'numa_topology' in primitive:
             del primitive['numa_topology']
         if target_version < (1, 4) and 'host_ip' in primitive:
@@ -67,13 +73,20 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
     @staticmethod
     def _from_db_object(context, compute, db_compute):
 
-        fields = set(compute.fields) - set(['stats'])
+        fields = set(compute.fields) - set(['stats', 'supported_hv_specs'])
         for key in fields:
             compute[key] = db_compute[key]
 
         stats = db_compute['stats']
         if stats:
             compute['stats'] = jsonutils.loads(stats)
+
+        sup_insts = db_compute.get('supported_instances')
+        if sup_insts:
+            hv_specs = jsonutils.loads(sup_insts)
+            hv_specs = [objects.HVSpec.from_list(hv_spec)
+                        for hv_spec in hv_specs]
+            compute['supported_hv_specs'] = hv_specs
 
         compute._context = context
         compute.obj_reset_changes()
@@ -99,6 +112,12 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         if host_ip:
             updates['host_ip'] = str(host_ip)
 
+    def _convert_supported_instances_to_db_format(selfself, updates):
+        hv_specs = updates.pop('supported_hv_specs', None)
+        if hv_specs is not None:
+            hv_specs = [hv_spec.to_list() for hv_spec in hv_specs]
+            updates['supported_instances'] = jsonutils.dumps(hv_specs)
+
     @base.remotable
     def create(self, context):
         if self.obj_attr_is_set('id'):
@@ -107,6 +126,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         updates = self.obj_get_changes()
         self._convert_stats_to_db_format(updates)
         self._convert_host_ip_to_db_format(updates)
+        self._convert_supported_instances_to_db_format(updates)
 
         db_compute = db.compute_node_create(context, updates)
         self._from_db_object(context, self, db_compute)
@@ -119,6 +139,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         updates.pop('id', None)
         self._convert_stats_to_db_format(updates)
         self._convert_host_ip_to_db_format(updates)
+        self._convert_supported_instances_to_db_format(updates)
 
         db_compute = db.compute_node_update(context, self.id, updates)
         self._from_db_object(context, self, db_compute)
@@ -143,7 +164,8 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     # Version 1.3 ComputeNode version 1.4
     # Version 1.4 ComputeNode version 1.5
     # Version 1.5 Add use_slave to get_by_service
-    VERSION = '1.5'
+    # Version 1.6 ComputeNode version 1.6
+    VERSION = '1.6'
     fields = {
         'objects': fields.ListOfObjectsField('ComputeNode'),
         }
@@ -155,6 +177,7 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
         '1.3': '1.4',
         '1.4': '1.5',
         '1.5': '1.5',
+        '1.6': '1.6'
         }
 
     @base.remotable_classmethod

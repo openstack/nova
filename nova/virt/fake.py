@@ -27,8 +27,11 @@ import contextlib
 
 from oslo.config import cfg
 
+from nova.compute import arch
+from nova.compute import hvtype
 from nova.compute import power_state
 from nova.compute import task_states
+from nova.compute import vm_mode
 from nova.console import type as ctype
 from nova import db
 from nova import exception
@@ -111,7 +114,9 @@ class FakeDriver(driver.ComputeDriver):
           'hypervisor_hostname': CONF.host,
           'cpu_info': {},
           'disk_available_least': 0,
-          'supported_instances': jsonutils.dumps([(None, 'fake', None)]),
+          'supported_instances': jsonutils.dumps([(arch.X86_64,
+                                                   hvtype.FAKE,
+                                                   vm_mode.HVM)]),
           'numa_topology': None,
           }
         self._mounts = {}

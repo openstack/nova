@@ -41,6 +41,18 @@ OPTIONAL = ['availability_zone', 'compute_node']
 
 
 class _TestServiceObject(object):
+    def supported_hv_specs_comparator(self, expected, obj_val):
+        obj_val = [inst.to_list() for inst in obj_val]
+        self.json_comparator(expected, obj_val)
+
+    def comparators(self):
+        return {'stats': self.json_comparator,
+                'host_ip': self.str_comparator,
+                'supported_hv_specs': self.supported_hv_specs_comparator}
+
+    def subs(self):
+        return {'supported_hv_specs': 'supported_instances'}
+
     def _test_query(self, db_method, obj_method, *args, **kwargs):
         self.mox.StubOutWithMock(db, db_method)
         getattr(db, db_method)(self.context, *args, **kwargs).AndReturn(
@@ -76,9 +88,9 @@ class _TestServiceObject(object):
         self.assertTrue(service_obj.obj_attr_is_set('compute_node'))
         self.compare_obj(service_obj.compute_node,
                          test_compute_node.fake_compute_node,
+                         subs=self.subs(),
                          allow_missing=OPTIONAL,
-                         comparators={'stats': self.json_comparator,
-                                      'host_ip': self.str_comparator})
+                         comparators=self.comparators())
 
     def test_create(self):
         self.mox.StubOutWithMock(db, 'service_create')
@@ -191,9 +203,9 @@ class _TestServiceObject(object):
         service_obj.id = 123
         self.compare_obj(service_obj.compute_node,
                          test_compute_node.fake_compute_node,
+                         subs=self.subs(),
                          allow_missing=OPTIONAL,
-                         comparators={'stats': self.json_comparator,
-                                      'host_ip': self.str_comparator})
+                         comparators=self.comparators())
         # Make sure it doesn't re-fetch this
         service_obj.compute_node
 
