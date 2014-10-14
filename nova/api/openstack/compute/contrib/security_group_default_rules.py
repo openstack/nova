@@ -23,10 +23,8 @@ from nova.api.openstack import xmlutil
 from nova import exception
 from nova.i18n import _
 from nova.network.security_group import openstack_driver
-from nova.openstack.common import log as logging
 
 
-LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute',
                                             'security_group_default_rules')
 
@@ -149,7 +147,6 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
 
         id = self.security_group_api.validate_id(id)
 
-        LOG.debug("Showing security_group_default_rule with id %s", id)
         try:
             rule = self.security_group_api.get_default_rule(context, id)
         except exception.SecurityGroupDefaultRuleNotFound:

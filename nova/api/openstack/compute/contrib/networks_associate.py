@@ -18,9 +18,7 @@ from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _
 from nova import network
-from nova.openstack.common import log as logging
 
-LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'networks_associate')
 
 
@@ -34,7 +32,7 @@ class NetworkAssociateActionController(wsgi.Controller):
     def _disassociate_host_only(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)
-        LOG.debug("Disassociating host with network with id %s", id)
+
         try:
             self.network_api.associate(context, id, host=None)
         except exception.NetworkNotFound:
@@ -50,7 +48,7 @@ class NetworkAssociateActionController(wsgi.Controller):
     def _disassociate_project_only(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)
-        LOG.debug("Disassociating project with network with id %s", id)
+
         try:
             self.network_api.associate(context, id, project=None)
         except exception.NetworkNotFound:

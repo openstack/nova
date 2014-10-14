@@ -20,10 +20,6 @@ from nova import compute
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.openstack.common import log as logging
-
-
-LOG = logging.getLogger(__name__)
 
 
 class ServerStartStopActionController(wsgi.Controller):
@@ -46,7 +42,7 @@ class ServerStartStopActionController(wsgi.Controller):
         context = req.environ['nova.context']
         instance = self._get_instance(context, id)
         extensions.check_compute_policy(context, 'start', instance)
-        LOG.debug('start instance', instance=instance)
+
         try:
             self.compute_api.start(context, instance)
         except (exception.InstanceNotReady, exception.InstanceIsLocked,
@@ -60,7 +56,7 @@ class ServerStartStopActionController(wsgi.Controller):
         context = req.environ['nova.context']
         instance = self._get_instance(context, id)
         extensions.check_compute_policy(context, 'stop', instance)
-        LOG.debug('stop instance', instance=instance)
+
         try:
             self.compute_api.stop(context, instance)
         except (exception.InstanceNotReady, exception.InstanceIsLocked,

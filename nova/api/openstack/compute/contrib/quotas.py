@@ -24,7 +24,6 @@ import nova.context
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.openstack.common import log as logging
 from nova import quota
 from nova import utils
 
@@ -35,9 +34,6 @@ NON_QUOTA_KEYS = ['tenant_id', 'id', 'force']
 # Quotas that are only enabled by specific extensions
 EXTENDED_QUOTAS = {'server_groups': 'os-server-group-quotas',
                    'server_group_members': 'os-server-group-quotas'}
-
-LOG = logging.getLogger(__name__)
-
 
 authorize_update = extensions.extension_authorizer('compute', 'quotas:update')
 authorize_show = extensions.extension_authorizer('compute', 'quotas:show')
@@ -179,8 +175,6 @@ class QuotaSetsController(wsgi.Controller):
                 except exception.InvalidInput as e:
                     raise webob.exc.HTTPBadRequest(
                         explanation=e.format_message())
-
-        LOG.debug("force update quotas: %s", force_update)
 
         if bad_keys:
             msg = _("Bad key(s) %s in quota_set") % ",".join(bad_keys)
