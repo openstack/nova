@@ -32,7 +32,7 @@ from oslo.utils import importutils
 from nova.compute import api as compute_api
 from nova.compute import arch
 from nova.compute import flavors
-from nova.compute import hvtype
+from nova.compute import hv_type
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
@@ -2202,18 +2202,18 @@ class ToSupportedInstancesTestCase(test.NoDBTestCase):
             host.to_supported_instances(None))
 
     def test_return_value(self):
-        self.assertEqual([(arch.X86_64, hvtype.XEN, 'xen')],
+        self.assertEqual([(arch.X86_64, hv_type.XEN, 'xen')],
              host.to_supported_instances([u'xen-3.0-x86_64']))
 
     def test_invalid_values_do_not_break(self):
-        self.assertEqual([(arch.X86_64, hvtype.XEN, 'xen')],
+        self.assertEqual([(arch.X86_64, hv_type.XEN, 'xen')],
              host.to_supported_instances([u'xen-3.0-x86_64', 'spam']))
 
     def test_multiple_values(self):
         self.assertEqual(
             [
-                (arch.X86_64, hvtype.XEN, 'xen'),
-                (arch.I686, hvtype.XEN, 'hvm')
+                (arch.X86_64, hv_type.XEN, 'xen'),
+                (arch.I686, hv_type.XEN, 'hvm')
             ],
             host.to_supported_instances([u'xen-3.0-x86_64', 'hvm-3.0-x86_32'])
         )

@@ -14,7 +14,7 @@
 #    under the License.
 
 from nova.compute import arch
-from nova.compute import hvtype
+from nova.compute import hv_type
 from nova.compute import vm_mode
 from nova import objects
 from nova.tests.unit.objects import test_objects
@@ -22,13 +22,13 @@ from nova.tests.unit.objects import test_objects
 
 spec_dict = {
     'arch': arch.I686,
-    'hv_type': hvtype.KVM,
+    'hv_type': hv_type.KVM,
     'vm_mode': vm_mode.HVM
 }
 
 spec_list = [
     arch.I686,
-    hvtype.KVM,
+    hv_type.KVM,
     vm_mode.HVM
 ]
 
@@ -42,7 +42,7 @@ class _TestHVSpecObject(object):
     def test_hv_spec_to_list(self):
         spec_obj = objects.HVSpec()
         spec_obj.arch = arch.I686
-        spec_obj.hv_type = hvtype.KVM
+        spec_obj.hv_type = hv_type.KVM
         spec_obj.vm_mode = vm_mode.HVM
         spec = spec_obj.to_list()
         self.assertEqual(spec_list, spec)
