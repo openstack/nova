@@ -1828,14 +1828,14 @@ class ComputeTestCase(BaseTestCase):
                 None, True, None, False)
 
         instances = db.instance_get_all(self.context)
-        LOG.info(_("Running instances: %s"), instances)
+        LOG.info("Running instances: %s", instances)
         self.assertEqual(len(instances), 1)
 
         self.compute.terminate_instance(self.context,
                 self._objectify(instance), [], [])
 
         instances = db.instance_get_all(self.context)
-        LOG.info(_("After terminating instances: %s"), instances)
+        LOG.info("After terminating instances: %s", instances)
         self.assertEqual(len(instances), 0)
 
         admin_deleted_context = context.get_admin_context(
@@ -1855,7 +1855,7 @@ class ComputeTestCase(BaseTestCase):
                 None, True, None, False)
 
         instances = db.instance_get_all(self.context)
-        LOG.info(_("Running instances: %s"), instances)
+        LOG.info("Running instances: %s", instances)
         self.assertEqual(len(instances), 1)
 
         def fake_check_attach(*args, **kwargs):
@@ -1905,7 +1905,7 @@ class ComputeTestCase(BaseTestCase):
                 self._objectify(instance), bdms, [])
 
         instances = db.instance_get_all(self.context)
-        LOG.info(_("After terminating instances: %s"), instances)
+        LOG.info("After terminating instances: %s", instances)
         self.assertEqual(len(instances), 0)
         bdms = db.block_device_mapping_get_all_by_instance(self.context,
                                                            instance['uuid'])
@@ -1935,7 +1935,7 @@ class ComputeTestCase(BaseTestCase):
                 None, True, None, False)
 
         instances = db.instance_get_all(self.context)
-        LOG.info(_("Running instances: %s"), instances)
+        LOG.info("Running instances: %s", instances)
         self.assertEqual(len(instances), 1)
         self.mox.ReplayAll()
 
@@ -1943,7 +1943,7 @@ class ComputeTestCase(BaseTestCase):
                 self._objectify(instance), [], [])
 
         instances = db.instance_get_all(self.context)
-        LOG.info(_("After terminating instances: %s"), instances)
+        LOG.info("After terminating instances: %s", instances)
         self.assertEqual(len(instances), 0)
 
     def test_run_terminate_timestamps(self):
@@ -1975,7 +1975,7 @@ class ComputeTestCase(BaseTestCase):
                 None, True, None, False)
 
         instances = db.instance_get_all(self.context)
-        LOG.info(_("Running instances: %s"), instances)
+        LOG.info("Running instances: %s", instances)
         self.assertEqual(len(instances), 1)
 
         def _fake_deallocate_network(*args, **kwargs):
@@ -5830,7 +5830,7 @@ class ComputeTestCase(BaseTestCase):
                 None, True, None, False)
 
         instances = db.instance_get_all(self.context)
-        LOG.info(_("Running instances: %s"), instances)
+        LOG.info("Running instances: %s", instances)
         self.assertEqual(len(instances), 1)
 
         instance_name = instances[0]['name']
@@ -5841,7 +5841,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute._sync_power_states(ctxt)
 
         instances = db.instance_get_all(self.context)
-        LOG.info(_("After force-killing instances: %s"), instances)
+        LOG.info("After force-killing instances: %s", instances)
         self.assertEqual(len(instances), 1)
         self.assertIsNone(instances[0]['task_state'])
 
