@@ -348,8 +348,9 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         conf.vcpus = 4
         return conf
 
-    def _get_instance_xml(self, driver, vif, image_meta=None):
-        default_inst_type = objects.Flavor(name='m1.small',
+    def _get_instance_xml(self, driver, vif, image_meta=None, flavor=None):
+        if flavor is None:
+            flavor = objects.Flavor(name='m1.small',
                                 memory_mb=128,
                                 vcpus=1,
                                 root_gb=0,
@@ -361,9 +362,10 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                 created_at=None, flavorid=1,
                                 is_public=True, vcpu_weight=None,
                                 id=2, disabled=False, rxtx_factor=1.0)
+
         conf = self._get_conf()
         nic = driver.get_config(self.instance, vif, image_meta,
-                                default_inst_type, CONF.libvirt.virt_type)
+                                flavor, CONF.libvirt.virt_type)
         conf.add_device(nic)
         return conf.to_xml()
 
