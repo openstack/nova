@@ -17,10 +17,14 @@ import contextlib
 import mock
 
 from nova.compute import vm_states
+from nova import context
 from nova import exception
 from nova import test
+from nova.tests.unit import fake_instance
+from nova.tests.unit.image import fake as image_fake
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
+from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import volumeops
@@ -34,9 +38,22 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         vmwareapi_fake.reset()
         stubs.set_stubs(self.stubs)
         self._session = driver.VMwareAPISession()
+        self._context = context.RequestContext('fake_user', 'fake_project')
 
         self._volumeops = volumeops.VMwareVolumeOps(self._session)
-        self.instance = {'name': 'fake_name', 'uuid': 'fake_uuid'}
+        self._image_id = image_fake.get_valid_image_id()
+        self._instance_values = {
+            'name': 'fake_name',
+            'uuid': 'fake_uuid',
+            'vcpus': 1,
+            'memory_mb': 512,
+            'image_ref': self._image_id,
+            'root_gb': 10,
+            'node': 'respool-1001(MyResPoolName)',
+            'expected_attrs': ['system_metadata'],
+        }
+        self._instance = fake_instance.fake_instance_obj(self._context,
+            **self._instance_values)
 
     def _test_detach_disk_from_vm(self, destroy_disk=False):
         def fake_call_method(module, method, *args, **kwargs):
@@ -61,7 +78,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             fake_device.backing = vmwareapi_fake.DataObject()
             fake_device.backing.fileName = 'fake_path'
             fake_device.key = 'fake_key'
-            self._volumeops.detach_disk_from_vm('fake_vm_ref', self.instance,
+            self._volumeops.detach_disk_from_vm('fake_vm_ref', self._instance,
                                                 fake_device, destroy_disk)
             _wait_for_task.assert_has_calls([
                    mock.call('fake_configure_task')])
@@ -150,3 +167,91 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             get_vmdk_backed_disk_device.assert_called_once_with(
                 mock.sentinel.vm_ref, connection_info['data'])
             self.assertTrue(get_vmdk_info.called)
+
+    def _test_attach_volume_vmdk(self, adapter_type=None):
+        connection_info = {'driver_volume_type': constants.DISK_FORMAT_VMDK,
+                           'serial': 'volume-fake-id',
+                           'data': {'volume': 'vm-10',
+                                    'volume_id': 'volume-fake-id'}}
+        vm_ref = 'fake-vm-ref'
+        volume_device = mock.MagicMock()
+        volume_device.backing.fileName = 'fake-path'
+        default_adapter_type = constants.DEFAULT_ADAPTER_TYPE
+        vmdk_info = vm_util.VmdkInfo('fake-path', default_adapter_type,
+                                     constants.DISK_TYPE_PREALLOCATED, 1024,
+                                     'fake-device')
+        adapter_type = adapter_type or default_adapter_type
+
+        with contextlib.nested(
+            mock.patch.object(vm_util, 'get_vm_ref', return_value=vm_ref),
+            mock.patch.object(self._volumeops, '_get_volume_ref'),
+            mock.patch.object(self._volumeops, '_get_vmdk_base_volume_device',
+                              return_value=volume_device),
+            mock.patch.object(vm_util, 'get_vmdk_info',
+                              return_value=vmdk_info),
+            mock.patch.object(self._volumeops, 'attach_disk_to_vm'),
+            mock.patch.object(self._volumeops, '_update_volume_details')
+        ) as (get_vm_ref, get_volume_ref, get_vmdk_base_volume_device,
+              get_vmdk_info, attach_disk_to_vm, update_volume_details):
+            self._volumeops.attach_volume(connection_info, self._instance,
+                                          adapter_type)
+
+            get_vm_ref.assert_called_once_with(self._volumeops._session,
+                                               self._instance)
+            get_volume_ref.assert_called_once_with(
+                connection_info['data']['volume'])
+            self.assertTrue(get_vmdk_info.called)
+            attach_disk_to_vm.assert_called_once_with(vm_ref,
+                self._instance, adapter_type,
+                constants.DISK_TYPE_PREALLOCATED, vmdk_path='fake-path')
+            update_volume_details.assert_called_once_with(vm_ref,
+                self._instance, connection_info['data']['volume_id'])
+
+    def _test_attach_volume_iscsi(self, adapter_type=None):
+        connection_info = {'driver_volume_type': 'iscsi',
+                           'serial': 'volume-fake-id',
+                           'data': {'volume': 'vm-10',
+                                    'volume_id': 'volume-fake-id'}}
+        vm_ref = 'fake-vm-ref'
+        default_adapter_type = constants.DEFAULT_ADAPTER_TYPE
+        vmdk_info = vm_util.VmdkInfo('fake-path', default_adapter_type,
+                                     constants.DISK_TYPE_PREALLOCATED, 1024,
+                                     'fake-device')
+        adapter_type = adapter_type or default_adapter_type
+
+        with contextlib.nested(
+            mock.patch.object(vm_util, 'get_vm_ref', return_value=vm_ref),
+            mock.patch.object(self._volumeops, '_iscsi_discover_target',
+                              return_value=(mock.sentinel.device_name,
+                                            mock.sentinel.uuid)),
+            mock.patch.object(vm_util, 'get_vmdk_info',
+                              return_value=vmdk_info),
+            mock.patch.object(self._volumeops, 'attach_disk_to_vm')
+        ) as (get_vm_ref, iscsi_discover_target, get_vmdk_info,
+              attach_disk_to_vm):
+            self._volumeops.attach_volume(connection_info, self._instance,
+                                          adapter_type)
+
+            get_vm_ref.assert_called_once_with(self._volumeops._session,
+                                               self._instance)
+            iscsi_discover_target.assert_called_once_with(
+                connection_info['data'])
+            self.assertTrue(get_vmdk_info.called)
+            attach_disk_to_vm.assert_called_once_with(vm_ref,
+                self._instance, adapter_type, 'rdmp',
+                device_name=mock.sentinel.device_name)
+
+    def test_attach_volume_vmdk(self):
+        for adapter_type in (None, constants.DEFAULT_ADAPTER_TYPE,
+                             constants.ADAPTER_TYPE_BUSLOGIC,
+                             constants.ADAPTER_TYPE_IDE,
+                             constants.ADAPTER_TYPE_LSILOGICSAS,
+                             constants.ADAPTER_TYPE_PARAVIRTUAL):
+            self._test_attach_volume_vmdk(adapter_type)
+
+    def test_attach_volume_iscsi(self):
+        for adapter_type in (None, constants.DEFAULT_ADAPTER_TYPE,
+                             constants.ADAPTER_TYPE_BUSLOGIC,
+                             constants.ADAPTER_TYPE_LSILOGICSAS,
+                             constants.ADAPTER_TYPE_PARAVIRTUAL):
+            self._test_attach_volume_iscsi(adapter_type)

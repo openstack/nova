@@ -311,7 +311,8 @@ class VMwareVolumeOps(object):
                         "VirtualMachine", "config.hardware.device")
         return vm_util.get_vmdk_volume_disk(hardware_devices)
 
-    def _attach_volume_vmdk(self, connection_info, instance):
+    def _attach_volume_vmdk(self, connection_info, instance,
+                            adapter_type=None):
         """Attach vmdk volume storage to VM instance."""
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         LOG.debug("_attach_volume_vmdk: %s", connection_info,
@@ -322,23 +323,25 @@ class VMwareVolumeOps(object):
         # Get details required for adding disk device such as
         # adapter_type, disk_type
         vmdk = vm_util.get_vmdk_info(self._session, volume_ref)
+        adapter_type = adapter_type or vmdk.adapter_type
 
         # IDE does not support disk hotplug
         if (instance.vm_state == vm_states.ACTIVE and
-            vmdk.adapter_type == constants.ADAPTER_TYPE_IDE):
-            msg = _('%s does not support disk hotplug.') % vmdk.adapter_type
+            adapter_type == constants.ADAPTER_TYPE_IDE):
+            msg = _('%s does not support disk hotplug.') % adapter_type
             raise exception.Invalid(msg)
 
         # Attach the disk to virtual machine instance
-        self.attach_disk_to_vm(vm_ref, instance, vmdk.adapter_type,
-                               vmdk.disk_type, vmdk_path=vmdk.path)
+        self.attach_disk_to_vm(vm_ref, instance, adapter_type, vmdk.disk_type,
+                               vmdk_path=vmdk.path)
 
         # Store the uuid of the volume_device
         self._update_volume_details(vm_ref, instance, data['volume_id'])
 
         LOG.debug("Attached VMDK: %s", connection_info, instance=instance)
 
-    def _attach_volume_iscsi(self, connection_info, instance):
+    def _attach_volume_iscsi(self, connection_info, instance,
+                             adapter_type=None):
         """Attach iscsi volume storage to VM instance."""
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         # Attach Volume to VM
@@ -354,21 +357,22 @@ class VMwareVolumeOps(object):
                 reason=_("Unable to find iSCSI Target"))
 
         vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
+        adapter_type = adapter_type or vmdk.adapter_type
 
         self.attach_disk_to_vm(vm_ref, instance,
-                               vmdk.adapter_type, 'rdmp',
+                               adapter_type, 'rdmp',
                                device_name=device_name)
         LOG.debug("Attached ISCSI: %s", connection_info, instance=instance)
 
-    def attach_volume(self, connection_info, instance):
+    def attach_volume(self, connection_info, instance, adapter_type=None):
         """Attach volume storage to VM instance."""
         driver_type = connection_info['driver_volume_type']
         LOG.debug("Volume attach. Driver type: %s", driver_type,
                   instance=instance)
         if driver_type == 'vmdk':
-            self._attach_volume_vmdk(connection_info, instance)
+            self._attach_volume_vmdk(connection_info, instance, adapter_type)
         elif driver_type == 'iscsi':
-            self._attach_volume_iscsi(connection_info, instance)
+            self._attach_volume_iscsi(connection_info, instance, adapter_type)
         else:
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
 
@@ -536,7 +540,7 @@ class VMwareVolumeOps(object):
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
 
     def attach_root_volume(self, connection_info, instance,
-                           datastore):
+                           datastore, adapter_type=None):
         """Attach a root volume to the VM instance."""
         driver_type = connection_info['driver_volume_type']
         LOG.debug("Root volume attach. Driver type: %s", driver_type,
@@ -551,4 +555,4 @@ class VMwareVolumeOps(object):
             res_pool = self._get_res_pool_of_vm(vm_ref)
             self._relocate_vmdk_volume(volume_ref, res_pool, datastore)
 
-        self.attach_volume(connection_info, instance)
+        self.attach_volume(connection_info, instance, adapter_type)
