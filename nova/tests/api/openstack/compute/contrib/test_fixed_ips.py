@@ -18,6 +18,7 @@ from nova.api.openstack.compute.contrib import fixed_ips
 from nova import context
 from nova import db
 from nova import exception
+from nova.i18n import _
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests.objects import test_network
@@ -72,6 +73,9 @@ fake_fixed_ips = [{'id': 1,
 
 
 def fake_fixed_ip_get_by_address(context, address, columns_to_join=None):
+    if address == 'inv.ali.d.ip':
+        msg = _("Invalid fixed IP Address %s in request") % address
+        raise exception.FixedIpInvalid(msg)
     for fixed_ip in fake_fixed_ips:
         if fixed_ip['address'] == address and not fixed_ip['deleted']:
             return fixed_ip
@@ -150,7 +154,7 @@ class FixedIpTest(test.NoDBTestCase):
 
     def test_fixed_ips_get_invalid_ip_address(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-fixed-ips/inv.ali.d.ip')
-        self.assertRaises(webob.exc.HTTPNotFound, self.controller.show, req,
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.show, req,
                           'inv.ali.d.ip')
 
     def test_fixed_ips_get_deleted_ip_fail(self):
@@ -179,7 +183,7 @@ class FixedIpTest(test.NoDBTestCase):
         body = {'reserve': None}
         req = fakes.HTTPRequest.blank(
             '/v2/fake/os-fixed-ips/inv.ali.d.ip/action')
-        self.assertRaises(webob.exc.HTTPNotFound,
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.action, req, 'inv.ali.d.ip', body)
 
     def test_fixed_ip_reserve_deleted_ip(self):
@@ -210,7 +214,7 @@ class FixedIpTest(test.NoDBTestCase):
         body = {'unreserve': None}
         req = fakes.HTTPRequest.blank(
             '/v2/fake/os-fixed-ips/inv.ali.d.ip/action')
-        self.assertRaises(webob.exc.HTTPNotFound,
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.action, req, 'inv.ali.d.ip', body)
 
     def test_fixed_ip_unreserve_deleted_ip(self):
