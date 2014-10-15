@@ -327,6 +327,8 @@ policy_data = """
     "compute_extension:v3:os-migrations:index": "is_admin:True",
     "compute_extension:os-assisted-volume-snapshots:create": "",
     "compute_extension:os-assisted-volume-snapshots:delete": "",
+    "compute_extension:v3:os-assisted-volume-snapshots:create": "",
+    "compute_extension:v3:os-assisted-volume-snapshots:delete": "",
     "compute_extension:console_auth_tokens": "is_admin:True",
     "compute_extension:v3:os-console-auth-tokens": "is_admin:True",
     "compute_extension:os-server-external-events:create": "rule:admin_api",
