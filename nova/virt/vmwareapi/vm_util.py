@@ -1187,10 +1187,10 @@ def get_all_cluster_refs_by_name(session, path_list):
     """
     cls = get_all_cluster_mors(session)
     if not cls:
-        return
+        return {}
     res = get_all_res_pool_mors(session)
     if not res:
-        return
+        return {}
     path_list = [path.strip() for path in path_list]
     list_obj = []
     for entity_path in path_list:
