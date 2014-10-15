@@ -276,11 +276,6 @@ def get_instance_pci_devs(inst, request_id=None):
       instance need to be returned. Refer to libvirt driver that handles
       soft_reboot and hard_boot of 'xen' instances.
     """
-    if isinstance(inst, objects.Instance):
-        pci_devices = inst.pci_devices
-    else:
-        ctxt = context.get_admin_context()
-        pci_devices = objects.PciDeviceList.get_by_instance_uuid(
-            ctxt, inst['uuid'])
+    pci_devices = inst.pci_devices
     return [device for device in pci_devices if
                    device.request_id == request_id or request_id == 'all']

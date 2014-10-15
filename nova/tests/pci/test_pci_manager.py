@@ -344,18 +344,6 @@ class PciDevTrackerTestCase(test.TestCase):
 
 
 class PciGetInstanceDevs(test.TestCase):
-    def test_get_devs_non_object(self):
-        def _fake_pci_device_get_by_instance_uuid(context, uuid):
-            self._get_by_uuid = True
-            return []
-
-        instance = fakes.stub_instance(id=1)
-        self.stubs.Set(db, 'pci_device_get_all_by_instance_uuid',
-            _fake_pci_device_get_by_instance_uuid)
-        self._get_by_uuid = False
-        pci_manager.get_instance_pci_devs(instance)
-        self.assertEqual(self._get_by_uuid, True)
-
     def test_get_devs_object(self):
         def _fake_obj_load_attr(foo, attrname):
             if attrname == 'pci_devices':

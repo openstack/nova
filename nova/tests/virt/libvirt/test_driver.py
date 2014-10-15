@@ -7353,9 +7353,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.reboot_create_called = True
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = {"name": "instancename", "id": "instanceid",
-                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64",
-                    "pci_devices": []}
+        instance = objects.Instance(**self.test_instance)
         self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
         self.stubs.Set(conn, '_create_domain', fake_create_domain)
         self.stubs.Set(loopingcall, 'FixedIntervalLoopingCall',
@@ -7398,9 +7396,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             pass
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = {"name": "instancename", "id": "instanceid",
-                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64",
-                    "pci_devices": []}
+        instance = objects.Instance(**self.test_instance)
         self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
         self.stubs.Set(greenthread, 'sleep', fake_sleep)
         self.stubs.Set(conn, '_hard_reboot', fake_hard_reboot)

@@ -218,7 +218,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.stubs.Set(imagebackend.Image, 'resolve_driver_format',
                        imagebackend.Image._get_driver_format)
 
-    def _get_running_instance(self, obj=False):
+    def _get_running_instance(self, obj=True):
         instance_ref = test_utils.get_test_instance(obj=obj)
         network_info = test_utils.get_test_network_info()
         network_info[0]['network']['subnets'][0]['meta']['dhcp_server'] = \
