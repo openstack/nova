@@ -2587,7 +2587,6 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertEqual(model.VNIC_TYPE_DIRECT, vnic_type)
         self.assertEqual(phynet_name, 'phynet1')
 
-    @mock.patch.object(neutronv2, 'get_client', return_value=mock.Mock())
     def _test_get_port_vnic_info(self, mock_get_client,
                                  binding_vnic_type=None):
         api = neutronapi.API()
@@ -2611,11 +2610,14 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertEqual(model.VNIC_TYPE_NORMAL, vnic_type)
         self.assertFalse(phynet_name)
 
-    def test_get_port_vnic_info_2(self):
-        self._test_get_port_vnic_info(binding_vnic_type=model.VNIC_TYPE_NORMAL)
+    @mock.patch.object(neutronv2, 'get_client', return_value=mock.Mock())
+    def test_get_port_vnic_info_2(self, mock_get_client):
+        self._test_get_port_vnic_info(mock_get_client,
+                                      binding_vnic_type=model.VNIC_TYPE_NORMAL)
 
-    def test_get_port_vnic_info_3(self):
-        self._test_get_port_vnic_info()
+    @mock.patch.object(neutronv2, 'get_client', return_value=mock.Mock())
+    def test_get_port_vnic_info_3(self, mock_get_client):
+        self._test_get_port_vnic_info(mock_get_client)
 
     @mock.patch.object(neutronapi.API, "_get_port_vnic_info")
     @mock.patch.object(neutronv2, 'get_client', return_value=mock.Mock())
