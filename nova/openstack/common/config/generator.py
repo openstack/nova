@@ -28,10 +28,9 @@ import sys
 import textwrap
 
 from oslo.config import cfg
+from oslo.utils import importutils
 import six
 import stevedore.named
-
-from nova.openstack.common import importutils
 
 STROPT = "StrOpt"
 BOOLOPT = "BoolOpt"
