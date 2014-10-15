@@ -323,16 +323,13 @@ class BaseTestCase(test.TestCase):
                                     [['fake_zone', [inst['host']]]])
         return db.instance_create(self.context, inst)
 
-    def _objectify(self, db_inst):
-        return objects.Instance._from_db_object(
-            self.context, objects.Instance(), db_inst,
-            expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
-
     def _create_fake_instance_obj(self, params=None, type_name='m1.tiny',
                                   services=False):
         db_inst = self._create_fake_instance(params, type_name=type_name,
                                              services=services)
-        return self._objectify(db_inst)
+        return objects.Instance._from_db_object(
+            self.context, objects.Instance(), db_inst,
+            expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
 
     def _create_instance_type(self, params=None):
         """Create a test instance type."""
@@ -1836,8 +1833,7 @@ class ComputeTestCase(BaseTestCase):
         LOG.info("Running instances: %s", instances)
         self.assertEqual(len(instances), 1)
 
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
         instances = db.instance_get_all(self.context)
         LOG.info("After terminating instances: %s", instances)
@@ -1927,8 +1923,7 @@ class ComputeTestCase(BaseTestCase):
         self._assert_state({'vm_state': vm_states.ACTIVE,
                             'task_state': None})
 
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
         instances = db.instance_get_all(self.context)
         self.assertEqual(len(instances), 0)
 
@@ -1944,8 +1939,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(len(instances), 1)
         self.mox.ReplayAll()
 
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
         instances = db.instance_get_all(self.context)
         LOG.info("After terminating instances: %s", instances)
@@ -1960,18 +1954,19 @@ class ComputeTestCase(BaseTestCase):
         launch = timeutils.utcnow()
         self.compute.run_instance(self.context, instance, {}, {}, [], None,
                 None, True, None, False)
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        self.assertTrue(instance['launched_at'] > launch)
+        instance.refresh()
+        self.assertTrue(instance['launched_at'].replace(tzinfo=None) > launch)
         self.assertIsNone(instance['deleted_at'])
         terminate = timeutils.utcnow()
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
         with utils.temporary_mutation(self.context, read_deleted='only'):
             instance = db.instance_get_by_uuid(self.context,
                     instance['uuid'])
-        self.assertTrue(instance['launched_at'] < terminate)
-        self.assertTrue(instance['deleted_at'] > terminate)
+        self.assertTrue(instance['launched_at'].replace(
+            tzinfo=None) < terminate)
+        self.assertTrue(instance['deleted_at'].replace(
+            tzinfo=None) > terminate)
 
     def test_run_terminate_deallocate_net_failure_sets_error_state(self):
         instance = self._create_fake_instance_obj()
@@ -1990,8 +1985,7 @@ class ComputeTestCase(BaseTestCase):
                 _fake_deallocate_network)
 
         try:
-            self.compute.terminate_instance(self.context,
-                    self._objectify(instance), [], [])
+            self.compute.terminate_instance(self.context, instance, [], [])
         except test.TestingException:
             pass
 
@@ -2011,8 +2005,7 @@ class ComputeTestCase(BaseTestCase):
                                                 inst_uuid,
                                                 expected_attrs=extra)
         self.compute.stop_instance(self.context, instance=inst_obj)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_start(self):
         # Ensure instance can be started.
@@ -2030,8 +2023,7 @@ class ComputeTestCase(BaseTestCase):
         inst_obj.task_state = task_states.POWERING_ON
         inst_obj.save(self.context)
         self.compute.start_instance(self.context, instance=inst_obj)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_stop_start_no_image(self):
         params = {'image_ref': ''}
@@ -2049,8 +2041,7 @@ class ComputeTestCase(BaseTestCase):
         inst_obj.task_state = task_states.POWERING_ON
         inst_obj.save(self.context)
         self.compute.start_instance(self.context, instance=inst_obj)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_rescue(self):
         # Ensure instance can be rescued and unrescued.
@@ -2268,8 +2259,7 @@ class ComputeTestCase(BaseTestCase):
         inst_obj.save(self.context)
         self.compute.start_instance(self.context, instance=inst_obj)
         self.assertTrue(called['power_on'])
-        self.compute.terminate_instance(self.context,
-                self._objectify(inst_obj), [], [])
+        self.compute.terminate_instance(self.context, inst_obj, [], [])
 
     def test_power_off(self):
         # Ensure instance can be powered off.
@@ -2294,8 +2284,7 @@ class ComputeTestCase(BaseTestCase):
         inst_obj.save(self.context)
         self.compute.stop_instance(self.context, instance=inst_obj)
         self.assertTrue(called['power_off'])
-        self.compute.terminate_instance(self.context,
-                self._objectify(inst_obj), [], [])
+        self.compute.terminate_instance(self.context, inst_obj, [], [])
 
     def test_pause(self):
         # Ensure instance can be paused and unpaused.
@@ -2419,15 +2408,14 @@ class ComputeTestCase(BaseTestCase):
                 None, True, None, False)
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.REBUILDING})
-        self.compute.rebuild_instance(self.context, self._objectify(instance),
+        self.compute.rebuild_instance(self.context, instance,
                                       image_ref, image_ref,
                                       injected_files=[],
                                       new_pass="new_password",
                                       orig_sys_metadata=sys_metadata,
                                       bdms=[], recreate=False,
                                       on_shared_storage=False)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_rebuild_driver(self):
         # Make sure virt drivers can override default rebuild
@@ -2451,7 +2439,7 @@ class ComputeTestCase(BaseTestCase):
                 None, True, None, False)
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.REBUILDING})
-        self.compute.rebuild_instance(self.context, self._objectify(instance),
+        self.compute.rebuild_instance(self.context, instance,
                                       image_ref, image_ref,
                                       injected_files=[],
                                       new_pass="new_password",
@@ -2459,8 +2447,7 @@ class ComputeTestCase(BaseTestCase):
                                       bdms=[], recreate=False,
                                       on_shared_storage=False)
         self.assertTrue(called['rebuild'])
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_rebuild_no_image(self):
         # Ensure instance can be rebuilt when started with no image.
@@ -2472,13 +2459,12 @@ class ComputeTestCase(BaseTestCase):
                 None, True, None, False)
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.REBUILDING})
-        self.compute.rebuild_instance(self.context, self._objectify(instance),
+        self.compute.rebuild_instance(self.context, instance,
                                       '', '', injected_files=[],
                                       new_pass="new_password",
                                       orig_sys_metadata=sys_metadata, bdms=[],
                                       recreate=False, on_shared_storage=False)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_rebuild_launched_at_time(self):
         # Ensure instance can be rebuilt.
@@ -2486,7 +2472,6 @@ class ComputeTestCase(BaseTestCase):
         cur_time = datetime.datetime(2012, 12, 21, 12, 21)
         timeutils.set_time_override(old_time)
         instance = self._create_fake_instance_obj()
-        instance_uuid = instance['uuid']
         image_ref = instance['image_ref']
 
         self.compute.run_instance(self.context, instance, {}, {}, [], None,
@@ -2494,17 +2479,17 @@ class ComputeTestCase(BaseTestCase):
         timeutils.set_time_override(cur_time)
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.REBUILDING})
-        self.compute.rebuild_instance(self.context, self._objectify(instance),
+        self.compute.rebuild_instance(self.context, instance,
                                       image_ref, image_ref,
                                       injected_files=[],
                                       new_pass="new_password",
                                       orig_sys_metadata={},
                                       bdms=[], recreate=False,
                                       on_shared_storage=False)
-        instance = db.instance_get_by_uuid(self.context, instance_uuid,)
-        self.assertEqual(cur_time, instance['launched_at'])
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        instance.refresh()
+        self.assertEqual(cur_time,
+                         instance['launched_at'].replace(tzinfo=None))
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_rebuild_with_injected_files(self):
         # Ensure instance can be rebuilt with injected files.
@@ -2527,15 +2512,14 @@ class ComputeTestCase(BaseTestCase):
                         instance['uuid'])
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.REBUILDING})
-        self.compute.rebuild_instance(self.context, self._objectify(instance),
+        self.compute.rebuild_instance(self.context, instance,
                                       image_ref, image_ref,
                                       injected_files=injected_files,
                                       new_pass="new_password",
                                       orig_sys_metadata=sys_metadata,
                                       bdms=[], recreate=False,
                                       on_shared_storage=False)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def _test_reboot(self, soft,
                      test_delete=False, test_unrescue=False,
@@ -2924,23 +2908,20 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance, {}, {}, [], None,
                 None, True, None, False)
 
-        self.compute.reset_network(self.context,
-                                   instance=self._objectify(instance))
+        self.compute.reset_network(self.context, instance)
 
         self.assertEqual(called['count'], 1)
 
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def _get_snapshotting_instance(self):
         # Ensure instance can be snapshotted.
         instance = self._create_fake_instance_obj()
         self.compute.run_instance(self.context, instance, {}, {}, [], None,
                 None, True, None, False)
-        instance = db.instance_update(
-                self.context, instance['uuid'],
-                {"task_state": task_states.IMAGE_SNAPSHOT_PENDING})
-        return self._objectify(instance)
+        instance.task_state = task_states.IMAGE_SNAPSHOT_PENDING
+        instance.save()
+        return instance
 
     def test_snapshot(self):
         inst_obj = self._get_snapshotting_instance()
@@ -3587,8 +3568,7 @@ class ComputeTestCase(BaseTestCase):
                     'uptime': 46664,
                     'version': '1.0'}
         self.assertEqual(expected, diagnostics)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_add_fixed_ip_usage_notification(self):
         def dummy(*args, **kwargs):
@@ -3605,11 +3585,10 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 0)
         self.compute.add_fixed_ip_to_instance(self.context, network_id=1,
-                instance=self._objectify(instance))
+                                              instance=instance)
 
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_remove_fixed_ip_usage_notification(self):
         def dummy(*args, **kwargs):
@@ -3629,19 +3608,17 @@ class ComputeTestCase(BaseTestCase):
                                                    instance=instance)
 
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_run_instance_usage_notification(self, request_spec=None):
         # Ensure run instance generates appropriate usage notification.
         request_spec = request_spec or {}
         instance = self._create_fake_instance_obj()
-        instance_uuid = instance['uuid']
         expected_image_name = request_spec.get('image', {}).get('name', '')
         self.compute.run_instance(self.context, instance, request_spec,
                 {}, [], None, None, True, None, False)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
-        inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
+        instance.refresh()
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.event_type, 'compute.instance.create.start')
         # The last event is the one with the sugar in it.
@@ -3652,7 +3629,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(payload['tenant_id'], self.project_id)
         self.assertEqual(expected_image_name, payload['image_name'])
         self.assertEqual(payload['user_id'], self.user_id)
-        self.assertEqual(payload['instance_id'], inst_ref['uuid'])
+        self.assertEqual(payload['instance_id'], instance['uuid'])
         self.assertEqual(payload['instance_type'], 'm1.tiny')
         type_id = flavors.get_flavor_by_name('m1.tiny')['id']
         self.assertEqual(str(payload['instance_type_id']), str(type_id))
@@ -3667,8 +3644,7 @@ class ComputeTestCase(BaseTestCase):
         image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
         self.assertEqual(payload['image_ref_url'], image_ref_url)
         self.assertEqual('Success', payload['message'])
-        self.compute.terminate_instance(self.context,
-                self._objectify(inst_ref), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_run_instance_image_usage_notification(self):
         request_spec = {'image': {'name': 'fake_name', 'key': 'value'}}
@@ -3764,8 +3740,7 @@ class ComputeTestCase(BaseTestCase):
                 None, True, None, False)
         fake_notifier.NOTIFICATIONS = []
         timeutils.set_time_override(cur_time)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 4)
 
@@ -3806,8 +3781,7 @@ class ComputeTestCase(BaseTestCase):
                           self.compute.run_instance,
                           self.context, instance, {}, {}, [], None, None, True,
                           None, False)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_run_instance_queries_macs(self):
         # run_instance should ask the driver for node mac addresses and pass
@@ -3896,12 +3870,10 @@ class ComputeTestCase(BaseTestCase):
                           self.context, instance, {}, {}, None, None, None,
                           True, None, False)
 
-        instance = db.instance_get_by_uuid(context.get_admin_context(),
-                                           instance['uuid'])
-        self.assertEqual(vm_states.ERROR, instance['vm_state'])
+        instance.refresh()
+        self.assertEqual(vm_states.ERROR, instance.vm_state)
 
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_delete_instance_keeps_net_on_power_off_fail(self):
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
@@ -3994,7 +3966,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertRaises(exception.InstanceTerminationFailure,
                           self.compute.terminate_instance,
                           self.context,
-                          self._objectify(instance), [], [])
+                          instance, [], [])
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
 
@@ -4014,8 +3986,7 @@ class ComputeTestCase(BaseTestCase):
                           self.context, instance, {}, {}, None, None, None,
                           True, None, False)
 
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_lock(self):
         # FIXME(comstud): This test is such crap.  This is testing
@@ -4037,33 +4008,30 @@ class ComputeTestCase(BaseTestCase):
             instance = db.instance_get_by_uuid(self.context, instance_uuid)
             self.assertEqual(instance['task_state'], task_state)
 
-        # should fail with locked nonadmin context
-        inst_obj = objects.Instance.get_by_uuid(self.context, instance['uuid'])
+        instance.refresh()
 
-        self.compute_api.lock(self.context, inst_obj)
+        # should fail with locked nonadmin context
+        self.compute_api.lock(self.context, instance)
         self.assertRaises(exception.InstanceIsLocked,
                           self.compute_api.reboot,
-                          non_admin_context, inst_obj, 'SOFT')
+                          non_admin_context, instance, 'SOFT')
         check_task_state(None)
 
         # should fail with invalid task state
-        self.compute_api.unlock(self.context, inst_obj)
-        instance = db.instance_update(self.context, instance_uuid,
-                                      {'task_state': task_states.REBOOTING})
-        inst_obj.refresh()
+        self.compute_api.unlock(self.context, instance)
+        instance.task_state = task_states.REBOOTING
+        instance.save()
         self.assertRaises(exception.InstanceInvalidState,
                           self.compute_api.reboot,
-                          non_admin_context, inst_obj, 'SOFT')
+                          non_admin_context, instance, 'SOFT')
         check_task_state(task_states.REBOOTING)
 
         # should succeed with admin context
-        instance = db.instance_update(self.context, instance_uuid,
-                                      {'task_state': None})
-        inst_obj.refresh()
-        self.compute_api.reboot(self.context, inst_obj, 'SOFT')
+        instance.task_state = None
+        instance.save()
+        self.compute_api.reboot(self.context, instance, 'SOFT')
         check_task_state(task_states.REBOOTING)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def _check_locked_by(self, instance_uuid, locked_by):
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
@@ -4088,10 +4056,9 @@ class ComputeTestCase(BaseTestCase):
                 None, True, None, False)
 
         # Ensure that an admin can override the owner lock
-        inst_obj = self._objectify(instance)
-        self.compute_api.lock(self.context, inst_obj)
+        self.compute_api.lock(self.context, instance)
         self._check_locked_by(instance_uuid, 'owner')
-        self.compute_api.unlock(admin_context, inst_obj)
+        self.compute_api.unlock(admin_context, instance)
         self._check_locked_by(instance_uuid, None)
 
     def test_upgrade_owner_lock(self):
@@ -4112,16 +4079,15 @@ class ComputeTestCase(BaseTestCase):
 
         # Ensure that an admin can upgrade the lock and that
         # the owner can no longer unlock
-        inst_obj = self._objectify(instance)
-        self.compute_api.lock(self.context, inst_obj)
-        self.compute_api.lock(admin_context, inst_obj)
+        self.compute_api.lock(self.context, instance)
+        self.compute_api.lock(admin_context, instance)
         self._check_locked_by(instance_uuid, 'admin')
-        inst_obj.refresh()
+        instance.refresh()
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.compute_api.unlock,
-                          self.context, inst_obj)
+                          self.context, instance)
         self._check_locked_by(instance_uuid, 'admin')
-        self.compute_api.unlock(admin_context, inst_obj)
+        self.compute_api.unlock(admin_context, instance)
         self._check_locked_by(instance_uuid, None)
 
     def _test_state_revert(self, instance, operation, pre_task_state,
@@ -4241,8 +4207,8 @@ class ComputeTestCase(BaseTestCase):
     def test_quotas_successful_delete(self):
         instance = self._create_fake_instance_obj()
         resvs = self._ensure_quota_reservations_committed(instance)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), bdms=[], reservations=resvs)
+        self.compute.terminate_instance(self.context, instance,
+                                        bdms=[], reservations=resvs)
 
     def test_quotas_failed_delete(self):
         instance = self._create_fake_instance_obj()
@@ -4256,12 +4222,12 @@ class ComputeTestCase(BaseTestCase):
         resvs = self._ensure_quota_reservations_rolledback(instance)
         self.assertRaises(test.TestingException,
                           self.compute.terminate_instance,
-                          self.context, self._objectify(instance),
+                          self.context, instance,
                           bdms=[], reservations=resvs)
 
     def test_quotas_successful_soft_delete(self):
-        instance = self._objectify(self._create_fake_instance(
-                params=dict(task_state=task_states.SOFT_DELETING)))
+        instance = self._create_fake_instance_obj(
+                params=dict(task_state=task_states.SOFT_DELETING))
         resvs = self._ensure_quota_reservations_committed(instance)
         self.compute.soft_delete_instance(self.context, instance,
                                           reservations=resvs)
@@ -4288,8 +4254,8 @@ class ComputeTestCase(BaseTestCase):
         # Termination should be successful, but quota reservations
         # rolled back because the instance was in SOFT_DELETED state.
         resvs = self._ensure_quota_reservations_rolledback(instance)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), bdms=[], reservations=resvs)
+        self.compute.terminate_instance(self.context, instance,
+                                        bdms=[], reservations=resvs)
 
     def _stub_out_resize_network_methods(self):
         def fake(cls, ctxt, instance, *args, **kwargs):
@@ -4585,8 +4551,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(cinder.API, "detach", fake_detach)
 
         # clean up
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_finish_resize_handles_error(self):
         # Make sure we don't leave the instance in RESIZE on error.
@@ -4673,12 +4638,10 @@ class ComputeTestCase(BaseTestCase):
 
         password = "new_password"
 
-        instance = db.instance_get_by_uuid(self.context, inst_ref['uuid'])
-
-        db.instance_update(self.context, instance['uuid'],
-                           {"task_state": task_states.REBUILDING})
+        inst_ref.task_state = task_states.REBUILDING
+        inst_ref.save()
         self.compute.rebuild_instance(self.context,
-                                      self._objectify(instance),
+                                      inst_ref,
                                       image_ref, new_image_ref,
                                       injected_files=[],
                                       new_pass=password,
@@ -4686,7 +4649,7 @@ class ComputeTestCase(BaseTestCase):
                                       bdms=[], recreate=False,
                                       on_shared_storage=False)
 
-        instance = db.instance_get_by_uuid(self.context, inst_ref['uuid'])
+        inst_ref.refresh()
 
         image_ref_url = glance.generate_image_url(image_ref)
         new_image_ref_url = glance.generate_image_url(new_image_ref)
@@ -4720,8 +4683,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertIn('launched_at', payload)
         self.assertEqual(payload['launched_at'], timeutils.strtime(cur_time))
         self.assertEqual(payload['image_ref_url'], new_image_ref_url)
-        self.compute.terminate_instance(self.context,
-                self._objectify(inst_ref), [], [])
+        self.compute.terminate_instance(self.context, inst_ref, [], [])
 
     def test_finish_resize_instance_notification(self):
         # Ensure notifications on instance migrate/resize.
@@ -4781,8 +4743,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(payload['launched_at'], timeutils.strtime(cur_time))
         image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
         self.assertEqual(payload['image_ref_url'], image_ref_url)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_resize_instance_notification(self):
         # Ensure notifications on instance migrate/resize.
@@ -4833,8 +4794,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertIn('launched_at', payload)
         image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
         self.assertEqual(payload['image_ref_url'], image_ref_url)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_prep_resize_instance_migration_error_on_same_host(self):
         """Ensure prep_resize raise a migration error if destination is set on
@@ -4858,8 +4818,7 @@ class ComputeTestCase(BaseTestCase):
                           instance_type=instance_type, image={},
                           reservations=reservations, request_spec={},
                           filter_properties={}, node=None)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_prep_resize_instance_migration_error_on_none_host(self):
         """Ensure prep_resize raises a migration error if destination host is
@@ -4881,8 +4840,7 @@ class ComputeTestCase(BaseTestCase):
                           instance_type=instance_type, image={},
                           reservations=reservations, request_spec={},
                           filter_properties={}, node=None)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_resize_instance_driver_error(self):
         # Ensure instance status set to Error on resize error.
@@ -4923,8 +4881,7 @@ class ComputeTestCase(BaseTestCase):
         # is not updated.  Refresh and compare against the DB.
         instance.refresh()
         self.assertEqual(instance.vm_state, vm_states.ERROR)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_resize_instance_driver_rollback(self):
         # Ensure instance status set to Running after rollback.
@@ -4964,8 +4921,7 @@ class ComputeTestCase(BaseTestCase):
         instance.refresh()
         self.assertEqual(instance.vm_state, vm_states.ACTIVE)
         self.assertIsNone(instance.task_state)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def _test_resize_instance(self, clean_shutdown=True):
         # Ensure instance can be migrated/resized.
@@ -5017,8 +4973,7 @@ class ComputeTestCase(BaseTestCase):
             mock_get_power_off_values.assert_caleld_once_with(self.context,
                     instance, clean_shutdown)
             self.assertEqual(migration.dest_compute, instance.host)
-            self.compute.terminate_instance(self.context,
-                    self._objectify(instance), [], [])
+            self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_resize_instance(self):
         self._test_resize_instance()
@@ -5119,8 +5074,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(old_vm_state, instance.vm_state)
         self.assertIsNone(instance.task_state)
         self.assertEqual(p_state, instance.power_state)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_confirm_resize_from_active(self):
         self._test_confirm_resize(power_on=True)
@@ -5321,8 +5275,7 @@ class ComputeTestCase(BaseTestCase):
                 instance_type=instance_type, image={},
                 reservations=reservations, request_spec={},
                 filter_properties={}, node=None)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_resize_instance_handles_migration_error(self):
         # Ensure vm_state is ERROR when error occurs.
@@ -5361,8 +5314,7 @@ class ComputeTestCase(BaseTestCase):
         # is not updated.  Refresh and compare against the DB.
         instance.refresh()
         self.assertEqual(instance.vm_state, vm_states.ERROR)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_pre_live_migration_instance_has_no_fixed_ip(self):
         # Confirm that no exception is raised if there is no fixed ip on
@@ -5493,7 +5445,7 @@ class ComputeTestCase(BaseTestCase):
         # Confirm live_migration() works as expected correctly.
         # creating instance testdata
         c = context.get_admin_context()
-        instance = self._objectify(self._create_fake_instance_obj())
+        instance = self._create_fake_instance_obj()
         instance.host = self.compute.host
         dest = 'desthost'
 
@@ -5601,10 +5553,10 @@ class ComputeTestCase(BaseTestCase):
 
         # creating testdata
         c = context.get_admin_context()
-        instance = self._objectify(self._create_fake_instance({
+        instance = self._create_fake_instance_obj({
                                         'host': srchost,
                                         'state_description': 'migrating',
-                                        'state': power_state.PAUSED}))
+                                        'state': power_state.PAUSED})
 
         instance.update({'task_state': task_states.MIGRATING,
                         'power_state': power_state.PAUSED})
@@ -5652,10 +5604,10 @@ class ComputeTestCase(BaseTestCase):
 
     def test_post_live_migration_terminate_volume_connections(self):
         c = context.get_admin_context()
-        instance = self._objectify(self._create_fake_instance({
+        instance = self._create_fake_instance_obj({
                                         'host': self.compute.host,
                                         'state_description': 'migrating',
-                                        'state': power_state.PAUSED}))
+                                        'state': power_state.PAUSED})
         instance.update({'task_state': task_states.MIGRATING,
                          'power_state': power_state.PAUSED})
         instance.save(c)
@@ -6698,7 +6650,7 @@ class ComputeTestCase(BaseTestCase):
                                                instance['uuid'])['updated_at']
 
         self.compute.remove_fixed_ip_from_instance(self.context, 'fake',
-                                                   self._objectify(instance))
+                                                   instance)
         updated_at_3 = db.instance_get_by_uuid(self.context,
                                                instance['uuid'])['updated_at']
 
@@ -7169,7 +7121,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance, {}, {}, None, None,
                 None, True, None, False)
 
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        instance.refresh()
         self.assertIsNone(instance['task_state'])
         return instance, instance_uuid
 
@@ -8329,7 +8281,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_update_block_device_mapping(self):
         swap_size = ephemeral_size = 1
         instance_type = {'swap': swap_size, 'ephemeral_gb': ephemeral_size}
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
         mappings = [
                 {'virtual': 'ami', 'device': 'sda1'},
                 {'virtual': 'root', 'device': '/dev/sda1'},
@@ -8472,9 +8424,8 @@ class ComputeAPITestCase(BaseTestCase):
         for bdm in db.block_device_mapping_get_all_by_instance(
                 self.context, instance['uuid']):
             db.block_device_mapping_destroy(self.context, bdm['id'])
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        instance.refresh()
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def _test_check_and_transform_bdm(self, bdms, expected_bdms,
                                       image_bdms=None, base_options=None,
@@ -8804,15 +8755,13 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, i_ref['uuid'])
 
     def test_add_remove_fixed_ip(self):
-        instance = self._create_fake_instance(params={'host': CONF.host})
+        instance = self._create_fake_instance_obj(params={'host': CONF.host})
         self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
                        lambda *a, **kw: None)
-        self.compute_api.add_fixed_ip(self.context, self._objectify(instance),
-                                      '1')
+        self.compute_api.add_fixed_ip(self.context, instance, '1')
         self.compute_api.remove_fixed_ip(self.context,
-                                         self._objectify(instance),
-                                         '192.168.1.1')
-        self.compute_api.delete(self.context, self._objectify(instance))
+                                         instance, '192.168.1.1')
+        self.compute_api.delete(self.context, instance)
 
     def test_attach_volume_invalid(self):
         self.assertRaises(exception.InvalidDevicePath,
@@ -9334,8 +9283,7 @@ class ComputeAPITestCase(BaseTestCase):
         # Kill the instance and check that it was detached
         bdms = db.block_device_mapping_get_all_by_instance(admin,
                 instance['uuid'])
-        self.compute.terminate_instance(admin, self._objectify(instance), bdms,
-                [])
+        self.compute.terminate_instance(admin, instance, bdms, [])
 
         self.assertTrue(result["detached"])
 
@@ -9367,8 +9315,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance, {}, {}, None, None,
                 None, True, None, False)
 
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), bdms, [])
+        self.compute.terminate_instance(self.context, instance, bdms, [])
 
         bdms = db.block_device_mapping_get_all_by_instance(admin,
                                                            instance['uuid'])
@@ -9442,10 +9389,10 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
                        lambda *a, **kw: None)
-        self.compute_api.delete(self.context, self._objectify(instance))
+        self.compute_api.delete(self.context, instance)
 
     def test_get_instance_diagnostics(self):
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
 
         rpcapi = compute_rpcapi.ComputeAPI
         self.mox.StubOutWithMock(rpcapi, 'get_instance_diagnostics')
@@ -9456,7 +9403,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
                        lambda *a, **kw: None)
-        self.compute_api.delete(self.context, self._objectify(instance))
+        self.compute_api.delete(self.context, instance)
 
     def test_secgroup_refresh(self):
         instance = self._create_fake_instance()
@@ -9583,7 +9530,6 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_live_migrate(self):
         instance, instance_uuid = self._run_instance()
-        instance = self._objectify(instance)
 
         rpcapi = self.compute_api.compute_task_api
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
@@ -10341,8 +10287,8 @@ class ComputePolicyTestCase(BaseTestCase):
         compute_api.check_policy(self.context, 'reboot', {})
 
     def test_wrapped_method(self):
-        instance = self._create_fake_instance(params={'host': None,
-                                                      'cell_name': 'foo'})
+        instance = self._create_fake_instance_obj(params={'host': None,
+                                                          'cell_name': 'foo'})
 
         # force delete to fail
         rules = {"compute:delete": [["false:false"]]}
@@ -10355,7 +10301,7 @@ class ComputePolicyTestCase(BaseTestCase):
         rules = {"compute:delete": []}
         self.policy.set_rules(rules)
 
-        self.compute_api.delete(self.context, self._objectify(instance))
+        self.compute_api.delete(self.context, instance)
 
     def test_create_fail(self):
         rules = {"compute:create": [["false:false"]]}
@@ -10587,9 +10533,9 @@ class ComputeReschedulingResizeTestCase(ComputeReschedulingTestCase):
         if not filter_properties:
             filter_properties = {}
 
-        instance_uuid = "12-34-56-78-90"
-        instance = fake_instance.fake_db_instance(uuid=instance_uuid)
-        instance = self._objectify(instance)
+        instance_uuid = str(uuid.uuid4())
+        instance = self._create_fake_instance_obj(
+            params={'uuid': instance_uuid})
         instance_type = {}
         reservations = None
 
