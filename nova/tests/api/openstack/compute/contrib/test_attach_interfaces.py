@@ -198,6 +198,19 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
                           self.attachments.show, req, FAKE_UUID2,
                           FAKE_PORT_ID1)
 
+    @mock.patch.object(network_api.API, 'show_port',
+                       side_effect=exception.Forbidden)
+    def test_show_forbidden(self, show_port_mock):
+        req = webob.Request.blank(self.url + '/show')
+        req.method = 'POST'
+        req.body = jsonutils.dumps({})
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+
+        self.assertRaises(exc.HTTPForbidden,
+                          self.attachments.show, req, FAKE_UUID1,
+                          FAKE_PORT_ID1)
+
     def test_delete(self):
         self.stubs.Set(compute_api.API, 'detach_interface',
                        fake_detach_interface)
