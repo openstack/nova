@@ -24,7 +24,6 @@ from nova import exception
 from nova.network import api as network_api
 from nova.network import manager as network_manager
 from nova.network import model as network_model
-from nova.network import nova_ipam_lib
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.objects import base as obj_base
@@ -209,17 +208,16 @@ def fake_network(network_id, ipv6=None):
     return fake_network
 
 
-def vifs(n):
-    for x in xrange(1, n + 1):
-        yield {'id': x,
-               'created_at': None,
-               'updated_at': None,
-               'deleted_at': None,
-               'deleted': 0,
-               'address': 'DE:AD:BE:EF:00:%02x' % x,
-               'uuid': '00000000-0000-0000-0000-00000000000000%02d' % x,
-               'network_id': x,
-               'instance_uuid': 'fake-uuid'}
+def fake_vif(x):
+    return{'id': x,
+           'created_at': None,
+           'updated_at': None,
+           'deleted_at': None,
+           'deleted': 0,
+           'address': 'DE:AD:BE:EF:00:%02x' % x,
+           'uuid': '00000000-0000-0000-0000-00000000000000%02d' % x,
+           'network_id': x,
+           'instance_uuid': 'fake-uuid'}
 
 
 def floating_ip_ids():
@@ -245,6 +243,15 @@ def next_fixed_ip(network_id, num_floating_ips=0):
             'address': '192.168.%d.%03d' % (network_id, (next_id + 99)),
             'instance_uuid': 1,
             'allocated': False,
+            'reserved': False,
+            'created_at': None,
+            'updated_at': None,
+            'deleted_at': None,
+            'leased': True,
+            'host': HOST,
+            'deleted': 0,
+            'network': fake_network(network_id),
+            'virtual_interface': fake_vif(network_id),
             # and since network_id and vif_id happen to be equivalent
             'virtual_interface_id': network_id,
             'floating_ips': f_ips}
@@ -285,8 +292,6 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
     fixed_ip_id = fixed_ip_ids()
     fixed_ips = []
 
-    networks = [fake_network(x) for x in xrange(1, num_networks + 1)]
-
     def fixed_ips_fake(*args, **kwargs):
         global fixed_ips
         ips = [next_fixed_ip(i, floating_ips_per_fixed_ip)
@@ -295,77 +300,11 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
         fixed_ips = ips
         return ips
 
-    def floating_ips_fake(context, address):
-        for ip in fixed_ips:
-            if address == ip['address']:
-                return ip['floating_ips']
-        return []
-
-    def fixed_ips_v6_fake():
-        return ['2001:db8:0:%x::1' % i
-                for i in xrange(1, num_networks + 1)]
-
-    def virtual_interfaces_fake(*args, **kwargs):
-        return [vif for vif in vifs(num_networks)]
-
-    def vif_by_uuid_fake(context, uuid):
-        return {'id': 1,
-               'address': 'DE:AD:BE:EF:00:01',
-               'uuid': uuid,
-               'network_id': 1,
-               'network': None,
-               'instance_uuid': 'fake-uuid'}
-
-    def network_get_fake(context, network_id, project_only='allow_none'):
-        nets = [n for n in networks if n['id'] == network_id]
-        if not nets:
-            raise exception.NetworkNotFound(network_id=network_id)
-        return nets[0]
-
     def update_cache_fake(*args, **kwargs):
         pass
 
-    def get_subnets_by_net_id(self, context, project_id, network_uuid,
-                              vif_uuid):
-        i = int(network_uuid[-2:])
-        subnet_v4 = dict(
-            cidr='192.168.%d.0/24' % i,
-            dns1='192.168.%d.3' % i,
-            dns2='192.168.%d.4' % i,
-            gateway='192.168.%d.1' % i)
-
-        subnet_v6 = dict(
-            cidr='2001:db8:0:%x::/64' % i,
-            gateway='2001:db8:0:%x::1' % i)
-        return [subnet_v4, subnet_v6]
-
-    def get_network_by_uuid(context, uuid):
-        return dict(id=1,
-                    cidr_v6='fe80::/64',
-                    bridge='br0',
-                    label='public')
-
-    def get_v4_fake(*args, **kwargs):
-        ips = fixed_ips_fake(*args, **kwargs)
-        return [ip['address'] for ip in ips]
-
-    def get_v6_fake(*args, **kwargs):
-        return fixed_ips_v6_fake()
-
     stubs.Set(db, 'fixed_ip_get_by_instance', fixed_ips_fake)
-    stubs.Set(db, 'floating_ip_get_by_fixed_address', floating_ips_fake)
-    stubs.Set(db, 'virtual_interface_get_by_uuid', vif_by_uuid_fake)
-    stubs.Set(db, 'network_get_by_uuid', get_network_by_uuid)
-    stubs.Set(db, 'virtual_interface_get_by_instance', virtual_interfaces_fake)
-    stubs.Set(db, 'network_get', network_get_fake)
     stubs.Set(db, 'instance_info_cache_update', update_cache_fake)
-
-    stubs.Set(nova_ipam_lib.NeutronNovaIPAMLib, 'get_subnets_by_net_id',
-              get_subnets_by_net_id)
-    stubs.Set(nova_ipam_lib.NeutronNovaIPAMLib, 'get_v4_ips_by_interface',
-                    get_v4_fake)
-    stubs.Set(nova_ipam_lib.NeutronNovaIPAMLib, 'get_v6_ips_by_interface',
-                    get_v6_fake)
 
     class FakeContext(nova.context.RequestContext):
         def is_admin(self):

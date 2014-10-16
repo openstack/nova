@@ -223,7 +223,7 @@ class FlatNetworkTestCase(test.TestCase):
                      'should_create_vlan': False,
                      'should_create_bridge': False,
                      'ip': '192.168.%d.%03d' % (nid, nid + 99),
-                     'ip_v6': '2001:db8:0:1::%x' % nid,
+                     'ip_v6': '2001:db8:0:1:dcad:beff:feef:%x' % nid,
                      'netmask': '255.255.255.0',
                      'netmask_v6': 64,
                      'physical_network': None,
@@ -1919,10 +1919,9 @@ class CommonNetworkTestCase(test.TestCase):
     def test_get_instance_nw_info_client_exceptions(self):
         manager = network_manager.NetworkManager()
         self.mox.StubOutWithMock(manager.db,
-                                 'virtual_interface_get_by_instance')
-        manager.db.virtual_interface_get_by_instance(
-                self.context, FAKEUUID,
-                use_slave=False).AndRaise(exception.InstanceNotFound(
+                                 'fixed_ip_get_by_instance')
+        manager.db.fixed_ip_get_by_instance(
+                self.context, FAKEUUID).AndRaise(exception.InstanceNotFound(
                                                  instance_id=FAKEUUID))
         self.mox.ReplayAll()
         self.assertRaises(messaging.ExpectedException,
