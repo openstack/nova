@@ -980,6 +980,7 @@ class API(base.Base):
             if port['network_id'] == net['id']:
                 network_name = net['name']
                 tenant_id = net['tenant_id']
+                shared = net['shared']
                 break
         else:
             tenant_id = port['tenant_id']
@@ -1013,6 +1014,7 @@ class API(base.Base):
             tenant_id=tenant_id
             )
         network['subnets'] = subnets
+        network['shared'] = shared
         port_profile = port.get('binding:profile')
         if port_profile:
             physical_network = port_profile.get('physical_network')

@@ -327,3 +327,65 @@ class IptablesFirewallDriver(base_firewall.IptablesFirewallDriver):
     def instance_filter_exists(self, instance, network_info):
         """Check nova-instance-instance-xxx exists."""
         return self.nwfilter.instance_filter_exists(instance, network_info)
+
+
+class EbtablesFirewallDriver(base_firewall.EbtablesFirewallDriver):
+    def __init__(self, virtapi, execute=None, **kwargs):
+        """ exact copy of IptablesFirewallDriver.__init__() """
+        super(EbtablesFirewallDriver, self).__init__(virtapi, **kwargs)
+        self.nwfilter = NWFilterFirewall(virtapi, kwargs['get_connection'])
+
+    def _ensure_static_filters(self):
+        """
+        scale down NWFilterFirewall._ensure_static_filters()
+        do not create nova-nodhcp, nova-vpn
+        do not use allow-dhcp-server
+        """
+        if self.nwfilter.static_filters_configured:
+            return
+        filter_set = ['no-mac-spoofing',
+                      'no-arp-mac-spoofing']
+        self.nwfilter._define_filter(self.nwfilter.nova_no_nd_reflection_filter)
+        filter_set.append('nova-no-nd-reflection')
+        self.nwfilter._define_filter(self.nwfilter._filter_container('nova-base', filter_set))
+        filter_set = ['no-mac-spoofing',
+                      'no-ip-spoofing',
+                      'no-arp-spoofing']
+        filter_set.append('nova-no-nd-reflection')
+        self.nwfilter._define_filter(self.nwfilter._filter_container('nova-base-plus', filter_set))
+        self.nwfilter.static_filters_configured = True
+
+    def _setup_basic_filtering(self, instance, network_info):
+        """
+        scale down NWFilterFirewall.setup_basic_filtering()
+        do not check if need to handle security groups, or if dhcp server exists
+        """
+        self._ensure_static_filters()
+        for vif in network_info:
+            shared = False
+            if 'meta' in vif['network'] and 'shared' in vif['network']['meta']:
+                shared = vif['network']['meta']['shared']
+            if shared:
+                base_filter = ['nova-base-plus']
+            else:
+                base_filter = ['nova-base']
+            self.nwfilter._define_filter(self.nwfilter._get_instance_filter_xml(instance,
+                                                                               base_filter,
+                                                                               vif))
+
+    def setup_basic_filtering(self, instance, network_info):
+        """
+        scale down IptablesFirewallDriver.setup_basic_filtering()
+        do not refresh iptables rules
+        """
+        self._setup_basic_filtering(instance, network_info)
+        if not self.basically_filtered:
+            LOG.debug(_('ebtables firewall: Setup Basic Filtering'),
+                      instance=instance)
+            self.basically_filtered = True
+
+    def unfilter_instance(self, instance, network_info):
+        self.nwfilter.unfilter_instance(instance, network_info)
+
+    def instance_filter_exists(self, instance, network_info):
+        return self.nwfilter.instance_filter_exists(instance, network_info)
