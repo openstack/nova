@@ -1615,6 +1615,14 @@ class API(base.Base):
                     self._record_action_start(context, instance,
                                               instance_actions.DELETE)
 
+                    # NOTE(snikitin): If instance's vm_state is 'soft-delete',
+                    # we should not count reservations here, because instance
+                    # in soft-delete vm_state have already had quotas
+                    # decremented. More details:
+                    # https://bugs.launchpad.net/nova/+bug/1333145
+                    if instance['vm_state'] == vm_states.SOFT_DELETED:
+                        quotas.rollback()
+
                     cb(context, instance, bdms,
                        reservations=quotas.reservations)
             except exception.ComputeHostNotFound:
