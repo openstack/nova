@@ -35,7 +35,7 @@ from nova import rpc
 from nova import test
 from nova.tests.compute.monitors import test_monitors
 from nova.tests.objects import test_migration
-from nova.tests.pci import pci_fakes
+from nova.tests.pci import fakes as pci_fakes
 from nova.virt import driver
 from nova.virt import hardware
 

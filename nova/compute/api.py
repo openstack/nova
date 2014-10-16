@@ -63,7 +63,7 @@ from nova.objects import quotas as quotas_obj
 from nova.objects import security_group as security_group_obj
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
-from nova.pci import pci_request
+from nova.pci import request as pci_request
 import nova.policy
 from nova import quota
 from nova import rpc

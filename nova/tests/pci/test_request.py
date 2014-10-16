@@ -16,7 +16,7 @@
 """Tests for PCI request."""
 
 from nova import exception
-from nova.pci import pci_request as pci_request
+from nova.pci import request
 from nova import test
 
 
@@ -56,7 +56,7 @@ _fake_alias3 = """{
 class AliasTestCase(test.NoDBTestCase):
     def test_good_alias(self):
         self.flags(pci_alias=[_fake_alias1])
-        als = pci_request._get_alias_from_config()
+        als = request._get_alias_from_config()
         self.assertIsInstance(als['QuicAssist'], list)
         expect_dict = {
             "capability_type": "pci",
@@ -68,7 +68,7 @@ class AliasTestCase(test.NoDBTestCase):
 
     def test_multispec_alias(self):
         self.flags(pci_alias=[_fake_alias1, _fake_alias11])
-        als = pci_request._get_alias_from_config()
+        als = request._get_alias_from_config()
         self.assertIsInstance(als['QuicAssist'], list)
         expect_dict1 = {
             "capability_type": "pci",
@@ -89,7 +89,7 @@ class AliasTestCase(test.NoDBTestCase):
     def test_wrong_type_aliase(self):
         self.flags(pci_alias=[_fake_alias2])
         self.assertRaises(exception.PciInvalidAlias,
-            pci_request._get_alias_from_config)
+            request._get_alias_from_config)
 
     def test_wrong_product_id_aliase(self):
         self.flags(pci_alias=[
@@ -101,7 +101,7 @@ class AliasTestCase(test.NoDBTestCase):
                 "device_type": "NIC"
                 }"""])
         self.assertRaises(exception.PciInvalidAlias,
-            pci_request._get_alias_from_config)
+            request._get_alias_from_config)
 
     def test_wrong_vendor_id_aliase(self):
         self.flags(pci_alias=[
@@ -113,7 +113,7 @@ class AliasTestCase(test.NoDBTestCase):
                 "device_type": "NIC"
                 }"""])
         self.assertRaises(exception.PciInvalidAlias,
-            pci_request._get_alias_from_config)
+            request._get_alias_from_config)
 
     def test_wrong_cap_type_aliase(self):
         self.flags(pci_alias=[
@@ -125,7 +125,7 @@ class AliasTestCase(test.NoDBTestCase):
                 "device_type": "NIC"
                 }"""])
         self.assertRaises(exception.PciInvalidAlias,
-            pci_request._get_alias_from_config)
+            request._get_alias_from_config)
 
     def test_dup_aliase(self):
         self.flags(pci_alias=[
@@ -145,7 +145,7 @@ class AliasTestCase(test.NoDBTestCase):
                 }"""])
         self.assertRaises(
             exception.PciInvalidAlias,
-            pci_request._get_alias_from_config)
+            request._get_alias_from_config)
 
     def _verify_result(self, expected, real):
         exp_real = zip(expected, real)
@@ -169,7 +169,7 @@ class AliasTestCase(test.NoDBTestCase):
                        'capability_type': 'pci'}],
              'alias_name': 'IntelNIC'}, ]
 
-        requests = pci_request._translate_alias_to_requests(
+        requests = request._translate_alias_to_requests(
             "QuicAssist : 3, IntelNIC: 1")
         self.assertEqual(set([p['count'] for p in requests]), set([1, 3]))
         self._verify_result(expect_request, requests)
@@ -177,7 +177,7 @@ class AliasTestCase(test.NoDBTestCase):
     def test_aliase_2_request_invalid(self):
         self.flags(pci_alias=[_fake_alias1, _fake_alias3])
         self.assertRaises(exception.PciRequestAliasNotDefined,
-                          pci_request._translate_alias_to_requests,
+                          request._translate_alias_to_requests,
                           "QuicAssistX : 3")
 
     def test_get_pci_requests_from_flavor(self):
@@ -197,7 +197,7 @@ class AliasTestCase(test.NoDBTestCase):
 
         flavor = {'extra_specs': {"pci_passthrough:alias":
                                   "QuicAssist:3, IntelNIC: 1"}}
-        requests = pci_request.get_pci_requests_from_flavor(flavor)
+        requests = request.get_pci_requests_from_flavor(flavor)
         self.assertEqual(set([1, 3]),
                          set([p.count for p in requests.requests]))
         self._verify_result(expect_request, requests.requests)
@@ -205,5 +205,5 @@ class AliasTestCase(test.NoDBTestCase):
     def test_get_pci_requests_from_flavor_no_extra_spec(self):
         self.flags(pci_alias=[_fake_alias1, _fake_alias3])
         flavor = {}
-        requests = pci_request.get_pci_requests_from_flavor(flavor)
+        requests = request.get_pci_requests_from_flavor(flavor)
         self.assertEqual([], requests.requests)

@@ -57,7 +57,7 @@ from nova.openstack.common import lockutils
 from nova.openstack.common import loopingcall
 from nova.openstack.common import processutils
 from nova.openstack.common import uuidutils
-from nova.pci import pci_manager
+from nova.pci import manager as pci_manager
 from nova import test
 from nova.tests import fake_block_device
 from nova.tests import fake_instance
@@ -7560,7 +7560,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           block_device_info)
 
     @mock.patch('nova.openstack.common.loopingcall.FixedIntervalLoopingCall')
-    @mock.patch('nova.pci.pci_manager.get_instance_pci_devs')
+    @mock.patch('nova.pci.manager.get_instance_pci_devs')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._prepare_pci_devices_for_use')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_domain_and_network')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_images_and_backing')

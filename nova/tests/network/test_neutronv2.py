@@ -36,8 +36,8 @@ from nova.network.neutronv2 import api as neutronapi
 from nova.network.neutronv2 import constants
 from nova import objects
 from nova.openstack.common import policy as common_policy
-from nova.pci import pci_manager
-from nova.pci import pci_whitelist
+from nova.pci import manager as pci_manager
+from nova.pci import whitelist as pci_whitelist
 from nova import policy
 from nova import test
 from nova.tests import fake_instance

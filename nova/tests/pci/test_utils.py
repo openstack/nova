@@ -15,7 +15,7 @@
 #    under the License.
 
 from nova import exception
-from nova.pci import pci_utils
+from nova.pci import utils
 from nova import test
 
 
@@ -26,36 +26,36 @@ class PciDeviceMatchTestCase(test.NoDBTestCase):
                            'device_id': 'd1'}
 
     def test_single_spec_match(self):
-        self.assertTrue(pci_utils.pci_device_prop_match(
+        self.assertTrue(utils.pci_device_prop_match(
             self.fake_pci_1, [{'vendor_id': 'v1', 'device_id': 'd1'}]))
 
     def test_multiple_spec_match(self):
-        self.assertTrue(pci_utils.pci_device_prop_match(
+        self.assertTrue(utils.pci_device_prop_match(
             self.fake_pci_1,
             [{'vendor_id': 'v1', 'device_id': 'd1'},
              {'vendor_id': 'v3', 'device_id': 'd3'}]))
 
     def test_spec_dismatch(self):
-        self.assertFalse(pci_utils.pci_device_prop_match(
+        self.assertFalse(utils.pci_device_prop_match(
             self.fake_pci_1,
             [{'vendor_id': 'v4', 'device_id': 'd4'},
              {'vendor_id': 'v3', 'device_id': 'd3'}]))
 
     def test_spec_extra_key(self):
-        self.assertFalse(pci_utils.pci_device_prop_match(
+        self.assertFalse(utils.pci_device_prop_match(
             self.fake_pci_1,
             [{'vendor_id': 'v1', 'device_id': 'd1', 'wrong_key': 'k1'}]))
 
 
 class PciDeviceAddressParserTestCase(test.NoDBTestCase):
     def test_parse_address(self):
-        self.parse_result = pci_utils.parse_address("0000:04:12.6")
+        self.parse_result = utils.parse_address("0000:04:12.6")
         self.assertEqual(self.parse_result, ('0000', '04', '12', '6'))
 
     def test_parse_address_wrong(self):
         self.assertRaises(exception.PciDeviceWrongAddressFormat,
-            pci_utils.parse_address, "0000:04.12:6")
+            utils.parse_address, "0000:04.12:6")
 
     def test_parse_address_invalid_character(self):
         self.assertRaises(exception.PciDeviceWrongAddressFormat,
-            pci_utils.parse_address, "0000:h4.12:6")
+            utils.parse_address, "0000:h4.12:6")

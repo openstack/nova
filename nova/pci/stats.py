@@ -21,8 +21,8 @@ from oslo.serialization import jsonutils
 from nova import exception
 from nova.i18n import _LE
 from nova.openstack.common import log as logging
-from nova.pci import pci_utils
-from nova.pci import pci_whitelist
+from nova.pci import utils
+from nova.pci import whitelist
 
 
 LOG = logging.getLogger(__name__)
@@ -81,7 +81,7 @@ class PciDeviceStats(object):
         """
         # Don't add a device that doesn't have a matching device spec.
         # This can happen during initial sync up with the controller
-        devspec = pci_whitelist.get_pci_device_devspec(dev)
+        devspec = whitelist.get_pci_device_devspec(dev)
         if not devspec:
             return
         tags = devspec.get_tags()
@@ -174,7 +174,7 @@ class PciDeviceStats(object):
     @staticmethod
     def _filter_pools_for_spec(pools, request_specs):
         return [pool for pool in pools
-                if pci_utils.pci_device_prop_match(pool, request_specs)]
+                if utils.pci_device_prop_match(pool, request_specs)]
 
     def _apply_request(self, pools, request):
         count = request.count

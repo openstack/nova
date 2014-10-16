@@ -30,7 +30,7 @@ from oslo.utils import units
 
 from nova import exception
 from nova.openstack.common import log as logging
-from nova.pci import pci_utils
+from nova.pci import utils as pci_utils
 from nova.virt import hardware
 
 

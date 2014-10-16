@@ -23,8 +23,8 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.openstack.common import log as logging
-from nova.pci import pci_device
-from nova.pci import pci_stats
+from nova.pci import device
+from nova.pci import stats
 
 LOG = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ class PciDevTracker(object):
         super(PciDevTracker, self).__init__()
         self.stale = {}
         self.node_id = node_id
-        self.stats = pci_stats.PciDeviceStats()
+        self.stats = stats.PciDeviceStats()
         if node_id:
             self.pci_devs = list(
                 objects.PciDeviceList.get_by_compute_node(context, node_id))
@@ -107,7 +107,7 @@ class PciDevTracker(object):
         for existed in self.pci_devs:
             if existed['address'] in exist_addrs - new_addrs:
                 try:
-                    pci_device.remove(existed)
+                    device.remove(existed)
                 except exception.PciDeviceInvalidStatus as e:
                     LOG.warn(_("Trying to remove device with %(status)s "
                                "ownership %(instance_uuid)s because of "
@@ -140,7 +140,7 @@ class PciDevTracker(object):
                     # by force in future.
                     self.stale[new_value['address']] = new_value
                 else:
-                    pci_device.update_device(existed, new_value)
+                    device.update_device(existed, new_value)
 
         for dev in [dev for dev in devices if
                     dev['address'] in new_addrs - exist_addrs]:
@@ -158,18 +158,18 @@ class PciDevTracker(object):
         if not devs:
             raise exception.PciDeviceRequestFailed(pci_requests)
         for dev in devs:
-            pci_device.claim(dev, instance)
+            device.claim(dev, instance)
         return devs
 
     def _allocate_instance(self, instance, devs):
         for dev in devs:
-            pci_device.allocate(dev, instance)
+            device.allocate(dev, instance)
 
     def _free_device(self, dev, instance=None):
-        pci_device.free(dev, instance)
+        device.free(dev, instance)
         stale = self.stale.pop(dev['address'], None)
         if stale:
-            pci_device.update_device(dev, stale)
+            device.update_device(dev, stale)
         self.stats.add_device(dev)
 
     def _free_instance(self, instance):

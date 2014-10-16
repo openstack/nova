@@ -46,7 +46,7 @@ import six
 from nova import exception
 from nova import objects
 from nova.openstack.common import log as logging
-from nova.pci import pci_utils
+from nova.pci import utils
 
 pci_alias_opts = [
     cfg.MultiStrOpt('pci_alias',
@@ -91,11 +91,11 @@ _ALIAS_SCHEMA = {
         },
         "product_id": {
             "type": "string",
-            "pattern": pci_utils.PCI_VENDOR_PATTERN,
+            "pattern": utils.PCI_VENDOR_PATTERN,
         },
         "vendor_id": {
             "type": "string",
-            "pattern": pci_utils.PCI_VENDOR_PATTERN,
+            "pattern": utils.PCI_VENDOR_PATTERN,
         },
         "device_type": {
             "type": "string",

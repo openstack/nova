@@ -17,7 +17,7 @@
 from oslo.config import cfg
 
 from nova.openstack.common import log as logging
-from nova.pci import pci_devspec
+from nova.pci import devspec
 
 pci_opts = [cfg.MultiStrOpt('pci_passthrough_whitelist',
                             default=[],
@@ -46,7 +46,7 @@ class PciHostDevicesWhiteList(object):
         """Parse and validate the pci whitelist from the nova config."""
         specs = []
         for jsonspec in whitelists:
-            spec = pci_devspec.PciDeviceSpec(jsonspec)
+            spec = devspec.PciDeviceSpec(jsonspec)
             specs.append(spec)
 
         return specs

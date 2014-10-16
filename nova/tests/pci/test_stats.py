@@ -18,10 +18,10 @@ from oslo.serialization import jsonutils
 
 from nova import exception
 from nova import objects
-from nova.pci import pci_stats as pci
-from nova.pci import pci_whitelist
+from nova.pci import stats
+from nova.pci import whitelist
 from nova import test
-from nova.tests.pci import pci_fakes
+from nova.tests.pci import fakes
 
 fake_pci_1 = {
     'compute_node_id': 1,
@@ -65,9 +65,9 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(PciDeviceStatsTestCase, self).setUp()
-        self.pci_stats = pci.PciDeviceStats()
+        self.pci_stats = stats.PciDeviceStats()
         # The following two calls need to be made before adding the devices.
-        patcher = pci_fakes.fake_pci_whitelist()
+        patcher = fakes.fake_pci_whitelist()
         self.addCleanup(patcher.stop)
         self._create_fake_devs()
 
@@ -92,7 +92,7 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
 
     def test_json_creat(self):
         m = jsonutils.dumps(self.pci_stats)
-        new_stats = pci.PciDeviceStats(m)
+        new_stats = stats.PciDeviceStats(m)
 
         self.assertEqual(len(new_stats.pools), 2)
         self.assertEqual(set([d['count'] for d in new_stats]),
@@ -141,19 +141,19 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
             pci_requests_multiple)
 
 
-@mock.patch.object(pci_whitelist, 'get_pci_devices_filter')
+@mock.patch.object(whitelist, 'get_pci_devices_filter')
 class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(PciDeviceStatsWithTagsTestCase, self).setUp()
-        self.pci_stats = pci.PciDeviceStats()
+        self.pci_stats = stats.PciDeviceStats()
         self._create_whitelist()
 
     def _create_whitelist(self):
         white_list = ['{"vendor_id":"1137","product_id":"0071",'
                         '"address":"*:0a:00.*","physical_network":"physnet1"}',
                        '{"vendor_id":"1137","product_id":"0072"}']
-        self.pci_wlist = pci_whitelist.PciHostDevicesWhiteList(white_list)
+        self.pci_wlist = whitelist.PciHostDevicesWhiteList(white_list)
 
     def _create_pci_devices(self):
         self.pci_tagged_devices = []

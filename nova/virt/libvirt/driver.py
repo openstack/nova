@@ -81,9 +81,9 @@ from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.openstack.common import processutils
-from nova.pci import pci_manager
-from nova.pci import pci_utils
-from nova.pci import pci_whitelist
+from nova.pci import manager as pci_manager
+from nova.pci import utils as pci_utils
+from nova.pci import whitelist as pci_whitelist
 from nova import rpc
 from nova import utils
 from nova import version

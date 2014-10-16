@@ -22,7 +22,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import objects
-from nova.pci import pci_device
+from nova.pci import device
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests.objects import test_pci_device
@@ -60,8 +60,8 @@ class PciServerControllerTest(test.NoDBTestCase):
                                        }]}
         self._create_fake_instance()
         self._create_fake_pci_device()
-        pci_device.claim(self.pci_device, self.inst)
-        pci_device.allocate(self.pci_device, self.inst)
+        device.claim(self.pci_device, self.inst)
+        device.allocate(self.pci_device, self.inst)
 
     def _create_fake_instance(self):
         self.inst = objects.Instance()

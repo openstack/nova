@@ -17,13 +17,13 @@ import functools
 
 import mock
 
-from nova.pci import pci_whitelist
+from nova.pci import whitelist
 
 
 def fake_pci_whitelist():
     devspec = mock.Mock()
     devspec.get_tags.return_value = None
-    patcher = mock.patch.object(pci_whitelist, 'get_pci_device_devspec',
+    patcher = mock.patch.object(whitelist, 'get_pci_device_devspec',
                      return_value=devspec)
     patcher.start()
     return patcher

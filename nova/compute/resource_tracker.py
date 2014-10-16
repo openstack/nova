@@ -36,7 +36,7 @@ from nova.i18n import _
 from nova import objects
 from nova.objects import base as obj_base
 from nova.openstack.common import log as logging
-from nova.pci import pci_manager
+from nova.pci import manager as pci_manager
 from nova import rpc
 from nova.scheduler import client as scheduler_client
 from nova import utils
