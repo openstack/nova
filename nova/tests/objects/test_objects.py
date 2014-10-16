@@ -303,7 +303,9 @@ class _BaseTestCase(test.TestCase):
     def setUp(self):
         super(_BaseTestCase, self).setUp()
         self.remote_object_calls = list()
-        self.context = context.RequestContext('fake-user', 'fake-project')
+        self.user_id = 'fake-user'
+        self.project_id = 'fake-project'
+        self.context = context.RequestContext(self.user_id, self.project_id)
         fake_notifier.stub_notifier(self.stubs)
         self.addCleanup(fake_notifier.reset)
 

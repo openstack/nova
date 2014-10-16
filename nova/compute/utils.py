@@ -318,6 +318,17 @@ def notify_about_instance_usage(notifier, context, instance, event_suffix,
     method(context, 'compute.instance.%s' % event_suffix, usage_info)
 
 
+def notify_about_server_group_update(context, event_suffix, sg_payload):
+    """Send a notification about server group update.
+
+    :param event_suffix: Event type like "create.start" or "create.end"
+    :param sg_payload: payload for server group update
+    """
+    notifier = rpc.get_notifier(service='servergroup')
+
+    notifier.info(context, 'servergroup.%s' % event_suffix, sg_payload)
+
+
 def notify_about_aggregate_update(context, event_suffix, aggregate_payload):
     """Send a notification about aggregate update.
 

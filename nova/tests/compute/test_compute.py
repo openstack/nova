@@ -3852,7 +3852,16 @@ class ComputeTestCase(BaseTestCase):
         instance_group.uuid = str(uuid.uuid4())
         instance_group.members = [group_instance.uuid]
         instance_group.policies = ['anti-affinity']
+        fake_notifier.NOTIFICATIONS = []
         instance_group.create()
+        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(instance_group.name, msg.payload['name'])
+        self.assertEqual(instance_group.members, msg.payload['members'])
+        self.assertEqual(instance_group.policies, msg.payload['policies'])
+        self.assertEqual(instance_group.project_id, msg.payload['project_id'])
+        self.assertEqual(instance_group.uuid, msg.payload['uuid'])
+        self.assertEqual('servergroup.create', msg.event_type)
         return instance_group
 
     def _run_instance_reschedules_on_anti_affinity_violation(self, group,

@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.compute import utils as compute_utils
 from nova import db
 from nova import exception
 from nova import objects
@@ -104,9 +105,14 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
         if not updates:
             return
 
+        payload = dict(updates)
+        payload['server_group_id'] = self.uuid
+
         db.instance_group_update(context, self.uuid, updates)
         db_inst = db.instance_group_get(context, self.uuid)
         self._from_db_object(context, self, db_inst)
+        compute_utils.notify_about_server_group_update(context,
+                                                       "update", payload)
 
     @base.remotable
     def refresh(self, context):
@@ -123,6 +129,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
         updates = self.obj_get_changes()
+        payload = dict(updates)
         updates.pop('id', None)
         policies = updates.pop('policies', None)
         members = updates.pop('members', None)
@@ -131,16 +138,26 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
                                            policies=policies,
                                            members=members)
         self._from_db_object(context, self, db_inst)
+        payload['server_group_id'] = self.uuid
+        compute_utils.notify_about_server_group_update(context,
+                                                       "create", payload)
 
     @base.remotable
     def destroy(self, context):
+        payload = {'server_group_id': self.uuid}
         db.instance_group_delete(context, self.uuid)
         self.obj_reset_changes()
+        compute_utils.notify_about_server_group_update(context,
+                                                       "delete", payload)
 
     @base.remotable_classmethod
     def add_members(cls, context, group_uuid, instance_uuids):
+        payload = {'server_group_id': group_uuid,
+                   'instance_uuids': instance_uuids}
         members = db.instance_group_members_add(context, group_uuid,
                 instance_uuids)
+        compute_utils.notify_about_server_group_update(context,
+                                                       "addmember", payload)
         return list(members)
 
     @base.remotable
