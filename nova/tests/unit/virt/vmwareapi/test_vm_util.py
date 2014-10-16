@@ -453,9 +453,11 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake_instance = {'id': 7, 'name': 'fake!',
                          'uuid': instance_uuid,
                          'vcpus': 2, 'memory_mb': 2048}
+        extra_specs = vm_util.ExtraSpecs()
         result = vm_util.get_vm_create_spec(fake.FakeFactory(),
                                             fake_instance, instance_uuid,
-                                            'fake-datastore', [])
+                                            'fake-datastore', [],
+                                            extra_specs)
         expected = """{
             'files': {'vmPathName': '[fake-datastore]',
             'obj_name': 'ns0:VirtualMachineFileInfo'},
@@ -486,11 +488,13 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake_instance = {'id': 7, 'name': 'fake!',
                          'uuid': instance_uuid,
                          'vcpus': 2, 'memory_mb': 2048}
+        cpu_limits = vm_util.CpuLimits(cpu_limit=7,
+                                       cpu_reservation=6)
+        extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         result = vm_util.get_vm_create_spec(fake.FakeFactory(),
                                             fake_instance, instance_uuid,
                                             'fake-datastore', [],
-                                            allocations={'cpu_limit': 7,
-                                                         'cpu_reservation': 6})
+                                            extra_specs)
         expected = """{
             'files': {'vmPathName': '[fake-datastore]',
             'obj_name': 'ns0:VirtualMachineFileInfo'},
@@ -524,10 +528,12 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake_instance = {'id': 7, 'name': 'fake!',
                          'uuid': instance_uuid,
                          'vcpus': 2, 'memory_mb': 2048}
+        cpu_limits = vm_util.CpuLimits(cpu_limit=7)
+        extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         result = vm_util.get_vm_create_spec(fake.FakeFactory(),
                                             fake_instance, instance_uuid,
                                             'fake-datastore', [],
-                                            allocations={'cpu_limit': 7})
+                                            extra_specs)
         expected = """{
             'files': {'vmPathName': '[fake-datastore]',
             'obj_name': 'ns0:VirtualMachineFileInfo'},
@@ -560,11 +566,12 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake_instance = {'id': 7, 'name': 'fake!',
                          'uuid': instance_uuid,
                          'vcpus': 2, 'memory_mb': 2048}
-        shares = {'cpu_shares_level': 'high'}
+        cpu_limits = vm_util.CpuLimits(cpu_shares_level='high')
+        extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         result = vm_util.get_vm_create_spec(fake.FakeFactory(),
                                             fake_instance, instance_uuid,
                                             'fake-datastore', [],
-                                            allocations=shares)
+                                            extra_specs)
         expected = """{
             'files': {'vmPathName': '[fake-datastore]',
             'obj_name': 'ns0:VirtualMachineFileInfo'},
@@ -599,12 +606,13 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake_instance = {'id': 7, 'name': 'fake!',
                          'uuid': instance_uuid,
                          'vcpus': 2, 'memory_mb': 2048}
-        shares = {'cpu_shares_level': 'custom',
-                  'cpu_shares_share': 1948}
+        cpu_limits = vm_util.CpuLimits(cpu_shares_level='custom',
+                                       cpu_shares_share=1948)
+        extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         result = vm_util.get_vm_create_spec(fake.FakeFactory(),
                                             fake_instance, instance_uuid,
                                             'fake-datastore', [],
-                                            allocations=shares)
+                                            extra_specs)
         expected = """{
             'files': {'vmPathName': '[fake-datastore]',
             'obj_name': 'ns0:VirtualMachineFileInfo'},
@@ -703,6 +711,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         config_spec = vm_util.get_vm_create_spec(
             session.vim.client.factory,
             instance, instance.name, 'fake-datastore', [],
+            vm_util.ExtraSpecs(),
             os_type='invalid_os_type')
 
         self.assertRaises(vexc.VMwareDriverException,

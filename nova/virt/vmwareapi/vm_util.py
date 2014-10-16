@@ -48,6 +48,31 @@ ALL_SUPPORTED_NETWORK_DEVICES = ['VirtualE1000', 'VirtualE1000e',
 _VM_REFS_CACHE = {}
 
 
+class CpuLimits(object):
+
+    def __init__(self, cpu_limit=None, cpu_reservation=None,
+                 cpu_shares_level=None, cpu_shares_share=None):
+        """CpuLimits object holds instance cpu limits for convenience."""
+        self.cpu_limit = cpu_limit
+        self.cpu_reservation = cpu_reservation
+        self.cpu_shares_level = cpu_shares_level
+        self.cpu_shares_share = cpu_shares_share
+
+
+class ExtraSpecs(object):
+
+    def __init__(self, cpu_limits=None):
+        """ExtraSpecs object holds extra_specs for the instance."""
+        if cpu_limits is None:
+            cpu_limits = CpuLimits()
+        self.cpu_limits = cpu_limits
+
+    def has_cpu_limits(self):
+        return bool(self.cpu_limits.cpu_limit or
+                    self.cpu_limits.cpu_reservation or
+                    self.cpu_limits.cpu_shares_level)
+
+
 def vm_refs_cache_reset():
     global _VM_REFS_CACHE
     _VM_REFS_CACHE = {}
@@ -100,8 +125,8 @@ def _iface_id_option_value(client_factory, iface_id, port_index):
 
 
 def get_vm_create_spec(client_factory, instance, name, data_store_name,
-                       vif_infos, os_type=constants.DEFAULT_OS_TYPE,
-                       allocations=None):
+                       vif_infos, extra_specs,
+                       os_type=constants.DEFAULT_OS_TYPE):
     """Builds the VM Create spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
     config_spec.name = name
@@ -131,21 +156,18 @@ def get_vm_create_spec(client_factory, instance, name, data_store_name,
     config_spec.memoryMB = int(instance['memory_mb'])
 
     # Configure cpu information
-    if (allocations is not None and
-        ('cpu_limit' in allocations or
-         'cpu_reservation' in allocations or
-         'cpu_shares_level' in allocations)):
+    if (extra_specs.has_cpu_limits()):
         allocation = client_factory.create('ns0:ResourceAllocationInfo')
-        if 'cpu_limit' in allocations:
-            allocation.limit = allocations['cpu_limit']
-        if 'cpu_reservation' in allocations:
-            allocation.reservation = allocations['cpu_reservation']
-        if 'cpu_shares_level' in allocations:
+        if extra_specs.cpu_limits.cpu_limit:
+            allocation.limit = extra_specs.cpu_limits.cpu_limit
+        if extra_specs.cpu_limits.cpu_reservation:
+            allocation.reservation = extra_specs.cpu_limits.cpu_reservation
+        if extra_specs.cpu_limits.cpu_shares_level:
             shares = client_factory.create('ns0:SharesInfo')
-            shares.level = allocations['cpu_shares_level']
+            shares.level = extra_specs.cpu_limits.cpu_shares_level
             if (shares.level == 'custom' and
-                'cpu_shares_share' in allocations):
-                shares.shares = allocations['cpu_shares_share']
+                extra_specs.cpu_limits.cpu_shares_share):
+                shares.shares = extra_specs.cpu_limits.cpu_shares_share
             else:
                 shares.shares = 0
             allocation.shares = shares

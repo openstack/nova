@@ -229,7 +229,7 @@ class VMwareVMOps(object):
             str(uploaded_iso_path))
 
     def build_virtual_machine(self, instance, instance_name, image_info,
-                              dc_info, datastore, network_info):
+                              dc_info, datastore, network_info, flavor):
         node_mo_id = vm_util.get_mo_id_from_instance(instance)
         res_pool_ref = vm_util.get_res_pool_ref(self._session,
                                                 self._cluster, node_mo_id)
@@ -239,7 +239,7 @@ class VMwareVMOps(object):
                                            image_info.vif_model,
                                            network_info)
 
-        allocations = self._get_cpu_allocations(instance.instance_type_id)
+        extra_specs = self._get_extra_specs(flavor)
 
         # Get the create vm config spec
         client_factory = self._session.vim.client.factory
@@ -248,27 +248,23 @@ class VMwareVMOps(object):
                                                  instance_name,
                                                  datastore.name,
                                                  vif_infos,
-                                                 image_info.os_type,
-                                                 allocations=allocations)
+                                                 extra_specs,
+                                                 image_info.os_type)
         # Create the VM
         vm_ref = vm_util.create_vm(self._session, instance, dc_info.vmFolder,
                                    config_spec, res_pool_ref)
         return vm_ref
 
-    def _get_cpu_allocations(self, instance_type_id):
-        # Read flavors for allocations
-        flavor = objects.Flavor.get_by_id(
-            nova_context.get_admin_context(read_deleted='yes'),
-            instance_type_id)
-        allocations = {}
+    def _get_extra_specs(self, flavor):
+        extra_specs = vm_util.ExtraSpecs()
         for (key, type) in (('cpu_limit', int),
                             ('cpu_reservation', int),
                             ('cpu_shares_level', str),
                             ('cpu_shares_share', int)):
             value = flavor.extra_specs.get('quota:' + key)
             if value:
-                allocations[key] = type(value)
-        return allocations
+                setattr(extra_specs.cpu_limits, key, type(value))
+        return extra_specs
 
     def _fetch_image_as_file(self, context, vi, image_ds_loc):
         """Download image as an individual file to host via HTTP PUT."""
@@ -434,6 +430,11 @@ class VMwareVMOps(object):
                                                    image_meta)
         vi = self._get_vm_config_info(instance, image_info, instance_name)
 
+        # Read flavors for extra_specs
+        flavor = objects.Flavor.get_by_id(
+            nova_context.get_admin_context(read_deleted='yes'),
+            instance.instance_type_id)
+
         # Creates the virtual machine. The virtual machine reference returned
         # is unique within Virtual Center.
         vm_ref = self.build_virtual_machine(instance,
@@ -441,7 +442,8 @@ class VMwareVMOps(object):
                                             image_info,
                                             vi.dc_info,
                                             vi.datastore,
-                                            network_info)
+                                            network_info,
+                                            flavor)
 
         # Cache the vm_ref. This saves a remote call to the VC. This uses the
         # instance_name. This covers all use cases including rescue and resize.
