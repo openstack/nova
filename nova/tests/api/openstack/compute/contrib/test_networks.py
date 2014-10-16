@@ -29,6 +29,8 @@ from nova.api.openstack.compute.contrib import networks_associate
 from nova.api.openstack.compute.contrib import os_networks as networks
 from nova.api.openstack.compute.contrib import os_tenant_networks as tnet
 from nova.api.openstack.compute.plugins.v3 import networks as networks_v21
+from nova.api.openstack.compute.plugins.v3 import networks_associate as \
+     networks_associate_v21
 from nova.api.openstack.compute.plugins.v3 import tenant_networks as tnet_v21
 from nova.api.openstack import extensions
 import nova.context
@@ -489,27 +491,31 @@ class NetworksTestV2(NetworksTestV21):
         self.controller.create(req, net)
 
 
-class NetworksAssociateTest(test.NoDBTestCase):
+class NetworksAssociateTestV21(test.NoDBTestCase):
 
     def setUp(self):
-        super(NetworksAssociateTest, self).setUp()
+        super(NetworksAssociateTestV21, self).setUp()
         self.fake_network_api = FakeNetworkAPI()
-        ext_mgr = extensions.ExtensionManager()
-        ext_mgr.extensions = {'os-extended-networks': 'fake'}
-        self.controller = networks.NetworkController(
-                                                self.fake_network_api,
-                                                ext_mgr)
-        self.associate_controller = networks_associate\
-            .NetworkAssociateActionController(self.fake_network_api)
+        self._setup()
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
+
+    def _setup(self):
+        self.controller = networks.NetworkController(self.fake_network_api)
+        self.associate_controller = networks_associate_v21\
+            .NetworkAssociateActionController(self.fake_network_api)
+
+    def _check_status(self, res, method, code):
+        self.assertEqual(method.wsgi_code, code)
 
     def test_network_disassociate_host_only(self):
         uuid = FAKE_NETWORKS[0]['uuid']
         req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s/action' % uuid)
         res = self.associate_controller._disassociate_host_only(
             req, uuid, {'disassociate_host': None})
-        self.assertEqual(res.status_int, 202)
+        self._check_status(res,
+                           self.associate_controller._disassociate_host_only,
+                           202)
         self.assertIsNotNone(self.fake_network_api.networks[0]['project_id'])
         self.assertIsNone(self.fake_network_api.networks[0]['host'])
 
@@ -518,16 +524,17 @@ class NetworksAssociateTest(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s/action' % uuid)
         res = self.associate_controller._disassociate_project_only(
             req, uuid, {'disassociate_project': None})
-        self.assertEqual(res.status_int, 202)
+        self._check_status(
+            res, self.associate_controller._disassociate_project_only, 202)
         self.assertIsNone(self.fake_network_api.networks[0]['project_id'])
         self.assertIsNotNone(self.fake_network_api.networks[0]['host'])
 
     def test_network_associate_with_host(self):
         uuid = FAKE_NETWORKS[1]['uuid']
-        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s/action' % uuid)
+        req = fakes.HTTPRequest.blank('/v2/1234//os-networks/%s/action' % uuid)
         res = self.associate_controller._associate_host(
             req, uuid, {'associate_host': "TestHost"})
-        self.assertEqual(res.status_int, 202)
+        self._check_status(res, self.associate_controller._associate_host, 202)
         req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s' % uuid)
         req.environ["nova.context"].is_admin = True
         res_dict = self.controller.show(req, uuid)
@@ -561,6 +568,21 @@ class NetworksAssociateTest(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPNotImplemented,
                           assoc_ctrl._disassociate_host_only,
                           req, uuid, {'disassociate_host': None})
+
+
+class NetworksAssociateTestV2(NetworksAssociateTestV21):
+
+    def _setup(self):
+        ext_mgr = extensions.ExtensionManager()
+        ext_mgr.extensions = {'os-extended-networks': 'fake'}
+        self.controller = networks.NetworkController(
+                                                self.fake_network_api,
+                                                ext_mgr)
+        self.associate_controller = networks_associate\
+            .NetworkAssociateActionController(self.fake_network_api)
+
+    def _check_status(self, res, method, code):
+        self.assertEqual(res.status_int, 202)
 
 
 class TenantNetworksTestV21(test.NoDBTestCase):

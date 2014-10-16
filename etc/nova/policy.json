@@ -210,6 +210,8 @@
     "compute_extension:v3:os-networks:view": "",
     "compute_extension:v3:os-networks:discoverable": "",
     "compute_extension:networks_associate": "rule:admin_api",
+    "compute_extension:v3:os-networks-associate": "rule:admin_api",
+    "compute_extension:v3:os-networks-associate:discoverable": "",
     "compute_extension:v3:os-pause-server:discoverable": "",
     "compute_extension:v3:os-pause-server:pause": "rule:admin_or_owner",
     "compute_extension:v3:os-pause-server:unpause": "rule:admin_or_owner",
