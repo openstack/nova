@@ -241,7 +241,7 @@ class FloatingIpDNSTestV21(test.TestCase):
               '/v2/123/os-floating-ip-dns/%s/entries/%s' %
               (_quote_domain(domain), name))
         entry = self.entry_controller.update(req, _quote_domain(domain),
-                                             name, body)
+                                             name, body=body)
         self.assertEqual(entry['dns_entry']['ip'], test_ipv4_address)
 
     def test_create_domain(self):
@@ -252,19 +252,20 @@ class FloatingIpDNSTestV21(test.TestCase):
                  'project': 'testproject'}}
         self.assertRaises(webob.exc.HTTPUnprocessableEntity,
                           self.domain_controller.update,
-                          req, _quote_domain(domain), body)
+                          req, _quote_domain(domain), body=body)
 
         body = {'domain_entry':
                 {'scope': 'public',
                  'availability_zone': 'zone1'}}
         self.assertRaises(webob.exc.HTTPUnprocessableEntity,
                           self.domain_controller.update,
-                          req, _quote_domain(domain), body)
+                          req, _quote_domain(domain), body=body)
 
         body = {'domain_entry':
                 {'scope': 'public',
                  'project': 'testproject'}}
-        entry = self.domain_controller.update(req, _quote_domain(domain), body)
+        entry = self.domain_controller.update(req, _quote_domain(domain),
+                    body=body)
         self.assertEqual(entry['domain_entry']['domain'], domain)
         self.assertEqual(entry['domain_entry']['scope'], 'public')
         self.assertEqual(entry['domain_entry']['project'], 'testproject')
@@ -272,7 +273,8 @@ class FloatingIpDNSTestV21(test.TestCase):
         body = {'domain_entry':
                 {'scope': 'private',
                  'availability_zone': 'zone1'}}
-        entry = self.domain_controller.update(req, _quote_domain(domain), body)
+        entry = self.domain_controller.update(req, _quote_domain(domain),
+            body=body)
         self.assertEqual(entry['domain_entry']['domain'], domain)
         self.assertEqual(entry['domain_entry']['scope'], 'private')
         self.assertEqual(entry['domain_entry']['availability_zone'], 'zone1')
@@ -341,7 +343,7 @@ class FloatingIpDNSTestV21(test.TestCase):
                   'dns_type': 'A'}}
         req = fakes.HTTPRequest.blank(
               '/v2/123/os-floating-ip-dns/%s/entries/%s' % (domain, name))
-        entry = self.entry_controller.update(req, domain, name, body)
+        entry = self.entry_controller.update(req, domain, name, body=body)
 
         self.assertEqual(entry['dns_entry']['ip'], test_ipv4_address2)
 
