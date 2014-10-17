@@ -110,6 +110,7 @@ class CloudpipeController(wsgi.Controller):
         return rv
 
     @extensions.expected_errors((400, 403))
+    @validation.schema(cloudpipe.create)
     def create(self, req, body):
         """Create a new cloudpipe instance, if none exists.
 
