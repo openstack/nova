@@ -27,6 +27,7 @@ import time
 
 from lxml import etree
 from oslo.utils import units
+import six
 
 from nova import exception
 from nova.openstack.common import log as logging
@@ -59,7 +60,7 @@ class LibvirtConfigObject(object):
 
     def _text_node(self, name, value, **kwargs):
         child = self._new_node(name, **kwargs)
-        child.text = str(value)
+        child.text = six.text_type(value)
         return child
 
     def format_dom(self):
