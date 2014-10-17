@@ -2470,7 +2470,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def suspend(self, instance):
         """Suspend the specified instance."""
-        dom = self._lookup_by_name(instance['name'])
+        dom = self._lookup_by_name(instance.name)
         self._detach_pci_devices(dom,
             pci_manager.get_instance_pci_devs(instance))
         self._detach_sriov_ports(instance, dom)
