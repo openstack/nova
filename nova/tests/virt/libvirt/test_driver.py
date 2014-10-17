@@ -4889,18 +4889,22 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_attach_invalid_volume_type(self):
         self.create_fake_libvirt_mock()
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        instance = fake_instance.fake_instance_obj(
+            self.context, **self.test_instance)
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.VolumeDriverNotFound,
                           conn.attach_volume, None,
                           {"driver_volume_type": "badtype"},
-                          {"name": "fake-instance"},
+                          instance,
                           "/dev/sda")
 
     def test_attach_blockio_invalid_hypervisor(self):
         self.flags(virt_type='fake_type', group='libvirt')
         self.create_fake_libvirt_mock()
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        instance = fake_instance.fake_instance_obj(
+            self.context, **self.test_instance)
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.InvalidHypervisorType,
@@ -4909,7 +4913,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                            "data": {"logical_block_size": "4096",
                                     "physical_block_size": "4096"}
                           },
-                          {"name": "fake-instance"},
+                          instance,
                           "/dev/sda")
 
     def test_attach_blockio_invalid_version(self):
@@ -4918,6 +4922,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(virt_type='qemu', group='libvirt')
         self.create_fake_libvirt_mock()
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        instance = fake_instance.fake_instance_obj(
+            self.context, **self.test_instance)
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(self.conn, "getLibVersion", get_lib_version_stub)
@@ -4927,7 +4933,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                            "data": {"logical_block_size": "4096",
                                     "physical_block_size": "4096"}
                           },
-                          {"name": "fake-instance"},
+                          instance,
                           "/dev/sda")
 
     @mock.patch('nova.virt.libvirt.blockinfo.get_info_from_bdm')
