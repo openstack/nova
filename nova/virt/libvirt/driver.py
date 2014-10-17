@@ -2493,7 +2493,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # Check if the instance is running already and avoid doing
         # anything if it is.
         try:
-            domain = self._lookup_by_name(instance['name'])
+            domain = self._lookup_by_name(instance.name)
             state = LIBVIRT_POWER_STATE[domain.info()[0]]
 
             ignored_states = (power_state.RUNNING,

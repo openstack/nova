@@ -7449,8 +7449,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
         self.stubs.Set(conn, '_hard_reboot', fake_hard_reboot)
-        instance = {"name": "instancename", "id": "instanceid",
-                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        instance_details = {"name": "instancename", "id": 1,
+                            "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        instance = fake_instance.fake_instance_obj(
+            self.context, **instance_details)
         network_info = _fake_network_info(self.stubs, 1)
 
         conn.resume_state_on_host_boot(self.context, instance, network_info,
@@ -7485,7 +7487,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_resume_state_on_host_boot_with_instance_not_found_on_driver(self):
         called = {'count': 0}
-        instance = {'name': 'test'}
+        instance_details = {'name': 'test'}
+        instance = fake_instance.fake_instance_obj(
+            self.context, **instance_details)
 
         def fake_lookup_by_name(instance_name):
             raise exception.InstanceNotFound(instance_id='fake')
