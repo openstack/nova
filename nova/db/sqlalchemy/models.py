@@ -322,7 +322,7 @@ class InstanceExtra(BASE, NovaBase):
     numa_topology = Column(Text)
     pci_requests = Column(Text)
     instance = orm.relationship(Instance,
-                            backref=orm.backref('numa_topology',
+                            backref=orm.backref('extra',
                                                 uselist=False),
                             foreign_keys=instance_uuid,
                             primaryjoin=instance_uuid == Instance.uuid)
