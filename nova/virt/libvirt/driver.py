@@ -1489,7 +1489,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def detach_volume(self, connection_info, instance, mountpoint,
                       encryption=None):
-        instance_name = instance['name']
+        instance_name = instance.name
         disk_dev = mountpoint.rpartition("/")[2]
         try:
             virt_dom = self._lookup_by_name(instance_name)
