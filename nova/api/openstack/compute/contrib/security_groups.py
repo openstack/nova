@@ -20,6 +20,7 @@ import contextlib
 from xml.dom import minidom
 
 from oslo.serialization import jsonutils
+import six
 import webob
 from webob import exc
 
@@ -390,7 +391,7 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
                               cidr=sg_rule.get('cidr'),
                               group_id=sg_rule.get('group_id'))
         except Exception as exp:
-            raise exc.HTTPBadRequest(explanation=unicode(exp))
+            raise exc.HTTPBadRequest(explanation=six.text_type(exp))
 
         if new_rule is None:
             msg = _("Not enough parameters to build a valid rule.")

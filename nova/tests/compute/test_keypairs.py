@@ -15,6 +15,7 @@
 """Tests for keypair API."""
 
 from oslo.config import cfg
+import six
 
 from nova.compute import api as compute_api
 from nova import context
@@ -117,7 +118,7 @@ class CreateImportSharedTestMixIn(object):
 
         exc = self.assertRaises(exc_class, func, self.ctxt, self.ctxt.user_id,
                                 name, *args)
-        self.assertEqual(expected_message, unicode(exc))
+        self.assertEqual(expected_message, six.text_type(exc))
 
     def assertInvalidKeypair(self, expected_message, name):
         msg = _('Keypair data is invalid: %s') % expected_message
@@ -188,7 +189,7 @@ class ImportKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
                                 self.ctxt, self.ctxt.user_id, 'foo',
                                 'bad key data')
         msg = u'Keypair data is invalid: failed to generate fingerprint'
-        self.assertEqual(msg, unicode(exc))
+        self.assertEqual(msg, six.text_type(exc))
 
 
 class GetKeypairTestCase(KeypairAPITestCase):

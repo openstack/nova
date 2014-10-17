@@ -13,6 +13,7 @@
 #    under the License.
 from xml.dom import minidom
 
+import six
 import webob
 from webob import exc
 
@@ -119,7 +120,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
                 ip_protocol=sg_rule.get('ip_protocol'),
                 cidr=sg_rule.get('cidr'))
         except Exception as exp:
-            raise exc.HTTPBadRequest(explanation=unicode(exp))
+            raise exc.HTTPBadRequest(explanation=six.text_type(exp))
 
         if values is None:
             msg = _('Not enough parameters to build a valid rule.')

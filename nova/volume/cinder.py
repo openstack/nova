@@ -395,7 +395,7 @@ class API(object):
         except cinder_exception.OverLimit:
             raise exception.OverQuota(overs='volumes')
         except cinder_exception.BadRequest as e:
-            raise exception.InvalidInput(reason=unicode(e))
+            raise exception.InvalidInput(reason=e)
 
     @translate_volume_exception
     def delete(self, context, volume_id):

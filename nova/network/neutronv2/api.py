@@ -21,6 +21,7 @@ import uuid
 from neutronclient.common import exceptions as neutron_client_exc
 from oslo.config import cfg
 from oslo.utils import excutils
+import six
 
 from nova.api.openstack import extensions
 from nova.compute import flavors
@@ -1151,9 +1152,9 @@ class API(base_api.NetworkAPI):
             fip = client.create_floatingip(param)
         except (neutron_client_exc.IpAddressGenerationFailureClient,
                 neutron_client_exc.ExternalIpAddressExhaustedClient) as e:
-            raise exception.NoMoreFloatingIps(unicode(e))
+            raise exception.NoMoreFloatingIps(six.text_type(e))
         except neutron_client_exc.OverQuotaClient as e:
-            raise exception.FloatingIpLimitExceeded(unicode(e))
+            raise exception.FloatingIpLimitExceeded(six.text_type(e))
 
         return fip['floatingip']['floating_ip_address']
 

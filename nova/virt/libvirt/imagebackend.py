@@ -276,7 +276,7 @@ class Image(object):
             except (TypeError, ValueError) as e:
                 msg = (_("Could not load line %(line)s, got error "
                         "%(error)s") %
-                        {'line': line, 'error': unicode(e)})
+                        {'line': line, 'error': e})
                 raise exception.InvalidDiskInfo(reason=msg)
 
         @utils.synchronized(self.disk_info_path, external=False,
@@ -313,7 +313,7 @@ class Image(object):
                 fileutils.ensure_tree(os.path.dirname(self.disk_info_path))
                 write_to_disk_info_file()
         except OSError as e:
-            raise exception.DiskInfoReadWriteFail(reason=unicode(e))
+            raise exception.DiskInfoReadWriteFail(reason=six.text_type(e))
         return driver_format
 
     @staticmethod

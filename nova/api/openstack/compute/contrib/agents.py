@@ -97,7 +97,7 @@ class AgentController(object):
             md5hash = para['md5hash']
             version = para['version']
         except (TypeError, KeyError) as ex:
-            msg = _("Invalid request body: %s") % unicode(ex)
+            msg = _("Invalid request body: %s") % ex
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
@@ -115,7 +115,7 @@ class AgentController(object):
             agent.md5hash = md5hash
             agent.save()
         except ValueError as ex:
-            msg = _("Invalid request body: %s") % unicode(ex)
+            msg = _("Invalid request body: %s") % ex
             raise webob.exc.HTTPBadRequest(explanation=msg)
         except exception.AgentBuildNotFound as ex:
             raise webob.exc.HTTPNotFound(explanation=ex.format_message())
@@ -153,7 +153,7 @@ class AgentController(object):
             url = agent['url']
             md5hash = agent['md5hash']
         except (TypeError, KeyError) as ex:
-            msg = _("Invalid request body: %s") % unicode(ex)
+            msg = _("Invalid request body: %s") % ex
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
