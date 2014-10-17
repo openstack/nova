@@ -1632,7 +1632,8 @@ class ComputeManager(manager.Manager):
             LOG.warn(_("Treating negative config value (%(retries)s) for "
                        "'network_allocate_retries' as 0."),
                      {'retries': retries})
-        attempts = retries > 1 and retries + 1 or 1
+            retries = 0
+        attempts = retries + 1
         retry_time = 1
         for attempt in range(1, attempts + 1):
             try:
