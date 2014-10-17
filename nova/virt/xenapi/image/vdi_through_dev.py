@@ -32,19 +32,19 @@ class VdiThroughDevStore(object):
     disk inside a tgz.
     """
 
-    def upload_image(self, context, session, instance, vdi_uuids, image_id):
+    def upload_image(self, context, session, instance, image_id, vdi_uuids):
         command = UploadToGlanceAsRawTgz(
-            context, session, instance, vdi_uuids, image_id)
+            context, session, instance, image_id, vdi_uuids)
         return command.upload_image()
 
-    def download_image(self, context, session, image_id):
+    def download_image(self, context, session, instance, image_id):
         # TODO(matelakat) Move through-dev image download functionality to this
         # method.
         raise NotImplementedError()
 
 
 class UploadToGlanceAsRawTgz(object):
-    def __init__(self, context, session, instance, vdi_uuids, image_id):
+    def __init__(self, context, session, instance, image_id, vdi_uuids):
         self.context = context
         self.image_id = image_id
         self.session = session

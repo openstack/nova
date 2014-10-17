@@ -823,8 +823,9 @@ class VMOps(object):
             self.image_upload_handler.upload_image(context,
                                                    self._session,
                                                    instance,
+                                                   image_id,
                                                    vdi_uuids,
-                                                   image_id)
+                                                   )
 
         LOG.debug("Finished snapshot and upload for VM",
                   instance=instance)

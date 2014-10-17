@@ -34,14 +34,14 @@ class TestDelegatingToCommand(test.NoDBTestCase):
         command = self.mox.CreateMock(vdi_through_dev.UploadToGlanceAsRawTgz)
         self.mox.StubOutWithMock(vdi_through_dev, 'UploadToGlanceAsRawTgz')
         vdi_through_dev.UploadToGlanceAsRawTgz(
-            'ctx', 'session', 'instance', 'vdis', 'image_id').AndReturn(
+            'ctx', 'session', 'instance', 'image_id', 'vdis').AndReturn(
                 command)
         command.upload_image().AndReturn('result')
         self.mox.ReplayAll()
 
         store = vdi_through_dev.VdiThroughDevStore()
         result = store.upload_image(
-            'ctx', 'session', 'instance', 'vdis', 'image_id')
+            'ctx', 'session', 'instance', 'image_id', 'vdis')
 
         self.assertEqual('result', result)
 
@@ -49,7 +49,7 @@ class TestDelegatingToCommand(test.NoDBTestCase):
 class TestUploadToGlanceAsRawTgz(test.NoDBTestCase):
     def test_upload_image(self):
         store = vdi_through_dev.UploadToGlanceAsRawTgz(
-            'context', 'session', 'instance', ['vdi0', 'vdi1'], 'id')
+            'context', 'session', 'instance', 'id', ['vdi0', 'vdi1'])
         self.mox.StubOutWithMock(store, '_perform_upload')
         self.mox.StubOutWithMock(store, '_get_vdi_ref')
         self.mox.StubOutWithMock(vdi_through_dev, 'glance')
@@ -74,7 +74,7 @@ class TestUploadToGlanceAsRawTgz(test.NoDBTestCase):
         consumer = self.mox.CreateMock(glance.UpdateGlanceImage)
         pool = self.mox.CreateMock(eventlet.GreenPool)
         store = vdi_through_dev.UploadToGlanceAsRawTgz(
-            'context', 'session', 'instance', ['vdi0', 'vdi1'], 'id')
+            'context', 'session', 'instance', 'id', ['vdi0', 'vdi1'])
         self.mox.StubOutWithMock(store, '_create_pipe')
         self.mox.StubOutWithMock(store, '_get_virtual_size')
         self.mox.StubOutWithMock(producer, 'get_metadata')
@@ -102,7 +102,7 @@ class TestUploadToGlanceAsRawTgz(test.NoDBTestCase):
     def test__get_vdi_ref(self):
         session = self.mox.CreateMock(xenapi_session.XenAPISession)
         store = vdi_through_dev.UploadToGlanceAsRawTgz(
-            'context', session, 'instance', ['vdi0', 'vdi1'], 'id')
+            'context', session, 'instance', 'id', ['vdi0', 'vdi1'])
         session.call_xenapi('VDI.get_by_uuid', 'vdi0').AndReturn('vdi_ref')
 
         self.mox.ReplayAll()
@@ -112,7 +112,7 @@ class TestUploadToGlanceAsRawTgz(test.NoDBTestCase):
     def test__get_virtual_size(self):
         session = self.mox.CreateMock(xenapi_session.XenAPISession)
         store = vdi_through_dev.UploadToGlanceAsRawTgz(
-            'context', session, 'instance', ['vdi0', 'vdi1'], 'id')
+            'context', session, 'instance', 'id', ['vdi0', 'vdi1'])
         self.mox.StubOutWithMock(store, '_get_vdi_ref')
         store._get_vdi_ref().AndReturn('vdi_ref')
         session.call_xenapi('VDI.get_virtual_size', 'vdi_ref')
@@ -123,7 +123,7 @@ class TestUploadToGlanceAsRawTgz(test.NoDBTestCase):
 
     def test__create_pipe(self):
         store = vdi_through_dev.UploadToGlanceAsRawTgz(
-            'context', 'session', 'instance', ['vdi0', 'vdi1'], 'id')
+            'context', 'session', 'instance', 'id', ['vdi0', 'vdi1'])
         self.mox.StubOutWithMock(vdi_through_dev, 'os')
         self.mox.StubOutWithMock(vdi_through_dev, 'greenio')
         vdi_through_dev.os.pipe().AndReturn(('rpipe', 'wpipe'))

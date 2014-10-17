@@ -91,7 +91,7 @@ class BittorrentStore(object):
 
         return fn
 
-    def download_image(self, context, session, image_id):
+    def download_image(self, context, session, instance, image_id):
         params = {}
         params['image_id'] = image_id
         params['uuid_stack'] = vm_utils._make_uuid_stack()
@@ -117,5 +117,5 @@ class BittorrentStore(object):
 
         return vdis
 
-    def upload_image(self, context, session, instance, vdi_uuids, image_id):
+    def upload_image(self, context, session, instance, image_id, vdi_uuids):
         raise NotImplementedError

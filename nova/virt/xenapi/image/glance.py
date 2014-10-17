@@ -43,7 +43,7 @@ class GlanceStore(object):
                 'sr_path': vm_utils.get_sr_path(session),
                 'extra_headers': glance.generate_identity_headers(context)}
 
-    def download_image(self, context, session, image_id):
+    def download_image(self, context, session, instance, image_id):
         params = self._make_params(context, session, image_id)
         params['uuid_stack'] = vm_utils._make_uuid_stack()
 
@@ -54,7 +54,7 @@ class GlanceStore(object):
 
         return vdis
 
-    def upload_image(self, context, session, instance, vdi_uuids, image_id):
+    def upload_image(self, context, session, instance, image_id, vdi_uuids):
         params = self._make_params(context, session, image_id)
         params['vdi_uuids'] = vdi_uuids
 

@@ -1424,7 +1424,7 @@ def _fetch_vhd_image(context, session, instance, image_id):
     handler = _choose_download_handler(context, instance)
 
     try:
-        vdis = handler.download_image(context, session, image_id)
+        vdis = handler.download_image(context, session, instance, image_id)
     except Exception:
         default_handler = _default_download_handler()
 
@@ -1440,7 +1440,7 @@ def _fetch_vhd_image(context, session, instance, image_id):
                          'default_handler': default_handler})
 
         vdis = default_handler.download_image(
-                context, session, image_id)
+                context, session, instance, image_id)
 
     # Ensure we can see the import VHDs as VDIs
     scan_default_sr(session)

@@ -57,6 +57,7 @@ class TestBittorrentStore(stubs.XenAPITestBaseNoDB):
 
     def test_download_image(self):
 
+        instance = {'uuid': '00000000-0000-0000-0000-000000007357'}
         params = {'image_id': 'fake_image_uuid',
                   'sr_path': '/fake/sr/path',
                   'torrent_download_stall_cutoff': 600,
@@ -78,14 +79,14 @@ class TestBittorrentStore(stubs.XenAPITestBaseNoDB):
         self.mox.ReplayAll()
 
         self.store.download_image(self.context, self.session,
-                                  'fake_image_uuid')
+                                  instance, 'fake_image_uuid')
 
         self.mox.VerifyAll()
 
     def test_upload_image(self):
         self.assertRaises(NotImplementedError, self.store.upload_image,
-                self.context, self.session, mox.IgnoreArg, ['fake_vdi_uuid'],
-                'fake_image_uuid')
+                self.context, self.session, mox.IgnoreArg, 'fake_image_uuid',
+                ['fake_vdi_uuid'])
 
 
 def bad_fetcher(image_id):

@@ -86,7 +86,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         self.mox.ReplayAll()
 
         self.store.download_image(self.context, self.session,
-                                  'fake_image_uuid')
+                                  self.instance, 'fake_image_uuid')
 
         self.mox.VerifyAll()
 
@@ -127,7 +127,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
             mock_call_plugin_serialized.side_effect = [error, "success"]
 
             self.store.download_image(self.context, self.session,
-                                      'fake_image_uuid')
+                                      self.instance, 'fake_image_uuid')
 
             mock_call_plugin_serialized.assert_has_calls(calls)
             mock_log_debug.assert_has_calls(log_calls, any_order=True)
@@ -148,7 +148,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
 
         self.mox.ReplayAll()
         self.store.upload_image(self.context, self.session, self.instance,
-                                ['fake_vdi_uuid'], 'fake_image_uuid')
+                                'fake_image_uuid', ['fake_vdi_uuid'])
         self.mox.VerifyAll()
 
     def test_upload_image(self):
@@ -177,7 +177,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
 
         self.assertRaises(RuntimeError, self.store.upload_image,
                           self.context, self.session, self.instance,
-                          ['fake_vdi_uuid'], 'fake_image_uuid')
+                          'fake_image_uuid', ['fake_vdi_uuid'])
         self.mox.VerifyAll()
 
     def test_upload_image_retries_then_raises_exception(self):
@@ -201,7 +201,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         self.assertRaises(exception.CouldNotUploadImage,
                           self.store.upload_image,
                           self.context, self.session, self.instance,
-                          ['fake_vdi_uuid'], 'fake_image_uuid')
+                          'fake_image_uuid', ['fake_vdi_uuid'])
         self.mox.VerifyAll()
 
     def test_upload_image_retries_on_signal_exception(self):
@@ -226,5 +226,5 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         self.mox.ReplayAll()
 
         self.store.upload_image(self.context, self.session, self.instance,
-                                ['fake_vdi_uuid'], 'fake_image_uuid')
+                                'fake_image_uuid', ['fake_vdi_uuid'])
         self.mox.VerifyAll()
