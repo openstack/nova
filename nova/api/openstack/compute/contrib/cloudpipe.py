@@ -81,8 +81,8 @@ class CloudpipeController(object):
                 if pipelib.is_vpn_image(instance['image_ref'])
                 and instance['vm_state'] != vm_states.DELETED]
 
-    def _get_cloudpipe_for_project(self, context, project_id):
-        """Get the cloudpipe instance for a project ID."""
+    def _get_cloudpipe_for_project(self, context):
+        """Get the cloudpipe instance for a project from context."""
         cloudpipes = self._get_all_cloudpipes(context) or [None]
         return cloudpipes[0]
 
@@ -143,7 +143,7 @@ class CloudpipeController(object):
         context.user_id = 'project-vpn'
         context.is_admin = False
         context.roles = []
-        instance = self._get_cloudpipe_for_project(context, project_id)
+        instance = self._get_cloudpipe_for_project(context)
         if not instance:
             try:
                 result = self.cloudpipe.launch_vpn_instance(context)
