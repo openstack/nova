@@ -1,6 +1,5 @@
 {
     "domain_entry": {
-        "domain": "domain1.example.org",
         "scope": "public",
         "project": "project1"
     }
