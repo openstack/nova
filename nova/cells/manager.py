@@ -76,7 +76,7 @@ class CellsManager(manager.Manager):
     Scheduling requests get passed to the scheduler class.
     """
 
-    target = oslo_messaging.Target(version='1.35')
+    target = oslo_messaging.Target(version='1.36')
 
     def __init__(self, *args, **kwargs):
         LOG.warning(_LW('The cells feature of Nova is considered experimental '
@@ -520,9 +520,12 @@ class CellsManager(manager.Manager):
         """Resume an instance in its cell."""
         self.msg_runner.resume_instance(ctxt, instance)
 
-    def terminate_instance(self, ctxt, instance):
+    def terminate_instance(self, ctxt, instance, delete_type='delete'):
         """Delete an instance in its cell."""
-        self.msg_runner.terminate_instance(ctxt, instance)
+        # NOTE(rajesht): The `delete_type` parameter is passed so that it will
+        # be routed to destination cell, where instance deletion will happen.
+        self.msg_runner.terminate_instance(ctxt, instance,
+                                           delete_type=delete_type)
 
     def soft_delete_instance(self, ctxt, instance):
         """Soft-delete an instance in its cell."""

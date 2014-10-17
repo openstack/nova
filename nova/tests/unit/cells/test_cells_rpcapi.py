@@ -634,10 +634,12 @@ class CellsAPITestCase(test.NoDBTestCase):
         call_info = self._stub_rpc_method('cast', None)
 
         self.cells_rpcapi.terminate_instance(self.fake_context,
-                                             'fake-instance', [])
-        expected_args = {'instance': 'fake-instance'}
+                                             'fake-instance', [],
+                                             delete_type='delete')
+        expected_args = {'instance': 'fake-instance',
+                         'delete_type': 'delete'}
         self._check_result(call_info, 'terminate_instance',
-                           expected_args, version='1.18')
+                           expected_args, version='1.36')
 
     def test_soft_delete_instance(self):
         call_info = self._stub_rpc_method('cast', None)

@@ -832,7 +832,7 @@ class _TargetedMessageMethods(_BaseMessageMethods):
                 self.msg_runner.instance_destroy_at_top(ctxt,
                                                         instance)
         except exception.InstanceInfoCacheNotFound:
-            if method != 'delete':
+            if method not in ('delete', 'force_delete'):
                 raise
 
         fn = getattr(self.compute_api, method, None)
@@ -865,8 +865,8 @@ class _TargetedMessageMethods(_BaseMessageMethods):
     def get_host_uptime(self, message, host_name):
         return self.host_api.get_host_uptime(message.ctxt, host_name)
 
-    def terminate_instance(self, message, instance):
-        self._call_compute_api_with_obj(message.ctxt, instance, 'delete')
+    def terminate_instance(self, message, instance, delete_type='delete'):
+        self._call_compute_api_with_obj(message.ctxt, instance, delete_type)
 
     def soft_delete_instance(self, message, instance):
         self._call_compute_api_with_obj(message.ctxt, instance, 'soft_delete')
@@ -1711,8 +1711,10 @@ class MessageRunner(object):
         """Resume an instance in its cell."""
         self._instance_action(ctxt, instance, 'resume_instance')
 
-    def terminate_instance(self, ctxt, instance):
-        self._instance_action(ctxt, instance, 'terminate_instance')
+    def terminate_instance(self, ctxt, instance, delete_type='delete'):
+        extra_kwargs = dict(delete_type=delete_type)
+        self._instance_action(ctxt, instance, 'terminate_instance',
+                              extra_kwargs=extra_kwargs)
 
     def soft_delete_instance(self, ctxt, instance):
         self._instance_action(ctxt, instance, 'soft_delete_instance')

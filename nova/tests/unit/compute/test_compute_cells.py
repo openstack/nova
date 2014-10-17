@@ -138,17 +138,18 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
     def test_error_evacuate(self):
         self.skipTest("Test is incompatible with cells.")
 
-    def test_delete_instance_no_cell(self):
+    def _test_delete_instance_no_cell(self, method_name):
         cells_rpcapi = self.compute_api.cells_rpcapi
         self.mox.StubOutWithMock(cells_rpcapi,
                                  'instance_delete_everywhere')
         inst = self._create_fake_instance_obj()
+        delete_type = method_name == 'soft_delete' and 'soft' or 'hard'
         cells_rpcapi.instance_delete_everywhere(self.context,
-                inst, 'hard')
+                inst, delete_type)
         self.mox.ReplayAll()
         self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
                        lambda *a, **kw: None)
-        self.compute_api.delete(self.context, inst)
+        getattr(self.compute_api, method_name)(self.context, inst)
 
     def test_delete_instance_no_cell_constraint_failure_does_not_loop(self):
         with mock.patch.object(self.compute_api.cells_rpcapi,
@@ -241,16 +242,13 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         _test()
 
     def test_soft_delete_instance_no_cell(self):
-        cells_rpcapi = self.compute_api.cells_rpcapi
-        self.mox.StubOutWithMock(cells_rpcapi,
-                                 'instance_delete_everywhere')
-        inst = self._create_fake_instance_obj()
-        cells_rpcapi.instance_delete_everywhere(self.context,
-                inst, 'soft')
-        self.mox.ReplayAll()
-        self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
-                       lambda *a, **kw: None)
-        self.compute_api.soft_delete(self.context, inst)
+        self._test_delete_instance_no_cell('soft_delete')
+
+    def test_delete_instance_no_cell(self):
+        self._test_delete_instance_no_cell('delete')
+
+    def test_force_delete_instance_no_cell(self):
+        self._test_delete_instance_no_cell('force_delete')
 
     def test_get_migrations(self):
         filters = {'cell_name': 'ChildCell', 'status': 'confirmed'}
