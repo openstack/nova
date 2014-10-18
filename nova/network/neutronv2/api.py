@@ -210,6 +210,11 @@ class API(base_api.NetworkAPI):
             LOG.debug('Successfully created port: %s', port_id,
                       instance=instance)
             return port_id
+        except neutron_client_exc.IpAddressInUseClient:
+            LOG.warning(_LW('Neutron error: Fixed IP %s is '
+                            'already in use.'), fixed_ip)
+            msg = _("Fixed IP %s is already in use.") % fixed_ip
+            raise exception.FixedIpAlreadyInUse(message=msg)
         except neutron_client_exc.OverQuotaClient:
             LOG.warning(_LW(
                 'Neutron error: Port quota exceeded in tenant: %s'),
