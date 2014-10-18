@@ -90,10 +90,7 @@ class ImageSizeTestV21(test.NoDBTestCase):
         return res
 
     def _get_app(self):
-        return fakes.wsgi_app_v3()
-
-    def _get_url(self):
-        return '/v3'
+        return fakes.wsgi_app_v21()
 
     def _get_image(self, body):
         return jsonutils.loads(body).get('image')
@@ -105,7 +102,7 @@ class ImageSizeTestV21(test.NoDBTestCase):
         self.assertEqual(image.get('%s:size' % self.prefix), size)
 
     def test_show(self):
-        url = self._get_url() + '/images/1'
+        url = '/v2/fake/images/1'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
@@ -113,7 +110,7 @@ class ImageSizeTestV21(test.NoDBTestCase):
         self.assertImageSize(image, 12345678)
 
     def test_detail(self):
-        url = self._get_url() + '/images/detail'
+        url = '/v2/fake/images/detail'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
@@ -125,9 +122,6 @@ class ImageSizeTestV21(test.NoDBTestCase):
 class ImageSizeTestV2(ImageSizeTestV21):
     def _get_app(self):
         return fakes.wsgi_app()
-
-    def _get_url(self):
-        return '/v2/fake'
 
 
 class ImageSizeXmlTest(ImageSizeTestV2):
