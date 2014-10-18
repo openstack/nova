@@ -23,10 +23,10 @@ Responses for APIv3 are taken care of by the request_id middleware provided
 in oslo.
 """
 
+from oslo.middleware import base
 import webob.dec
 
 from nova.openstack.common import context
-from nova.openstack.common.middleware import base
 
 
 ENV_REQUEST_ID = 'openstack.request_id'
