@@ -1638,7 +1638,7 @@ def fake_get_instances_security_groups_bindings(inst, context, servers):
 
 
 class SecurityGroupsOutputTestV21(test.TestCase):
-    base_url = '/v3/servers'
+    base_url = '/v2/fake/servers'
     content_type = 'application/json'
 
     def setUp(self):
@@ -1654,7 +1654,7 @@ class SecurityGroupsOutputTestV21(test.TestCase):
         self.app = self._setup_app()
 
     def _setup_app(self):
-        return fakes.wsgi_app_v3(init_only=('os-security-groups', 'servers'))
+        return fakes.wsgi_app_v21(init_only=('os-security-groups', 'servers'))
 
     def _make_request(self, url, body=None):
         req = webob.Request.blank(url)
@@ -1721,7 +1721,6 @@ class SecurityGroupsOutputTestV21(test.TestCase):
 
 
 class SecurityGroupsOutputTestV2(SecurityGroupsOutputTestV21):
-    base_url = '/v2/fake/servers'
 
     def _setup_app(self):
         return fakes.wsgi_app(init_only=('servers',))

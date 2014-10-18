@@ -82,10 +82,10 @@ class ServerGroupQuotasTestV21(test.TestCase):
         self.controller = sg_v3.ServerGroupController()
 
     def _get_app(self):
-        return fakes.wsgi_app_v3(init_only=('os-server-groups',))
+        return fakes.wsgi_app_v21(init_only=('os-server-groups',))
 
     def _get_url(self):
-        return '/v3'
+        return '/v2/fake'
 
     def _setup_quotas(self):
         pass
@@ -179,6 +179,3 @@ class ServerGroupQuotasTestV2(ServerGroupQuotasTestV21):
 
     def _get_app(self):
         return fakes.wsgi_app(init_only=('os-server-groups',))
-
-    def _get_url(self):
-        return '/v2/fake'

@@ -106,8 +106,8 @@ def fake_instance_get_active_by_window_joined(context, begin, end,
 @mock.patch.object(db, 'instance_get_active_by_window_joined',
                    fake_instance_get_active_by_window_joined)
 class SimpleTenantUsageTestV21(test.TestCase):
-    url = '/v3/os-simple-tenant-usage'
-    alt_url = '/v3/os-simple-tenant-usage'
+    url = '/v2/faketenant_0/os-simple-tenant-usage'
+    alt_url = '/v2/faketenant_1/os-simple-tenant-usage'
     policy_rule_prefix = "compute_extension:v3:os-simple-tenant-usage"
 
     def setUp(self):
@@ -123,9 +123,9 @@ class SimpleTenantUsageTestV21(test.TestCase):
                                                        is_admin=False)
 
     def _get_wsgi_app(self, context):
-        return fakes.wsgi_app_v3(fake_auth_context=context,
-                                 init_only=('servers',
-                                            'os-simple-tenant-usage'))
+        return fakes.wsgi_app_v21(fake_auth_context=context,
+                                  init_only=('servers',
+                                             'os-simple-tenant-usage'))
 
     def _test_verify_index(self, start, stop):
         req = webob.Request.blank(
@@ -283,8 +283,6 @@ class SimpleTenantUsageTestV21(test.TestCase):
 
 
 class SimpleTenantUsageTestV2(SimpleTenantUsageTestV21):
-    url = '/v2/faketenant_0/os-simple-tenant-usage'
-    alt_url = '/v2/faketenant_1/os-simple-tenant-usage'
     policy_rule_prefix = "compute_extension:simple_tenant_usage"
 
     def _get_wsgi_app(self, context):
