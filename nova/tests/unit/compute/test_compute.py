@@ -2373,6 +2373,26 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context, instance, [], [])
 
+    def test_resume_notifications(self):
+        # ensure instance can be suspended and resumed.
+        instance = self._create_fake_instance_obj()
+        self.compute.run_instance(self.context, instance, {}, {}, [], None,
+                None, True, None, False)
+        instance.task_state = task_states.SUSPENDING
+        instance.save()
+        self.compute.suspend_instance(self.context, instance)
+        instance.task_state = task_states.RESUMING
+        instance.save()
+        self.compute.resume_instance(self.context, instance)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 5)
+        msg = fake_notifier.NOTIFICATIONS[3]
+        self.assertEqual(msg.event_type,
+                         'compute.instance.resume.start')
+        msg = fake_notifier.NOTIFICATIONS[4]
+        self.assertEqual(msg.event_type,
+                         'compute.instance.resume.end')
+        self.compute.terminate_instance(self.context, instance, [], [])
+
     def test_resume_no_old_state(self):
         # ensure a suspended instance with no old_vm_state is resumed to the
         # ACTIVE state

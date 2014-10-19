@@ -4071,6 +4071,7 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         LOG.audit(_('Resuming'), context=context, instance=instance)
 
+        self._notify_about_instance_usage(context, instance, 'resume.start')
         network_info = self._get_instance_nw_info(context, instance)
         block_device_info = self._get_instance_block_device_info(
                             context, instance)
@@ -4086,7 +4087,7 @@ class ComputeManager(manager.Manager):
 
         instance.task_state = None
         instance.save(expected_task_state=task_states.RESUMING)
-        self._notify_about_instance_usage(context, instance, 'resume')
+        self._notify_about_instance_usage(context, instance, 'resume.end')
 
     @wrap_exception()
     @reverts_task_state
