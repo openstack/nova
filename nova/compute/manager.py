@@ -4055,7 +4055,7 @@ class ComputeManager(manager.Manager):
         instance.system_metadata['old_vm_state'] = instance.vm_state
 
         with self._error_out_instance_on_exception(context, instance,
-             instance_state=instance['vm_state']):
+             instance_state=instance.vm_state):
             self.driver.suspend(instance)
         current_power_state = self._get_power_state(context, instance)
         instance.power_state = current_power_state
