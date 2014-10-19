@@ -34,7 +34,10 @@ CONF = cfg.CONF
 
 
 class LibvirtUtilsTestCase(test.NoDBTestCase):
-    def test_get_disk_type(self):
+
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('nova.utils.execute')
+    def test_get_disk_type(self, mock_execute, mock_exists):
         path = "disk.config"
         example_output = """image: disk.config
 file format: raw
@@ -43,14 +46,12 @@ cluster_size: 65536
 disk size: 96K
 blah BLAH: bb
 """
-        self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(utils, 'execute')
-        os.path.exists(path).AndReturn(True)
-        utils.execute('env', 'LC_ALL=C', 'LANG=C',
-                      'qemu-img', 'info', path).AndReturn((example_output, ''))
-        self.mox.ReplayAll()
+        mock_execute.return_value = (example_output, '')
         disk_type = libvirt_utils.get_disk_type(path)
-        self.assertEqual(disk_type, 'raw')
+        mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
+                                             'qemu-img', 'info', path)
+        mock_exists.assert_called_once_with(path)
+        self.assertEqual('raw', disk_type)
 
     @mock.patch('nova.utils.execute')
     def test_copy_image_local_cp(self, mock_execute):
@@ -85,7 +86,8 @@ blah BLAH: bb
         ])
         self.assertEqual(2, mock_execute.call_count)
 
-    def test_disk_type(self):
+    @mock.patch('os.path.exists', return_value=True)
+    def test_disk_type(self, mock_exists):
         # Seems like lvm detection
         # if its in /dev ??
         for p in ['/dev/b', '/dev/blah/blah']:
@@ -109,17 +111,17 @@ disk size: 96K
                 'format': f,
                 'path': path,
             })
-            self.mox.StubOutWithMock(os.path, 'exists')
-            self.mox.StubOutWithMock(utils, 'execute')
-            os.path.exists(path).AndReturn(True)
-            utils.execute('env', 'LC_ALL=C', 'LANG=C',
-                          'qemu-img', 'info', path).AndReturn((output, ''))
-            self.mox.ReplayAll()
-            d_type = libvirt_utils.get_disk_type(path)
-            self.assertEqual(f, d_type)
-            self.mox.UnsetStubs()
+            with mock.patch('nova.utils.execute',
+                return_value=(output, '')) as mock_execute:
+                d_type = libvirt_utils.get_disk_type(path)
+                mock_execute.assert_called_once_with(
+                    'env', 'LC_ALL=C', 'LANG=C',
+                    'qemu-img', 'info', path)
+                self.assertEqual(f, d_type)
 
-    def test_disk_backing(self):
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('nova.utils.execute')
+    def test_disk_backing(self, mock_execute, mock_exists):
         path = '/myhome/disk.config'
         template_output = """image: %(path)s
 file format: raw
@@ -130,16 +132,21 @@ disk size: 96K
         output = template_output % ({
             'path': path,
         })
-        self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(utils, 'execute')
-        os.path.exists(path).AndReturn(True)
-        utils.execute('env', 'LC_ALL=C', 'LANG=C',
-                      'qemu-img', 'info', path).AndReturn((output, ''))
-        self.mox.ReplayAll()
+        mock_execute.return_value = (output, '')
         d_backing = libvirt_utils.get_disk_backing_file(path)
+        mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
+                                             'qemu-img', 'info', path)
+        mock_exists.assert_called_once_with(path)
         self.assertIsNone(d_backing)
 
-    def test_disk_size(self):
+    def _test_disk_size(self, mock_execute, path, expected_size):
+        d_size = libvirt_utils.get_disk_size(path)
+        self.assertEqual(expected_size, d_size)
+        mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
+                                             'qemu-img', 'info', path)
+
+    @mock.patch('os.path.exists', return_value=True)
+    def test_disk_size(self, mock_exists):
         path = '/myhome/disk.config'
         template_output = """image: %(path)s
 file format: raw
@@ -156,31 +163,21 @@ disk size: 96K
                 'vsize_b': i,
                 'path': path,
             })
-            self.mox.StubOutWithMock(os.path, 'exists')
-            self.mox.StubOutWithMock(utils, 'execute')
-            os.path.exists(path).AndReturn(True)
-            utils.execute('env', 'LC_ALL=C', 'LANG=C',
-                          'qemu-img', 'info', path).AndReturn((output, ''))
-            self.mox.ReplayAll()
-            d_size = libvirt_utils.get_disk_size(path)
-            self.assertEqual(i, d_size)
-            self.mox.UnsetStubs()
+            with mock.patch('nova.utils.execute',
+                return_value=(output, '')) as mock_execute:
+                self._test_disk_size(mock_execute, path, i)
             output = template_output % ({
                 'v_size': "%sK" % (kbytes),
                 'vsize_b': i,
                 'path': path,
             })
-            self.mox.StubOutWithMock(os.path, 'exists')
-            self.mox.StubOutWithMock(utils, 'execute')
-            os.path.exists(path).AndReturn(True)
-            utils.execute('env', 'LC_ALL=C', 'LANG=C',
-                          'qemu-img', 'info', path).AndReturn((output, ''))
-            self.mox.ReplayAll()
-            d_size = libvirt_utils.get_disk_size(path)
-            self.assertEqual(i, d_size)
-            self.mox.UnsetStubs()
+            with mock.patch('nova.utils.execute',
+                return_value=(output, '')) as mock_execute:
+                self._test_disk_size(mock_execute, path, i)
 
-    def test_qemu_info_canon(self):
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('nova.utils.execute')
+    def test_qemu_info_canon(self, mock_execute, mock_exists):
         path = "disk.config"
         example_output = """image: disk.config
 file format: raw
@@ -189,20 +186,20 @@ cluster_size: 65536
 disk size: 96K
 blah BLAH: bb
 """
-        self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(utils, 'execute')
-        os.path.exists(path).AndReturn(True)
-        utils.execute('env', 'LC_ALL=C', 'LANG=C',
-                      'qemu-img', 'info', path).AndReturn((example_output, ''))
-        self.mox.ReplayAll()
+        mock_execute.return_value = (example_output, '')
         image_info = images.qemu_img_info(path)
+        mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
+                                             'qemu-img', 'info', path)
+        mock_exists.assert_called_once_with(path)
         self.assertEqual('disk.config', image_info.image)
         self.assertEqual('raw', image_info.file_format)
         self.assertEqual(67108864, image_info.virtual_size)
         self.assertEqual(98304, image_info.disk_size)
         self.assertEqual(65536, image_info.cluster_size)
 
-    def test_qemu_info_canon2(self):
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('nova.utils.execute')
+    def test_qemu_info_canon2(self, mock_execute, mock_exists):
         path = "disk.config"
         example_output = """image: disk.config
 file format: QCOW2
@@ -211,13 +208,11 @@ cluster_size: 65536
 disk size: 963434
 backing file: /var/lib/nova/a328c7998805951a_2
 """
-        self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(utils, 'execute')
-        os.path.exists(path).AndReturn(True)
-        utils.execute('env', 'LC_ALL=C', 'LANG=C',
-                      'qemu-img', 'info', path).AndReturn((example_output, ''))
-        self.mox.ReplayAll()
+        mock_execute.return_value = (example_output, '')
         image_info = images.qemu_img_info(path)
+        mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
+                                             'qemu-img', 'info', path)
+        mock_exists.assert_called_once_with(path)
         self.assertEqual('disk.config', image_info.image)
         self.assertEqual('qcow2', image_info.file_format)
         self.assertEqual(67108844, image_info.virtual_size)
@@ -226,7 +221,10 @@ backing file: /var/lib/nova/a328c7998805951a_2
         self.assertEqual('/var/lib/nova/a328c7998805951a_2',
                          image_info.backing_file)
 
-    def test_qemu_backing_file_actual(self):
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('nova.utils.execute')
+    def test_qemu_backing_file_actual(self,
+                                      mock_execute, mock_exists):
         path = "disk.config"
         example_output = """image: disk.config
 file format: raw
@@ -238,13 +236,11 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
 1     d9a9784a500742a7bb95627bb3aace38      0 2012-08-20 10:52:46 00:00:00.000
 backing file: /var/lib/nova/a328c7998805951a_2 (actual path: /b/3a988059e51a_2)
 """
-        self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(utils, 'execute')
-        os.path.exists(path).AndReturn(True)
-        utils.execute('env', 'LC_ALL=C', 'LANG=C',
-                      'qemu-img', 'info', path).AndReturn((example_output, ''))
-        self.mox.ReplayAll()
+        mock_execute.return_value = (example_output, '')
         image_info = images.qemu_img_info(path)
+        mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
+                                             'qemu-img', 'info', path)
+        mock_exists.assert_called_once_with(path)
         self.assertEqual('disk.config', image_info.image)
         self.assertEqual('raw', image_info.file_format)
         self.assertEqual(67108864, image_info.virtual_size)
@@ -253,7 +249,9 @@ backing file: /var/lib/nova/a328c7998805951a_2 (actual path: /b/3a988059e51a_2)
         self.assertEqual('/b/3a988059e51a_2',
                          image_info.backing_file)
 
-    def test_qemu_info_convert(self):
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('nova.utils.execute')
+    def test_qemu_info_convert(self, mock_execute, mock_exists):
         path = "disk.config"
         example_output = """image: disk.config
 file format: raw
@@ -266,19 +264,19 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
 4        d9a9784a500742a7bb95627bb3aace38    0 2012-08-20 10:52:46 00:00:00.000
 junk stuff: bbb
 """
-        self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(utils, 'execute')
-        os.path.exists(path).AndReturn(True)
-        utils.execute('env', 'LC_ALL=C', 'LANG=C',
-                      'qemu-img', 'info', path).AndReturn((example_output, ''))
-        self.mox.ReplayAll()
+        mock_execute.return_value = (example_output, '')
         image_info = images.qemu_img_info(path)
+        mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
+                                             'qemu-img', 'info', path)
+        mock_exists.assert_called_once_with(path)
         self.assertEqual('disk.config', image_info.image)
         self.assertEqual('raw', image_info.file_format)
         self.assertEqual(67108864, image_info.virtual_size)
         self.assertEqual(98304, image_info.disk_size)
 
-    def test_qemu_info_snaps(self):
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('nova.utils.execute')
+    def test_qemu_info_snaps(self, mock_execute, mock_exists):
         path = "disk.config"
         example_output = """image: disk.config
 file format: raw
@@ -290,13 +288,11 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
 3        d9a9784a500742a7bb95627bb3aace38    0 2012-08-20 10:52:46 00:00:00.000
 4        d9a9784a500742a7bb95627bb3aace38    0 2012-08-20 10:52:46 00:00:00.000
 """
-        self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(utils, 'execute')
-        os.path.exists(path).AndReturn(True)
-        utils.execute('env', 'LC_ALL=C', 'LANG=C',
-                      'qemu-img', 'info', path).AndReturn((example_output, ''))
-        self.mox.ReplayAll()
+        mock_execute.return_value = (example_output, '')
         image_info = images.qemu_img_info(path)
+        mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
+                                             'qemu-img', 'info', path)
+        mock_exists.assert_called_once_with(path)
         self.assertEqual('disk.config', image_info.image)
         self.assertEqual('raw', image_info.file_format)
         self.assertEqual(67108864, image_info.virtual_size)
@@ -315,30 +311,27 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
     def test_valid_hostname_bad(self):
         self.assertFalse(libvirt_utils.is_valid_hostname("foo/?com=/bin/sh"))
 
-    def test_create_image(self):
-        self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('qemu-img', 'create', '-f', 'raw',
-                      '/some/path', '10G')
-        utils.execute('qemu-img', 'create', '-f', 'qcow2',
-                      '/some/stuff', '1234567891234')
-        # Start test
-        self.mox.ReplayAll()
+    @mock.patch('nova.utils.execute')
+    def test_create_image(self, mock_execute):
         libvirt_utils.create_image('raw', '/some/path', '10G')
         libvirt_utils.create_image('qcow2', '/some/stuff', '1234567891234')
+        expected_args = [(('qemu-img', 'create', '-f', 'raw',
+                           '/some/path', '10G'),),
+                         (('qemu-img', 'create', '-f', 'qcow2',
+                           '/some/stuff', '1234567891234'),)]
+        self.assertEqual(expected_args, mock_execute.call_args_list)
 
-    def test_create_cow_image(self):
-        self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(utils, 'execute')
-        rval = ('stdout', None)
-        os.path.exists('/some/path').AndReturn(True)
-        utils.execute('env', 'LC_ALL=C', 'LANG=C',
-                      'qemu-img', 'info', '/some/path').AndReturn(rval)
-        utils.execute('qemu-img', 'create', '-f', 'qcow2',
-                      '-o', 'backing_file=/some/path',
-                      '/the/new/cow')
-        # Start test
-        self.mox.ReplayAll()
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('nova.utils.execute')
+    def test_create_cow_image(self, mock_execute, mock_exists):
+        mock_execute.return_value = ('stdout', None)
         libvirt_utils.create_cow_image('/some/path', '/the/new/cow')
+        expected_args = [(('env', 'LC_ALL=C', 'LANG=C',
+                           'qemu-img', 'info', '/some/path'),),
+                         (('qemu-img', 'create', '-f', 'qcow2',
+                           '-o', 'backing_file=/some/path',
+                           '/the/new/cow'),)]
+        self.assertEqual(expected_args, mock_execute.call_args_list)
 
     def test_pick_disk_driver_name(self):
         type_map = {'kvm': ([True, 'qemu'], [False, 'qemu'], [None, 'qemu']),
@@ -364,19 +357,20 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
         result = libvirt_utils.pick_disk_driver_name(4000000, False)
         self.assertEqual(result, "tap")
 
-    def test_get_disk_size(self):
-        self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(utils, 'execute')
-        os.path.exists('/some/path').AndReturn(True)
-        utils.execute('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info',
-                      '/some/path').AndReturn(('''image: 00000001
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('nova.utils.execute')
+    def test_get_disk_size(self, mock_execute, mock_exists):
+        path = '/some/path'
+        example_output = """image: 00000001
 file format: raw
 virtual size: 4.4M (4592640 bytes)
-disk size: 4.4M''', ''))
-
-        # Start test
-        self.mox.ReplayAll()
-        self.assertEqual(disk.get_disk_size('/some/path'), 4592640)
+disk size: 4.4M
+"""
+        mock_execute.return_value = (example_output, '')
+        self.assertEqual(4592640, disk.get_disk_size('/some/path'))
+        mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
+                                             'qemu-img', 'info', path)
+        mock_exists.assert_called_once_with(path)
 
     def test_copy_image(self):
         dst_fd, dst_path = tempfile.mkstemp()
@@ -450,24 +444,26 @@ disk size: 4.4M''', ''))
                         '/some/path')
         mock_execute.assert_called_once_with(*execute_args, run_as_root=True)
 
-    def _do_test_extract_snapshot(self, dest_format='raw', out_format='raw'):
-        self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('qemu-img', 'convert', '-f', 'qcow2', '-O', out_format,
-                      '/path/to/disk/image', '/extracted/snap')
-
-        # Start test
-        self.mox.ReplayAll()
+    def _do_test_extract_snapshot(self, mock_execute,
+                                  dest_format='raw', out_format='raw'):
         libvirt_utils.extract_snapshot('/path/to/disk/image', 'qcow2',
                                        '/extracted/snap', dest_format)
+        mock_execute.assert_called_once_with(
+            'qemu-img', 'convert', '-f', 'qcow2', '-O', out_format,
+            '/path/to/disk/image', '/extracted/snap')
 
-    def test_extract_snapshot_raw(self):
-        self._do_test_extract_snapshot()
+    @mock.patch.object(utils, 'execute')
+    def test_extract_snapshot_raw(self, mock_execute):
+        self._do_test_extract_snapshot(mock_execute)
 
-    def test_extract_snapshot_iso(self):
-        self._do_test_extract_snapshot(dest_format='iso')
+    @mock.patch.object(utils, 'execute')
+    def test_extract_snapshot_iso(self, mock_execute):
+        self._do_test_extract_snapshot(mock_execute, dest_format='iso')
 
-    def test_extract_snapshot_qcow2(self):
-        self._do_test_extract_snapshot(dest_format='qcow2', out_format='qcow2')
+    @mock.patch.object(utils, 'execute')
+    def test_extract_snapshot_qcow2(self, mock_execute):
+        self._do_test_extract_snapshot(mock_execute,
+                                       dest_format='qcow2', out_format='qcow2')
 
     def test_load_file(self):
         dst_fd, dst_path = tempfile.mkstemp()
@@ -522,20 +518,18 @@ disk size: 4.4M''', ''))
         self.assertEqual(3686400, fs_info['free'])
         self.assertEqual(4096000, fs_info['used'])
 
-    def test_fetch_image(self):
-        self.mox.StubOutWithMock(images, 'fetch_to_raw')
-
+    @mock.patch('nova.virt.images.fetch_to_raw')
+    def test_fetch_image(self, mock_images):
         context = 'opaque context'
         target = '/tmp/targetfile'
         image_id = '4'
         user_id = 'fake'
         project_id = 'fake'
-        images.fetch_to_raw(context, image_id, target, user_id, project_id,
-                            max_size=0)
-
-        self.mox.ReplayAll()
         libvirt_utils.fetch_image(context, target, image_id,
                                   user_id, project_id)
+        mock_images.assert_called_once_with(
+            context, image_id, target, user_id, project_id,
+            max_size=0)
 
     def test_fetch_raw_image(self):
 
