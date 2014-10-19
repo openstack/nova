@@ -4079,8 +4079,10 @@ class ComputeManager(manager.Manager):
         block_device_info = self._get_instance_block_device_info(
                             context, instance)
 
-        self.driver.resume(context, instance, network_info,
-                           block_device_info)
+        with self._error_out_instance_on_exception(context, instance,
+             instance_state=instance.vm_state):
+            self.driver.resume(context, instance, network_info,
+                               block_device_info)
 
         instance.power_state = self._get_power_state(context, instance)
 

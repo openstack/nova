@@ -2409,6 +2409,26 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context, instance, [], [])
 
+    def test_resume_error(self):
+        # Ensure vm_state is ERROR when resume error occurs.
+        instance = self._create_fake_instance_obj()
+        self.compute.run_instance(self.context, instance, {}, {}, [], None,
+                None, True, None, False)
+        instance.task_state = task_states.SUSPENDING
+        instance.save()
+        self.compute.suspend_instance(self.context, instance)
+        instance.task_state = task_states.RESUMING
+        instance.save()
+        with mock.patch.object(self.compute.driver, 'resume',
+                               side_effect=test.TestingException):
+            self.assertRaises(test.TestingException,
+                              self.compute.resume_instance,
+                              self.context,
+                              instance)
+
+        instance = db.instance_get_by_uuid(self.context, instance.uuid)
+        self.assertEqual(vm_states.ERROR, instance.vm_state)
+
     def test_rebuild(self):
         # Ensure instance can be rebuilt.
         instance = self._create_fake_instance_obj()
