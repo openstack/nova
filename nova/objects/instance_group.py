@@ -32,7 +32,8 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
     # Version 1.6: Add get_by_name()
     # Version 1.7: Deprecate metadetails
     # Version 1.8: Add count_members_by_user()
-    VERSION = '1.8'
+    # Version 1.9: Add get_by_instance_uuid()
+    VERSION = '1.9'
 
     fields = {
         'id': fields.IntegerField(),
@@ -89,6 +90,11 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
                 return ig
 
         raise exception.InstanceGroupNotFound(group_uuid=name)
+
+    @base.remotable_classmethod
+    def get_by_instance_uuid(cls, context, instance_uuid):
+        db_inst = db.instance_group_get_by_instance(context, instance_uuid)
+        return cls._from_db_object(context, cls(), db_inst)
 
     @classmethod
     def get_by_hint(cls, context, hint):
@@ -196,7 +202,8 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
     # Version 1.3: InstanceGroup <= version 1.6
     # Version 1.4: InstanceGroup <= version 1.7
     # Version 1.5: InstanceGroup <= version 1.8
-    VERSION = '1.5'
+    # Version 1.6: InstanceGroup <= version 1.9
+    VERSION = '1.6'
 
     fields = {
         'objects': fields.ListOfObjectsField('InstanceGroup'),
@@ -209,6 +216,7 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
         '1.3': '1.6',
         '1.4': '1.7',
         '1.5': '1.8',
+        '1.6': '1.9',
         }
 
     @base.remotable_classmethod
