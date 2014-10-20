@@ -477,7 +477,10 @@ class ResourceTracker(object):
                     "total allocated virtual ram (MB): %(vram)s"),
                     {'pram': resources['memory_mb'],
                      'vram': resources['memory_mb_used']})
-        LOG.audit(_("Free disk (GB): %s") % resources['free_disk_gb'])
+        LOG.audit(_("Total physical disk (GB): %(pdisk)s, "
+                    "total allocated virtual disk (GB): %(vdisk)s"),
+                  {'pdisk': resources['local_gb'],
+                   'vdisk': resources['local_gb_used']})
 
         vcpus = resources['vcpus']
         if vcpus:
