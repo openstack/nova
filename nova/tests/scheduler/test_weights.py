@@ -16,6 +16,8 @@
 Tests For Scheduler weights.
 """
 
+from oslo.serialization import jsonutils
+
 from nova import context
 from nova import exception
 from nova.openstack.common.fixture import mockpatch
@@ -36,9 +38,10 @@ class TestWeighedHost(test.NoDBTestCase):
     def test_all_weighers(self):
         classes = weights.all_weighers()
         class_names = [cls.__name__ for cls in classes]
-        self.assertEqual(len(classes), 2)
+        self.assertEqual(len(classes), 3)
         self.assertIn('RAMWeigher', class_names)
         self.assertIn('MetricsWeigher', class_names)
+        self.assertIn('IoOpsWeigher', class_names)
 
 
 class RamWeigherTestCase(test.NoDBTestCase):
@@ -246,3 +249,91 @@ class MetricsWeigherTestCase(test.NoDBTestCase):
         self.flags(required=False, group='metrics')
         setting = ['foo=0.0001', 'zot=-1']
         self._do_test(setting, 1.0, 'host5')
+
+
+COMPUTE_NODES_IO_OPS = [
+        # host1: num_io_ops=1
+        dict(id=1, local_gb=1024, memory_mb=1024, vcpus=1,
+             disk_available_least=None, free_ram_mb=512, vcpus_used=1,
+             free_disk_gb=512, local_gb_used=0, updated_at=None,
+             service=dict(host='host1', disabled=False),
+             hypervisor_hostname='node1', host_ip='127.0.0.1',
+             hypervisor_version=0, numa_topology=None,
+             stats=jsonutils.dumps({'io_workload': '1'})),
+        # host2: num_io_ops=2
+        dict(id=2, local_gb=2048, memory_mb=2048, vcpus=2,
+             disk_available_least=1024, free_ram_mb=1024, vcpus_used=2,
+             free_disk_gb=1024, local_gb_used=0, updated_at=None,
+             service=dict(host='host2', disabled=True),
+             hypervisor_hostname='node2', host_ip='127.0.0.1',
+             hypervisor_version=0, numa_topology=None,
+             stats=jsonutils.dumps({'io_workload': '2'})),
+        # host3: num_io_ops=0, so host3 should win in the case of default
+        # io_ops_weight_multiplier configure.
+        dict(id=3, local_gb=4096, memory_mb=4096, vcpus=4,
+             disk_available_least=3333, free_ram_mb=3072, vcpus_used=1,
+             free_disk_gb=3072, local_gb_used=0, updated_at=None,
+             service=dict(host='host3', disabled=False),
+             hypervisor_hostname='node3', host_ip='127.0.0.1',
+             hypervisor_version=0, numa_topology=None,
+             stats=jsonutils.dumps({'io_workload': '0'})),
+        # host4: num_io_ops=4, so host4 should win in the case of positive
+        # io_ops_weight_multiplier configure.
+        dict(id=4, local_gb=8192, memory_mb=8192, vcpus=8,
+             disk_available_least=8192, free_ram_mb=8192, vcpus_used=0,
+             free_disk_gb=8888, local_gb_used=0, updated_at=None,
+             service=dict(host='host4', disabled=False),
+             hypervisor_hostname='node4', host_ip='127.0.0.1',
+             hypervisor_version=0, numa_topology=None,
+             stats=jsonutils.dumps({'io_workload': '4'})),
+        # Broken entry
+        dict(id=5, local_gb=1024, memory_mb=1024, vcpus=1, service=None),
+]
+
+
+class IoOpsWeigherTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super(IoOpsWeigherTestCase, self).setUp()
+        self.useFixture(mockpatch.Patch(
+            'nova.db.compute_node_get_all',
+             return_value=COMPUTE_NODES_IO_OPS))
+        self.host_manager = fakes.FakeHostManager()
+        self.weight_handler = weights.HostWeightHandler()
+        self.weight_classes = self.weight_handler.get_matching_classes(
+                ['nova.scheduler.weights.io_ops.IoOpsWeigher'])
+
+    def _get_weighed_host(self, hosts, io_ops_weight_multiplier):
+        if io_ops_weight_multiplier is not None:
+            self.flags(io_ops_weight_multiplier=io_ops_weight_multiplier)
+        return self.weight_handler.get_weighed_objects(self.weight_classes,
+                                                       hosts, {})[0]
+
+    def _get_all_hosts(self):
+        ctxt = context.get_admin_context()
+        return self.host_manager.get_all_host_states(ctxt)
+
+    def _do_test(self, io_ops_weight_multiplier, expected_weight,
+                 expected_host):
+        hostinfo_list = self._get_all_hosts()
+        weighed_host = self._get_weighed_host(hostinfo_list,
+                                              io_ops_weight_multiplier)
+        self.assertEqual(weighed_host.weight, expected_weight)
+        if expected_host:
+            self.assertEqual(weighed_host.obj.host, expected_host)
+
+    def test_io_ops_weight_multiplier_by_default(self):
+        self._do_test(io_ops_weight_multiplier=None,
+                      expected_weight=0.0,
+                      expected_host='host3')
+
+    def test_io_ops_weight_multiplier_zero_value(self):
+        # We do not know the host, all have same weight.
+        self._do_test(io_ops_weight_multiplier=0.0,
+                      expected_weight=0.0,
+                      expected_host=None)
+
+    def test_io_ops_weight_multiplier_positive_value(self):
+        self._do_test(io_ops_weight_multiplier=2.0,
+                      expected_weight=2.0,
+                      expected_host='host4')
