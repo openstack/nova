@@ -980,65 +980,77 @@ class NetworkManager(manager.Manager):
             LOG.exception(_("Failed to update usages deallocating "
                             "fixed IP"))
 
-        self._do_trigger_security_group_members_refresh_for_instance(
-            instance_uuid)
+        try:
+            self._do_trigger_security_group_members_refresh_for_instance(
+                instance_uuid)
 
-        if self._validate_instance_zone_for_dns_domain(context, instance):
-            for n in self.instance_dns_manager.get_entries_by_address(address,
-                                                     self.instance_dns_domain):
-                self.instance_dns_manager.delete_entry(n,
-                                                      self.instance_dns_domain)
+            if self._validate_instance_zone_for_dns_domain(context, instance):
+                for n in self.instance_dns_manager.get_entries_by_address(
+                    address, self.instance_dns_domain):
+                    self.instance_dns_manager.delete_entry(n,
+                        self.instance_dns_domain)
 
-        fixed_ip_ref.allocated = False
-        fixed_ip_ref.save()
+            fixed_ip_ref.allocated = False
+            fixed_ip_ref.save()
 
-        if teardown:
-            network = fixed_ip_ref.network
+            if teardown:
+                network = fixed_ip_ref.network
 
-            if CONF.force_dhcp_release:
-                dev = self.driver.get_dev(network)
-                # NOTE(vish): The below errors should never happen, but there
-                #             may be a race condition that is causing them per
-                #             https://code.launchpad.net/bugs/968457, so we log
-                #             an error to help track down the possible race.
-                msg = _("Unable to release %s because vif doesn't exist.")
-                if not vif_id:
-                    LOG.error(msg % address)
-                    return
+                if CONF.force_dhcp_release:
+                    dev = self.driver.get_dev(network)
+                    # NOTE(vish): The below errors should never happen, but
+                    #             there may be a race condition that is causing
+                    #             them per
+                    #             https://code.launchpad.net/bugs/968457,
+                    #             so we log an error to help track down
+                    #             the possible race.
+                    msg = _("Unable to release %s because vif doesn't exist.")
+                    if not vif_id:
+                        LOG.error(msg % address)
+                        return
 
-                vif = objects.VirtualInterface.get_by_id(context, vif_id)
+                    vif = objects.VirtualInterface.get_by_id(context, vif_id)
 
-                if not vif:
-                    LOG.error(msg % address)
-                    return
+                    if not vif:
+                        LOG.error(msg % address)
+                        return
 
-                # NOTE(cfb): Call teardown before release_dhcp to ensure
-                #            that the IP can't be re-leased after a release
-                #            packet is sent.
-                self._teardown_network_on_host(context, network)
-                # NOTE(vish): This forces a packet so that the release_fixed_ip
-                #             callback will get called by nova-dhcpbridge.
+                    # NOTE(cfb): Call teardown before release_dhcp to ensure
+                    #            that the IP can't be re-leased after a release
+                    #            packet is sent.
+                    self._teardown_network_on_host(context, network)
+                    # NOTE(vish): This forces a packet so that the
+                    #             release_fixed_ip callback will
+                    #             get called by nova-dhcpbridge.
+                    try:
+                        self.driver.release_dhcp(dev, address, vif.address)
+                    except exception.NetworkDhcpReleaseFailed:
+                        LOG.error(_LE("Error releasing DHCP for IP %(address)s"
+                                      " with MAC %(mac_address)s"),
+                                  {'address': address,
+                                   'mac_address': vif.address},
+                                  instance=instance)
+
+                    # NOTE(yufang521247): This is probably a failed dhcp fixed
+                    # ip. DHCPRELEASE packet sent to dnsmasq would not trigger
+                    # dhcp-bridge to run. Thus it is better to disassociate
+                    # such fixed ip here.
+                    fixed_ip_ref = objects.FixedIP.get_by_address(
+                        context, address)
+                    if (instance_uuid == fixed_ip_ref.instance_uuid and
+                            not fixed_ip_ref.leased):
+                        fixed_ip_ref.disassociate()
+                else:
+                    # We can't try to free the IP address so just call teardown
+                    self._teardown_network_on_host(context, network)
+        except Exception:
+            with excutils.save_and_reraise_exception():
                 try:
-                    self.driver.release_dhcp(dev, address, vif.address)
-                except exception.NetworkDhcpReleaseFailed:
-                    LOG.error(_LE("Error releasing DHCP for IP %(address)s "
-                                  "with MAC %(mac_address)s"),
-                              {'address': address,
-                               'mac_address': vif.address},
-                              instance=instance)
-
-                # NOTE(yufang521247): This is probably a failed dhcp fixed ip.
-                # DHCPRELEASE packet sent to dnsmasq would not trigger
-                # dhcp-bridge to run. Thus it is better to disassociate such
-                # fixed ip here.
-                fixed_ip_ref = objects.FixedIP.get_by_address(
-                    context, address)
-                if (instance_uuid == fixed_ip_ref.instance_uuid and
-                        not fixed_ip_ref.leased):
-                    fixed_ip_ref.disassociate()
-            else:
-                # We can't try to free the IP address so just call teardown
-                self._teardown_network_on_host(context, network)
+                    quotas.rollback(context)
+                except Exception:
+                    LOG.warn(_LW("Failed to rollback quota for "
+                                 "deallocate fixed ip: %s"), address,
+                             instance=instance)
 
         # Commit the reservations
         quotas.commit(context)

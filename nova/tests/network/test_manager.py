@@ -2502,6 +2502,22 @@ class CommonNetworkTestCase(test.TestCase):
         #     Determine networks to NAT based on lookup
         self._test_init_host_dynamic_fixed_range(self.network)
 
+    @mock.patch('nova.objects.quotas.Quotas.rollback')
+    @mock.patch('nova.objects.fixed_ip.FixedIP.get_by_address')
+    @mock.patch('nova.network.manager.NetworkManager.'
+                '_do_trigger_security_group_members_refresh_for_instance')
+    def test_fixed_ip_cleanup_rollback(self, fake_trig,
+                                      fixed_get, rollback):
+        manager = network_manager.NetworkManager()
+
+        fake_trig.side_effect = test.TestingException
+
+        self.assertRaises(test.TestingException,
+                          manager.deallocate_fixed_ip,
+                          self.context, 'fake', 'fake',
+                          instance=fake_inst(uuid='ignoreduuid'))
+        rollback.assert_called_once_with(self.context)
+
 
 class TestRPCFixedManager(network_manager.RPCAllocateFixedIP,
         network_manager.NetworkManager):
