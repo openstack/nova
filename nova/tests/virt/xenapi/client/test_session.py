@@ -20,7 +20,28 @@ import mock
 
 from nova import exception
 from nova.tests.virt.xenapi import stubs
+from nova import version
 from nova.virt.xenapi.client import session
+
+
+class SessionTestCase(stubs.XenAPITestBaseNoDB):
+    @mock.patch.object(session.XenAPISession, '_create_session')
+    @mock.patch.object(session.XenAPISession, '_get_product_version_and_brand')
+    @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
+    def test_session_passes_version(self, mock_verify, mock_version,
+                                    create_session):
+        sess = mock.Mock()
+        create_session.return_value = sess
+        mock_version.return_value = ('version', 'brand')
+
+        session.XenAPISession('url', 'username', 'password')
+
+        expected_version = '%s %s %s' % (version.vendor_string(),
+                                         version.product_string(),
+                                         version.version_string_with_package())
+        sess.login_with_password.assert_called_with('username', 'password',
+                                                    expected_version,
+                                                    'OpenStack')
 
 
 class ApplySessionHelpersTestCase(stubs.XenAPITestBaseNoDB):
