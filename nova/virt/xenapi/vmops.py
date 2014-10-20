@@ -43,6 +43,7 @@ from nova.console import type as ctype
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LE
 from nova import objects
 from nova.openstack.common import log as logging
 from nova.pci import pci_manager
@@ -1425,11 +1426,14 @@ class VMOps(object):
         # NOTE(sirp): `block_device_info` is not used, information about which
         # volumes should be detached is determined by the
         # VBD.other_config['osvol'] attribute
+        # NOTE(alaski): `block_device_info` is used to determine if there's a
+        # volume still attached if the VM is not present.
         return self._destroy(instance, vm_ref, network_info=network_info,
-                             destroy_disks=destroy_disks)
+                             destroy_disks=destroy_disks,
+                             block_device_info=block_device_info)
 
     def _destroy(self, instance, vm_ref, network_info=None,
-                 destroy_disks=True):
+                 destroy_disks=True, block_device_info=None):
         """Destroys VM instance by performing:
 
             1. A shutdown
@@ -1441,6 +1445,34 @@ class VMOps(object):
         if vm_ref is None:
             LOG.warning(_("VM is not present, skipping destroy..."),
                         instance=instance)
+            # NOTE(alaski): There should not be a block device mapping here,
+            # but if there is it very likely means there was an error cleaning
+            # it up previously and there is now an orphaned sr/pbd.  This will
+            # prevent both volume and instance deletes from completing.
+            bdms = block_device_info['block_device_mapping'] or []
+            if not bdms:
+                return
+            for bdm in bdms:
+                volume_id = bdm['connection_info']['data']['volume_id']
+                sr_uuid = 'FA15E-D15C-%s' % volume_id
+                sr_ref = None
+                try:
+                    sr_ref = volume_utils.find_sr_by_uuid(self._session,
+                            sr_uuid)
+                except Exception:
+                    LOG.exception(_LE('Failed to find an SR for volume %s'),
+                            volume_id, instance=instance)
+
+                try:
+                    if sr_ref:
+                        volume_utils.forget_sr(self._session, sr_ref)
+                    else:
+                        LOG.error(_LE('Volume %s is associated with the '
+                            'instance but no SR was found for it'), volume_id,
+                                instance=instance)
+                except Exception:
+                    LOG.exception(_LE('Failed to forget the SR for volume %s'),
+                            volume_id, instance=instance)
             return
 
         vm_utils.hard_shutdown_vm(self._session, instance, vm_ref)
