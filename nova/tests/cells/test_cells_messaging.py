@@ -28,6 +28,7 @@ from oslo.utils import timeutils
 
 from nova.cells import messaging
 from nova.cells import utils as cells_utils
+from nova.compute import delete_types
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
@@ -1297,7 +1298,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
                                           (), {}, (), {}, False)
 
     def test_soft_delete_instance(self):
-        self._test_instance_action_method('soft_delete',
+        self._test_instance_action_method(delete_types.SOFT_DELETE,
                                           (), {}, (), {}, False)
 
     def test_pause_instance(self):
@@ -1616,10 +1617,10 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         instance = {'uuid': 'meow'}
 
         # Should not be called in src (API cell)
-        self.mox.StubOutWithMock(self.src_compute_api, 'delete')
+        self.mox.StubOutWithMock(self.src_compute_api, delete_types.DELETE)
 
-        self.mox.StubOutWithMock(self.mid_compute_api, 'delete')
-        self.mox.StubOutWithMock(self.tgt_compute_api, 'delete')
+        self.mox.StubOutWithMock(self.mid_compute_api, delete_types.DELETE)
+        self.mox.StubOutWithMock(self.tgt_compute_api, delete_types.DELETE)
 
         self.mid_compute_api.delete(self.ctxt, instance)
         self.tgt_compute_api.delete(self.ctxt, instance)
@@ -1627,7 +1628,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         self.src_msg_runner.instance_delete_everywhere(self.ctxt,
-                instance, 'hard')
+                instance, delete_types.DELETE)
 
     def test_instance_soft_delete_everywhere(self):
         # Reset this, as this is a broadcast down.
@@ -1635,10 +1636,13 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         instance = {'uuid': 'meow'}
 
         # Should not be called in src (API cell)
-        self.mox.StubOutWithMock(self.src_compute_api, 'soft_delete')
+        self.mox.StubOutWithMock(self.src_compute_api,
+                                 delete_types.SOFT_DELETE)
 
-        self.mox.StubOutWithMock(self.mid_compute_api, 'soft_delete')
-        self.mox.StubOutWithMock(self.tgt_compute_api, 'soft_delete')
+        self.mox.StubOutWithMock(self.mid_compute_api,
+                                 delete_types.SOFT_DELETE)
+        self.mox.StubOutWithMock(self.tgt_compute_api,
+                                 delete_types.SOFT_DELETE)
 
         self.mid_compute_api.soft_delete(self.ctxt, instance)
         self.tgt_compute_api.soft_delete(self.ctxt, instance)
@@ -1646,7 +1650,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         self.src_msg_runner.instance_delete_everywhere(self.ctxt,
-                instance, 'soft')
+                instance, delete_types.SOFT_DELETE)
 
     def test_instance_fault_create_at_top(self):
         fake_instance_fault = {'id': 1,

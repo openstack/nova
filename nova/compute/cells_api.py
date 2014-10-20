@@ -23,6 +23,7 @@ from nova import block_device
 from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import utils as cells_utils
 from nova.compute import api as compute_api
+from nova.compute import delete_types
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
 from nova import objects
@@ -225,14 +226,13 @@ class ComputeCellsAPI(compute_api.API):
         return rv
 
     def soft_delete(self, context, instance):
-        self._handle_cell_delete(context, instance, 'soft_delete')
+        self._handle_cell_delete(context, instance, delete_types.SOFT_DELETE)
 
     def delete(self, context, instance):
-        self._handle_cell_delete(context, instance, 'delete')
+        self._handle_cell_delete(context, instance, delete_types.DELETE)
 
-    def _handle_cell_delete(self, context, instance, method_name):
+    def _handle_cell_delete(self, context, instance, delete_type):
         if not instance['cell_name']:
-            delete_type = method_name == 'soft_delete' and 'soft' or 'hard'
             self.cells_rpcapi.instance_delete_everywhere(context,
                     instance, delete_type)
             bdms = block_device.legacy_mapping(
@@ -241,11 +241,11 @@ class ComputeCellsAPI(compute_api.API):
             # NOTE(danms): If we try to delete an instance with no cell,
             # there isn't anything to salvage, so we can hard-delete here.
             super(ComputeCellsAPI, self)._local_delete(context, instance, bdms,
-                                                       method_name,
+                                                       delete_type,
                                                        self._do_delete)
             return
 
-        method = getattr(super(ComputeCellsAPI, self), method_name)
+        method = getattr(super(ComputeCellsAPI, self), delete_type)
         method(context, instance)
 
     @check_instance_cell
@@ -258,7 +258,7 @@ class ComputeCellsAPI(compute_api.API):
     def force_delete(self, context, instance):
         """Force delete a previously deleted (but not reclaimed) instance."""
         super(ComputeCellsAPI, self).force_delete(context, instance)
-        self._cast_to_cells(context, instance, 'force_delete')
+        self._cast_to_cells(context, instance, delete_types.FORCE_DELETE)
 
     @check_instance_cell
     def evacuate(self, context, instance, *args, **kwargs):
