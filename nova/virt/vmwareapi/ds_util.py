@@ -248,7 +248,9 @@ def get_datastore(session, cluster, datastore_regex=None):
                                 vim_util,
                                 "get_dynamic_property", cluster,
                                 "ClusterComputeResource", "datastore")
-    if datastore_ret is None:
+    # If there are no hosts in the cluster then an empty string is
+    # returned
+    if not datastore_ret:
         raise exception.DatastoreNotFound()
 
     data_store_mors = datastore_ret.ManagedObjectReference

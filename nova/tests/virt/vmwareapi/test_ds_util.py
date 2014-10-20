@@ -311,6 +311,16 @@ class DsUtilTestCase(test.NoDBTestCase):
                               ds_util.get_datastore,
                               self.session, 'fake-cluster')
 
+    def test_get_datastore_no_host_in_cluster(self):
+        def fake_call_method(module, method, *args, **kwargs):
+            return ''
+
+        with mock.patch.object(self.session, '_call_method',
+                               fake_call_method):
+            self.assertRaises(exception.DatastoreNotFound,
+                              ds_util.get_datastore,
+                              self.session, 'fake-cluster')
+
     def _test_is_datastore_valid(self, accessible=True,
                                  maintenance_mode="normal",
                                  type="VMFS",
