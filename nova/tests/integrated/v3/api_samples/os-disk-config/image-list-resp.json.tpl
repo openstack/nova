@@ -14,7 +14,7 @@
                     "rel": "bookmark"
                 },
                 {
-                    "href": "%(glance_host)s/openstack/images/%(id)s",
+                    "href": "%(glance_host)s/images/%(id)s",
                     "rel": "alternate",
                     "type": "application/vnd.openstack.image"
                 }
@@ -45,7 +45,7 @@
                     "rel": "bookmark"
                 },
                 {
-                    "href": "%(glance_host)s/openstack/images/%(id)s",
+                    "href": "%(glance_host)s/images/%(id)s",
                     "rel": "alternate",
                     "type": "application/vnd.openstack.image"
                 }
@@ -75,7 +75,7 @@
                     "rel": "bookmark"
                 },
                 {
-                    "href": "%(glance_host)s/openstack/images/%(uuid)s",
+                    "href": "%(glance_host)s/images/%(uuid)s",
                     "rel": "alternate",
                     "type": "application/vnd.openstack.image"
                 }
@@ -105,7 +105,7 @@
                     "rel": "bookmark"
                 },
                 {
-                    "href": "%(glance_host)s/openstack/images/%(uuid)s",
+                    "href": "%(glance_host)s/images/%(uuid)s",
                     "rel": "alternate",
                     "type": "application/vnd.openstack.image"
                 }
@@ -136,7 +136,7 @@
                     "rel": "bookmark"
                 },
                 {
-                    "href": "%(glance_host)s/openstack/images/%(id)s",
+                    "href": "%(glance_host)s/images/%(id)s",
                     "rel": "alternate",
                     "type": "application/vnd.openstack.image"
                 }
@@ -165,7 +165,7 @@
                     "rel": "bookmark"
                 },
                 {
-                    "href": "%(glance_host)s/openstack/images/%(id)s",
+                    "href": "%(glance_host)s/images/%(id)s",
                     "rel": "alternate",
                     "type": "application/vnd.openstack.image"
                 }
@@ -194,7 +194,7 @@
                     "rel": "bookmark"
                 },
                 {
-                    "href": "%(glance_host)s/openstack/images/%(id)s",
+                    "href": "%(glance_host)s/images/%(id)s",
                     "rel": "alternate",
                     "type": "application/vnd.openstack.image"
                 }

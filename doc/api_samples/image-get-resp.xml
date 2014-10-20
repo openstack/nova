@@ -8,5 +8,5 @@
   </metadata>
   <atom:link href="http://openstack.example.com/v2/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b" rel="self"/>
   <atom:link href="http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b" rel="bookmark"/>
-  <atom:link href="http://glance.openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b" type="application/vnd.openstack.image" rel="alternate"/>
+  <atom:link href="http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b" type="application/vnd.openstack.image" rel="alternate"/>
 </image>

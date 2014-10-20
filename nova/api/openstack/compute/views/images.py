@@ -119,7 +119,6 @@ class ViewBuilder(common.ViewBuilder):
         glance_url = glance.generate_glance_url()
         glance_url = self._update_glance_link_prefix(glance_url)
         return '/'.join([glance_url,
-                         request.environ["nova.context"].project_id,
                          self._collection_name,
                          str(identifier)])
 

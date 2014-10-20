@@ -8,5 +8,5 @@
   </metadata>
   <atom:link href="%(host)s/v2/openstack/images/%(image_id)s" rel="self"/>
   <atom:link href="%(host)s/openstack/images/%(image_id)s" rel="bookmark"/>
-  <atom:link href="%(glance_host)s/openstack/images/%(image_id)s" type="application/vnd.openstack.image" rel="alternate"/>
+  <atom:link href="%(glance_host)s/images/%(image_id)s" type="application/vnd.openstack.image" rel="alternate"/>
 </image>

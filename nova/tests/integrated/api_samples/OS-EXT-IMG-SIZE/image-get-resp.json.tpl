@@ -12,7 +12,7 @@
                 "rel": "bookmark"
             },
             {
-                "href": "%(glance_host)s/openstack/images/%(image_id)s",
+                "href": "%(glance_host)s/images/%(image_id)s",
                 "rel": "alternate",
                 "type": "application/vnd.openstack.image"
             }
