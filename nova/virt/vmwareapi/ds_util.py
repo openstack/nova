@@ -23,11 +23,14 @@ from oslo.vmware import pbm
 from nova import exception
 from nova.i18n import _, _LE, _LI
 from nova.openstack.common import log as logging
+from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 
 LOG = logging.getLogger(__name__)
-ALLOWED_DATASTORE_TYPES = ['VMFS', 'NFS']
+ALL_SUPPORTED_DS_TYPES = frozenset([constants.DATASTORE_TYPE_VMFS,
+                                    constants.DATASTORE_TYPE_NFS,
+                                    constants.DATASTORE_TYPE_VSAN])
 
 
 class Datastore(object):
@@ -191,7 +194,8 @@ def _get_token(results):
 
 
 def _select_datastore(session, data_stores, best_match, datastore_regex=None,
-                      storage_policy=None):
+                      storage_policy=None,
+                      allowed_ds_types=ALL_SUPPORTED_DS_TYPES):
     """Find the most preferable datastore in a given RetrieveResult object.
 
     :param session: vmwareapi session
@@ -199,6 +203,7 @@ def _select_datastore(session, data_stores, best_match, datastore_regex=None,
     :param best_match: the current best match for datastore
     :param datastore_regex: an optional regular expression to match names
     :param storage_policy: storage policy for the datastore
+    :param allowed_ds_types: a list of acceptable datastore type names
     :return: datastore_ref, datastore_name, capacity, freespace
     """
 
@@ -217,7 +222,7 @@ def _select_datastore(session, data_stores, best_match, datastore_regex=None,
             continue
 
         propdict = vm_util.propset_dict(obj_content.propSet)
-        if _is_datastore_valid(propdict, datastore_regex):
+        if _is_datastore_valid(propdict, datastore_regex, allowed_ds_types):
             new_ds = Datastore(
                     ref=obj_content.obj,
                     name=propdict['summary.name'],
@@ -231,13 +236,13 @@ def _select_datastore(session, data_stores, best_match, datastore_regex=None,
     return best_match
 
 
-def _is_datastore_valid(propdict, datastore_regex):
+def _is_datastore_valid(propdict, datastore_regex, ds_types):
     """Checks if a datastore is valid based on the following criteria.
 
        Criteria:
        - Datastore is accessible
        - Datastore is not in maintenance mode (optional)
-       - Datastore is of a supported disk type
+       - Datastore's type is one of the given ds_types
        - Datastore matches the supplied regex (optional)
 
        :param propdict: datastore summary dict
@@ -249,13 +254,14 @@ def _is_datastore_valid(propdict, datastore_regex):
     return (propdict.get('summary.accessible') and
             (propdict.get('summary.maintenanceMode') is None or
              propdict.get('summary.maintenanceMode') == 'normal') and
-            propdict['summary.type'] in ALLOWED_DATASTORE_TYPES and
+            propdict['summary.type'] in ds_types and
             (datastore_regex is None or
              datastore_regex.match(propdict['summary.name'])))
 
 
-def get_datastore(session, cluster=None, datastore_regex=None,
-                  storage_policy=None):
+def get_datastore(session, cluster, datastore_regex=None,
+                  storage_policy=None,
+                  allowed_ds_types=ALL_SUPPORTED_DS_TYPES):
     """Get the datastore list and choose the most preferable one."""
     datastore_ret = session._call_method(
                                 vim_util,
@@ -281,7 +287,8 @@ def get_datastore(session, cluster=None, datastore_regex=None,
                                        data_stores,
                                        best_match,
                                        datastore_regex,
-                                       storage_policy)
+                                       storage_policy,
+                                       allowed_ds_types)
         token = _get_token(data_stores)
         if not token:
             break
@@ -311,7 +318,9 @@ def _get_allowed_datastores(data_stores, datastore_regex):
             continue
 
         propdict = vm_util.propset_dict(obj_content.propSet)
-        if _is_datastore_valid(propdict, datastore_regex):
+        if _is_datastore_valid(propdict,
+                               datastore_regex,
+                               ALL_SUPPORTED_DS_TYPES):
             allowed.append(Datastore(ref=obj_content.obj,
                                      name=propdict['summary.name']))
 
@@ -349,6 +358,12 @@ def get_available_datastores(session, cluster=None, datastore_regex=None):
                                            "continue_to_get_objects",
                                            token)
     return allowed
+
+
+def get_allowed_datastore_types(disk_type):
+    if disk_type == constants.DISK_TYPE_STREAM_OPTIMIZED:
+        return ALL_SUPPORTED_DS_TYPES
+    return ALL_SUPPORTED_DS_TYPES - frozenset([constants.DATASTORE_TYPE_VSAN])
 
 
 def file_delete(session, ds_path, dc_ref):

@@ -420,9 +420,13 @@ class VMwareVMOps(object):
             reason = _("Image disk size greater than requested disk size")
             raise exception.InstanceUnacceptable(instance_id=instance.uuid,
                                                  reason=reason)
-        datastore = ds_util.get_datastore(
-                self._session, self._cluster, self._datastore_regex,
-                storage_policy=storage_policy)
+        allowed_ds_types = ds_util.get_allowed_datastore_types(
+            image_info.disk_type)
+        datastore = ds_util.get_datastore(self._session,
+                                          self._cluster,
+                                          self._datastore_regex,
+                                          storage_policy,
+                                          allowed_ds_types)
         dc_info = self.get_datacenter_ref_and_name(datastore.ref)
 
         return VirtualMachineInstanceConfigInfo(instance,
