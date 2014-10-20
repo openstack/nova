@@ -171,10 +171,27 @@ class SimpleTenantUsageTestV21(test.TestCase):
         req.method = "GET"
         req.headers["content-type"] = "application/json"
 
-        res = req.get_response(self._get_wsgi_app(self.admin_context))
-        self.assertEqual(res.status_int, 200)
-        res_dict = jsonutils.loads(res.body)
-        return res_dict['tenant_usages']
+        # Make sure that get_active_by_window_joined is only called with
+        # expected_attrs=['system_metadata'].
+        orig_get_active_by_window_joined = (
+            objects.InstanceList.get_active_by_window_joined)
+
+        def fake_get_active_by_window_joined(context, begin, end=None,
+                                    project_id=None, host=None,
+                                    expected_attrs=None,
+                                    use_slave=False):
+            self.assertEqual(['system_metadata'], expected_attrs)
+            return orig_get_active_by_window_joined(context, begin, end,
+                                                    project_id, host,
+                                                    expected_attrs, use_slave)
+
+        with mock.patch.object(objects.InstanceList,
+                               'get_active_by_window_joined',
+                               side_effect=fake_get_active_by_window_joined):
+            res = req.get_response(self._get_wsgi_app(self.admin_context))
+            self.assertEqual(res.status_int, 200)
+            res_dict = jsonutils.loads(res.body)
+            return res_dict['tenant_usages']
 
     def test_verify_detailed_index(self):
         usages = self._get_tenant_usages('1')
