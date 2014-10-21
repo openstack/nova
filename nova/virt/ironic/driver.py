@@ -112,9 +112,9 @@ def _validate_instance_and_node(ironicclient, instance):
     node, and return the node.
     """
     try:
-        return ironicclient.call("node.get_by_instance_uuid", instance['uuid'])
+        return ironicclient.call("node.get_by_instance_uuid", instance.uuid)
     except ironic.exc.NotFound:
-        raise exception.InstanceNotFound(instance_id=instance['uuid'])
+        raise exception.InstanceNotFound(instance_id=instance.uuid)
 
 
 def _get_nodes_supported_instances(cpu_arch=None):
@@ -315,7 +315,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             # NOTE(pmurray): Flavor may have been deleted
             ctxt = context.elevated(read_deleted="yes")
             flavor = objects.Flavor.get_by_id(ctxt,
-                                              instance['instance_type_id'])
+                                              instance.instance_type_id)
         patch = patcher.create(node).get_cleanup_patch(instance, network_info,
                                                        flavor)
 
@@ -326,7 +326,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         except ironic.exc.BadRequest:
             LOG.error(_LE("Failed to clean up the parameters on node %(node)s "
                           "when unprovisioning the instance %(instance)s"),
-                         {'node': node.uuid, 'instance': instance['uuid']})
+                         {'node': node.uuid, 'instance': instance.uuid})
             reason = (_("Fail to clean up node %s parameters") % node.uuid)
             raise exception.InstanceTerminationFailure(reason=reason)
 
@@ -572,7 +572,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         """
         ironicclient = client_wrapper.IronicClientWrapper()
         try:
-            node = ironicclient.call("node.get", instance['node'])
+            node = ironicclient.call("node.get", instance.node)
         except ironic.exc.NotFound:
             return None
         ports = ironicclient.call("node.list_ports", node.uuid)
@@ -602,12 +602,12 @@ class IronicDriver(virt_driver.ComputeDriver):
         if not node_uuid:
             raise ironic.exc.BadRequest(
                 _("Ironic node uuid not supplied to "
-                  "driver for instance %s.") % instance['uuid'])
+                  "driver for instance %s.") % instance.uuid)
 
         ironicclient = client_wrapper.IronicClientWrapper()
         node = ironicclient.call("node.get", node_uuid)
         flavor = objects.Flavor.get_by_id(context,
-                                          instance['instance_type_id'])
+                                          instance.instance_type_id)
 
         self._add_driver_fields(node, instance, image_meta, flavor)
 
@@ -639,7 +639,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             with excutils.save_and_reraise_exception():
                 LOG.error(_LE("Error preparing deploy for instance "
                               "%(instance)s on baremetal node %(node)s."),
-                          {'instance': instance['uuid'],
+                          {'instance': instance.uuid,
                            'node': node_uuid})
                 self._cleanup_deploy(context, node, instance, network_info,
                                      flavor=flavor)
@@ -652,7 +652,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             with excutils.save_and_reraise_exception():
                 msg = (_LE("Failed to request Ironic to provision instance "
                            "%(inst)s: %(reason)s"),
-                           {'inst': instance['uuid'],
+                           {'inst': instance.uuid,
                             'reason': six.text_type(e)})
                 LOG.error(msg)
                 self._cleanup_deploy(context, node, instance, network_info,
@@ -666,7 +666,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             with excutils.save_and_reraise_exception():
                 LOG.error(_LE("Error deploying instance %(instance)s on "
                               "baremetal node %(node)s."),
-                             {'instance': instance['uuid'],
+                             {'instance': instance.uuid,
                               'node': node_uuid})
                 self.destroy(context, instance, network_info)
 
@@ -730,7 +730,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             node = _validate_instance_and_node(ironicclient, instance)
         except exception.InstanceNotFound:
             LOG.warning(_LW("Destroy called on non-existing instance %s."),
-                        instance['uuid'])
+                        instance.uuid)
             # NOTE(deva): if nova.compute.ComputeManager._delete_instance()
             #             is called on a non-existing instance, the only way
             #             to delete it is to return from this method
@@ -883,7 +883,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         # don't block while holding the logging lock.
         network_info_str = str(network_info)
         LOG.debug("plug: instance_uuid=%(uuid)s vif=%(network_info)s",
-                  {'uuid': instance['uuid'],
+                  {'uuid': instance.uuid,
                    'network_info': network_info_str})
         # start by ensuring the ports are clear
         self._unplug_vifs(node, instance, network_info)
@@ -916,7 +916,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         # don't block while holding the logging lock.
         network_info_str = str(network_info)
         LOG.debug("unplug: instance_uuid=%(uuid)s vif=%(network_info)s",
-                  {'uuid': instance['uuid'],
+                  {'uuid': instance.uuid,
                    'network_info': network_info_str})
         if network_info and len(network_info) > 0:
             ironicclient = client_wrapper.IronicClientWrapper()
@@ -952,7 +952,7 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         """
         ironicclient = client_wrapper.IronicClientWrapper()
-        node = ironicclient.call("node.get", instance['node'])
+        node = ironicclient.call("node.get", instance.node)
         self._unplug_vifs(node, instance, network_info)
 
     def rebuild(self, context, instance, image_meta, injected_files,
