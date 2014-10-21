@@ -15,11 +15,8 @@
 Tests For Scheduler Host Filters.
 """
 
-import mock
 from oslo.config import cfg
-import requests
 import six
-import stubout
 
 from nova.compute import arch
 from nova.compute import hvtype
@@ -29,12 +26,10 @@ from nova import db
 from nova import objects
 from nova.objects import base as obj_base
 from nova.openstack.common import jsonutils
-from nova.openstack.common import timeutils
 from nova.pci import pci_stats
 from nova.scheduler import filters
 from nova.scheduler.filters import extra_specs_ops
 from nova.scheduler.filters import ram_filter
-from nova.scheduler.filters import trusted_filter
 from nova import servicegroup
 from nova import test
 from nova.tests import fake_instance
@@ -248,19 +243,8 @@ class HostFiltersTestCase(test.NoDBTestCase):
     # the testing of the DB API code from the host-filter code.
     USES_DB = True
 
-    def fake_oat_request(self, *args, **kwargs):
-        """Stubs out the response from OAT service."""
-        self.oat_attested = True
-        self.oat_hosts = args[2]
-        return requests.codes.OK, self.oat_data
-
     def setUp(self):
         super(HostFiltersTestCase, self).setUp()
-        self.oat_data = ''
-        self.oat_attested = False
-        self.stubs = stubout.StubOutForTesting()
-        self.stubs.Set(trusted_filter.AttestationService, '_request',
-                self.fake_oat_request)
         self.context = context.RequestContext('fake', 'fake')
         self.json_query = jsonutils.dumps(
                 ['and', ['>=', '$free_ram_mb', 1024],
@@ -1363,170 +1347,6 @@ class HostFiltersTestCase(test.NoDBTestCase):
             },
         }
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
-
-    def test_trusted_filter_default_passes(self):
-        self._stub_service_is_up(True)
-        filt_cls = self.class_map['TrustedFilter']()
-        filter_properties = {'context': self.context.elevated(),
-                             'instance_type': {'memory_mb': 1024}}
-        host = fakes.FakeHostState('host1', 'node1', {})
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-
-    def test_trusted_filter_trusted_and_trusted_passes(self):
-        self.oat_data = {"hosts": [{"host_name": "node1",
-                                   "trust_lvl": "trusted",
-                                   "vtime": timeutils.isotime()}]}
-        self._stub_service_is_up(True)
-        filt_cls = self.class_map['TrustedFilter']()
-        extra_specs = {'trust:trusted_host': 'trusted'}
-        filter_properties = {'context': self.context.elevated(),
-                             'instance_type': {'memory_mb': 1024,
-                                               'extra_specs': extra_specs}}
-        host = fakes.FakeHostState('host1', 'node1', {})
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-
-    def test_trusted_filter_trusted_and_untrusted_fails(self):
-        self.oat_data = {"hosts": [{"host_name": "node1",
-                                    "trust_lvl": "untrusted",
-                                    "vtime": timeutils.isotime()}]}
-        self._stub_service_is_up(True)
-        filt_cls = self.class_map['TrustedFilter']()
-        extra_specs = {'trust:trusted_host': 'trusted'}
-        filter_properties = {'context': self.context.elevated(),
-                             'instance_type': {'memory_mb': 1024,
-                                               'extra_specs': extra_specs}}
-        host = fakes.FakeHostState('host1', 'node1', {})
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
-
-    def test_trusted_filter_untrusted_and_trusted_fails(self):
-        self.oat_data = {"hosts": [{"host_name": "node",
-                                    "trust_lvl": "trusted",
-                                    "vtime": timeutils.isotime()}]}
-        self._stub_service_is_up(True)
-        filt_cls = self.class_map['TrustedFilter']()
-        extra_specs = {'trust:trusted_host': 'untrusted'}
-        filter_properties = {'context': self.context.elevated(),
-                             'instance_type': {'memory_mb': 1024,
-                                               'extra_specs': extra_specs}}
-        host = fakes.FakeHostState('host1', 'node1', {})
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
-
-    def test_trusted_filter_untrusted_and_untrusted_passes(self):
-        self.oat_data = {"hosts": [{"host_name": "node1",
-                                    "trust_lvl": "untrusted",
-                                    "vtime": timeutils.isotime()}]}
-        self._stub_service_is_up(True)
-        filt_cls = self.class_map['TrustedFilter']()
-        extra_specs = {'trust:trusted_host': 'untrusted'}
-        filter_properties = {'context': self.context.elevated(),
-                             'instance_type': {'memory_mb': 1024,
-                                               'extra_specs': extra_specs}}
-        host = fakes.FakeHostState('host1', 'node1', {})
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-
-    def test_trusted_filter_update_cache(self):
-        self.oat_data = {"hosts": [{"host_name": "node1",
-                                    "trust_lvl": "untrusted",
-                                    "vtime": timeutils.isotime()}]}
-
-        filt_cls = self.class_map['TrustedFilter']()
-        extra_specs = {'trust:trusted_host': 'untrusted'}
-        filter_properties = {'context': self.context.elevated(),
-                             'instance_type': {'memory_mb': 1024,
-                                               'extra_specs': extra_specs}}
-        host = fakes.FakeHostState('host1', 'node1', {})
-
-        filt_cls.host_passes(host, filter_properties)     # Fill the caches
-
-        self.oat_attested = False
-        filt_cls.host_passes(host, filter_properties)
-        self.assertFalse(self.oat_attested)
-
-        self.oat_attested = False
-
-        timeutils.set_time_override(timeutils.utcnow())
-        timeutils.advance_time_seconds(
-            CONF.trusted_computing.attestation_auth_timeout + 80)
-        filt_cls.host_passes(host, filter_properties)
-        self.assertTrue(self.oat_attested)
-
-        timeutils.clear_time_override()
-
-    def test_trusted_filter_update_cache_timezone(self):
-        self.oat_data = {"hosts": [{"host_name": "node1",
-                                    "trust_lvl": "untrusted",
-                                    "vtime": "2012-09-09T05:10:40-04:00"}]}
-
-        filt_cls = self.class_map['TrustedFilter']()
-        extra_specs = {'trust:trusted_host': 'untrusted'}
-        filter_properties = {'context': self.context.elevated(),
-                             'instance_type': {'memory_mb': 1024,
-                                               'extra_specs': extra_specs}}
-        host = fakes.FakeHostState('host1', 'node1', {})
-
-        timeutils.set_time_override(
-            timeutils.normalize_time(
-                timeutils.parse_isotime("2012-09-09T09:10:40Z")))
-
-        filt_cls.host_passes(host, filter_properties)     # Fill the caches
-
-        self.oat_attested = False
-        filt_cls.host_passes(host, filter_properties)
-        self.assertFalse(self.oat_attested)
-
-        self.oat_attested = False
-        timeutils.advance_time_seconds(
-            CONF.trusted_computing.attestation_auth_timeout - 10)
-        filt_cls.host_passes(host, filter_properties)
-        self.assertFalse(self.oat_attested)
-
-        timeutils.clear_time_override()
-
-    @mock.patch('nova.db.compute_node_get_all')
-    def test_trusted_filter_combine_hosts(self, mockdb):
-        self.oat_data = {"hosts": [{"host_name": "node1",
-                                    "trust_lvl": "untrusted",
-                                    "vtime": "2012-09-09T05:10:40-04:00"}]}
-        fake_compute_nodes = [
-            {'hypervisor_hostname': 'node1',
-             'service': {'host': 'host1'},
-            },
-            {'hypervisor_hostname': 'node2',
-             'service': {'host': 'host2'},
-            }, ]
-        mockdb.return_value = fake_compute_nodes
-        filt_cls = self.class_map['TrustedFilter']()
-        extra_specs = {'trust:trusted_host': 'trusted'}
-        filter_properties = {'context': self.context.elevated(),
-                             'instance_type': {'memory_mb': 1024,
-                                               'extra_specs': extra_specs}}
-        host = fakes.FakeHostState('host1', 'node1', {})
-
-        filt_cls.host_passes(host, filter_properties)     # Fill the caches
-        self.assertEqual(set(self.oat_hosts), set(['node1', 'node2']))
-
-    def test_trusted_filter_trusted_and_locale_formated_vtime_passes(self):
-        self.oat_data = {"hosts": [{"host_name": "host1",
-                                    "trust_lvl": "trusted",
-                                    "vtime": timeutils.strtime(fmt="%c")},
-                                   {"host_name": "host2",
-                                    "trust_lvl": "trusted",
-                                    "vtime": timeutils.strtime(fmt="%D")},
-                                    # This is just a broken date to ensure that
-                                    # we're not just arbitrarily accepting any
-                                    # date format.
-                        ]}
-        self._stub_service_is_up(True)
-        filt_cls = self.class_map['TrustedFilter']()
-        extra_specs = {'trust:trusted_host': 'trusted'}
-        filter_properties = {'context': self.context.elevated(),
-                             'instance_type': {'memory_mb': 1024,
-                                               'extra_specs': extra_specs}}
-        host = fakes.FakeHostState('host1', 'host1', {})
-        bad_host = fakes.FakeHostState('host2', 'host2', {})
-
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-        self.assertFalse(filt_cls.host_passes(bad_host, filter_properties))
 
     def test_core_filter_passes(self):
         filt_cls = self.class_map['CoreFilter']()
