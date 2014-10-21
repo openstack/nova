@@ -53,6 +53,10 @@ class BlockDeviceMapping(extensions.V3APIExtensionBase):
                      'is not allowed in the same request.')
             raise exc.HTTPBadRequest(explanation=expl)
 
+        if not isinstance(bdm, list):
+            msg = _('block_device_mapping_v2 must be a list')
+            raise exc.HTTPBadRequest(explanation=msg)
+
         try:
             block_device_mapping = [
                 block_device.BlockDeviceDict.from_api(bdm_dict)

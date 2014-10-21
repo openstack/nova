@@ -857,6 +857,9 @@ class Controller(wsgi.Controller):
         legacy_bdm = True
         if self.ext_mgr.is_loaded('os-volumes'):
             block_device_mapping = server_dict.get('block_device_mapping', [])
+            if not isinstance(block_device_mapping, list):
+                msg = _('block_device_mapping must be a list')
+                raise exc.HTTPBadRequest(explanation=msg)
             for bdm in block_device_mapping:
                 try:
                     block_device.validate_device_name(bdm.get("device_name"))
@@ -878,6 +881,10 @@ class Controller(wsgi.Controller):
                     expl = _('Using different block_device_mapping syntaxes '
                              'is not allowed in the same request.')
                     raise exc.HTTPBadRequest(explanation=expl)
+
+                if not isinstance(block_device_mapping_v2, list):
+                    msg = _('block_device_mapping_v2 must be a list')
+                    raise exc.HTTPBadRequest(explanation=msg)
 
                 # Assume legacy format
                 legacy_bdm = not bool(block_device_mapping_v2)
