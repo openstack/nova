@@ -331,7 +331,9 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                        lambda: elevated_context)
         self.mox.StubOutWithMock(driver_bdm._bdm_obj, 'save')
         self.mox.StubOutWithMock(encryptors, 'get_encryption_metadata')
-        instance = {'id': 'fake_id', 'uuid': 'fake_uuid'}
+        instance_detail = {'id': '123', 'uuid': 'fake_uuid'}
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   **instance_detail)
         connector = {'ip': 'fake_ip', 'host': 'fake_host'}
         connection_info = {'data': {'access_mode': access_mode}}
         expected_conn_info = {'data': {'access_mode': access_mode},

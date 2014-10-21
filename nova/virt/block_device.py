@@ -267,7 +267,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         if 'data' in connection_info:
             mode = connection_info['data'].get('access_mode', 'rw')
         if volume['attach_status'] == "detached":
-            volume_api.attach(context, volume_id, instance['uuid'],
+            volume_api.attach(context, volume_id, instance.uuid,
                               self['mount_device'], mode=mode)
 
     @update_db
