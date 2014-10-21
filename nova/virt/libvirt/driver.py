@@ -4721,11 +4721,11 @@ class LibvirtDriver(driver.ComputeDriver):
                     if fun_cap.type == 'virt_functions':
                         return {'dev_type': 'type-PF'}
                     if fun_cap.type == 'phys_function':
-                        phys_address = "%s:%s:%s.%s" % (
-                            fun_cap.device_addrs[0][0].replace("0x", ''),
-                            fun_cap.device_addrs[0][1].replace("0x", ''),
-                            fun_cap.device_addrs[0][2].replace("0x", ''),
-                            fun_cap.device_addrs[0][3].replace("0x", ''))
+                        phys_address = "%04x:%02x:%02x.%01x" % (
+                            fun_cap.device_addrs[0][0],
+                            fun_cap.device_addrs[0][1],
+                            fun_cap.device_addrs[0][2],
+                            fun_cap.device_addrs[0][3])
                         return {'dev_type': 'type-VF',
                                 'phys_function': phys_address}
             return {'dev_type': 'type-PCI'}
