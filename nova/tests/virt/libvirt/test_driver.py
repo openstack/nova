@@ -10448,8 +10448,11 @@ class HostStateTestCase(test.NoDBTestCase):
                            hardware.VirtNUMATopologyCellUsage(
                                 2, set([3, 4]), 1024)])
 
-    class FakeConnection(object):
+    class FakeConnection(libvirt_driver.LibvirtDriver):
         """Fake connection object."""
+        def __init__(self):
+            super(HostStateTestCase.FakeConnection,
+                  self).__init__(fake.FakeVirtAPI(), True)
 
         def _get_vcpu_total(self):
             return 1
@@ -10498,8 +10501,9 @@ class HostStateTestCase(test.NoDBTestCase):
             return HostStateTestCase.numa_topology
 
     def test_update_status(self):
-        hs = libvirt_driver.HostState(self.FakeConnection())
-        stats = hs._stats
+        drvr = HostStateTestCase.FakeConnection()
+
+        stats = drvr.get_available_resource("compute1")
         self.assertEqual(stats["vcpus"], 1)
         self.assertEqual(stats["memory_mb"], 497)
         self.assertEqual(stats["local_gb"], 100)

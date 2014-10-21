@@ -383,7 +383,6 @@ class LibvirtDriver(driver.ComputeDriver):
             libvirt = importutils.import_module('libvirt')
 
         self._skip_list_all_domains = False
-        self._host_state = None
         self._initiator = None
         self._fc_wwnns = None
         self._fc_wwpns = None
@@ -466,12 +465,6 @@ class LibvirtDriver(driver.ComputeDriver):
             if not self._supports_direct_io(CONF.instances_path):
                 self._disk_cachemode = "writethrough"
         return self._disk_cachemode
-
-    @property
-    def host_state(self):
-        if not self._host_state:
-            self._host_state = HostState(self)
-        return self._host_state
 
     def _set_cache_mode(self, conf):
         """Set cache mode on LibvirtConfigGuestDisk object."""
@@ -4916,12 +4909,45 @@ class LibvirtDriver(driver.ComputeDriver):
         :returns: dictionary containing resource info
         """
 
-        # Temporary: convert supported_instances into a string, while keeping
+        disk_info_dict = self._get_local_gb_info()
+        data = {}
+
+        # NOTE(dprince): calling capabilities before getVersion works around
+        # an initialization issue with some versions of Libvirt (1.0.5.5).
+        # See: https://bugzilla.redhat.com/show_bug.cgi?id=1000116
+        # See: https://bugs.launchpad.net/nova/+bug/1215593
+
+        # Temporary convert supported_instances into a string, while keeping
         # the RPC version as JSON. Can be changed when RPC broadcast is removed
-        stats = self.host_state.get_host_stats(True)
-        stats['supported_instances'] = jsonutils.dumps(
-                stats['supported_instances'])
-        return stats
+        data["supported_instances"] = jsonutils.dumps(
+            self._get_instance_capabilities())
+
+        data["vcpus"] = self._get_vcpu_total()
+        data["memory_mb"] = self._get_memory_mb_total()
+        data["local_gb"] = disk_info_dict['total']
+        data["vcpus_used"] = self._get_vcpu_used()
+        data["memory_mb_used"] = self._get_memory_mb_used()
+        data["local_gb_used"] = disk_info_dict['used']
+        data["hypervisor_type"] = self._get_hypervisor_type()
+        data["hypervisor_version"] = self._get_hypervisor_version()
+        data["hypervisor_hostname"] = self._get_hypervisor_hostname()
+        data["cpu_info"] = self._get_cpu_info()
+
+        disk_free_gb = disk_info_dict['free']
+        disk_over_committed = self._get_disk_over_committed_size_total()
+        available_least = disk_free_gb * units.Gi - disk_over_committed
+        data['disk_available_least'] = available_least / units.Gi
+
+        data['pci_passthrough_devices'] = \
+            self._get_pci_passthrough_devices()
+
+        numa_topology = self._get_host_numa_topology()
+        if numa_topology:
+            data['numa_topology'] = numa_topology.to_json()
+        else:
+            data['numa_topology'] = None
+
+        return data
 
     def check_instance_shared_storage_local(self, context, instance):
         dirpath = libvirt_utils.get_instance_path(instance)
@@ -6315,76 +6341,3 @@ class LibvirtDriver(driver.ComputeDriver):
     def is_supported_fs_format(self, fs_type):
         return fs_type in [disk.FS_FORMAT_EXT2, disk.FS_FORMAT_EXT3,
                            disk.FS_FORMAT_EXT4, disk.FS_FORMAT_XFS]
-
-
-class HostState(object):
-    """Manages information about the compute node through libvirt."""
-    def __init__(self, driver):
-        super(HostState, self).__init__()
-        self._stats = {}
-        self.driver = driver
-        self.update_status()
-
-    def get_host_stats(self, refresh=False):
-        """Return the current state of the host.
-
-        If 'refresh' is True, run update the stats first.
-        """
-        if refresh or not self._stats:
-            self.update_status()
-        return self._stats
-
-    def update_status(self):
-        """Retrieve status info from libvirt."""
-        def _get_disk_available_least():
-            """Return total real disk available least size.
-
-            The size of available disk, when block_migration command given
-            disk_over_commit param is FALSE.
-
-            The size that deducted real instance disk size from the total size
-            of the virtual disk of all instances.
-
-            """
-            disk_free_gb = disk_info_dict['free']
-            disk_over_committed = (self.driver.
-                    _get_disk_over_committed_size_total())
-            # Disk available least size
-            available_least = disk_free_gb * units.Gi - disk_over_committed
-            return (available_least / units.Gi)
-
-        LOG.debug("Updating host stats")
-        disk_info_dict = self.driver._get_local_gb_info()
-        data = {}
-
-        # NOTE(dprince): calling capabilities before getVersion works around
-        # an initialization issue with some versions of Libvirt (1.0.5.5).
-        # See: https://bugzilla.redhat.com/show_bug.cgi?id=1000116
-        # See: https://bugs.launchpad.net/nova/+bug/1215593
-        data["supported_instances"] = \
-            self.driver._get_instance_capabilities()
-
-        data["vcpus"] = self.driver._get_vcpu_total()
-        data["memory_mb"] = self.driver._get_memory_mb_total()
-        data["local_gb"] = disk_info_dict['total']
-        data["vcpus_used"] = self.driver._get_vcpu_used()
-        data["memory_mb_used"] = self.driver._get_memory_mb_used()
-        data["local_gb_used"] = disk_info_dict['used']
-        data["hypervisor_type"] = self.driver._get_hypervisor_type()
-        data["hypervisor_version"] = self.driver._get_hypervisor_version()
-        data["hypervisor_hostname"] = self.driver._get_hypervisor_hostname()
-        data["cpu_info"] = self.driver._get_cpu_info()
-        data['disk_available_least'] = _get_disk_available_least()
-
-        data['pci_passthrough_devices'] = \
-            self.driver._get_pci_passthrough_devices()
-
-        numa_topology = self.driver._get_host_numa_topology()
-        if numa_topology:
-            data['numa_topology'] = numa_topology.to_json()
-        else:
-            data['numa_topology'] = None
-
-        self._stats = data
-
-        return data
