@@ -227,22 +227,6 @@ class HostFiltersTestCase(test.NoDBTestCase):
         filter_properties = {}
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
-    def test_filter_num_instances_passes(self):
-        self.flags(max_instances_per_host=5)
-        filt_cls = self.class_map['NumInstancesFilter']()
-        host = fakes.FakeHostState('host1', 'node1',
-                                   {'num_instances': 4})
-        filter_properties = {}
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-
-    def test_filter_num_instances_fails(self):
-        self.flags(max_instances_per_host=5)
-        filt_cls = self.class_map['NumInstancesFilter']()
-        host = fakes.FakeHostState('host1', 'node1',
-                                   {'num_instances': 5})
-        filter_properties = {}
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
-
     def _test_group_anti_affinity_filter_passes(self, cls, policy):
         filt_cls = self.class_map[cls]()
         host = fakes.FakeHostState('host1', 'node1', {})
@@ -395,31 +379,4 @@ class HostFiltersTestCase(test.NoDBTestCase):
             name='fake_aggregate',
             hosts=['host1'],
             metadata={'disk_allocation_ratio': '2'})
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-
-    def test_filter_aggregate_num_instances_value(self):
-        self.flags(max_instances_per_host=4)
-        filt_cls = self.class_map['AggregateNumInstancesFilter']()
-        host = fakes.FakeHostState('host1', 'node1',
-                                   {'num_instances': 5})
-        filter_properties = {'context': self.context}
-        # No aggregate defined for that host.
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
-        self._create_aggregate_with_host(
-            name='fake_aggregate',
-            hosts=['host1'],
-            metadata={'max_instances_per_host': 6})
-        # Aggregate defined for that host.
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-
-    def test_filter_aggregate_num_instances_value_error(self):
-        self.flags(max_instances_per_host=6)
-        filt_cls = self.class_map['AggregateNumInstancesFilter']()
-        host = fakes.FakeHostState('host1', 'node1',
-                                   {'num_instances': 5})
-        filter_properties = {'context': self.context}
-        self._create_aggregate_with_host(
-            name='fake_aggregate',
-            hosts=['host1'],
-            metadata={'max_instances_per_host': 'XXX'})
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
