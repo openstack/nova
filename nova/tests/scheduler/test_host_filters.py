@@ -15,34 +15,24 @@
 Tests For Scheduler Host Filters.
 """
 
-from nova import context
 from nova.scheduler import filters
+from nova.scheduler.filters import all_hosts_filter
+from nova.scheduler.filters import compute_filter
 from nova import test
 from nova.tests.scheduler import fakes
 
 
 class HostFiltersTestCase(test.NoDBTestCase):
-    """Test case for host filters."""
-    # FIXME(sirp): These tests still require DB access until we can separate
-    # the testing of the DB API code from the host-filter code.
-    USES_DB = True
 
-    def setUp(self):
-        super(HostFiltersTestCase, self).setUp()
-        self.context = context.RequestContext('fake', 'fake')
+    def test_filter_handler(self):
+        # Double check at least a couple of known filters exist
         filter_handler = filters.HostFilterHandler()
         classes = filter_handler.get_matching_classes(
                 ['nova.scheduler.filters.all_filters'])
-        self.class_map = {}
-        for cls in classes:
-            self.class_map[cls.__name__] = cls
-
-    def test_all_filters(self):
-        # Double check at least a couple of known filters exist
-        self.assertIn('AllHostsFilter', self.class_map)
-        self.assertIn('ComputeFilter', self.class_map)
+        self.assertIn(all_hosts_filter.AllHostsFilter, classes)
+        self.assertIn(compute_filter.ComputeFilter, classes)
 
     def test_all_host_filter(self):
-        filt_cls = self.class_map['AllHostsFilter']()
+        filt_cls = all_hosts_filter.AllHostsFilter()
         host = fakes.FakeHostState('host1', 'node1', {})
         self.assertTrue(filt_cls.host_passes(host, {}))
