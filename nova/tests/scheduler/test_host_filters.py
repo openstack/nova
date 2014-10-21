@@ -211,22 +211,6 @@ class HostFiltersTestCase(test.NoDBTestCase):
         filter_properties = dict(retry=retry)
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
-    def test_filter_num_iops_passes(self):
-        self.flags(max_io_ops_per_host=8)
-        filt_cls = self.class_map['IoOpsFilter']()
-        host = fakes.FakeHostState('host1', 'node1',
-                                   {'num_io_ops': 7})
-        filter_properties = {}
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-
-    def test_filter_num_iops_fails(self):
-        self.flags(max_io_ops_per_host=8)
-        filt_cls = self.class_map['IoOpsFilter']()
-        host = fakes.FakeHostState('host1', 'node1',
-                                   {'num_io_ops': 8})
-        filter_properties = {}
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
-
     def _test_group_anti_affinity_filter_passes(self, cls, policy):
         filt_cls = self.class_map[cls]()
         host = fakes.FakeHostState('host1', 'node1', {})
@@ -312,31 +296,6 @@ class HostFiltersTestCase(test.NoDBTestCase):
                                    attribute_dict={'metrics': metrics})
         filt_cls = self.class_map['MetricsFilter']()
         self.assertFalse(filt_cls.host_passes(host, None))
-
-    def test_aggregate_filter_num_iops_value(self):
-        self.flags(max_io_ops_per_host=7)
-        filt_cls = self.class_map['AggregateIoOpsFilter']()
-        host = fakes.FakeHostState('host1', 'node1',
-                                   {'num_io_ops': 7})
-        filter_properties = {'context': self.context}
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
-        self._create_aggregate_with_host(
-            name='fake_aggregate',
-            hosts=['host1'],
-            metadata={'max_io_ops_per_host': 8})
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-
-    def test_aggregate_filter_num_iops_value_error(self):
-        self.flags(max_io_ops_per_host=8)
-        filt_cls = self.class_map['AggregateIoOpsFilter']()
-        host = fakes.FakeHostState('host1', 'node1',
-                                   {'num_io_ops': 7})
-        self._create_aggregate_with_host(
-            name='fake_aggregate',
-            hosts=['host1'],
-            metadata={'max_io_ops_per_host': 'XXX'})
-        filter_properties = {'context': self.context}
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_aggregate_disk_filter_value_error(self):
         self._stub_service_is_up(True)
