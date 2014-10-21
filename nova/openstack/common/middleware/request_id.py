@@ -1,4 +1,4 @@
-# Copyright (c) 2014 IBM Corp.
+# Copyright (c) 2013 NEC Corporation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -13,27 +13,26 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Middleware that ensures x-compute-request-id
+"""Middleware that ensures request ID.
 
-Using this middleware provides a convenient way to attach the
-x-compute-request-id to only v2 responses. Previously, this header was set in
-api/openstack/wsgi.py
-
-Responses for APIv3 are taken care of by the request_id middleware provided
-in oslo.
+It ensures to assign request ID for each API request and set it to
+request environment. The request ID is also added to API response.
 """
 
 import webob.dec
 
 from nova.openstack.common import context
 from nova.openstack.common.middleware import base
+from nova.openstack.common import versionutils
 
 
 ENV_REQUEST_ID = 'openstack.request_id'
-HTTP_RESP_HEADER_REQUEST_ID = 'x-compute-request-id'
+HTTP_RESP_HEADER_REQUEST_ID = 'x-openstack-request-id'
 
 
-class ComputeReqIdMiddleware(base.Middleware):
+@versionutils.deprecated(as_of=versionutils.deprecated.JUNO,
+                         in_favor_of='oslo.middleware.RequestId')
+class RequestIdMiddleware(base.Middleware):
 
     @webob.dec.wsgify
     def __call__(self, req):
