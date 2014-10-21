@@ -1005,7 +1005,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         ironicclient = client_wrapper.IronicClientWrapper()
         node = ironicclient.call("node.get", node_uuid)
         flavor = objects.Flavor.get_by_id(context,
-                                          instance['instance_type_id'])
+                                          instance.instance_type_id)
 
         self._add_driver_fields(node, instance, image_meta, flavor,
                                 preserve_ephemeral)
@@ -1018,7 +1018,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                 ironic.exc.InternalServerError,  # Validations
                 ironic.exc.BadRequest) as e:     # Maintenance
             msg = (_("Failed to request Ironic to rebuild instance "
-                     "%(inst)s: %(reason)s") % {'inst': instance['uuid'],
+                     "%(inst)s: %(reason)s") % {'inst': instance.uuid,
                                                 'reason': six.text_type(e)})
             raise exception.InstanceDeployFailure(msg)
 
