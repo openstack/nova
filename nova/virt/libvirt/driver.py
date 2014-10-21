@@ -979,10 +979,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 old_domid = virt_dom.ID()
                 virt_dom.destroy()
 
-                # NOTE(GuanQiang): teardown container to avoid resource leak
-                if CONF.libvirt.virt_type == 'lxc':
-                    self._teardown_container(instance)
-
             except libvirt.libvirtError as e:
                 is_okay = False
                 errcode = e.get_error_code()
@@ -1049,6 +1045,10 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.info(_LI("Going to destroy instance again."),
                      instance=instance)
             self._destroy(instance)
+        else:
+            # NOTE(GuanQiang): teardown container to avoid resource leak
+            if CONF.libvirt.virt_type == 'lxc':
+                self._teardown_container(instance)
 
     def destroy(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True, migrate_data=None):

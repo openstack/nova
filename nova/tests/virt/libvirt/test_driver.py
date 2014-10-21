@@ -172,6 +172,8 @@ class FakeVirtDomain(object):
         self.uuidstr = uuidstr
         self.id = id
         self.domname = name
+        self._info = [power_state.RUNNING, 2048 * units.Mi, 1234 * units.Mi,
+                     None, None]
         if fake_xml:
             self._fake_dom_xml = fake_xml
         else:
@@ -195,8 +197,7 @@ class FakeVirtDomain(object):
         return self.id
 
     def info(self):
-        return [power_state.RUNNING, 2048 * units.Mi, 1234 * units.Mi,
-                None, None]
+        return self._info
 
     def create(self):
         pass
@@ -235,6 +236,9 @@ class FakeVirtDomain(object):
         pass
 
     def resume(self):
+        pass
+
+    def destroy(self):
         pass
 
 
@@ -7322,6 +7326,56 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                        'unfilter_instance', fake_unfilter_instance)
         self.stubs.Set(os.path, 'exists', fake_os_path_exists)
         conn.destroy(self.context, instance, [], None, False)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver, 'cleanup')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_teardown_container')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_lookup_by_name')
+    def test_destroy_lxc_calls_teardown_container(self, mock_look_up,
+                                                  mock_teardown_container,
+                                                  mock_cleanup):
+        self.flags(virt_type='lxc', group='libvirt')
+        fake_domain = FakeVirtDomain()
+
+        def destroy_side_effect(*args, **kwargs):
+            fake_domain._info[0] = power_state.SHUTDOWN
+
+        with mock.patch.object(fake_domain, 'destroy',
+               side_effect=destroy_side_effect) as mock_domain_destroy:
+            mock_look_up.return_value = fake_domain
+            instance = fake_instance.fake_instance_obj(self.context)
+
+            conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+            network_info = []
+            conn.destroy(self.context, instance, network_info, None, False)
+
+            mock_look_up.assert_has_calls([mock.call(instance.name),
+                                           mock.call(instance.name)])
+            mock_domain_destroy.assert_called_once_with()
+            mock_teardown_container.assert_called_once_with(instance)
+            mock_cleanup.assert_called_once_with(self.context, instance,
+                                                 network_info, None, False,
+                                                 None)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver, 'cleanup')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_teardown_container')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_lookup_by_name')
+    def test_destroy_lxc_calls_teardown_container_when_no_domain(self,
+            mock_look_up, mock_teardown_container, mock_cleanup):
+        self.flags(virt_type='lxc', group='libvirt')
+        instance = fake_instance.fake_instance_obj(self.context)
+        inf_exception = exception.InstanceNotFound(instance_id=instance.name)
+        mock_look_up.side_effect = inf_exception
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        network_info = []
+        conn.destroy(self.context, instance, network_info, None, False)
+
+        mock_look_up.assert_has_calls([mock.call(instance.name),
+                                       mock.call(instance.name)])
+        mock_teardown_container.assert_called_once_with(instance)
+        mock_cleanup.assert_called_once_with(self.context, instance,
+                                             network_info, None, False,
+                                             None)
 
     def test_reboot_different_ids(self):
         class FakeLoopingCall:
