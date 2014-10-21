@@ -17,18 +17,8 @@ Tests For Scheduler Host Filters.
 
 from nova import context
 from nova.scheduler import filters
-from nova import servicegroup
 from nova import test
 from nova.tests.scheduler import fakes
-
-
-class TestFilter(filters.BaseHostFilter):
-    pass
-
-
-class TestBogusFilter(object):
-    """Class that doesn't inherit from BaseHostFilter."""
-    pass
 
 
 class HostFiltersTestCase(test.NoDBTestCase):
@@ -56,47 +46,6 @@ class HostFiltersTestCase(test.NoDBTestCase):
         filt_cls = self.class_map['AllHostsFilter']()
         host = fakes.FakeHostState('host1', 'node1', {})
         self.assertTrue(filt_cls.host_passes(host, {}))
-
-    def _stub_service_is_up(self, ret_value):
-        def fake_service_is_up(self, service):
-                return ret_value
-        self.stubs.Set(servicegroup.API, 'service_is_up', fake_service_is_up)
-
-    def test_compute_filter_passes(self):
-        self._stub_service_is_up(True)
-        filt_cls = self.class_map['ComputeFilter']()
-        filter_properties = {'instance_type': {'memory_mb': 1024}}
-        service = {'disabled': False}
-        host = fakes.FakeHostState('host1', 'node1',
-                {'free_ram_mb': 1024, 'service': service})
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-
-    def _test_compute_filter_fails_on_service_disabled(self,
-                                                       reason=None):
-        self._stub_service_is_up(True)
-        filt_cls = self.class_map['ComputeFilter']()
-        filter_properties = {'instance_type': {'memory_mb': 1024}}
-        service = {'disabled': True}
-        if reason:
-            service['disabled_reason'] = reason
-        host = fakes.FakeHostState('host1', 'node1',
-                {'free_ram_mb': 1024, 'service': service})
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
-
-    def test_compute_filter_fails_on_service_disabled_no_reason(self):
-        self._test_compute_filter_fails_on_service_disabled()
-
-    def test_compute_filter_fails_on_service_disabled(self):
-        self._test_compute_filter_fails_on_service_disabled(reason='Test')
-
-    def test_compute_filter_fails_on_service_down(self):
-        self._stub_service_is_up(False)
-        filt_cls = self.class_map['ComputeFilter']()
-        filter_properties = {'instance_type': {'memory_mb': 1024}}
-        service = {'disabled': False}
-        host = fakes.FakeHostState('host1', 'node1',
-                {'free_ram_mb': 1024, 'service': service})
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_retry_filter_disabled(self):
         # Test case where retry/re-scheduling is disabled.
