@@ -229,34 +229,6 @@ class HostFiltersTestCase(test.NoDBTestCase):
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
         self.assertEqual(4 * 2, host.limits['vcpu'])
 
-    @staticmethod
-    def _make_zone_request(zone, is_admin=False):
-        ctxt = context.RequestContext('fake', 'fake', is_admin=is_admin)
-        return {
-            'context': ctxt,
-            'request_spec': {
-                'instance_properties': {
-                    'availability_zone': zone
-                }
-            }
-        }
-
-    def test_availability_zone_filter_same(self):
-        filt_cls = self.class_map['AvailabilityZoneFilter']()
-        service = {'availability_zone': 'nova'}
-        request = self._make_zone_request('nova')
-        host = fakes.FakeHostState('host1', 'node1',
-                                   {'service': service})
-        self.assertTrue(filt_cls.host_passes(host, request))
-
-    def test_availability_zone_filter_different(self):
-        filt_cls = self.class_map['AvailabilityZoneFilter']()
-        service = {'availability_zone': 'nova'}
-        request = self._make_zone_request('bad')
-        host = fakes.FakeHostState('host1', 'node1',
-                                   {'service': service})
-        self.assertFalse(filt_cls.host_passes(host, request))
-
     def test_retry_filter_disabled(self):
         # Test case where retry/re-scheduling is disabled.
         filt_cls = self.class_map['RetryFilter']()
