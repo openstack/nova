@@ -337,16 +337,16 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         if node.target_provision_state == ironic_states.DELETED:
             # ironic is trying to delete it now
-            raise exception.InstanceNotFound(instance_id=instance['uuid'])
+            raise exception.InstanceNotFound(instance_id=instance.uuid)
 
         if node.provision_state == ironic_states.NOSTATE:
             # ironic already deleted it
-            raise exception.InstanceNotFound(instance_id=instance['uuid'])
+            raise exception.InstanceNotFound(instance_id=instance.uuid)
 
         if node.provision_state == ironic_states.DEPLOYFAIL:
             # ironic failed to deploy
             msg = (_("Failed to provision instance %(inst)s: %(reason)s")
-                   % {'inst': instance['uuid'], 'reason': node.last_error})
+                   % {'inst': instance.uuid, 'reason': node.last_error})
             raise exception.InstanceDeployFailure(msg)
 
         _log_ironic_polling('become ACTIVE', node, instance)
