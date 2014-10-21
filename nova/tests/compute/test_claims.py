@@ -26,9 +26,9 @@ from nova.compute import claims
 from nova import db
 from nova import exception
 from nova import objects
-from nova.pci import pci_manager
+from nova.pci import manager as pci_manager
 from nova import test
-from nova.tests.pci import pci_fakes
+from nova.tests.pci import fakes as pci_fakes
 from nova.virt import hardware
 
 

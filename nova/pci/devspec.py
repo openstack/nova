@@ -17,7 +17,7 @@ import re
 from oslo.serialization import jsonutils
 
 from nova import exception
-from nova.pci import pci_utils
+from nova.pci import utils
 
 MAX_VENDOR_ID = 0xFFFF
 MAX_PRODUCT_ID = 0xFFFF
@@ -69,12 +69,12 @@ class PciAddress(object):
     def _check_physical_function(self):
         if ANY in (self.domain, self.bus, self.slot, self.func):
             return
-        self.is_physical_function = pci_utils.is_physical_function(self)
+        self.is_physical_function = utils.is_physical_function(self)
 
     def _init_address_fields(self, pci_addr):
         if self.is_physical_function:
             (self.domain, self.bus, self.slot,
-             self.func) = pci_utils.get_pci_address_fields(pci_addr)
+             self.func) = utils.get_pci_address_fields(pci_addr)
             return
         dbs, sep, func = pci_addr.partition('.')
         if func:
@@ -112,12 +112,12 @@ class PciAddress(object):
             if not pci_phys_addr:
                 return False
             domain, bus, slot, func = (
-                pci_utils.get_pci_address_fields(pci_phys_addr))
+                utils.get_pci_address_fields(pci_phys_addr))
             return (self.domain == domain and self.bus == bus and
                     self.slot == slot and self.func == func)
         else:
             domain, bus, slot, func = (
-                pci_utils.get_pci_address_fields(pci_addr))
+                utils.get_pci_address_fields(pci_addr))
             conditions = [
                 self.domain in (ANY, domain),
                 self.bus in (ANY, bus),
@@ -149,7 +149,7 @@ class PciDeviceSpec(object):
             raise exception.PciDeviceInvalidDeviceName()
         if not self.address:
             if self.dev_name:
-                self.address, pf = pci_utils.get_function_by_ifname(
+                self.address, pf = utils.get_function_by_ifname(
                     self.dev_name)
                 if not self.address:
                     raise exception.PciDeviceNotFoundById(id=self.dev_name)

@@ -46,7 +46,7 @@ from nova.i18n import _
 from nova.i18n import _LE
 from nova import objects
 from nova.openstack.common import log as logging
-from nova.pci import pci_manager
+from nova.pci import manager as pci_manager
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import driver as virt_driver

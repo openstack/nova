@@ -30,7 +30,7 @@ from nova import context
 from nova import db
 from nova import objects
 from nova.objects import base as obj_base
-from nova.pci import pci_stats
+from nova.pci import stats as pci_stats
 from nova.scheduler import filters
 from nova.scheduler.filters import extra_specs_ops
 from nova.scheduler.filters import ram_filter

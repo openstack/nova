@@ -30,7 +30,7 @@ from nova import db
 from nova import exception
 from nova.i18n import _, _LW
 from nova.openstack.common import log as logging
-from nova.pci import pci_stats
+from nova.pci import stats as pci_stats
 from nova.scheduler import filters
 from nova.scheduler import weights
 from nova.virt import hardware

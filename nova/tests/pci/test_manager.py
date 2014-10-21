@@ -23,11 +23,11 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import objects
-from nova.pci import pci_device
-from nova.pci import pci_manager
+from nova.pci import device
+from nova.pci import manager
 from nova import test
 from nova.tests.api.openstack import fakes
-from nova.tests.pci import pci_fakes
+from nova.tests.pci import fakes as pci_fakes
 
 
 fake_pci = {
@@ -111,7 +111,7 @@ class PciDevTrackerTestCase(test.TestCase):
         patcher = pci_fakes.fake_pci_whitelist()
         self.addCleanup(patcher.stop)
         self._create_fake_instance()
-        self.tracker = pci_manager.PciDevTracker(1)
+        self.tracker = manager.PciDevTracker(1)
 
     def test_pcidev_tracker_create(self):
         self.assertEqual(len(self.tracker.pci_devs), 3)
@@ -122,7 +122,7 @@ class PciDevTrackerTestCase(test.TestCase):
         self.assertEqual(self.tracker.node_id, 1)
 
     def test_pcidev_tracker_create_no_nodeid(self):
-        self.tracker = pci_manager.PciDevTracker()
+        self.tracker = manager.PciDevTracker()
         self.assertEqual(len(self.tracker.pci_devs), 0)
 
     def test_set_hvdev_new_dev(self):
@@ -260,13 +260,13 @@ class PciDevTrackerTestCase(test.TestCase):
         self.assertEqual(len(self.tracker.pci_devs), 3)
         dev = self.tracker.pci_devs[0]
         self.update_called = 0
-        pci_device.remove(dev)
+        device.remove(dev)
         self.tracker.save(ctxt)
         self.assertEqual(len(self.tracker.pci_devs), 2)
         self.assertEqual(self.destroy_called, 1)
 
     def test_set_compute_node_id(self):
-        self.tracker = pci_manager.PciDevTracker()
+        self.tracker = manager.PciDevTracker()
         fake_pci_devs = [copy.deepcopy(fake_pci), copy.deepcopy(fake_pci_1),
                          copy.deepcopy(fake_pci_2)]
         self.tracker.set_hvdevs(fake_pci_devs)
@@ -360,5 +360,5 @@ class PciGetInstanceDevs(test.TestCase):
         self.stubs.Set(objects.Instance, 'obj_load_attr', _fake_obj_load_attr)
 
         self.load_attr_called = False
-        pci_manager.get_instance_pci_devs(inst)
+        manager.get_instance_pci_devs(inst)
         self.assertEqual(self.load_attr_called, True)

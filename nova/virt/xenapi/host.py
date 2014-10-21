@@ -32,7 +32,7 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.openstack.common import log as logging
-from nova.pci import pci_whitelist
+from nova.pci import whitelist as pci_whitelist
 from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils
 

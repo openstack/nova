@@ -19,7 +19,7 @@ This module provides helper APIs for populating the config.py
 classes based on common operational needs / policies
 """
 
-from nova.pci import pci_utils
+from nova.pci import utils as pci_utils
 
 
 def set_vif_guest_frontend_config(conf, mac, model, driver):

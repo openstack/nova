@@ -35,9 +35,9 @@ from nova import objects
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
-from nova.pci import pci_manager
-from nova.pci import pci_request
-from nova.pci import pci_whitelist
+from nova.pci import manager as pci_manager
+from nova.pci import request as pci_request
+from nova.pci import whitelist as pci_whitelist
 
 neutron_opts = [
     cfg.StrOpt('url',

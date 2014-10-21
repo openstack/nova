@@ -28,7 +28,7 @@ from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import virtual_interface as vif_obj
-from nova.pci import pci_device
+from nova.pci import device as pci_device
 from nova.tests.objects import test_fixed_ip
 from nova.tests.objects import test_instance_info_cache
 from nova.tests.objects import test_pci_device

@@ -21,7 +21,7 @@ from nova.compute import task_states
 from nova import context
 from nova import exception
 from nova import objects
-from nova.pci import pci_manager
+from nova.pci import manager as pci_manager
 from nova import test
 from nova.tests import fake_instance
 from nova.tests.virt.xenapi import stubs
