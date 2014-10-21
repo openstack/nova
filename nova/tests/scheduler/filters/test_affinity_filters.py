@@ -183,3 +183,76 @@ class TestSimpleCIDRAffinityFilter(test.NoDBTestCase):
                              'scheduler_hints': None}
 
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
+
+
+class TestGroupAffinityFilter(test.NoDBTestCase):
+
+    def _test_group_anti_affinity_filter_passes(self, filt_cls, policy):
+        host = fakes.FakeHostState('host1', 'node1', {})
+        filter_properties = {}
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        filter_properties = {'group_policies': ['affinity']}
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        filter_properties = {'group_policies': [policy]}
+        filter_properties['group_hosts'] = []
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        filter_properties['group_hosts'] = ['host2']
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_group_anti_affinity_filter_passes(self):
+        self._test_group_anti_affinity_filter_passes(
+                affinity_filter.ServerGroupAntiAffinityFilter(),
+                'anti-affinity')
+
+    def test_group_anti_affinity_filter_passes_legacy(self):
+        self._test_group_anti_affinity_filter_passes(
+                affinity_filter.GroupAntiAffinityFilter(),
+                'legacy')
+
+    def _test_group_anti_affinity_filter_fails(self, filt_cls, policy):
+        host = fakes.FakeHostState('host1', 'node1', {})
+        filter_properties = {'group_policies': [policy],
+                             'group_hosts': ['host1']}
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_group_anti_affinity_filter_fails(self):
+        self._test_group_anti_affinity_filter_fails(
+                affinity_filter.ServerGroupAntiAffinityFilter(),
+                'anti-affinity')
+
+    def test_group_anti_affinity_filter_fails_legacy(self):
+        self._test_group_anti_affinity_filter_fails(
+                affinity_filter.GroupAntiAffinityFilter(),
+                'legacy')
+
+    def _test_group_affinity_filter_passes(self, filt_cls, policy):
+        host = fakes.FakeHostState('host1', 'node1', {})
+        filter_properties = {}
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        filter_properties = {'group_policies': ['anti-affinity']}
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+        filter_properties = {'group_policies': ['affinity'],
+                             'group_hosts': ['host1']}
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_group_affinity_filter_passes(self):
+        self._test_group_affinity_filter_passes(
+                affinity_filter.ServerGroupAffinityFilter(), 'affinity')
+
+    def test_group_affinity_filter_passes_legacy(self):
+        self._test_group_affinity_filter_passes(
+                affinity_filter.GroupAffinityFilter(), 'legacy')
+
+    def _test_group_affinity_filter_fails(self, filt_cls, policy):
+        host = fakes.FakeHostState('host1', 'node1', {})
+        filter_properties = {'group_policies': [policy],
+                             'group_hosts': ['host2']}
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_group_affinity_filter_fails(self):
+        self._test_group_affinity_filter_fails(
+                affinity_filter.ServerGroupAffinityFilter(), 'affinity')
+
+    def test_group_affinity_filter_fails_legacy(self):
+        self._test_group_affinity_filter_fails(
+                affinity_filter.GroupAffinityFilter(), 'legacy')
