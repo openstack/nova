@@ -15,16 +15,11 @@
 Tests For Scheduler Host Filters.
 """
 
-from oslo.config import cfg
-
 from nova import context
-from nova import db
 from nova.scheduler import filters
 from nova import servicegroup
 from nova import test
 from nova.tests.scheduler import fakes
-
-CONF = cfg.CONF
 
 
 class TestFilter(filters.BaseHostFilter):
@@ -102,19 +97,6 @@ class HostFiltersTestCase(test.NoDBTestCase):
         host = fakes.FakeHostState('host1', 'node1',
                 {'free_ram_mb': 1024, 'service': service})
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
-
-    def _create_aggregate_with_host(self, name='fake_aggregate',
-                          metadata=None,
-                          hosts=['host1']):
-        values = {'name': name}
-        if metadata:
-            metadata['availability_zone'] = 'fake_avail_zone'
-        else:
-            metadata = {'availability_zone': 'fake_avail_zone'}
-        result = db.aggregate_create(self.context.elevated(), values, metadata)
-        for host in hosts:
-            db.aggregate_host_add(self.context.elevated(), result['id'], host)
-        return result
 
     def test_retry_filter_disabled(self):
         # Test case where retry/re-scheduling is disabled.
@@ -228,46 +210,3 @@ class HostFiltersTestCase(test.NoDBTestCase):
                                    attribute_dict={'metrics': metrics})
         filt_cls = self.class_map['MetricsFilter']()
         self.assertFalse(filt_cls.host_passes(host, None))
-
-    def test_aggregate_disk_filter_value_error(self):
-        self._stub_service_is_up(True)
-        filt_cls = self.class_map['AggregateDiskFilter']()
-        self.flags(disk_allocation_ratio=1.0)
-        filter_properties = {
-            'context': self.context,
-            'instance_type': {'root_gb': 1,
-                              'ephemeral_gb': 1,
-                              'swap': 1024}}
-        service = {'disabled': False}
-        host = fakes.FakeHostState('host1', 'node1',
-                                   {'free_disk_mb': 3 * 1024,
-                                    'total_usable_disk_gb': 1,
-                                   'service': service})
-        self._create_aggregate_with_host(name='fake_aggregate',
-                hosts=['host1'],
-                metadata={'disk_allocation_ratio': 'XXX'})
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-
-    def test_aggregate_disk_filter_default_value(self):
-        self._stub_service_is_up(True)
-        filt_cls = self.class_map['AggregateDiskFilter']()
-        self.flags(disk_allocation_ratio=1.0)
-        filter_properties = {
-            'context': self.context,
-            'instance_type': {'root_gb': 2,
-                              'ephemeral_gb': 1,
-                              'swap': 1024}}
-        service = {'disabled': False}
-        host = fakes.FakeHostState('host1', 'node1',
-                                   {'free_disk_mb': 3 * 1024,
-                                    'total_usable_disk_gb': 1,
-                                   'service': service})
-        # Uses global conf.
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
-
-        # Uses an aggregate with ratio
-        self._create_aggregate_with_host(
-            name='fake_aggregate',
-            hosts=['host1'],
-            metadata={'disk_allocation_ratio': '2'})
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
