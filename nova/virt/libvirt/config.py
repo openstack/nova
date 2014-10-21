@@ -25,6 +25,8 @@ helpers for populating up config object instances.
 
 import time
 
+import six
+
 from nova import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common import units
@@ -59,7 +61,7 @@ class LibvirtConfigObject(object):
 
     def _text_node(self, name, value, **kwargs):
         child = self._new_node(name, **kwargs)
-        child.text = str(value)
+        child.text = six.text_type(value)
         return child
 
     def format_dom(self):

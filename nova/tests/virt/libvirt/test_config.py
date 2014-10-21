@@ -50,6 +50,13 @@ class LibvirtConfigTest(LibvirtConfigBaseTest):
         xml = etree.tostring(root)
         self.assertXmlEqual(xml, "<demo><foo>bar</foo></demo>")
 
+    def test_config_text_unicode(self):
+        obj = config.LibvirtConfigObject(root_name='demo')
+        root = obj.format_dom()
+        root.append(obj._text_node('foo', u'\xF0\x9F\x92\xA9'))
+        self.assertXmlEqual('<demo><foo>&#240;&#159;&#146;&#169;</foo></demo>',
+                            etree.tostring(root))
+
     def test_config_parse(self):
         inxml = "<demo><foo/></demo>"
         obj = config.LibvirtConfigObject(root_name="demo")
