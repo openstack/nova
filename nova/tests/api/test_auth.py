@@ -13,13 +13,13 @@
 #    under the License.
 
 from oslo.config import cfg
-from oslo.middleware import request_id
 from oslo.serialization import jsonutils
 import webob
 import webob.exc
 
 import nova.api.auth
 from nova.i18n import _
+from nova.openstack.common.middleware import request_id
 from nova import test
 
 CONF = cfg.CONF
