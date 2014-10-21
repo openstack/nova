@@ -15,7 +15,6 @@
 
 """The multinic extension."""
 
-import webob
 from webob import exc
 
 from nova.api.openstack import common
@@ -36,6 +35,7 @@ class MultinicController(wsgi.Controller):
         super(MultinicController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
+    @wsgi.response(202)
     @wsgi.action('addFixedIp')
     @extensions.expected_errors((400, 404))
     @validation.schema(multinic.add_fixed_ip)
@@ -52,8 +52,7 @@ class MultinicController(wsgi.Controller):
         except exception.NoMoreFixedIps as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
-        return webob.Response(status_int=202)
-
+    @wsgi.response(202)
     @wsgi.action('removeFixedIp')
     @extensions.expected_errors((400, 404))
     @validation.schema(multinic.remove_fixed_ip)
@@ -70,8 +69,6 @@ class MultinicController(wsgi.Controller):
             self.compute_api.remove_fixed_ip(context, instance, address)
         except exception.FixedIpNotFoundForSpecificInstance as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
-
-        return webob.Response(status_int=202)
 
 
 # Note: The class name is as it has to be for this to be loaded as an

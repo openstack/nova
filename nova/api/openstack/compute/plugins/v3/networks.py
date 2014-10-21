@@ -15,7 +15,6 @@
 #    under the License.
 
 import netaddr
-import webob
 from webob import exc
 
 from nova.api.openstack import extensions
@@ -88,9 +87,9 @@ class NetworkController(wsgi.Controller):
         result = [network_dict(context, net_ref) for net_ref in networks]
         return {'networks': result}
 
+    @wsgi.response(202)
     @extensions.expected_errors((404, 501))
     @wsgi.action("disassociate")
-    @wsgi.response(202)
     def _disassociate_host_and_project(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)
@@ -117,6 +116,7 @@ class NetworkController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
         return {'network': network_dict(context, network)}
 
+    @wsgi.response(202)
     @extensions.expected_errors((404, 409))
     def delete(self, req, id):
         context = req.environ['nova.context']
@@ -129,7 +129,6 @@ class NetworkController(wsgi.Controller):
         except exception.NetworkNotFound:
             msg = _("Network not found")
             raise exc.HTTPNotFound(explanation=msg)
-        return webob.Response(status_int=202)
 
     @extensions.expected_errors((400, 409, 501))
     def create(self, req, body):
@@ -171,8 +170,8 @@ class NetworkController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=ex.format_message())
         return {"network": network_dict(context, network)}
 
-    @extensions.expected_errors((400, 409, 501))
     @wsgi.response(202)
+    @extensions.expected_errors((400, 409, 501))
     def add(self, req, body):
         context = req.environ['nova.context']
         authorize(context)

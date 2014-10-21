@@ -14,7 +14,6 @@
 #   under the License.
 
 from oslo.utils import strutils
-import webob
 from webob import exc
 
 from nova.api.openstack import common
@@ -38,6 +37,7 @@ class MigrateServerController(wsgi.Controller):
         super(MigrateServerController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
+    @wsgi.response(202)
     @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.action('migrate')
     def _migrate(self, req, id, body):
@@ -61,8 +61,7 @@ class MigrateServerController(wsgi.Controller):
         except exception.NoValidHost as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
-        return webob.Response(status_int=202)
-
+    @wsgi.response(202)
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('os-migrateLive')
     @validation.schema(migrate_server.migrate_live)
@@ -102,7 +101,6 @@ class MigrateServerController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'os-migrateLive', id)
-        return webob.Response(status_int=202)
 
 
 class MigrateServer(extensions.V3APIExtensionBase):

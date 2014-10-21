@@ -32,8 +32,12 @@ class FlavorManageController(wsgi.Controller):
     def __init__(self):
         super(FlavorManageController, self).__init__()
 
-    @wsgi.action("delete")
+    # NOTE(oomichi): Return 202 for backwards compatibility but should be
+    # 204 as this operation complete the deletion of aggregate resource and
+    # return no response body.
+    @wsgi.response(202)
     @extensions.expected_errors((404))
+    @wsgi.action("delete")
     def _delete(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
@@ -45,11 +49,6 @@ class FlavorManageController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         flavors.destroy(flavor['name'])
-
-        # NOTE(oomichi): Return 202 for backwards compatibility but should be
-        # 204 as this operation complete the deletion of aggregate resource and
-        # return no response body.
-        return webob.Response(status_int=202)
 
     # NOTE(oomichi): Return 200 for backwards compatibility but should be 201
     # as this operation complete the creation of flavor resource.

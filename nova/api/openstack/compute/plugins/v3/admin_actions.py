@@ -12,7 +12,6 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-import webob
 from webob import exc
 
 from nova.api.openstack import common
@@ -42,6 +41,7 @@ class AdminActionsController(wsgi.Controller):
         super(AdminActionsController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
+    @wsgi.response(202)
     @extensions.expected_errors((404, 409))
     @wsgi.action('resetNetwork')
     def _reset_network(self, req, id, body):
@@ -54,8 +54,8 @@ class AdminActionsController(wsgi.Controller):
             self.compute_api.reset_network(context, instance)
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
-        return webob.Response(status_int=202)
 
+    @wsgi.response(202)
     @extensions.expected_errors((404, 409))
     @wsgi.action('injectNetworkInfo')
     def _inject_network_info(self, req, id, body):
@@ -68,8 +68,8 @@ class AdminActionsController(wsgi.Controller):
             self.compute_api.inject_network_info(context, instance)
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
-        return webob.Response(status_int=202)
 
+    @wsgi.response(202)
     @extensions.expected_errors((400, 404))
     @wsgi.action('os-resetState')
     @validation.schema(reset_server_state.reset_state)
@@ -86,7 +86,6 @@ class AdminActionsController(wsgi.Controller):
         instance.vm_state = state
         instance.task_state = None
         instance.save(admin_state_reset=True)
-        return webob.Response(status_int=202)
 
 
 class AdminActions(extensions.V3APIExtensionBase):

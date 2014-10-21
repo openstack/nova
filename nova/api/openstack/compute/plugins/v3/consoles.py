@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import webob
 from webob import exc
 
 from nova.api.openstack import extensions
@@ -81,6 +80,7 @@ class ConsolesController(object):
             raise exc.HTTPNotFound(explanation=e.format_message())
         return _translate_detail_keys(console)
 
+    @wsgi.response(202)
     @extensions.expected_errors(404)
     def delete(self, req, server_id, id):
         """Deletes a console."""
@@ -90,7 +90,6 @@ class ConsolesController(object):
                                             int(id))
         except exception.ConsoleNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
-        return webob.Response(status_int=202)
 
 
 class Consoles(extensions.V3APIExtensionBase):

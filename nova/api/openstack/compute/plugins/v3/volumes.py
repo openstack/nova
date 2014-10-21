@@ -16,7 +16,6 @@
 """The volumes extension."""
 
 from oslo.utils import strutils
-import webob
 from webob import exc
 
 from nova.api.openstack import common
@@ -98,6 +97,7 @@ class VolumeController(wsgi.Controller):
 
         return {'volume': _translate_volume_detail_view(context, vol)}
 
+    @wsgi.response(202)
     @extensions.expected_errors(404)
     def delete(self, req, id):
         """Delete a volume."""
@@ -110,7 +110,6 @@ class VolumeController(wsgi.Controller):
             self.volume_api.delete(context, id)
         except exception.NotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
-        return webob.Response(status_int=202)
 
     @extensions.expected_errors(())
     def index(self, req):
@@ -257,6 +256,7 @@ class SnapshotController(wsgi.Controller):
 
         return {'snapshot': _translate_snapshot_detail_view(context, vol)}
 
+    @wsgi.response(202)
     @extensions.expected_errors(404)
     def delete(self, req, id):
         """Delete a snapshot."""
@@ -269,7 +269,6 @@ class SnapshotController(wsgi.Controller):
             self.volume_api.delete_snapshot(context, id)
         except exception.NotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
-        return webob.Response(status_int=202)
 
     @extensions.expected_errors(())
     def index(self, req):
