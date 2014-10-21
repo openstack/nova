@@ -170,16 +170,6 @@ class HostFiltersTestCase(test.NoDBTestCase):
                 {'free_ram_mb': 1024, 'service': service})
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
-    def test_aggregate_filter_passes_no_extra_specs(self):
-        self._stub_service_is_up(True)
-        filt_cls = self.class_map['AggregateInstanceExtraSpecsFilter']()
-        capabilities = {'opt1': 1, 'opt2': 2}
-
-        filter_properties = {'context': self.context, 'instance_type':
-                {'memory_mb': 1024}}
-        host = fakes.FakeHostState('host1', 'node1', capabilities)
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-
     def _create_aggregate_with_host(self, name='fake_aggregate',
                           metadata=None,
                           hosts=['host1']):
@@ -192,61 +182,6 @@ class HostFiltersTestCase(test.NoDBTestCase):
         for host in hosts:
             db.aggregate_host_add(self.context.elevated(), result['id'], host)
         return result
-
-    def _do_test_aggregate_filter_extra_specs(self, emeta, especs, passes):
-        self._stub_service_is_up(True)
-        filt_cls = self.class_map['AggregateInstanceExtraSpecsFilter']()
-        self._create_aggregate_with_host(name='fake2', metadata=emeta)
-        filter_properties = {'context': self.context,
-            'instance_type': {'memory_mb': 1024, 'extra_specs': especs}}
-        host = fakes.FakeHostState('host1', 'node1',
-                                   {'free_ram_mb': 1024})
-        assertion = self.assertTrue if passes else self.assertFalse
-        assertion(filt_cls.host_passes(host, filter_properties))
-
-    def test_aggregate_filter_fails_extra_specs_deleted_host(self):
-        self._stub_service_is_up(True)
-        filt_cls = self.class_map['AggregateInstanceExtraSpecsFilter']()
-        extra_specs = {'opt1': 's== 1', 'opt2': 's== 2',
-                       'trust:trusted_host': 'true'}
-        self._create_aggregate_with_host(metadata={'opt1': '1'})
-        agg2 = self._create_aggregate_with_host(name='fake2',
-                metadata={'opt2': '2'})
-        filter_properties = {'context': self.context, 'instance_type':
-                {'memory_mb': 1024, 'extra_specs': extra_specs}}
-        host = fakes.FakeHostState('host1', 'node1',
-                                   {'free_ram_mb': 1024})
-        db.aggregate_host_delete(self.context.elevated(), agg2['id'], 'host1')
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
-
-    def test_aggregate_filter_passes_extra_specs_simple(self):
-        especs = {
-            # Un-scoped extra spec
-            'opt1': '1',
-            # Scoped extra spec that applies to this filter
-            'aggregate_instance_extra_specs:opt2': '2',
-            # Scoped extra spec that does not apply to this filter
-            'trust:trusted_host': 'true',
-        }
-        self._do_test_aggregate_filter_extra_specs(
-                emeta={'opt1': '1', 'opt2': '2'}, especs=especs, passes=True)
-
-    def test_aggregate_filter_passes_with_key_same_as_scope(self):
-        especs = {
-                # Un-scoped extra spec, make sure we don't blow up if it
-                # happens to match our scope.
-                'aggregate_instance_extra_specs': '1',
-        }
-        self._do_test_aggregate_filter_extra_specs(
-                emeta={'aggregate_instance_extra_specs': '1'},
-                especs=especs, passes=True)
-
-    def test_aggregate_filter_fails_extra_specs_simple(self):
-        self._do_test_aggregate_filter_extra_specs(
-            emeta={'opt1': '1', 'opt2': '2'},
-            especs={'opt1': '1', 'opt2': '222',
-                    'trust:trusted_host': 'true'},
-            passes=False)
 
     def _do_test_isolated_hosts(self, host_in_list, image_in_list,
                             set_flags=True,
