@@ -157,6 +157,21 @@ class TestWSGIServer(test.NoDBTestCase):
         server.stop()
         server.wait()
 
+    def test_wsgi_keep_alive(self):
+        self.flags(wsgi_keep_alive=False)
+
+        # mocking eventlet spawn method to check it is called with
+        # configured 'wsgi_keep_alive' value.
+        with mock.patch.object(eventlet,
+                               'spawn') as mock_spawn:
+            server = nova.wsgi.Server("test_app", None,
+                                      host="127.0.0.1", port=0)
+            server.start()
+            _, kwargs = mock_spawn.call_args
+            self.assertEqual(CONF.wsgi_keep_alive,
+                             kwargs['keepalive'])
+            server.stop()
+
 
 class TestWSGIServerWithSSL(test.NoDBTestCase):
     """WSGI server with SSL tests."""
