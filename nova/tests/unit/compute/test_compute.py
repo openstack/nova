@@ -9187,6 +9187,26 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.detach_interface(self.context, instance, port_id)
         self.assertEqual(self.compute.driver._interfaces, {})
 
+    def test_detach_interface_failed(self):
+        nwinfo, port_id = self.test_attach_interface()
+        instance = objects.Instance()
+        instance['uuid'] = 'fake-uuid'
+        instance.info_cache = objects.InstanceInfoCache.new(
+            self.context, 'fake-uuid')
+        instance.info_cache.network_info = network_model.NetworkInfo.hydrate(
+            nwinfo)
+
+        with contextlib.nested(
+            mock.patch.object(self.compute.driver, 'detach_interface',
+                side_effect=exception.NovaException('detach_failed')),
+            mock.patch.object(self.compute.network_api,
+                              'deallocate_port_for_instance')) as (
+            mock_detach, mock_deallocate):
+            self.assertRaises(exception.InterfaceDetachFailed,
+                              self.compute.detach_interface, self.context,
+                              instance, port_id)
+            self.assertFalse(mock_deallocate.called)
+
     def test_attach_volume(self):
         fake_bdm = fake_block_device.FakeDbBlockDeviceDict(
                 {'source_type': 'volume', 'destination_type': 'volume',
