@@ -68,3 +68,22 @@ get_rdp_console = {
     'required': ['os-getRDPConsole'],
     'additionalProperties': False,
 }
+
+get_serial_console = {
+    'type': 'object',
+    'properties': {
+        'os-getSerialConsole': {
+            'type': 'object',
+            'properties': {
+                'type': {
+                    'type': 'string',
+                    'enum': ['serial'],
+                },
+            },
+            'required': ['type'],
+            'additionalProperties': False,
+        },
+    },
+    'required': ['os-getSerialConsole'],
+    'additionalProperties': False,
+}
