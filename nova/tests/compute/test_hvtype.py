@@ -37,6 +37,9 @@ class HvTypeTest(test.NoDBTestCase):
     def test_canonicalize_xapi(self):
         self.assertEqual(hvtype.XEN, hvtype.canonicalize("xapi"))
 
+    def test_canonicalize_powervm(self):
+        self.assertEqual(hvtype.PHYP, hvtype.canonicalize("POWERVM"))
+
     def test_canonicalize_invalid(self):
         self.assertRaises(exception.InvalidHypervisorVirtType,
                           hvtype.canonicalize,
