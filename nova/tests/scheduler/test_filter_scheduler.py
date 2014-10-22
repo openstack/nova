@@ -646,6 +646,20 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 self.driver.select_destinations, self.context,
                 {'num_instances': 1}, {})
 
+    def test_select_destinations_no_valid_host_not_enough(self):
+        # Tests that we have fewer hosts available than number of instances
+        # requested to build.
+        with mock.patch.object(self.driver, '_schedule',
+                               return_value=[mock.sentinel.host1]):
+            try:
+                self.driver.select_destinations(
+                    self.context, {'num_instances': 2}, {})
+                self.fail('Expected NoValidHost to be raised.')
+            except exception.NoValidHost as e:
+                # Make sure that we provided a reason why NoValidHost.
+                self.assertIn('reason', e.kwargs)
+                self.assertTrue(len(e.kwargs['reason']) > 0)
+
     def test_handles_deleted_instance(self):
         """Test instance deletion while being scheduled."""
 
