@@ -615,6 +615,20 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         inst = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self.assertPublicAPISignatures(baseinst, inst)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_min_version")
+    def test_min_version_start_ok(self, mock_version):
+        mock_version.return_value = True
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr.init_host("dummyhost")
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_min_version")
+    def test_min_version_start_abort(self, mock_version):
+        mock_version.return_value = False
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertRaises(exception.NovaException,
+                          drvr.init_host,
+                          "dummyhost")
+
     @mock.patch.object(objects.Service, 'get_by_compute_host')
     def test_set_host_enabled_with_disable(self, mock_svc):
         # Tests disabling an enabled host.
