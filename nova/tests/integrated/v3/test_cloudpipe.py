@@ -69,3 +69,12 @@ class CloudPipeSampleTest(api_sample_base.ApiSampleTestBaseV3):
         subs.update(project)
         subs['image_id'] = CONF.vpn_image_id
         self._verify_response('cloud-pipe-get-resp', subs, response, 200)
+
+    def test_cloud_pipe_update(self):
+        subs = {'vpn_ip': '192.168.1.1',
+                'vpn_port': 2000}
+        response = self._do_put('os-cloudpipe/configure-project',
+                                'cloud-pipe-update-req',
+                                subs)
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, "")
