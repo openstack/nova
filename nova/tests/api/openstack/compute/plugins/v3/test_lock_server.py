@@ -31,9 +31,9 @@ class LockServerTests(admin_only_action_common.CommonTests):
 
         self.stubs.Set(lock_server, 'LockServerController',
                        _fake_controller)
-        self.app = fakes.wsgi_app_v3(init_only=('servers',
-                                                'os-lock-server'),
-                                     fake_auth_context=self.context)
+        self.app = fakes.wsgi_app_v21(init_only=('servers',
+                                                 'os-lock-server'),
+                                      fake_auth_context=self.context)
         self.mox.StubOutWithMock(self.compute_api, 'get')
 
     def test_lock_unlock(self):
