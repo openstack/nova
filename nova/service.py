@@ -221,7 +221,7 @@ class Service(service.Service):
             'host': self.host,
             'binary': self.binary,
             'topic': self.topic,
-            'report_count': 0
+            'report_count': 0,
         }
         service = self.conductor_api.service_create(context, svc_values)
         self.service_id = service['id']

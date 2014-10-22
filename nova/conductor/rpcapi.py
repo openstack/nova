@@ -281,7 +281,20 @@ class ConductorAPI(object):
 
     def service_update(self, context, service, values):
         service_p = jsonutils.to_primitive(service)
-        cctxt = self.client.prepare()
+
+        # (NOTE:jichenjc)If we're calling this periodically, it makes no
+        # sense for the RPC timeout to be more than the service
+        # report interval. Select 5 here is only find a reaonable long
+        # interval as threshold.
+        timeout = CONF.report_interval
+        if timeout and timeout > 5:
+            timeout -= 1
+
+        if timeout:
+            cctxt = self.client.prepare(timeout=timeout)
+        else:
+            cctxt = self.client.prepare()
+
         return cctxt.call(context, 'service_update',
                           service=service_p, values=values)
 
