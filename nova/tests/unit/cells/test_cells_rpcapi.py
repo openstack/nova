@@ -517,23 +517,27 @@ class CellsAPITestCase(test.NoDBTestCase):
         call_info = self._stub_rpc_method('cast', None)
 
         self.cells_rpcapi.stop_instance(
-                self.fake_context, 'fake-instance', do_cast=True)
+                self.fake_context, 'fake-instance', do_cast=True,
+                clean_shutdown=True)
 
         expected_args = {'instance': 'fake-instance',
-                         'do_cast': True}
+                         'do_cast': True,
+                         'clean_shutdown': True}
         self._check_result(call_info, 'stop_instance',
-                expected_args, version='1.12')
+                expected_args, version='1.31')
 
     def test_stop_instance_call(self):
         call_info = self._stub_rpc_method('call', 'fake_response')
 
         result = self.cells_rpcapi.stop_instance(
-                self.fake_context, 'fake-instance', do_cast=False)
+                self.fake_context, 'fake-instance', do_cast=False,
+                clean_shutdown=True)
 
         expected_args = {'instance': 'fake-instance',
-                         'do_cast': False}
+                         'do_cast': False,
+                         'clean_shutdown': True}
         self._check_result(call_info, 'stop_instance',
-                expected_args, version='1.12')
+                expected_args, version='1.31')
         self.assertEqual(result, 'fake_response')
 
     def test_cell_create(self):

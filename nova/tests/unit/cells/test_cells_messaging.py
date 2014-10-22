@@ -1262,11 +1262,13 @@ class CellsTargetedMethodsTestCase(test.TestCase):
 
     def test_stop_instance_cast(self):
         self._test_instance_action_method('stop', (), {}, (),
-                                          {'do_cast': True}, False)
+                                          {'do_cast': True,
+                                           'clean_shutdown': True}, False)
 
     def test_stop_instance_call(self):
         self._test_instance_action_method('stop', (), {}, (),
-                                          {'do_cast': False}, True)
+                                          {'do_cast': False,
+                                           'clean_shutdown': True}, True)
 
     def test_reboot_instance(self):
         kwargs = dict(reboot_type='HARD')

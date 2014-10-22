@@ -276,6 +276,8 @@ class ComputeAPI(object):
         can handle the version_cap being set to 3.35.
 
         * 3.36 - Make build_and_run_instance() send a Flavor object
+        * 3.37 - Add clean_shutdown to stop, resize, rescue, shelve, and
+                 shelve_offload
     '''
 
     VERSION_ALIASES = {
@@ -639,9 +641,13 @@ class ComputeAPI(object):
                           instance=instance, volume_id=volume_id)
 
     def rescue_instance(self, ctxt, instance, rescue_password,
-                        rescue_image_ref=None):
+                        rescue_image_ref=None, clean_shutdown=True):
         msg_args = {'rescue_password': rescue_password}
-        if self.client.can_send_version('3.24'):
+        if self.client.can_send_version('3.37'):
+            version = '3.37'
+            msg_args['clean_shutdown'] = clean_shutdown
+            msg_args['rescue_image_ref'] = rescue_image_ref
+        elif self.client.can_send_version('3.24'):
             version = '3.24'
             msg_args['rescue_image_ref'] = rescue_image_ref
         else:
@@ -658,15 +664,19 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'reset_network', instance=instance)
 
     def resize_instance(self, ctxt, instance, migration, image, instance_type,
-                        reservations=None):
-        version = '3.0'
+                        reservations=None, clean_shutdown=True):
         instance_type_p = jsonutils.to_primitive(instance_type)
+        msg_args = {'instance': instance, 'migration': migration,
+                    'image': image, 'reservations': reservations,
+                    'instance_type': instance_type_p}
+        if self.client.can_send_version('3.37'):
+            version = '3.37'
+            msg_args['clean_shutdown'] = clean_shutdown
+        else:
+            version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
-        cctxt.cast(ctxt, 'resize_instance',
-                   instance=instance, migration=migration,
-                   image=image, reservations=reservations,
-                   instance_type=instance_type_p)
+        cctxt.cast(ctxt, 'resize_instance', **msg_args)
 
     def resume_instance(self, ctxt, instance):
         version = '3.0'
@@ -783,12 +793,17 @@ class ComputeAPI(object):
                 version=version)
         cctxt.cast(ctxt, 'start_instance', instance=instance)
 
-    def stop_instance(self, ctxt, instance, do_cast=True):
-        version = '3.0'
+    def stop_instance(self, ctxt, instance, do_cast=True, clean_shutdown=True):
+        msg_args = {'instance': instance}
+        if self.client.can_send_version('3.37'):
+            version = '3.37'
+            msg_args['clean_shutdown'] = clean_shutdown
+        else:
+            version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         rpc_method = cctxt.cast if do_cast else cctxt.call
-        return rpc_method(ctxt, 'stop_instance', instance=instance)
+        return rpc_method(ctxt, 'stop_instance', **msg_args)
 
     def suspend_instance(self, ctxt, instance):
         version = '3.0'
@@ -829,18 +844,29 @@ class ComputeAPI(object):
                 version=version)
         cctxt.cast(ctxt, 'restore_instance', instance=instance)
 
-    def shelve_instance(self, ctxt, instance, image_id=None):
-        version = '3.0'
+    def shelve_instance(self, ctxt, instance, image_id=None,
+                        clean_shutdown=True):
+        msg_args = {'instance': instance, 'image_id': image_id}
+        if self.client.can_send_version('3.37'):
+            version = '3.37'
+            msg_args['clean_shutdown'] = clean_shutdown
+        else:
+            version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
-        cctxt.cast(ctxt, 'shelve_instance',
-                   instance=instance, image_id=image_id)
+        cctxt.cast(ctxt, 'shelve_instance', **msg_args)
 
-    def shelve_offload_instance(self, ctxt, instance):
-        version = '3.0'
+    def shelve_offload_instance(self, ctxt, instance,
+                                clean_shutdown=True):
+        msg_args = {'instance': instance}
+        if self.client.can_send_version('3.37'):
+            version = '3.37'
+            msg_args['clean_shutdown'] = clean_shutdown
+        else:
+            version = '3.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
-        cctxt.cast(ctxt, 'shelve_offload_instance', instance=instance)
+        cctxt.cast(ctxt, 'shelve_offload_instance', **msg_args)
 
     def unshelve_instance(self, ctxt, instance, host, image=None,
                           filter_properties=None, node=None):

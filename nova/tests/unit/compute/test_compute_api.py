@@ -387,6 +387,9 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_stop_stopped_instance_with_bypass(self):
         self._test_stop(vm_states.STOPPED, force=True)
 
+    def test_stop_forced_shutdown(self):
+        self._test_stop(vm_states.ACTIVE, force=True)
+
     def _test_stop_invalid_state(self, vm_state):
         params = dict(vm_state=vm_state)
         instance = self._create_instance_obj(params=params)
