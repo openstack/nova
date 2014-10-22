@@ -41,10 +41,6 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake.reset()
         vm_util.vm_refs_cache_reset()
 
-    def tearDown(self):
-        super(VMwareVMUtilTestCase, self).tearDown()
-        fake.reset()
-
     def _test_get_stats_from_cluster(self, connection_state="connected",
                                      maintenance_mode=False):
         ManagedObjectRefs = [fake.ManagedObjectReference("host1",
