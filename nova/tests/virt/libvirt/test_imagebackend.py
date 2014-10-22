@@ -402,14 +402,14 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
     def test_create_image_too_small(self):
         fn = self.prepare_mocks()
         self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(imagebackend.Qcow2, 'get_disk_size')
+        self.mox.StubOutWithMock(imagebackend.disk, 'get_disk_size')
         if self.OLD_STYLE_INSTANCE_PATH:
             os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
         os.path.exists(self.DISK_INFO_PATH).AndReturn(False)
         os.path.exists(self.INSTANCES_PATH).AndReturn(True)
         os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
-        imagebackend.Qcow2.get_disk_size(self.TEMPLATE_PATH
-                                         ).AndReturn(self.SIZE)
+        imagebackend.disk.get_disk_size(self.TEMPLATE_PATH
+                                       ).AndReturn(self.SIZE)
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -811,21 +811,6 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.mox.VerifyAll()
 
-    def test_cache_base_dir_exists(self):
-        self.mox.StubOutWithMock(os.path, 'exists')
-        os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
-        os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
-        fn = self.mox.CreateMockAnything()
-        fn(target=self.TEMPLATE_PATH)
-        self.mox.StubOutWithMock(imagebackend.fileutils, 'ensure_tree')
-        self.mox.ReplayAll()
-
-        image = self.image_class(self.INSTANCE, self.NAME)
-        self.mock_create_image(image)
-        image.cache(fn, self.TEMPLATE)
-
-        self.mox.VerifyAll()
-
     def test_create_image(self):
         fn = self.prepare_mocks()
         fn(max_size=None, rbd=self.rbd, target=self.TEMPLATE_PATH)
@@ -892,27 +877,56 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.mox.VerifyAll()
 
-    def test_direct_fetch_fail(self):
+    def test_direct_fetch_fail_no_layering_support(self):
+        self.prepare_mocks()
         image = self.image_class(self.INSTANCE, self.NAME)
-        self.stubs.Set(image, '_is_cloneable', lambda: True)
-        self.assertRaises(exception.ImageUnacceptable,
-                          image.direct_fetch, 'image_id',
-                          {'disk_format': 'raw'},
-                          [{'url': 'rbd://a/b/c/d'}])
-        self.rbd.RBD_FEATURE_LAYERING = 1
-        self.assertRaises(exception.ImageUnacceptable,
-                          image.direct_fetch, 'image_id',
-                          {},
-                          [{'url': 'rbd://a/b/c/d'}])
-        self.assertRaises(exception.ImageUnacceptable,
-                          image.direct_fetch, 'image_id',
-                          {'disk_format': 'raw'},
-                          [])
-        self.stubs.Set(image, '_is_cloneable', lambda: False)
-        self.assertRaises(exception.ImageUnacceptable,
-                          image.direct_fetch, 'image_id',
-                          {'disk_format': 'raw'},
-                          [{'url': 'rbd://a/b/c/d'}])
+        self.stubs.Set(image, '_supports_layering', lambda: False)
+        self.assertRaisesRegexp(
+            exception.ImageUnacceptable,
+            'installed version of librbd does not support cloning',
+            image.direct_fetch,
+            'image_id',
+            {'disk_format': 'raw'},
+            [{'url': 'rbd://a/b/c/d'}]
+        )
+
+    def test_direct_fetch_fail_no_supported_image_format(self):
+        self.prepare_mocks()
+        image = self.image_class(self.INSTANCE, self.NAME)
+        self.assertRaisesRegexp(
+            exception.ImageUnacceptable,
+            'Image is not raw format',
+            image.direct_fetch,
+            'image_id',
+            {},
+            [{'url': 'rbd://a/b/c/d'}]
+        )
+
+    def test_direct_fetch_fail_no_image_locations(self):
+        self.prepare_mocks()
+        image = self.image_class(self.INSTANCE, self.NAME)
+        self.stubs.Set(image, '_is_cloneable', lambda x: True)
+        self.assertRaisesRegexp(
+            exception.ImageUnacceptable,
+            'No image locations are accessible',
+            image.direct_fetch,
+            'image_id',
+            {'disk_format': 'raw'},
+            []
+        )
+
+    def test_direct_fetch_fail_no_cloneable_image(self):
+        self.prepare_mocks()
+        image = self.image_class(self.INSTANCE, self.NAME)
+        self.stubs.Set(image, '_is_cloneable', lambda x: False)
+        self.assertRaisesRegexp(
+            exception.ImageUnacceptable,
+            'No image locations are accessible',
+            image.direct_fetch,
+            'image_id',
+            {'disk_format': 'raw'},
+            [{'url': 'rbd://a/b/c/d'}]
+    )
 
     def test_good_locations(self):
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -977,20 +991,9 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.assertFalse(image._is_cloneable(location))
 
-    def test_image_path(self):
-
-        conf = "FakeConf"
-        pool = "FakePool"
-        user = "FakeUser"
-
-        self.flags(libvirt_images_rbd_pool=pool)
-        self.flags(libvirt_images_rbd_ceph_conf=conf)
-        self.flags(rbd_user=user)
-        image = self.image_class(self.INSTANCE, self.NAME)
-        rbd_path = "rbd:%s/%s:id=%s:conf=%s" % (pool, image.rbd_name,
-                                                user, conf)
-
-        self.assertEqual(image.path, rbd_path)
+    def test_parent_compatible(self):
+        self.assertEqual(getargspec(imagebackend.Image.libvirt_info),
+             getargspec(self.image_class.libvirt_info))
 
 
 class BackendTestCase(test.NoDBTestCase):

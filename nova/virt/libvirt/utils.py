@@ -308,13 +308,19 @@ def list_rbd_volumes(pool):
 
 def remove_rbd_volumes(pool, *names):
     """Remove one or more rbd volume."""
+    deletion_marker = '_to_be_deleted_by_glance'
     client, ioctx = _connect_to_rados(pool)
     rbd_inst = rbd.RBD()
     for name in names:
+        if deletion_marker in name or 'clone' in name:
+            continue
         try:
             # Retry if ImageBusy raised
             rbd_inst.remove(ioctx, name)
-        except rbd.ImageNotFound, rbd.ImageHasSnapshots:
+        except rbd.ImageHasSnapshots:
+            new_name = name + deletion_marker
+            rbd_inst.rename(ioctx, name, new_name)
+        except rbd.ImageNotFound, rbd.ImageBusy:
             LOG.warn(_("rbd remove %(name)s in pool %(pool)s failed"),
                      {'name': name, 'pool': pool})
 
@@ -548,11 +554,33 @@ def chown(path, owner):
     execute('chown', owner, path, run_as_root=True)
 
 
-def extract_snapshot(disk_path, source_fmt, out_path, dest_fmt):
-    """Extract a snapshot from a disk image.
-    Note that nobody should write to the disk image during this operation.
+def create_snapshot(disk_path, snapshot_name):
+    """Create a snapshot in a disk image
 
     :param disk_path: Path to disk image
+    :param snapshot_name: Name of snapshot in disk image
+    """
+    qemu_img_cmd = ('qemu-img', 'snapshot', '-c', snapshot_name, disk_path)
+    # NOTE(vish): libvirt changes ownership of images
+    execute(*qemu_img_cmd, run_as_root=True)
+
+
+def delete_snapshot(disk_path, snapshot_name):
+    """Create a snapshot in a disk image
+
+    :param disk_path: Path to disk image
+    :param snapshot_name: Name of snapshot in disk image
+    """
+    qemu_img_cmd = ('qemu-img', 'snapshot', '-d', snapshot_name, disk_path)
+    # NOTE(vish): libvirt changes ownership of images
+    execute(*qemu_img_cmd, run_as_root=True)
+
+
+def extract_snapshot(disk_path, source_fmt, snapshot_name, out_path, dest_fmt):
+    """Extract a named snapshot from a disk image
+
+    :param disk_path: Path to disk image
+    :param snapshot_name: Name of snapshot in disk image
     :param out_path: Desired path of extracted snapshot
     """
     # NOTE(markmc): ISO is just raw to qemu-img
@@ -564,6 +592,11 @@ def extract_snapshot(disk_path, source_fmt, out_path, dest_fmt):
     # Conditionally enable compression of snapshots.
     if CONF.libvirt_snapshot_compression and dest_fmt == "qcow2":
         qemu_img_cmd += ('-c',)
+
+    # When snapshot name is omitted we do a basic convert, which
+    # is used by live snapshots.
+    if snapshot_name is not None:
+        qemu_img_cmd += ('-s', snapshot_name)
 
     qemu_img_cmd += (disk_path, out_path)
     execute(*qemu_img_cmd)

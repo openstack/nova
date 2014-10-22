@@ -1421,6 +1421,44 @@ class LibvirtDriver(driver.ComputeDriver):
                      instance=instance)
 
         update_task_state(task_state=task_states.IMAGE_PENDING_UPLOAD)
+
+        try:
+            url = snapshot_backend.direct_snapshot(snapshot_name,
+                                                   image_format,
+                                                   image_id)
+            metadata['location'] = url
+            try:
+                image_service.update(context,
+                                     image_href,
+                                     metadata)
+            except Exception as e:
+                LOG.debug('failed to update glance', exc_info=True)
+                reason = _('failed to update glance: %s') % e
+                raise exception.ImageUnacceptable(image_id=image_id,
+                                                  reason=reason)
+            update_task_state(task_state=task_states.IMAGE_UPLOADING,
+                     expected_state=task_states.IMAGE_PENDING_UPLOAD)
+            LOG.info(_("Snapshot image upload complete"),
+                         instance=instance)
+        except exception.ImageUnacceptable:
+            LOG.debug('direct snapshot failed', exc_info=True)
+            self._generic_snapshot(context, snapshot_name,
+                                   snapshot_backend,
+                                   disk_path,
+                                   live_snapshot,
+                                   virt_dom,
+                                   state,
+                                   image_format,
+                                   instance,
+                                   image_href,
+                                   metadata,
+                                   image_service,
+                                   update_task_state)
+
+    def _generic_snapshot(self, context, snapshot_name, snapshot_backend,
+                          disk_path, live_snapshot,  virt_dom, state,
+                          image_format, instance, image_href, metadata,
+                          image_service, update_task_state):
         snapshot_directory = CONF.libvirt_snapshots_directory
         fileutils.ensure_tree(snapshot_directory)
         with utils.tempdir(dir=snapshot_directory) as tmpdir:
@@ -4225,7 +4263,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.DestinationDiskExists(path=instance_dir)
             os.mkdir(instance_dir)
 
-        if not is_shared_block_storage:
+        if not (is_shared_block_storage or is_shared_instance_path):
             # Ensure images and backing files are present.
             self._create_images_and_backing(context, instance, instance_dir,
                                             disk_info)
