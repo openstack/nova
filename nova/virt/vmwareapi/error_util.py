@@ -26,16 +26,6 @@ from nova.i18n import _
 # - map back to NovaException?
 
 
-class VMwareDriverConfigurationException(vexc.VMwareDriverException):
-    """Base class for all configuration exceptions.
-    """
-    msg_fmt = _("VMware Driver configuration fault.")
-
-
-class UseLinkedCloneConfigurationFault(VMwareDriverConfigurationException):
-    msg_fmt = _("No default value for use_linked_clone found.")
-
-
 class NoRootDiskDefined(vexc.VMwareDriverException):
     msg_fmt = _("No root disk defined.")
 
@@ -44,9 +34,9 @@ class TaskInProgress(vexc.VMwareDriverException):
     msg_fmt = _("Virtual machine is busy.")
 
 
-class PbmDefaultPolicyUnspecified(VMwareDriverConfigurationException):
+class PbmDefaultPolicyUnspecified(vexc.VMwareDriverConfigurationException):
     msg_fmt = _("Default PBM policy is required if PBM is enabled.")
 
 
-class PbmDefaultPolicyDoesNotExist(VMwareDriverConfigurationException):
+class PbmDefaultPolicyDoesNotExist(vexc.VMwareDriverConfigurationException):
     msg_fmt = _("The default PBM policy doesn't exist on the backend.")
