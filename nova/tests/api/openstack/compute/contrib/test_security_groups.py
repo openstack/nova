@@ -21,6 +21,8 @@ from oslo.serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute.contrib import security_groups as secgroups_v2
+from nova.api.openstack.compute.plugins.v3 import security_groups as \
+    secgroups_v21
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
@@ -121,17 +123,17 @@ def return_server_nonexistent(context, server_id, columns_to_join=None):
     raise exception.InstanceNotFound(instance_id=server_id)
 
 
-# NOTE(oomichi): v2.1 API does not support security group management (create/
-# update/delete a security group). We don't need to test this class against
-# v2.1 API.
-class TestSecurityGroups(test.TestCase):
-    def setUp(self):
-        super(TestSecurityGroups, self).setUp()
+class TestSecurityGroupsV21(test.TestCase):
+    secgrp_ctl_cls = secgroups_v21.SecurityGroupController
+    server_secgrp_ctl_cls = secgroups_v21.ServerSecurityGroupController
+    secgrp_act_ctl_cls = secgroups_v21.SecurityGroupActionController
 
-        self.controller = secgroups_v2.SecurityGroupController()
-        self.server_controller = (
-            secgroups_v2.ServerSecurityGroupController())
-        self.manager = secgroups_v2.SecurityGroupActionController()
+    def setUp(self):
+        super(TestSecurityGroupsV21, self).setUp()
+
+        self.controller = self.secgrp_ctl_cls()
+        self.server_controller = self.server_secgrp_ctl_cls()
+        self.manager = self.secgrp_act_ctl_cls()
 
         # This needs to be done here to set fake_id because the derived
         # class needs to be called first if it wants to set
@@ -805,6 +807,12 @@ class TestSecurityGroups(test.TestCase):
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         self.manager._removeSecurityGroup(req, '1', body)
+
+
+class TestSecurityGroupsV2(TestSecurityGroupsV21):
+    controller_cls = secgroups_v2.SecurityGroupController
+    server_secgrp_ctl_cls = secgroups_v2.ServerSecurityGroupController
+    secgrp_act_ctl_cls = secgroups_v2.SecurityGroupActionController
 
 
 # NOTE(oomichi): v2.1 API does not support security group management (create/
