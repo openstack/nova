@@ -321,22 +321,17 @@ class VMwareVolumeOps(object):
 
         # Get details required for adding disk device such as
         # adapter_type, disk_type
-        hw_devices = self._session._call_method(vim_util,
-                                                'get_dynamic_property',
-                                                volume_ref, 'VirtualMachine',
-                                                'config.hardware.device')
-        (volume_vmdk_path, adapter_type,
-         disk_type) = vm_util.get_vmdk_path_and_adapter_type(hw_devices)
+        vmdk = vm_util.get_vmdk_info(self._session, volume_ref)
 
         # IDE does not support disk hotplug
         if (instance.vm_state == vm_states.ACTIVE and
-            adapter_type == constants.ADAPTER_TYPE_IDE):
-            msg = _('%s does not support disk hotplug.') % adapter_type
+            vmdk.adapter_type == constants.ADAPTER_TYPE_IDE):
+            msg = _('%s does not support disk hotplug.') % vmdk.adapter_type
             raise exception.Invalid(msg)
 
         # Attach the disk to virtual machine instance
-        self.attach_disk_to_vm(vm_ref, instance, adapter_type,
-                               disk_type, vmdk_path=volume_vmdk_path)
+        self.attach_disk_to_vm(vm_ref, instance, vmdk.adapter_type,
+                               vmdk.disk_type, vmdk_path=vmdk.path)
 
         # Store the uuid of the volume_device
         self._update_volume_details(vm_ref, instance, data['volume_id'])
@@ -358,15 +353,10 @@ class VMwareVolumeOps(object):
             raise exception.StorageError(
                 reason=_("Unable to find iSCSI Target"))
 
-        # Get the vmdk file name that the VM is pointing to
-        hardware_devices = self._session._call_method(vim_util,
-                        "get_dynamic_property", vm_ref,
-                        "VirtualMachine", "config.hardware.device")
-        (vmdk_file_path, adapter_type,
-         disk_type) = vm_util.get_vmdk_path_and_adapter_type(hardware_devices)
+        vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
 
         self.attach_disk_to_vm(vm_ref, instance,
-                               adapter_type, 'rdmp',
+                               vmdk.adapter_type, 'rdmp',
                                device_name=device_name)
         LOG.debug("Attached ISCSI: %s", connection_info, instance=instance)
 
@@ -494,22 +484,17 @@ class VMwareVolumeOps(object):
 
         # Get details required for adding disk device such as
         # adapter_type, disk_type
-        hw_devices = self._session._call_method(vim_util,
-                                                'get_dynamic_property',
-                                                volume_ref, 'VirtualMachine',
-                                                'config.hardware.device')
-        (vmdk_file_path, adapter_type,
-         disk_type) = vm_util.get_vmdk_path_and_adapter_type(hw_devices)
+        vmdk = vm_util.get_vmdk_info(self._session, volume_ref)
 
         # IDE does not support disk hotplug
         if (instance.vm_state == vm_states.ACTIVE and
-            adapter_type == constants.ADAPTER_TYPE_IDE):
-            msg = _('%s does not support disk hotplug.') % adapter_type
+            vmdk.adapter_type == constants.ADAPTER_TYPE_IDE):
+            msg = _('%s does not support disk hotplug.') % vmdk.adapter_type
             raise exception.Invalid(msg)
 
         self._consolidate_vmdk_volume(instance, vm_ref, device, volume_ref,
-                                      adapter_type=adapter_type,
-                                      disk_type=disk_type)
+                                      adapter_type=vmdk.adapter_type,
+                                      disk_type=vmdk.disk_type)
 
         self.detach_disk_from_vm(vm_ref, instance, device)
         LOG.debug("Detached VMDK: %s", connection_info, instance=instance)
