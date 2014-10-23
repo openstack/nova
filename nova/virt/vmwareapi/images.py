@@ -18,14 +18,17 @@ Utility functions for Image transfer and manipulation.
 """
 
 import os
+import tarfile
+import tempfile
 
+from lxml import etree
 from oslo_config import cfg
 from oslo_utils import strutils
 from oslo_utils import units
 from oslo_vmware import rw_handles
 
 from nova import exception
-from nova.i18n import _LI
+from nova.i18n import _, _LI
 from nova import image
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import constants
@@ -52,6 +55,7 @@ class VMwareImage(object):
                  os_type=constants.DEFAULT_OS_TYPE,
                  adapter_type=constants.DEFAULT_ADAPTER_TYPE,
                  disk_type=constants.DEFAULT_DISK_TYPE,
+                 container_format=constants.CONTAINER_FORMAT_BARE,
                  file_type=constants.DEFAULT_DISK_FORMAT,
                  linked_clone=None,
                  vif_model=constants.DEFAULT_VIF_MODEL):
@@ -62,6 +66,7 @@ class VMwareImage(object):
             os_type (str): name of guest os (use vSphere names only)
             adapter_type (str): name of the adapter's type
             disk_type (str): type of disk in thin, thick, etc
+            container_format (str): container format (bare or ova)
             file_type (str): vmdk or iso
             linked_clone(bool): use linked clone, or don't
         """
@@ -69,6 +74,7 @@ class VMwareImage(object):
         self.file_size = file_size
         self.os_type = os_type
         self.adapter_type = adapter_type
+        self.container_format = container_format
         self.disk_type = disk_type
         self.file_type = file_type
 
@@ -96,6 +102,10 @@ class VMwareImage(object):
     def is_iso(self):
         return self.file_type == constants.DISK_FORMAT_ISO
 
+    @property
+    def is_ova(self):
+        return self.container_format == constants.CONTAINER_FORMAT_OVA
+
     @classmethod
     def from_image(cls, image_id, image_meta=None):
         """Returns VMwareImage, the subset of properties the driver uses.
@@ -120,7 +130,8 @@ class VMwareImage(object):
 
         props = {
             'image_id': image_id,
-            'linked_clone': linked_clone
+            'linked_clone': linked_clone,
+            'container_format': image_meta.get('container_format')
         }
 
         if 'size' in image_meta:
@@ -352,6 +363,84 @@ def fetch_image_stream_optimized(context, instance, session, vm_name,
              {'image_ref': instance['image_ref']}, instance=instance)
     session._call_method(session.vim, "UnregisterVM", imported_vm_ref)
     LOG.info(_LI("The imported VM was unregistered"), instance=instance)
+
+
+def get_vmdk_name_from_ovf(xmlstr):
+    """Parse the OVA descriptor to extract the vmdk name."""
+
+    ovf = etree.fromstring(xmlstr)
+    nsovf = "{%s}" % ovf.nsmap["ovf"]
+
+    disk = ovf.find("./%sDiskSection/%sDisk" % (nsovf, nsovf))
+    file_id = disk.get("%sfileRef" % nsovf)
+
+    file = ovf.find('./%sReferences/%sFile[@%sid="%s"]' % (nsovf, nsovf,
+                                                           nsovf, file_id))
+    vmdk_name = file.get("%shref" % nsovf)
+    return vmdk_name
+
+
+def fetch_image_ova(context, instance, session, vm_name, ds_name,
+                    vm_folder_ref, res_pool_ref):
+    """Download the OVA image from the glance image server to the
+    Nova compute node.
+    """
+    image_ref = instance.image_ref
+    LOG.debug("Downloading OVA image file %(image_ref)s to the ESX "
+              "as VM named '%(vm_name)s'",
+              {'image_ref': image_ref, 'vm_name': vm_name},
+              instance=instance)
+
+    metadata = IMAGE_API.get(context, image_ref)
+    file_size = int(metadata['size'])
+
+    vm_import_spec = _build_import_spec_for_import_vapp(
+        session, vm_name, ds_name)
+
+    read_iter = IMAGE_API.download(context, image_ref)
+    ova_fd, ova_path = tempfile.mkstemp()
+
+    try:
+        # NOTE(arnaud): Look to eliminate first writing OVA to file system
+        with os.fdopen(ova_fd, 'w') as fp:
+            for chunk in read_iter:
+                fp.write(chunk)
+        with tarfile.open(ova_path, mode="r") as tar:
+            vmdk_name = None
+            for tar_info in tar:
+                if tar_info and tar_info.name.endswith(".ovf"):
+                    extracted = tar.extractfile(tar_info.name)
+                    xmlstr = extracted.read()
+                    vmdk_name = get_vmdk_name_from_ovf(xmlstr)
+                elif vmdk_name and tar_info.name.startswith(vmdk_name):
+                    # Actual file name is <vmdk_name>.XXXXXXX
+                    extracted = tar.extractfile(tar_info.name)
+                    write_handle = rw_handles.VmdkWriteHandle(
+                        session,
+                        session._host,
+                        session._port,
+                        res_pool_ref,
+                        vm_folder_ref,
+                        vm_import_spec,
+                        file_size)
+                    start_transfer(context,
+                                   extracted,
+                                   file_size,
+                                   write_file_handle=write_handle)
+                    extracted.close()
+                    LOG.info(_LI("Downloaded OVA image file %(image_ref)s"),
+                        {'image_ref': instance.image_ref}, instance=instance)
+                    imported_vm_ref = write_handle.get_imported_vm()
+                    session._call_method(session.vim, "UnregisterVM",
+                                         imported_vm_ref)
+                    LOG.info(_LI("The imported VM was unregistered"),
+                             instance=instance)
+                    return
+            raise exception.ImageUnacceptable(
+                reason=_("Extracting vmdk from OVA failed."),
+                image_id=image_ref)
+    finally:
+        os.unlink(ova_path)
 
 
 def upload_image_stream_optimized(context, image_id, instance, session,

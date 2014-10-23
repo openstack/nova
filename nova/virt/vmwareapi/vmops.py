@@ -341,6 +341,21 @@ class VMwareVMOps(object):
             vi.dc_info.vmFolder,
             self._root_resource_pool)
 
+    def _fetch_image_as_ova(self, context, vi, image_ds_loc):
+        """Download root disk of an OVA image as streamOptimized."""
+
+        # The directory of the imported disk is the unique name
+        # of the VM use to import it with.
+        vm_name = image_ds_loc.parent.basename
+
+        images.fetch_image_ova(context,
+                               vi.instance,
+                               self._session,
+                               vm_name,
+                               vi.datastore.name,
+                               vi.dc_info.vmFolder,
+                               self._root_resource_pool)
+
     def _prepare_sparse_image(self, vi):
         tmp_dir_loc = vi.datastore.build_path(
                 self._tmp_folder, uuidutils.generate_uuid())
@@ -459,7 +474,9 @@ class VMwareVMOps(object):
     def _get_image_callbacks(self, vi):
         disk_type = vi.ii.disk_type
 
-        if disk_type == constants.DISK_TYPE_STREAM_OPTIMIZED:
+        if vi.ii.is_ova:
+            image_fetch = self._fetch_image_as_ova
+        elif disk_type == constants.DISK_TYPE_STREAM_OPTIMIZED:
             image_fetch = self._fetch_image_as_vapp
         else:
             image_fetch = self._fetch_image_as_file
