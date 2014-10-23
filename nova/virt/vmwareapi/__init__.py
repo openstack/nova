@@ -18,8 +18,4 @@
 # NOTE(sdague) for nicer compute_driver specification
 from nova.virt.vmwareapi import driver
 
-# VMwareESXDriver is deprecated in Juno. This property definition
-# allows those configurations to work which reference it while
-# logging a deprecation warning
-VMwareESXDriver = driver.VMwareESXDriver
 VMwareVCDriver = driver.VMwareVCDriver

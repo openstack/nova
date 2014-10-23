@@ -105,22 +105,6 @@ CONF.register_opts(spbm_opts, 'vmware')
 TIME_BETWEEN_API_CALL_RETRIES = 1.0
 
 
-# The following class was removed in the transition from Icehouse to
-# Juno, but may still be referenced in configuration files.  The
-# following stub allow those configurations to work while logging a
-# deprecation warning.
-class VMwareESXDriver(driver.ComputeDriver):
-    """The ESX host connection object."""
-
-    def _do_deprecation_warning(self):
-        LOG.warn(_LW('The VMware ESX driver is now deprecated and has been '
-                     'removed in the Juno release. The VC driver will remain '
-                     'and continue to be supported.'))
-
-    def __init__(self, virtapi, read_only=False, scheme="https"):
-        self._do_deprecation_warning()
-
-
 class VMwareVCDriver(driver.ComputeDriver):
     """The VC host connection object."""
 
