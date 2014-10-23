@@ -27,11 +27,9 @@ import webob
 
 from nova.api.openstack.compute.contrib import networks_associate
 from nova.api.openstack.compute.contrib import os_networks as networks
-from nova.api.openstack.compute.contrib import os_tenant_networks as tnet
 from nova.api.openstack.compute.plugins.v3 import networks as networks_v21
 from nova.api.openstack.compute.plugins.v3 import networks_associate as \
      networks_associate_v21
-from nova.api.openstack.compute.plugins.v3 import tenant_networks as tnet_v21
 from nova.api.openstack import extensions
 import nova.context
 from nova import exception
@@ -610,48 +608,3 @@ class NetworksAssociateTestV2(NetworksAssociateTestV21):
 
     def _check_status(self, res, method, code):
         self.assertEqual(res.status_int, 202)
-
-
-class TenantNetworksTestV21(test.NoDBTestCase):
-    ctrlr = tnet_v21.TenantNetworkController
-
-    def setUp(self):
-        super(TenantNetworksTestV21, self).setUp()
-        self.controller = self.ctrlr()
-        self.flags(enable_network_quota=True)
-
-    @mock.patch('nova.quota.QUOTAS.reserve')
-    @mock.patch('nova.quota.QUOTAS.rollback')
-    @mock.patch('nova.network.api.API.delete')
-    def _test_network_delete_exception(self, ex, expex, delete_mock,
-                                       rollback_mock, reserve_mock):
-        req = fakes.HTTPRequest.blank('/v2/1234/os-tenant-networks')
-        ctxt = req.environ['nova.context']
-
-        reserve_mock.return_value = 'rv'
-        delete_mock.side_effect = ex
-
-        self.assertRaises(expex, self.controller.delete, req, 1)
-
-        delete_mock.assert_called_once_with(ctxt, 1)
-        rollback_mock.assert_called_once_with(ctxt, 'rv')
-        reserve_mock.assert_called_once_with(ctxt, networks=-1)
-
-    def test_network_delete_exception_network_not_found(self):
-        ex = exception.NetworkNotFound(network_id=1)
-        expex = webob.exc.HTTPNotFound
-        self._test_network_delete_exception(ex, expex)
-
-    def test_network_delete_exception_policy_failed(self):
-        ex = exception.PolicyNotAuthorized(action='dummy')
-        expex = webob.exc.HTTPForbidden
-        self._test_network_delete_exception(ex, expex)
-
-    def test_network_delete_exception_network_in_use(self):
-        ex = exception.NetworkInUse(network_id=1)
-        expex = webob.exc.HTTPConflict
-        self._test_network_delete_exception(ex, expex)
-
-
-class TenantNetworksTestV2(TenantNetworksTestV21):
-    ctrlr = tnet.NetworkController
