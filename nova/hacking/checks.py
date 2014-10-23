@@ -358,20 +358,21 @@ def check_assert_called_once(logical_line, filename):
             yield (pos, msg)
 
 
-class CheckForStrExc(BaseASTChecker):
-    """Checks for the use of str() on an exception.
+class CheckForStrUnicodeExc(BaseASTChecker):
+    """Checks for the use of str() or unicode() on an exception.
 
-    This currently only handles the case where str() is used in
-    the scope of an exception handler.  If the exception is passed
-    into a function, returned from an assertRaises, or used on an
-    exception created in the same scope, this does not catch it.
+    This currently only handles the case where str() or unicode()
+    is used in the scope of an exception handler.  If the exception
+    is passed into a function, returned from an assertRaises, or
+    used on an exception created in the same scope, this does not
+    catch it.
     """
 
-    CHECK_DESC = ('N325 str() cannot be used on an exception.  '
-                  'Remove or use six.text_type()')
+    CHECK_DESC = ('N325 str() and unicode() cannot be used on an '
+                  'exception.  Remove or use six.text_type()')
 
     def __init__(self, tree, filename):
-        super(CheckForStrExc, self).__init__(tree, filename)
+        super(CheckForStrUnicodeExc, self).__init__(tree, filename)
         self.name = []
         self.already_checked = []
 
@@ -379,19 +380,19 @@ class CheckForStrExc(BaseASTChecker):
         for handler in node.handlers:
             if handler.name:
                 self.name.append(handler.name.id)
-                super(CheckForStrExc, self).generic_visit(node)
+                super(CheckForStrUnicodeExc, self).generic_visit(node)
                 self.name = self.name[:-1]
             else:
-                super(CheckForStrExc, self).generic_visit(node)
+                super(CheckForStrUnicodeExc, self).generic_visit(node)
 
     def visit_Call(self, node):
-        if self._check_call_names(node, ['str']):
+        if self._check_call_names(node, ['str', 'unicode']):
             if node not in self.already_checked:
                 self.already_checked.append(node)
                 if isinstance(node.args[0], ast.Name):
                     if node.args[0].id in self.name:
                         self.add_error(node.args[0])
-        super(CheckForStrExc, self).generic_visit(node)
+        super(CheckForStrUnicodeExc, self).generic_visit(node)
 
 
 class CheckForTransAdd(BaseASTChecker):
@@ -435,5 +436,5 @@ def factory(register):
     register(check_explicit_underscore_import)
     register(use_jsonutils)
     register(check_assert_called_once)
-    register(CheckForStrExc)
+    register(CheckForStrUnicodeExc)
     register(CheckForTransAdd)

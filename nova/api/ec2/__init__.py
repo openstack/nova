@@ -87,7 +87,7 @@ class FaultWrapper(wsgi.Middleware):
         try:
             return req.get_response(self.application)
         except Exception as ex:
-            LOG.exception(_("FaultWrapper: %s"), unicode(ex))
+            LOG.exception(_("FaultWrapper: %s"), ex)
             return faults.Fault(webob.exc.HTTPInternalServerError())
 
 
@@ -321,7 +321,7 @@ class Requestify(wsgi.Middleware):
         except KeyError:
             raise webob.exc.HTTPBadRequest()
         except exception.InvalidRequest as err:
-            raise webob.exc.HTTPBadRequest(explanation=unicode(err))
+            raise webob.exc.HTTPBadRequest(explanation=six.text_type(err))
 
         LOG.debug('action: %s', action)
         for key, value in args.items():
@@ -506,9 +506,9 @@ def ec2_error_ex(ex, req, code=None, message=None, unexpected=False):
     request_id = context.request_id
     log_msg_args = {
         'ex_name': type(ex).__name__,
-        'ex_str': unicode(ex)
+        'ex_str': ex
     }
-    log_fun(log_msg % log_msg_args, context=context)
+    log_fun(log_msg, log_msg_args, context=context)
 
     if ex.args and not message and (not unexpected or status < 500):
         message = unicode(ex.args[0])

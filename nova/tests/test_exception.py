@@ -16,6 +16,8 @@
 
 import inspect
 
+import six
+
 from nova import context
 from nova import exception
 from nova import test
@@ -67,10 +69,10 @@ class NovaExceptionTestCase(test.NoDBTestCase):
             msg_fmt = "default message"
 
         exc = FakeNovaException()
-        self.assertEqual(unicode(exc), 'default message')
+        self.assertEqual(six.text_type(exc), 'default message')
 
     def test_error_msg(self):
-        self.assertEqual(unicode(exception.NovaException('test')),
+        self.assertEqual(six.text_type(exception.NovaException('test')),
                          'test')
 
     def test_default_error_msg_with_kwargs(self):
@@ -78,7 +80,7 @@ class NovaExceptionTestCase(test.NoDBTestCase):
             msg_fmt = "default message: %(code)s"
 
         exc = FakeNovaException(code=500)
-        self.assertEqual(unicode(exc), 'default message: 500')
+        self.assertEqual(six.text_type(exc), 'default message: 500')
         self.assertEqual(exc.message, 'default message: 500')
 
     def test_error_msg_exception_with_kwargs(self):
@@ -86,7 +88,7 @@ class NovaExceptionTestCase(test.NoDBTestCase):
             msg_fmt = "default message: %(misspelled_code)s"
 
         exc = FakeNovaException(code=500, misspelled_code='blah')
-        self.assertEqual(unicode(exc), 'default message: blah')
+        self.assertEqual(six.text_type(exc), 'default message: blah')
         self.assertEqual(exc.message, 'default message: blah')
 
     def test_default_error_code(self):
@@ -115,7 +117,7 @@ class NovaExceptionTestCase(test.NoDBTestCase):
             msg_fmt = "some message"
 
         exc = FakeNovaException()
-        self.assertEqual(unicode(exc), exc.format_message())
+        self.assertEqual(six.text_type(exc), exc.format_message())
 
     def test_format_message_remote(self):
         class FakeNovaException_Remote(exception.NovaException):
@@ -125,7 +127,7 @@ class NovaExceptionTestCase(test.NoDBTestCase):
                 return u"print the whole trace"
 
         exc = FakeNovaException_Remote()
-        self.assertEqual(unicode(exc), u"print the whole trace")
+        self.assertEqual(six.text_type(exc), u"print the whole trace")
         self.assertEqual(exc.format_message(), "some message")
 
     def test_format_message_remote_error(self):

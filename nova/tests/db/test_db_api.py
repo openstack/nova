@@ -6554,7 +6554,7 @@ class Ec2TestCase(test.TestCase):
             try:
                 method(self.ctxt, value)
             except exception.NotFound as exc:
-                self.assertIn(unicode(value), unicode(exc))
+                self.assertIn(six.text_type(value), six.text_type(exc))
 
         check_exc_format(db.get_ec2_instance_id_by_uuid, 'fake')
         check_exc_format(db.get_instance_uuid_by_ec2_id, 123456)

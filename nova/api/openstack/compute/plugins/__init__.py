@@ -48,7 +48,7 @@ class LoadedExtensionInfo(object):
                       ' '.join(extension.__doc__.strip().split()))
             LOG.debug('Ext version: %i', extension.version)
         except AttributeError as ex:
-            LOG.exception(_("Exception loading extension: %s"), unicode(ex))
+            LOG.exception(_("Exception loading extension: %s"), ex)
             return False
 
         return True

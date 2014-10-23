@@ -300,9 +300,9 @@ class HackingTestCase(test.NoDBTestCase):
         self._assert_has_errors(code, checker, expected_errors=errors,
                                 filename='nova/tests/test_assert.py')
 
-    def test_str_exception(self):
+    def test_str_unicode_exception(self):
 
-        checker = checks.CheckForStrExc
+        checker = checks.CheckForStrUnicodeExc
         code = """
                def f(a, b):
                    try:
@@ -317,12 +317,23 @@ class HackingTestCase(test.NoDBTestCase):
         code = """
                def f(a, b):
                    try:
+                       p = unicode(a) + str(b)
+                   except ValueError as e:
+                       p = e
+                   return p
+               """
+        errors = []
+        self._assert_has_errors(code, checker, expected_errors=errors)
+
+        code = """
+               def f(a, b):
+                   try:
                        p = str(a) + str(b)
                    except ValueError as e:
                        p = unicode(e)
                    return p
                """
-        errors = []
+        errors = [(5, 20, 'N325')]
         self._assert_has_errors(code, checker, expected_errors=errors)
 
         code = """
@@ -334,10 +345,25 @@ class HackingTestCase(test.NoDBTestCase):
                            p  = unicode(a) + unicode(b)
                        except ValueError as ve:
                            p = str(e) + str(ve)
-                       p = unicode(e)
+                       p = e
                    return p
                """
         errors = [(8, 20, 'N325'), (8, 29, 'N325')]
+        self._assert_has_errors(code, checker, expected_errors=errors)
+
+        code = """
+               def f(a, b):
+                   try:
+                       p = str(a) + str(b)
+                   except ValueError as e:
+                       try:
+                           p  = unicode(a) + unicode(b)
+                       except ValueError as ve:
+                           p = str(e) + unicode(ve)
+                       p = str(e)
+                   return p
+               """
+        errors = [(8, 20, 'N325'), (8, 33, 'N325'), (9, 16, 'N325')]
         self._assert_has_errors(code, checker, expected_errors=errors)
 
     def test_trans_add(self):

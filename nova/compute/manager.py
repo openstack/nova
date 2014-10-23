@@ -1487,7 +1487,7 @@ class ComputeManager(manager.Manager):
                 self._log_original_error(exc_info, instance.uuid)
                 raise exception.RescheduledException(
                         instance_uuid=instance.uuid,
-                        reason=unicode(exc_info[1]))
+                        reason=six.text_type(exc_info[1]))
             else:
                 # not re-scheduling, go to error:
                 raise exc_info[0], exc_info[1], exc_info[2]
@@ -2415,7 +2415,7 @@ class ComputeManager(manager.Manager):
                     exc_info = sys.exc_info()
                     LOG.warn(_LW('Failed to delete volume: %(volume_id)s due '
                                  'to %(exc)s'), {'volume_id': bdm.volume_id,
-                                                  'exc': unicode(exc)})
+                                                  'exc': exc})
         if exc_info is not None and raise_exc:
             six.reraise(exc_info[0], exc_info[1], exc_info[2])
 
@@ -3264,7 +3264,7 @@ class ComputeManager(manager.Manager):
                           instance=instance)
             raise exception.InstanceNotRescuable(
                 instance_id=instance.uuid,
-                reason=_("Driver Error: %s") % unicode(e))
+                reason=_("Driver Error: %s") % e)
 
         self.conductor_api.notify_usage_exists(context, instance,
                                                current_period=True)
@@ -5943,7 +5943,7 @@ class ComputeManager(manager.Manager):
                 except Exception as e:
                     LOG.warning(_("Periodic reclaim failed to delete "
                                   "instance: %s"),
-                                unicode(e), instance=instance)
+                                e, instance=instance)
 
     @periodic_task.periodic_task
     def update_available_resource(self, context):
@@ -6054,7 +6054,7 @@ class ComputeManager(manager.Manager):
                     except Exception as e:
                         LOG.warning(_("Periodic cleanup failed to delete "
                                       "instance: %s"),
-                                    unicode(e), instance=instance)
+                                    e, instance=instance)
                 else:
                     raise Exception(_("Unrecognized value '%s'"
                                       " for CONF.running_deleted_"

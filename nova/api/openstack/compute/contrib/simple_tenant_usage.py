@@ -17,6 +17,7 @@ import datetime
 
 import iso8601
 from oslo.utils import timeutils
+import six
 import six.moves.urllib.parse as urlparse
 from webob import exc
 
@@ -55,7 +56,7 @@ def parse_strtime(dstr, fmt):
     try:
         return timeutils.parse_strtime(dstr, fmt)
     except (TypeError, ValueError) as e:
-        raise exception.InvalidStrTime(reason=unicode(e))
+        raise exception.InvalidStrTime(reason=six.text_type(e))
 
 
 class SimpleTenantUsageTemplate(xmlutil.TemplateBuilder):

@@ -21,6 +21,7 @@ import xml.dom.minidom as minidom
 
 from lxml import etree
 import mock
+import six
 from testtools import matchers
 import webob
 import webob.exc
@@ -380,7 +381,7 @@ class MiscFunctionsTest(test.TestCase):
             common.raise_http_conflict_for_instance_invalid_state(exc,
                     'meow', 'fake_server_id')
         except webob.exc.HTTPConflict as e:
-            self.assertEqual(unicode(e),
+            self.assertEqual(six.text_type(e),
                 "Cannot 'meow' instance fake_server_id while it is in "
                 "fake_attr fake_state")
         else:
