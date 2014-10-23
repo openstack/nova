@@ -292,7 +292,12 @@ def mask_password(message, secret="***"):
     >>> mask_password("u'original_password' :   u'aaaaa'")
     "u'original_password' :   u'***'"
     """
-    message = six.text_type(message)
+    try:
+        message = six.text_type(message)
+    except UnicodeDecodeError:
+        # NOTE(jecarey): Temporary fix to handle cases where message is a
+        # byte string.   A better solution will be provided in Kilo.
+        pass
 
     # NOTE(ldbragst): Check to see if anything in message contains any key
     # specified in _SANITIZE_KEYS, if not then just return the message since
