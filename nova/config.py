@@ -35,7 +35,7 @@ _DEFAULT_LOG_LEVELS = ['amqp=WARN', 'amqplib=WARN', 'boto=WARN',
                        'requests.packages.urllib3.connectionpool=WARN',
                        'urllib3.connectionpool=WARN', 'websocket=WARN',
                        'keystonemiddleware=WARN', 'routes.middleware=WARN',
-                       'stevedore=WARN']
+                       'stevedore=WARN', 'glanceclient=WARN']
 
 _DEFAULT_LOGGING_CONTEXT_FORMAT = ('%(asctime)s.%(msecs)03d %(process)d '
                                    '%(levelname)s %(name)s [%(request_id)s '
