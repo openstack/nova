@@ -844,7 +844,7 @@ class TestSecurityGroupRulesV21(test.TestCase):
                 return db1
             if group_id == db2['id']:
                 return db2
-            raise exception.NotFound()
+            raise exception.SecurityGroupNotFound(security_group_id=group_id)
 
         self.stubs.Set(nova.db, 'security_group_get',
                        return_security_group)
@@ -1137,7 +1137,7 @@ class TestSecurityGroupRulesV21(test.TestCase):
                                             parent_group_id=self.sg2['id'])
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.create,
                           req, {'security_group_rule': rule})
 
     def test_create_with_same_group_parent_id_and_group_id(self):

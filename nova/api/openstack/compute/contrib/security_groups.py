@@ -390,6 +390,8 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
                               ip_protocol=sg_rule.get('ip_protocol'),
                               cidr=sg_rule.get('cidr'),
                               group_id=sg_rule.get('group_id'))
+        except exception.SecurityGroupNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         except Exception as exp:
             raise exc.HTTPBadRequest(explanation=six.text_type(exp))
 
