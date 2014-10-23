@@ -99,3 +99,21 @@ base_rebuild = {
     'required': ['rebuild'],
     'additionalProperties': False,
 }
+
+base_resize = {
+    'type': 'object',
+    'properties': {
+        'resize': {
+            'type': 'object',
+            'properties': {
+                'flavorRef': parameter_types.flavor_ref,
+            },
+            'required': ['flavorRef'],
+            # TODO(gmann): enable here after all extension schema
+            # patches are merged.
+            # 'additionalProperties': False,
+        },
+    },
+    'required': ['resize'],
+    'additionalProperties': False,
+}
