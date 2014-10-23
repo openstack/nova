@@ -29,7 +29,7 @@ from oslo.vmware import exceptions as vexc
 from oslo.vmware import pbm
 
 from nova import exception
-from nova.i18n import _, _LW
+from nova.i18n import _, _LI, _LW
 from nova.network import model as network_model
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import constants
@@ -1231,6 +1231,20 @@ def create_vm(session, instance, vm_folder, config_spec, res_pool_ref):
                          {'ostype': config_spec.guestId})
     LOG.debug("Created VM on the ESX host", instance=instance)
     return task_info.result
+
+
+def destroy_vm(session, instance, vm_ref=None):
+    """Destroy a VM instance. Assumes VM is powered off."""
+    try:
+        if not vm_ref:
+            vm_ref = get_vm_ref(session, instance)
+        LOG.debug("Destroying the VM", instance=instance)
+        destroy_task = session._call_method(session.vim, "Destroy_Task",
+                                            vm_ref)
+        session._wait_for_task(destroy_task)
+        LOG.info(_LI("Destroyed the VM"), instance=instance)
+    except Exception as exc:
+        LOG.exception(exc, instance=instance)
 
 
 def create_virtual_disk(session, dc_ref, adapter_type, disk_type,

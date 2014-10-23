@@ -1335,7 +1335,7 @@ class FakeVim(object):
              source_vm_mdo.get("config.hardware.device").VirtualDevice,
          "instanceUuid": source_vm_mdo.get("summary.config.instanceUuid")}
 
-        if clone_spec.config is not None:
+        if hasattr(clone_spec, 'config'):
             # Impose the config changes specified in the config property
             if (hasattr(clone_spec.config, 'instanceUuid') and
                clone_spec.config.instanceUuid is not None):
