@@ -322,7 +322,7 @@ class ProjectCommandsTestCase(test.TestCase):
         sys.stdout = sys.__stdout__
         result = output.getvalue()
         print_format = "%-36s %-10s" % ('instances', 'unlimited')
-        self.assertEqual((print_format in result), True)
+        self.assertIn(print_format, result)
 
     def test_quota_update_invalid_key(self):
         self.assertEqual(2, self.commands.quota('admin', 'volumes1', '10'))
