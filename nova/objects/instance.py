@@ -39,7 +39,8 @@ _INSTANCE_OPTIONAL_JOINED_FIELDS = ['metadata', 'system_metadata',
                                     'info_cache', 'security_groups',
                                     'pci_devices']
 # These are fields that are optional but don't translate to db columns
-_INSTANCE_OPTIONAL_NON_COLUMN_FIELDS = ['fault', 'numa_topology']
+_INSTANCE_OPTIONAL_NON_COLUMN_FIELDS = ['fault', 'numa_topology',
+                                        'pci_requests']
 
 # These are fields that can be specified as expected_attrs
 INSTANCE_OPTIONAL_ATTRS = (_INSTANCE_OPTIONAL_JOINED_FIELDS +
@@ -75,7 +76,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
     # Version 1.13: Added delete_metadata_key()
     # Version 1.14: Added numa_topology
     # Version 1.15: PciDeviceList 1.1
-    VERSION = '1.15'
+    # Version 1.16: Added pci_requests
+    VERSION = '1.16'
 
     fields = {
         'id': fields.IntegerField(),
@@ -162,7 +164,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
 
         'pci_devices': fields.ObjectField('PciDeviceList', nullable=True),
         'numa_topology': fields.ObjectField('InstanceNUMATopology',
-                                            nullable=True)
+                                            nullable=True),
+        'pci_requests': fields.ObjectField('InstancePCIRequests',
+                                           nullable=True),
         }
 
     obj_extra_fields = ['name']
@@ -233,6 +237,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             # NOTE(danms): Before 1.6 there was no pci_devices list
             if 'pci_devices' in primitive:
                 del primitive['pci_devices']
+        if target_version < (1, 16) and 'pci_requests' in primitive:
+            del primitive['pci_requests']
 
     @property
     def name(self):
@@ -287,6 +293,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                     context, instance.uuid))
         if 'numa_topology' in expected_attrs:
             instance._load_numa_topology()
+        if 'pci_requests' in expected_attrs:
+            instance._load_pci_requests()
 
         if 'info_cache' in expected_attrs:
             if db_inst['info_cache'] is None:
@@ -398,6 +406,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
 
     def _save_numa_topology(self, context):
         # NOTE(ndipanov): No need for this yet.
+        pass
+
+    def _save_pci_requests(self, context):
+        # NOTE(danms): No need for this yet.
         pass
 
     def _save_pci_devices(self, context):
@@ -558,6 +570,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         except exception.NumaTopologyNotFound:
             self.numa_topology = None
 
+    def _load_pci_requests(self):
+        self.pci_requests = \
+            objects.InstancePCIRequests.get_by_instance_uuid(
+                self._context, self.uuid)
+
     def obj_load_attr(self, attrname):
         if attrname not in INSTANCE_OPTIONAL_ATTRS:
             raise exception.ObjectActionError(
@@ -572,14 +589,17 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                    'name': self.obj_name(),
                    'uuid': self.uuid,
                    })
-        # FIXME(comstud): This should be optimized to only load the attr.
+
+        # NOTE(danms): We handle some fields differently here so that we
+        # can be more efficient
         if attrname == 'fault':
-            # NOTE(danms): We handle fault differently here so that we
-            # can be more efficient
             self._load_fault()
         elif attrname == 'numa_topology':
             self._load_numa_topology()
+        elif attrname == 'pci_requests':
+            self._load_pci_requests()
         else:
+            # FIXME(comstud): This should be optimized to only load the attr.
             self._load_generic(attrname)
         self.obj_reset_changes([attrname])
 
@@ -660,7 +680,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.7: Added use_slave to get_active_by_window_joined
     # Version 1.8: Instance <= version 1.14
     # Version 1.9: Instance <= version 1.15
-    VERSION = '1.9'
+    # Version 1.10: Instance <= version 1.16
+    VERSION = '1.10'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -676,6 +697,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         '1.7': '1.13',
         '1.8': '1.14',
         '1.9': '1.15',
+        '1.10': '1.16',
         }
 
     @base.remotable_classmethod
