@@ -53,7 +53,7 @@ class PciAddress(object):
 
         | pci_passthrough_whitelist = {"address":"*:0a:00.*",
         |                         "physical_network":"physnet1"}
-        | pci_passthrough_whitelist = {"address":":0a:00.",
+        | pci_passthrough_whitelist = {"vendor_id":"1137","product_id":"0071"}
 
     This function class will validate the address fields, check for wildcards,
     and insert wildcards where the field is left blank.
