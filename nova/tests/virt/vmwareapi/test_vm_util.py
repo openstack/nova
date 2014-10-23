@@ -26,6 +26,8 @@ from nova.network import model as network_model
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.virt.vmwareapi import fake
+from nova.tests.virt.vmwareapi import stubs
+from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import vm_util
 
 
@@ -120,101 +122,10 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     def test_get_stats_from_cluster_hosts_connected_and_maintenance(self):
         self._test_get_stats_from_cluster(maintenance_mode=True)
 
-    def test_get_host_ref_from_id(self):
-        fake_host_name = "ha-host"
-        fake_host_sys = fake.HostSystem(fake_host_name)
-        fake_host_id = fake_host_sys.obj.value
-        fake_objects = fake.FakeRetrieveResult()
-        fake_objects.add_object(fake_host_sys)
-        ref = vm_util.get_host_ref_from_id(
-            fake.FakeObjectRetrievalSession(fake_objects),
-            fake_host_id, ['name'])
-
-        self.assertIsInstance(ref, fake.HostSystem)
-        self.assertEqual(fake_host_id, ref.obj.value)
-
-        host_name = vm_util.get_host_name_from_host_ref(ref)
-
-        self.assertEqual(fake_host_name, host_name)
-
     def test_get_host_ref_no_hosts_in_cluster(self):
         self.assertRaises(exception.NoValidHost,
                           vm_util.get_host_ref,
                           fake.FakeObjectRetrievalSession(""), 'fake_cluster')
-
-    @mock.patch.object(vm_util, '_get_vm_ref_from_vm_uuid',
-                       return_value=None)
-    def test_get_host_name_for_vm(self, _get_ref_from_uuid):
-        fake_host = fake.HostSystem()
-        fake_host_id = fake_host.obj.value
-        fake_vm = fake.VirtualMachine(name='vm-123',
-                                      runtime_host=fake_host.obj)
-        fake_objects = fake.FakeRetrieveResult()
-        fake_objects.add_object(fake_vm)
-
-        vm_ref = vm_util.get_vm_ref_from_name(
-                fake.FakeObjectRetrievalSession(fake_objects), 'vm-123')
-
-        self.assertIsNotNone(vm_ref)
-
-        host_id = vm_util.get_host_id_from_vm_ref(
-            fake.FakeObjectRetrievalSession(fake_objects), vm_ref)
-
-        self.assertEqual(fake_host_id, host_id)
-
-    def test_property_from_property_set(self):
-
-        ObjectContent = collections.namedtuple('ObjectContent', ['propSet'])
-        DynamicProperty = collections.namedtuple('Property', ['name', 'val'])
-        MoRef = collections.namedtuple('Val', ['value'])
-
-        good_objects = fake.FakeRetrieveResult()
-        results_good = [
-            ObjectContent(propSet=[
-                DynamicProperty(name='name', val=MoRef(value='vm-123'))]),
-            ObjectContent(propSet=[
-                DynamicProperty(name='foo', val=MoRef(value='bar1')),
-                DynamicProperty(
-                    name='runtime.host', val=MoRef(value='host-123')),
-                DynamicProperty(name='foo', val=MoRef(value='bar2')),
-            ]),
-            ObjectContent(propSet=[
-                DynamicProperty(
-                    name='something', val=MoRef(value='thing'))]), ]
-        for result in results_good:
-            good_objects.add_object(result)
-
-        bad_objects = fake.FakeRetrieveResult()
-        results_bad = [
-            ObjectContent(propSet=[
-                DynamicProperty(name='name', val=MoRef(value='vm-123'))]),
-            ObjectContent(propSet=[
-                DynamicProperty(name='foo', val='bar1'),
-                DynamicProperty(name='foo', val='bar2'), ]),
-            ObjectContent(propSet=[
-                DynamicProperty(
-                    name='something', val=MoRef(value='thing'))]), ]
-        for result in results_bad:
-            bad_objects.add_object(result)
-
-        prop = vm_util.property_from_property_set(
-                    'runtime.host', good_objects)
-        self.assertIsNotNone(prop)
-        value = prop.val.value
-        self.assertEqual('host-123', value)
-
-        prop2 = vm_util.property_from_property_set(
-                    'runtime.host', bad_objects)
-        self.assertIsNone(prop2)
-
-        prop3 = vm_util.property_from_property_set('foo', good_objects)
-        self.assertIsNotNone(prop3)
-        val3 = prop3.val.value
-        self.assertEqual('bar1', val3)
-
-        prop4 = vm_util.property_from_property_set('foo', bad_objects)
-        self.assertIsNotNone(prop4)
-        self.assertEqual('bar1', prop4.val)
 
     def test_get_resize_spec(self):
         fake_instance = {'id': 7, 'name': 'fake!',
@@ -1080,3 +991,42 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                                                      'fake-vm-ref')
             fake_wait_for_task.assert_called_once_with('fake-task')
             self.assertFalse(fake_get_ref.called)
+
+
+@mock.patch.object(driver.VMwareAPISession, 'vim', stubs.fake_vim_prop)
+class VMwareVMUtilGetHostRefTestCase(test.NoDBTestCase):
+    # N.B. Mocking on the class only mocks test_*(), but we need
+    # VMwareAPISession.vim to be mocked in both setUp and tests. Not mocking in
+    # setUp causes object initialisation to fail. Not mocking in tests results
+    # in vim calls not using FakeVim.
+    @mock.patch.object(driver.VMwareAPISession, 'vim', stubs.fake_vim_prop)
+    def setUp(self):
+        super(VMwareVMUtilGetHostRefTestCase, self).setUp()
+        fake.reset()
+        vm_util.vm_refs_cache_reset()
+
+        self.session = driver.VMwareAPISession()
+
+        # Create a fake VirtualMachine running on a known host
+        self.host_ref = fake._db_content['HostSystem'].keys()[0]
+        self.vm_ref = fake.create_vm(host_ref=self.host_ref)
+
+    @mock.patch.object(vm_util, 'get_vm_ref')
+    def test_get_host_ref_for_vm(self, mock_get_vm_ref):
+        mock_get_vm_ref.return_value = self.vm_ref
+
+        ret = vm_util.get_host_ref_for_vm(self.session, 'fake-instance')
+
+        mock_get_vm_ref.assert_called_once_with(self.session, 'fake-instance')
+        self.assertEqual(self.host_ref, ret)
+
+    @mock.patch.object(vm_util, 'get_vm_ref')
+    def test_get_host_name_for_vm(self, mock_get_vm_ref):
+        mock_get_vm_ref.return_value = self.vm_ref
+
+        host = fake._get_object(self.host_ref)
+
+        ret = vm_util.get_host_name_for_vm(self.session, 'fake-instance')
+
+        mock_get_vm_ref.assert_called_once_with(self.session, 'fake-instance')
+        self.assertEqual(host.name, ret)
