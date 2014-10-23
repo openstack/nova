@@ -166,7 +166,7 @@ class BootFromVolumeTest(test.TestCase):
                 name='test_server', imageRef=IMAGE_UUID,
                 flavorRef=2, min_count=1, max_count=1,
                 block_device_mapping=[dict(
-                        volume_id=1,
+                        volume_id='1',
                         device_name='/dev/vda',
                         virtual='root',
                         delete_on_termination=False,
@@ -184,7 +184,7 @@ class BootFromVolumeTest(test.TestCase):
         self.assertEqual(CONF.password_length, len(server['adminPass']))
         self.assertEqual(len(self._block_device_mapping_seen), 1)
         self.assertTrue(self._legacy_bdm_seen)
-        self.assertEqual(self._block_device_mapping_seen[0]['volume_id'], 1)
+        self.assertEqual(self._block_device_mapping_seen[0]['volume_id'], '1')
         self.assertEqual(self._block_device_mapping_seen[0]['device_name'],
                 '/dev/vda')
 
@@ -194,7 +194,7 @@ class BootFromVolumeTest(test.TestCase):
                 flavorRef=2, min_count=1, max_count=1,
                 block_device_mapping_v2=[dict(
                         source_type='volume',
-                        uuid=1,
+                        uuid='1',
                         device_name='/dev/vda',
                         boot_index=0,
                         delete_on_termination=False,
@@ -212,7 +212,7 @@ class BootFromVolumeTest(test.TestCase):
         self.assertEqual(CONF.password_length, len(server['adminPass']))
         self.assertEqual(len(self._block_device_mapping_seen), 1)
         self.assertFalse(self._legacy_bdm_seen)
-        self.assertEqual(self._block_device_mapping_seen[0]['volume_id'], 1)
+        self.assertEqual(self._block_device_mapping_seen[0]['volume_id'], '1')
         self.assertEqual(self._block_device_mapping_seen[0]['boot_index'],
                          0)
         self.assertEqual(self._block_device_mapping_seen[0]['device_name'],
@@ -283,7 +283,7 @@ class VolumeApiTestV21(test.TestCase):
 
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes')
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          volumes.VolumeController().create, req, body)
+                          volumes.VolumeController().create, req, body=body)
 
     def test_volume_index(self):
         req = webob.Request.blank(self.url_prefix + '/os-volumes')
@@ -481,7 +481,7 @@ class VolumeAttachTests(test.TestCase):
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
-        result = self.attachments.create(req, FAKE_UUID, body)
+        result = self.attachments.create(req, FAKE_UUID, body=body)
         self.assertEqual(result['volumeAttachment']['id'],
             '00000000-aaaa-aaaa-aaaa-000000000000')
 
@@ -502,7 +502,7 @@ class VolumeAttachTests(test.TestCase):
         req.environ['nova.context'] = self.context
 
         self.assertRaises(webob.exc.HTTPConflict, self.attachments.create,
-                          req, FAKE_UUID, body)
+                          req, FAKE_UUID, body=body)
 
     def test_attach_volume_bad_id(self):
         self.stubs.Set(compute_api.API,
@@ -523,7 +523,7 @@ class VolumeAttachTests(test.TestCase):
         req.environ['nova.context'] = self.context
 
         self.assertRaises(webob.exc.HTTPBadRequest, self.attachments.create,
-                          req, FAKE_UUID, body)
+                          req, FAKE_UUID, body=body)
 
     def test_attach_volume_without_volumeId(self):
         self.stubs.Set(compute_api.API,
@@ -543,7 +543,7 @@ class VolumeAttachTests(test.TestCase):
         req.environ['nova.context'] = self.context
 
         self.assertRaises(webob.exc.HTTPBadRequest, self.attachments.create,
-                          req, FAKE_UUID, body)
+                          req, FAKE_UUID, body=body)
 
     def _test_swap(self, uuid=FAKE_UUID_A, fake_func=None, body=None):
         fake_func = fake_func or fake_swap_volume
@@ -558,7 +558,7 @@ class VolumeAttachTests(test.TestCase):
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
-        return self.attachments.update(req, FAKE_UUID, uuid, body)
+        return self.attachments.update(req, FAKE_UUID, uuid, body=body)
 
     def test_swap_volume_for_locked_server(self):
         self.ext_mgr.extensions['os-volume-attachment-update'] = True
@@ -872,6 +872,7 @@ class CommonBadRequestTestCase(object):
     entity_name = None
     controller_cls = None
     kwargs = {}
+    bad_request = exc.HTTPBadRequest
 
     """
     Tests of places we throw 400 Bad Request from
@@ -887,7 +888,7 @@ class CommonBadRequestTestCase(object):
 
         kwargs = self.kwargs.copy()
         kwargs['body'] = body
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(self.bad_request,
                           self.controller.create, req, **kwargs)
 
     def test_create_no_body(self):
@@ -908,10 +909,12 @@ class BadRequestVolumeTestCaseV21(CommonBadRequestTestCase,
     resource = 'os-volumes'
     entity_name = 'volume'
     controller_cls = volumes_v3.VolumeController
+    bad_request = exception.ValidationError
 
 
 class BadRequestVolumeTestCaseV2(BadRequestVolumeTestCaseV21):
     controller_cls = volumes.VolumeController
+    bad_request = exc.HTTPBadRequest
 
 
 class BadRequestAttachmentTestCase(CommonBadRequestTestCase,
@@ -927,11 +930,13 @@ class BadRequestSnapshotTestCaseV21(CommonBadRequestTestCase,
 
     resource = 'os-snapshots'
     entity_name = 'snapshot'
-    controller_cls = volumes.SnapshotController
+    controller_cls = volumes_v3.SnapshotController
+    bad_request = exception.ValidationError
 
 
 class BadRequestSnapshotTestCaseV2(BadRequestSnapshotTestCaseV21):
-    controller_cls = volumes_v3.SnapshotController
+    controller_cls = volumes.SnapshotController
+    bad_request = exc.HTTPBadRequest
 
 
 class ShowSnapshotTestCaseV21(test.TestCase):
@@ -957,6 +962,7 @@ class ShowSnapshotTestCaseV2(ShowSnapshotTestCaseV21):
 
 class CreateSnapshotTestCaseV21(test.TestCase):
     snapshot_cls = volumes_v3.SnapshotController
+    invalid_input = exception.ValidationError
 
     def setUp(self):
         super(CreateSnapshotTestCaseV21, self).setUp()
@@ -967,24 +973,25 @@ class CreateSnapshotTestCaseV21(test.TestCase):
         self.stubs.Set(cinder.API, 'create_snapshot', fake_create_snapshot)
         self.req = fakes.HTTPRequest.blank('/v2/fake/os-snapshots')
         self.req.method = 'POST'
-        self.body = {'snapshot': {'volume_id': 1}}
+        self.body = {'snapshot': {'volume_id': '1'}}
 
     def test_force_true(self):
         self.body['snapshot']['force'] = 'True'
         self.controller.create(self.req, body=self.body)
 
     def test_force_false(self):
-        self.body['snapshot']['force'] = 'f'
+        self.body['snapshot']['force'] = 'false'
         self.controller.create(self.req, body=self.body)
 
     def test_force_invalid(self):
         self.body['snapshot']['force'] = 'foo'
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(self.invalid_input,
                           self.controller.create, self.req, body=self.body)
 
 
 class CreateSnapshotTestCaseV2(CreateSnapshotTestCaseV21):
     snapshot_cls = volumes.SnapshotController
+    invalid_input = exc.HTTPBadRequest
 
 
 class DeleteSnapshotTestCaseV21(test.TestCase):
@@ -1002,7 +1009,7 @@ class DeleteSnapshotTestCaseV21(test.TestCase):
 
     def test_normal_delete(self):
         self.req.method = 'POST'
-        self.body = {'snapshot': {'volume_id': 1}}
+        self.body = {'snapshot': {'volume_id': '1'}}
         result = self.controller.create(self.req, body=self.body)
 
         self.req.method = 'DELETE'
@@ -1023,7 +1030,7 @@ class DeleteSnapshotTestCaseV21(test.TestCase):
         self.stubs.Set(cinder.API, 'delete_snapshot',
             fake_delete_snapshot_not_exist)
         self.req.method = 'POST'
-        self.body = {'snapshot': {'volume_id': 1}}
+        self.body = {'snapshot': {'volume_id': '1'}}
         result = self.controller.create(self.req, body=self.body)
 
         self.req.method = 'DELETE'
@@ -1045,13 +1052,13 @@ class AssistedSnapshotCreateTestCase(test.TestCase):
 
     def test_assisted_create(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
-        body = {'snapshot': {'volume_id': 1, 'create_info': {}}}
+        body = {'snapshot': {'volume_id': '1', 'create_info': {}}}
         req.method = 'POST'
         self.controller.create(req, body=body)
 
     def test_assisted_create_missing_create_info(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
-        body = {'snapshot': {'volume_id': 1}}
+        body = {'snapshot': {'volume_id': '1'}}
         req.method = 'POST'
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                 req, body=body)
@@ -1067,7 +1074,7 @@ class AssistedSnapshotDeleteTestCase(test.TestCase):
 
     def test_assisted_delete(self):
         params = {
-            'delete_info': jsonutils.dumps({'volume_id': 1}),
+            'delete_info': jsonutils.dumps({'volume_id': '1'}),
         }
         req = fakes.HTTPRequest.blank(
                 '/v2/fake/os-assisted-volume-snapshots?%s' %

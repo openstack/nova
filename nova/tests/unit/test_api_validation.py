@@ -409,8 +409,10 @@ class BooleanTestCase(APIValidationTestCase):
                          self.post(body={'foo': '0'}))
 
     def test_validate_boolean_fails(self):
-        enum_boolean = ("[True, 'True', 'TRUE', 'true', '1',"
-                        " False, 'False', 'FALSE', 'false', '0']")
+        enum_boolean = ("[True, 'True', 'TRUE', 'true', '1', 'ON', 'On',"
+                        " 'on', 'YES', 'Yes', 'yes',"
+                        " False, 'False', 'FALSE', 'false', '0', 'OFF', 'Off',"
+                        " 'off', 'NO', 'No', 'no']")
 
         detail = ("Invalid input for field/attribute foo. Value: bar."
                   " 'bar' is not one of %s") % enum_boolean
