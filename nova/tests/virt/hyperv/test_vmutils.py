@@ -637,7 +637,8 @@ class VMUtilsTestCase(test.NoDBTestCase):
 
         response = self._vmutils._create_vm_obj(vs_man_svc=mock_vs_man_svc,
                                                 vm_name='fake vm',
-                                                notes='fake notes')
+                                                notes='fake notes',
+                                                dynamic_memory_ratio=1.0)
 
         _conn.new.assert_called_once_with()
         self.assertEqual(mock_vs_gs_data.ElementName, 'fake vm')
