@@ -1959,7 +1959,6 @@ class ComputeManager(manager.Manager):
     # callers all pass objects already
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
     @wrap_instance_fault
     def build_and_run_instance(self, context, instance, image, request_spec,
                      filter_properties, admin_password=None,
@@ -1976,100 +1975,111 @@ class ComputeManager(manager.Manager):
                          for t in requested_networks])
 
         @utils.synchronized(instance.uuid)
-        def do_build_and_run_instance(context, instance, image, request_spec,
-                filter_properties, admin_password, injected_files,
-                requested_networks, security_groups, block_device_mapping,
-                node=None, limits=None):
+        def _locked_do_build_and_run_instance(*args, **kwargs):
+            self._do_build_and_run_instance(*args, **kwargs)
 
-            try:
-                LOG.audit(_('Starting instance...'), context=context,
+        # NOTE(danms): We spawn here to return the RPC worker thread back to
+        # the pool. Since what follows could take a really long time, we don't
+        # want to tie up RPC workers.
+        utils.spawn_n(_locked_do_build_and_run_instance,
+                      context, instance, image, request_spec,
+                      filter_properties, admin_password, injected_files,
+                      requested_networks, security_groups,
+                      block_device_mapping, node, limits)
+
+    @wrap_exception()
+    @reverts_task_state
+    @wrap_instance_event
+    @wrap_instance_fault
+    def _do_build_and_run_instance(self, context, instance, image,
+            request_spec, filter_properties, admin_password, injected_files,
+            requested_networks, security_groups, block_device_mapping,
+            node=None, limits=None):
+
+        try:
+            LOG.audit(_('Starting instance...'), context=context,
+                  instance=instance)
+            instance.vm_state = vm_states.BUILDING
+            instance.task_state = None
+            instance.save(expected_task_state=
+                    (task_states.SCHEDULING, None))
+        except exception.InstanceNotFound:
+            msg = 'Instance disappeared before build.'
+            LOG.debug(msg, instance=instance)
+            return
+        except exception.UnexpectedTaskStateError as e:
+            LOG.debug(e.format_message(), instance=instance)
+            return
+
+        # b64 decode the files to inject:
+        decoded_files = self._decode_files(injected_files)
+
+        if limits is None:
+            limits = {}
+
+        if node is None:
+            node = self.driver.get_available_nodes(refresh=True)[0]
+            LOG.debug('No node specified, defaulting to %s', node,
                       instance=instance)
-                instance.vm_state = vm_states.BUILDING
-                instance.task_state = None
-                instance.save(expected_task_state=
-                        (task_states.SCHEDULING, None))
-            except exception.InstanceNotFound:
-                msg = 'Instance disappeared before build.'
-                LOG.debug(msg, instance=instance)
-                return
-            except exception.UnexpectedTaskStateError as e:
-                LOG.debug(e.format_message(), instance=instance)
-                return
 
-            # b64 decode the files to inject:
-            decoded_files = self._decode_files(injected_files)
-
-            if limits is None:
-                limits = {}
-
-            if node is None:
-                node = self.driver.get_available_nodes(refresh=True)[0]
-                LOG.debug('No node specified, defaulting to %s', node,
-                          instance=instance)
-
-            try:
-                self._build_and_run_instance(context, instance, image,
-                        decoded_files, admin_password, requested_networks,
-                        security_groups, block_device_mapping, node, limits,
-                        filter_properties)
-            except exception.RescheduledException as e:
-                LOG.debug(e.format_message(), instance=instance)
-                retry = filter_properties.get('retry', None)
-                if not retry:
-                    # no retry information, do not reschedule.
-                    LOG.debug("Retry info not present, will not reschedule",
-                        instance=instance)
-                    self._cleanup_allocated_networks(context, instance,
-                        requested_networks)
-                    compute_utils.add_instance_fault_from_exc(context,
-                            instance, e, sys.exc_info())
-                    self._set_instance_error_state(context, instance)
-                    return
-                retry['exc'] = traceback.format_exception(*sys.exc_info())
-                # NOTE(comstud): Deallocate networks if the driver wants
-                # us to do so.
-                if self.driver.deallocate_networks_on_reschedule(instance):
-                    self._cleanup_allocated_networks(context, instance,
-                            requested_networks)
-
-                instance.task_state = task_states.SCHEDULING
-                instance.save()
-
-                self.compute_task_api.build_instances(context, [instance],
-                        image, filter_properties, admin_password,
-                        injected_files, requested_networks, security_groups,
-                        block_device_mapping)
-            except (exception.InstanceNotFound,
-                    exception.UnexpectedDeletingTaskStateError):
-                msg = 'Instance disappeared during build.'
-                LOG.debug(msg, instance=instance)
+        try:
+            self._build_and_run_instance(context, instance, image,
+                    decoded_files, admin_password, requested_networks,
+                    security_groups, block_device_mapping, node, limits,
+                    filter_properties)
+        except exception.RescheduledException as e:
+            LOG.debug(e.format_message(), instance=instance)
+            retry = filter_properties.get('retry', None)
+            if not retry:
+                # no retry information, do not reschedule.
+                LOG.debug("Retry info not present, will not reschedule",
+                    instance=instance)
                 self._cleanup_allocated_networks(context, instance,
-                        requested_networks)
-            except exception.BuildAbortException as e:
-                LOG.exception(e.format_message(), instance=instance)
-                self._cleanup_allocated_networks(context, instance,
-                        requested_networks)
-                self._cleanup_volumes(context, instance.uuid,
-                        block_device_mapping, raise_exc=False)
-                compute_utils.add_instance_fault_from_exc(context, instance,
-                        e, sys.exc_info())
+                    requested_networks)
+                compute_utils.add_instance_fault_from_exc(context,
+                        instance, e, sys.exc_info())
                 self._set_instance_error_state(context, instance)
-            except Exception as e:
-                # Should not reach here.
-                msg = _LE('Unexpected build failure, not rescheduling build.')
-                LOG.exception(msg, instance=instance)
+                return
+            retry['exc'] = traceback.format_exception(*sys.exc_info())
+            # NOTE(comstud): Deallocate networks if the driver wants
+            # us to do so.
+            if self.driver.deallocate_networks_on_reschedule(instance):
                 self._cleanup_allocated_networks(context, instance,
                         requested_networks)
-                self._cleanup_volumes(context, instance.uuid,
-                        block_device_mapping, raise_exc=False)
-                compute_utils.add_instance_fault_from_exc(context, instance,
-                        e, sys.exc_info())
-                self._set_instance_error_state(context, instance)
 
-        do_build_and_run_instance(context, instance, image, request_spec,
-                filter_properties, admin_password, injected_files,
-                requested_networks, security_groups, block_device_mapping,
-                node, limits)
+            instance.task_state = task_states.SCHEDULING
+            instance.save()
+
+            self.compute_task_api.build_instances(context, [instance],
+                    image, filter_properties, admin_password,
+                    injected_files, requested_networks, security_groups,
+                    block_device_mapping)
+        except (exception.InstanceNotFound,
+                exception.UnexpectedDeletingTaskStateError):
+            msg = 'Instance disappeared during build.'
+            LOG.debug(msg, instance=instance)
+            self._cleanup_allocated_networks(context, instance,
+                    requested_networks)
+        except exception.BuildAbortException as e:
+            LOG.exception(e.format_message(), instance=instance)
+            self._cleanup_allocated_networks(context, instance,
+                    requested_networks)
+            self._cleanup_volumes(context, instance.uuid,
+                    block_device_mapping, raise_exc=False)
+            compute_utils.add_instance_fault_from_exc(context, instance,
+                    e, sys.exc_info())
+            self._set_instance_error_state(context, instance)
+        except Exception as e:
+            # Should not reach here.
+            msg = _LE('Unexpected build failure, not rescheduling build.')
+            LOG.exception(msg, instance=instance)
+            self._cleanup_allocated_networks(context, instance,
+                    requested_networks)
+            self._cleanup_volumes(context, instance.uuid,
+                    block_device_mapping, raise_exc=False)
+            compute_utils.add_instance_fault_from_exc(context, instance,
+                    e, sys.exc_info())
+            self._set_instance_error_state(context, instance)
 
     def _build_and_run_instance(self, context, instance, image, injected_files,
             admin_password, requested_networks, security_groups,
