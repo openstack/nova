@@ -182,9 +182,11 @@ class HostState(object):
         if least_gb is not None:
             if least_gb > free_gb:
                 # can occur when an instance in database is not on host
-                LOG.warn(_LW("Host has more disk space than database "
-                             "expected (%(physical)sgb > %(database)sgb)"),
-                         {'physical': least_gb, 'database': free_gb})
+                LOG.warn(_LW("Host %(hostname)s has more disk space than "
+                             "database expected "
+                             "(%(physical)sgb > %(database)sgb)"),
+                         {'physical': least_gb, 'database': free_gb,
+                          'hostname': compute['hypervisor_hostname']})
             free_gb = min(least_gb, free_gb)
         free_disk_mb = free_gb * 1024
 
