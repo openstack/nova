@@ -64,20 +64,15 @@ class BaseFilterHandler(loadables.BaseLoader):
     This class should be subclassed where one needs to use filters.
     """
 
-    def get_filtered_objects(self, filter_classes, objs,
-            filter_properties, index=0):
+    def get_filtered_objects(self, filters, objs, filter_properties, index=0):
         list_objs = list(objs)
         LOG.debug("Starting with %d host(s)", len(list_objs))
-        for filter_cls in filter_classes:
-            cls_name = filter_cls.__name__
-            filter = filter_cls()
-
+        for filter in filters:
             if filter.run_filter_for_index(index):
-                objs = filter.filter_all(list_objs,
-                                               filter_properties)
+                cls_name = filter.__class__.__name__
+                objs = filter.filter_all(list_objs, filter_properties)
                 if objs is None:
-                    LOG.debug("Filter %(cls_name)s says to stop filtering",
-                              {'cls_name': cls_name})
+                    LOG.debug("Filter %s says to stop filtering", cls_name)
                     return
                 list_objs = list(objs)
                 if not list_objs:

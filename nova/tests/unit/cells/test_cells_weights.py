@@ -78,11 +78,12 @@ class _WeigherTestClass(test.NoDBTestCase):
     def setUp(self):
         super(_WeigherTestClass, self).setUp()
         self.weight_handler = weights.CellWeightHandler()
-        self.weight_classes = self.weight_handler.get_matching_classes(
+        weigher_classes = self.weight_handler.get_matching_classes(
                 [self.weigher_cls_name])
+        self.weighers = [cls() for cls in weigher_classes]
 
     def _get_weighed_cells(self, cells, weight_properties):
-        return self.weight_handler.get_weighed_objects(self.weight_classes,
+        return self.weight_handler.get_weighed_objects(self.weighers,
                 cells, weight_properties)
 
 

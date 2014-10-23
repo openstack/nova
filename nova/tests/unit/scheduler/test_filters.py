@@ -110,11 +110,9 @@ class FiltersTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(filt2_mock, 'run_filter_for_index')
         self.mox.StubOutWithMock(filt2_mock, 'filter_all')
 
-        Filter1().AndReturn(filt1_mock)
         filt1_mock.run_filter_for_index(0).AndReturn(True)
         filt1_mock.filter_all(filter_objs_initial,
                               filter_properties).AndReturn(filter_objs_second)
-        Filter2().AndReturn(filt2_mock)
         filt2_mock.run_filter_for_index(0).AndReturn(True)
         filt2_mock.filter_all(filter_objs_second,
                               filter_properties).AndReturn(filter_objs_last)
@@ -122,8 +120,8 @@ class FiltersTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
 
         filter_handler = filters.BaseFilterHandler(filters.BaseFilter)
-        filter_classes = [Filter1, Filter2]
-        result = filter_handler.get_filtered_objects(filter_classes,
+        filter_mocks = [filt1_mock, filt2_mock]
+        result = filter_handler.get_filtered_objects(filter_mocks,
                                                      filter_objs_initial,
                                                      filter_properties)
         self.assertEqual(filter_objs_last, result)
@@ -154,19 +152,17 @@ class FiltersTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(filt2_mock, 'run_filter_for_index')
         self.mox.StubOutWithMock(filt2_mock, 'filter_all')
 
-        Filter1().AndReturn(filt1_mock)
         filt1_mock.run_filter_for_index(0).AndReturn(True)
         filt1_mock.filter_all(filter_objs_initial,
                               filter_properties).AndReturn(filter_objs_second)
-        Filter2().AndReturn(filt2_mock)
         # return false so filter_all will not be called
         filt2_mock.run_filter_for_index(0).AndReturn(False)
 
         self.mox.ReplayAll()
 
         filter_handler = filters.BaseFilterHandler(filters.BaseFilter)
-        filter_classes = [Filter1, Filter2]
-        filter_handler.get_filtered_objects(filter_classes,
+        filter_mocks = [filt1_mock, filt2_mock]
+        filter_handler.get_filtered_objects(filter_mocks,
                                             filter_objs_initial,
                                             filter_properties)
 
@@ -192,15 +188,14 @@ class FiltersTestCase(test.NoDBTestCase):
                                  use_mock_anything=True)
         self.mox.StubOutWithMock(filt2_mock, 'filter_all')
 
-        Filter1().AndReturn(filt1_mock)
         filt1_mock.run_filter_for_index(0).AndReturn(True)
         filt1_mock.filter_all(filter_objs_initial,
                               filter_properties).AndReturn(None)
         self.mox.ReplayAll()
 
         filter_handler = filters.BaseFilterHandler(filters.BaseFilter)
-        filter_classes = [Filter1, Filter2]
-        result = filter_handler.get_filtered_objects(filter_classes,
+        filter_mocks = [filt1_mock, filt2_mock]
+        result = filter_handler.get_filtered_objects(filter_mocks,
                                                      filter_objs_initial,
                                                      filter_properties)
         self.assertIsNone(result)

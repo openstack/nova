@@ -43,13 +43,14 @@ class _FilterTestClass(test.NoDBTestCase):
         self.scheduler = self.msg_runner.scheduler
         self.my_cell_state = self.msg_runner.state_manager.get_my_state()
         self.filter_handler = filters.CellFilterHandler()
-        self.filter_classes = self.filter_handler.get_matching_classes(
+        filter_classes = self.filter_handler.get_matching_classes(
                 [self.filter_cls_name])
+        self.filters = [cls() for cls in filter_classes]
         self.context = context.RequestContext('fake', 'fake',
                                               is_admin=True)
 
     def _filter_cells(self, cells, filter_properties):
-        return self.filter_handler.get_filtered_objects(self.filter_classes,
+        return self.filter_handler.get_filtered_objects(self.filters,
                                                         cells,
                                                         filter_properties)
 

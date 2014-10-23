@@ -51,11 +51,13 @@ class FakeFilterClass2(filters.BaseCellFilter):
 
 
 class FakeWeightClass1(weights.BaseCellWeigher):
-    pass
+    def _weigh_object(self, obj, weight_properties):
+        pass
 
 
 class FakeWeightClass2(weights.BaseCellWeigher):
-    pass
+    def _weigh_object(self, obj, weight_properties):
+        pass
 
 
 class CellsSchedulerTestCase(test.TestCase):
@@ -360,8 +362,8 @@ class CellsSchedulerTestCase(test.TestCase):
         def fake_rpc_build_instances(ctxt, **host_sched_kwargs):
             call_info['host_sched_kwargs'] = host_sched_kwargs
 
-        def fake_get_filtered_objs(filter_classes, cells, filt_properties):
-            call_info['filt_classes'] = filter_classes
+        def fake_get_filtered_objs(filters, cells, filt_properties):
+            call_info['filt_objects'] = filters
             call_info['filt_cells'] = cells
             call_info['filt_props'] = filt_properties
             return cells
@@ -411,7 +413,7 @@ class CellsSchedulerTestCase(test.TestCase):
                                'instance_type': 'fake_type'}
         self.assertEqual(expected_filt_props, call_info['filt_props'])
         self.assertEqual([FakeFilterClass1, FakeFilterClass2],
-                         call_info['filt_classes'])
+                         [obj.__class__ for obj in call_info['filt_objects']])
         self.assertEqual([self.my_cell_state], call_info['filt_cells'])
 
     def test_cells_filter_returning_none(self):
@@ -475,8 +477,8 @@ class CellsSchedulerTestCase(test.TestCase):
         def fake_rpc_build_instances(ctxt, **host_sched_kwargs):
             call_info['host_sched_kwargs'] = host_sched_kwargs
 
-        def fake_get_weighed_objs(weight_classes, cells, filt_properties):
-            call_info['weight_classes'] = weight_classes
+        def fake_get_weighed_objs(weighers, cells, filt_properties):
+            call_info['weighers'] = weighers
             call_info['weight_cells'] = cells
             call_info['weight_props'] = filt_properties
             return [weights.WeightedCell(cells[0], 0.0)]
@@ -526,5 +528,5 @@ class CellsSchedulerTestCase(test.TestCase):
                                'instance_type': 'fake_type'}
         self.assertEqual(expected_filt_props, call_info['weight_props'])
         self.assertEqual([FakeWeightClass1, FakeWeightClass2],
-                         call_info['weight_classes'])
+                         [obj.__class__ for obj in call_info['weighers']])
         self.assertEqual([self.my_cell_state], call_info['weight_cells'])

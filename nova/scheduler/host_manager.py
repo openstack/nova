@@ -281,11 +281,15 @@ class HostManager(object):
     def __init__(self):
         self.host_state_map = {}
         self.filter_handler = filters.HostFilterHandler()
-        self.filter_classes = self.filter_handler.get_matching_classes(
+        filter_classes = self.filter_handler.get_matching_classes(
                 CONF.scheduler_available_filters)
+        self.filter_cls_map = dict(
+                (cls.__name__, cls) for cls in filter_classes)
+        self.filter_obj_map = {}
         self.weight_handler = weights.HostWeightHandler()
-        self.weight_classes = self.weight_handler.get_matching_classes(
+        weigher_classes = self.weight_handler.get_matching_classes(
                 CONF.scheduler_weight_classes)
+        self.weighers = [cls() for cls in weigher_classes]
 
     def _choose_host_filters(self, filter_cls_names):
         """Since the caller may specify which filters to use we need
@@ -297,14 +301,17 @@ class HostManager(object):
             filter_cls_names = CONF.scheduler_default_filters
         if not isinstance(filter_cls_names, (list, tuple)):
             filter_cls_names = [filter_cls_names]
-        cls_map = dict((cls.__name__, cls) for cls in self.filter_classes)
+
         good_filters = []
         bad_filters = []
         for filter_name in filter_cls_names:
-            if filter_name not in cls_map:
-                bad_filters.append(filter_name)
-                continue
-            good_filters.append(cls_map[filter_name])
+            if filter_name not in self.filter_obj_map:
+                if filter_name not in self.filter_cls_map:
+                    bad_filters.append(filter_name)
+                    continue
+                filter_cls = self.filter_cls_map[filter_name]
+                self.filter_obj_map[filter_name] = filter_cls()
+            good_filters.append(self.filter_obj_map[filter_name])
         if bad_filters:
             msg = ", ".join(bad_filters)
             raise exception.SchedulerHostFilterNotFound(filter_name=msg)
@@ -357,7 +364,7 @@ class HostManager(object):
                         "'force_nodes' value of '%s'")
             LOG.audit(msg % forced_nodes_str)
 
-        filter_classes = self._choose_host_filters(filter_class_names)
+        filters = self._choose_host_filters(filter_class_names)
         ignore_hosts = filter_properties.get('ignore_hosts', [])
         force_hosts = filter_properties.get('force_hosts', [])
         force_nodes = filter_properties.get('force_nodes', [])
@@ -381,12 +388,12 @@ class HostManager(object):
                     return name_to_cls_map.values()
             hosts = name_to_cls_map.itervalues()
 
-        return self.filter_handler.get_filtered_objects(filter_classes,
+        return self.filter_handler.get_filtered_objects(filters,
                 hosts, filter_properties, index)
 
     def get_weighed_hosts(self, hosts, weight_properties):
         """Weigh the hosts."""
-        return self.weight_handler.get_weighed_objects(self.weight_classes,
+        return self.weight_handler.get_weighed_objects(self.weighers,
                 hosts, weight_properties)
 
     def get_all_host_states(self, context):
