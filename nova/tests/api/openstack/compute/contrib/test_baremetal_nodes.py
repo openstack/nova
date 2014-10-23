@@ -14,16 +14,15 @@
 #    under the License.
 
 import mock
-from oslo.config import cfg
 from webob import exc
 
-from nova.api.openstack.compute.contrib import baremetal_nodes
+from nova.api.openstack.compute.contrib import baremetal_nodes as b_nodes_v2
+from nova.api.openstack.compute.plugins.v3 import baremetal_nodes \
+                                                 as b_nodes_v21
 from nova.api.openstack import extensions
 from nova import context
 from nova import test
 from nova.tests.virt.ironic import utils as ironic_utils
-
-CONF = cfg.CONF
 
 
 class FakeRequest(object):
@@ -64,17 +63,18 @@ def fake_node_ext_status(**updates):
 FAKE_IRONIC_CLIENT = ironic_utils.FakeClient()
 
 
-@mock.patch.object(baremetal_nodes, '_get_ironic_client',
+@mock.patch.object(b_nodes_v21, '_get_ironic_client',
                    lambda *_: FAKE_IRONIC_CLIENT)
-class BareMetalNodesTest(test.NoDBTestCase):
-
+class BareMetalNodesTestV21(test.NoDBTestCase):
     def setUp(self):
-        super(BareMetalNodesTest, self).setUp()
+        super(BareMetalNodesTestV21, self).setUp()
 
-        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
+        self._setup()
         self.context = context.get_admin_context()
-        self.controller = baremetal_nodes.BareMetalNodeController(self.ext_mgr)
         self.request = FakeRequest(self.context)
+
+    def _setup(self):
+        self.controller = b_nodes_v21.BareMetalNodeController()
 
     @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'list')
     def test_index_ironic(self, mock_list):
@@ -149,3 +149,11 @@ class BareMetalNodesTest(test.NoDBTestCase):
         self.assertRaises(exc.HTTPBadRequest,
                           self.controller._remove_interface,
                           self.request, 'fake-id', 'fake-body')
+
+
+@mock.patch.object(b_nodes_v2, '_get_ironic_client',
+                   lambda *_: FAKE_IRONIC_CLIENT)
+class BareMetalNodesTestV2(BareMetalNodesTestV21):
+    def _setup(self):
+        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
+        self.controller = b_nodes_v2.BareMetalNodeController(self.ext_mgr)
