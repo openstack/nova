@@ -99,7 +99,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         if CONF.shelved_offload_time == 0:
             self.compute._notify_about_instance_usage(self.context, instance,
                 'shelve_offload.start')
-            self.compute.driver.power_off(instance)
+            self.compute.driver.power_off(instance, 0, 0)
             self.compute._get_power_state(self.context,
                                           instance).AndReturn(123)
             db.instance_update_and_get_original(self.context,
@@ -127,10 +127,10 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
     def test_shelve_forced_shutdown(self):
         self._shelve_instance(-1, clean_shutdown=False)
 
-    def test_shelve_offload(self):
+    def test_shelve_and_offload(self):
         self._shelve_instance(0)
 
-    def test_shelve_volume_backed(self):
+    def _shelve_offload(self, clean_shutdown=True):
         instance = self._create_fake_instance_obj()
         instance.task_state = task_states.SHELVING
         instance.save()
@@ -151,7 +151,12 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
         self.compute._notify_about_instance_usage(self.context, instance,
                 'shelve_offload.start')
-        self.compute.driver.power_off(instance)
+        if clean_shutdown:
+            self.compute.driver.power_off(instance,
+                                          CONF.shutdown_timeout,
+                                          self.compute.SHUTDOWN_RETRY_INTERVAL)
+        else:
+            self.compute.driver.power_off(instance, 0, 0)
         self.compute._get_power_state(self.context,
                 instance).AndReturn(123)
         db.instance_update_and_get_original(self.context, instance['uuid'],
@@ -168,7 +173,14 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 'shelve_offload.end')
         self.mox.ReplayAll()
 
-        self.compute.shelve_offload_instance(self.context, instance)
+        self.compute.shelve_offload_instance(self.context, instance,
+                                             clean_shutdown=clean_shutdown)
+
+    def test_shelve_offload(self):
+        self._shelve_offload()
+
+    def test_shelve_offload_forced_shutdown(self):
+        self._shelve_offload(clean_shutdown=False)
 
     def test_unshelve(self):
         db_instance = self._create_fake_instance()

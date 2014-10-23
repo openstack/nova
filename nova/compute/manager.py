@@ -4103,6 +4103,7 @@ class ComputeManager(manager.Manager):
         :param context: request context
         :param instance: an Instance object
         :param image_id: an image id to snapshot to.
+        :param clean_shutdown: give the GuestOS a chance to stop
         """
         self.conductor_api.notify_usage_exists(
             context, obj_base.obj_to_primitive(instance),
@@ -4140,12 +4141,13 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(context, instance, 'shelve.end')
 
         if CONF.shelved_offload_time == 0:
-            self.shelve_offload_instance(context, instance)
+            self.shelve_offload_instance(context, instance,
+                                         clean_shutdown=False)
 
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
-    def shelve_offload_instance(self, context, instance):
+    def shelve_offload_instance(self, context, instance, clean_shutdown=True):
         """Remove a shelved instance from the hypervisor.
 
         This frees up those resources for use by other instances, but may lead
@@ -4155,11 +4157,12 @@ class ComputeManager(manager.Manager):
 
         :param context: request context
         :param instance: nova.objects.instance.Instance
+        :param clean_shutdown: give the GuestOS a chance to stop
         """
         self._notify_about_instance_usage(context, instance,
                 'shelve_offload.start')
 
-        self.driver.power_off(instance)
+        self._power_off_instance(context, instance, clean_shutdown)
         current_power_state = self._get_power_state(context, instance)
 
         network_info = self._get_instance_nw_info(context, instance)
@@ -5488,7 +5491,8 @@ class ComputeManager(manager.Manager):
             try:
                 instance.task_state = task_states.SHELVING_OFFLOADING
                 instance.save()
-                self.shelve_offload_instance(context, instance)
+                self.shelve_offload_instance(context, instance,
+                                             clean_shutdown=False)
             except Exception:
                 LOG.exception(_LE('Periodic task failed to offload instance.'),
                         instance=instance)
