@@ -649,7 +649,7 @@ def stub_compute_volume_snapshot_create(self, context, volume_id, create_info):
 
 def stub_snapshot_delete(self, context, snapshot_id):
     if snapshot_id == '-1':
-        raise exc.NotFound
+        raise exc.SnapshotNotFound(snapshot_id=snapshot_id)
 
 
 def stub_compute_volume_snapshot_delete(self, context, volume_id, snapshot_id,
@@ -659,7 +659,7 @@ def stub_compute_volume_snapshot_delete(self, context, volume_id, snapshot_id,
 
 def stub_snapshot_get(self, context, snapshot_id):
     if snapshot_id == '-1':
-        raise exc.NotFound
+        raise exc.SnapshotNotFound(snapshot_id=snapshot_id)
     return stub_snapshot(snapshot_id)
 
 

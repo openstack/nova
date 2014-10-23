@@ -174,7 +174,8 @@ class ImagesControllerTestV21(test.NoDBTestCase):
 
         self.assertThat(actual_image, matchers.DictMatches(expected_image))
 
-    @mock.patch('nova.image.api.API.get', side_effect=exception.NotFound)
+    @mock.patch('nova.image.api.API.get',
+                side_effect=exception.ImageNotFound(image_id=''))
     def test_get_image_404(self, _get_mocked):
         fake_req = self.http_request.blank(self.url_base + 'images/unknown')
         self.assertRaises(webob.exc.HTTPNotFound,

@@ -14,6 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+import webob
+
 from nova.api.openstack.compute.contrib import fping
 from nova.api.openstack.compute.plugins.v3 import fping as fping_v21
 from nova import exception
@@ -97,6 +100,15 @@ class FpingTestV21(test.TestCase):
         srv = res_dict["server"]
         for key in "project_id", "id", "alive":
             self.assertIn(key, srv)
+
+    @mock.patch('nova.db.instance_get_by_uuid')
+    def test_fping_show_with_not_found(self, mock_get_instance):
+        mock_get_instance.side_effect = exception.InstanceNotFound(
+            instance_id='')
+        req = fakes.HTTPRequest.blank(self._get_url() +
+                                      "os-fping/%s" % FAKE_UUID)
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.show, req, FAKE_UUID)
 
 
 class FpingTestV2(FpingTestV21):

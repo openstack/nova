@@ -728,7 +728,7 @@ class ServersController(wsgi.Controller):
             instance.update(update_dict)
             instance.save()
             return self._view_builder.show(req, instance)
-        except exception.NotFound:
+        except exception.InstanceNotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
 
@@ -836,7 +836,7 @@ class ServersController(wsgi.Controller):
         """Destroys a server."""
         try:
             self._delete(req.environ['nova.context'], req, id)
-        except exception.NotFound:
+        except exception.InstanceNotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
         except exception.InstanceIsLocked as e:

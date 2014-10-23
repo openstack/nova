@@ -73,7 +73,7 @@ class InterfaceAttachmentController(wsgi.Controller):
 
         try:
             port_info = self.network_api.show_port(context, port_id)
-        except exception.NotFound as e:
+        except exception.PortNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.Forbidden as e:
             raise exc.HTTPForbidden(explanation=e.format_message())

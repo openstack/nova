@@ -95,7 +95,7 @@ class VolumeController(wsgi.Controller):
 
         try:
             vol = self.volume_api.get(context, id)
-        except exception.NotFound as e:
+        except exception.VolumeNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
 
         return {'volume': _translate_volume_detail_view(context, vol)}
@@ -109,7 +109,7 @@ class VolumeController(wsgi.Controller):
 
         try:
             self.volume_api.delete(context, id)
-        except exception.NotFound as e:
+        except exception.VolumeNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
 
     @extensions.expected_errors(())
@@ -471,7 +471,7 @@ class SnapshotController(wsgi.Controller):
 
         try:
             vol = self.volume_api.get_snapshot(context, id)
-        except exception.NotFound as e:
+        except exception.SnapshotNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
 
         return {'snapshot': _translate_snapshot_detail_view(context, vol)}
@@ -485,7 +485,7 @@ class SnapshotController(wsgi.Controller):
 
         try:
             self.volume_api.delete_snapshot(context, id)
-        except exception.NotFound as e:
+        except exception.SnapshotNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
 
     @extensions.expected_errors(())

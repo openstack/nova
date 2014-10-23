@@ -85,7 +85,7 @@ class ImagesController(wsgi.Controller):
 
         try:
             image = self._image_api.get(context, id)
-        except (exception.NotFound, exception.InvalidImageRef):
+        except (exception.ImageNotFound, exception.InvalidImageRef):
             explanation = _("Image not found.")
             raise webob.exc.HTTPNotFound(explanation=explanation)
 
