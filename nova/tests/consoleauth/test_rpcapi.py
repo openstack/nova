@@ -78,7 +78,7 @@ class ConsoleAuthRpcAPITestCase(test.NoDBTestCase):
         self.flags(consoleauth='havana', group='upgrade_levels')
         self._test_consoleauth_api('check_token', token='t', version='1.0')
 
-    def test_delete_tokens_for_instnace(self):
+    def test_delete_tokens_for_instance(self):
         self._test_consoleauth_api('delete_tokens_for_instance',
                                    _do_cast=True,
                                    instance_uuid="instance")
