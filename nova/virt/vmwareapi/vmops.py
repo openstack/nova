@@ -51,10 +51,10 @@ from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import imagecache
+from nova.virt.vmwareapi import images
 from nova.virt.vmwareapi import vif as vmwarevif
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
-from nova.virt.vmwareapi import vmware_images
 
 
 CONF = cfg.CONF
@@ -283,7 +283,7 @@ class VMwareVMOps(object):
                    'datastore_name': vi.datastore.name},
                   instance=vi.instance)
 
-        vmware_images.fetch_image(
+        images.fetch_image(
             context,
             vi.instance,
             session._host,
@@ -429,8 +429,8 @@ class VMwareVMOps(object):
               instance_name=None, power_on=True):
 
         client_factory = self._session.vim.client.factory
-        image_info = vmware_images.VMwareImage.from_image(instance.image_ref,
-                                                          image_meta)
+        image_info = images.VMwareImage.from_image(instance.image_ref,
+                                                   image_meta)
         vi = self._get_vm_config_info(instance, image_info, instance_name)
 
         # Creates the virtual machine. The virtual machine reference returned
@@ -520,7 +520,7 @@ class VMwareVMOps(object):
                     cdb.make_drive(tmp_file)
                     upload_iso_path = "%s/configdrive.iso" % (
                         upload_folder)
-                    vmware_images.upload_iso_to_datastore(
+                    images.upload_iso_to_datastore(
                         tmp_file, instance,
                         host=self._session._host,
                         data_center_name=dc_name,
@@ -680,7 +680,7 @@ class VMwareVMOps(object):
             # Upload the contents of -flat.vmdk file which has the disk data.
             LOG.debug("Uploading image %s", image_id,
                       instance=instance)
-            vmware_images.upload_image(
+            images.upload_image(
                 context,
                 image_id,
                 instance,

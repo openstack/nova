@@ -62,11 +62,11 @@ from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import imagecache
+from nova.virt.vmwareapi import images
 from nova.virt.vmwareapi import vif
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
-from nova.virt.vmwareapi import vmware_images
 from nova.virt.vmwareapi import volumeops
 
 CONF = cfg.CONF
@@ -528,13 +528,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         else:
             self.assertFalse(vmwareapi_fake.get_file(str(cache)))
 
-    @mock.patch.object(nova.virt.vmwareapi.vmware_images.VMwareImage,
+    @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
                        'from_image')
     def test_instance_dir_disk_created(self, mock_from_image):
         """Test image file is cached when even when use_linked_clone
             is False
         """
-        img_props = vmware_images.VMwareImage(
+        img_props = images.VMwareImage(
             image_id=self.fake_image_uuid,
             linked_clone=False)
 
@@ -544,13 +544,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertTrue(vmwareapi_fake.get_file(str(path)))
         self._cached_files_exist()
 
-    @mock.patch.object(nova.virt.vmwareapi.vmware_images.VMwareImage,
+    @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
                        'from_image')
     def test_cache_dir_disk_created(self, mock_from_image):
         """Test image disk is cached when use_linked_clone is True."""
         self.flags(use_linked_clone=True, group='vmware')
 
-        img_props = vmware_images.VMwareImage(
+        img_props = images.VMwareImage(
             image_id=self.fake_image_uuid,
             file_size=1 * units.Ki,
             disk_type=constants.DISK_TYPE_SPARSE)
@@ -599,11 +599,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.image['disk_format'] = 'iso'
         self._create_vm()
 
-    @mock.patch.object(nova.virt.vmwareapi.vmware_images.VMwareImage,
+    @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
                        'from_image')
     def test_iso_disk_cdrom_attach_with_config_drive(self,
                                                      mock_from_image):
-        img_props = vmware_images.VMwareImage(
+        img_props = images.VMwareImage(
             image_id=self.fake_image_uuid,
             file_size=80 * units.Gi,
             file_type='iso',
@@ -781,10 +781,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._check_vm_info(info, power_state.RUNNING)
         self.assertTrue(vmwareapi_fake.get_file(str(root)))
 
-    @mock.patch.object(nova.virt.vmwareapi.vmware_images.VMwareImage,
+    @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
                        'from_image')
     def test_spawn_disk_extend_sparse(self, mock_from_image):
-        img_props = vmware_images.VMwareImage(
+        img_props = images.VMwareImage(
             image_id=self.fake_image_uuid,
             file_size=units.Ki,
             disk_type=constants.DISK_TYPE_SPARSE,
@@ -916,10 +916,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             self.assertRaises(DeleteError, self._create_vm)
         self.assertTrue(vmwareapi_fake.get_file(cached_image))
 
-    @mock.patch.object(nova.virt.vmwareapi.vmware_images.VMwareImage,
+    @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
                        'from_image')
     def test_spawn_disk_invalid_disk_size(self, mock_from_image):
-        img_props = vmware_images.VMwareImage(
+        img_props = images.VMwareImage(
             image_id=self.fake_image_uuid,
             file_size=82 * units.Gi,
             disk_type=constants.DISK_TYPE_SPARSE,
@@ -930,10 +930,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertRaises(exception.InstanceUnacceptable,
                           self._create_vm)
 
-    @mock.patch.object(nova.virt.vmwareapi.vmware_images.VMwareImage,
+    @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
                        'from_image')
     def test_spawn_disk_extend_insufficient_disk_space(self, mock_from_image):
-        img_props = vmware_images.VMwareImage(
+        img_props = images.VMwareImage(
             image_id=self.fake_image_uuid,
             file_size=1024,
             disk_type=constants.DISK_TYPE_SPARSE,
@@ -1185,7 +1185,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         info = self.conn.get_info({'uuid': self.uuid,
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
-        with mock.patch.object(vmware_images, 'upload_image',
+        with mock.patch.object(images, 'upload_image',
                                self.mock_upload_image):
             self.conn.snapshot(self.context, self.instance, "Test-Snapshot",
                                func_call_matcher.call)
@@ -2216,10 +2216,10 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
                           network_info=self.network_info,
                           block_device_info=None)
 
-    @mock.patch.object(nova.virt.vmwareapi.vmware_images.VMwareImage,
+    @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
                        'from_image')
     def test_spawn_with_sparse_image(self, mock_from_image):
-        img_info = vmware_images.VMwareImage(
+        img_info = images.VMwareImage(
             image_id=self.fake_image_uuid,
             file_size=1024,
             disk_type=constants.DISK_TYPE_SPARSE,

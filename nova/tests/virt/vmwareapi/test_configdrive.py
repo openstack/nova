@@ -27,9 +27,9 @@ from nova.tests.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.virt.vmwareapi import stubs
 from nova.virt import fake
 from nova.virt.vmwareapi import driver
+from nova.virt.vmwareapi import images
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
-from nova.virt.vmwareapi import vmware_images
 
 
 class ConfigDriveTestCase(test.NoDBTestCase):
@@ -108,7 +108,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
 
         def fake_upload_iso_to_datastore(iso_path, instance, **kwargs):
             pass
-        self.stubs.Set(vmware_images,
+        self.stubs.Set(images,
                        'upload_iso_to_datastore',
                        fake_upload_iso_to_datastore)
 

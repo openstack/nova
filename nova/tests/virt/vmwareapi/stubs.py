@@ -26,8 +26,8 @@ from nova import db
 from nova.tests import test_flavors
 from nova.tests.virt.vmwareapi import fake
 from nova.virt.vmwareapi import driver
+from nova.virt.vmwareapi import images
 from nova.virt.vmwareapi import network_util
-from nova.virt.vmwareapi import vmware_images
 
 
 def fake_get_vim_object(arg):
@@ -86,8 +86,8 @@ def set_stubs(stubs):
     """Set the stubs."""
     stubs.Set(network_util, 'get_network_with_the_name',
               fake.fake_get_network)
-    stubs.Set(vmware_images, 'upload_image', fake.fake_upload_image)
-    stubs.Set(vmware_images, 'fetch_image', fake.fake_fetch_image)
+    stubs.Set(images, 'upload_image', fake.fake_upload_image)
+    stubs.Set(images, 'fetch_image', fake.fake_fetch_image)
     stubs.Set(driver.VMwareAPISession, "vim", fake_vim_prop)
     stubs.Set(driver.VMwareAPISession, "_is_vim_object",
               fake_is_vim_object)
