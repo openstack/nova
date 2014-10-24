@@ -25,11 +25,9 @@ from nova import compute
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.openstack.common import log as logging
 from nova import volume
 
 ALIAS = "os-extended-volumes"
-LOG = logging.getLogger(__name__)
 authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
 authorize_attach = extensions.extension_authorizer('compute',
                                                    'v3:%s:attach' % ALIAS)
@@ -137,13 +135,6 @@ class ExtendedVolumesController(wsgi.Controller):
         disk_bus = body['attach'].get('disk_bus')
         device_type = body['attach'].get('device_type')
 
-        LOG.audit(_("Attach volume %(volume_id)s to instance %(server_id)s "
-                    "at %(device)s"),
-                  {'volume_id': volume_id,
-                   'device': device,
-                   'server_id': server_id},
-                  context=context)
-
         instance = common.get_instance(self.compute_api, context, server_id,
                                        want_objects=True)
         try:
@@ -174,11 +165,6 @@ class ExtendedVolumesController(wsgi.Controller):
 
         volume_id = body['detach']['volume_id']
 
-        LOG.audit(_("Detach volume %(volume_id)s from "
-                    "instance %(server_id)s"),
-                  {"volume_id": volume_id,
-                   "server_id": id,
-                   "context": context})
         instance = common.get_instance(self.compute_api, context, server_id,
                                        want_objects=True)
         try:
@@ -192,7 +178,6 @@ class ExtendedVolumesController(wsgi.Controller):
             msg = _("Volume %(volume_id)s is not attached to the "
                     "instance %(server_id)s") % {'server_id': server_id,
                                                  'volume_id': volume_id}
-            LOG.debug(msg)
             raise exc.HTTPNotFound(explanation=msg)
 
         for bdm in bdms:

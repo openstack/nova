@@ -26,10 +26,8 @@ from nova import compute
 from nova import exception
 from nova.i18n import _
 from nova import network
-from nova.openstack.common import log as logging
 
 
-LOG = logging.getLogger(__name__)
 ALIAS = 'os-attach-interfaces'
 authorize = extensions.extension_authorizer('compute',
                                             'v3:' + ALIAS)
@@ -111,8 +109,6 @@ class InterfaceAttachmentController(object):
 
         instance = common.get_instance(self.compute_api, context,
                                        server_id, want_objects=True)
-        LOG.audit(_("Attach interface to %s"), instance=instance)
-
         try:
             vif = self.compute_api.attach_interface(context,
                 instance, network_id, port_id, req_ip)
@@ -128,7 +124,6 @@ class InterfaceAttachmentController(object):
         except NotImplementedError as e:
             raise webob.exc.HTTPNotImplemented(explanation=e.format_message())
         except exception.InterfaceAttachFailed as e:
-            LOG.exception(e)
             raise webob.exc.HTTPInternalServerError(
                 explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
@@ -146,7 +141,6 @@ class InterfaceAttachmentController(object):
 
         instance = common.get_instance(self.compute_api, context, server_id,
                                        want_objects=True)
-        LOG.audit(_("Detach interface %s"), port_id, instance=instance)
         try:
             self.compute_api.detach_interface(context,
                 instance, port_id=port_id)

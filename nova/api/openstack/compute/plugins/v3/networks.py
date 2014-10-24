@@ -25,10 +25,8 @@ from nova.i18n import _
 from nova import network
 from nova.objects import base as base_obj
 from nova.objects import fields as obj_fields
-from nova.openstack.common import log as logging
 
 ALIAS = 'os-networks'
-LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 authorize_view = extensions.extension_authorizer('compute',
                                                  'v3:' + ALIAS + ':view')
