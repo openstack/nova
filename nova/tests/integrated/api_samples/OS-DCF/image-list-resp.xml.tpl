@@ -9,7 +9,7 @@
     </metadata>
     <atom:link href="%(host)s/v2/openstack/images/%(id)s" rel="self"/>
     <atom:link href="%(host)s/openstack/images/%(id)s" rel="bookmark"/>
-    <atom:link href="%(glance_host)s/openstack/images/%(id)s" type="application/vnd.openstack.image" rel="alternate"/>
+    <atom:link href="%(glance_host)s/images/%(id)s" type="application/vnd.openstack.image" rel="alternate"/>
   </image>
   <image status="ACTIVE" updated="2011-01-01T01:02:03Z" name="fakeimage123456" created="2011-01-01T01:02:03Z" minDisk="0" progress="100" minRam="0" id="%(id)s">
     <metadata>
@@ -19,7 +19,7 @@
     </metadata>
     <atom:link href="%(host)s/v2/openstack/images/%(id)s" rel="self"/>
     <atom:link href="%(host)s/openstack/images/%(id)s" rel="bookmark"/>
-    <atom:link href="%(glance_host)s/openstack/images/%(id)s" type="application/vnd.openstack.image" rel="alternate"/>
+    <atom:link href="%(glance_host)s/images/%(id)s" type="application/vnd.openstack.image" rel="alternate"/>
   </image>
   <image status="ACTIVE" updated="2011-01-01T01:02:03Z" name="fakeimage123456" created="2011-01-01T01:02:03Z" minDisk="0" progress="100" minRam="0" id="%(id)s">
     <metadata>
@@ -28,7 +28,7 @@
     </metadata>
     <atom:link href="%(host)s/v2/openstack/images/%(id)s" rel="self"/>
     <atom:link href="%(host)s/openstack/images/%(id)s" rel="bookmark"/>
-    <atom:link href="%(glance_host)s/openstack/images/%(id)s" type="application/vnd.openstack.image" rel="alternate"/>
+    <atom:link href="%(glance_host)s/images/%(id)s" type="application/vnd.openstack.image" rel="alternate"/>
   </image>
   <image status="ACTIVE" updated="2011-01-01T01:02:03Z" name="fakeimage6" created="2011-01-01T01:02:03Z" minDisk="0" progress="100" minRam="0" id="%(id)s" OS-DCF:diskConfig="MANUAL">
     <metadata>
@@ -39,7 +39,7 @@
     </metadata>
     <atom:link href="%(host)s/v2/openstack/images/%(id)s" rel="self"/>
     <atom:link href="%(host)s/openstack/images/%(id)s" rel="bookmark"/>
-    <atom:link href="%(glance_host)s/openstack/images/%(id)s" type="application/vnd.openstack.image" rel="alternate"/>
+    <atom:link href="%(glance_host)s/images/%(id)s" type="application/vnd.openstack.image" rel="alternate"/>
   </image>
   <image status="ACTIVE" updated="2011-01-01T01:02:03Z" name="fakeimage123456" created="2011-01-01T01:02:03Z" minDisk="0" progress="100" minRam="0" id="%(id)s">
     <metadata>
@@ -48,7 +48,7 @@
     </metadata>
     <atom:link href="%(host)s/v2/openstack/images/%(id)s" rel="self"/>
     <atom:link href="%(host)s/openstack/images/%(id)s" rel="bookmark"/>
-    <atom:link href="%(glance_host)s/openstack/images/%(id)s" type="application/vnd.openstack.image" rel="alternate"/>
+    <atom:link href="%(glance_host)s/images/%(id)s" type="application/vnd.openstack.image" rel="alternate"/>
   </image>
   <image status="ACTIVE" updated="2011-01-01T01:02:03Z" name="fakeimage123456" created="2011-01-01T01:02:03Z" minDisk="0" progress="100" minRam="0" id="%(id)s">
     <metadata>
@@ -57,7 +57,7 @@
     </metadata>
     <atom:link href="%(host)s/v2/openstack/images/%(id)s" rel="self"/>
     <atom:link href="%(host)s/openstack/images/%(id)s" rel="bookmark"/>
-    <atom:link href="%(glance_host)s/openstack/images/%(id)s" type="application/vnd.openstack.image" rel="alternate"/>
+    <atom:link href="%(glance_host)s/images/%(id)s" type="application/vnd.openstack.image" rel="alternate"/>
   </image>
   <image status="ACTIVE" updated="2011-01-01T01:02:03Z" name="fakeimage123456" created="2011-01-01T01:02:03Z" minDisk="0" progress="100" minRam="0" id="%(id)s">
     <metadata>
@@ -66,6 +66,6 @@
     </metadata>
     <atom:link href="%(host)s/v2/openstack/images/%(id)s" rel="self"/>
     <atom:link href="%(host)s/openstack/images/%(id)s" rel="bookmark"/>
-    <atom:link href="%(glance_host)s/openstack/images/%(id)s" type="application/vnd.openstack.image" rel="alternate"/>
+    <atom:link href="%(glance_host)s/images/%(id)s" type="application/vnd.openstack.image" rel="alternate"/>
   </image>
 </images>

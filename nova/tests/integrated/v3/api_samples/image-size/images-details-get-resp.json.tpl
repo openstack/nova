@@ -13,7 +13,7 @@
                     "rel": "bookmark"
                 },
                 {
-                    "href": "%(glance_host)s/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "href": "%(glance_host)s/images/70a599e0-31e7-49b7-b260-868f441e862b",
                     "rel": "alternate",
                     "type": "application/vnd.openstack.image"
                 }
@@ -45,7 +45,7 @@
                     "rel": "bookmark"
                 },
                 {
-                    "href": "%(glance_host)s/openstack/images/155d900f-4e14-4e4c-a73d-069cbf4541e6",
+                    "href": "%(glance_host)s/images/155d900f-4e14-4e4c-a73d-069cbf4541e6",
                     "rel": "alternate",
                     "type": "application/vnd.openstack.image"
                 }
@@ -76,7 +76,7 @@
                     "rel": "bookmark"
                 },
                 {
-                    "href": "%(glance_host)s/openstack/images/a2459075-d96c-40d5-893e-577ff92e721c",
+                    "href": "%(glance_host)s/images/a2459075-d96c-40d5-893e-577ff92e721c",
                     "rel": "alternate",
                     "type": "application/vnd.openstack.image"
                 }
@@ -106,7 +106,7 @@
                     "rel": "bookmark"
                 },
                 {
-                    "href": "%(glance_host)s/openstack/images/a440c04b-79fa-479c-bed1-0b816eaec379",
+                    "href": "%(glance_host)s/images/a440c04b-79fa-479c-bed1-0b816eaec379",
                     "rel": "alternate",
                     "type": "application/vnd.openstack.image"
                 }
@@ -138,7 +138,7 @@
                     "rel": "bookmark"
                 },
                 {
-                    "href": "%(glance_host)s/openstack/images/c905cedb-7281-47e4-8a62-f26bc5fc4c77",
+                    "href": "%(glance_host)s/images/c905cedb-7281-47e4-8a62-f26bc5fc4c77",
                     "rel": "alternate",
                     "type": "application/vnd.openstack.image"
                 }
@@ -168,7 +168,7 @@
                     "rel": "bookmark"
                 },
                 {
-                    "href": "%(glance_host)s/openstack/images/cedef40a-ed67-4d10-800e-17455edce175",
+                    "href": "%(glance_host)s/images/cedef40a-ed67-4d10-800e-17455edce175",
                     "rel": "alternate",
                     "type": "application/vnd.openstack.image"
                 }
@@ -198,7 +198,7 @@
                     "rel": "bookmark"
                 },
                 {
-                    "href": "%(glance_host)s/openstack/images/76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
+                    "href": "%(glance_host)s/images/76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
                     "rel": "alternate",
                     "type": "application/vnd.openstack.image"
                 }
