@@ -16,8 +16,9 @@
 
 import re
 
+from oslo.concurrency import processutils
+
 from nova.openstack.common import log as logging
-from nova.openstack.common import processutils
 from nova import utils
 from nova.volume.encryptors import cryptsetup
 

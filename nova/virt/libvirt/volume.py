@@ -21,6 +21,7 @@ import os
 import time
 import urllib2
 
+from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.utils import strutils
 import six
@@ -32,7 +33,6 @@ from nova.i18n import _LE
 from nova.i18n import _LW
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
-from nova.openstack.common import processutils
 from nova import paths
 from nova.storage import linuxscsi
 from nova import utils

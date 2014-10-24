@@ -21,12 +21,14 @@ import tempfile
 
 import fixtures
 import mock
+from oslo.concurrency import lockutils
 from oslo.config import cfg
 from oslo.utils import units
 
 from nova import context
 from nova import exception
 from nova import keymgr
+from nova.openstack.common.fixture import config as config_fixture
 from nova.openstack.common import imageutils
 from nova.openstack.common import uuidutils
 from nova import test
@@ -49,9 +51,11 @@ class _ImageTestCase(object):
 
     def setUp(self):
         super(_ImageTestCase, self).setUp()
+        self.fixture = self.useFixture(config_fixture.Config(lockutils.CONF))
         self.INSTANCES_PATH = tempfile.mkdtemp(suffix='instances')
-        self.flags(disable_process_locking=True,
-                   instances_path=self.INSTANCES_PATH)
+        self.fixture.config(disable_process_locking=True,
+                            group='oslo_concurrency')
+        self.flags(instances_path=self.INSTANCES_PATH)
         self.INSTANCE = {'name': 'instance',
                          'uuid': uuidutils.generate_uuid()}
         self.DISK_INFO_PATH = os.path.join(self.INSTANCES_PATH,

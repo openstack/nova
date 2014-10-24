@@ -24,6 +24,7 @@ import os
 import time
 
 import decorator
+from oslo.concurrency import lockutils
 from oslo.config import cfg
 from oslo.utils import excutils
 from oslo.utils import strutils
@@ -40,7 +41,6 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _, _LE, _LW
 from nova import objects
-from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova import utils

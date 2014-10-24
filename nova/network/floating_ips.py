@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo import messaging
 from oslo.utils import excutils
@@ -28,7 +29,6 @@ from nova.i18n import _, _LE
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.openstack.common import log as logging
-from nova.openstack.common import processutils
 from nova.openstack.common import uuidutils
 from nova import quota
 from nova import rpc

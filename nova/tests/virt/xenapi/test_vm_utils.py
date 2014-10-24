@@ -20,6 +20,8 @@ from eventlet import greenthread
 import fixtures
 import mock
 import mox
+from oslo.concurrency import lockutils
+from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.utils import timeutils
 from oslo.utils import units
@@ -31,7 +33,7 @@ from nova.compute import vm_mode
 from nova import context
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import processutils
+from nova.openstack.common.fixture import config as config_fixture
 from nova import test
 from nova.tests.virt.xenapi import stubs
 from nova.tests.virt.xenapi import test_xenapi
@@ -638,8 +640,10 @@ class CheckVDISizeTestCase(VMUtilsTestBase):
 class GetInstanceForVdisForSrTestCase(VMUtilsTestBase):
     def setUp(self):
         super(GetInstanceForVdisForSrTestCase, self).setUp()
-        self.flags(disable_process_locking=True,
-                   instance_name_template='%d',
+        self.fixture = self.useFixture(config_fixture.Config(lockutils.CONF))
+        self.fixture.config(disable_process_locking=True,
+                            group='oslo_concurrency')
+        self.flags(instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
         self.flags(connection_url='test_url',
@@ -1077,8 +1081,10 @@ class VDIOtherConfigTestCase(VMUtilsTestBase):
 class GenerateDiskTestCase(VMUtilsTestBase):
     def setUp(self):
         super(GenerateDiskTestCase, self).setUp()
-        self.flags(disable_process_locking=True,
-                   instance_name_template='%d',
+        self.fixture = self.useFixture(config_fixture.Config(lockutils.CONF))
+        self.fixture.config(disable_process_locking=True,
+                            group='oslo_concurrency')
+        self.flags(instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
         self.flags(connection_url='test_url',
@@ -1312,8 +1318,10 @@ class StreamDiskTestCase(VMUtilsTestBase):
 class VMUtilsSRPath(VMUtilsTestBase):
     def setUp(self):
         super(VMUtilsSRPath, self).setUp()
-        self.flags(disable_process_locking=True,
-                   instance_name_template='%d',
+        self.fixture = self.useFixture(config_fixture.Config(lockutils.CONF))
+        self.fixture.config(disable_process_locking=True,
+                            group='oslo_concurrency')
+        self.flags(instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
         self.flags(connection_url='test_url',
@@ -2166,8 +2174,10 @@ class CreateVmRecordTestCase(VMUtilsTestBase):
         session.call_xenapi.assert_called_with('VM.create', expected_vm_rec)
 
     def test_list_vms(self):
-        self.flags(disable_process_locking=True,
-                   instance_name_template='%d',
+        self.fixture = self.useFixture(config_fixture.Config(lockutils.CONF))
+        self.fixture.config(disable_process_locking=True,
+                            group='oslo_concurrency')
+        self.flags(instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
         self.flags(connection_url='test_url',

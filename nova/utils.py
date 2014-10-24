@@ -36,6 +36,8 @@ from xml.sax import saxutils
 
 import eventlet
 import netaddr
+from oslo.concurrency import lockutils
+from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo import messaging
 from oslo.utils import excutils
@@ -45,9 +47,7 @@ import six
 
 from nova import exception
 from nova.i18n import _, _LE
-from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import processutils
 
 notify_decorator = 'nova.notifications.notify_decorator'
 

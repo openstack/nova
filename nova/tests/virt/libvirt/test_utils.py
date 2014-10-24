@@ -18,11 +18,11 @@ import os
 import tempfile
 
 import mock
+from oslo.concurrency import processutils
 from oslo.config import cfg
 
 from nova import exception
 from nova.openstack.common import fileutils
-from nova.openstack.common import processutils
 from nova import test
 from nova import utils
 from nova.virt.disk import api as disk

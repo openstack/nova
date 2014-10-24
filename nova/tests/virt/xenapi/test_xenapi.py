@@ -24,6 +24,7 @@ import re
 
 import mock
 import mox
+from oslo.concurrency import lockutils
 from oslo.config import cfg
 from oslo.serialization import jsonutils
 from oslo.utils import importutils
@@ -43,6 +44,7 @@ from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import instance as instance_obj
+from nova.openstack.common.fixture import config as config_fixture
 from nova.openstack.common import log as logging
 from nova import test
 from nova.tests.db import fakes as db_fakes
@@ -214,8 +216,10 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBaseNoDB):
     """Unit tests for Volume operations."""
     def setUp(self):
         super(XenAPIVolumeTestCase, self).setUp()
-        self.flags(disable_process_locking=True,
-                   firewall_driver='nova.virt.xenapi.firewall.'
+        self.fixture = self.useFixture(config_fixture.Config(lockutils.CONF))
+        self.fixture.config(disable_process_locking=True,
+                            group='oslo_concurrency')
+        self.flags(firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
         self.flags(connection_url='test_url',
                    connection_password='test_pass',
@@ -270,8 +274,10 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         super(XenAPIVMTestCase, self).setUp()
         self.useFixture(test.SampleNetworks())
         self.network = importutils.import_object(CONF.network_manager)
-        self.flags(disable_process_locking=True,
-                   instance_name_template='%d',
+        self.fixture = self.useFixture(config_fixture.Config(lockutils.CONF))
+        self.fixture.config(disable_process_locking=True,
+                            group='oslo_concurrency')
+        self.flags(instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
         self.flags(connection_url='test_url',

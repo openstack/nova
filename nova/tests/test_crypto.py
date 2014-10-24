@@ -20,11 +20,11 @@ import os
 
 import mock
 import mox
+from oslo.concurrency import processutils
 
 from nova import crypto
 from nova import db
 from nova import exception
-from nova.openstack.common import processutils
 from nova import test
 from nova import utils
 
