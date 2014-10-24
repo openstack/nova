@@ -47,3 +47,4 @@ lockfile>=0.8
 simplejson>=2.2.0
 rfc3986>=0.2.0  # Apache-2.0
 oslo.vmware>=0.6.0                      # Apache-2.0
+oslo.middleware>=0.1.0                  # Apache-2.0
