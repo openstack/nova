@@ -38,6 +38,13 @@ FAKE_COMPUTES = [
     ('host4', 1024, 100, 300, 30),
 ]
 
+FAKE_COMPUTES_N_TO_ONE = [
+    ('host1', 1024, 100, 0, 0),
+    ('host1', 1024, 100, -1, -1),
+    ('host2', 1024, 100, 1024, 100),
+    ('host2', 1024, 100, 300, 30),
+]
+
 # NOTE(alaski): It's important to have multiple types that end up having the
 # same memory and disk requirements.  So two types need the same first value,
 # and two need the second and third values to add up to the same thing.
@@ -49,16 +56,12 @@ FAKE_ITYPES = [
 ]
 
 
-@classmethod
-def _fake_compute_node_get_all(cls, context):
-    def _node(host, total_mem, total_disk, free_mem, free_disk):
-        return objects.ComputeNode(host=host,
-                                   memory_mb=total_mem,
-                                   local_gb=total_disk,
-                                   free_ram_mb=free_mem,
-                                   free_disk_gb=free_disk)
-
-    return [_node(*fake) for fake in FAKE_COMPUTES]
+def _create_fake_node(host, total_mem, total_disk, free_mem, free_disk):
+    return objects.ComputeNode(host=host,
+                               memory_mb=total_mem,
+                               local_gb=total_disk,
+                               free_ram_mb=free_mem,
+                               free_disk_gb=free_disk)
 
 
 @classmethod
@@ -67,6 +70,16 @@ def _fake_service_get_all_by_binary(cls, context, binary):
         return objects.Service(host=host, disabled=False)
 
     return [_node(*fake) for fake in FAKE_COMPUTES]
+
+
+@classmethod
+def _fake_compute_node_get_all(cls, context):
+    return [_create_fake_node(*fake) for fake in FAKE_COMPUTES]
+
+
+@classmethod
+def _fake_compute_node_n_to_one_get_all(cls, context):
+    return [_create_fake_node(*fake) for fake in FAKE_COMPUTES_N_TO_ONE]
 
 
 def _fake_cell_get_all(context):
@@ -185,6 +198,35 @@ class TestCellsStateManager(test.NoDBTestCase):
         state_manager = self._get_state_manager(reserve_percent)
         my_state = state_manager.get_my_state()
         return my_state.capacities
+
+
+class TestCellsStateManagerNToOne(TestCellsStateManager):
+    def setUp(self):
+        super(TestCellsStateManagerNToOne, self).setUp()
+
+        self.stubs.Set(objects.ComputeNodeList, 'get_all',
+                       _fake_compute_node_n_to_one_get_all)
+
+    def test_capacity_part_reserve(self):
+        # utilize half the cell's free capacity
+        cap = self._capacity(50.0)
+
+        cell_free_ram = sum(compute[3] for compute in FAKE_COMPUTES_N_TO_ONE)
+        self.assertEqual(cell_free_ram, cap['ram_free']['total_mb'])
+
+        cell_free_disk = (1024 *
+                sum(compute[4] for compute in FAKE_COMPUTES_N_TO_ONE))
+        self.assertEqual(cell_free_disk, cap['disk_free']['total_mb'])
+
+        self.assertEqual(0, cap['ram_free']['units_by_mb']['0'])
+        self.assertEqual(0, cap['disk_free']['units_by_mb']['0'])
+
+        units = 6  # 6 from host 2
+        self.assertEqual(units, cap['ram_free']['units_by_mb']['50'])
+
+        sz = 25 * 1024
+        units = 1  # 1 on host 2
+        self.assertEqual(units, cap['disk_free']['units_by_mb'][str(sz)])
 
 
 class TestCellStateManagerException(test.NoDBTestCase):

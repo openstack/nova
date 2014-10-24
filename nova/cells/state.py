@@ -16,6 +16,7 @@
 """
 CellState Manager
 """
+import collections
 import copy
 import datetime
 import functools
@@ -259,7 +260,10 @@ class CellStateManager(base.Base):
             ctxt = context.get_admin_context()
 
         reserve_level = CONF.cells.reserve_percent / 100.0
-        compute_hosts = {}
+
+        def _defaultdict_int():
+            return collections.defaultdict(int)
+        compute_hosts = collections.defaultdict(_defaultdict_int)
 
         def _get_compute_hosts():
             service_refs = {service.host: service
@@ -273,11 +277,13 @@ class CellStateManager(base.Base):
                 if not service or service['disabled']:
                     continue
 
-                compute_hosts[host] = {
-                        'free_ram_mb': compute['free_ram_mb'],
-                        'free_disk_mb': compute['free_disk_gb'] * 1024,
-                        'total_ram_mb': compute['memory_mb'],
-                        'total_disk_mb': compute['local_gb'] * 1024}
+                chost = compute_hosts[host]
+                chost['free_ram_mb'] += compute['free_ram_mb']
+                free_disk = compute['free_disk_gb'] * 1024
+                chost['free_disk_mb'] += free_disk
+                chost['total_ram_mb'] += compute['memory_mb']
+                total_disk = compute['local_gb'] * 1024
+                chost['total_disk_mb'] += total_disk
 
         _get_compute_hosts()
         if not compute_hosts:
