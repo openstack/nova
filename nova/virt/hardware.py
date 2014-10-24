@@ -1042,7 +1042,9 @@ def instance_topology_from_instance(instance):
             if dict_cells:
                 cells = [objects.InstanceNUMACell(id=cell['id'],
                                                   cpuset=set(cell['cpuset']),
-                                                  memory=cell['memory'])
+                                                  memory=cell['memory'],
+                                                  pagesize=cell.get(
+                                                      'pagesize'))
                          for cell in dict_cells]
                 instance_numa_topology = (
                         objects.InstanceNUMATopology(cells=cells))

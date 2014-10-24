@@ -21,18 +21,21 @@ from nova.virt import hardware
 
 class InstanceNUMACell(base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Add pagesize field
+    VERSION = '1.1'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
         'cpuset': fields.SetOfIntegersField(),
         'memory': fields.IntegerField(),
+        'pagesize': fields.IntegerField(nullable=True),
         }
 
 
 class InstanceNUMATopology(base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Takes into account pagesize
+    VERSION = '1.1'
 
     fields = {
         # NOTE(danms): The 'id' field is no longer used and should be
@@ -50,16 +53,24 @@ class InstanceNUMATopology(base.NovaObject):
         if topology:
             cells = []
             for topocell in topology.cells:
+                pagesize = (topocell.pagesize
+                            and topocell.pagesize.size_kb or None)
                 cell = InstanceNUMACell(id=topocell.id, cpuset=topocell.cpuset,
-                                        memory=topocell.memory)
+                                        memory=topocell.memory,
+                                        pagesize=pagesize)
                 cells.append(cell)
             return cls(cells=cells)
 
     def topology_from_obj(self):
         cells = []
         for objcell in self.cells:
-            cell = hardware.VirtNUMATopologyCellInstance(
-                objcell.id, objcell.cpuset, objcell.memory)
+            pagesize = (
+                objcell.pagesize and
+                hardware.VirtPageSize(objcell.pagesize) or None)
+            cell = hardware.VirtNUMATopologyCellInstance(objcell.id,
+                                                         objcell.cpuset,
+                                                         objcell.memory,
+                                                         pagesize=pagesize)
             cells.append(cell)
         return hardware.VirtNUMAInstanceTopology(cells=cells)
 

@@ -20,8 +20,10 @@ from nova.tests.objects import test_objects
 from nova.virt import hardware
 
 fake_numa_topology = hardware.VirtNUMAInstanceTopology(
-        cells=[hardware.VirtNUMATopologyCellInstance(0, set([1, 2]), 512),
-               hardware.VirtNUMATopologyCellInstance(1, set([3, 4]), 512)])
+        cells=[hardware.VirtNUMATopologyCellInstance(
+            0, set([1, 2]), 512, hardware.VirtPageSize(2048)),
+               hardware.VirtNUMATopologyCellInstance(
+            1, set([3, 4]), 512, hardware.VirtPageSize(2048))])
 
 fake_db_topology = {
     'created_at': None,
@@ -55,6 +57,7 @@ class _TestInstanceNUMATopology(object):
             self.assertIsInstance(obj_cell, objects.InstanceNUMACell)
             self.assertEqual(topo_cell.cpuset, obj_cell.cpuset)
             self.assertEqual(topo_cell.memory, obj_cell.memory)
+            self.assertEqual(topo_cell.pagesize.size_kb, obj_cell.pagesize)
 
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid')
     def test_get_by_instance_uuid_missing(self, mock_get):
