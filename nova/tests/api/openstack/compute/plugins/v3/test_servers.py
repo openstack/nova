@@ -3335,3 +3335,11 @@ class TestServersExtensionSchema(test.NoDBTestCase):
 
         actual_schema = self._test_load_extension_schema('rebuild')
         self.assertEqual(expected_schema, actual_schema)
+
+    def test_load_resize_extension_point(self):
+        # keypair extension does not contain resize_server() and
+        # here checks that any extension is not added to the schema.
+        expected_schema = copy.deepcopy(servers_schema.base_resize)
+
+        actual_schema = self._test_load_extension_schema('resize')
+        self.assertEqual(expected_schema, actual_schema)

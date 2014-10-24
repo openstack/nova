@@ -628,7 +628,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'resize', resize_mock)
 
         req = fakes.HTTPRequestV3.blank(self.url)
-        body = self.controller._action_resize(req, FAKE_UUID, body)
+        body = self.controller._action_resize(req, FAKE_UUID, body=body)
 
         self.assertEqual(self.resize_called, True)
 
@@ -636,17 +636,17 @@ class ServerActionsControllerTest(test.TestCase):
         body = dict(resize=dict())
 
         req = fakes.HTTPRequestV3.blank(self.url)
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.controller._action_resize,
-                          req, FAKE_UUID, body)
+                          req, FAKE_UUID, body=body)
 
     def test_resize_server_no_flavor_ref(self):
         body = dict(resize=dict(flavorRef=None))
 
         req = fakes.HTTPRequestV3.blank(self.url)
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.controller._action_resize,
-                          req, FAKE_UUID, body)
+                          req, FAKE_UUID, body=body)
 
     def test_resize_with_server_not_found(self):
         body = dict(resize=dict(flavorRef="http://localhost/3"))
@@ -656,7 +656,7 @@ class ServerActionsControllerTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank(self.url)
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller._action_resize,
-                          req, FAKE_UUID, body)
+                          req, FAKE_UUID, body=body)
 
     def test_resize_with_image_exceptions(self):
         body = dict(resize=dict(flavorRef="http://localhost/3"))
@@ -688,7 +688,7 @@ class ServerActionsControllerTest(test.TestCase):
             next_exception = expected.next()
             actual = self.assertRaises(next_exception,
                               self.controller._action_resize,
-                              req, FAKE_UUID, body)
+                              req, FAKE_UUID, body=body)
             if (isinstance(exceptions[call_no][0],
                            exception.NoValidHost)):
                 self.assertEqual(actual.explanation,
@@ -711,7 +711,7 @@ class ServerActionsControllerTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank(self.url)
         self.assertRaises(webob.exc.HTTPForbidden,
                           self.controller._action_resize,
-                          req, FAKE_UUID, body)
+                          req, FAKE_UUID, body=body)
 
     @mock.patch('nova.compute.api.API.resize',
                 side_effect=exception.CannotResizeDisk(reason=''))
@@ -720,7 +720,7 @@ class ServerActionsControllerTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_resize,
-                          req, FAKE_UUID, body)
+                          req, FAKE_UUID, body=body)
 
     @mock.patch('nova.compute.api.API.resize',
                 side_effect=exception.FlavorNotFound(reason='',
@@ -730,7 +730,7 @@ class ServerActionsControllerTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_resize,
-                          req, FAKE_UUID, body)
+                          req, FAKE_UUID, body=body)
 
     def test_resize_raises_conflict_on_invalid_state(self):
         body = dict(resize=dict(flavorRef="http://localhost/3"))
@@ -745,7 +745,7 @@ class ServerActionsControllerTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank(self.url)
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._action_resize,
-                          req, FAKE_UUID, body)
+                          req, FAKE_UUID, body=body)
 
     def test_confirm_resize_server(self):
         body = dict(confirmResize=None)

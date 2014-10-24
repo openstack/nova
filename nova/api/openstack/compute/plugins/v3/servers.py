@@ -77,6 +77,7 @@ class ServersController(wsgi.Controller):
     schema_server_create = schema_servers.base_create
     schema_server_update = schema_servers.base_update
     schema_server_rebuild = schema_servers.base_rebuild
+    schema_server_resize = schema_servers.base_resize
 
     @staticmethod
     def _add_location(robj):
@@ -227,6 +228,20 @@ class ServersController(wsgi.Controller):
                                             self.schema_server_rebuild)
         else:
             LOG.debug("Did not find any server rebuild schemas")
+
+        # Look for API schema of server resize extension
+        self.resize_schema_manager = \
+            stevedore.enabled.EnabledExtensionManager(
+                namespace=self.EXTENSION_RESIZE_NAMESPACE,
+                check_func=_check_load_extension('get_server_resize_schema'),
+                invoke_on_load=True,
+                invoke_kwds={"extension_info": self.extension_info},
+                propagate_map_exceptions=True)
+        if list(self.resize_schema_manager):
+            self.resize_schema_manager.map(self._resize_extension_schema,
+                                           self.schema_server_resize)
+        else:
+            LOG.debug("Did not find any server resize schemas")
 
     @extensions.expected_errors((400, 403))
     def index(self, req):
@@ -648,6 +663,13 @@ class ServersController(wsgi.Controller):
         schema = handler.get_server_rebuild_schema()
         rebuild_schema['properties']['rebuild']['properties'].update(schema)
 
+    def _resize_extension_schema(self, ext, resize_schema):
+        handler = ext.obj
+        LOG.debug("Running _resize_extension_schema for %s", ext.obj)
+
+        schema = handler.get_server_resize_schema()
+        resize_schema['properties']['resize']['properties'].update(schema)
+
     def _delete(self, context, req, instance_uuid):
         instance = self._get_server(context, req, instance_uuid)
         if CONF.reclaim_instance_interval:
@@ -862,17 +884,11 @@ class ServersController(wsgi.Controller):
     @extensions.expected_errors((400, 401, 403, 404, 409))
     @wsgi.response(202)
     @wsgi.action('resize')
+    @validation.schema(schema_server_resize)
     def _action_resize(self, req, id, body):
         """Resizes a given instance to the flavor size requested."""
         resize_dict = body['resize']
-        try:
-            flavor_ref = str(resize_dict["flavorRef"])
-            if not flavor_ref:
-                msg = _("Resize request has invalid 'flavorRef' attribute.")
-                raise exc.HTTPBadRequest(explanation=msg)
-        except (KeyError, TypeError):
-            msg = _("Resize requests require 'flavorRef' attribute.")
-            raise exc.HTTPBadRequest(explanation=msg)
+        flavor_ref = str(resize_dict["flavorRef"])
 
         resize_kwargs = {}
 
