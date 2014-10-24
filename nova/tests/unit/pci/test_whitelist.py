@@ -33,6 +33,12 @@ class PciHostDevicesWhiteListTestCase(test.NoDBTestCase):
         parsed = whitelist.PciHostDevicesWhiteList([white_list])
         self.assertEqual(1, len(parsed.specs))
 
+    def test_whitelist_list_format(self):
+        white_list = '[{"product_id":"0001", "vendor_id":"8086"},'\
+                       '{"product_id":"0002", "vendor_id":"8086"}]'
+        parsed = whitelist.PciHostDevicesWhiteList([white_list])
+        self.assertEqual(2, len(parsed.specs))
+
     def test_whitelist_empty(self):
         parsed = whitelist.PciHostDevicesWhiteList()
         self.assertFalse(parsed.device_assignable(dev_dict))

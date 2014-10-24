@@ -15,7 +15,10 @@
 #    under the License.
 
 from oslo.config import cfg
+from oslo.serialization import jsonutils
 
+from nova import exception
+from nova.i18n import _
 from nova.openstack.common import log as logging
 from nova.pci import devspec
 
@@ -46,8 +49,26 @@ class PciHostDevicesWhiteList(object):
         """Parse and validate the pci whitelist from the nova config."""
         specs = []
         for jsonspec in whitelists:
-            spec = devspec.PciDeviceSpec(jsonspec)
-            specs.append(spec)
+            try:
+                dev_spec = jsonutils.loads(jsonspec)
+            except ValueError:
+                raise exception.PciConfigInvalidWhitelist(
+                          reason=_("Invalid entry: '%s'") % jsonspec)
+            if isinstance(dev_spec, dict):
+                dev_spec = [dev_spec]
+            elif not isinstance(dev_spec, list):
+                raise exception.PciConfigInvalidWhitelist(
+                          reason=_("Invalid entry: '%s'; "
+                                   "Expecting list or dict") % jsonspec)
+
+            for ds in dev_spec:
+                if not isinstance(ds, dict):
+                    raise exception.PciConfigInvalidWhitelist(
+                              reason=_("Invalid entry: '%s'; "
+                                       "Expecting dict") % ds)
+
+                spec = devspec.PciDeviceSpec(ds)
+                specs.append(spec)
 
         return specs
 
