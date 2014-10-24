@@ -5334,6 +5334,11 @@ class ComputeManager(manager.Manager):
                 self._get_instance_nw_info(context, instance, use_slave=True)
                 LOG.debug('Updated the network info_cache for instance',
                           instance=instance)
+            except exception.InstanceNotFound:
+                # Instance is gone.
+                LOG.debug('Instance no longer exists. Unable to refresh',
+                          instance=instance)
+                return
             except Exception:
                 LOG.error(_LE('An error occurred while refreshing the network '
                               'cache.'), instance=instance, exc_info=True)
