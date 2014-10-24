@@ -17,6 +17,7 @@
 from oslo.utils import strutils
 from webob import exc
 
+from nova.api.openstack.compute.schemas.v3 import disk_config
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.i18n import _
@@ -144,3 +145,10 @@ class DiskConfig(extensions.V3APIExtensionBase):
     server_update = server_create
     server_rebuild = server_create
     server_resize = server_create
+
+    def get_server_create_schema(self):
+        return disk_config.server_create
+
+    get_server_update_schema = get_server_create_schema
+    get_server_rebuild_schema = get_server_create_schema
+    get_server_resize_schema = get_server_create_schema
