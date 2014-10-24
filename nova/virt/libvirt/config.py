@@ -1597,6 +1597,64 @@ class LibvirtConfigGuestMemoryTune(LibvirtConfigObject):
         return root
 
 
+class LibvirtConfigGuestNUMATuneMemory(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestNUMATuneMemory, self).__init__(
+            root_name="memory", **kwargs)
+
+        self.mode = "strict"
+        self.nodeset = []
+
+    def format_dom(self):
+        root = super(LibvirtConfigGuestNUMATuneMemory, self).format_dom()
+
+        root.set("mode", self.mode)
+        root.set("nodeset", hardware.format_cpu_spec(self.nodeset))
+
+        return root
+
+
+class LibvirtConfigGuestNUMATuneMemNode(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestNUMATuneMemNode, self).__init__(
+            root_name="memnode", **kwargs)
+
+        self.cellid = 0
+        self.mode = "strict"
+        self.nodeset = []
+
+    def format_dom(self):
+        root = super(LibvirtConfigGuestNUMATuneMemNode, self).format_dom()
+
+        root.set("cellid", str(self.cellid))
+        root.set("mode", self.mode)
+        root.set("nodeset", hardware.format_cpu_spec(self.nodeset))
+
+        return root
+
+
+class LibvirtConfigGuestNUMATune(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestNUMATune, self).__init__(
+            root_name="numatune", **kwargs)
+
+        self.memory = None
+        self.memnodes = []
+
+    def format_dom(self):
+        root = super(LibvirtConfigGuestNUMATune, self).format_dom()
+
+        if self.memory is not None:
+            root.append(self.memory.format_dom())
+        for node in self.memnodes:
+            root.append(node.format_dom())
+
+        return root
+
+
 class LibvirtConfigGuest(LibvirtConfigObject):
 
     def __init__(self, **kwargs):
@@ -1609,6 +1667,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.memory = 500 * units.Mi
         self.membacking = None
         self.memtune = None
+        self.numatune = None
         self.vcpus = 1
         self.cpuset = None
         self.cpu = None
@@ -1640,6 +1699,8 @@ class LibvirtConfigGuest(LibvirtConfigObject):
             root.append(self.membacking.format_dom())
         if self.memtune is not None:
             root.append(self.memtune.format_dom())
+        if self.numatune is not None:
+            root.append(self.numatune.format_dom())
         if self.cpuset is not None:
             vcpu = self._text_node("vcpu", self.vcpus)
             vcpu.set("cpuset", hardware.format_cpu_spec(self.cpuset))

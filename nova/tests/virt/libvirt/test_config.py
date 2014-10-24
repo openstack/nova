@@ -1432,6 +1432,33 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.memtune.swap_hard_limit = 1638
         obj.memtune.min_guarantee = 2970
 
+        obj.numatune = config.LibvirtConfigGuestNUMATune()
+
+        numamemory = config.LibvirtConfigGuestNUMATuneMemory()
+        numamemory.mode = "preferred"
+        numamemory.nodeset = [0, 1, 2, 3, 8]
+
+        obj.numatune.memory = numamemory
+
+        numamemnode0 = config.LibvirtConfigGuestNUMATuneMemNode()
+        numamemnode0.cellid = 0
+        numamemnode0.mode = "preferred"
+        numamemnode0.nodeset = [0, 1]
+
+        numamemnode1 = config.LibvirtConfigGuestNUMATuneMemNode()
+        numamemnode1.cellid = 1
+        numamemnode1.mode = "preferred"
+        numamemnode1.nodeset = [2, 3]
+
+        numamemnode2 = config.LibvirtConfigGuestNUMATuneMemNode()
+        numamemnode2.cellid = 2
+        numamemnode2.mode = "preferred"
+        numamemnode2.nodeset = [8]
+
+        obj.numatune.memnodes.extend([numamemnode0,
+                                      numamemnode1,
+                                      numamemnode2])
+
         obj.name = "demo"
         obj.uuid = "b38a3f43-4be2-4046-897f-b67c2f5e0147"
         obj.os_type = "linux"
@@ -1468,6 +1495,12 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
                 <swap_hard_limit units="K">1638</swap_hard_limit>
                 <min_guarantee units="K">2970</min_guarantee>
               </memtune>
+              <numatune>
+                <memory mode="preferred" nodeset="0-3,8"/>
+                <memnode cellid="0" mode="preferred" nodeset="0-1"/>
+                <memnode cellid="1" mode="preferred" nodeset="2-3"/>
+                <memnode cellid="2" mode="preferred" nodeset="8"/>
+              </numatune>
               <vcpu cpuset="0-1,3-5">2</vcpu>
               <sysinfo type='smbios'>
                  <bios>
@@ -2136,6 +2169,55 @@ class LibvirtConfigGuestMemoryTuneTest(LibvirtConfigBaseTest):
             <swap_hard_limit units="K">140</swap_hard_limit>
             <min_guarantee units="K">270</min_guarantee>
           </memtune>""")
+
+
+class LibvirtConfigGuestNUMATuneTest(LibvirtConfigBaseTest):
+    def test_config_numa_tune_none(self):
+        obj = config.LibvirtConfigGuestNUMATune()
+
+        xml = obj.to_xml()
+        self.assertXmlEqual("<numatune/>", xml)
+
+    def test_config_numa_tune_memory(self):
+        obj = config.LibvirtConfigGuestNUMATune()
+
+        numamemory = config.LibvirtConfigGuestNUMATuneMemory()
+        numamemory.nodeset = [0, 1, 2, 3, 8]
+
+        obj.memory = numamemory
+
+        xml = obj.to_xml()
+        self.assertXmlEqual("""
+          <numatune>
+            <memory mode="strict" nodeset="0-3,8"/>
+          </numatune>""", xml)
+
+    def test_config_numa_tune_memnodes(self):
+        obj = config.LibvirtConfigGuestNUMATune()
+
+        numamemnode0 = config.LibvirtConfigGuestNUMATuneMemNode()
+        numamemnode0.cellid = 0
+        numamemnode0.nodeset = [0, 1]
+
+        numamemnode1 = config.LibvirtConfigGuestNUMATuneMemNode()
+        numamemnode1.cellid = 1
+        numamemnode1.nodeset = [2, 3]
+
+        numamemnode2 = config.LibvirtConfigGuestNUMATuneMemNode()
+        numamemnode2.cellid = 2
+        numamemnode2.nodeset = [8]
+
+        obj.memnodes.extend([numamemnode0,
+                             numamemnode1,
+                             numamemnode2])
+
+        xml = obj.to_xml()
+        self.assertXmlEqual("""
+          <numatune>
+            <memnode cellid="0" mode="strict" nodeset="0-1"/>
+            <memnode cellid="1" mode="strict" nodeset="2-3"/>
+            <memnode cellid="2" mode="strict" nodeset="8"/>
+          </numatune>""", xml)
 
 
 class LibvirtConfigGuestMetadataNovaTest(LibvirtConfigBaseTest):
