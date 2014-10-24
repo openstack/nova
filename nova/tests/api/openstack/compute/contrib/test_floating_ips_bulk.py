@@ -16,26 +16,34 @@ import netaddr
 from oslo.config import cfg
 import webob
 
-from nova.api.openstack.compute.contrib import floating_ips_bulk
+from nova.api.openstack.compute.contrib import floating_ips_bulk as fipbulk_v2
+from nova.api.openstack.compute.plugins.v3 import floating_ips_bulk as\
+                                                      fipbulk_v21
 from nova import context
+from nova import exception
 from nova import test
 from nova.tests.api.openstack import fakes
 
 CONF = cfg.CONF
 
 
-class FloatingIpsBulk(test.TestCase):
+class FloatingIPBulkV21(test.TestCase):
+
+    floating_ips_bulk = fipbulk_v21
+    url = '/v2/fake/os-floating-ips-bulk'
+    delete_url = '/v2/fake/os-fixed-ips/delete'
+    bad_request = exception.ValidationError
 
     def setUp(self):
-        super(FloatingIpsBulk, self).setUp()
+        super(FloatingIPBulkV21, self).setUp()
 
         self.context = context.get_admin_context()
-        self.controller = floating_ips_bulk.FloatingIPBulkController()
+        self.controller = self.floating_ips_bulk.FloatingIPBulkController()
 
     def _setup_floating_ips(self, ip_range):
         body = {'floating_ips_bulk_create': {'ip_range': ip_range}}
-        req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips-bulk')
-        res_dict = self.controller.create(req, body)
+        req = fakes.HTTPRequest.blank(self.url)
+        res_dict = self.controller.create(req, body=body)
         response = {"floating_ips_bulk_create": {
                 'ip_range': ip_range,
                 'pool': CONF.default_floating_pool,
@@ -52,8 +60,8 @@ class FloatingIpsBulk(test.TestCase):
         body = {'floating_ips_bulk_create':
                 {'ip_range': ip_range,
                  'pool': pool}}
-        req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips-bulk')
-        res_dict = self.controller.create(req, body)
+        req = fakes.HTTPRequest.blank(self.url)
+        res_dict = self.controller.create(req, body=body)
         response = {"floating_ips_bulk_create": {
                 'ip_range': ip_range,
                 'pool': pool,
@@ -63,8 +71,7 @@ class FloatingIpsBulk(test.TestCase):
     def test_list_ips(self):
         ip_range = '192.168.1.1/28'
         self._setup_floating_ips(ip_range)
-        req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips-bulk',
-                                      use_admin_context=True)
+        req = fakes.HTTPRequest.blank(self.url, use_admin_context=True)
         res_dict = self.controller.index(req)
 
         ip_info = [{'address': str(ip_addr),
@@ -80,8 +87,7 @@ class FloatingIpsBulk(test.TestCase):
     def test_list_ip_by_host(self):
         ip_range = '192.168.1.1/28'
         self._setup_floating_ips(ip_range)
-        req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips-bulk',
-                                      use_admin_context=True)
+        req = fakes.HTTPRequest.blank(self.url, use_admin_context=True)
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.show, req, 'host')
 
@@ -90,15 +96,14 @@ class FloatingIpsBulk(test.TestCase):
         self._setup_floating_ips(ip_range)
 
         body = {'ip_range': ip_range}
-        req = fakes.HTTPRequest.blank('/v2/fake/os-fixed-ips/delete')
-        res_dict = self.controller.update(req, "delete", body)
+        req = fakes.HTTPRequest.blank(self.delete_url)
+        res_dict = self.controller.update(req, "delete", body=body)
 
         response = {"floating_ips_bulk_delete": ip_range}
         self.assertEqual(res_dict, response)
 
         # Check that the IPs are actually deleted
-        req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips-bulk',
-                                      use_admin_context=True)
+        req = fakes.HTTPRequest.blank(self.url, use_admin_context=True)
         res_dict = self.controller.index(req)
         response = {'floating_ip_info': []}
         self.assertEqual(res_dict, response)
@@ -109,21 +114,26 @@ class FloatingIpsBulk(test.TestCase):
 
         ip_range = '192.168.1.0/28'
         body = {'floating_ips_bulk_create': {'ip_range': ip_range}}
-        req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips-bulk')
+        req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          req, body)
+                          req, body=body)
 
     def test_create_bad_cidr_fail(self):
         # netaddr can't handle /32 or 31 cidrs
         ip_range = '192.168.1.1/32'
         body = {'floating_ips_bulk_create': {'ip_range': ip_range}}
-        req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips-bulk')
+        req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          req, body)
+                          req, body=body)
 
     def test_create_invalid_cidr_fail(self):
         ip_range = 'not a cidr'
         body = {'floating_ips_bulk_create': {'ip_range': ip_range}}
-        req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips-bulk')
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          req, body)
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(self.bad_request, self.controller.create,
+                          req, body=body)
+
+
+class FloatingIPBulkV2(FloatingIPBulkV21):
+    floating_ips_bulk = fipbulk_v2
+    bad_request = webob.exc.HTTPBadRequest
