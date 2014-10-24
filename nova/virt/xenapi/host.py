@@ -29,7 +29,7 @@ from nova.compute import vm_mode
 from nova.compute import vm_states
 from nova import context
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova import objects
 from nova.openstack.common import log as logging
 from nova.pci import whitelist as pci_whitelist
@@ -258,10 +258,10 @@ class HostState(object):
                 del data['host_memory']
             if (data['host_hostname'] !=
                     self._stats.get('host_hostname', data['host_hostname'])):
-                LOG.error(_('Hostname has changed from %(old)s '
-                            'to %(new)s. A restart is required to take effect.'
-                            ) % {'old': self._stats['host_hostname'],
-                                 'new': data['host_hostname']})
+                LOG.error(_LE('Hostname has changed from %(old)s to %(new)s. '
+                              'A restart is required to take effect.') %
+                          {'old': self._stats['host_hostname'],
+                           'new': data['host_hostname']})
                 data['host_hostname'] = self._stats['host_hostname']
             data['hypervisor_hostname'] = data['host_hostname']
             vcpus_used = 0
@@ -311,8 +311,8 @@ def call_xenhost(session, method, arg_dict):
         LOG.exception(_("Unable to get updated status"))
         return None
     except session.XenAPI.Failure as e:
-        LOG.error(_("The call to %(method)s returned "
-                    "an error: %(e)s."), {'method': method, 'e': e})
+        LOG.error(_LE("The call to %(method)s returned "
+                      "an error: %(e)s."), {'method': method, 'e': e})
         return e.details[1]
 
 

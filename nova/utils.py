@@ -44,7 +44,7 @@ from oslo.utils import timeutils
 import six
 
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
@@ -350,7 +350,7 @@ def get_my_ipv4_address():
                 except exception.NovaException:
                     pass
     except Exception as ex:
-        LOG.error(_("Couldn't get IPv4 : %(ex)s") % {'ex': ex})
+        LOG.error(_LE("Couldn't get IPv4 : %(ex)s"), {'ex': ex})
     return LOCALHOST
 
 
@@ -479,7 +479,7 @@ def parse_server_string(server_str):
         return (address, port)
 
     except Exception:
-        LOG.error(_('Invalid server_string: %s'), server_str)
+        LOG.error(_LE('Invalid server_string: %s'), server_str)
         return ('', '')
 
 
@@ -770,7 +770,7 @@ def tempdir(**kwargs):
         try:
             shutil.rmtree(tmpdir)
         except OSError as e:
-            LOG.error(_('Could not remove tmpdir: %s'), e)
+            LOG.error(_LE('Could not remove tmpdir: %s'), e)
 
 
 def walk_class_hierarchy(clazz, encountered=None):

@@ -25,7 +25,7 @@ import sys
 from oslo.config import cfg
 from oslo.utils import importutils
 
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import event as virtevent
@@ -1281,7 +1281,7 @@ class ComputeDriver(object):
             LOG.debug("Emitting event %s", str(event))
             self._compute_event_callback(event)
         except Exception as ex:
-            LOG.error(_("Exception dispatching event %(event)s: %(ex)s"),
+            LOG.error(_LE("Exception dispatching event %(event)s: %(ex)s"),
                       {'event': event, 'ex': ex})
 
     def delete_instance_files(self, instance):
@@ -1375,7 +1375,7 @@ def load_compute_driver(virtapi, compute_driver=None):
         compute_driver = CONF.compute_driver
 
     if not compute_driver:
-        LOG.error(_("Compute driver option required, but not specified"))
+        LOG.error(_LE("Compute driver option required, but not specified"))
         sys.exit(1)
 
     LOG.info(_("Loading compute driver '%s'") % compute_driver)

@@ -16,7 +16,7 @@
 
 from oslo.utils import importutils
 
-from nova.i18n import _
+from nova.i18n import _LE
 from nova.openstack.common import log as logging
 from nova.volume.encryptors import nop
 
@@ -40,7 +40,7 @@ def get_volume_encryptor(connection_info, **kwargs):
             encryptor = importutils.import_object(provider, connection_info,
                                                   **kwargs)
         except Exception as e:
-            LOG.error(_("Error instantiating %(provider)s: %(exception)s"),
+            LOG.error(_LE("Error instantiating %(provider)s: %(exception)s"),
                       provider=provider, exception=e)
             raise
 
@@ -55,9 +55,9 @@ def get_encryption_metadata(context, volume_api, volume_id, connection_info):
             metadata = volume_api.get_volume_encryption_metadata(context,
                                                                  volume_id)
         except Exception as e:
-            LOG.error(_("Failed to retrieve encryption metadata for "
-                            "volume %(volume_id)s: %(exception)s"),
-                          {'volume_id': volume_id, 'exception': e})
+            LOG.error(_LE("Failed to retrieve encryption metadata for "
+                          "volume %(volume_id)s: %(exception)s"),
+                      {'volume_id': volume_id, 'exception': e})
             raise
 
     return metadata

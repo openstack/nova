@@ -34,7 +34,7 @@ from nova.compute import vm_states
 from nova.conductor.tasks import live_migrate
 from nova.db import base
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova import image
 from nova import manager
 from nova import network
@@ -120,8 +120,8 @@ class ConductorManager(manager.Manager):
                         updates, service):
         for key, value in updates.iteritems():
             if key not in allowed_updates:
-                LOG.error(_("Instance update attempted for "
-                            "'%(key)s' on %(instance_uuid)s"),
+                LOG.error(_LE("Instance update attempted for "
+                              "'%(key)s' on %(instance_uuid)s"),
                           {'key': key, 'instance_uuid': instance_uuid})
                 raise KeyError("unexpected update keyword '%s'" % key)
             if key in datetime_fields and isinstance(value, six.string_types):
@@ -583,10 +583,10 @@ class ComputeTaskManager(base.Base):
                              expected_task_state=task_states.MIGRATING,),
                         ex, request_spec, self.db)
         except Exception as ex:
-            LOG.error(_('Migration of instance %(instance_id)s to host'
-                       ' %(dest)s unexpectedly failed.'),
-                       {'instance_id': instance['uuid'], 'dest': destination},
-                       exc_info=True)
+            LOG.error(_LE('Migration of instance %(instance_id)s to host'
+                          ' %(dest)s unexpectedly failed.'),
+                      {'instance_id': instance['uuid'], 'dest': destination},
+                      exc_info=True)
             raise exception.MigrationError(reason=ex)
 
     def build_instances(self, context, instances, image, filter_properties,
@@ -705,8 +705,8 @@ class ComputeTaskManager(base.Base):
                             instance=instance)
                 return
         else:
-            LOG.error(_('Unshelve attempted but vm_state not SHELVED or '
-                        'SHELVED_OFFLOADED'), instance=instance)
+            LOG.error(_LE('Unshelve attempted but vm_state not SHELVED or '
+                          'SHELVED_OFFLOADED'), instance=instance)
             instance.vm_state = vm_states.ERROR
             instance.save()
             return

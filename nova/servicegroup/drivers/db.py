@@ -101,7 +101,7 @@ class DbDriver(api.ServiceGroupDriver):
             # TODO(termie): make this pattern be more elegant.
             if getattr(service, 'model_disconnected', False):
                 service.model_disconnected = False
-                LOG.error(_('Recovered model server connection!'))
+                LOG.error(_LE('Recovered model server connection!'))
 
         # TODO(vish): this should probably only catch connection errors
         except Exception:  # pylint: disable=W0702

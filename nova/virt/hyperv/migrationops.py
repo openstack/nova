@@ -22,7 +22,7 @@ from oslo.utils import excutils
 from oslo.utils import units
 
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova.openstack.common import log as logging
 from nova.virt import configdrive
 from nova.virt.hyperv import imagecache
@@ -97,7 +97,7 @@ class MigrationOps(object):
         except Exception as ex:
             # Log and ignore this exception
             LOG.exception(ex)
-            LOG.error(_("Cannot cleanup migration files"))
+            LOG.error(_LE("Cannot cleanup migration files"))
 
     def _check_target_flavor(self, instance, flavor):
         new_root_gb = flavor['root_gb']

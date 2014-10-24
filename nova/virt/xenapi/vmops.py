@@ -42,8 +42,7 @@ from nova.compute import vm_states
 from nova.console import type as ctype
 from nova import context as nova_context
 from nova import exception
-from nova.i18n import _
-from nova.i18n import _LE
+from nova.i18n import _, _LE
 from nova import objects
 from nova.openstack.common import log as logging
 from nova.pci import manager as pci_manager
@@ -1892,18 +1891,18 @@ class VMOps(object):
         except self._session.XenAPI.Failure as e:
             err_msg = e.details[-1].splitlines()[-1]
             if 'TIMEOUT:' in err_msg:
-                LOG.error(_('TIMEOUT: The call to %(method)s timed out. '
-                            'args=%(args)r'),
+                LOG.error(_LE('TIMEOUT: The call to %(method)s timed out. '
+                              'args=%(args)r'),
                           {'method': method, 'args': args}, instance=instance)
                 return {'returncode': 'timeout', 'message': err_msg}
             elif 'NOT IMPLEMENTED:' in err_msg:
-                LOG.error(_('NOT IMPLEMENTED: The call to %(method)s is not'
-                            ' supported by the agent. args=%(args)r'),
+                LOG.error(_LE('NOT IMPLEMENTED: The call to %(method)s is not'
+                              ' supported by the agent. args=%(args)r'),
                           {'method': method, 'args': args}, instance=instance)
                 return {'returncode': 'notimplemented', 'message': err_msg}
             else:
-                LOG.error(_('The call to %(method)s returned an error: %(e)s. '
-                            'args=%(args)r'),
+                LOG.error(_LE('The call to %(method)s returned an error: '
+                              '%(e)s. args=%(args)r'),
                           {'method': method, 'args': args, 'e': e},
                           instance=instance)
                 return {'returncode': 'error', 'message': err_msg}

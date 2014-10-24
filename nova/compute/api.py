@@ -3201,9 +3201,8 @@ class API(base.Base):
         inst_host = instance.host
         service = objects.Service.get_by_compute_host(context, inst_host)
         if self.servicegroup_api.service_is_up(service):
-            msg = (_('Instance compute service state on %s '
-                     'expected to be down, but it was up.') % inst_host)
-            LOG.error(msg)
+            LOG.error(_LE('Instance compute service state on %s '
+                          'expected to be down, but it was up.'), inst_host)
             raise exception.ComputeServiceInUse(host=inst_host)
 
         instance.task_state = task_states.REBUILDING

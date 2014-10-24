@@ -29,7 +29,7 @@ from oslo.utils import units
 
 from nova.api.metadata import base as instance_metadata
 from nova import exception
-from nova.i18n import _, _LI, _LW
+from nova.i18n import _, _LI, _LE, _LW
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
@@ -358,7 +358,8 @@ class VMOps(object):
                 cdb.make_drive(configdrive_path_iso)
             except processutils.ProcessExecutionError as e:
                 with excutils.save_and_reraise_exception():
-                    LOG.error(_('Creating config drive failed with error: %s'),
+                    LOG.error(_LE('Creating config drive failed with '
+                                  'error: %s'),
                               e, instance=instance)
 
         if not CONF.hyperv.config_drive_cdrom:
@@ -536,8 +537,8 @@ class VMOps(object):
                                              'req_state': req_state})
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.error(_("Failed to change vm state of %(instance_name)s"
-                            " to %(req_state)s"),
+                LOG.error(_LE("Failed to change vm state of %(instance_name)s"
+                              " to %(req_state)s"),
                           {'instance_name': instance_name,
                            'req_state': req_state})
 

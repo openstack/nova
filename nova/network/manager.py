@@ -1004,15 +1004,16 @@ class NetworkManager(manager.Manager):
                     #             https://code.launchpad.net/bugs/968457,
                     #             so we log an error to help track down
                     #             the possible race.
-                    msg = _("Unable to release %s because vif doesn't exist.")
                     if not vif_id:
-                        LOG.error(msg % address)
+                        LOG.error(_LE("Unable to release %s because vif "
+                                      "doesn't exist"), address)
                         return
 
                     vif = objects.VirtualInterface.get_by_id(context, vif_id)
 
                     if not vif:
-                        LOG.error(msg % address)
+                        LOG.error(_LE("Unable to release %s because vif "
+                                      "object doesn't exist"), address)
                         return
 
                     # NOTE(cfb): Call teardown before release_dhcp to ensure

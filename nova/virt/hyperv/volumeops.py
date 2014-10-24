@@ -23,7 +23,7 @@ from oslo.config import cfg
 from oslo.utils import excutils
 
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova.openstack.common import log as logging
 from nova.virt import driver
 from nova.virt.hyperv import constants
@@ -149,7 +149,7 @@ class VolumeOps(object):
                                                       mounted_disk_path)
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.error(_('Unable to attach volume to instance %s'),
+                LOG.error(_LE('Unable to attach volume to instance %s'),
                           instance_name)
                 if target_iqn:
                     self._volutils.logout_storage_target(target_iqn)

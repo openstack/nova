@@ -49,7 +49,7 @@ from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova.db import base
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import base as objects_base
@@ -1877,7 +1877,7 @@ def serialize_remote_exception(failure_info, log_failure=True):
     tb = traceback.format_exception(*failure_info)
     failure = failure_info[1]
     if log_failure:
-        LOG.error(_("Returning exception %s to caller"),
+        LOG.error(_LE("Returning exception %s to caller"),
                   six.text_type(failure))
         LOG.error(tb)
 
