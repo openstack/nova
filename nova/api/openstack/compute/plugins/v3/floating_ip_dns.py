@@ -125,18 +125,19 @@ class FloatingIPDNSDomainController(object):
             msg = _("you can not pass av_zone if the scope is public")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
+        if scope == 'private':
+            create_dns_domain = self.network_api.create_private_dns_domain
+            area_name, area = 'availability_zone', av_zone
+        else:
+            create_dns_domain = self.network_api.create_public_dns_domain
+            area_name, area = 'project', project
+
         try:
-            if scope == 'private':
-                create_dns_domain = self.network_api.create_private_dns_domain
-                area_name, area = 'availability_zone', av_zone
-            else:
-                create_dns_domain = self.network_api.create_public_dns_domain
-                area_name, area = 'project', project
+            create_dns_domain(context, fqdomain, area)
         except NotImplementedError:
             msg = _("Unable to create dns domain")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
 
-        create_dns_domain(context, fqdomain, area)
         return _translate_domain_entry_view({'domain': fqdomain,
                                              'scope': scope,
                                              area_name: area})

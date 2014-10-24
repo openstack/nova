@@ -138,7 +138,12 @@ class FloatingIPDNSDomainController(object):
         """Return a list of available DNS domains."""
         context = req.environ['nova.context']
         authorize(context)
-        domains = self.network_api.get_dns_domains(context)
+        try:
+            domains = self.network_api.get_dns_domains(context)
+        except NotImplementedError:
+            msg = _("Unable to get dns domain")
+            raise webob.exc.HTTPNotImplemented(explanation=msg)
+
         domainlist = [_create_domain_entry(domain['domain'],
                                          domain.get('scope'),
                                          domain.get('project'),
@@ -171,7 +176,12 @@ class FloatingIPDNSDomainController(object):
         else:
             create_dns_domain = self.network_api.create_public_dns_domain
             area_name, area = 'project', project
-        create_dns_domain(context, fqdomain, area)
+        try:
+            create_dns_domain(context, fqdomain, area)
+        except NotImplementedError:
+            msg = _("Unable to create dns domain")
+            raise webob.exc.HTTPNotImplemented(explanation=msg)
+
         return _translate_domain_entry_view({'domain': fqdomain,
                                              'scope': scope,
                                              area_name: area})
@@ -187,6 +197,9 @@ class FloatingIPDNSDomainController(object):
             self.network_api.delete_dns_domain(context, domain)
         except exception.NotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
+        except NotImplementedError:
+            msg = _("Unable to delete dns domain")
+            raise webob.exc.HTTPNotImplemented(explanation=msg)
 
         return webob.Response(status_int=202)
 
@@ -210,13 +223,16 @@ class FloatingIPDNSEntryController(object):
         if utils.is_valid_ipv4(id) or utils.is_valid_ipv6(id):
             floating_ip = id
 
-        if floating_ip:
-            entries = self.network_api.get_dns_entries_by_address(context,
-                                                                  floating_ip,
-                                                                  domain)
-        else:
-            entries = self.network_api.get_dns_entries_by_name(context, id,
-                                                               domain)
+        try:
+            if floating_ip:
+                entries = self.network_api.get_dns_entries_by_address(
+                    context, floating_ip, domain)
+            else:
+                entries = self.network_api.get_dns_entries_by_name(
+                    context, id, domain)
+        except NotImplementedError:
+            msg = _("Unable to get dns entry")
+            raise webob.exc.HTTPNotImplemented(explanation=msg)
 
         if not entries:
             explanation = _("DNS entries not found.")
@@ -246,15 +262,20 @@ class FloatingIPDNSEntryController(object):
         except (TypeError, KeyError):
             raise webob.exc.HTTPUnprocessableEntity()
 
-        entries = self.network_api.get_dns_entries_by_name(context,
-                                                           name, domain)
-        if not entries:
-            # create!
-            self.network_api.add_dns_entry(context, address, name,
-                                           dns_type, domain)
-        else:
-            # modify!
-            self.network_api.modify_dns_entry(context, name, address, domain)
+        try:
+            entries = self.network_api.get_dns_entries_by_name(
+                context, name, domain)
+            if not entries:
+                # create!
+                self.network_api.add_dns_entry(context, address, name,
+                                               dns_type, domain)
+            else:
+                # modify!
+                self.network_api.modify_dns_entry(context, name, address,
+                                                  domain)
+        except NotImplementedError:
+            msg = _("Unable to create dns entry")
+            raise webob.exc.HTTPNotImplemented(explanation=msg)
 
         return _translate_dns_entry_view({'ip': address,
                                           'name': name,
@@ -272,6 +293,9 @@ class FloatingIPDNSEntryController(object):
             self.network_api.delete_dns_entry(context, name, domain)
         except exception.NotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
+        except NotImplementedError:
+            msg = _("Unable to delete dns entry")
+            raise webob.exc.HTTPNotImplemented(explanation=msg)
 
         return webob.Response(status_int=202)
 
