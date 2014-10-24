@@ -19,6 +19,7 @@ import os
 import signal
 
 import jinja2
+from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.utils import excutils
 
@@ -26,7 +27,6 @@ from nova import context
 from nova import db
 from nova.i18n import _, _LE
 from nova.openstack.common import log as logging
-from nova.openstack.common import processutils
 from nova import paths
 from nova import utils
 

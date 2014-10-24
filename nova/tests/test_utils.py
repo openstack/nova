@@ -24,12 +24,12 @@ import tempfile
 
 import mox
 import netaddr
+from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.utils import timeutils
 
 import nova
 from nova import exception
-from nova.openstack.common import processutils
 from nova import test
 from nova import utils
 
