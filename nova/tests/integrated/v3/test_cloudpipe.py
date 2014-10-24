@@ -46,13 +46,13 @@ class CloudPipeSampleTest(api_sample_base.ApiSampleTestBaseV3):
                        network_api_get)
 
     def generalize_subs(self, subs, vanilla_regexes):
-        subs['project_id'] = 'cloudpipe-[0-9a-f-]+'
+        subs['project_id'] = '[0-9a-f-]+'
         return subs
 
     def test_cloud_pipe_create(self):
         # Get api samples of cloud pipe extension creation.
         self.flags(vpn_image_id=fake.get_valid_image_id())
-        project = {'project_id': 'cloudpipe-' + str(uuid_lib.uuid4())}
+        project = {'project_id': str(uuid_lib.uuid4().hex)}
         response = self._do_post('os-cloudpipe', 'cloud-pipe-create-req',
                                  project)
         subs = self._get_regexes()

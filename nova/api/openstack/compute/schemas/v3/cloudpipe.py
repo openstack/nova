@@ -15,6 +15,21 @@
 from nova.api.validation import parameter_types
 
 
+create = {
+    'type': 'object',
+    'properties': {
+        'cloudpipe': {
+            'type': 'object',
+            'properties': {
+                'project_id': parameter_types.project_id,
+            },
+            'additionalProperties': False,
+        },
+    },
+    'required': ['cloudpipe'],
+    'additionalProperties': False,
+}
+
 update = {
     'type': 'object',
     'properties': {
