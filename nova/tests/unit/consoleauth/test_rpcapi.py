@@ -39,7 +39,6 @@ class ConsoleAuthRpcAPITestCase(test.NoDBTestCase):
         self.assertEqual(rpcapi.client.target.topic, CONF.consoleauth_topic)
 
         orig_prepare = rpcapi.client.prepare
-        expected_version = kwargs.pop('version', rpcapi.client.target.version)
 
         with contextlib.nested(
             mock.patch.object(rpcapi.client, 'cast' if do_cast else 'call'),
@@ -51,12 +50,12 @@ class ConsoleAuthRpcAPITestCase(test.NoDBTestCase):
             prepare_mock.return_value = rpcapi.client
             rpc_mock.return_value = None if do_cast else 'foo'
             csv_mock.side_effect = (
-                lambda v: orig_prepare(version=v).can_send_version())
+                lambda v: orig_prepare().can_send_version())
 
             retval = getattr(rpcapi, method)(ctxt, **kwargs)
             self.assertEqual(retval, rpc_mock.return_value)
 
-            prepare_mock.assert_called_once_with(version=expected_version)
+            prepare_mock.assert_called_once_with()
             rpc_mock.assert_called_once_with(ctxt, method, **kwargs)
 
     def test_authorize_console(self):
@@ -64,28 +63,10 @@ class ConsoleAuthRpcAPITestCase(test.NoDBTestCase):
                 console_type='ctype', host='h', port='p',
                 internal_access_path='iap', instance_uuid="instance")
 
-        # NOTE(russellb) Havana compat
-        self.flags(consoleauth='havana', group='upgrade_levels')
-        self._test_consoleauth_api('authorize_console', token='token',
-                console_type='ctype', host='h', port='p',
-                internal_access_path='iap', instance_uuid="instance",
-                version='1.2')
-
     def test_check_token(self):
         self._test_consoleauth_api('check_token', token='t')
 
-        # NOTE(russellb) Havana compat
-        self.flags(consoleauth='havana', group='upgrade_levels')
-        self._test_consoleauth_api('check_token', token='t', version='1.0')
-
-    def test_delete_tokens_for_instance(self):
+    def test_delete_tokens_for_instnace(self):
         self._test_consoleauth_api('delete_tokens_for_instance',
                                    _do_cast=True,
                                    instance_uuid="instance")
-
-        # NOTE(russellb) Havana compat
-        self.flags(consoleauth='havana', group='upgrade_levels')
-        self._test_consoleauth_api('delete_tokens_for_instance',
-                                   _do_cast=True,
-                                   instance_uuid="instance",
-                                   version='1.2')
