@@ -69,19 +69,10 @@ class ConsoleAPI(object):
                                                CONF.upgrade_levels.console)
         self.client = rpc.get_client(target, version_cap=version_cap)
 
-    def _get_compat_version(self, current, havana_compat):
-        if not self.client.can_send_version(current):
-            return havana_compat
-        return current
-
     def add_console(self, ctxt, instance_id):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('2.0', '1.0')
-        cctxt = self.client.prepare(version=version)
+        cctxt = self.client.prepare()
         cctxt.cast(ctxt, 'add_console', instance_id=instance_id)
 
     def remove_console(self, ctxt, console_id):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('2.0', '1.0')
-        cctxt = self.client.prepare(version=version)
+        cctxt = self.client.prepare()
         cctxt.cast(ctxt, 'remove_console', console_id=console_id)
