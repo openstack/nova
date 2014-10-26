@@ -16,7 +16,7 @@
 
 
 from nova.i18n import _LI
-from nova.objects import aggregate
+from nova import objects
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ def aggregate_values_from_db(context, host, key_name):
     # TODO(sahid): DB query in filter is a performance hit, especially for
     # system with lots of hosts. Will need a general solution here to fix
     # all filters with aggregate DB call things.
-    aggrlist = aggregate.AggregateList.get_by_host(
+    aggrlist = objects.AggregateList.get_by_host(
         context.elevated(), host, key=key_name)
     aggregate_vals = set(aggr.metadata[key_name] for aggr in aggrlist)
     return aggregate_vals
