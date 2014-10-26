@@ -76,8 +76,6 @@ from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import instance as instance_obj
-from nova.objects import quotas as quotas_obj
 from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task
 from nova import paths
@@ -810,7 +808,8 @@ class ComputeManager(manager.Manager):
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
         quotas = objects.Quotas(context)
-        project_id, user_id = quotas_obj.ids_from_instance(context, instance)
+        project_id, user_id = objects.quotas.ids_from_instance(context,
+                                                               instance)
         quotas.reserve(context, project_id=project_id, user_id=user_id,
                        instances=-1, cores=-instance.vcpus,
                        ram=-instance.memory_mb)
@@ -3556,9 +3555,9 @@ class ComputeManager(manager.Manager):
 
         """
 
-        quotas = quotas_obj.Quotas.from_reservations(context,
-                                                     reservations,
-                                                     instance=instance)
+        quotas = objects.Quotas.from_reservations(context,
+                                                  reservations,
+                                                  instance=instance)
 
         # NOTE(comstud): A revert_resize is essentially a resize back to
         # the old size, so we need to send a usage event here.
@@ -3612,9 +3611,9 @@ class ComputeManager(manager.Manager):
 
         """
 
-        quotas = quotas_obj.Quotas.from_reservations(context,
-                                                     reservations,
-                                                     instance=instance)
+        quotas = objects.Quotas.from_reservations(context,
+                                                  reservations,
+                                                  instance=instance)
 
         with self._error_out_instance_on_exception(context, instance,
                                                    quotas=quotas):
@@ -3735,9 +3734,9 @@ class ComputeManager(manager.Manager):
             LOG.debug("No node specified, defaulting to %s", node,
                       instance=instance)
 
-        quotas = quotas_obj.Quotas.from_reservations(context,
-                                                     reservations,
-                                                     instance=instance)
+        quotas = objects.Quotas.from_reservations(context,
+                                                  reservations,
+                                                  instance=instance)
         with self._error_out_instance_on_exception(context, instance,
                                                    quotas=quotas):
             self.conductor_api.notify_usage_exists(
@@ -3822,9 +3821,9 @@ class ComputeManager(manager.Manager):
                         clean_shutdown=True):
         """Starts the migration of a running instance to another host."""
 
-        quotas = quotas_obj.Quotas.from_reservations(context,
-                                                     reservations,
-                                                     instance=instance)
+        quotas = objects.Quotas.from_reservations(context,
+                                                  reservations,
+                                                  instance=instance)
         with self._error_out_instance_on_exception(context, instance,
                                                    quotas=quotas):
             if not instance_type:
@@ -3977,9 +3976,9 @@ class ComputeManager(manager.Manager):
         new host machine.
 
         """
-        quotas = quotas_obj.Quotas.from_reservations(context,
-                                                     reservations,
-                                                     instance=instance)
+        quotas = objects.Quotas.from_reservations(context,
+                                                  reservations,
+                                                  instance=instance)
         try:
             self._finish_resize(context, instance, migration,
                                 disk_info, image)
@@ -6036,14 +6035,14 @@ class ComputeManager(manager.Manager):
         # and quota commit to DB. When compute node starts again
         # it will have no idea the reservation is committed or not or even
         # expired, since it's a rare case, so marked as todo.
-        quotas = quotas_obj.Quotas.from_reservations(context, None)
+        quotas = objects.Quotas.from_reservations(context, None)
 
         filters = {'vm_state': vm_states.SOFT_DELETED,
                    'task_state': None,
                    'host': self.host}
         instances = objects.InstanceList.get_by_filters(
             context, filters,
-            expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS,
+            expected_attrs=objects.instance.INSTANCE_DEFAULT_FIELDS,
             use_slave=True)
         for instance in instances:
             if self._deleted_old_enough(instance, interval):
