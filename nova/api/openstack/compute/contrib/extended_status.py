@@ -17,7 +17,6 @@
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova import compute
 
 authorize = extensions.soft_extension_authorizer('compute', 'extended_status')
 
@@ -25,7 +24,6 @@ authorize = extensions.soft_extension_authorizer('compute', 'extended_status')
 class ExtendedStatusController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(ExtendedStatusController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API()
 
     def _extend_server(self, server, instance):
         for state in ['task_state', 'vm_state', 'power_state']:
