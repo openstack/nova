@@ -71,13 +71,12 @@ class ResourcePool(object):
         if not pool_states.is_hv_pool(aggregate['metadata']):
             return
 
-        invalid = {pool_states.CHANGING: 'setup in progress',
-                   pool_states.DISMISSED: 'aggregate deleted',
-                   pool_states.ERROR: 'aggregate in error'}
+        invalid = {pool_states.CHANGING: _('setup in progress'),
+                   pool_states.DISMISSED: _('aggregate deleted'),
+                   pool_states.ERROR: _('aggregate in error')}
 
         if (aggregate['metadata'][pool_states.KEY] in invalid.keys()):
-            raise exception.InvalidAggregateAction(
-                    action='add host',
+            raise exception.InvalidAggregateActionAdd(
                     aggregate_id=aggregate['id'],
                     reason=invalid[aggregate['metadata'][pool_states.KEY]])
 
@@ -119,12 +118,11 @@ class ResourcePool(object):
         if not pool_states.is_hv_pool(aggregate['metadata']):
             return
 
-        invalid = {pool_states.CREATED: 'no hosts to remove',
-                   pool_states.CHANGING: 'setup in progress',
-                   pool_states.DISMISSED: 'aggregate deleted', }
+        invalid = {pool_states.CREATED: _('no hosts to remove'),
+                   pool_states.CHANGING: _('setup in progress'),
+                   pool_states.DISMISSED: _('aggregate deleted')}
         if aggregate['metadata'][pool_states.KEY] in invalid.keys():
-            raise exception.InvalidAggregateAction(
-                    action='remove host',
+            raise exception.InvalidAggregateActionDelete(
                     aggregate_id=aggregate['id'],
                     reason=invalid[aggregate['metadata'][pool_states.KEY]])
 
@@ -142,9 +140,8 @@ class ResourcePool(object):
             if len(aggregate['hosts']) > 1:
                 # NOTE: this could be avoided by doing a master
                 # re-election, but this is simpler for now.
-                raise exception.InvalidAggregateAction(
+                raise exception.InvalidAggregateActionDelete(
                                     aggregate_id=aggregate['id'],
-                                    action='remove_from_aggregate',
                                     reason=_('Unable to eject %s '
                                              'from the pool; pool not empty')
                                              % host)

@@ -334,7 +334,27 @@ class InvalidParameterValue(Invalid):
 
 
 class InvalidAggregateAction(Invalid):
-    msg_fmt = _("Cannot perform action '%(action)s' on aggregate "
+    msg_fmt = _("Unacceptable parameters.")
+    code = 400
+
+
+class InvalidAggregateActionAdd(InvalidAggregateAction):
+    msg_fmt = _("Cannot add host to aggregate "
+                "%(aggregate_id)s. Reason: %(reason)s.")
+
+
+class InvalidAggregateActionDelete(InvalidAggregateAction):
+    msg_fmt = _("Cannot remove host from aggregate "
+                "%(aggregate_id)s. Reason: %(reason)s.")
+
+
+class InvalidAggregateActionUpdate(InvalidAggregateAction):
+    msg_fmt = _("Cannot update aggregate "
+                "%(aggregate_id)s. Reason: %(reason)s.")
+
+
+class InvalidAggregateActionUpdateMeta(InvalidAggregateAction):
+    msg_fmt = _("Cannot update metadata of aggregate "
                 "%(aggregate_id)s. Reason: %(reason)s.")
 
 

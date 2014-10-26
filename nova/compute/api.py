@@ -153,6 +153,11 @@ QUOTAS = quota.QUOTAS
 RO_SECURITY_GROUPS = ['default']
 VIDEO_RAM = 'hw_video:ram_max_mb'
 
+AGGREGATE_ACTION_UPDATE = 'Update'
+AGGREGATE_ACTION_UPDATE_META = 'UpdateMeta'
+AGGREGATE_ACTION_DELETE = 'Delete'
+AGGREGATE_ACTION_ADD = 'Add'
+
 
 def check_instance_state(vm_state=None, task_state=(None,),
                          must_have_launched=True):
@@ -3481,7 +3486,7 @@ class AggregateAPI(base.Base):
             aggregate.name = values.pop('name')
             aggregate.save()
         self.is_safe_to_update_az(context, values, aggregate=aggregate,
-                                  action_name="update_aggregate")
+                                  action_name=AGGREGATE_ACTION_UPDATE)
         if values:
             aggregate.update_metadata(values)
         # If updated values include availability_zones, then the cache
@@ -3495,7 +3500,7 @@ class AggregateAPI(base.Base):
         """Updates the aggregate metadata."""
         aggregate = objects.Aggregate.get_by_id(context, aggregate_id)
         self.is_safe_to_update_az(context, metadata, aggregate=aggregate,
-                                  action_name="update_aggregate_metadata")
+                                  action_name=AGGREGATE_ACTION_UPDATE_META)
         aggregate.update_metadata(metadata)
         # If updated metadata include availability_zones, then the cache
         # which stored availability_zones and host need to be reset
@@ -3513,16 +3518,16 @@ class AggregateAPI(base.Base):
         aggregate = objects.Aggregate.get_by_id(context, aggregate_id)
         if len(aggregate.hosts) > 0:
             msg = _("Host aggregate is not empty")
-            raise exception.InvalidAggregateAction(action='delete',
-                                                   aggregate_id=aggregate_id,
-                                                   reason=msg)
+            raise exception.InvalidAggregateActionDelete(
+                aggregate_id=aggregate_id, reason=msg)
         aggregate.destroy()
         compute_utils.notify_about_aggregate_update(context,
                                                     "delete.end",
                                                     aggregate_payload)
 
     def is_safe_to_update_az(self, context, metadata, aggregate,
-                             hosts=None, action_name="add_host_to_aggregate"):
+                             hosts=None,
+                             action_name=AGGREGATE_ACTION_ADD):
         """Determine if updates alter an aggregate's availability zone.
 
             :param context: local context
@@ -3564,8 +3569,25 @@ class AggregateAPI(base.Base):
                                     metadata, host_az, aggregate.id,
                                     action_name=action_name)
 
+    def _raise_invalid_aggregate_exc(self, action_name, aggregate_id, reason):
+        if action_name == AGGREGATE_ACTION_ADD:
+            raise exception.InvalidAggregateActionAdd(
+                aggregate_id=aggregate_id, reason=reason)
+        elif action_name == AGGREGATE_ACTION_UPDATE:
+            raise exception.InvalidAggregateActionUpdate(
+                aggregate_id=aggregate_id, reason=reason)
+        elif action_name == AGGREGATE_ACTION_UPDATE_META:
+            raise exception.InvalidAggregateActionUpdateMeta(
+                aggregate_id=aggregate_id, reason=reason)
+        elif action_name == AGGREGATE_ACTION_DELETE:
+            raise exception.InvalidAggregateActionDelete(
+                aggregate_id=aggregate_id, reason=reason)
+
+        raise exception.NovaException(
+            _("Unexpected aggregate action %s") % action_name)
+
     def _check_az_for_host(self, aggregate_meta, host_az, aggregate_id,
-                           action_name="add_host_to_aggregate"):
+                           action_name=AGGREGATE_ACTION_ADD):
         # NOTE(mtreinish) The availability_zone key returns a set of
         # zones so loop over each zone. However there should only
         # ever be one zone in the set because an aggregate can only
@@ -3582,9 +3604,8 @@ class AggregateAPI(base.Base):
             if aggregate_az and aggregate_az != host_az:
                 msg = _("Host already in availability zone "
                         "%s") % host_az
-                raise exception.InvalidAggregateAction(
-                    action=action_name, aggregate_id=aggregate_id,
-                    reason=msg)
+                self._raise_invalid_aggregate_exc(action_name,
+                    aggregate_id, msg)
 
     def _update_az_cache_for_host(self, context, host_name, aggregate_meta):
         # Update the availability_zone cache to avoid getting wrong

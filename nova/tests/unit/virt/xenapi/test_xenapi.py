@@ -3064,7 +3064,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
 
     def test_remove_from_empty_aggregate(self):
         result = self._aggregate_setup()
-        self.assertRaises(exception.InvalidAggregateAction,
+        self.assertRaises(exception.InvalidAggregateActionDelete,
                           self.conn._pool.remove_from_aggregate,
                           self.context, result, "test_host")
 
@@ -3100,7 +3100,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         aggregate = self._aggregate_setup(hosts=['host', 'host2'],
                                           metadata=self.fake_metadata)
 
-        self.assertRaises(exception.InvalidAggregateAction,
+        self.assertRaises(exception.InvalidAggregateActionDelete,
                           self.conn._pool.remove_from_aggregate,
                           self.context, aggregate, "host")
 
@@ -3122,31 +3122,31 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         return aggregate
 
     def test_add_host_to_aggregate_invalid_changing_status(self):
-        """Ensure InvalidAggregateAction is raised when adding host while
+        """Ensure InvalidAggregateActionAdd is raised when adding host while
         aggregate is not ready.
         """
         aggregate = self._aggregate_setup(aggr_state=pool_states.CHANGING)
-        ex = self.assertRaises(exception.InvalidAggregateAction,
+        ex = self.assertRaises(exception.InvalidAggregateActionAdd,
                                self.conn.add_to_aggregate, self.context,
                                aggregate, 'host')
         self.assertIn('setup in progress', str(ex))
 
     def test_add_host_to_aggregate_invalid_dismissed_status(self):
-        """Ensure InvalidAggregateAction is raised when aggregate is
+        """Ensure InvalidAggregateActionAdd is raised when aggregate is
         deleted.
         """
         aggregate = self._aggregate_setup(aggr_state=pool_states.DISMISSED)
-        ex = self.assertRaises(exception.InvalidAggregateAction,
+        ex = self.assertRaises(exception.InvalidAggregateActionAdd,
                                self.conn.add_to_aggregate, self.context,
                                aggregate, 'fake_host')
         self.assertIn('aggregate deleted', str(ex))
 
     def test_add_host_to_aggregate_invalid_error_status(self):
-        """Ensure InvalidAggregateAction is raised when aggregate is
+        """Ensure InvalidAggregateActionAdd is raised when aggregate is
         in error.
         """
         aggregate = self._aggregate_setup(aggr_state=pool_states.ERROR)
-        ex = self.assertRaises(exception.InvalidAggregateAction,
+        ex = self.assertRaises(exception.InvalidAggregateActionAdd,
                                self.conn.add_to_aggregate, self.context,
                                aggregate, 'fake_host')
         self.assertIn('aggregate in error', str(ex))
@@ -3173,20 +3173,20 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                          pool_states.ACTIVE)
 
     def test_remove_host_from_aggregate_invalid_dismissed_status(self):
-        """Ensure InvalidAggregateAction is raised when aggregate is
+        """Ensure InvalidAggregateActionDelete is raised when aggregate is
         deleted.
         """
         aggregate = self._aggregate_setup(aggr_state=pool_states.DISMISSED)
-        self.assertRaises(exception.InvalidAggregateAction,
+        self.assertRaises(exception.InvalidAggregateActionDelete,
                           self.conn.remove_from_aggregate, self.context,
                           aggregate, 'fake_host')
 
     def test_remove_host_from_aggregate_invalid_changing_status(self):
-        """Ensure InvalidAggregateAction is raised when aggregate is
+        """Ensure InvalidAggregateActionDelete is raised when aggregate is
         changing.
         """
         aggregate = self._aggregate_setup(aggr_state=pool_states.CHANGING)
-        self.assertRaises(exception.InvalidAggregateAction,
+        self.assertRaises(exception.InvalidAggregateActionDelete,
                           self.conn.remove_from_aggregate, self.context,
                           aggregate, 'fake_host')
 
