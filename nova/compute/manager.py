@@ -1509,7 +1509,7 @@ class ComputeManager(manager.Manager):
         original_context = context
         context = context.elevated()
 
-        instance_uuid = instance['uuid']
+        instance_uuid = instance.uuid
         rescheduled = False
 
         compute_utils.add_instance_fault_from_exc(context,
@@ -1526,7 +1526,7 @@ class ComputeManager(manager.Manager):
 
             self._shutdown_instance(context, instance,
                                     bdms, requested_networks)
-            self._cleanup_volumes(context, instance['uuid'], bdms)
+            self._cleanup_volumes(context, instance.uuid, bdms)
         except Exception:
             # do not attempt retry if clean up failed:
             with excutils.save_and_reraise_exception():
@@ -1555,7 +1555,7 @@ class ComputeManager(manager.Manager):
             exc_info=None):
         """Attempt to re-schedule a compute operation."""
 
-        instance_uuid = instance['uuid']
+        instance_uuid = instance.uuid
         retry = filter_properties.get('retry', None)
         if not retry:
             # no retry information, do not reschedule.
@@ -2434,8 +2434,6 @@ class ComputeManager(manager.Manager):
         """Delete an instance on this host.  Commit or rollback quotas
         as necessary.
         """
-        instance_uuid = instance['uuid']
-
         was_soft_deleted = instance['vm_state'] == vm_states.SOFT_DELETED
         if was_soft_deleted:
             # Instances in SOFT_DELETED vm_state have already had quotas
@@ -2464,7 +2462,7 @@ class ComputeManager(manager.Manager):
             #             future to set an instance fault the first time
             #             and to only ignore the failure if the instance
             #             is already in ERROR.
-            self._cleanup_volumes(context, instance_uuid, bdms,
+            self._cleanup_volumes(context, instance.uuid, bdms,
                     raise_exc=False)
             # if a delete task succeed, always update vm state and task
             # state without expecting task state to be DELETING
