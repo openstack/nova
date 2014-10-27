@@ -1367,6 +1367,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
             self.assertIsNone(cfg.cpuset)
             self.assertIsNone(cfg.cputune)
+            self.assertIsNone(cfg.numatune)
             self.assertIsNotNone(cfg.cpu.numa)
             for instance_cell, numa_cfg_cell in zip(
                     instance_topology.cells, cfg.cpu.numa.cells):
@@ -1431,6 +1432,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 self.assertEqual(instance_cell.cpuset, numa_cfg_cell.cpus)
                 self.assertEqual(instance_cell.memory * units.Ki,
                                  numa_cfg_cell.memory)
+
+            allnodes = [cell.id for cell in instance_topology.cells]
+            self.assertEqual(allnodes, cfg.numatune.memory.nodeset)
+            self.assertEqual("strict", cfg.numatune.memory.mode)
+
+            for instance_cell, memnode in zip(
+                    instance_topology.cells, cfg.numatune.memnodes):
+                self.assertEqual(instance_cell.id, memnode.cellid)
+                self.assertEqual([instance_cell.id], memnode.nodeset)
+                self.assertEqual("strict", memnode.mode)
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
     def test_get_guest_config_clock(self, mock_flavor):
