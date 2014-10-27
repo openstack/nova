@@ -26,11 +26,11 @@ class FloatingIpDNSTest(api_sample_base.ApiSampleTestBaseV3):
     ip = '192.168.1.1'
 
     def _create_or_update(self):
-        subs = {'domain': self.domain,
-                'project': self.project,
+        subs = {'project': self.project,
                 'scope': self.scope}
         response = self._do_put('os-floating-ip-dns/%s' % self.domain,
                                 'floating-ip-dns-create-or-update-req', subs)
+        subs.update({'domain': self.domain})
         self._verify_response('floating-ip-dns-create-or-update-resp', subs,
                               response, 200)
 
