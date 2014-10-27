@@ -664,7 +664,8 @@ def instance_get_all_by_filters(context, filters, sort_key='created_at',
 
 def instance_get_active_by_window_joined(context, begin, end=None,
                                          project_id=None, host=None,
-                                         use_slave=False):
+                                         use_slave=False,
+                                         columns_to_join=None):
     """Get instances and joins active during a certain time window.
 
     Specifying a project_id will filter for a certain project.
@@ -672,7 +673,8 @@ def instance_get_active_by_window_joined(context, begin, end=None,
     """
     return IMPL.instance_get_active_by_window_joined(context, begin, end,
                                               project_id, host,
-                                              use_slave=use_slave)
+                                              use_slave=use_slave,
+                                              columns_to_join=columns_to_join)
 
 
 def instance_get_all_by_host(context, host,

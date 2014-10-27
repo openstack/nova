@@ -2145,14 +2145,22 @@ def process_sort_params(sort_keys, sort_dirs,
 @require_context
 def instance_get_active_by_window_joined(context, begin, end=None,
                                          project_id=None, host=None,
-                                         use_slave=False):
+                                         use_slave=False,
+                                         columns_to_join=None):
     """Return instances and joins that were active during window."""
     session = get_session(use_slave=use_slave)
     query = session.query(models.Instance)
 
-    query = query.options(joinedload('info_cache')).\
-                  options(joinedload('security_groups')).\
-                  filter(or_(models.Instance.terminated_at == null(),
+    if columns_to_join is None:
+        columns_to_join = ['info_cache', 'security_groups']
+        manual_joins = ['metadata', 'system_metadata']
+    else:
+        manual_joins, columns_to_join = _manual_join_columns(columns_to_join)
+
+    for column in columns_to_join:
+        query = query.options(joinedload(column))
+
+    query = query.filter(or_(models.Instance.terminated_at == null(),
                              models.Instance.terminated_at > begin))
     if end:
         query = query.filter(models.Instance.launched_at < end)
@@ -2161,7 +2169,7 @@ def instance_get_active_by_window_joined(context, begin, end=None,
     if host:
         query = query.filter_by(host=host)
 
-    return _instances_fill_metadata(context, query.all())
+    return _instances_fill_metadata(context, query.all(), manual_joins)
 
 
 def _instance_get_all_query(context, project_only=False,
