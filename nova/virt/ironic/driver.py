@@ -291,13 +291,13 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         # Associate the node with an instance
         patch.append({'path': '/instance_uuid', 'op': 'add',
-                      'value': instance['uuid']})
+                      'value': instance.uuid})
         try:
             ironicclient.call('node.update', node.uuid, patch)
         except ironic.exc.BadRequest:
             msg = (_("Failed to add deploy parameters on node %(node)s "
                      "when provisioning the instance %(instance)s")
-                   % {'node': node.uuid, 'instance': instance['uuid']})
+                   % {'node': node.uuid, 'instance': instance.uuid})
             LOG.error(msg)
             raise exception.InstanceDeployFailure(msg)
 

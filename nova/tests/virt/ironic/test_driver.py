@@ -638,11 +638,11 @@ class IronicDriverTestCase(test.NoDBTestCase):
         expected_patch = [{'path': '/instance_info/image_source', 'op': 'add',
                            'value': image_meta['id']},
                           {'path': '/instance_info/root_gb', 'op': 'add',
-                           'value': str(instance['root_gb'])},
+                           'value': str(instance.root_gb)},
                           {'path': '/instance_info/swap_mb', 'op': 'add',
                            'value': str(flavor['swap'])},
                           {'path': '/instance_uuid', 'op': 'add',
-                           'value': instance['uuid']}]
+                           'value': instance.uuid}]
         mock_update.assert_called_once_with(node.uuid, expected_patch)
 
     @mock.patch.object(FAKE_CLIENT.node, 'update')
