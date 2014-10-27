@@ -16,19 +16,15 @@ Tests For Scheduler Host Filters.
 """
 
 from oslo.config import cfg
-from oslo.serialization import jsonutils
 
 from nova import context
 from nova import db
 from nova import objects
-from nova.objects import base as obj_base
 from nova.pci import stats as pci_stats
 from nova.scheduler import filters
 from nova import servicegroup
 from nova import test
-from nova.tests import fake_instance
 from nova.tests.scheduler import fakes
-from nova.virt import hardware
 
 CONF = cfg.CONF
 
@@ -765,131 +761,3 @@ class HostFiltersTestCase(test.NoDBTestCase):
             hosts=['host1'],
             metadata={'max_instances_per_host': 'XXX'})
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
-
-    def test_numa_topology_filter_pass(self):
-        instance_topology = hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCell(0, set([1]), 512),
-                   hardware.VirtNUMATopologyCell(1, set([3]), 512)])
-        instance = fake_instance.fake_instance_obj(self.context)
-        instance.numa_topology = (
-                objects.InstanceNUMATopology.obj_from_topology(
-                    instance_topology))
-        filter_properties = {
-            'request_spec': {
-                'instance_properties': jsonutils.to_primitive(
-                    obj_base.obj_to_primitive(instance))}}
-        host = fakes.FakeHostState('host1', 'node1',
-                                   {'numa_topology': fakes.NUMA_TOPOLOGY})
-        filt_cls = self.class_map['NUMATopologyFilter']()
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-
-    def test_numa_topology_filter_numa_instance_no_numa_host_fail(self):
-        instance_topology = hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCell(0, set([1]), 512),
-                   hardware.VirtNUMATopologyCell(1, set([3]), 512)])
-        instance = fake_instance.fake_instance_obj(self.context)
-        instance.numa_topology = (
-                objects.InstanceNUMATopology.obj_from_topology(
-                    instance_topology))
-
-        filter_properties = {
-            'request_spec': {
-                'instance_properties': jsonutils.to_primitive(
-                    obj_base.obj_to_primitive(instance))}}
-        host = fakes.FakeHostState('host1', 'node1', {})
-        filt_cls = self.class_map['NUMATopologyFilter']()
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
-
-    def test_numa_topology_filter_numa_host_no_numa_instance_pass(self):
-        instance = fake_instance.fake_instance_obj(self.context)
-        instance.numa_topology = None
-        filter_properties = {
-            'request_spec': {
-                'instance_properties': jsonutils.to_primitive(
-                    obj_base.obj_to_primitive(instance))}}
-        host = fakes.FakeHostState('host1', 'node1',
-                                   {'numa_topology': fakes.NUMA_TOPOLOGY})
-        filt_cls = self.class_map['NUMATopologyFilter']()
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-
-    def test_numa_topology_filter_fail_fit(self):
-        instance_topology = hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCell(0, set([1]), 512),
-                   hardware.VirtNUMATopologyCell(1, set([2]), 512),
-                   hardware.VirtNUMATopologyCell(2, set([3]), 512)])
-        instance = fake_instance.fake_instance_obj(self.context)
-        instance.numa_topology = (
-                objects.InstanceNUMATopology.obj_from_topology(
-                    instance_topology))
-        filter_properties = {
-            'request_spec': {
-                'instance_properties': jsonutils.to_primitive(
-                    obj_base.obj_to_primitive(instance))}}
-        host = fakes.FakeHostState('host1', 'node1',
-                                   {'numa_topology': fakes.NUMA_TOPOLOGY})
-        filt_cls = self.class_map['NUMATopologyFilter']()
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
-
-    def test_numa_topology_filter_fail_memory(self):
-        self.flags(ram_allocation_ratio=1)
-
-        instance_topology = hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCell(0, set([1]), 1024),
-                   hardware.VirtNUMATopologyCell(1, set([3]), 512)])
-        instance = fake_instance.fake_instance_obj(self.context)
-        instance.numa_topology = (
-                objects.InstanceNUMATopology.obj_from_topology(
-                    instance_topology))
-        filter_properties = {
-            'request_spec': {
-                'instance_properties': jsonutils.to_primitive(
-                    obj_base.obj_to_primitive(instance))}}
-        host = fakes.FakeHostState('host1', 'node1',
-                                   {'numa_topology': fakes.NUMA_TOPOLOGY})
-        filt_cls = self.class_map['NUMATopologyFilter']()
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
-
-    def test_numa_topology_filter_fail_cpu(self):
-        self.flags(cpu_allocation_ratio=1)
-
-        instance_topology = hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCell(0, set([1]), 512),
-                   hardware.VirtNUMATopologyCell(1, set([3, 4, 5]), 512)])
-        instance = fake_instance.fake_instance_obj(self.context)
-        instance.numa_topology = (
-                objects.InstanceNUMATopology.obj_from_topology(
-                    instance_topology))
-        filter_properties = {
-            'request_spec': {
-                'instance_properties': jsonutils.to_primitive(
-                    obj_base.obj_to_primitive(instance))}}
-        host = fakes.FakeHostState('host1', 'node1',
-                                   {'numa_topology': fakes.NUMA_TOPOLOGY})
-        filt_cls = self.class_map['NUMATopologyFilter']()
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
-
-    def test_numa_topology_filter_pass_set_limit(self):
-        self.flags(cpu_allocation_ratio=21)
-        self.flags(ram_allocation_ratio=1.3)
-
-        instance_topology = hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCell(0, set([1]), 512),
-                   hardware.VirtNUMATopologyCell(1, set([3]), 512)])
-        instance = fake_instance.fake_instance_obj(self.context)
-        instance.numa_topology = (
-                objects.InstanceNUMATopology.obj_from_topology(
-                    instance_topology))
-        filter_properties = {
-            'request_spec': {
-                'instance_properties': jsonutils.to_primitive(
-                    obj_base.obj_to_primitive(instance))}}
-        host = fakes.FakeHostState('host1', 'node1',
-                                   {'numa_topology': fakes.NUMA_TOPOLOGY})
-        filt_cls = self.class_map['NUMATopologyFilter']()
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-        limits_topology = hardware.VirtNUMALimitTopology.from_json(
-                host.limits['numa_topology'])
-        self.assertEqual(limits_topology.cells[0].cpu_limit, 42)
-        self.assertEqual(limits_topology.cells[1].cpu_limit, 42)
-        self.assertEqual(limits_topology.cells[0].memory_limit, 665)
-        self.assertEqual(limits_topology.cells[1].memory_limit, 665)
