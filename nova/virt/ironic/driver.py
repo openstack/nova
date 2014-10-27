@@ -941,7 +941,7 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         """
         ironicclient = client_wrapper.IronicClientWrapper()
-        node = ironicclient.call("node.get", instance['node'])
+        node = ironicclient.call("node.get", instance.node)
         self._plug_vifs(node, instance, network_info)
 
     def unplug_vifs(self, instance, network_info):
