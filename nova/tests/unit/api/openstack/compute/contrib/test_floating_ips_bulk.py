@@ -51,11 +51,11 @@ class FloatingIPBulkV21(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_create_ips(self):
-        ip_range = '192.168.1.0/24'
+        ip_range = '192.168.1.0/28'
         self._setup_floating_ips(ip_range)
 
     def test_create_ips_pool(self):
-        ip_range = '10.0.1.0/20'
+        ip_range = '10.0.1.0/29'
         pool = 'a new pool'
         body = {'floating_ips_bulk_create':
                 {'ip_range': ip_range,
@@ -92,7 +92,7 @@ class FloatingIPBulkV21(test.TestCase):
                           self.controller.show, req, 'host')
 
     def test_delete_ips(self):
-        ip_range = '192.168.1.0/20'
+        ip_range = '192.168.1.0/29'
         self._setup_floating_ips(ip_range)
 
         body = {'ip_range': ip_range}
@@ -109,10 +109,10 @@ class FloatingIPBulkV21(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_create_duplicate_fail(self):
-        ip_range = '192.168.1.0/20'
+        ip_range = '192.168.1.0/30'
         self._setup_floating_ips(ip_range)
 
-        ip_range = '192.168.1.0/28'
+        ip_range = '192.168.1.0/29'
         body = {'floating_ips_bulk_create': {'ip_range': ip_range}}
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
