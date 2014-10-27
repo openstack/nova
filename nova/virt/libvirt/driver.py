@@ -4768,8 +4768,8 @@ class LibvirtDriver(driver.ComputeDriver):
         device = {
             "dev_id": cfgdev.name,
             "address": address,
-            "product_id": cfgdev.pci_capability.product_id[2:6],
-            "vendor_id": cfgdev.pci_capability.vendor_id[2:6],
+            "product_id": "%04x" % cfgdev.pci_capability.product_id,
+            "vendor_id": "%04x" % cfgdev.pci_capability.vendor_id,
             }
 
         # requirement by DataBase Model

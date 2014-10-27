@@ -1839,7 +1839,7 @@ class LibvirtConfigNodeDevicePciCapTest(LibvirtConfigBaseTest):
               <bus>10</bus>
               <slot>1</slot>
               <function>5</function>
-              <product id="0x8086-3">Intel 10 Gigabit Ethernet</product>
+              <product id="0x10bd">Intel 10 Gigabit Ethernet</product>
               <vendor id="0x8086">Intel Inc.</vendor>
               <capability type="virt_functions">
                <address domain="0000" bus="0x0a" slot="0x1" function="0x1"/>
@@ -1854,9 +1854,9 @@ class LibvirtConfigNodeDevicePciCapTest(LibvirtConfigBaseTest):
         self.assertEqual(obj.slot, 1)
         self.assertEqual(obj.function, 5)
         self.assertEqual(obj.product, "Intel 10 Gigabit Ethernet")
-        self.assertEqual(obj.product_id, '0x8086-3')
+        self.assertEqual(obj.product_id, 0x10bd)
         self.assertEqual(obj.vendor, "Intel Inc.")
-        self.assertEqual(obj.vendor_id, "0x8086")
+        self.assertEqual(obj.vendor_id, 0x8086)
         self.assertIsInstance(obj.fun_capability[0],
                               config.LibvirtConfigNodeDevicePciSubFunctionCap)
 
@@ -1872,7 +1872,7 @@ class LibvirtConfigNodeDevicePciCapTest(LibvirtConfigBaseTest):
               <bus>10</bus>
               <slot>1</slot>
               <function>5</function>
-              <product id="0x8086-3">Intel 10 Gigabit Ethernet</product>
+              <product id="0x10bd">Intel 10 Gigabit Ethernet</product>
               <vendor id="0x8086">Intel Inc.</vendor>
               <capability type="virt_functions">
                <address domain="0000" bus="0x0a" slot="0x1" function="0x1"/>
@@ -1890,9 +1890,9 @@ class LibvirtConfigNodeDevicePciCapTest(LibvirtConfigBaseTest):
         self.assertEqual(obj.slot, 1)
         self.assertEqual(obj.function, 5)
         self.assertEqual(obj.product, "Intel 10 Gigabit Ethernet")
-        self.assertEqual(obj.product_id, '0x8086-3')
+        self.assertEqual(obj.product_id, 0x10bd)
         self.assertEqual(obj.vendor, "Intel Inc.")
-        self.assertEqual(obj.vendor_id, "0x8086")
+        self.assertEqual(obj.vendor_id, 0x8086)
         self.assertIsInstance(obj.fun_capability[0],
                               config.LibvirtConfigNodeDevicePciSubFunctionCap)
 
