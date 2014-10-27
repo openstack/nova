@@ -1514,6 +1514,25 @@ class LibvirtConfigGuestCPUTuneVCPUPin(LibvirtConfigObject):
         return root
 
 
+class LibvirtConfigGuestCPUTuneEmulatorPin(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestCPUTuneEmulatorPin, self).__init__(
+            root_name="emulatorpin",
+            **kwargs)
+
+        self.cpuset = None
+
+    def format_dom(self):
+        root = super(LibvirtConfigGuestCPUTuneEmulatorPin, self).format_dom()
+
+        if self.cpuset is not None:
+            root.set("cpuset",
+                     hardware.format_cpu_spec(self.cpuset))
+
+        return root
+
+
 class LibvirtConfigGuestCPUTune(LibvirtConfigObject):
 
     def __init__(self, **kwargs):
@@ -1523,6 +1542,7 @@ class LibvirtConfigGuestCPUTune(LibvirtConfigObject):
         self.quota = None
         self.period = None
         self.vcpupin = []
+        self.emulatorpin = None
 
     def format_dom(self):
         root = super(LibvirtConfigGuestCPUTune, self).format_dom()
@@ -1534,6 +1554,8 @@ class LibvirtConfigGuestCPUTune(LibvirtConfigObject):
         if self.period is not None:
             root.append(self._text_node("period", str(self.period)))
 
+        if self.emulatorpin is not None:
+            root.append(self.emulatorpin.format_dom())
         for vcpu in self.vcpupin:
             root.append(vcpu.format_dom())
 
