@@ -162,7 +162,7 @@
     "compute_extension:v3:os-floating-ip-pools:discoverable": "",
     "compute_extension:floating_ips": "",
     "compute_extension:floating_ips_bulk": "rule:admin_api",
-    "compute_extension:v3:os-floating-ips-bulk": "rule_admin_api",
+    "compute_extension:v3:os-floating-ips-bulk": "rule:admin_api",
     "compute_extension:v3:os-floating-ips-bulk:discoverable": "",
     "compute_extension:fping": "",
     "compute_extension:fping:all_tenants": "rule:admin_api",
