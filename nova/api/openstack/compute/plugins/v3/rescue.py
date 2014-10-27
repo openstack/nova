@@ -15,7 +15,6 @@
 """The rescue mode extension."""
 
 from oslo.config import cfg
-import webob
 from webob import exc
 
 from nova.api.openstack import common
@@ -83,9 +82,7 @@ class RescueController(wsgi.Controller):
         else:
             return {}
 
-    # TODO(cyeoh): Should be responding here with 202 Accept
-    # because unrescue is an async call, but keep to 200
-    # for backwards compatibility reasons.
+    @wsgi.response(202)
     @extensions.expected_errors((404, 409, 501))
     @wsgi.action('unrescue')
     def _unrescue(self, req, id, body):
@@ -102,8 +99,6 @@ class RescueController(wsgi.Controller):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                                                                   'unrescue',
                                                                   id)
-
-        return webob.Response(status_int=202)
 
 
 class Rescue(extensions.V3APIExtensionBase):
