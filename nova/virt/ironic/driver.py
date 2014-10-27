@@ -535,15 +535,15 @@ class IronicDriver(virt_driver.ComputeDriver):
         if memory_kib == 0:
             LOG.warn(_LW("Warning, memory usage is 0 for "
                          "%(instance)s on baremetal node %(node)s."),
-                     {'instance': instance['uuid'],
-                      'node': instance['node']})
+                     {'instance': instance.uuid,
+                      'node': instance.node})
 
         num_cpu = node.properties.get('cpus', 0)
         if num_cpu == 0:
             LOG.warn(_LW("Warning, number of cpus is 0 for "
                          "%(instance)s on baremetal node %(node)s."),
-                     {'instance': instance['uuid'],
-                      'node': instance['node']})
+                     {'instance': instance.uuid,
+                      'node': instance.node})
 
         return {'state': map_power_state(node.power_state),
                 'max_mem': memory_kib,
