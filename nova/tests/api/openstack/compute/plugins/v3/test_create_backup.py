@@ -34,9 +34,9 @@ class CreateBackupTests(admin_only_action_common.CommonMixin,
 
         self.stubs.Set(create_backup, 'CreateBackupController',
                        _fake_controller)
-        self.app = fakes.wsgi_app_v3(init_only=('servers',
-                                                'os-create-backup'),
-                                     fake_auth_context=self.context)
+        self.app = fakes.wsgi_app_v21(init_only=('servers',
+                                                 'os-create-backup'),
+                                      fake_auth_context=self.context)
         self.mox.StubOutWithMock(self.compute_api, 'get')
         self.mox.StubOutWithMock(common,
                                  'check_img_metadata_properties_quota')

@@ -74,7 +74,7 @@ class MockSetAdminPassword(object):
 
 class ServerActionsControllerTest(test.TestCase):
     image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-    image_href = 'http://localhost/v3/images/%s' % image_uuid
+    image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
 
     def setUp(self):
         super(ServerActionsControllerTest, self).setUp()
@@ -99,11 +99,11 @@ class ServerActionsControllerTest(test.TestCase):
         self.controller = servers.ServersController(extension_info=ext_info)
         self.compute_api = self.controller.compute_api
         self.context = context.RequestContext('fake', 'fake')
-        self.app = fakes.wsgi_app_v3(init_only=('servers',),
-                                     fake_auth_context=self.context)
+        self.app = fakes.wsgi_app_v21(init_only=('servers',),
+                                      fake_auth_context=self.context)
 
     def _make_request(self, url, body):
-        req = webob.Request.blank('/v3' + url)
+        req = webob.Request.blank('/v2/fake' + url)
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.content_type = 'application/json'
@@ -288,14 +288,13 @@ class ServerActionsControllerTest(test.TestCase):
                 fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
         self.stubs.Set(compute_api.API, 'rebuild', rebuild)
 
-        # proper local hrefs must start with 'http://localhost/v3/'
         body = {
             'rebuild': {
                 'imageRef': self.image_uuid,
             },
         }
 
-        req = fakes.HTTPRequestV3.blank('/v3/servers/a/action')
+        req = fakes.HTTPRequestV3.blank('/v2/fake/servers/a/action')
         self.controller._action_rebuild(req, FAKE_UUID, body=body)
         self.assertEqual(info['image_href_in_call'], self.image_uuid)
 
@@ -309,14 +308,13 @@ class ServerActionsControllerTest(test.TestCase):
                 fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
         self.stubs.Set(compute_api.API, 'rebuild', rebuild)
 
-        # proper local hrefs must start with 'http://localhost/v3/'
         body = {
             'rebuild': {
                 'imageRef': self.image_href,
             },
         }
 
-        req = fakes.HTTPRequestV3.blank('/v3/servers/a/action')
+        req = fakes.HTTPRequestV3.blank('/v2/fake/servers/a/action')
         self.controller._action_rebuild(req, FAKE_UUID, body=body)
         self.assertEqual(info['image_href_in_call'], self.image_uuid)
 

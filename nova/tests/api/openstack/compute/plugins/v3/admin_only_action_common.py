@@ -31,7 +31,7 @@ class CommonMixin(object):
         self.context = nova.context.RequestContext('fake', 'fake')
 
     def _make_request(self, url, body):
-        req = webob.Request.blank('/v3' + url)
+        req = webob.Request.blank('/v2/fake' + url)
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.content_type = 'application/json'

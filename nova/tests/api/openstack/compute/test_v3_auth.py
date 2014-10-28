@@ -31,32 +31,32 @@ class TestNoAuthMiddlewareV3(test.NoDBTestCase):
         fakes.stub_out_networking(self.stubs)
 
     def test_authorize_user(self):
-        req = webob.Request.blank('/v3')
+        req = webob.Request.blank('/v2/fake')
         req.headers['X-Auth-User'] = 'user1'
         req.headers['X-Auth-Key'] = 'user1_key'
         req.headers['X-Auth-Project-Id'] = 'user1_project'
-        result = req.get_response(fakes.wsgi_app_v3(use_no_auth=True))
+        result = req.get_response(fakes.wsgi_app_v21(use_no_auth=True))
         self.assertEqual(result.status, '204 No Content')
         self.assertEqual(result.headers['X-Server-Management-Url'],
-            "http://localhost/v3")
+            "http://localhost/v2/fake")
 
     def test_authorize_user_trailing_slash(self):
         # make sure it works with trailing slash on the request
-        req = webob.Request.blank('/v3/')
+        req = webob.Request.blank('/v2/fake/')
         req.headers['X-Auth-User'] = 'user1'
         req.headers['X-Auth-Key'] = 'user1_key'
         req.headers['X-Auth-Project-Id'] = 'user1_project'
-        result = req.get_response(fakes.wsgi_app_v3(use_no_auth=True))
+        result = req.get_response(fakes.wsgi_app_v21(use_no_auth=True))
         self.assertEqual(result.status, '204 No Content')
         self.assertEqual(result.headers['X-Server-Management-Url'],
-            "http://localhost/v3")
+            "http://localhost/v2/fake")
 
     def test_auth_token_no_empty_headers(self):
-        req = webob.Request.blank('/v3')
+        req = webob.Request.blank('/v2/fake')
         req.headers['X-Auth-User'] = 'user1'
         req.headers['X-Auth-Key'] = 'user1_key'
         req.headers['X-Auth-Project-Id'] = 'user1_project'
-        result = req.get_response(fakes.wsgi_app_v3(use_no_auth=True))
+        result = req.get_response(fakes.wsgi_app_v21(use_no_auth=True))
         self.assertEqual(result.status, '204 No Content')
         self.assertNotIn('X-CDN-Management-Url', result.headers)
         self.assertNotIn('X-Storage-Url', result.headers)

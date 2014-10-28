@@ -142,13 +142,14 @@ class ExtendedVolumesTest(test.TestCase):
         self.stubs.Set(volume.cinder.API, 'get', fake_volume_get)
         self.stubs.Set(compute.api.API, 'detach_volume', fake_detach_volume)
         self.stubs.Set(compute.api.API, 'attach_volume', fake_attach_volume)
-        self.app = fakes.wsgi_app_v3(init_only=('os-extended-volumes',
-                                                'servers'))
+        self.app = fakes.wsgi_app_v21(init_only=('os-extended-volumes',
+                                                 'servers'))
         return_server = fakes.fake_instance_get()
         self.stubs.Set(db, 'instance_get_by_uuid', return_server)
 
     def _make_request(self, url, body=None):
-        req = webob.Request.blank(url)
+        base_url = '/v2/fake/servers'
+        req = webob.Request.blank(base_url + url)
         req.headers['Accept'] = self.content_type
         if body:
             req.body = jsonutils.dumps(body)
@@ -164,7 +165,7 @@ class ExtendedVolumesTest(test.TestCase):
         return jsonutils.loads(body).get('servers')
 
     def test_show(self):
-        url = '/v3/servers/%s' % UUID1
+        url = '/%s' % UUID1
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
@@ -175,7 +176,7 @@ class ExtendedVolumesTest(test.TestCase):
         self.assertEqual(exp_volumes, actual)
 
     def test_detail(self):
-        url = '/v3/servers/detail'
+        url = '/detail'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
@@ -186,108 +187,108 @@ class ExtendedVolumesTest(test.TestCase):
             self.assertEqual(exp_volumes, actual)
 
     def test_detach(self):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         res = self._make_request(url, {"detach": {"volume_id": UUID1}})
         self.assertEqual(res.status_int, 202)
 
     def test_detach_volume_from_locked_server(self):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         self.stubs.Set(compute.api.API, 'detach_volume',
                        fakes.fake_actions_to_locked_server)
         res = self._make_request(url, {"detach": {"volume_id": UUID1}})
         self.assertEqual(res.status_int, 409)
 
     def test_detach_with_non_existed_vol(self):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         self.stubs.Set(volume.cinder.API, 'get', fake_volume_get_not_found)
         res = self._make_request(url, {"detach": {"volume_id": UUID2}})
         self.assertEqual(res.status_int, 404)
 
     def test_detach_with_non_existed_instance(self):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         self.stubs.Set(compute.api.API, 'get', fake_compute_get_not_found)
         res = self._make_request(url, {"detach": {"volume_id": UUID2}})
         self.assertEqual(res.status_int, 404)
 
     def test_detach_with_invalid_vol(self):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         self.stubs.Set(compute.api.API, 'detach_volume',
                        fake_detach_volume_invalid_volume)
         res = self._make_request(url, {"detach": {"volume_id": UUID2}})
         self.assertEqual(res.status_int, 400)
 
     def test_detach_with_bad_id(self):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         res = self._make_request(url, {"detach": {"volume_id": 'xxx'}})
         self.assertEqual(res.status_int, 400)
 
     def test_detach_without_id(self):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         res = self._make_request(url, {"detach": {}})
         self.assertEqual(res.status_int, 400)
 
     def test_detach_volume_with_invalid_request(self):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         res = self._make_request(url, {"detach": None})
         self.assertEqual(res.status_int, 400)
 
     @mock.patch('nova.objects.BlockDeviceMapping.is_root',
                  new_callable=mock.PropertyMock)
     def test_detach_volume_root(self, mock_isroot):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         mock_isroot.return_value = True
         res = self._make_request(url, {"detach": {"volume_id": UUID1}})
         self.assertEqual(res.status_int, 403)
 
     def test_attach_volume(self):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         res = self._make_request(url, {"attach": {"volume_id": UUID1}})
         self.assertEqual(res.status_int, 202)
 
     def test_attach_volume_to_locked_server(self):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         self.stubs.Set(compute.api.API, 'attach_volume',
                        fakes.fake_actions_to_locked_server)
         res = self._make_request(url, {"attach": {"volume_id": UUID1}})
         self.assertEqual(res.status_int, 409)
 
     def test_attach_volume_disk_bus_and_disk_dev(self):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         self._make_request(url, {"attach": {"volume_id": UUID1,
                                             "device": "/dev/vdb",
                                             "disk_bus": "ide",
                                             "device_type": "cdrom"}})
 
     def test_attach_volume_with_bad_id(self):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         res = self._make_request(url, {"attach": {"volume_id": 'xxx'}})
         self.assertEqual(res.status_int, 400)
 
     def test_attach_volume_without_id(self):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         res = self._make_request(url, {"attach": {}})
         self.assertEqual(res.status_int, 400)
 
     def test_attach_volume_with_invalid_request(self):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         res = self._make_request(url, {"attach": None})
         self.assertEqual(res.status_int, 400)
 
     def test_attach_volume_with_non_existe_vol(self):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         self.stubs.Set(compute.api.API, 'attach_volume',
                        fake_attach_volume_not_found_vol)
         res = self._make_request(url, {"attach": {"volume_id": UUID1}})
         self.assertEqual(res.status_int, 404)
 
     def test_attach_volume_with_non_existed_instance(self):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         self.stubs.Set(compute.api.API, 'get', fake_compute_get_not_found)
         res = self._make_request(url, {"attach": {"volume_id": UUID1}})
         self.assertEqual(res.status_int, 404)
 
     def test_attach_volume_with_invalid_device_path(self):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         self.stubs.Set(compute.api.API, 'attach_volume',
                        fake_attach_volume_invalid_device_path)
         res = self._make_request(url, {"attach": {"volume_id": UUID1,
@@ -295,21 +296,21 @@ class ExtendedVolumesTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
 
     def test_attach_volume_with_instance_invalid_state(self):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         self.stubs.Set(compute.api.API, 'attach_volume',
                        fake_attach_volume_instance_invalid_state)
         res = self._make_request(url, {"attach": {"volume_id": UUID1}})
         self.assertEqual(res.status_int, 409)
 
     def test_attach_volume_with_invalid_volume(self):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         self.stubs.Set(compute.api.API, 'attach_volume',
                        fake_attach_volume_invalid_volume)
         res = self._make_request(url, {"attach": {"volume_id": UUID1}})
         self.assertEqual(res.status_int, 400)
 
     def test_attach_volume_with_invalid_request_body(self):
-        url = "/v3/servers/%s/action" % UUID1
+        url = "/%s/action" % UUID1
         self.stubs.Set(compute.api.API, 'attach_volume',
                        fake_attach_volume_invalid_volume)
         res = self._make_request(url, {"attach": None})
@@ -318,7 +319,7 @@ class ExtendedVolumesTest(test.TestCase):
     def _test_swap(self, uuid=UUID1, body=None):
         body = body or {'swap_volume_attachment': {'old_volume_id': uuid,
                                                    'new_volume_id': UUID2}}
-        req = webob.Request.blank('/v3/servers/%s/action' % UUID1)
+        req = webob.Request.blank('/v2/fake/servers/%s/action' % UUID1)
         req.method = 'PUT'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'

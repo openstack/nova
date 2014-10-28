@@ -57,21 +57,21 @@ class ServerPasswordTest(test.TestCase):
         req.headers['Accept'] = self.content_type
         req.method = method
         res = req.get_response(
-                fakes.wsgi_app_v3(init_only=('servers', 'os-server-password')))
+               fakes.wsgi_app_v21(init_only=('servers', 'os-server-password')))
         return res
 
     def _get_pass(self, body):
         return jsonutils.loads(body).get('password')
 
     def test_get_password(self):
-        url = '/v3/servers/fake/os-server-password'
+        url = '/v2/fake/servers/fake/os-server-password'
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
         self.assertEqual(self._get_pass(res.body), 'fakepass')
 
     def test_reset_password(self):
-        url = '/v3/servers/fake/os-server-password'
+        url = '/v2/fake/servers/fake/os-server-password'
         res = self._make_request(url, 'DELETE')
         self.assertEqual(res.status_int, 204)
 
