@@ -13,10 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 
+from nova.i18n import _LE
 from nova import keymgr
 from nova import test
 from nova.tests.keymgr import fake
+from nova.volume import encryptors
 
 
 class VolumeEncryptorTestCase(test.TestCase):
@@ -36,3 +39,16 @@ class VolumeEncryptorTestCase(test.TestCase):
             },
         }
         self.encryptor = self._create(self.connection_info)
+
+    @mock.patch('nova.volume.encryptors.LOG')
+    def test_error_log(self, log):
+        encryption = {'control_location': 'front-end',
+                      'provider': 'TestEncryptor'}
+        provider = 'TestEncryptor'
+        try:
+            encryptors.get_volume_encryptor(self.connection_info, **encryption)
+        except Exception as e:
+            log.error.assert_called_once_with(_LE("Error instantiating "
+                                                  "%(provider)s: "
+                                                  "%(exception)s"),
+                      {'provider': provider, 'exception': e})

@@ -41,7 +41,7 @@ def get_volume_encryptor(connection_info, **kwargs):
                                                   **kwargs)
         except Exception as e:
             LOG.error(_LE("Error instantiating %(provider)s: %(exception)s"),
-                      provider=provider, exception=e)
+                      {'provider': provider, 'exception': e})
             raise
 
     return encryptor
