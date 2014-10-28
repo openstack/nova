@@ -180,6 +180,10 @@ class VMwareVCDriver(driver.ComputeDriver):
         # Register the OpenStack extension
         self._register_openstack_extension()
 
+    @property
+    def need_legacy_block_device_info(self):
+        return False
+
     def _update_pbm_location(self):
         if CONF.vmware.pbm_wsdl_location:
             pbm_wsdl_loc = CONF.vmware.pbm_wsdl_location
