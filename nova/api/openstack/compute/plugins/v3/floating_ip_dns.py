@@ -16,8 +16,10 @@ import urllib
 
 import webob
 
+from nova.api.openstack.compute.schemas.v3 import floating_ip_dns
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import exception
 from nova.i18n import _
 from nova import network
@@ -105,22 +107,18 @@ class FloatingIPDNSDomainController(object):
         return _translate_domain_entries_view(domainlist)
 
     @extensions.expected_errors((422, 501))
+    @validation.schema(floating_ip_dns.domain_entry_update)
     def update(self, req, id, body):
         """Add or modify domain entry."""
         context = req.environ['nova.context']
         authorize(context)
         fqdomain = _unquote_domain(id)
-        try:
-            entry = body['domain_entry']
-            scope = entry['scope']
-        except (TypeError, KeyError):
-            raise webob.exc.HTTPUnprocessableEntity()
+        entry = body['domain_entry']
+        scope = entry['scope']
         project = entry.get('project', None)
         av_zone = entry.get('availability_zone', None)
-        if (scope not in ('private', 'public') or
-            project and av_zone or
-            scope == 'private' and project or
-                scope == 'public' and av_zone):
+        if (scope == 'private' and project or
+            scope == 'public' and av_zone):
             raise webob.exc.HTTPUnprocessableEntity()
         try:
             if scope == 'private':
@@ -201,19 +199,17 @@ class FloatingIPDNSEntryController(object):
         entry = _create_dns_entry(entries[0], id, domain)
         return _translate_dns_entry_view(entry)
 
-    @extensions.expected_errors((422, 501))
+    @extensions.expected_errors(501)
+    @validation.schema(floating_ip_dns.dns_entry_update)
     def update(self, req, domain_id, id, body):
         """Add or modify dns entry."""
         context = req.environ['nova.context']
         authorize(context)
         domain = _unquote_domain(domain_id)
         name = id
-        try:
-            entry = body['dns_entry']
-            address = entry['ip']
-            dns_type = entry['dns_type']
-        except (TypeError, KeyError):
-            raise webob.exc.HTTPUnprocessableEntity()
+        entry = body['dns_entry']
+        address = entry['ip']
+        dns_type = entry['dns_type']
 
         try:
             entries = self.network_api.get_dns_entries_by_name(context,
