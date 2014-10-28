@@ -556,12 +556,6 @@ class BlockDeviceMapping(BASE, NovaBase):
         Index('block_device_mapping_instance_uuid_volume_id_idx',
               'instance_uuid', 'volume_id'),
         Index('block_device_mapping_instance_uuid_idx', 'instance_uuid'),
-        # TODO(sshturm) Should be dropped. `virtual_name` was dropped
-        # in 186 migration,
-        # Duplicates `block_device_mapping_instance_uuid_device_name_idx`
-        # index.
-        Index("block_device_mapping_instance_uuid_virtual_name"
-              "_device_name_idx", 'instance_uuid', 'device_name'),
     )
     id = Column(Integer, primary_key=True, autoincrement=True)
 
