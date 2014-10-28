@@ -351,7 +351,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_call.return_value = nodes
 
         response = self.driver.list_instances()
-        mock_call.assert_called_with("node.list", associated=True)
+        mock_call.assert_called_with("node.list", associated=True, limit=0)
         expected_calls = [mock.call(mock.ANY, instances[0].uuid),
                           mock.call(mock.ANY, instances[1].uuid)]
         mock_inst_by_uuid.assert_has_calls(expected_calls)
@@ -368,7 +368,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         mock_call.return_value = nodes
         uuids = self.driver.list_instance_uuids()
-        mock_call.assert_called_with('node.list', associated=True)
+        mock_call.assert_called_with('node.list', associated=True, limit=0)
         expected = [n.instance_uuid for n in nodes]
         self.assertEqual(sorted(expected), sorted(uuids))
 
@@ -381,7 +381,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_list.return_value = []
         self.assertTrue(self.driver.node_is_available(node.uuid))
         mock_get.assert_called_with(node.uuid)
-        mock_list.assert_called_with(detail=True)
+        mock_list.assert_called_with(detail=True, limit=0)
 
         mock_get.side_effect = ironic_exception.NotFound
         self.assertFalse(self.driver.node_is_available(node.uuid))
@@ -393,7 +393,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_get.return_value = node
         mock_list.return_value = [node]
         self.assertTrue(self.driver.node_is_available(node.uuid))
-        mock_list.assert_called_with(detail=True)
+        mock_list.assert_called_with(detail=True, limit=0)
         self.assertEqual(0, mock_get.call_count)
 
     @mock.patch.object(FAKE_CLIENT.node, 'list')
