@@ -759,7 +759,7 @@ class ComputeDriver(object):
         back to the source host to check the results.
 
         :param context: security context
-        :param instance: nova.db.sqlalchemy.models.Instance
+        :param instance: nova.objects.instance.Instance object
         """
         raise NotImplementedError()
 

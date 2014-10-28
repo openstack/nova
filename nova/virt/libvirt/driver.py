@@ -4970,7 +4970,7 @@ class LibvirtDriver(driver.ComputeDriver):
         back to the source host to check the results.
 
         :param context: security context
-        :param instance: nova.db.sqlalchemy.models.Instance
+        :param instance: nova.objects.instance.Instance object
         :returns
             :tempfile: A dict containing the tempfile info on the destination
                        host
