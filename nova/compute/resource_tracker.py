@@ -748,11 +748,12 @@ class ResourceTracker(object):
 
         self.stats.update_stats_for_instance(instance)
 
-        if self.pci_tracker:
-            self.pci_tracker.update_pci_for_instance(context, instance)
-
         # if it's a new or deleted instance:
         if is_new_instance or is_deleted_instance:
+            if self.pci_tracker:
+                self.pci_tracker.update_pci_for_instance(context,
+                                                         instance,
+                                                         sign=sign)
             # new instance, update compute node resource usage:
             self._update_usage(instance, sign=sign)
 

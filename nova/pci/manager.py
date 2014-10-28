@@ -18,8 +18,6 @@ import collections
 
 from oslo_log import log as logging
 
-from nova.compute import task_states
-from nova.compute import vm_states
 from nova import exception
 from nova.i18n import _LW
 from nova import objects
@@ -167,7 +165,8 @@ class PciDevTracker(object):
         devs = self.stats.consume_requests(pci_requests.requests,
                                            instance_cells)
         if not devs:
-            raise exception.PciDeviceRequestFailed(pci_requests)
+            return None
+
         for dev in devs:
             device.claim(dev, instance)
         if instance_numa_topology and any(
@@ -180,6 +179,22 @@ class PciDevTracker(object):
     def _allocate_instance(self, instance, devs):
         for dev in devs:
             device.allocate(dev, instance)
+
+    def allocate_instance(self, instance):
+        devs = self.claims.pop(instance['uuid'], [])
+        self._allocate_instance(instance, devs)
+        if devs:
+            self.allocations[instance['uuid']] += devs
+
+    def claim_instance(self, context, instance):
+        if not self.pci_devs:
+            return
+
+        devs = self._claim_instance(context, instance)
+        if devs:
+            self.claims[instance['uuid']] = devs
+            return devs
+        return None
 
     def _free_device(self, dev, instance=None):
         device.free(dev, instance)
@@ -199,36 +214,22 @@ class PciDevTracker(object):
                     dev.instance_uuid == instance['uuid']):
                 self._free_device(dev)
 
-    def update_pci_for_instance(self, context, instance):
-        """Update instance's pci usage information.
+    def free_instance(self, context, instance):
+        if self.allocations.pop(instance['uuid'], None):
+            self._free_instance(instance)
+        elif self.claims.pop(instance['uuid'], None):
+            self._free_instance(instance)
 
-        The caller should hold the COMPUTE_RESOURCE_SEMAPHORE lock
+    def update_pci_for_instance(self, context, instance, sign):
+        """Update PCI usage information if devices are de/allocated.
         """
+        if not self.pci_devs:
+            return
 
-        uuid = instance['uuid']
-        vm_state = instance['vm_state']
-        task_state = instance['task_state']
-
-        if vm_state == vm_states.DELETED:
-            if self.allocations.pop(uuid, None):
-                self._free_instance(instance)
-            elif self.claims.pop(uuid, None):
-                self._free_instance(instance)
-        elif task_state == task_states.RESIZE_MIGRATED:
-            devs = self.allocations.pop(uuid, None)
-            if devs:
-                self._free_instance(instance)
-        elif task_state == task_states.RESIZE_FINISH:
-            devs = self.claims.pop(uuid, None)
-            if devs:
-                self._allocate_instance(instance, devs)
-                self.allocations[uuid] = devs
-        elif (uuid not in self.allocations and
-               uuid not in self.claims):
-            devs = self._claim_instance(context, instance)
-            if devs:
-                self._allocate_instance(instance, devs)
-                self.allocations[uuid] = devs
+        if sign == -1:
+            self.free_instance(context, instance)
+        if sign == 1:
+            self.allocate_instance(instance)
 
     def update_pci_for_migration(self, context, instance, sign=1):
         """Update instance's pci usage information when it is migrated.

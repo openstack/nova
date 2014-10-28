@@ -159,8 +159,7 @@ class PciDeviceStats(object):
                           " on the compute node semaphore"))
                 for d in range(len(alloc_devices)):
                     self.add_device(alloc_devices.pop())
-                raise exception.PciDeviceRequestFailed(requests=pci_requests)
-
+                return None
             for pool in pools:
                 if pool['count'] >= count:
                     num_alloc = count
