@@ -19,6 +19,7 @@
 
 import copy
 
+from oslo.concurrency import processutils
 from oslo.config import cfg
 
 from nova import exception
@@ -27,7 +28,6 @@ from nova.i18n import _LE
 from nova.network import linux_net
 from nova.network import model as network_model
 from nova.openstack.common import log as logging
-from nova.openstack.common import processutils
 from nova import utils
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import designer

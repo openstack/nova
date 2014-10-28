@@ -28,6 +28,7 @@ from xml.dom import minidom
 from xml.parsers import expat
 
 from eventlet import greenthread
+from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.utils import excutils
 from oslo.utils import importutils
@@ -46,7 +47,6 @@ from nova import exception
 from nova.i18n import _, _LE, _LI
 from nova.network import model as network_model
 from nova.openstack.common import log as logging
-from nova.openstack.common import processutils
 from nova.openstack.common import versionutils
 from nova import utils
 from nova.virt import configdrive

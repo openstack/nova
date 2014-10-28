@@ -30,6 +30,7 @@ import tempfile
 if os.name != 'nt':
     import crypt
 
+from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.serialization import jsonutils
 
@@ -38,7 +39,6 @@ from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
 from nova.openstack.common import log as logging
-from nova.openstack.common import processutils
 from nova import utils
 from nova.virt.disk.mount import api as mount
 from nova.virt.disk.vfs import api as vfs

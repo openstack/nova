@@ -16,12 +16,12 @@
 
 import sys
 
+from oslo.concurrency import processutils
 from oslo.config import cfg
 
 from nova import config
 from nova import objects
 from nova.openstack.common import log as logging
-from nova.openstack.common import processutils
 from nova.openstack.common.report import guru_meditation_report as gmr
 from nova import service
 from nova import utils

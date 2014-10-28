@@ -22,6 +22,7 @@ import sys
 
 import mock
 import mox
+from oslo.concurrency import processutils
 from oslo.config import cfg
 import testtools
 
@@ -29,7 +30,6 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import manager
-from nova.openstack.common import processutils
 from nova.openstack.common import service as _service
 from nova import rpc
 from nova import service

@@ -21,12 +21,12 @@ from xml.dom import minidom
 from lxml import etree
 import mock
 import mox
+from oslo.concurrency import lockutils
 
 from nova.compute import utils as compute_utils
 from nova import exception
 from nova.network import linux_net
 from nova import objects
-from nova.openstack.common import lockutils
 from nova import test
 from nova.tests import fake_network
 from nova.tests.virt.libvirt import fakelibvirt

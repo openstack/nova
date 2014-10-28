@@ -20,6 +20,7 @@ import hashlib
 import os
 import time
 
+from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.serialization import jsonutils
 from oslo.utils import importutils
@@ -27,7 +28,6 @@ from oslo.utils import importutils
 from nova import conductor
 from nova import db
 from nova.openstack.common import log as logging
-from nova.openstack.common import processutils
 from nova import test
 from nova.tests import fake_instance
 from nova import utils

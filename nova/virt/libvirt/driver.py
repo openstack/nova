@@ -48,6 +48,7 @@ from eventlet import patcher
 from eventlet import tpool
 from eventlet import util as eventlet_util
 from lxml import etree
+from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.serialization import jsonutils
 from oslo.utils import excutils
@@ -80,7 +81,6 @@ from nova import objects
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
-from nova.openstack.common import processutils
 from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
 from nova.pci import whitelist as pci_whitelist
