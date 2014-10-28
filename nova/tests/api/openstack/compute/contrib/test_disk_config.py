@@ -131,6 +131,11 @@ class DiskConfigTestCaseV21(test.TestCase):
         self.app = compute.APIRouterV21(init_only=('servers', 'images',
                                                    'os-disk-config'))
 
+    def _get_expected_msg_for_invalid_disk_config(self):
+        return ('{{"badRequest": {{"message": "Invalid input for'
+                ' field/attribute {0}. Value: {1}. u\'{1}\' is'
+                ' not one of [\'AUTO\', \'MANUAL\']", "code": 400}}}}')
+
     def _setup_fake_image_service(self):
         self.image_service = nova.tests.image.fake.stub_out_image_service(
                 self.stubs)
@@ -341,10 +346,9 @@ class DiskConfigTestCaseV21(test.TestCase):
         req.body = jsonutils.dumps(body)
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
-        expected_msg = ('{"badRequest": {"message": "%s must be either'
-                        ' \'MANUAL\' or \'AUTO\'.", "code": 400}}' %
-                        API_DISK_CONFIG)
-        self.assertEqual(res.body, expected_msg)
+        expected_msg = self._get_expected_msg_for_invalid_disk_config()
+        self.assertEqual(expected_msg.format(API_DISK_CONFIG, 'server_test'),
+                         res.body)
 
     def _test_rebuild_server_disk_config(self, uuid, disk_config):
         req = fakes.HTTPRequest.blank(
@@ -439,3 +443,7 @@ class DiskConfigTestCaseV2(DiskConfigTestCaseV21):
         osapi_compute_ext_list=['Disk_config'])
 
         self.app = compute.APIRouter(init_only=('servers', 'images'))
+
+    def _get_expected_msg_for_invalid_disk_config(self):
+        return ('{{"badRequest": {{"message": "{0} must be either'
+                ' \'MANUAL\' or \'AUTO\'.", "code": 400}}}}')

@@ -36,7 +36,8 @@ from nova.api.openstack.compute.plugins.v3 import disk_config
 from nova.api.openstack.compute.plugins.v3 import ips
 from nova.api.openstack.compute.plugins.v3 import keypairs
 from nova.api.openstack.compute.plugins.v3 import servers
-from nova.api.openstack.compute.schemas.v3 import keypairs as keypairs_schema
+from nova.api.openstack.compute.schemas.v3 import disk_config as \
+    disk_config_schema
 from nova.api.openstack.compute.schemas.v3 import servers as servers_schema
 from nova.api.openstack.compute import views
 from nova.api.openstack import extensions
@@ -3298,7 +3299,7 @@ class TestServersExtensionPoint(test.NoDBTestCase):
 class TestServersExtensionSchema(test.NoDBTestCase):
     def setUp(self):
         super(TestServersExtensionSchema, self).setUp()
-        CONF.set_override('extensions_whitelist', ['keypairs'], 'osapi_v3')
+        CONF.set_override('extensions_whitelist', ['disk_config'], 'osapi_v3')
 
     def _test_load_extension_schema(self, name):
         setattr(FakeExt, 'get_server_%s_schema' % name,
@@ -3315,7 +3316,7 @@ class TestServersExtensionSchema(test.NoDBTestCase):
         # because of the above extensions_whitelist.
         expected_schema = copy.deepcopy(servers_schema.base_create)
         expected_schema['properties']['server']['properties'].update(
-            keypairs_schema.server_create)
+            disk_config_schema.server_create)
 
         actual_schema = self._test_load_extension_schema('create')
         self.assertEqual(expected_schema, actual_schema)
@@ -3324,6 +3325,8 @@ class TestServersExtensionSchema(test.NoDBTestCase):
         # keypair extension does not contain update_server() and
         # here checks that any extension is not added to the schema.
         expected_schema = copy.deepcopy(servers_schema.base_update)
+        expected_schema['properties']['server']['properties'].update(
+            disk_config_schema.server_create)
 
         actual_schema = self._test_load_extension_schema('update')
         self.assertEqual(expected_schema, actual_schema)
@@ -3332,6 +3335,8 @@ class TestServersExtensionSchema(test.NoDBTestCase):
         # keypair extension does not contain rebuild_server() and
         # here checks that any extension is not added to the schema.
         expected_schema = copy.deepcopy(servers_schema.base_rebuild)
+        expected_schema['properties']['rebuild']['properties'].update(
+            disk_config_schema.server_create)
 
         actual_schema = self._test_load_extension_schema('rebuild')
         self.assertEqual(expected_schema, actual_schema)
@@ -3340,6 +3345,8 @@ class TestServersExtensionSchema(test.NoDBTestCase):
         # keypair extension does not contain resize_server() and
         # here checks that any extension is not added to the schema.
         expected_schema = copy.deepcopy(servers_schema.base_resize)
+        expected_schema['properties']['resize']['properties'].update(
+            disk_config_schema.server_create)
 
         actual_schema = self._test_load_extension_schema('resize')
         self.assertEqual(expected_schema, actual_schema)
