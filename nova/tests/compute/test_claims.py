@@ -15,12 +15,10 @@
 
 """Tests for resource tracker claims."""
 
-import re
 import uuid
 
 import mock
 from oslo.serialization import jsonutils
-import six
 
 from nova.compute import claims
 from nova import db
@@ -132,14 +130,6 @@ class ClaimTestCase(test.NoDBTestCase):
             resources.update(values)
         return resources
 
-    # TODO(lxsli): Remove once Py2.6 is deprecated
-    def assertRaisesRegexp(self, re_obj, e, fn, *a, **kw):
-        try:
-            fn(*a, **kw)
-            self.fail("Expected exception not raised")
-        except e as ee:
-            self.assertTrue(re.search(re_obj, six.text_type(ee)))
-
     def test_memory_unlimited(self, mock_get):
         self._claim(memory_mb=99999999)
 
@@ -178,14 +168,16 @@ class ClaimTestCase(test.NoDBTestCase):
 
     def test_disk_insufficient(self, mock_get):
         limits = {'disk_gb': 45}
-        self.assertRaisesRegexp(re.compile("disk", re.IGNORECASE),
+        self.assertRaisesRegexp(
                 exception.ComputeResourcesUnavailable,
+                "disk",
                 self._claim, limits=limits, root_gb=10, ephemeral_gb=40)
 
     def test_disk_and_memory_insufficient(self, mock_get):
         limits = {'disk_gb': 45, 'memory_mb': 8192}
-        self.assertRaisesRegexp(re.compile("memory.*disk", re.IGNORECASE),
+        self.assertRaisesRegexp(
                 exception.ComputeResourcesUnavailable,
+                "memory.*disk",
                 self._claim, limits=limits, root_gb=10, ephemeral_gb=40,
                 memory_mb=16384)
 
