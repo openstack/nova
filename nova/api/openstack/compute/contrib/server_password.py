@@ -15,14 +15,12 @@
 
 """The server password extension."""
 
-import webob
-
 from nova.api.metadata import password
+from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
-from nova import exception
 
 
 authorize = extensions.extension_authorizer('compute', 'server_password')
@@ -40,17 +38,12 @@ class ServerPasswordController(object):
     def __init__(self):
         self.compute_api = compute.API()
 
-    def _get_instance(self, context, server_id):
-        try:
-            return self.compute_api.get(context, server_id, want_objects=True)
-        except exception.InstanceNotFound as exp:
-            raise webob.exc.HTTPNotFound(explanation=exp.format_message())
-
     @wsgi.serializers(xml=ServerPasswordTemplate)
     def index(self, req, server_id):
         context = req.environ['nova.context']
         authorize(context)
-        instance = self._get_instance(context, server_id)
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       want_objects=True)
 
         passw = password.extract_password(instance)
         return {'password': passw or ''}
@@ -59,7 +52,8 @@ class ServerPasswordController(object):
     def delete(self, req, server_id):
         context = req.environ['nova.context']
         authorize(context)
-        instance = self._get_instance(context, server_id)
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       want_objects=True)
         meta = password.convert_password(context, None)
         instance.system_metadata.update(meta)
         instance.save()

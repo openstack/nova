@@ -86,7 +86,7 @@ def get_instance_by_floating_ip_addr(self, context, address):
     snagiibfa = self.network_api.get_instance_id_by_floating_address
     instance_id = snagiibfa(context, address)
     if instance_id:
-        return self.compute_api.get(context, instance_id)
+        return common.get_instance(self.compute_api, context, instance_id)
 
 
 def disassociate_floating_ip(self, context, instance, address):

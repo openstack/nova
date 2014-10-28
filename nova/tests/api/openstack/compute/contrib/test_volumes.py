@@ -53,7 +53,8 @@ FAKE_UUID_D = 'dddddddd-dddd-dddd-dddd-dddddddddddd'
 IMAGE_UUID = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
 
 
-def fake_get_instance(self, context, instance_id, want_objects=False):
+def fake_get_instance(self, context, instance_id, want_objects=False,
+                      expected_attrs=None):
     return fake_instance.fake_instance_obj(context, **{'uuid': instance_id})
 
 

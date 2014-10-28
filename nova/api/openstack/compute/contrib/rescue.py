@@ -23,7 +23,6 @@ from nova.api.openstack import extensions as exts
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
-from nova.i18n import _
 from nova import utils
 
 
@@ -37,14 +36,6 @@ class RescueController(wsgi.Controller):
         self.compute_api = compute.API()
         self.ext_mgr = ext_mgr
 
-    def _get_instance(self, context, instance_id, want_objects=False):
-        try:
-            return self.compute_api.get(context, instance_id,
-                                        want_objects=want_objects)
-        except exception.InstanceNotFound:
-            msg = _("Server not found")
-            raise exc.HTTPNotFound(explanation=msg)
-
     @wsgi.action('rescue')
     def _rescue(self, req, id, body):
         """Rescue an instance."""
@@ -56,7 +47,8 @@ class RescueController(wsgi.Controller):
         else:
             password = utils.generate_password()
 
-        instance = self._get_instance(context, id, want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
         try:
             rescue_image_ref = None
             if self.ext_mgr.is_loaded("os-extended-rescue-with-image"):
@@ -82,7 +74,8 @@ class RescueController(wsgi.Controller):
         """Unrescue an instance."""
         context = req.environ["nova.context"]
         authorize(context)
-        instance = self._get_instance(context, id, want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
         try:
             self.compute_api.unrescue(context, instance)
         except exception.InstanceIsLocked as e:

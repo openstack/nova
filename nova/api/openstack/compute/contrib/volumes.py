@@ -351,11 +351,7 @@ class VolumeAttachmentController(wsgi.Controller):
         authorize_attach(context, action='show')
 
         volume_id = id
-        try:
-            instance = self.compute_api.get(context, server_id)
-        except exception.NotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
-
+        instance = common.get_instance(self.compute_api, context, server_id)
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance['uuid'])
 
@@ -411,9 +407,9 @@ class VolumeAttachmentController(wsgi.Controller):
                    'server_id': server_id},
                   context=context)
 
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       want_objects=True)
         try:
-            instance = self.compute_api.get(context, server_id,
-                                            want_objects=True)
             device = self.compute_api.attach_volume(context, instance,
                                                     volume_id, device)
         except exception.NotFound as e:
@@ -465,11 +461,8 @@ class VolumeAttachmentController(wsgi.Controller):
         self._validate_volume_id(new_volume_id)
         new_volume = self.volume_api.get(context, new_volume_id)
 
-        try:
-            instance = self.compute_api.get(context, server_id,
-                                            want_objects=True)
-        except exception.NotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       want_objects=True)
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
@@ -508,11 +501,8 @@ class VolumeAttachmentController(wsgi.Controller):
         volume_id = id
         LOG.audit(_("Detach volume %s"), volume_id, context=context)
 
-        try:
-            instance = self.compute_api.get(context, server_id,
-                                            want_objects=True)
-        except exception.NotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       want_objects=True)
 
         volume = self.volume_api.get(context, volume_id)
 
@@ -555,10 +545,7 @@ class VolumeAttachmentController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context)
 
-        try:
-            instance = self.compute_api.get(context, server_id)
-        except exception.NotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+        instance = common.get_instance(self.compute_api, context, server_id)
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance['uuid'])

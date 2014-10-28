@@ -15,6 +15,7 @@
 import mock
 from oslo.config import cfg
 
+from nova.api.openstack import common
 from nova.api.openstack.compute.contrib import rescue
 from nova.api.openstack import extensions
 from nova import compute
@@ -37,8 +38,11 @@ class ExtendedRescueWithImageTest(test.NoDBTestCase):
         ext_mgr.extensions = {'os-extended-rescue-with-image': 'fake'}
         self.controller = rescue.RescueController(ext_mgr)
 
+    @mock.patch.object(common, 'get_instance',
+                       return_value="instance")
     @mock.patch.object(compute.api.API, "rescue")
-    def _make_rescue_request_with_image_ref(self, body, mock_rescue):
+    def _make_rescue_request_with_image_ref(self, body, mock_rescue,
+                                            mock_get_instance):
         instance = "instance"
         self.controller._get_instance = mock.Mock(return_value=instance)
         fake_context = context.RequestContext('fake', 'fake')
