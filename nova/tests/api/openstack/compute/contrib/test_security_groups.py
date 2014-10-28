@@ -810,7 +810,7 @@ class TestSecurityGroupsV21(test.TestCase):
 
 
 class TestSecurityGroupsV2(TestSecurityGroupsV21):
-    controller_cls = secgroups_v2.SecurityGroupController
+    secgrp_ctl_cls = secgroups_v2.SecurityGroupController
     server_secgrp_ctl_cls = secgroups_v2.ServerSecurityGroupController
     secgrp_act_ctl_cls = secgroups_v2.SecurityGroupActionController
 
