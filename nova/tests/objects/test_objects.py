@@ -491,14 +491,8 @@ class _TestObject(object):
         class Foo(base.NovaObject):
             fields = {'foobar': fields.Field(fields.Integer())}
         obj = Foo()
-        # NOTE(danms): Can't use assertRaisesRegexp() because of py26
-        raised = False
-        try:
+        with self.assertRaisesRegexp(NotImplementedError, ".*foobar.*"):
             obj.foobar
-        except NotImplementedError as ex:
-            raised = True
-        self.assertTrue(raised)
-        self.assertIn('foobar', six.text_type(ex))
 
     def test_loaded_in_primitive(self):
         obj = MyObj(foo=1)
