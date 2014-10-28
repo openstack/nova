@@ -727,25 +727,65 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         now2 = now + datetime.timedelta(minutes=2)
         now3 = now + datetime.timedelta(minutes=3)
         ctxt = context.get_admin_context()
-        self.create_instance_with_args(launched_at=now)
-        self.create_instance_with_args(launched_at=now1, terminated_at=now2)
-        self.create_instance_with_args(launched_at=now2, terminated_at=now3)
-        self.create_instance_with_args(launched_at=now3, terminated_at=None)
+        # used for testing columns_to_join
+        network_info = jsonutils.dumps({'ckey': 'cvalue'})
+        sample_data = {
+            'metadata': {'mkey1': 'mval1', 'mkey2': 'mval2'},
+            'system_metadata': {'smkey1': 'smval1', 'smkey2': 'smval2'},
+            'info_cache': {'network_info': network_info},
+        }
+        self.create_instance_with_args(launched_at=now, **sample_data)
+        self.create_instance_with_args(launched_at=now1, terminated_at=now2,
+                                       **sample_data)
+        self.create_instance_with_args(launched_at=now2, terminated_at=now3,
+                                       **sample_data)
+        self.create_instance_with_args(launched_at=now3, terminated_at=None,
+                                       **sample_data)
+
         result = sqlalchemy_api.instance_get_active_by_window_joined(
             ctxt, begin=now)
         self.assertEqual(4, len(result))
+        # verify that all default columns are joined
+        meta = utils.metadata_to_dict(result[0]['metadata'])
+        self.assertEqual(sample_data['metadata'], meta)
+        sys_meta = utils.metadata_to_dict(result[0]['system_metadata'])
+        self.assertEqual(sample_data['system_metadata'], sys_meta)
+        self.assertIn('info_cache', result[0])
+
         result = sqlalchemy_api.instance_get_active_by_window_joined(
-            ctxt, begin=now3)
+            ctxt, begin=now3, columns_to_join=['info_cache'])
         self.assertEqual(2, len(result))
+        # verify that only info_cache is loaded
+        meta = utils.metadata_to_dict(result[0]['metadata'])
+        self.assertEqual({}, meta)
+        self.assertIn('info_cache', result[0])
+
         result = sqlalchemy_api.instance_get_active_by_window_joined(
             ctxt, begin=start_time, end=now)
         self.assertEqual(0, len(result))
+
         result = sqlalchemy_api.instance_get_active_by_window_joined(
-            ctxt, begin=start_time, end=now2)
+            ctxt, begin=start_time, end=now2,
+            columns_to_join=['system_metadata'])
         self.assertEqual(2, len(result))
+        # verify that only system_metadata is loaded
+        meta = utils.metadata_to_dict(result[0]['metadata'])
+        self.assertEqual({}, meta)
+        sys_meta = utils.metadata_to_dict(result[0]['system_metadata'])
+        self.assertEqual(sample_data['system_metadata'], sys_meta)
+        self.assertNotIn('info_cache', result[0])
+
         result = sqlalchemy_api.instance_get_active_by_window_joined(
-            ctxt, begin=now2, end=now3)
+            ctxt, begin=now2, end=now3,
+            columns_to_join=['metadata', 'info_cache'])
         self.assertEqual(2, len(result))
+        # verify that only metadata and info_cache are loaded
+        meta = utils.metadata_to_dict(result[0]['metadata'])
+        self.assertEqual(sample_data['metadata'], meta)
+        sys_meta = utils.metadata_to_dict(result[0]['system_metadata'])
+        self.assertEqual({}, sys_meta)
+        self.assertIn('info_cache', result[0])
+        self.assertEqual(network_info, result[0]['info_cache']['network_info'])
 
 
 class ProcessSortParamTestCase(test.TestCase):
