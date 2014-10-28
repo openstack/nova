@@ -620,6 +620,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         inst = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self.assertPublicAPISignatures(baseinst, inst)
 
+    def test_legacy_block_device_info(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertFalse(conn.need_legacy_block_device_info)
+
     @mock.patch.object(host.Host, "has_min_version")
     def test_min_version_start_ok(self, mock_version):
         mock_version.return_value = True
