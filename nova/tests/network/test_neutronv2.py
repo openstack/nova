@@ -369,15 +369,22 @@ class TestNeutronv2Base(test.TestCase):
             has_portbinding = True
             api.extensions[constants.PORTBINDING_EXT] = 1
             self.mox.StubOutWithMock(api, '_refresh_neutron_extensions_cache')
-            neutronv2.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
+            neutronv2.get_client(mox.IgnoreArg()).AndReturn(
                 self.moxed_client)
             neutronv2.get_client(
-                mox.IgnoreArg(), admin=True).MultipleTimes().AndReturn(
+                mox.IgnoreArg(), admin=True).AndReturn(
                 self.moxed_client)
-            api._refresh_neutron_extensions_cache(mox.IgnoreArg())
+            api._refresh_neutron_extensions_cache(mox.IgnoreArg(),
+                neutron=self.moxed_client)
+            self.mox.StubOutWithMock(api, '_has_port_binding_extension')
+            api._has_port_binding_extension(mox.IgnoreArg(),
+                neutron=self.moxed_client,
+                refresh_cache=True).AndReturn(has_portbinding)
         else:
+            self.mox.StubOutWithMock(api, '_refresh_neutron_extensions_cache')
+            api._refresh_neutron_extensions_cache(mox.IgnoreArg(),
+                neutron=self.moxed_client)
             self.mox.StubOutWithMock(api, '_populate_neutron_extension_values')
-        self.mox.StubOutWithMock(api, '_has_port_binding_extension')
         # Net idx is 1-based for compatibility with existing unit tests
         nets = self.nets[net_idx - 1]
         ports = {}
@@ -431,7 +438,6 @@ class TestNeutronv2Base(test.TestCase):
             return api
         # search all req_net_ids as in api.py
         search_ids = req_net_ids
-
         if search_ids:
             mox_list_params = {'id': mox.SameElementsAs(search_ids)}
             self.moxed_client.list_networks(
@@ -476,14 +482,13 @@ class TestNeutronv2Base(test.TestCase):
             if not has_portbinding:
                 api._populate_neutron_extension_values(mox.IgnoreArg(),
                     self.instance, mox.IgnoreArg(),
-                    mox.IgnoreArg()).AndReturn(None)
+                    mox.IgnoreArg(), neutron=self.moxed_client).AndReturn(None)
             else:
                 # since _populate_neutron_extension_values() will call
                 # _has_port_binding_extension()
-                api._has_port_binding_extension(mox.IgnoreArg()).\
-                                                     AndReturn(has_portbinding)
-            api._has_port_binding_extension(mox.IgnoreArg()).\
-                                                 AndReturn(has_portbinding)
+                api._has_port_binding_extension(mox.IgnoreArg(),
+                    neutron=self.moxed_client).\
+                    AndReturn(has_portbinding)
             if request.port_id:
                 port = ports[request.port_id]
                 self.moxed_client.update_port(request.port_id,
@@ -520,7 +525,8 @@ class TestNeutronv2Base(test.TestCase):
         api.get_instance_nw_info(mox.IgnoreArg(),
                                  self.instance,
                                  networks=nets_in_requested_net_order,
-                                 port_ids=ports_in_requested_net_order
+                                 port_ids=ports_in_requested_net_order,
+                                 admin_client=None
                                 ).AndReturn(self._returned_nw_info)
         self.mox.ReplayAll()
         return api
@@ -980,6 +986,7 @@ class TestNeutronv2(TestNeutronv2Base):
         self.instance = fake_instance.fake_instance_obj(self.context,
                                                         **self.instance)
         api = neutronapi.API()
+        self.moxed_client.list_extensions().AndReturn({'extensions': []})
         self.moxed_client.list_networks(
             tenant_id=self.instance.project_id,
             shared=False).AndReturn(
@@ -1002,8 +1009,9 @@ class TestNeutronv2(TestNeutronv2Base):
         api = neutronapi.API()
         self.mox.StubOutWithMock(api, '_populate_neutron_extension_values')
         self.mox.StubOutWithMock(api, '_has_port_binding_extension')
-        api._has_port_binding_extension(mox.IgnoreArg()).MultipleTimes().\
-                                                         AndReturn(False)
+        api._has_port_binding_extension(mox.IgnoreArg(),
+            neutron=self.moxed_client,
+            refresh_cache=True).AndReturn(False)
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(network_id=net['id'])
                      for net in (self.nets2[0], self.nets2[1])])
@@ -1028,7 +1036,8 @@ class TestNeutronv2(TestNeutronv2Base):
             port = {'id': 'portid_' + network['id']}
 
             api._populate_neutron_extension_values(self.context,
-                self.instance, None, binding_port_req_body).AndReturn(None)
+                self.instance, None, binding_port_req_body,
+                neutron=self.moxed_client).AndReturn(None)
             if index == 0:
                 self.moxed_client.create_port(
                     MyComparator(port_req_body)).AndReturn({'port': port})
@@ -1056,8 +1065,9 @@ class TestNeutronv2(TestNeutronv2Base):
         api = neutronapi.API()
         self.mox.StubOutWithMock(api, '_populate_neutron_extension_values')
         self.mox.StubOutWithMock(api, '_has_port_binding_extension')
-        api._has_port_binding_extension(mox.IgnoreArg()).MultipleTimes().\
-                                                         AndReturn(False)
+        api._has_port_binding_extension(mox.IgnoreArg(),
+            neutron=self.moxed_client,
+            refresh_cache=True).AndReturn(False)
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(network_id=net['id'])
                      for net in (self.nets2[0], self.nets2[1])])
@@ -1078,7 +1088,8 @@ class TestNeutronv2(TestNeutronv2Base):
             },
         }
         api._populate_neutron_extension_values(self.context,
-            self.instance, None, binding_port_req_body).AndReturn(None)
+            self.instance, None, binding_port_req_body,
+            neutron=self.moxed_client).AndReturn(None)
         self.moxed_client.create_port(
             MyComparator(port_req_body)).AndRaise(
                 Exception("fail to create port"))
@@ -1093,11 +1104,14 @@ class TestNeutronv2(TestNeutronv2Base):
         self.instance = fake_instance.fake_instance_obj(self.context,
                                                         **self.instance)
         api = neutronapi.API()
+        self.moxed_client.list_extensions().AndReturn({'extensions': []})
         self.mox.StubOutWithMock(api, '_get_available_networks')
         # Make sure we get an empty list and then bail out of the rest
         # of the function
         api._get_available_networks(self.context, self.instance.project_id,
-                                    []).AndRaise(BailOutEarly)
+                                    [],
+                                    neutron=self.moxed_client).\
+                                    AndRaise(BailOutEarly)
         self.mox.ReplayAll()
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest()])
@@ -1132,6 +1146,7 @@ class TestNeutronv2(TestNeutronv2Base):
         """
         self.instance = fake_instance.fake_instance_obj(self.context,
                                                         **self.instance)
+        self.moxed_client.list_extensions().AndReturn({'extensions': []})
         # no networks in the tenant
         self.moxed_client.list_networks(
             tenant_id=self.instance.project_id,
@@ -1152,6 +1167,7 @@ class TestNeutronv2(TestNeutronv2Base):
         """
         self.instance = fake_instance.fake_instance_obj(self.context,
                                                         **self.instance)
+        self.moxed_client.list_extensions().AndReturn({'extensions': []})
         # network found in the tenant
         self.moxed_client.list_networks(
             tenant_id=self.instance.project_id,

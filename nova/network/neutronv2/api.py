@@ -276,7 +276,20 @@ class API(base_api.NetworkAPI):
             # to create a port on a network. If we find a mac with a
             # pre-allocated port we also remove it from this set.
             available_macs = set(hypervisor_macs)
+
+        # The neutron client and port_client (either the admin context or
+        # tenant context) are read here. The reason for this is that there are
+        # a number of different calls for the instance allocation.
+        # We do not want to create a new neutron session for each of these
+        # calls.
         neutron = neutronv2.get_client(context)
+        # Requires admin creds to set port bindings
+        port_client = (neutron if not
+                       self._has_port_binding_extension(context,
+                           refresh_cache=True, neutron=neutron) else
+                       neutronv2.get_client(context, admin=True))
+        # Store the admin client - this is used later
+        admin_client = port_client if neutron != port_client else None
         LOG.debug('allocate_for_instance()', instance=instance)
         if not instance.project_id:
             msg = _('empty project id for instance %s')
@@ -311,7 +324,7 @@ class API(base_api.NetworkAPI):
                     ordered_networks.append(request)
 
         nets = self._get_available_networks(context, instance.project_id,
-                                            net_ids)
+                                            net_ids, neutron=neutron)
         if not nets:
             LOG.warn(_LW("No network configured!"), instance=instance)
             return network_model.NetworkInfo([])
@@ -407,11 +420,8 @@ class API(base_api.NetworkAPI):
                 self._populate_neutron_extension_values(context,
                                                         instance,
                                                         request.pci_request_id,
-                                                        port_req_body)
-                # Requires admin creds to set port bindings
-                port_client = (neutron if not
-                               self._has_port_binding_extension(context) else
-                               neutronv2.get_client(context, admin=True))
+                                                        port_req_body,
+                                                        neutron=neutron)
                 if request.port_id:
                     port = ports[request.port_id]
                     port_client.update_port(port['id'], port_req_body)
@@ -430,12 +440,9 @@ class API(base_api.NetworkAPI):
                         try:
                             port_req_body = {'port': {'device_id': ''}}
                             # Requires admin creds to set port bindings
-                            if self._has_port_binding_extension(context):
+                            if self._has_port_binding_extension(context,
+                                neutron=neutron):
                                 port_req_body['port']['binding:host_id'] = None
-                                port_client = neutronv2.get_client(
-                                    context, admin=True)
-                            else:
-                                port_client = neutron
                             port_client.update_port(port_id, port_req_body)
                         except Exception:
                             msg = _LE("Failed to update port %s")
@@ -445,7 +452,8 @@ class API(base_api.NetworkAPI):
 
         nw_info = self.get_instance_nw_info(context, instance,
                                             networks=nets_in_requested_order,
-                                            port_ids=ports_in_requested_order)
+                                            port_ids=ports_in_requested_order,
+                                            admin_client=admin_client)
         # NOTE(danms): Only return info about ports we created in this run.
         # In the initial allocation case, this will be everything we created,
         # and in later runs will only be what was created that time. Thus,
@@ -455,21 +463,23 @@ class API(base_api.NetworkAPI):
                                           if vif['id'] in created_port_ids +
                                                            touched_port_ids])
 
-    def _refresh_neutron_extensions_cache(self, context):
+    def _refresh_neutron_extensions_cache(self, context, neutron=None):
         """Refresh the neutron extensions cache when necessary."""
         if (not self.last_neutron_extension_sync or
             ((time.time() - self.last_neutron_extension_sync)
              >= CONF.neutron.extension_sync_interval)):
-            neutron = neutronv2.get_client(context)
+            if neutron is None:
+                neutron = neutronv2.get_client(context)
             extensions_list = neutron.list_extensions()['extensions']
             self.last_neutron_extension_sync = time.time()
             self.extensions.clear()
             self.extensions = dict((ext['name'], ext)
                                    for ext in extensions_list)
 
-    def _has_port_binding_extension(self, context, refresh_cache=False):
+    def _has_port_binding_extension(self, context, refresh_cache=False,
+                                    neutron=None):
         if refresh_cache:
-            self._refresh_neutron_extensions_cache(context)
+            self._refresh_neutron_extensions_cache(context, neutron=neutron)
         return constants.PORTBINDING_EXT in self.extensions
 
     @staticmethod
@@ -492,17 +502,18 @@ class API(base_api.NetworkAPI):
             port_req_body['port']['binding:profile'] = profile
 
     def _populate_neutron_extension_values(self, context, instance,
-                                           pci_request_id, port_req_body):
+                                           pci_request_id, port_req_body,
+                                           neutron=None):
         """Populate neutron extension values for the instance.
 
         If the extensions loaded contain QOS_QUEUE then pass the rxtx_factor.
         """
-        self._refresh_neutron_extensions_cache(context)
+        self._refresh_neutron_extensions_cache(context, neutron=neutron)
         if constants.QOS_QUEUE in self.extensions:
             flavor = flavors.extract_flavor(instance)
             rxtx_factor = flavor.get('rxtx_factor')
             port_req_body['port']['rxtx_factor'] = rxtx_factor
-        if self._has_port_binding_extension(context):
+        if self._has_port_binding_extension(context, neutron=neutron):
             port_req_body['port']['binding:host_id'] = instance.get('host')
             self._populate_neutron_binding_profile(instance,
                                                    pci_request_id,
@@ -592,7 +603,8 @@ class API(base_api.NetworkAPI):
             raise exception.Forbidden()
 
     def get_instance_nw_info(self, context, instance, networks=None,
-                             port_ids=None, use_slave=False):
+                             port_ids=None, use_slave=False,
+                             admin_client=None):
         """Return network information for specified instance
            and update cache.
         """
@@ -601,7 +613,7 @@ class API(base_api.NetworkAPI):
         #                   the master. For now we just ignore this arg.
         with lockutils.lock('refresh_cache-%s' % instance['uuid']):
             result = self._get_instance_nw_info(context, instance, networks,
-                                                port_ids)
+                                                port_ids, admin_client)
             base_api.update_instance_cache_with_nw_info(self, context,
                                                         instance,
                                                         nw_info=result,
@@ -609,13 +621,13 @@ class API(base_api.NetworkAPI):
         return result
 
     def _get_instance_nw_info(self, context, instance, networks=None,
-                              port_ids=None):
+                              port_ids=None, admin_client=None):
         # NOTE(danms): This is an inner method intended to be called
         # by other code that updates instance nwinfo. It *must* be
         # called with the refresh_cache-%(instance_uuid) lock held!
         LOG.debug('get_instance_nw_info()', instance=instance)
         nw_info = self._build_network_info_model(context, instance, networks,
-                                                 port_ids)
+                                                 port_ids, admin_client)
         return network_model.NetworkInfo.hydrate(nw_info)
 
     def _gather_port_ids_and_networks(self, context, instance, networks=None,
@@ -1339,7 +1351,7 @@ class API(base_api.NetworkAPI):
         return network, ovs_interfaceid
 
     def _build_network_info_model(self, context, instance, networks=None,
-                                  port_ids=None):
+                                  port_ids=None, admin_client=None):
         """Return list of ordered VIFs attached to instance.
 
         :param context - request context.
@@ -1351,11 +1363,16 @@ class API(base_api.NetworkAPI):
                           instance in order of attachment. If value is None
                           this value will be populated from the existing
                           cached value.
+        :param admin_client - a neutron client for the admin context.
         """
 
         search_opts = {'tenant_id': instance['project_id'],
                        'device_id': instance['uuid'], }
-        client = neutronv2.get_client(context, admin=True)
+        if admin_client is None:
+            client = neutronv2.get_client(context, admin=True)
+        else:
+            client = admin_client
+
         data = client.list_ports(**search_opts)
 
         current_neutron_ports = data.get('ports', [])
