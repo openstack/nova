@@ -13,10 +13,6 @@ The preferred way to run the unit tests is using ``tox``.  See `the
 unit testing section of the Testing wiki page`_ and Nova's HACKING.rst
 for more information.  Following are some simple examples.
 
-To run the Python 2.6 tests::
-
-    tox -e py26
-
 To run the style tests:
 
     tox -e pep8
