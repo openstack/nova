@@ -294,6 +294,9 @@ def main():
         stream.run(result)
     finally:
         result.stopTestRun()
+    if count_tests('status', '.*') == 0:
+        print("The test run didn't actually run any tests")
+        return 1
     if args.post_fails:
         print_fails(sys.stdout)
     print_summary(sys.stdout)
