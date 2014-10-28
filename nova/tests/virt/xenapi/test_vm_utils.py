@@ -20,7 +20,6 @@ from eventlet import greenthread
 import fixtures
 import mock
 import mox
-from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.utils import timeutils
 from oslo.utils import units
@@ -32,6 +31,7 @@ from nova.compute import vm_mode
 from nova import context
 from nova import exception
 from nova.i18n import _
+from nova.openstack.common import processutils
 from nova import test
 from nova.tests.virt.xenapi import stubs
 from nova.tests.virt.xenapi import test_xenapi

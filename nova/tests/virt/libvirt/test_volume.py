@@ -19,10 +19,10 @@ import time
 
 import fixtures
 import mock
-from oslo.concurrency import processutils
 from oslo.config import cfg
 
 from nova import exception
+from nova.openstack.common import processutils
 from nova.storage import linuxscsi
 from nova import test
 from nova.tests.virt.libvirt import fake_libvirt_utils

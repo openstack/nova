@@ -22,7 +22,6 @@ import os
 import time
 
 from eventlet import timeout as etimeout
-from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.utils import excutils
 from oslo.utils import importutils
@@ -34,6 +33,7 @@ from nova.i18n import _, _LI, _LE, _LW
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
+from nova.openstack.common import processutils
 from nova.openstack.common import uuidutils
 from nova import utils
 from nova.virt import configdrive

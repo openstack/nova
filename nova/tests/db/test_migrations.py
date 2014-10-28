@@ -44,7 +44,6 @@ import glob
 import os
 
 from migrate.versioning import repository
-from oslo.concurrency import processutils
 from oslo.db.sqlalchemy import session
 from oslo.db.sqlalchemy import utils as oslodbutils
 import six.moves.urllib.parse as urlparse
@@ -55,6 +54,7 @@ import nova.db.sqlalchemy.migrate_repo
 from nova.db.sqlalchemy import utils as db_utils
 from nova.i18n import _
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova import test
 from nova import utils
 

@@ -26,7 +26,6 @@ import tempfile
 import boto.s3.connection
 import eventlet
 from lxml import etree
-from oslo.concurrency import processutils
 from oslo.config import cfg
 
 from nova.api.ec2 import ec2utils
@@ -36,6 +35,7 @@ from nova import exception
 from nova.i18n import _, _LE
 from nova.image import glance
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova import utils
 
 

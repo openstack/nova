@@ -23,7 +23,6 @@ import os
 import re
 
 import netaddr
-from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.serialization import jsonutils
 from oslo.utils import excutils
@@ -36,6 +35,7 @@ from nova.i18n import _, _LE
 from nova import objects
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova import paths
 from nova import utils
 
