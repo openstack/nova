@@ -1740,11 +1740,6 @@ class ServerStatusTest(test.TestCase):
         self.ext_mgr.extensions = {}
         self.controller = servers.Controller(self.ext_mgr)
 
-        def _fake_get_server(context, req, id):
-            return fakes.stub_instance(id)
-
-        self.stubs.Set(self.controller, '_get_server', _fake_get_server)
-
     def _get_with_state(self, vm_state, task_state=None):
         self.stubs.Set(db, 'instance_get_by_uuid',
                 fakes.fake_instance_get(vm_state=vm_state,
@@ -1773,7 +1768,8 @@ class ServerStatusTest(test.TestCase):
                                         task_states.REBOOTING_HARD)
         self.assertEqual(response['server']['status'], 'HARD_REBOOT')
 
-    def test_reboot_resize_policy_fail(self):
+    @mock.patch.object(servers.Controller, "_get_server")
+    def test_reboot_resize_policy_fail(self, mock_get_server):
         req = self._req_with_policy_fail('reboot')
         self.assertRaises(exception.PolicyNotAuthorized,
                 self.controller._action_reboot, req, '1234',
@@ -1793,7 +1789,8 @@ class ServerStatusTest(test.TestCase):
                                         task_states.RESIZE_PREP)
         self.assertEqual(response['server']['status'], 'RESIZE')
 
-    def test_confirm_resize_policy_fail(self):
+    @mock.patch.object(servers.Controller, "_get_server")
+    def test_confirm_resize_policy_fail(self, mock_get_server):
         req = self._req_with_policy_fail('confirm_resize')
         self.assertRaises(exception.PolicyNotAuthorized,
                 self.controller._action_confirm_resize, req, '1234', {})
@@ -1807,7 +1804,8 @@ class ServerStatusTest(test.TestCase):
                                         task_states.RESIZE_REVERTING)
         self.assertEqual(response['server']['status'], 'REVERT_RESIZE')
 
-    def test_revert_resize_policy_fail(self):
+    @mock.patch.object(servers.Controller, "_get_server")
+    def test_revert_resize_policy_fail(self, mock_get_server):
         req = self._req_with_policy_fail('revert_resize')
         self.assertRaises(exception.PolicyNotAuthorized,
                 self.controller._action_revert_resize, req, '1234', {})

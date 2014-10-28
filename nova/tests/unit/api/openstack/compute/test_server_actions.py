@@ -47,7 +47,7 @@ INSTANCE_IDS = {FAKE_UUID: 1}
 
 
 def return_server_not_found(*arg, **kwarg):
-    raise exception.NotFound()
+    raise exception.InstanceNotFound(instance_id=FAKE_UUID)
 
 
 def instance_update_and_get_original(context, instance_uuid, values,
@@ -123,6 +123,7 @@ class ServerActionsControllerTest(test.TestCase):
             self.context, objects.Instance(), instance)
 
         self.compute_api.get(self.context, uuid,
+                             expected_attrs=None,
                              want_objects=True).AndReturn(instance)
         return instance
 

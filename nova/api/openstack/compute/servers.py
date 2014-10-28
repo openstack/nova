@@ -619,12 +619,8 @@ class Controller(wsgi.Controller):
 
     def _get_server(self, context, req, instance_uuid):
         """Utility function for looking up an instance by uuid."""
-        try:
-            instance = self.compute_api.get(context, instance_uuid,
-                                            want_objects=True)
-        except exception.NotFound:
-            msg = _("Instance could not be found")
-            raise exc.HTTPNotFound(explanation=msg)
+        instance = common.get_instance(self.compute_api, context,
+                                       instance_uuid, want_objects=True)
         req.cache_db_instance(instance)
         return instance
 
@@ -760,15 +756,9 @@ class Controller(wsgi.Controller):
     @wsgi.serializers(xml=ServerTemplate)
     def show(self, req, id):
         """Returns server details by server id."""
-        try:
-            context = req.environ['nova.context']
-            instance = self.compute_api.get(context, id,
-                                            want_objects=True)
-            req.cache_db_instance(instance)
-            return self._view_builder.show(req, instance)
-        except exception.NotFound:
-            msg = _("Instance could not be found")
-            raise exc.HTTPNotFound(explanation=msg)
+        context = req.environ['nova.context']
+        instance = self._get_server(context, req, id)
+        return self._view_builder.show(req, instance)
 
     @wsgi.response(202)
     @wsgi.serializers(xml=FullServerTemplate)
@@ -1083,12 +1073,11 @@ class Controller(wsgi.Controller):
             msg = _("Personality cannot be updated.")
             raise exc.HTTPBadRequest(explanation=msg)
 
+        instance = self._get_server(ctxt, req, id)
         try:
-            instance = self.compute_api.get(ctxt, id,
-                                            want_objects=True)
-            req.cache_db_instance(instance)
             policy.enforce(ctxt, 'compute:update', instance)
             instance.update(update_dict)
+            # Note instance.save can throw a NotFound exception
             instance.save()
         except exception.NotFound:
             msg = _("Instance could not be found")
