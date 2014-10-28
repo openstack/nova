@@ -38,7 +38,7 @@ class TestWeighedHost(test.NoDBTestCase):
     def test_all_weighers(self):
         classes = weights.all_weighers()
         class_names = [cls.__name__ for cls in classes]
-        self.assertEqual(len(classes), 3)
+        self.assertEqual(3, len(classes))
         self.assertIn('RAMWeigher', class_names)
         self.assertIn('MetricsWeigher', class_names)
         self.assertIn('IoOpsWeigher', class_names)
@@ -75,8 +75,8 @@ class RamWeigherTestCase(test.NoDBTestCase):
 
         # so, host4 should win:
         weighed_host = self._get_weighed_host(hostinfo_list)
-        self.assertEqual(weighed_host.weight, 1.0)
-        self.assertEqual(weighed_host.obj.host, 'host4')
+        self.assertEqual(1.0, weighed_host.weight)
+        self.assertEqual('host4', weighed_host.obj.host)
 
     def test_ram_filter_multiplier1(self):
         self.flags(ram_weight_multiplier=0.0)
@@ -89,7 +89,7 @@ class RamWeigherTestCase(test.NoDBTestCase):
 
         # We do not know the host, all have same weight.
         weighed_host = self._get_weighed_host(hostinfo_list)
-        self.assertEqual(weighed_host.weight, 0.0)
+        self.assertEqual(0.0, weighed_host.weight)
 
     def test_ram_filter_multiplier2(self):
         self.flags(ram_weight_multiplier=2.0)
@@ -102,8 +102,8 @@ class RamWeigherTestCase(test.NoDBTestCase):
 
         # so, host4 should win:
         weighed_host = self._get_weighed_host(hostinfo_list)
-        self.assertEqual(weighed_host.weight, 1.0 * 2)
-        self.assertEqual(weighed_host.obj.host, 'host4')
+        self.assertEqual(1.0 * 2, weighed_host.weight)
+        self.assertEqual('host4', weighed_host.obj.host)
 
     def test_ram_filter_negative(self):
         self.flags(ram_weight_multiplier=1.0)
@@ -123,13 +123,13 @@ class RamWeigherTestCase(test.NoDBTestCase):
                                                           hostinfo_list, {})
 
         weighed_host = weights[0]
-        self.assertEqual(weighed_host.weight, 1)
-        self.assertEqual(weighed_host.obj.host, "host4")
+        self.assertEqual(1, weighed_host.weight)
+        self.assertEqual('host4', weighed_host.obj.host)
 
         # and negativehost should lose
         weighed_host = weights[-1]
-        self.assertEqual(weighed_host.weight, 0)
-        self.assertEqual(weighed_host.obj.host, "negative")
+        self.assertEqual(0, weighed_host.weight)
+        self.assertEqual('negative', weighed_host.obj.host)
 
 
 class MetricsWeigherTestCase(test.NoDBTestCase):
@@ -157,8 +157,8 @@ class MetricsWeigherTestCase(test.NoDBTestCase):
     def _do_test(self, settings, expected_weight, expected_host):
         hostinfo_list = self._get_all_hosts()
         weighed_host = self._get_weighed_host(hostinfo_list, settings)
-        self.assertEqual(weighed_host.weight, expected_weight)
-        self.assertEqual(weighed_host.obj.host, expected_host)
+        self.assertEqual(expected_weight, weighed_host.weight)
+        self.assertEqual(expected_host, weighed_host.obj.host)
 
     def test_single_resource(self):
         # host1: foo=512
