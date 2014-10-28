@@ -24,11 +24,9 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _
-from nova.openstack.common import log as logging
 from nova import volume
 
 ALIAS = "os-volumes"
-LOG = logging.getLogger(__name__)
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
@@ -68,7 +66,6 @@ def _translate_volume_summary_view(context, vol):
         d['volumeType'] = vol['volume_type_id']
 
     d['snapshotId'] = vol['snapshot_id']
-    LOG.audit(_("vol=%s"), vol, context=context)
 
     if vol.get('volume_metadata'):
         d['metadata'] = vol.get('volume_metadata')
@@ -103,8 +100,6 @@ class VolumeController(wsgi.Controller):
         """Delete a volume."""
         context = req.environ['nova.context']
         authorize(context)
-
-        LOG.audit(_("Delete volume with id: %s"), id, context=context)
 
         try:
             self.volume_api.delete(context, id)
@@ -156,8 +151,6 @@ class VolumeController(wsgi.Controller):
         size = vol.get('size', None)
         if size is None and snapshot is not None:
             size = snapshot['volume_size']
-
-        LOG.audit(_("Create volume of %s GB"), size, context=context)
 
         availability_zone = vol.get('availability_zone')
 
@@ -263,8 +256,6 @@ class SnapshotController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context)
 
-        LOG.audit(_("Delete snapshot with id: %s"), id, context=context)
-
         try:
             self.volume_api.delete_snapshot(context, id)
         except exception.NotFound as e:
@@ -303,9 +294,6 @@ class SnapshotController(wsgi.Controller):
 
         snapshot = body['snapshot']
         volume_id = snapshot['volume_id']
-
-        LOG.audit(_("Create snapshot from volume %s"), volume_id,
-                  context=context)
 
         force = snapshot.get('force', False)
         try:

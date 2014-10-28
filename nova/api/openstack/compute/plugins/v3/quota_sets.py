@@ -25,13 +25,11 @@ import nova.context
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.openstack.common import log as logging
 from nova import quota
 
 
 ALIAS = "os-quota-sets"
 QUOTAS = quota.QUOTAS
-LOG = logging.getLogger(__name__)
 authorize_update = extensions.extension_authorizer('compute',
                                                    'v3:%s:update' % ALIAS)
 authorize_show = extensions.extension_authorizer('compute',
@@ -120,8 +118,6 @@ class QuotaSetsController(wsgi.Controller):
                                                          user_id=user_id)
         except exception.Forbidden:
             raise webob.exc.HTTPForbidden()
-
-        LOG.debug("Force update quotas: %s", force_update)
 
         for key, value in body['quota_set'].iteritems():
             if key == 'force' or (not value and value != 0):
