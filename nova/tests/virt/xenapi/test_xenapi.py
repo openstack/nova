@@ -531,8 +531,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
         self.fake_upload_called = False
 
-        def fake_image_upload(_self, ctx, session, inst, vdi_uuids,
-                              img_id):
+        def fake_image_upload(_self, ctx, session, inst, img_id, vdi_uuids):
             self.fake_upload_called = True
             self.assertEqual(ctx, self.context)
             self.assertEqual(inst, instance)
