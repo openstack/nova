@@ -288,6 +288,8 @@ def get_associated(context, network_id, host=None, address=None):
 
 class LinuxNetworkTestCase(test.NoDBTestCase):
 
+    REQUIRES_LOCKING = True
+
     def setUp(self):
         super(LinuxNetworkTestCase, self).setUp()
         self.driver = driver.load_network_driver()

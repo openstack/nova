@@ -193,6 +193,8 @@ class VMwareSessionTestCase(test.NoDBTestCase):
 class VMwareAPIVMTestCase(test.NoDBTestCase):
     """Unit tests for Vmware API connection calls."""
 
+    REQUIRES_LOCKING = True
+
     @mock.patch.object(driver.VMwareVCDriver, '_register_openstack_extension')
     def setUp(self, mock_register, create_connection=True):
         super(VMwareAPIVMTestCase, self).setUp()

@@ -31,6 +31,7 @@ import logging
 import os
 import shutil
 import sys
+import tempfile
 import uuid
 
 import fixtures
@@ -221,6 +222,7 @@ class TestCase(testtools.TestCase):
     `NoDBTestCase` first.
     """
     USES_DB = True
+    REQUIRES_LOCKING = False
 
     # NOTE(rpodolyaka): this attribute can be overridden in subclasses in order
     #                   to scale the global test timeout value set for each
@@ -283,6 +285,29 @@ class TestCase(testtools.TestCase):
 
         # Don't log every single DB migration step
         logging.getLogger('migrate.versioning.api').setLevel(logging.WARNING)
+
+        # NOTE(sdague): because of the way we were using the lock
+        # wrapper we eneded up with a lot of tests that started
+        # relying on global external locking being set up for them. We
+        # consider all of these to be *bugs*. Tests should not require
+        # global external locking, or if they do, they should
+        # explicitly set it up themselves.
+        #
+        # The following REQUIRES_LOCKING class parameter is provided
+        # as a bridge to get us there. No new tests should be added
+        # that require it, and existing classes and tests should be
+        # fixed to not need it.
+        if self.REQUIRES_LOCKING:
+            lock_path = tempfile.mkdtemp()
+
+            def _cleanup_lock_path():
+                # because CONF is a global object, we actually have to
+                # explicitly zero it out afterwards
+                CONF.set_override('lock_path', None)
+                shutil.rmtree(lock_path)
+
+            self.addCleanup(_cleanup_lock_path)
+            CONF.set_override('lock_path', lock_path)
 
         self.useFixture(conf_fixture.ConfFixture(CONF))
 

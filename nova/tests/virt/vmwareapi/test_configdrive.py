@@ -33,6 +33,9 @@ from nova.virt.vmwareapi import vmops
 
 
 class ConfigDriveTestCase(test.NoDBTestCase):
+
+    REQUIRES_LOCKING = True
+
     @mock.patch.object(driver.VMwareVCDriver, '_register_openstack_extension')
     def setUp(self, mock_register):
         super(ConfigDriveTestCase, self).setUp()

@@ -36,6 +36,8 @@ CONF.import_opt('compute_driver', 'nova.virt.driver')
 
 class QuotaIntegrationTestCase(test.TestCase):
 
+    REQUIRES_LOCKING = True
+
     def setUp(self):
         super(QuotaIntegrationTestCase, self).setUp()
         self.flags(compute_driver='nova.virt.fake.FakeDriver',

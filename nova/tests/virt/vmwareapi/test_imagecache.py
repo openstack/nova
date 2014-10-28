@@ -31,6 +31,9 @@ CONF = cfg.CONF
 
 
 class ImageCacheManagerTestCase(test.NoDBTestCase):
+
+    REQUIRES_LOCKING = True
+
     def setUp(self):
         super(ImageCacheManagerTestCase, self).setUp()
         self._session = mock.Mock(name='session')

@@ -133,6 +133,9 @@ def get_instances_with_cached_ips(orig_func, get_floating,
 
 
 class CloudTestCase(test.TestCase):
+
+    REQUIRES_LOCKING = True
+
     def setUp(self):
         super(CloudTestCase, self).setUp()
         self.useFixture(test.SampleNetworks())

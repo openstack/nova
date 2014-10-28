@@ -63,6 +63,8 @@ def generate_new_element(items, prefix, numeric=False):
 
 
 class _IntegratedTestBase(test.TestCase):
+    REQUIRES_LOCKING = True
+
     def setUp(self):
         super(_IntegratedTestBase, self).setUp()
 
