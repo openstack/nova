@@ -10417,8 +10417,8 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
     One legitimate use of the 'disabled' field would be when phasing out a
     particular instance-type. We still want customers to be able to use an
     instance that of the old type, and we want Ops to be able perform
-    migrations against it, but we *don't* want customers building new slices
-    with ths phased-out instance-type.
+    migrations against it, but we *don't* want customers building new
+    instances with the phased-out instance-type.
     """
     def setUp(self):
         super(DisabledInstanceTypesTestCase, self).setUp()
