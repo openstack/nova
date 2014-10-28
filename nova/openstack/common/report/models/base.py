@@ -37,13 +37,29 @@ class ReportModel(col.MutableMapping):
     model.  An appropriate object for a view is callable with
     a single parameter: the model to be serialized.
 
-    :param data: a dictionary of data to initially associate with the model
+    If present, the object passed in as data will be transformed
+    into a standard python dict.  For mappings, this is fairly
+    straightforward.  For sequences, the indices become keys
+    and the items become values.
+
+    :param data: a sequence or mapping of data to associate with the model
     :param attached_view: a view object to attach to this model
     """
 
     def __init__(self, data=None, attached_view=None):
         self.attached_view = attached_view
-        self.data = data or {}
+
+        if data is not None:
+            if isinstance(data, col.Mapping):
+                self.data = dict(data)
+            elif isinstance(data, col.Sequence):
+                # convert a list [a, b, c] to a dict {0: a, 1: b, 2: c}
+                self.data = dict(enumerate(data))
+            else:
+                raise TypeError('Data for the model must be a sequence '
+                                'or mapping.')
+        else:
+            self.data = {}
 
     def __str__(self):
         self_cpy = copy.deepcopy(self)
@@ -89,6 +105,8 @@ class ReportModel(col.MutableMapping):
         try:
             return self.data[attrname]
         except KeyError:
+            # we don't have that key in data, and the
+            # model class doesn't have that attribute
             raise AttributeError(
                 "'{cl}' object has no attribute '{an}'".format(
                     cl=type(self).__name__, an=attrname

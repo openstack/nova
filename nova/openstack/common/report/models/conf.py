@@ -41,8 +41,15 @@ class ConfigModel(mwdv.ModelWithDefaultViews):
         def opt_title(optname, co):
             return co._opts[optname]['opt'].name
 
+        def opt_value(opt_obj, value):
+            if opt_obj['opt'].secret:
+                return '*******'
+            else:
+                return value
+
         self['default'] = dict(
-            (opt_title(optname, conf_obj), conf_obj[optname])
+            (opt_title(optname, conf_obj),
+             opt_value(conf_obj._opts[optname], conf_obj[optname]))
             for optname in conf_obj._opts
         )
 
@@ -50,9 +57,10 @@ class ConfigModel(mwdv.ModelWithDefaultViews):
         for groupname in conf_obj._groups:
             group_obj = conf_obj._groups[groupname]
             curr_group_opts = dict(
-                (opt_title(optname, group_obj), conf_obj[groupname][optname])
-                for optname in group_obj._opts
-            )
+                (opt_title(optname, group_obj),
+                 opt_value(group_obj._opts[optname],
+                           conf_obj[groupname][optname]))
+                for optname in group_obj._opts)
             groups[group_obj.name] = curr_group_opts
 
         self.update(groups)

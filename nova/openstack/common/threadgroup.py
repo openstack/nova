@@ -96,6 +96,8 @@ class ThreadGroup(object):
                 continue
             try:
                 x.stop()
+            except eventlet.greenlet.GreenletExit:
+                pass
             except Exception as ex:
                 LOG.exception(ex)
 
