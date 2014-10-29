@@ -1892,3 +1892,7 @@ class EnumFieldUnset(Invalid):
 
 class InvalidImageFormat(Invalid):
     msg_fmt = _("Invalid image format '%(format)s'")
+
+
+class UnsupportedImageModel(Invalid):
+    msg_fmt = _("Image model '%(image)s' is not supported")

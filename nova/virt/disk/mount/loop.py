@@ -27,7 +27,8 @@ class LoopMount(api.Mount):
     mode = 'loop'
 
     def _inner_get_dev(self):
-        out, err = utils.trycmd('losetup', '--find', '--show', self.image,
+        out, err = utils.trycmd('losetup', '--find', '--show',
+                                self.image.path,
                                 run_as_root=True)
         if err:
             self.error = _('Could not attach image to loopback: %s') % err

@@ -23,6 +23,7 @@ from nova import test
 from nova.tests.unit import utils as tests_utils
 import nova.utils
 from nova.virt.disk.vfs import localfs as vfsimpl
+from nova.virt.image import model as imgmodel
 
 CONF = cfg.CONF
 
@@ -432,7 +433,9 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
 
         self.assertTrue(mkdtemp.called)
         NbdMount.assert_called_once_with(
-            'img.qcow2', 'tmp/', None)
+            imgmodel.LocalFileImage('img.qcow2',
+                                    imgmodel.FORMAT_QCOW2),
+            'tmp/', None)
         mounter.do_mount.assert_called_once_with()
 
     @mock.patch.object(tempfile, 'mkdtemp')
@@ -448,5 +451,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
 
         self.assertTrue(mkdtemp.called)
         NbdMount.assert_called_once_with(
-            'img.qcow2', 'tmp/', None)
+            imgmodel.LocalFileImage('img.qcow2',
+                                    imgmodel.FORMAT_QCOW2),
+            'tmp/', None)
         self.assertFalse(mounter.do_mount.called)
