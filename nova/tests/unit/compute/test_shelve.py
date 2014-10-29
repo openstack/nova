@@ -213,6 +213,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
         self.deleted_image_id = None
 
+        db_instance['extra'] = None
+
         def fake_delete(self2, ctxt, image_id):
             self.deleted_image_id = image_id
 
@@ -272,16 +274,14 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.assertEqual(instance.host, self.compute.host)
 
     def test_unshelve_volume_backed(self):
-        db_instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
+        db_instance = obj_base.obj_to_primitive(instance)
         node = test_compute.NODENAME
         limits = {}
         filter_properties = {'limits': limits}
         cur_time = timeutils.utcnow()
         cur_time_tz = cur_time.replace(tzinfo=iso8601.iso8601.Utc())
         timeutils.set_time_override(cur_time)
-        instance = objects.Instance.get_by_uuid(
-            self.context, db_instance['uuid'],
-            expected_attrs=['metadata', 'system_metadata'])
         instance.task_state = task_states.UNSHELVING
         instance.save()
 
@@ -299,7 +299,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         db.instance_update_and_get_original(self.context, instance['uuid'],
                 {'task_state': task_states.SPAWNING},
                 update_cells=False,
-                columns_to_join=['metadata', 'system_metadata']
+                columns_to_join=['metadata', 'system_metadata',
+                                 'info_cache', 'security_groups']
                 ).AndReturn((db_instance, db_instance))
         self.compute._prep_block_device(self.context, instance,
                 mox.IgnoreArg(), do_check_attach=False).AndReturn('fake_bdm')
@@ -326,7 +327,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                  'expected_task_state': task_states.SPAWNING,
                  'launched_at': cur_time_tz},
                  update_cells=False,
-                 columns_to_join=['metadata', 'system_metadata']
+                 columns_to_join=['metadata', 'system_metadata',
+                                  'info_cache', 'security_groups']
                  ).AndReturn((db_instance, db_instance))
         self.compute._notify_about_instance_usage(self.context, instance,
                 'unshelve.end')
