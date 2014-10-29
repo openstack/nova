@@ -76,51 +76,6 @@ class HostFiltersTestCase(test.NoDBTestCase):
                 {'free_ram_mb': 1024, 'service': service})
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
-    def test_type_filter(self):
-        self._stub_service_is_up(True)
-        filt_cls = self.class_map['TypeAffinityFilter']()
-
-        filter_properties = {'context': self.context,
-                             'instance_type': {'id': 1}}
-        filter2_properties = {'context': self.context,
-                             'instance_type': {'id': 2}}
-
-        service = {'disabled': False}
-        host = fakes.FakeHostState('fake_host', 'fake_node',
-                {'service': service})
-        # True since empty
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-        fakes.FakeInstance(context=self.context,
-                           params={'host': 'fake_host', 'instance_type_id': 1})
-        # True since same type
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-        # False since different type
-        self.assertFalse(filt_cls.host_passes(host, filter2_properties))
-        # False since node not homogeneous
-        fakes.FakeInstance(context=self.context,
-                           params={'host': 'fake_host', 'instance_type_id': 2})
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
-
-    def test_aggregate_type_filter(self):
-        self._stub_service_is_up(True)
-        filt_cls = self.class_map['AggregateTypeAffinityFilter']()
-
-        filter_properties = {'context': self.context,
-                             'instance_type': {'name': 'fake1'}}
-        filter2_properties = {'context': self.context,
-                             'instance_type': {'name': 'fake2'}}
-        service = {'disabled': False}
-        host = fakes.FakeHostState('fake_host', 'fake_node',
-                {'service': service})
-        # True since no aggregates
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-        # True since type matches aggregate, metadata
-        self._create_aggregate_with_host(name='fake_aggregate',
-                hosts=['fake_host'], metadata={'instance_type': 'fake1'})
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-        # False since type matches aggregate, metadata
-        self.assertFalse(filt_cls.host_passes(host, filter2_properties))
-
     def _test_compute_filter_fails_on_service_disabled(self,
                                                        reason=None):
         self._stub_service_is_up(True)
