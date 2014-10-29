@@ -1415,12 +1415,30 @@ class _BaseTaskTestCase(object):
 
         e = exc.ImageNotFound(image_id=shelved_image_id)
         self.conductor_manager.image_api.get(
-            self.context, shelved_image_id).AndRaise(e)
+            self.context, shelved_image_id, show_deleted=False).AndRaise(e)
         self.mox.ReplayAll()
 
         system_metadata['shelved_at'] = timeutils.utcnow()
         system_metadata['shelved_host'] = 'fake-mini'
         system_metadata['shelved_image_id'] = shelved_image_id
+
+        self.assertRaises(
+            exc.UnshelveException,
+            self.conductor_manager.unshelve_instance,
+            self.context, instance)
+        self.assertEqual(instance.vm_state, vm_states.ERROR)
+
+    def test_unshelve_offloaded_instance_image_id_is_none(self):
+        db_instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance = objects.Instance.get_by_uuid(
+            self.context,
+            db_instance['uuid'],
+            expected_attrs=['system_metadata'])
+        instance.vm_state = vm_states.SHELVED_OFFLOADED
+        instance.task_state = task_states.UNSHELVING
+        system_metadata = instance.system_metadata
+        system_metadata['shelved_image_id'] = None
+        instance.save()
 
         self.assertRaises(
             exc.UnshelveException,
@@ -1443,7 +1461,7 @@ class _BaseTaskTestCase(object):
                 'unshelve_instance')
 
         self.conductor_manager.image_api.get(self.context,
-                'fake_image_id').AndReturn('fake_image')
+                'fake_image_id', show_deleted=False).AndReturn('fake_image')
         self.conductor_manager._schedule_instances(self.context,
                 'fake_image', filter_properties, instance).AndReturn(
                         [{'host': 'fake_host',
@@ -1482,7 +1500,8 @@ class _BaseTaskTestCase(object):
             system_metadata['shelved_host'] = 'fake-mini'
             self.conductor_manager.unshelve_instance(self.context, instance)
             _get_image.assert_has_calls([mock.call(self.context,
-                                      system_metadata['shelved_image_id'])])
+                                      system_metadata['shelved_image_id'],
+                                      show_deleted=False)])
             self.assertEqual(vm_states.SHELVED_OFFLOADED, instance.vm_state)
 
     def test_unshelve_instance_schedule_and_rebuild_volume_backed(self):
@@ -1500,7 +1519,7 @@ class _BaseTaskTestCase(object):
                 'unshelve_instance')
 
         self.conductor_manager.image_api.get(self.context,
-                'fake_image_id').AndReturn(None)
+                'fake_image_id', show_deleted=False).AndReturn(None)
         self.conductor_manager._schedule_instances(self.context,
                 None, filter_properties, instance).AndReturn(
                         [{'host': 'fake_host',

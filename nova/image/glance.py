@@ -290,7 +290,8 @@ class GlanceImageService(object):
 
         return _images
 
-    def show(self, context, image_id, include_locations=False):
+    def show(self, context, image_id, include_locations=False,
+             show_deleted=True):
         """Returns a dict with image data for the given opaque image id.
 
         :param context: The context object to pass to image client
@@ -301,6 +302,8 @@ class GlanceImageService(object):
                                   not support the locations attribute, it will
                                   still be included in the returned dict, as an
                                   empty list.
+        :param show_deleted: (Optional) show the image even the status of
+                             image is deleted.
         """
         version = 1
         if include_locations:
@@ -309,6 +312,9 @@ class GlanceImageService(object):
             image = self._client.call(context, version, 'get', image_id)
         except Exception:
             _reraise_translated_image_exception(image_id)
+
+        if not show_deleted and getattr(image, 'deleted', False):
+            raise exception.ImageNotFound(image_id=image_id)
 
         if not _is_image_available(context, image):
             raise exception.ImageNotFound(image_id=image_id)
