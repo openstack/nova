@@ -57,6 +57,13 @@ Development policies
    kilo.blueprints
    policies
 
+Testing guides
+--------------
+
+.. toctree::
+    :maxdepth: 3
+
+    testing/libvirt-numa
 
 Other Resources
 ---------------
