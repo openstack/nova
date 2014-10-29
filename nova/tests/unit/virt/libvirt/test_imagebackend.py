@@ -35,6 +35,7 @@ from nova.openstack.common import imageutils
 from nova import test
 from nova.tests.unit import fake_processutils
 from nova.tests.unit.virt.libvirt import fake_libvirt_utils
+from nova.virt.image import model as imgmodel
 from nova.virt import images
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import imagebackend
@@ -258,7 +259,8 @@ class RawTestCase(_ImageTestCase, test.NoDBTestCase):
         fn = self.prepare_mocks()
         fn(max_size=self.SIZE, target=self.TEMPLATE_PATH, image_id=None)
         imagebackend.libvirt_utils.copy_image(self.TEMPLATE_PATH, self.PATH)
-        imagebackend.disk.extend(self.PATH, self.SIZE, use_cow=False)
+        image = imgmodel.LocalFileImage(self.PATH, imgmodel.FORMAT_RAW)
+        imagebackend.disk.extend(image, self.SIZE)
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -413,7 +415,8 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         imagebackend.Image.verify_base_size(self.TEMPLATE_PATH, self.SIZE)
         imagebackend.libvirt_utils.create_cow_image(self.TEMPLATE_PATH,
                                                     self.PATH)
-        imagebackend.disk.extend(self.PATH, self.SIZE, use_cow=True)
+        image = imgmodel.LocalFileImage(self.PATH, imgmodel.FORMAT_QCOW2)
+        imagebackend.disk.extend(image, self.SIZE)
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -460,7 +463,9 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         imagebackend.Image.verify_base_size(self.TEMPLATE_PATH, self.SIZE)
         imagebackend.libvirt_utils.copy_image(self.TEMPLATE_PATH,
                                               self.QCOW2_BASE)
-        imagebackend.disk.extend(self.QCOW2_BASE, self.SIZE, use_cow=True)
+        image = imgmodel.LocalFileImage(self.QCOW2_BASE,
+                                        imgmodel.FORMAT_QCOW2)
+        imagebackend.disk.extend(image, self.SIZE)
 
         os.path.exists(self.PATH).AndReturn(True)
         self.mox.ReplayAll()

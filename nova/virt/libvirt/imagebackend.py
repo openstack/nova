@@ -35,6 +35,7 @@ from nova import keymgr
 from nova.openstack.common import fileutils
 from nova import utils
 from nova.virt.disk import api as disk
+from nova.virt.image import model as imgmodel
 from nova.virt import images
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import dmcrypt
@@ -425,8 +426,9 @@ class Raw(Image):
             libvirt_utils.copy_image(base, target)
             if size:
                 # class Raw is misnamed, format may not be 'raw' in all cases
-                use_cow = self.driver_format == 'qcow2'
-                disk.extend(target, size, use_cow=use_cow)
+                image = imgmodel.LocalFileImage(target,
+                                                self.driver_format)
+                disk.extend(image, size)
 
         generating = 'image_id' not in kwargs
         if generating:
@@ -473,7 +475,8 @@ class Qcow2(Image):
             # This would be keyed on a 'preallocate_images' setting.
             libvirt_utils.create_cow_image(base, target)
             if size:
-                disk.extend(target, size, use_cow=True)
+                image = imgmodel.LocalFileImage(target, imgmodel.FORMAT_QCOW2)
+                disk.extend(image, size)
 
         # Download the unmodified base image unless we already have a copy.
         if not os.path.exists(base):
@@ -502,7 +505,9 @@ class Qcow2(Image):
             if not os.path.exists(legacy_base):
                 with fileutils.remove_path_on_error(legacy_base):
                     libvirt_utils.copy_image(base, legacy_base)
-                    disk.extend(legacy_base, legacy_backing_size, use_cow=True)
+                    image = imgmodel.LocalFileImage(legacy_base,
+                                                    imgmodel.FORMAT_QCOW2)
+                    disk.extend(image, legacy_backing_size)
 
         if not os.path.exists(self.path):
             with fileutils.remove_path_on_error(self.path):

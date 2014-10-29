@@ -35,25 +35,34 @@ class VirtDiskTest(test.NoDBTestCase):
                                             imgmodel.FORMAT_QCOW2)
 
     def test_inject_data(self):
-        self.assertTrue(diskapi.inject_data("/some/file", use_cow=True))
+        self.assertTrue(diskapi.inject_data(
+            imgmodel.LocalFileImage("/some/file", imgmodel.FORMAT_QCOW2)))
 
-        self.assertTrue(diskapi.inject_data("/some/file",
-                                            mandatory=('files',)))
+        self.assertTrue(diskapi.inject_data(
+            imgmodel.LocalFileImage("/some/file", imgmodel.FORMAT_RAW),
+            mandatory=('files',)))
 
-        self.assertTrue(diskapi.inject_data("/some/file", key="mysshkey",
-                                            mandatory=('key',)))
+        self.assertTrue(diskapi.inject_data(
+            imgmodel.LocalFileImage("/some/file", imgmodel.FORMAT_RAW),
+            key="mysshkey",
+            mandatory=('key',)))
 
         os_name = os.name
         os.name = 'nt'  # Cause password injection to fail
         self.assertRaises(exception.NovaException,
                           diskapi.inject_data,
-                          "/some/file", admin_password="p",
+                          imgmodel.LocalFileImage("/some/file",
+                                                  imgmodel.FORMAT_RAW),
+                          admin_password="p",
                           mandatory=('admin_password',))
-        self.assertFalse(diskapi.inject_data("/some/file", admin_password="p"))
+        self.assertFalse(diskapi.inject_data(
+            imgmodel.LocalFileImage("/some/file", imgmodel.FORMAT_RAW),
+            admin_password="p"))
         os.name = os_name
 
-        self.assertFalse(diskapi.inject_data("/some/fail/file",
-                                             key="mysshkey"))
+        self.assertFalse(diskapi.inject_data(
+            imgmodel.LocalFileImage("/some/fail/file", imgmodel.FORMAT_RAW),
+            key="mysshkey"))
 
     def test_inject_data_key(self):
 

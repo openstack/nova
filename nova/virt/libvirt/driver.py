@@ -88,6 +88,7 @@ from nova.virt.disk.vfs import guestfs
 from nova.virt import driver
 from nova.virt import firewall
 from nova.virt import hardware
+from nova.virt.image import model as imgmodel
 from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import dmcrypt
@@ -2734,10 +2735,14 @@ class LibvirtDriver(driver.ComputeDriver):
                          injection_image.path, instance=instance)
                 return
             try:
-                disk.inject_data(injection_image.path,
+                fmt = imgmodel.FORMAT_RAW
+                if CONF.use_cow_images:
+                    fmt = imgmodel.FORMAT_QCOW2
+                image = imgmodel.LocalFileImage(injection_image.path,
+                                                fmt)
+                disk.inject_data(image,
                                  key, net, metadata, admin_pass, files,
                                  partition=target_partition,
-                                 use_cow=CONF.use_cow_images,
                                  mandatory=('files',))
             except Exception as e:
                 with excutils.save_and_reraise_exception():
@@ -4301,9 +4306,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
         container_dir = os.path.join(inst_path, 'rootfs')
         fileutils.ensure_tree(container_dir)
-        rootfs_dev = disk.setup_container(disk_path,
-                                          container_dir=container_dir,
-                                          use_cow=use_cow)
+        fmt = imgmodel.FORMAT_RAW
+        if use_cow:
+            fmt = imgmodel.FORMAT_QCOW2
+        image = imgmodel.LocalFileImage(disk_path, fmt)
+        rootfs_dev = disk.setup_container(image,
+                                          container_dir=container_dir)
 
         try:
             # Save rootfs device to disconnect it when deleting the instance
@@ -6415,32 +6423,40 @@ class LibvirtDriver(driver.ComputeDriver):
                       '-O', 'raw', path, path_raw)
         utils.execute('mv', path_raw, path)
 
-    def _disk_resize(self, info, size):
+    def _disk_resize(self, image, size):
         """Attempts to resize a disk to size
+
+        :param image: an instance of nova.virt.image.model.Image
 
         Attempts to resize a disk by checking the capabilities and
         preparing the format, then calling disk.api.extend.
 
         Note: Currently only support disk extend.
         """
+
+        if not isinstance(image, imgmodel.LocalFileImage):
+            LOG.debug("Skipping resize of non-local image")
+            return
+
         # If we have a non partitioned image that we can extend
         # then ensure we're in 'raw' format so we can extend file system.
-        fmt, org = [info['type']] * 2
-        pth = info['path']
-        if (size and fmt == 'qcow2' and
-                disk.can_resize_image(pth, size) and
-                disk.is_image_extendable(pth, use_cow=True)):
-            self._disk_qcow2_to_raw(pth)
-            fmt = 'raw'
+        converted = False
+        if (size and
+            image.format == imgmodel.FORMAT_QCOW2 and
+            disk.can_resize_image(image.path, size) and
+            disk.is_image_extendable(image)):
+            self._disk_qcow2_to_raw(image.path)
+            converted = True
+            image = imgmodel.LocalFileImage(image.path,
+                                            imgmodel.FORMAT_RAW)
 
         if size:
-            use_cow = fmt == 'qcow2'
-            disk.extend(pth, size, use_cow=use_cow)
+            disk.extend(image, size)
 
-        if fmt != org:
+        if converted:
             # back to qcow2 (no backing_file though) so that snapshot
             # will be available
-            self._disk_raw_to_qcow2(pth)
+            self._disk_raw_to_qcow2(image.path)
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
@@ -6452,7 +6468,9 @@ class LibvirtDriver(driver.ComputeDriver):
         for info in disk_info:
             size = self._disk_size_from_instance(instance, info)
             if resize_instance:
-                self._disk_resize(info, size)
+                image = imgmodel.LocalFileImage(info['path'],
+                                                info['type'])
+                self._disk_resize(image, size)
             if info['type'] == 'raw' and CONF.use_cow_images:
                 self._disk_raw_to_qcow2(info['path'])
 

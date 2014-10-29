@@ -78,8 +78,9 @@ class APITestCase(test.NoDBTestCase):
                 fake_import_fails))
 
         imgfile = tempfile.NamedTemporaryFile()
+        image = imgmodel.LocalFileImage(imgfile, imgmodel.FORMAT_QCOW2)
         self.addCleanup(imgfile.close)
-        self.assertFalse(api.is_image_extendable(imgfile, use_cow=True))
+        self.assertFalse(api.is_image_extendable(image))
 
     def test_resize2fs_success(self):
         imgfile = tempfile.NamedTemporaryFile()
@@ -115,7 +116,6 @@ class APITestCase(test.NoDBTestCase):
         imgfile = tempfile.NamedTemporaryFile()
         imgsize = 10
         device = "/dev/sdh"
-        use_cow = True
         image = imgmodel.LocalFileImage(imgfile, imgmodel.FORMAT_QCOW2)
 
         self.flags(resize_fs_using_block_device=True)
@@ -134,14 +134,14 @@ class APITestCase(test.NoDBTestCase):
 
         api.can_resize_image(imgfile, imgsize).AndReturn(True)
         utils.execute('qemu-img', 'resize', imgfile, imgsize)
-        api.is_image_extendable(imgfile, use_cow).AndReturn(True)
+        api.is_image_extendable(image).AndReturn(True)
         mount.Mount.instance_for_format(image, None, None).AndReturn(mounter)
         mounter.get_dev().AndReturn(True)
         api.resize2fs(mounter.device, run_as_root=True, check_exit_code=[0])
         mounter.unget_dev()
 
         self.mox.ReplayAll()
-        api.extend(imgfile, imgsize, use_cow=use_cow)
+        api.extend(image, imgsize)
 
     @mock.patch.object(api, 'can_resize_image', return_value=True)
     @mock.patch.object(api, 'is_image_extendable')
@@ -150,10 +150,11 @@ class APITestCase(test.NoDBTestCase):
                                    mock_can_resize_image):
         imgfile = tempfile.NamedTemporaryFile()
         imgsize = 10
+        image = imgmodel.LocalFileImage(imgfile, imgmodel.FORMAT_QCOW2)
 
         self.flags(resize_fs_using_block_device=False)
 
-        api.extend(imgfile, imgsize, use_cow=True)
+        api.extend(image, imgsize)
 
         mock_can_resize_image.assert_called_once_with(imgfile, imgsize)
         mock_execute.assert_called_once_with('qemu-img', 'resize', imgfile,
@@ -163,7 +164,7 @@ class APITestCase(test.NoDBTestCase):
     def test_extend_raw_success(self):
         imgfile = tempfile.NamedTemporaryFile()
         imgsize = 10
-        use_cow = False
+        image = imgmodel.LocalFileImage(imgfile, imgmodel.FORMAT_RAW)
 
         self.mox.StubOutWithMock(api, 'can_resize_image')
         self.mox.StubOutWithMock(utils, 'execute')
@@ -172,11 +173,11 @@ class APITestCase(test.NoDBTestCase):
 
         api.can_resize_image(imgfile, imgsize).AndReturn(True)
         utils.execute('qemu-img', 'resize', imgfile, imgsize)
-        api.is_image_extendable(imgfile, use_cow).AndReturn(True)
+        api.is_image_extendable(image).AndReturn(True)
         api.resize2fs(imgfile, run_as_root=False, check_exit_code=[0])
 
         self.mox.ReplayAll()
-        api.extend(imgfile, imgsize, use_cow=use_cow)
+        api.extend(image, imgsize)
 
     HASH_VFAT = utils.get_hash_str(api.FS_FORMAT_VFAT)[:7]
     HASH_EXT4 = utils.get_hash_str(api.FS_FORMAT_EXT4)[:7]

@@ -81,6 +81,7 @@ from nova.virt import driver
 from nova.virt import fake
 from nova.virt import firewall as base_firewall
 from nova.virt import hardware
+from nova.virt.image import model as imgmodel
 from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import driver as libvirt_driver
@@ -7168,9 +7169,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(virt_type="lxc",
                    group='libvirt')
 
-        def check_setup_container(path, container_dir=None, use_cow=False):
-            self.assertEqual(path, '/dev/path/to/dev')
-            self.assertTrue(use_cow)
+        def check_setup_container(image, container_dir=None):
+            self.assertEqual(image.path, '/dev/path/to/dev')
+            self.assertEqual(image.format, imgmodel.FORMAT_QCOW2)
             return '/dev/nbd1'
 
         bdm = {
@@ -9978,9 +9979,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_ensure_tree.assert_has_calls([mock.call('/tmp/rootfs')])
         drvr.image_backend.image.assert_has_calls([mock.call(mock_instance,
                                                              'disk')])
-        setup_container_call = mock.call('/tmp/test.img',
-                                         container_dir='/tmp/rootfs',
-                                         use_cow=CONF.use_cow_images)
+
+        fmt = imgmodel.FORMAT_RAW
+        if CONF.use_cow_images:
+            fmt = imgmodel.FORMAT_QCOW2
+
+        setup_container_call = mock.call(
+            imgmodel.LocalFileImage('/tmp/test.img', fmt),
+            container_dir='/tmp/rootfs')
         mock_setup_container.assert_has_calls([setup_container_call])
         mock_get_info.assert_has_calls([mock.call(mock_instance)])
         mock_clean.assert_has_calls([mock.call(container_dir='/tmp/rootfs')])
@@ -10041,9 +10047,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_ensure_tree.assert_has_calls([mock.call('/tmp/rootfs')])
         drvr.image_backend.image.assert_has_calls([mock.call(mock_instance,
                                                              'disk')])
-        setup_container_call = mock.call('/tmp/test.img',
-                                         container_dir='/tmp/rootfs',
-                                         use_cow=CONF.use_cow_images)
+
+        fmt = imgmodel.FORMAT_RAW
+        if CONF.use_cow_images:
+            fmt = imgmodel.FORMAT_QCOW2
+
+        setup_container_call = mock.call(
+            imgmodel.LocalFileImage('/tmp/test.img', fmt),
+            container_dir='/tmp/rootfs')
         mock_setup_container.assert_has_calls([setup_container_call])
         mock_get_info.assert_has_calls([mock.call(mock_instance)])
         mock_clean.assert_has_calls([mock.call(container_dir='/tmp/rootfs')])
@@ -10090,9 +10101,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_ensure_tree.assert_has_calls([mock.call('/tmp/rootfs')])
         drvr.image_backend.image.assert_has_calls([mock.call(mock_instance,
                                                              'disk')])
-        setup_container_call = mock.call('/tmp/test.img',
-                                         container_dir='/tmp/rootfs',
-                                         use_cow=CONF.use_cow_images)
+
+        fmt = imgmodel.FORMAT_RAW
+        if CONF.use_cow_images:
+            fmt = imgmodel.FORMAT_QCOW2
+
+        setup_container_call = mock.call(
+            imgmodel.LocalFileImage('/tmp/test.img', fmt),
+            container_dir='/tmp/rootfs')
         mock_setup_container.assert_has_calls([setup_container_call])
         mock_get_info.assert_has_calls([mock.call(mock_instance)])
         teardown_call = mock.call(container_dir='/tmp/rootfs')
@@ -11688,17 +11704,17 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.virt.disk.api.extend')
     def test_disk_resize_raw(self, mock_extend):
-        info = {'type': 'raw', 'path': '/test/disk'}
+        image = imgmodel.LocalFileImage("/test/disk",
+                                        imgmodel.FORMAT_RAW)
 
-        self.drvr._disk_resize(info, 50)
-        mock_extend.assert_called_once_with(info['path'], 50, use_cow=False)
+        self.drvr._disk_resize(image, 50)
+        mock_extend.assert_called_once_with(image, 50)
 
     @mock.patch('nova.virt.disk.api.can_resize_image')
     @mock.patch('nova.virt.disk.api.is_image_extendable')
     @mock.patch('nova.virt.disk.api.extend')
     def test_disk_resize_qcow2(
             self, mock_extend, mock_can_resize, mock_is_image_extendable):
-        info = {'type': 'qcow2', 'path': '/test/disk'}
 
         with contextlib.nested(
                 mock.patch.object(
@@ -11710,12 +11726,15 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             mock_can_resize.return_value = True
             mock_is_image_extendable.return_value = True
 
-            self.drvr._disk_resize(info, 50)
+            imageqcow2 = imgmodel.LocalFileImage("/test/disk",
+                                                 imgmodel.FORMAT_QCOW2)
+            imageraw = imgmodel.LocalFileImage("/test/disk",
+                                               imgmodel.FORMAT_RAW)
+            self.drvr._disk_resize(imageqcow2, 50)
 
-            mock_disk_qcow2_to_raw.assert_called_once_with(info['path'])
-            mock_extend.assert_called_once_with(
-                info['path'], 50, use_cow=False)
-            mock_disk_raw_to_qcow2.assert_called_once_with(info['path'])
+            mock_disk_qcow2_to_raw.assert_called_once_with(imageqcow2.path)
+            mock_extend.assert_called_once_with(imageraw, 50)
+            mock_disk_raw_to_qcow2.assert_called_once_with(imageqcow2.path)
 
     def _test_finish_migration(self, power_on, resize_instance=False):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
@@ -11761,7 +11780,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             else:
                 return hardware.InstanceInfo(state=power_state.SHUTDOWN)
 
-        def fake_disk_resize(info, size):
+        def fake_disk_resize(image, size):
             self.fake_disk_resize_called = True
 
         self.flags(use_cow_images=True)
@@ -12065,7 +12084,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.virt.netutils.get_injected_network_template')
     @mock.patch('nova.virt.disk.api.inject_data')
-    def _test_inject_data(self, driver_params, disk_params,
+    def _test_inject_data(self, driver_params, path, disk_params,
                           disk_inject_data, inj_network,
                           called=True):
         class ImageBackend(object):
@@ -12081,7 +12100,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         inj_network.side_effect = fake_inj_network
 
         image_backend = ImageBackend()
-        image_backend.path = disk_params[0]
+        image_backend.path = path
 
         with mock.patch.object(
                 self.drvr.image_backend,
@@ -12093,8 +12112,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
             if called:
                 disk_inject_data.assert_called_once_with(
+                    mock.ANY,
                     *disk_params,
-                    partition=None, mandatory=('files',), use_cow=True)
+                    partition=None, mandatory=('files',))
 
             self.assertEqual(disk_inject_data.called, called)
 
@@ -12112,18 +12132,18 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         driver_params = self._test_inject_data_default_driver_params()
         driver_params['admin_pass'] = 'foobar'
         disk_params = [
-            '/path',  # injection_path
             None,  # key
             None,  # net
             {},  # metadata
             'foobar',  # admin_pass
             None,  # files
         ]
-        self._test_inject_data(driver_params, disk_params)
+        self._test_inject_data(driver_params, "/path", disk_params)
 
         # Test with the configuration setted to false.
         self.flags(inject_password=False, group='libvirt')
-        self._test_inject_data(driver_params, disk_params, called=False)
+        self._test_inject_data(driver_params, "/path",
+                               disk_params, called=False)
 
     def test_inject_data_key(self):
         driver_params = self._test_inject_data_default_driver_params()
@@ -12131,18 +12151,18 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         self.flags(inject_key=True, group='libvirt')
         disk_params = [
-            '/path',  # injection_path
             'key-content',  # key
             None,  # net
             {},  # metadata
             None,  # admin_pass
             None,  # files
         ]
-        self._test_inject_data(driver_params, disk_params)
+        self._test_inject_data(driver_params, "/path", disk_params)
 
         # Test with the configuration setted to false.
         self.flags(inject_key=False, group='libvirt')
-        self._test_inject_data(driver_params, disk_params, called=False)
+        self._test_inject_data(driver_params, "/path",
+                               disk_params, called=False)
 
     def test_inject_data_metadata(self):
         instance_metadata = {'metadata': {'data': 'foo'}}
@@ -12150,52 +12170,49 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             **instance_metadata
         )
         disk_params = [
-            '/path',  # injection_path
             None,  # key
             None,  # net
             {'data': 'foo'},  # metadata
             None,  # admin_pass
             None,  # files
         ]
-        self._test_inject_data(driver_params, disk_params)
+        self._test_inject_data(driver_params, "/path", disk_params)
 
     def test_inject_data_files(self):
         driver_params = self._test_inject_data_default_driver_params()
         driver_params['files'] = ['file1', 'file2']
         disk_params = [
-            '/path',  # injection_path
             None,  # key
             None,  # net
             {},  # metadata
             None,  # admin_pass
             ['file1', 'file2'],  # files
         ]
-        self._test_inject_data(driver_params, disk_params)
+        self._test_inject_data(driver_params, "/path", disk_params)
 
     def test_inject_data_net(self):
         driver_params = self._test_inject_data_default_driver_params()
         driver_params['network_info'] = {'net': 'eno1'}
         disk_params = [
-            '/path',  # injection_path
             None,  # key
             {'net': 'eno1'},  # net
             {},  # metadata
             None,  # admin_pass
             None,  # files
         ]
-        self._test_inject_data(driver_params, disk_params)
+        self._test_inject_data(driver_params, "/path", disk_params)
 
     def test_inject_not_exist_image(self):
         driver_params = self._test_inject_data_default_driver_params()
         disk_params = [
-            '/fail/path',  # injection_path
             'key-content',  # key
             None,  # net
             None,  # metadata
             None,  # admin_pass
             None,  # files
         ]
-        self._test_inject_data(driver_params, disk_params, called=False)
+        self._test_inject_data(driver_params, "/fail/path",
+                               disk_params, called=False)
 
     def _test_attach_detach_interface(self, method, power_state,
                                       expected_flags):
