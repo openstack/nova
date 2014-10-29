@@ -22,6 +22,7 @@ from nova import exception
 from nova.i18n import _
 from nova.i18n import _LW
 from nova.virt.disk.vfs import api as vfs
+from nova.virt.image import model as imgmodel
 
 
 LOG = logging.getLogger(__name__)
@@ -57,8 +58,14 @@ class VFSGuestFS(vfs.VFS):
     the host filesystem, thus avoiding any potential for symlink
     attacks from the guest filesystem.
     """
-    def __init__(self, imgfile, imgfmt='raw', partition=None):
-        super(VFSGuestFS, self).__init__(imgfile, imgfmt, partition)
+    def __init__(self, image, partition=None):
+        """Create a new local VFS instance
+
+        :param image: instance of nova.virt.image.model.Image
+        :param partition: the partition number of access
+        """
+
+        super(VFSGuestFS, self).__init__(image, partition)
 
         global guestfs
         if guestfs is None:
@@ -111,8 +118,8 @@ class VFSGuestFS(vfs.VFS):
             self.setup_os_static()
 
     def setup_os_static(self):
-        LOG.debug("Mount guest OS image %(imgfile)s partition %(part)s",
-                  {'imgfile': self.imgfile, 'part': str(self.partition)})
+        LOG.debug("Mount guest OS image %(image)s partition %(part)s",
+                  {'image': self.image, 'part': str(self.partition)})
 
         if self.partition:
             self.handle.mount_options("", "/dev/sda%d" % self.partition, "/")
@@ -120,18 +127,18 @@ class VFSGuestFS(vfs.VFS):
             self.handle.mount_options("", "/dev/sda", "/")
 
     def setup_os_inspect(self):
-        LOG.debug("Inspecting guest OS image %s", self.imgfile)
+        LOG.debug("Inspecting guest OS image %s", self.image)
         roots = self.handle.inspect_os()
 
         if len(roots) == 0:
             raise exception.NovaException(_("No operating system found in %s")
-                                          % self.imgfile)
+                                          % self.image)
 
         if len(roots) != 1:
             LOG.debug("Multi-boot OS %(roots)s", {'roots': str(roots)})
             raise exception.NovaException(
                 _("Multi-boot operating system found in %s") %
-                self.imgfile)
+                self.image)
 
         self.setup_os_root(roots[0])
 
@@ -141,8 +148,8 @@ class VFSGuestFS(vfs.VFS):
 
         if len(mounts) == 0:
             raise exception.NovaException(
-                _("No mount points found in %(root)s of %(imgfile)s") %
-                {'root': root, 'imgfile': self.imgfile})
+                _("No mount points found in %(root)s of %(image)s") %
+                {'root': root, 'image': self.image})
 
         # the root directory must be mounted first
         mounts.sort(key=lambda mount: mount[0])
@@ -156,8 +163,8 @@ class VFSGuestFS(vfs.VFS):
                 root_mounted = True
             except RuntimeError as e:
                 msg = _("Error mounting %(device)s to %(dir)s in image"
-                        " %(imgfile)s with libguestfs (%(e)s)") % \
-                      {'imgfile': self.imgfile, 'device': mount[1],
+                        " %(image)s with libguestfs (%(e)s)") % \
+                      {'image': self.image, 'device': mount[1],
                        'dir': mount[0], 'e': e}
                 if root_mounted:
                     LOG.debug(msg)
@@ -165,8 +172,8 @@ class VFSGuestFS(vfs.VFS):
                     raise exception.NovaException(msg)
 
     def setup(self, mount=True):
-        LOG.debug("Setting up appliance for %(imgfile)s %(imgfmt)s",
-                  {'imgfile': self.imgfile, 'imgfmt': self.imgfmt})
+        LOG.debug("Setting up appliance for %(image)s",
+                  {'image': self.image})
         try:
             self.handle = tpool.Proxy(
                 guestfs.GuestFS(python_return_dict=False,
@@ -195,7 +202,21 @@ class VFSGuestFS(vfs.VFS):
             pass
 
         try:
-            self.handle.add_drive_opts(self.imgfile, format=self.imgfmt)
+            if isinstance(self.image, imgmodel.LocalImage):
+                self.handle.add_drive_opts(self.image.path,
+                                           format=self.image.format)
+            elif isinstance(self.image, imgmodel.RBDImage):
+                self.handle.add_drive_opts("%s/%s" % (self.image.pool,
+                                                      self.image.name),
+                                           protocol="rbd",
+                                           format=imgmodel.FORMAT_RAW,
+                                           server=self.image.servers,
+                                           username=self.image.user,
+                                           secret=self.image.password)
+            else:
+                raise exception.UnsupportedImageModel(
+                    self.image.__class__.__name__)
+
             self.handle.launch()
 
             if mount:
@@ -208,8 +229,8 @@ class VFSGuestFS(vfs.VFS):
             # close() is not enough
             self.teardown()
             raise exception.NovaException(
-                _("Error mounting %(imgfile)s with libguestfs (%(e)s)") %
-                {'imgfile': self.imgfile, 'e': e})
+                _("Error mounting %(image)s with libguestfs (%(e)s)") %
+                {'image': self.image, 'e': e})
         except Exception:
             # explicitly teardown instead of implicit close()
             # to prevent orphaned VMs in cases when an implicit

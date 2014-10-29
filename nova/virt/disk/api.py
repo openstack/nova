@@ -240,7 +240,9 @@ def is_image_extendable(image, use_cow=False):
     if use_cow:
         fs = None
         try:
-            fs = vfs.VFS.instance_for_image(image, 'qcow2', None)
+            fs = vfs.VFS.instance_for_image(
+                imgmodel.LocalFileImage(image, imgmodel.FORMAT_QCOW2),
+                None)
             fs.setup(mount=False)
             if fs.get_image_fs() in SUPPORTED_FS_TO_EXTEND:
                 return True
@@ -384,6 +386,16 @@ def inject_data(image, key=None, net=None, metadata=None, admin_password=None,
                 files=None, partition=None, use_cow=False, mandatory=()):
     """Inject the specified items into a disk image.
 
+    :param image: the local file path
+    :param key: the SSH public key to inject
+    :param net: the network configuration to inject
+    :param metadata: the user metadata to inject
+    :param admin_password: the root password to set
+    :param files: the files to copy into the image
+    :param partition: the partition number to access
+    :param use_cow: whether the image is in qcow2 format
+    :param mandatory: the list of parameters which must not fail to inject
+
     If an item name is not specified in the MANDATORY iterable, then a warning
     is logged on failure to inject that item, rather than raising an exception.
 
@@ -400,11 +412,12 @@ def inject_data(image, key=None, net=None, metadata=None, admin_password=None,
               "files=%(files)s partition=%(partition)s use_cow=%(use_cow)s",
               {'image': image, 'key': key, 'net': net, 'metadata': metadata,
                'files': files, 'partition': partition, 'use_cow': use_cow})
-    fmt = "raw"
+    fmt = imgmodel.FORMAT_RAW
     if use_cow:
-        fmt = "qcow2"
+        fmt = imgmodel.FORMAT_QCOW2
     try:
-        fs = vfs.VFS.instance_for_image(image, fmt, partition)
+        fs = vfs.VFS.instance_for_image(
+            imgmodel.LocalFileImage(image, fmt), partition)
         fs.setup()
     except Exception as e:
         # If a mandatory item is passed to this function,
