@@ -34,6 +34,8 @@ from oslo import messaging
 import six
 from testtools import matchers as testtools_matchers
 
+from eventlet import greenthread
+
 import nova
 from nova import availability_zones
 from nova import block_device
@@ -378,6 +380,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                        lambda *a, **kw: None)
         self.stubs.Set(self.compute.volume_api, 'check_attach',
                        lambda *a, **kw: None)
+        self.stubs.Set(greenthread, 'sleep',
+                       lambda *a, **kw: None)
 
         def store_cinfo(context, *args, **kwargs):
             self.cinfo = jsonutils.loads(args[-1].get('connection_info'))
@@ -438,7 +442,9 @@ class ComputeVolumeTestCase(BaseTestCase):
             mock_get_by_id.assert_called_once_with(self.context, 'fake')
             self.assertTrue(mock_attach.called)
 
-    def test_await_block_device_created_to_slow(self):
+    def test_await_block_device_created_too_slow(self):
+        self.flags(block_device_allocate_retries=2)
+        self.flags(block_device_allocate_retries_interval=0.1)
 
         def never_get(context, vol_id):
             return {
@@ -449,13 +455,15 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.volume_api, 'get', never_get)
         self.assertRaises(exception.VolumeNotCreated,
                           self.compute._await_block_device_map_created,
-                          self.context, '1', max_tries=2, wait_between=0.1)
+                          self.context, '1')
 
     def test_await_block_device_created_slow(self):
         c = self.compute
+        self.flags(block_device_allocate_retries=4)
+        self.flags(block_device_allocate_retries_interval=0.1)
 
         def slow_get(context, vol_id):
-            while self.fetched_attempts < 2:
+            if self.fetched_attempts < 2:
                 self.fetched_attempts += 1
                 return {
                     'status': 'creating',
@@ -467,9 +475,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             }
 
         self.stubs.Set(c.volume_api, 'get', slow_get)
-        attempts = c._await_block_device_map_created(self.context, '1',
-                                                     max_tries=4,
-                                                     wait_between=0.1)
+        attempts = c._await_block_device_map_created(self.context, '1')
         self.assertEqual(attempts, 3)
 
     def test_boot_volume_serial(self):
