@@ -714,8 +714,8 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
     def _instance_topology(self, mem):
         mem = mem * 1024
         return hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCell(0, set([1]), mem),
-                   hardware.VirtNUMATopologyCell(1, set([3]), mem)])
+            cells=[hardware.VirtNUMATopologyCellInstance(0, set([1]), mem),
+                   hardware.VirtNUMATopologyCellInstance(1, set([3]), mem)])
 
     def _claim_topology(self, mem, cpus=1):
         if self.tracker.driver.numa_topology is None:

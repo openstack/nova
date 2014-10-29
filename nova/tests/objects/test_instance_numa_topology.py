@@ -20,8 +20,8 @@ from nova.tests.objects import test_objects
 from nova.virt import hardware
 
 fake_numa_topology = hardware.VirtNUMAInstanceTopology(
-        cells=[hardware.VirtNUMATopologyCell(0, set([1, 2]), 512),
-               hardware.VirtNUMATopologyCell(1, set([3, 4]), 512)])
+        cells=[hardware.VirtNUMATopologyCellInstance(0, set([1, 2]), 512),
+               hardware.VirtNUMATopologyCellInstance(1, set([3, 4]), 512)])
 
 fake_db_topology = {
     'created_at': None,

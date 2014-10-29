@@ -607,6 +607,23 @@ class VirtNUMATopologyCell(object):
         return cls(cell_id, cpuset, memory)
 
 
+class VirtNUMATopologyCellInstance(VirtNUMATopologyCell):
+    """Class for reporting NUMA resources in an iinstance cell."""
+
+    def __init__(self, id, cpuset, memory):
+        """Create a new NUMA Cell Instance
+
+        :param id: integer identifier of cell
+        :param cpuset: set containing list of CPU indexes
+        :param memory: RAM measured in Mib
+
+        :returns: a new NUMA cell instance object
+        """
+
+        super(VirtNUMATopologyCellInstance, self).__init__(
+            id, cpuset, memory)
+
+
 class VirtNUMATopologyCellLimit(VirtNUMATopologyCell):
     def __init__(self, id, cpuset, memory, cpu_limit, memory_limit):
         """Create a new NUMA Cell with usage
@@ -750,7 +767,7 @@ class VirtNUMAInstanceTopology(VirtNUMATopology):
     disk image
     """
 
-    cell_class = VirtNUMATopologyCell
+    cell_class = VirtNUMATopologyCellInstance
 
     @staticmethod
     def _get_flavor_or_image_prop(flavor, image_meta, propname):
@@ -798,7 +815,7 @@ class VirtNUMAInstanceTopology(VirtNUMATopology):
 
                 availcpus.remove(cpu)
 
-            cells.append(VirtNUMATopologyCell(node, cpuset, mem))
+            cells.append(cls.cell_class(node, cpuset, mem))
             totalmem = totalmem + mem
 
         if availcpus:
@@ -835,7 +852,7 @@ class VirtNUMAInstanceTopology(VirtNUMATopology):
             start = node * ncpus
             cpuset = set(range(start, start + ncpus))
 
-            cells.append(VirtNUMATopologyCell(node, cpuset, mem))
+            cells.append(cls.cell_class(node, cpuset, mem))
 
         return cls(cells)
 
