@@ -2582,7 +2582,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.assertEqual(cfg.devices[5].type, "spice")
         self.assertEqual(cfg.devices[6].type, "qxl")
-        self.assertEqual(cfg.devices[6].vram, 64)
+        self.assertEqual(cfg.devices[6].vram, 64 * units.Mi / units.Ki)
 
     @mock.patch('nova.virt.disk.api.teardown_container')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_info')

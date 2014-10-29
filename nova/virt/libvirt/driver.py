@@ -3912,7 +3912,7 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.RequestedVRamTooHigh(req_vram=video_ram,
                                                  max_vram=max_vram)
         if max_vram and video_ram:
-            video.vram = video_ram
+            video.vram = video_ram * units.Mi / units.Ki
         guest.add_device(video)
 
     def _add_qga_device(self, guest, instance):
