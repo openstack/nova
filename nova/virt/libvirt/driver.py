@@ -1303,7 +1303,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if driver_type not in self.volume_drivers:
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
         driver = self.volume_drivers[driver_type]
-        return driver.connect_volume(connection_info, disk_info)
+        driver.connect_volume(connection_info, disk_info)
 
     def _disconnect_volume(self, connection_info, disk_dev):
         driver_type = connection_info.get('driver_volume_type')
@@ -1356,7 +1356,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.Invalid(msg)
 
         disk_info = blockinfo.get_info_from_bdm(CONF.libvirt.virt_type, bdm)
-        conf = self._connect_volume(connection_info, disk_info)
+        self._connect_volume(connection_info, disk_info)
+        conf = self._get_volume_config(connection_info, disk_info)
         self._set_cache_mode(conf)
 
         try:
@@ -1367,10 +1368,6 @@ class LibvirtDriver(driver.ComputeDriver):
             state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
             if state in (power_state.RUNNING, power_state.PAUSED):
                 flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
-
-            # cache device_path in connection_info -- required by encryptors
-            if 'data' in connection_info:
-                connection_info['data']['device_path'] = conf.source_path
 
             if encryption:
                 encryptor = self._get_volume_encryptor(connection_info,
@@ -1448,7 +1445,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 CONF.libvirt.virt_type, disk_dev),
             'type': 'disk',
             }
-        conf = self._connect_volume(new_connection_info, disk_info)
+        self._connect_volume(new_connection_info, disk_info)
+        conf = self._get_volume_config(new_connection_info, disk_info)
         if not conf.source_path:
             self._disconnect_volume(new_connection_info, disk_dev)
             raise NotImplementedError(_("Swap only supports host devices"))
@@ -3462,7 +3460,8 @@ class LibvirtDriver(driver.ComputeDriver):
             connection_info = vol['connection_info']
             vol_dev = block_device.prepend_dev(vol['mount_device'])
             info = disk_mapping[vol_dev]
-            cfg = self._connect_volume(connection_info, info)
+            self._connect_volume(connection_info, info)
+            cfg = self._get_volume_config(connection_info, info)
             devices.append(cfg)
             vol['connection_info'] = connection_info
             vol.save(nova_context.get_admin_context())
@@ -4373,15 +4372,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
-            info = blockinfo.get_info_from_bdm(
-                   CONF.libvirt.virt_type, vol)
-            conf = self._connect_volume(connection_info, info)
-
-            # cache device_path in connection_info -- required by encryptors
-            if 'data' in connection_info:
-                connection_info['data']['device_path'] = conf.source_path
-                vol['connection_info'] = connection_info
-                vol.save(context)
 
             if (not reboot and 'data' in connection_info and
                     'volume_id' in connection_info['data']):

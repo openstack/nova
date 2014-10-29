@@ -429,6 +429,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         connection_info = {
             "driver_volume_type": "fake",
             "serial": "fake_serial",
+            "data": {}
         }
         self.assertIsNone(
             self.connection.attach_volume(None, connection_info, instance_ref,
@@ -441,12 +442,15 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     def test_swap_volume(self):
         instance_ref, network_info = self._get_running_instance()
         self.assertIsNone(
-            self.connection.attach_volume(None, {'driver_volume_type': 'fake'},
+            self.connection.attach_volume(None, {'driver_volume_type': 'fake',
+                                                 'data': {}},
                                           instance_ref,
                                           '/dev/sda'))
         self.assertIsNone(
-            self.connection.swap_volume({'driver_volume_type': 'fake'},
-                                        {'driver_volume_type': 'fake'},
+            self.connection.swap_volume({'driver_volume_type': 'fake',
+                                         'data': {}},
+                                        {'driver_volume_type': 'fake',
+                                         'data': {}},
                                         instance_ref,
                                         '/dev/sda', 2))
 
@@ -456,6 +460,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         connection_info = {
             "driver_volume_type": "fake",
             "serial": "fake_serial",
+            "data": {}
         }
         self.connection.power_off(instance_ref)
         self.connection.attach_volume(None, connection_info, instance_ref,
@@ -480,7 +485,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
                 ])
         }
         bdm['block_device_mapping'][0]['connection_info'] = (
-            {'driver_volume_type': 'fake'})
+            {'driver_volume_type': 'fake', 'data': {}})
         with mock.patch.object(
                 driver_block_device.DriverVolumeBlockDevice, 'save'):
             self.connection.power_on(
