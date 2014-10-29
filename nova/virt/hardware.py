@@ -580,7 +580,7 @@ class VirtNUMATopologyCell(object):
 
         :param id: integer identifier of cell
         :param cpuset: set containing list of CPU indexes
-        :param memory: RAM measured in KiB
+        :param memory: RAM measured in MiB
 
         Creates a new NUMA cell object to record the hardware
         resources.
@@ -613,9 +613,9 @@ class VirtNUMATopologyCellLimit(VirtNUMATopologyCell):
 
         :param id: integer identifier of cell
         :param cpuset: set containing list of CPU indexes
-        :param memory: RAM measured in KiB
+        :param memory: RAM measured in MiB
         :param cpu_limit: maximum number of  CPUs allocated
-        :param memory_usage: maxumum RAM allocated in KiB
+        :param memory_usage: maxumum RAM allocated in MiB
 
         Creates a new NUMA cell object to represent the max hardware
         resources and utilization. The number of CPUs specified
@@ -663,9 +663,9 @@ class VirtNUMATopologyCellUsage(VirtNUMATopologyCell):
 
         :param id: integer identifier of cell
         :param cpuset: set containing list of CPU indexes
-        :param memory: RAM measured in KiB
+        :param memory: RAM measured in MiB
         :param cpu_usage: number of  CPUs allocated
-        :param memory_usage: RAM allocated in KiB
+        :param memory_usage: RAM allocated in MiB
 
         Creates a new NUMA cell object to record the hardware
         resources and utilization. The number of CPUs specified
