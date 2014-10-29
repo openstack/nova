@@ -1345,6 +1345,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     'properties': {
                                    'kernel_id': instance['kernel_id'],
                                    'image_location': 'snapshot',
+                                   'image_type': 'snapshot',
                                    'image_state': 'available',
                                    'owner_id': instance['project_id'],
                                    'ramdisk_id': instance['ramdisk_id'],
@@ -1440,6 +1441,22 @@ class LibvirtDriver(driver.ComputeDriver):
                      expected_state=task_states.IMAGE_PENDING_UPLOAD)
             LOG.info(_("Snapshot image upload complete"),
                          instance=instance)
+            """ Alop found a logic error in direct snapshot, it
+            doesn't start up an instance because that code only
+            gets called if we see ImageUnaccepable
+            """
+            LOG.info(_("Direct snapshot succeeded, restarting instance"),
+                        instance=instance)
+            new_dom = None
+            if CONF.libvirt_type != 'lxc' and not live_snapshot:
+                if state == power_state.RUNNING:
+                    new_dom = self._create_domain(domain=virt_dom)
+                elif state == power_state.PAUSED:
+                    new_dom = self._create_domain(domain=virt_dom,
+                                launch_flags=libvirt.VIR_DOMAIN_START_PAUSED)
+                if new_dom is not None:
+                    self._attach_pci_devices(new_dom,
+                            pci_manager.get_instance_pci_devs(instance))
         except exception.ImageUnacceptable:
             LOG.debug('direct snapshot failed', exc_info=True)
             self._generic_snapshot(context, snapshot_name,
