@@ -153,6 +153,7 @@ class LibvirtConfigCapsNUMACell(LibvirtConfigObject):
 
         self.id = None
         self.memory = None
+        self.mempages = []
         self.cpus = []
 
     def parse_dom(self, xmldoc):
@@ -162,6 +163,10 @@ class LibvirtConfigCapsNUMACell(LibvirtConfigObject):
         for c in xmldoc.getchildren():
             if c.tag == "memory":
                 self.memory = int(c.text)
+            elif c.tag == "pages":
+                pages = LibvirtConfigCapsNUMAPages()
+                pages.parse_dom(c)
+                self.mempages.append(pages)
             elif c.tag == "cpus":
                 for c2 in c.getchildren():
                     cpu = LibvirtConfigCapsNUMACPU()
@@ -177,6 +182,9 @@ class LibvirtConfigCapsNUMACell(LibvirtConfigObject):
         mem.set("unit", "KiB")
         mem.text = str(self.memory)
         cell.append(mem)
+
+        for pages in self.mempages:
+            cell.append(pages.format_dom())
 
         cpus = etree.Element("cpus")
         cpus.set("num", str(len(self.cpus)))
@@ -224,6 +232,31 @@ class LibvirtConfigCapsNUMACPU(LibvirtConfigObject):
                     hardware.format_cpu_spec(self.siblings))
 
         return cpu
+
+
+class LibvirtConfigCapsNUMAPages(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigCapsNUMAPages, self).__init__(
+            root_name="pages", **kwargs)
+
+        self.size = None
+        self.total = None
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigCapsNUMAPages, self).parse_dom(xmldoc)
+
+        self.size = int(xmldoc.get("size"))
+        self.total = int(xmldoc.text)
+
+    def format_dom(self):
+        pages = super(LibvirtConfigCapsNUMAPages, self).format_dom()
+
+        pages.text = str(self.total)
+        pages.set("size", str(self.size))
+        pages.set("unit", "KiB")
+
+        return pages
 
 
 class LibvirtConfigCapsHost(LibvirtConfigObject):

@@ -82,6 +82,8 @@ class LibvirtConfigCapsTest(LibvirtConfigBaseTest):
               <cells num='2'>
                 <cell id='0'>
                   <memory unit='KiB'>4048280</memory>
+                  <pages unit='KiB' size='4'>1011941</pages>
+                  <pages unit='KiB' size='2048'>0</pages>
                   <cpus num='4'>
                     <cpu id='0' socket_id='0' core_id='0' siblings='0'/>
                     <cpu id='1' socket_id='0' core_id='1' siblings='1'/>
@@ -91,6 +93,8 @@ class LibvirtConfigCapsTest(LibvirtConfigBaseTest):
                 </cell>
                 <cell id='1'>
                   <memory unit='KiB'>4127684</memory>
+                  <pages unit='KiB' size='4'>1031921</pages>
+                  <pages unit='KiB' size='2048'>0</pages>
                   <cpus num='4'>
                     <cpu id='4' socket_id='1' core_id='0' siblings='4'/>
                     <cpu id='5' socket_id='1' core_id='1' siblings='5'/>
