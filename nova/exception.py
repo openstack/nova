@@ -1888,3 +1888,7 @@ class EnumFieldInvalid(Invalid):
 
 class EnumFieldUnset(Invalid):
     msg_fmt = _('%(fieldname)s missing field type')
+
+
+class InvalidImageFormat(Invalid):
+    msg_fmt = _("Invalid image format '%(format)s'")
