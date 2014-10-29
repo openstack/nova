@@ -14,12 +14,37 @@
 
 from oslo.config import cfg
 
+from nova import block_device
 from nova.compute import vm_states
+from nova import context
+from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.virt import imagecache
 
 CONF = cfg.CONF
+
+swap_bdm_128 = [block_device.BlockDeviceDict(
+        {'id': 1, 'instance_uuid': 'fake-instance',
+         'device_name': '/dev/sdb1',
+         'source_type': 'blank',
+         'destination_type': 'local',
+         'delete_on_termination': True,
+         'guest_format': 'swap',
+         'disk_bus': 'scsi',
+         'volume_size': 128,
+         'boot_index': -1})]
+
+swap_bdm_256 = [block_device.BlockDeviceDict(
+        {'id': 1, 'instance_uuid': 'fake-instance',
+         'device_name': '/dev/sdb1',
+         'source_type': 'blank',
+         'destination_type': 'local',
+         'delete_on_termination': True,
+         'guest_format': 'swap',
+         'disk_bus': 'scsi',
+         'volume_size': 256,
+         'boot_index': -1})]
 
 
 class ImageCacheManagerTests(test.NoDBTestCase):
@@ -72,9 +97,22 @@ class ImageCacheManagerTests(test.NoDBTestCase):
 
         image_cache_manager = imagecache.ImageCacheManager()
 
+        self.mox.StubOutWithMock(objects.block_device.BlockDeviceMappingList,
+                   'get_by_instance_uuid')
+
+        ctxt = context.get_admin_context()
+        objects.block_device.BlockDeviceMappingList.get_by_instance_uuid(
+                ctxt, '123').AndReturn(swap_bdm_256)
+        objects.block_device.BlockDeviceMappingList.get_by_instance_uuid(
+                ctxt, '456').AndReturn(swap_bdm_128)
+        objects.block_device.BlockDeviceMappingList.get_by_instance_uuid(
+                ctxt, '789').AndReturn(swap_bdm_128)
+
+        self.mox.ReplayAll()
+
         # The argument here should be a context, but it's mocked out
-        running = image_cache_manager._list_running_instances(None,
-                                                              all_instances)
+        running = image_cache_manager._list_running_instances(ctxt,
+            all_instances)
 
         self.assertEqual(4, len(running['used_images']))
         self.assertEqual((1, 0, ['instance-00000001']),
@@ -96,6 +134,10 @@ class ImageCacheManagerTests(test.NoDBTestCase):
         self.assertEqual(1, running['image_popularity']['21'])
         self.assertEqual(1, running['image_popularity']['22'])
 
+        self.assertEqual(len(running['used_swap_images']), 2)
+        self.assertIn('swap_128', running['used_swap_images'])
+        self.assertIn('swap_256', running['used_swap_images'])
+
     def test_list_resizing_instances(self):
         instances = [{'image_ref': '1',
                       'host': CONF.host,
@@ -108,8 +150,16 @@ class ImageCacheManagerTests(test.NoDBTestCase):
                          for instance in instances]
 
         image_cache_manager = imagecache.ImageCacheManager()
-        running = image_cache_manager._list_running_instances(None,
-                                                              all_instances)
+        self.mox.StubOutWithMock(objects.block_device.BlockDeviceMappingList,
+                   'get_by_instance_uuid')
+
+        ctxt = context.get_admin_context()
+        objects.block_device.BlockDeviceMappingList.get_by_instance_uuid(
+                ctxt, '123').AndReturn(swap_bdm_256)
+
+        self.mox.ReplayAll()
+        running = image_cache_manager._list_running_instances(ctxt,
+            all_instances)
 
         self.assertEqual(1, len(running['used_images']))
         self.assertEqual((1, 0, ['instance-00000001']),

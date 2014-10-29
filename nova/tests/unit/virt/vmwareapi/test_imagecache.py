@@ -19,6 +19,7 @@ import mock
 from oslo.config import cfg
 from oslo.utils import timeutils
 
+from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.vmwareapi import fake
@@ -235,7 +236,9 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                     ds_util.DatastorePath('fake-ds', 'fake-path'))
             self.assertEqual(3, self._get_timestamp_called)
 
-    def test_update(self):
+    @mock.patch.object(objects.block_device.BlockDeviceMappingList,
+                       'get_by_instance_uuid')
+    def test_update(self, mock_get_by_inst):
         def fake_list_datastore_images(ds_path, datastore):
             return {'unexplained_images': [],
                     'originals': self.images}

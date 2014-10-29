@@ -20,13 +20,16 @@ import hashlib
 import os
 import time
 
+import mock
 from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.serialization import jsonutils
 from oslo.utils import importutils
 
 from nova import conductor
+from nova import context
 from nova import db
+from nova import objects
 from nova.openstack.common import log as logging
 from nova import test
 from nova.tests.unit import fake_instance
@@ -65,6 +68,22 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         self.stubs.Set(os.path, 'exists', lambda x: False)
         csum = imagecache.read_stored_checksum('/tmp/foo', timestamped=False)
         self.assertIsNone(csum)
+
+    @mock.patch.object(os.path, 'exists', return_value=True)
+    @mock.patch.object(time, 'time', return_value=2000000)
+    @mock.patch.object(os.path, 'getmtime', return_value=1000000)
+    def test_get_age_of_file(self, mock_getmtime, mock_time, mock_exists):
+        image_cache_manager = imagecache.ImageCacheManager()
+        exists, age = image_cache_manager._get_age_of_file('/tmp')
+        self.assertTrue(exists)
+        self.assertEqual(1000000, age)
+
+    @mock.patch.object(os.path, 'exists', return_value=False)
+    def test_get_age_of_file_not_exists(self, mock_exists):
+        image_cache_manager = imagecache.ImageCacheManager()
+        exists, age = image_cache_manager._get_age_of_file('/tmp')
+        self.assertFalse(exists)
+        self.assertEqual(0, age)
 
     def test_read_stored_checksum(self):
         with utils.tempdir() as tmpdir:
@@ -109,7 +128,8 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         listing = ['00000001',
                    'ephemeral_0_20_None',
                    '17d1b00b81642842e514494a78e804e9a511637c_5368709120.info',
-                    '00000004']
+                   '00000004',
+                   'swap_1000']
         images = ['e97222e91fc4241f49a7f520d1dcf446751129b3_sm',
                   'e09c675c2d1cfac32dae3c2d83689c8c94bc693b_sm',
                   'e97222e91fc4241f49a7f520d1dcf446751129b3',
@@ -158,6 +178,9 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                                   '17d1b00b81642842e514494a78e804e9a511637c_'
                                 '10737418240')
         self.assertNotIn(unexpected, image_cache_manager.originals)
+
+        self.assertEqual(1, len(image_cache_manager.back_swap_images))
+        self.assertTrue('swap_1000' in image_cache_manager.back_swap_images)
 
     def test_list_backing_images_small(self):
         self.stubs.Set(os, 'listdir',
@@ -664,9 +687,19 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
         self.stubs.Set(os, 'remove', lambda x: remove(x))
 
+        self.mox.StubOutWithMock(objects.block_device.BlockDeviceMappingList,
+                   'get_by_instance_uuid')
+
+        ctxt = context.get_admin_context()
+        objects.block_device.BlockDeviceMappingList.get_by_instance_uuid(
+                ctxt, '123').AndReturn(None)
+        objects.block_device.BlockDeviceMappingList.get_by_instance_uuid(
+                ctxt, '456').AndReturn(None)
+
+        self.mox.ReplayAll()
         # And finally we can make the call we're actually testing...
         # The argument here should be a context, but it is mocked out
-        image_cache_manager.update(None, all_instances)
+        image_cache_manager.update(ctxt, all_instances)
 
         # Verify
         active = [fq_path(hashed_1), fq_path('%s_5368709120' % hashed_1),
@@ -750,8 +783,21 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             touch(base_filename + '.info')
             os.utime(base_filename + '.info', (old, old))
 
+            self.mox.StubOutWithMock(
+                objects.block_device.BlockDeviceMappingList,
+                'get_by_instance_uuid')
+
+            ctxt = context.get_admin_context()
+            objects.block_device.BlockDeviceMappingList.get_by_instance_uuid(
+                ctxt, '123').AndReturn(None)
+            objects.block_device.BlockDeviceMappingList.get_by_instance_uuid(
+                ctxt, '456').AndReturn(None)
+
+            self.mox.ReplayAll()
+
             image_cache_manager = imagecache.ImageCacheManager()
-            image_cache_manager.update(None, all_instances)
+            image_cache_manager.update(ctxt,
+                                       all_instances)
 
             self.assertTrue(os.path.exists(base_filename))
             self.assertTrue(os.path.exists(base_filename + '.info'))
@@ -781,6 +827,56 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             compute.conductor_api = conductor.API()
             compute._run_image_cache_manager_pass(None)
             self.assertTrue(was['called'])
+
+    def test_store_swap_image(self):
+        image_cache_manager = imagecache.ImageCacheManager()
+        image_cache_manager._store_swap_image('swap_')
+        image_cache_manager._store_swap_image('swap_123')
+        image_cache_manager._store_swap_image('swap_456')
+        image_cache_manager._store_swap_image('swap_abc')
+        image_cache_manager._store_swap_image('123_swap')
+        image_cache_manager._store_swap_image('swap_129_')
+
+        self.assertEqual(len(image_cache_manager.back_swap_images), 2)
+        expect_set = set(['swap_123', 'swap_456'])
+        self.assertEqual(image_cache_manager.back_swap_images, expect_set)
+
+    @mock.patch.object(libvirt_utils, 'chown')
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('os.utime')
+    @mock.patch('os.path.getmtime')
+    @mock.patch('os.remove')
+    def test_age_and_verify_swap_images(self, mock_remove, mock_getmtime,
+            mock_utime, mock_exist, mock_chown):
+        image_cache_manager = imagecache.ImageCacheManager()
+        expected_remove = set()
+        expected_exist = set(['swap_128', 'swap_256'])
+
+        image_cache_manager.back_swap_images.add('swap_128')
+        image_cache_manager.back_swap_images.add('swap_256')
+
+        image_cache_manager.used_swap_images.add('swap_128')
+
+        def getmtime(path):
+            return time.time() - 1000000
+
+        mock_getmtime.side_effect = getmtime
+
+        def removefile(path):
+            if not path.startswith('/tmp_age_test'):
+                return os.remove(path)
+
+            fn = os.path.split(path)[-1]
+            expected_remove.add(fn)
+            expected_exist.remove(fn)
+
+        mock_remove.side_effect = removefile
+
+        image_cache_manager._age_and_verify_swap_images(None, '/tmp_age_test')
+        self.assertEqual(1, len(expected_exist))
+        self.assertEqual(1, len(expected_remove))
+        self.assertTrue('swap_128' in expected_exist)
+        self.assertTrue('swap_256' in expected_remove)
 
 
 class VerifyChecksumTestCase(test.NoDBTestCase):
