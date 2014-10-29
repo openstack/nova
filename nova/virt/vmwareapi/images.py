@@ -205,6 +205,7 @@ def upload_iso_to_datastore(iso_path, instance, **kwargs):
     with open(iso_path, 'r') as iso_file:
         write_file_handle = read_write_util.VMwareHTTPWriteFile(
             kwargs.get("host"),
+            kwargs.get("port"),
             kwargs.get("data_center_name"),
             kwargs.get("datastore_name"),
             kwargs.get("cookies"),
@@ -224,7 +225,7 @@ def upload_iso_to_datastore(iso_path, instance, **kwargs):
               instance=instance)
 
 
-def fetch_image(context, instance, host, dc_name, ds_name, file_path,
+def fetch_image(context, instance, host, port, dc_name, ds_name, file_path,
                 cookies=None):
     """Download image from the glance image server."""
     image_ref = instance['image_ref']
@@ -239,7 +240,7 @@ def fetch_image(context, instance, host, dc_name, ds_name, file_path,
     read_iter = IMAGE_API.download(context, image_ref)
     read_file_handle = read_write_util.GlanceFileRead(read_iter)
     write_file_handle = read_write_util.VMwareHTTPWriteFile(
-        host, dc_name, ds_name, cookies, file_path, file_size)
+        host, port, dc_name, ds_name, cookies, file_path, file_size)
     start_transfer(context, read_file_handle, file_size,
                    write_file_handle=write_file_handle)
     LOG.debug("Downloaded image file data %(image_ref)s to "
@@ -360,6 +361,7 @@ def upload_image(context, image, instance, **kwargs):
               instance=instance)
     read_file_handle = read_write_util.VMwareHTTPReadFile(
                                 kwargs.get("host"),
+                                kwargs.get("port"),
                                 kwargs.get("data_center_name"),
                                 kwargs.get("datastore_name"),
                                 kwargs.get("cookies"),

@@ -1062,8 +1062,8 @@ def fake_upload_image(context, image, instance, **kwargs):
     pass
 
 
-def fake_fetch_image(context, instance, host, dc_name, ds_name, file_path,
-                     cookies=None):
+def fake_fetch_image(context, instance, host, port, dc_name, ds_name,
+                     file_path, cookies=None):
     """Fakes the fetch of an image."""
     ds_file_path = "[" + ds_name + "] " + file_path
     _add_file(ds_file_path)

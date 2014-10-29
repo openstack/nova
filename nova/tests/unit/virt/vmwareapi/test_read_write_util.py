@@ -32,6 +32,7 @@ class ReadWriteUtilTestCase(test.NoDBTestCase):
         httplib.HTTPConnection.endheaders()
         self.mox.ReplayAll()
         file = read_write_util.VMwareHTTPWriteFile(ipv6_host,
+                                                   443,
                                                    'fake_dc',
                                                    'fake_ds',
                                                    dict(),
@@ -45,13 +46,15 @@ class ReadWriteUtilTestCase(test.NoDBTestCase):
     @mock.patch.object(urllib2, 'urlopen')
     def test_ipv6_host_read(self, mock_open, mock_request):
         ipv6_host = 'fd8c:215d:178e:c51e:200:c9ff:fed1:584c'
+        port = 7443
         folder = 'tmp/fake.txt'
         read_write_util.VMwareHTTPReadFile(ipv6_host,
+                                           port,
                                            'fake_dc',
                                            'fake_ds',
                                            dict(),
                                            folder)
-        base_url = 'https://[%s]/folder/%s' % (ipv6_host, folder)
+        base_url = 'https://[%s]:%s/folder/%s' % (ipv6_host, port, folder)
         base_url += '?dsName=fake_ds&dcPath=fake_dc'
         headers = {'Cookie': '', 'User-Agent': 'OpenStack-ESX-Adapter'}
         mock_request.assert_called_with(base_url,

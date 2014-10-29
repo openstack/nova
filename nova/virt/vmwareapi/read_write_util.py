@@ -106,22 +106,22 @@ class VMwareHTTPFile(object):
         """Get size of the file to be read."""
         raise NotImplementedError()
 
-    def _get_base_url(self, scheme, host, file_path):
+    def _get_base_url(self, scheme, host, port, file_path):
         if netutils.is_valid_ipv6(host):
-            base_url = "%s://[%s]/folder/%s" % (scheme, host,
-                                                urllib.pathname2url(file_path))
+            base_url = ("%s://[%s]:%s/folder/%s"
+                        % (scheme, host, port, urllib.pathname2url(file_path)))
         else:
-            base_url = "%s://%s/folder/%s" % (scheme, host,
-                                              urllib.pathname2url(file_path))
+            base_url = ("%s://%s:%s/folder/%s"
+                        % (scheme, host, port, urllib.pathname2url(file_path)))
         return base_url
 
 
 class VMwareHTTPWriteFile(VMwareHTTPFile):
     """VMware file write handler class."""
 
-    def __init__(self, host, data_center_name, datastore_name, cookies,
+    def __init__(self, host, port, data_center_name, datastore_name, cookies,
                  file_path, file_size, scheme="https"):
-        base_url = self._get_base_url(scheme, host, file_path)
+        base_url = self._get_base_url(scheme, host, port, file_path)
         param_list = {"dcPath": data_center_name, "dsName": datastore_name}
         base_url = base_url + "?" + urllib.urlencode(param_list)
         _urlparse = urlparse.urlparse(base_url)
@@ -155,9 +155,9 @@ class VMwareHTTPWriteFile(VMwareHTTPFile):
 class VMwareHTTPReadFile(VMwareHTTPFile):
     """VMware file read handler class."""
 
-    def __init__(self, host, data_center_name, datastore_name, cookies,
+    def __init__(self, host, port, data_center_name, datastore_name, cookies,
                  file_path, scheme="https"):
-        base_url = self._get_base_url(scheme, host, file_path)
+        base_url = self._get_base_url(scheme, host, port, file_path)
         param_list = {"dcPath": data_center_name, "dsName": datastore_name}
         base_url = base_url + "?" + urllib.urlencode(param_list)
         headers = {'User-Agent': USER_AGENT,

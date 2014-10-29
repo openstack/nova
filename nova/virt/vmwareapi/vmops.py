@@ -292,6 +292,7 @@ class VMwareVMOps(object):
             context,
             vi.instance,
             session._host,
+            session._port,
             vi.dc_info.name,
             vi.datastore.name,
             image_ds_loc.rel_path,
@@ -631,6 +632,7 @@ class VMwareVMOps(object):
                     images.upload_iso_to_datastore(
                         tmp_file, instance,
                         host=self._session._host,
+                        port=self._session._port,
                         data_center_name=dc_name,
                         datastore_name=data_store_name,
                         cookies=cookies,
@@ -797,6 +799,7 @@ class VMwareVMOps(object):
                 adapter_type=adapter_type,
                 image_version=1,
                 host=self._session._host,
+                port=self._session._port,
                 data_center_name=dc_info.name,
                 datastore_name=datastore_name,
                 cookies=cookies,
