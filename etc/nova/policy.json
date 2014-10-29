@@ -242,6 +242,8 @@
     "compute_extension:v3:os-rescue:discoverable": "",
     "compute_extension:v3:os-scheduler-hints:discoverable": "",
     "compute_extension:security_group_default_rules": "rule:admin_api",
+    "compute_extension:v3:os-security-group-default-rules:discoverable": "",
+    "compute_extension:v3:os-security-group-default-rules": "rule:admin_api",
     "compute_extension:security_groups": "",
     "compute_extension:v3:os-security-groups": "",
     "compute_extension:v3:os-security-groups:discoverable": "",
