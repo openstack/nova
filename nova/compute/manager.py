@@ -132,16 +132,12 @@ interval_opts = [
                default=600,
                help='Interval to pull network bandwidth usage info. Not '
                     'supported on all hypervisors. Set to -1 to disable. '
-                    'Setting this to 0 will disable, but this will change in '
-                    'the K release to mean "run at the default rate".'),
-    # TODO(gilliard): Clean the above message after the K release
+                    'Setting this to 0 will run at the default rate.'),
     cfg.IntOpt('sync_power_state_interval',
                default=600,
                help='Interval to sync power states between the database and '
                     'the hypervisor. Set to -1 to disable. '
-                    'Setting this to 0 will disable, but this will change in '
-                    'Juno to mean "run at the default rate".'),
-    # TODO(gilliard): Clean the above message after the K release
+                    'Setting this to 0 will run at the default rate.'),
     cfg.IntOpt("heal_instance_info_cache_interval",
                default=60,
                help="Number of seconds between instance info_cache self "
@@ -156,9 +152,7 @@ interval_opts = [
                default=3600,
                help='Interval in seconds for polling shelved instances to '
                     'offload. Set to -1 to disable.'
-                    'Setting this to 0 will disable, but this will change in '
-                    'Juno to mean "run at the default rate".'),
-    # TODO(gilliard): Clean the above message after the K release
+                    'Setting this to 0 will run at the default rate.'),
     cfg.IntOpt('shelved_offload_time',
                default=0,
                help='Time in seconds before a shelved instance is eligible '
@@ -168,8 +162,7 @@ interval_opts = [
                default=300,
                help=('Interval in seconds for retrying failed instance file '
                      'deletes. Set to -1 to disable. '
-                     'Setting this to 0 will disable, but this will change in '
-                     'the K release to mean "run at the default rate".')),
+                     'Setting this to 0 will run at the default rate.')),
     cfg.IntOpt('block_device_allocate_retries_interval',
                default=3,
                help='Waiting time interval (seconds) between block'
@@ -5469,11 +5462,8 @@ class ComputeManager(manager.Manager):
                            "Will retry later."),
                          e, instance=instance)
 
-    @compute_utils.periodic_task_spacing_warn("shelved_poll_interval")
     @periodic_task.periodic_task(spacing=CONF.shelved_poll_interval)
     def _poll_shelved_instances(self, context):
-        if CONF.shelved_offload_time <= 0:
-            return
 
         filters = {'vm_state': vm_states.SHELVED,
                    'host': self.host}
@@ -5551,11 +5541,10 @@ class ComputeManager(manager.Manager):
                                       num_instances,
                                       time.time() - start_time))
 
-    @compute_utils.periodic_task_spacing_warn("bandwidth_poll_interval")
     @periodic_task.periodic_task(spacing=CONF.bandwidth_poll_interval)
     def _poll_bandwidth_usage(self, context):
 
-        if (CONF.bandwidth_poll_interval <= 0 or not self._bw_usage_supported):
+        if not self._bw_usage_supported:
             return
 
         prev_time, start_time = utils.last_completed_audit_period()
@@ -5687,7 +5676,6 @@ class ComputeManager(manager.Manager):
 
         self._update_volume_usage_cache(context, vol_usages)
 
-    @compute_utils.periodic_task_spacing_warn("sync_power_state_interval")
     @periodic_task.periodic_task(spacing=CONF.sync_power_state_interval,
                                  run_immediately=True)
     def _sync_power_states(self, context):
@@ -6181,15 +6169,12 @@ class ComputeManager(manager.Manager):
             else:
                 self._process_instance_event(instance, event)
 
-    @compute_utils.periodic_task_spacing_warn("image_cache_manager_interval")
     @periodic_task.periodic_task(spacing=CONF.image_cache_manager_interval,
                                  external_process_ok=True)
     def _run_image_cache_manager_pass(self, context):
         """Run a single pass of the image cache manager."""
 
         if not self.driver.capabilities["has_imagecache"]:
-            return
-        if CONF.image_cache_manager_interval == 0:
             return
 
         # Determine what other nodes use this storage
@@ -6209,13 +6194,9 @@ class ComputeManager(manager.Manager):
 
         self.driver.manage_image_cache(context, filtered_instances)
 
-    @compute_utils.periodic_task_spacing_warn("instance_delete_interval")
     @periodic_task.periodic_task(spacing=CONF.instance_delete_interval)
     def _run_pending_deletes(self, context):
         """Retry any pending instance file deletes."""
-        if CONF.instance_delete_interval == 0:
-            return
-
         LOG.debug('Cleaning up deleted instances')
         filters = {'deleted': True,
                    'soft_deleted': False,

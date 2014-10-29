@@ -667,16 +667,6 @@ class ComputeVolumeTestCase(BaseTestCase):
     def test_boot_image_no_metadata(self):
         self.test_boot_image_metadata(metadata=False)
 
-    def test_poll_bandwidth_usage_disabled(self):
-        ctxt = 'MockContext'
-        self.mox.StubOutWithMock(utils, 'last_completed_audit_period')
-        # None of the mocks should be called.
-        self.mox.ReplayAll()
-
-        self.flags(bandwidth_poll_interval=0)
-        self.compute._poll_bandwidth_usage(ctxt)
-        self.mox.UnsetStubs()
-
     def test_poll_bandwidth_usage_not_implemented(self):
         ctxt = context.get_admin_context()
 
