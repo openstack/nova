@@ -426,9 +426,7 @@ class TestNeutronSecurityGroupRulesTestCase(TestNeutronSecurityGroupsTestCase):
         super(TestNeutronSecurityGroupsTestCase, self).tearDown()
 
 
-class TestNeutronSecurityGroupRules(
-        test_security_groups.TestSecurityGroupRules,
-        TestNeutronSecurityGroupRulesTestCase):
+class TestNeutronSecurityGroupRulesBase(object):
 
     def test_create_add_existing_rules_by_cidr(self):
         sg = test_security_groups.security_group_template()
@@ -466,6 +464,20 @@ class TestNeutronSecurityGroupRules(
     def test_create_rule_quota_limit(self):
         # Enforced by neutron
         pass
+
+
+class TestNeutronSecurityGroupRulesV2(
+        TestNeutronSecurityGroupRulesBase,
+        test_security_groups.TestSecurityGroupRulesV2,
+        TestNeutronSecurityGroupRulesTestCase):
+    pass
+
+
+class TestNeutronSecurityGroupRulesV21(
+        TestNeutronSecurityGroupRulesBase,
+        test_security_groups.TestSecurityGroupRulesV21,
+        TestNeutronSecurityGroupRulesTestCase):
+    pass
 
 
 class TestNeutronSecurityGroupsXMLDeserializer(
