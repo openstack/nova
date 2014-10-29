@@ -19,8 +19,6 @@ from oslo.config import cfg
 
 from nova import context
 from nova import db
-from nova import objects
-from nova.pci import stats as pci_stats
 from nova.scheduler import filters
 from nova import servicegroup
 from nova import test
@@ -387,59 +385,6 @@ class HostFiltersTestCase(test.NoDBTestCase):
     def test_group_affinity_filter_fails_legacy(self):
         self._test_group_affinity_filter_fails(
                 'GroupAffinityFilter', 'legacy')
-
-    def _fake_pci_support_requests(self, pci_requests):
-        self.pci_requests = pci_requests
-        return self.pci_request_result
-
-    def test_pci_passthrough_pass(self):
-        filt_cls = self.class_map['PciPassthroughFilter']()
-        request = objects.InstancePCIRequest(count=1,
-            spec=[{'vendor_id': '8086'}])
-        requests = objects.InstancePCIRequests(requests=[request])
-        filter_properties = {'pci_requests': requests}
-        self.stubs.Set(pci_stats.PciDeviceStats, 'support_requests',
-                       self._fake_pci_support_requests)
-        host = fakes.FakeHostState(
-            'host1', 'node1',
-            attribute_dict={'pci_stats': pci_stats.PciDeviceStats()})
-        self.pci_request_result = True
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-        self.assertEqual(self.pci_requests, requests.requests)
-
-    def test_pci_passthrough_fail(self):
-        filt_cls = self.class_map['PciPassthroughFilter']()
-        request = objects.InstancePCIRequest(count=1,
-            spec=[{'vendor_id': '8086'}])
-        requests = objects.InstancePCIRequests(requests=[request])
-        filter_properties = {'pci_requests': requests}
-        self.stubs.Set(pci_stats.PciDeviceStats, 'support_requests',
-                       self._fake_pci_support_requests)
-        host = fakes.FakeHostState(
-            'host1', 'node1',
-            attribute_dict={'pci_stats': pci_stats.PciDeviceStats()})
-        self.pci_request_result = False
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
-        self.assertEqual(self.pci_requests, requests.requests)
-
-    def test_pci_passthrough_no_pci_request(self):
-        filt_cls = self.class_map['PciPassthroughFilter']()
-        filter_properties = {}
-        host = fakes.FakeHostState('h1', 'n1', {})
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-
-    def test_pci_passthrough_comopute_stats(self):
-        filt_cls = self.class_map['PciPassthroughFilter']()
-        requests = [{'count': 1, 'spec': [{'vendor_id': '8086'}]}]
-        filter_properties = {'pci_requests': requests}
-        self.stubs.Set(pci_stats.PciDeviceStats, 'support_requests',
-                       self._fake_pci_support_requests)
-        host = fakes.FakeHostState(
-            'host1', 'node1',
-            attribute_dict={})
-        self.pci_request_result = True
-        self.assertRaises(AttributeError, filt_cls.host_passes,
-                          host, filter_properties)
 
     def test_metrics_filter_pass(self):
         self.flags(weight_setting=['foo=1', 'bar=2'], group='metrics')
