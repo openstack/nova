@@ -47,33 +47,6 @@ class HostFiltersTestCase(test.NoDBTestCase):
         host = fakes.FakeHostState('host1', 'node1', {})
         self.assertTrue(filt_cls.host_passes(host, {}))
 
-    def test_retry_filter_disabled(self):
-        # Test case where retry/re-scheduling is disabled.
-        filt_cls = self.class_map['RetryFilter']()
-        host = fakes.FakeHostState('host1', 'node1', {})
-        filter_properties = {}
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-
-    def test_retry_filter_pass(self):
-        # Node not previously tried.
-        filt_cls = self.class_map['RetryFilter']()
-        host = fakes.FakeHostState('host1', 'nodeX', {})
-        retry = dict(num_attempts=2,
-                     hosts=[['host1', 'node1'],  # same host, different node
-                            ['host2', 'node2'],  # different host and node
-                            ])
-        filter_properties = dict(retry=retry)
-        self.assertTrue(filt_cls.host_passes(host, filter_properties))
-
-    def test_retry_filter_fail(self):
-        # Node was already tried.
-        filt_cls = self.class_map['RetryFilter']()
-        host = fakes.FakeHostState('host1', 'node1', {})
-        retry = dict(num_attempts=1,
-                     hosts=[['host1', 'node1']])
-        filter_properties = dict(retry=retry)
-        self.assertFalse(filt_cls.host_passes(host, filter_properties))
-
     def _test_group_anti_affinity_filter_passes(self, cls, policy):
         filt_cls = self.class_map[cls]()
         host = fakes.FakeHostState('host1', 'node1', {})
