@@ -46,7 +46,7 @@ import functools
 
 import stevedore
 
-from nova.i18n import _LE
+from nova.i18n import _, _LE
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
@@ -65,50 +65,68 @@ class FatalHookException(Exception):
 
 class HookManager(stevedore.hook.HookManager):
     def __init__(self, name):
-        # invoke_on_load creates an instance of the Hook class
+        """Invoke_on_load creates an instance of the Hook class
+
+        :param name: The name of the hooks to load.
+        :type name: str
+        """
         super(HookManager, self).__init__(NS, name, invoke_on_load=True)
 
-    def run_pre(self, name, args, kwargs, f=None):
+    def _run(self, name, method_type, args, kwargs, func=None):
+        if method_type not in ('pre', 'post'):
+            msg = _("Wrong type of hook method. "
+                    "Only 'pre' and 'post' type allowed")
+            raise ValueError(msg)
+
         for e in self.extensions:
             obj = e.obj
-            pre = getattr(obj, 'pre', None)
-            if pre:
-                LOG.debug("Running %(name)s pre-hook: %(obj)s",
-                          {'name': name, 'obj': obj})
+            hook_method = getattr(obj, method_type, None)
+            if hook_method:
+                LOG.debug("Running %(name)s %(type)s-hook: %(obj)s",
+                          {'name': name, 'type': method_type, 'obj': obj})
                 try:
-                    if f:
-                        pre(f, *args, **kwargs)
+                    if func:
+                        hook_method(func, *args, **kwargs)
                     else:
-                        pre(*args, **kwargs)
+                        hook_method(*args, **kwargs)
                 except FatalHookException:
                     msg = _LE("Fatal Exception running %(name)s "
-                              "pre-hook: %(obj)s")
-                    LOG.exception(msg, {'name': name, 'obj': obj})
+                              "%(type)s-hook: %(obj)s")
+                    LOG.exception(msg, {'name': name, 'type': method_type,
+                                        'obj': obj})
                     raise
                 except Exception:
-                    msg = _LE("Exception running %(name)s pre-hook: %(obj)s")
-                    LOG.exception(msg, {'name': name, 'obj': obj})
+                    msg = _LE("Exception running %(name)s "
+                              "%(type)s-hook: %(obj)s")
+                    LOG.exception(msg, {'name': name, 'type': method_type,
+                                        'obj': obj})
+
+    def run_pre(self, name, args, kwargs, f=None):
+        """Execute optional pre methods of loaded hooks.
+
+        :param name: The name of the loaded hooks.
+        :param args: Positional arguments which would be transmitted into
+                     all pre methods of loaded hooks.
+        :param kwargs: Keyword args which would be transmitted into all pre
+                       methods of loaded hooks.
+        :param f: Target function.
+        """
+        self._run(name=name, method_type='pre', args=args, kwargs=kwargs,
+                  func=f)
 
     def run_post(self, name, rv, args, kwargs, f=None):
-        for e in reversed(self.extensions):
-            obj = e.obj
-            post = getattr(obj, 'post', None)
-            if post:
-                LOG.debug("Running %(name)s post-hook: %(obj)s",
-                          {'name': name, 'obj': obj})
-                try:
-                    if f:
-                        post(f, rv, *args, **kwargs)
-                    else:
-                        post(rv, *args, **kwargs)
-                except FatalHookException:
-                    msg = _LE("Fatal Exception running %(name)s "
-                              "post-hook: %(obj)s")
-                    LOG.exception(msg, {'name': name, 'obj': obj})
-                    raise
-                except Exception:
-                    msg = _LE("Exception running %(name)s post-hook: %(obj)s")
-                    LOG.exception(msg, {'name': name, 'obj': obj})
+        """Execute optional post methods of loaded hooks.
+
+        :param name: The name of the loaded hooks.
+        :param rv: Return values of target method call.
+        :param args: Positional arguments which would be transmitted into
+                     all post methods of loaded hooks.
+        :param kwargs: Keyword args which would be transmitted into all post
+                       methods of loaded hooks.
+        :param f: Target function.
+        """
+        self._run(name=name, method_type='post', args=(rv,) + args,
+                  kwargs=kwargs, func=f)
 
 
 def add_hook(name, pass_function=False):
