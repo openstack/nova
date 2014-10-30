@@ -4588,6 +4588,11 @@ class ComputeManager(manager.Manager):
                                       instance,
                                       mp,
                                       encryption=encryption)
+        except exception.DiskNotFound as err:
+            LOG.warn(_LW('Ignoring DiskNotFound exception while detaching '
+                         'volume %(volume_id)s from %(mp)s: %(err)s'),
+                     {'volume_id': volume_id, 'mp': mp, 'err': err},
+                     instance=instance)
         except Exception:  # pylint: disable=W0702
             with excutils.save_and_reraise_exception():
                 LOG.exception(_LE('Failed to detach volume %(volume_id)s '
