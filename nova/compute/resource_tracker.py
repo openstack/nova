@@ -777,11 +777,15 @@ class ResourceTracker(object):
         See bug 1164110
         """
         try:
-            return flavors.extract_flavor(instance, prefix)
+            extracted_flavor = flavors.extract_flavor(instance, prefix)
         except KeyError:
             if not instance_type_id:
                 instance_type_id = instance['instance_type_id']
             return objects.Flavor.get_by_id(context, instance_type_id)
+        # NOTE (ndipanov): Make sure we don't try to lazy-load extra_specs
+        # from the object, if there were none stashed in system_metadata
+        extracted_flavor.setdefault('extra_specs', {})
+        return objects.Flavor(context, **extracted_flavor)
 
     def _get_usage_dict(self, object_or_dict, **updates):
         """Make a usage dict _update methods expect.

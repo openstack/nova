@@ -15,6 +15,7 @@ import copy
 
 import mock
 
+from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import resource_tracker
 from nova.compute import task_states
@@ -38,37 +39,47 @@ _VIRT_DRIVER_AVAIL_RESOURCES = {
 
 _INSTANCE_TYPE_FIXTURES = {
     1: {
+        'id': 1,
+        'flavorid': 'fakeid-1',
+        'name': 'fake1.small',
         'memory_mb': 128,
         'vcpus': 1,
         'root_gb': 1,
         'ephemeral_gb': 0,
+        'swap': 0,
+        'rxtx_factor': 0,
+        'vcpu_weight': 1,
+        'extra_specs': {},
     },
     2: {
+        'id': 2,
+        'flavorid': 'fakeid-2',
+        'name': 'fake1.medium',
         'memory_mb': 256,
         'vcpus': 2,
         'root_gb': 5,
         'ephemeral_gb': 0,
+        'swap': 0,
+        'rxtx_factor': 0,
+        'vcpu_weight': 1,
+        'extra_specs': {},
     },
 }
-
-
-def flavor_get_by_id_mock(_context, flavorid):
-    flavor = _INSTANCE_TYPE_FIXTURES[flavorid]
-    return objects.Flavor(**flavor)
 
 
 # A collection of system_metadata attributes that would exist in instances
 # that have the instance type ID matching the dictionary key.
 _INSTANCE_TYPE_SYS_META = {
-    1: dict(
-        ('instance_type_' + key, value) for key, value
-        in _INSTANCE_TYPE_FIXTURES[1].items()
-    ),
-    2: dict(
-        ('instance_type_' + key, value) for key, value
-        in _INSTANCE_TYPE_FIXTURES[2].items()
-    ),
+    1: flavors.save_flavor_info({}, _INSTANCE_TYPE_FIXTURES[1]),
+    2: flavors.save_flavor_info({}, _INSTANCE_TYPE_FIXTURES[2]),
 }
+
+
+_MIGRATION_SYS_META = flavors.save_flavor_info(
+        {}, _INSTANCE_TYPE_FIXTURES[1], 'old_')
+_MIGRATION_SYS_META = flavors.save_flavor_info(
+        _MIGRATION_SYS_META, _INSTANCE_TYPE_FIXTURES[2], 'new_')
+
 
 _INSTANCE_FIXTURES = [
     objects.Instance(
@@ -156,7 +167,7 @@ _MIGRATION_INSTANCE_FIXTURES = {
         vm_state=vm_states.ACTIVE,
         power_state=power_state.RUNNING,
         task_state=task_states.RESIZE_MIGRATING,
-        system_metadata=_INSTANCE_TYPE_SYS_META[1],
+        system_metadata=_MIGRATION_SYS_META,
         os_type='fake-os',
         project_id='fake-project',
     ),
@@ -173,7 +184,7 @@ _MIGRATION_INSTANCE_FIXTURES = {
         vm_state=vm_states.ACTIVE,
         power_state=power_state.RUNNING,
         task_state=task_states.RESIZE_MIGRATING,
-        system_metadata=_INSTANCE_TYPE_SYS_META[2],
+        system_metadata=_MIGRATION_SYS_META,
         os_type='fake-os',
         project_id='fake-project',
     ),
@@ -190,7 +201,7 @@ _MIGRATION_INSTANCE_FIXTURES = {
         vm_state=vm_states.ACTIVE,
         power_state=power_state.RUNNING,
         task_state=task_states.RESIZE_MIGRATING,
-        system_metadata=_INSTANCE_TYPE_SYS_META[2],
+        system_metadata=_MIGRATION_SYS_META,
         os_type='fake-os',
         project_id='fake-project',
     ),
@@ -445,11 +456,9 @@ class TestUpdateAvailableResources(BaseTestCase):
         sync_mock.assert_called_once_with(mock.sentinel.ctx,
                 expected_resources)
 
-    @mock.patch('nova.objects.Flavor.get_by_id')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
-    def test_no_instances_source_migration(self, get_mock, get_inst_mock,
-                                           flavor_get_mock):
+    def test_no_instances_source_migration(self, get_mock, get_inst_mock):
         # We test the behavior of update_available_resource() when
         # there is an active migration that involves this compute node
         # as the source host not the destination host, and the resource
@@ -473,7 +482,6 @@ class TestUpdateAvailableResources(BaseTestCase):
         # objects.Instance.get_by_uuid, so we have the migration return
         inst_uuid = migr_obj.instance_uuid
         get_inst_mock.return_value = _MIGRATION_INSTANCE_FIXTURES[inst_uuid]
-        flavor_get_mock.side_effect = flavor_get_by_id_mock
 
         sync_mock = self._update_available_resources()
 
@@ -500,11 +508,9 @@ class TestUpdateAvailableResources(BaseTestCase):
         sync_mock.assert_called_once_with(mock.sentinel.ctx,
                 expected_resources)
 
-    @mock.patch('nova.objects.Flavor.get_by_id')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
-    def test_no_instances_dest_migration(self, get_mock, get_inst_mock,
-                                         flavor_get_mock):
+    def test_no_instances_dest_migration(self, get_mock, get_inst_mock):
         # We test the behavior of update_available_resource() when
         # there is an active migration that involves this compute node
         # as the destination host not the source host, and the resource
@@ -525,7 +531,6 @@ class TestUpdateAvailableResources(BaseTestCase):
         migr_mock.return_value = [migr_obj]
         inst_uuid = migr_obj.instance_uuid
         get_inst_mock.return_value = _MIGRATION_INSTANCE_FIXTURES[inst_uuid]
-        flavor_get_mock.side_effect = flavor_get_by_id_mock
 
         sync_mock = self._update_available_resources()
 
@@ -552,11 +557,10 @@ class TestUpdateAvailableResources(BaseTestCase):
         sync_mock.assert_called_once_with(mock.sentinel.ctx,
                 expected_resources)
 
-    @mock.patch('nova.objects.Flavor.get_by_id')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_some_instances_source_and_dest_migration(
-            self, get_mock, get_inst_mock, flavor_get_mock):
+            self, get_mock, get_inst_mock):
         # We test the behavior of update_available_resource() when
         # there is an active migration that involves this compute node
         # as the destination host AND the source host, and the resource
@@ -579,7 +583,6 @@ class TestUpdateAvailableResources(BaseTestCase):
         all_instances = _INSTANCE_FIXTURES + [resizing_instance]
         get_mock.return_value = all_instances
         get_inst_mock.return_value = resizing_instance
-        flavor_get_mock.side_effect = flavor_get_by_id_mock
 
         sync_mock = self._update_available_resources()
 
