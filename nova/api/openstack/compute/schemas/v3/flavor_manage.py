@@ -28,31 +28,12 @@ create = {
                     'minLength': 1, 'maxLength': 255,
                     'pattern': '^(?! )[a-zA-Z0-9. _-]+(?<! )$'
                 },
-                # positive ( > 0) integer
-                'ram': {
-                    'type': ['integer', 'string'],
-                    'pattern': '^[0-9]*$', 'minimum': 1
-                },
-                # positive ( > 0) integer
-                'vcpus': {
-                    'type': ['integer', 'string'],
-                    'pattern': '^[0-9]*$', 'minimum': 1
-                },
-                # non-negative ( >= 0) integer
-                'disk': {
-                    'type': ['integer', 'string'],
-                    'pattern': '^[0-9]*$', 'minimum': 0
-                },
-                # non-negative ( >= 0) integer
-                'OS-FLV-EXT-DATA:ephemeral': {
-                    'type': ['integer', 'string'],
-                    'pattern': '^[0-9]*$', 'minimum': 0
-                },
-                # non-negative ( >= 0) integer
-                'swap': {
-                    'type': ['integer', 'string'],
-                    'pattern': '^[0-9]*$', 'minimum': 0
-                },
+                'ram': parameter_types.positive_integer,
+                'vcpus': parameter_types.positive_integer,
+                'disk': parameter_types.non_negative_integer,
+                'OS-FLV-EXT-DATA:ephemeral':
+                    parameter_types.non_negative_integer,
+                'swap': parameter_types.non_negative_integer,
                 # positive ( > 0) float
                 'rxtx_factor': {
                     'type': ['number', 'string'],

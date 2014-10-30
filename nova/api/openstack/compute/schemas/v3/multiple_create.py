@@ -14,15 +14,7 @@
 from nova.api.validation import parameter_types
 
 server_create = {
-    'min_count': {
-        'type': ['integer', 'string'],
-        'pattern': '^[0-9]+$',
-        'minimum': 1
-    },
-    'max_count': {
-        'type': ['integer', 'string'],
-        'pattern': '^[0-9]+$',
-        'minimum': 1
-    },
+    'min_count': parameter_types.positive_integer,
+    'max_count': parameter_types.positive_integer,
     'return_reservation_id': parameter_types.boolean,
 }
