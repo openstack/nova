@@ -338,6 +338,19 @@ class CellsTestV21(BaseCellsTest):
         self.assertRaises(self.bad_request,
             self.controller.create, req, body=body)
 
+    def test_cell_create_rpc_port_empty_string_raises(self):
+        body = {'cell': {'name': 'moocow',
+                         'username': 'fred',
+                         'password': 'secret',
+                         'rpc_host': 'r3.example.org',
+                         'rpc_port': '',
+                         'type': 'parent'}}
+
+        req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
+        self.assertRaises(self.bad_request,
+            self.controller.create, req, body=body)
+
     def _cell_update(self):
         body = {'cell': {'username': 'zeb',
                          'password': 'sneaky'}}
@@ -374,6 +387,17 @@ class CellsTestV21(BaseCellsTest):
         body = {'cell': {'name': '',
                          'username': 'zeb',
                          'password': 'sneaky'}}
+
+        req = self._get_request("cells/cell1")
+        req.environ['nova.context'] = self.context
+        self.assertRaises(self.bad_request,
+            self.controller.update, req, 'cell1', body=body)
+
+    def test_cell_update_empty_rpc_port_raises(self):
+        body = {'cell': {'name': 'fake',
+                         'username': 'zeb',
+                         'password': 'sneaky',
+                         'rpc_port': ''}}
 
         req = self._get_request("cells/cell1")
         req.environ['nova.context'] = self.context
@@ -445,6 +469,19 @@ class CellsTestV21(BaseCellsTest):
                          'password': 'secret',
                          'rpc_host': 'r3.example.org',
                          'rpc_port': None,
+                         'type': 'parent'}}
+
+        req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
+        self.assertRaises(self.bad_request,
+            self.controller.update, req, 'cell1', body=body)
+
+    def test_cell_update_rpc_port_empty_string_raises(self):
+        body = {'cell': {'name': 'moocow',
+                         'username': 'fred',
+                         'password': 'secret',
+                         'rpc_host': 'r3.example.org',
+                         'rpc_port': '',
                          'type': 'parent'}}
 
         req = self._get_request("cells")

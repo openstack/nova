@@ -88,6 +88,15 @@ class CloudpipeUpdateTestV21(test.NoDBTestCase):
                           self.controller.update, req,
                           'configure-project', body=body)
 
+    def test_cloudpipe_configure_project_vpn_port_with_empty_string(self):
+        req = fakes.HTTPRequest.blank(
+            '/v2/fake/os-cloudpipe/configure-project')
+        body = {"configure_project": {"vpn_ipxx": "1.2.3.4",
+                                      "vpn_port": ""}}
+        self.assertRaises(self.bad_request,
+                          self.controller.update, req,
+                          'configure-project', body=body)
+
 
 class CloudpipeUpdateTestV2(CloudpipeUpdateTestV21):
     bad_request = webob.exc.HTTPBadRequest
