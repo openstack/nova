@@ -26,7 +26,6 @@ from oslo.serialization import jsonutils
 from oslo.utils import timeutils
 
 from nova.openstack.common import log as logging
-import nova.scheduler.base_baremetal_host_manager as bbhm
 from nova.scheduler import host_manager
 
 host_manager_opts = [
@@ -56,7 +55,7 @@ CONF.register_opts(host_manager_opts)
 LOG = logging.getLogger(__name__)
 
 
-class IronicNodeState(bbhm.BaseBaremetalNodeState):
+class IronicNodeState(host_manager.HostState):
     """Mutable and immutable information tracked for a host.
     This is an attempt to remove the ad-hoc data structures
     previously used and lock down access.
@@ -64,7 +63,15 @@ class IronicNodeState(bbhm.BaseBaremetalNodeState):
 
     def update_from_compute_node(self, compute):
         """Update information about a host from its compute_node info."""
-        super(IronicNodeState, self).update_from_compute_node(compute)
+        self.vcpus_total = compute['vcpus']
+        self.vcpus_used = compute['vcpus_used']
+
+        self.free_ram_mb = compute['free_ram_mb']
+        self.total_usable_ram_mb = compute['memory_mb']
+        self.free_disk_mb = compute['free_disk_gb'] * 1024
+
+        stats = compute.get('stats', '{}')
+        self.stats = jsonutils.loads(stats)
 
         self.total_usable_disk_gb = compute['local_gb']
         self.hypervisor_type = compute.get('hypervisor_type')
@@ -78,12 +85,14 @@ class IronicNodeState(bbhm.BaseBaremetalNodeState):
 
     def consume_from_instance(self, instance):
         """Consume nodes entire resources regardless of instance request."""
-        super(IronicNodeState, self).consume_from_instance(instance)
+        self.free_ram_mb = 0
+        self.free_disk_mb = 0
+        self.vcpus_used = self.vcpus_total
 
         self.updated = timeutils.utcnow()
 
 
-class IronicHostManager(bbhm.BaseBaremetalHostManager):
+class IronicHostManager(host_manager.HostManager):
     """Ironic HostManager class."""
 
     def __init__(self):
