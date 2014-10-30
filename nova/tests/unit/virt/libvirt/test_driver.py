@@ -12084,8 +12084,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.virt.netutils.get_injected_network_template')
     @mock.patch('nova.virt.disk.api.inject_data')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, "_conn")
     def _test_inject_data(self, driver_params, path, disk_params,
-                          disk_inject_data, inj_network,
+                          mock_conn, disk_inject_data, inj_network,
                           called=True):
         class ImageBackend(object):
             path = '/path'
@@ -12094,6 +12095,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                 if self.path == '/fail/path':
                     return False
                 return True
+
+            def get_model(self, connection):
+                return imgmodel.LocalFileImage(self.path,
+                                               imgmodel.FORMAT_RAW)
 
         def fake_inj_network(*args, **kwds):
             return args[0] or None

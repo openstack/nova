@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import base64
 import contextlib
 import inspect
 import os
@@ -43,6 +44,18 @@ from nova.virt.libvirt import rbd_utils
 
 CONF = cfg.CONF
 CONF.import_opt('fixed_key', 'nova.keymgr.conf_key_mgr', group='keymgr')
+
+
+class FakeSecret(object):
+
+    def value(self):
+        return base64.b64decode("MTIzNDU2Cg==")
+
+
+class FakeConn(object):
+
+    def secretLookupByUUIDString(self, uuid):
+        return FakeSecret()
 
 
 class _ImageTestCase(object):
@@ -295,6 +308,13 @@ class RawTestCase(_ImageTestCase, test.NoDBTestCase):
         driver_format = image.resolve_driver_format()
         self.assertEqual(driver_format, 'raw')
 
+    def test_get_model(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        model = image.get_model(FakeConn())
+        self.assertEqual(imgmodel.LocalFileImage(self.PATH,
+                                                 imgmodel.FORMAT_RAW),
+                         model)
+
 
 class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
     SIZE = units.Gi
@@ -506,6 +526,13 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         image = self.image_class(self.INSTANCE, self.NAME)
         driver_format = image.resolve_driver_format()
         self.assertEqual(driver_format, 'qcow2')
+
+    def test_get_model(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        model = image.get_model(FakeConn())
+        self.assertEqual(imgmodel.LocalFileImage(self.PATH,
+                                                 imgmodel.FORMAT_QCOW2),
+                        model)
 
 
 class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
@@ -1085,6 +1112,12 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.assertEqual(fake_processutils.fake_execute_get_log(), [])
 
+    def test_get_model(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        model = image.get_model(FakeConn())
+        self.assertEqual(imgmodel.LocalBlockImage(self.PATH),
+                         model)
+
 
 class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
     POOL = "FakePool"
@@ -1302,6 +1335,32 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
                               image.create_image, mock.MagicMock(),
                               self.TEMPLATE_PATH, 1)
             driver_mock.size.assert_called_once_with(image.rbd_name)
+
+    @mock.patch.object(rbd_utils.RBDDriver, "get_mon_addrs")
+    def test_get_model(self, mock_mon_addrs):
+        pool = "FakePool"
+        user = "FakeUser"
+
+        self.flags(images_rbd_pool=pool, group='libvirt')
+        self.flags(rbd_user=user, group='libvirt')
+        self.flags(rbd_secret_uuid="3306a5c4-8378-4b3c-aa1f-7b48d3a26172",
+                   group='libvirt')
+
+        def get_mon_addrs():
+            hosts = ["server1", "server2"]
+            ports = ["1899", "1920"]
+            return hosts, ports
+        mock_mon_addrs.side_effect = get_mon_addrs
+
+        image = self.image_class(self.INSTANCE, self.NAME)
+        model = image.get_model(FakeConn())
+        self.assertEqual(imgmodel.RBDImage(
+            self.INSTANCE["uuid"] + "_fake.vm",
+            "FakePool",
+            "FakeUser",
+            "MTIzNDU2Cg==",
+            ["server1:1899", "server2:1920"]),
+                         model)
 
 
 class PloopTestCase(_ImageTestCase, test.NoDBTestCase):

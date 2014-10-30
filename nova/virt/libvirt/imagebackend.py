@@ -14,6 +14,7 @@
 #    under the License.
 
 import abc
+import base64
 import contextlib
 import functools
 import os
@@ -376,6 +377,13 @@ class Image(object):
         """Get an image's name of a base file."""
         return os.path.split(base)[-1]
 
+    def get_model(self, connection):
+        """Get the image information model
+
+        :returns: an instance of nova.virt.image.model.Image
+        """
+        raise NotImplementedError()
+
 
 class Raw(Image):
     def __init__(self, instance=None, disk_name=None, path=None):
@@ -451,6 +459,10 @@ class Raw(Image):
     def is_file_in_instance_path():
         return True
 
+    def get_model(self, connection):
+        return imgmodel.LocalFileImage(self.path,
+                                       imgmodel.FORMAT_RAW)
+
 
 class Qcow2(Image):
     def __init__(self, instance=None, disk_name=None, path=None):
@@ -521,6 +533,10 @@ class Qcow2(Image):
     @staticmethod
     def is_file_in_instance_path():
         return True
+
+    def get_model(self, connection):
+        return imgmodel.LocalFileImage(self.path,
+                                       imgmodel.FORMAT_QCOW2)
 
 
 class Lvm(Image):
@@ -640,6 +656,9 @@ class Lvm(Image):
     def snapshot_extract(self, target, out_format):
         images.convert_image(self.path, target, out_format,
                              run_as_root=True)
+
+    def get_model(self, connection):
+        return imgmodel.LocalBlockImage(self.path)
 
 
 class Rbd(Image):
@@ -770,6 +789,22 @@ class Rbd(Image):
         reason = _('No image locations are accessible')
         raise exception.ImageUnacceptable(image_id=image_id_or_uri,
                                           reason=reason)
+
+    def get_model(self, connection):
+        secret = None
+        if CONF.libvirt.rbd_secret_uuid:
+            secretobj = connection.secretLookupByUUIDString(
+                CONF.libvirt.rbd_secret_uuid)
+            secret = base64.b64encode(secretobj.value())
+
+        hosts, ports = self.driver.get_mon_addrs()
+        servers = [str(':'.join(k)) for k in zip(hosts, ports)]
+
+        return imgmodel.RBDImage(self.rbd_name,
+                                 self.pool,
+                                 self.rbd_user,
+                                 secret,
+                                 servers)
 
 
 class Ploop(Image):

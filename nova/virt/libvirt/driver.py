@@ -2735,12 +2735,7 @@ class LibvirtDriver(driver.ComputeDriver):
                          injection_image.path, instance=instance)
                 return
             try:
-                fmt = imgmodel.FORMAT_RAW
-                if CONF.use_cow_images:
-                    fmt = imgmodel.FORMAT_QCOW2
-                image = imgmodel.LocalFileImage(injection_image.path,
-                                                fmt)
-                disk.inject_data(image,
+                disk.inject_data(injection_image.get_model(self._conn),
                                  key, net, metadata, admin_pass, files,
                                  partition=target_partition,
                                  mandatory=('files',))
