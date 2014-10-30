@@ -16,18 +16,6 @@
 """
 A driver for XenServer or Xen Cloud Platform.
 
-**Related Flags**
-
-:connection_url:  URL for connection to XenServer/Xen Cloud Platform.
-:connection_username:  Username for connection to XenServer/Xen Cloud
-                       Platform (default: root).
-:connection_password:  Password for connection to XenServer/Xen Cloud
-                       Platform.
-:target_host:                the iSCSI Target Host IP address, i.e. the IP
-                             address for the nova-volume host
-:target_port:                iSCSI Target Port, 3260 Default
-:iqn_prefix:                 IQN Prefix, e.g. 'iqn.2010-10.org.openstack'
-
 **Variable Naming Scheme**
 
 - suffix "_ref" for opaque references
