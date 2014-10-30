@@ -15,9 +15,9 @@
 import os
 
 import mock
+from oslo.concurrency import processutils
 
 from nova import exception
-from nova.openstack.common import processutils
 from nova import test
 from nova import utils
 from nova.virt import images

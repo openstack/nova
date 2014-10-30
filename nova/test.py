@@ -31,11 +31,12 @@ import logging
 import os
 import shutil
 import sys
-import tempfile
 import uuid
 
 import fixtures
+from oslo.concurrency import lockutils
 from oslo.config import cfg
+from oslo.config import fixture as config_fixture
 from oslo.messaging import conffixture as messaging_conffixture
 from oslo.utils import timeutils
 import testtools
@@ -298,16 +299,11 @@ class TestCase(testtools.TestCase):
         # that require it, and existing classes and tests should be
         # fixed to not need it.
         if self.REQUIRES_LOCKING:
-            lock_path = tempfile.mkdtemp()
-
-            def _cleanup_lock_path():
-                # because CONF is a global object, we actually have to
-                # explicitly zero it out afterwards
-                CONF.set_override('lock_path', None)
-                shutil.rmtree(lock_path)
-
-            self.addCleanup(_cleanup_lock_path)
-            CONF.set_override('lock_path', lock_path)
+            lock_path = self.useFixture(fixtures.TempDir()).path
+            self.fixture = self.useFixture(
+                config_fixture.Config(lockutils.CONF))
+            self.fixture.config(lock_path=lock_path,
+                                group='oslo_concurrency')
 
         self.useFixture(conf_fixture.ConfFixture(CONF))
 

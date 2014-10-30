@@ -16,10 +16,10 @@
 import contextlib
 
 import mock
+from oslo.concurrency import processutils
 from oslo.config import cfg
 
 from nova import exception
-from nova.openstack.common import processutils
 from nova import test
 from nova import utils
 from nova.virt.libvirt import lvm

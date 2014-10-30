@@ -34,6 +34,7 @@ six>=1.7.0
 stevedore>=1.1.0  # Apache-2.0
 websockify>=0.6.0,<0.7
 wsgiref>=0.1.2
+oslo.concurrency>=0.1.0  # Apache-2.0
 oslo.config>=1.4.0  # Apache-2.0
 oslo.serialization>=1.0.0               # Apache-2.0
 oslo.utils>=1.0.0                       # Apache-2.0

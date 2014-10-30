@@ -21,6 +21,7 @@
 
 import functools
 
+from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.utils import units
 import six
@@ -30,7 +31,6 @@ from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
 from nova.openstack.common import log as logging
-from nova.openstack.common import processutils
 from nova import utils as nova_utils
 from nova.virt.libvirt import utils
 

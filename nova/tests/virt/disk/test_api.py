@@ -16,8 +16,8 @@
 import tempfile
 
 import fixtures
+from oslo.concurrency import processutils
 
-from nova.openstack.common import processutils
 from nova import test
 from nova import utils
 from nova.virt.disk import api

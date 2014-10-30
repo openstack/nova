@@ -14,10 +14,11 @@
 
 """Generic linux scsi subsystem utilities."""
 
+from oslo.concurrency import processutils
+
 from nova.i18n import _LW
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
-from nova.openstack.common import processutils
 from nova import utils
 
 LOG = logging.getLogger(__name__)

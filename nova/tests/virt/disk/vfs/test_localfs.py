@@ -12,10 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.concurrency import processutils
 from oslo.config import cfg
 
 from nova import exception
-from nova.openstack.common import processutils
 from nova import test
 from nova.tests import utils as tests_utils
 import nova.utils
