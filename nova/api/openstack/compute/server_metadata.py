@@ -177,9 +177,9 @@ class Controller(object):
             msg = _("Metadata item was not found")
             raise exc.HTTPNotFound(explanation=msg)
 
+        server = common.get_instance(self.compute_api, context, server_id,
+                                     want_objects=True)
         try:
-            server = self.compute_api.get(context, server_id,
-                                          want_objects=True)
             self.compute_api.delete_instance_metadata(context, server, id)
 
         except exception.InstanceNotFound:

@@ -115,8 +115,9 @@ class ConsolesController(wsgi.Controller):
 
         # If type is not supplied or unknown get_serial_console below will cope
         console_type = body['os-getSerialConsole'].get('type')
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
         try:
-            instance = self.compute_api.get(context, id, want_objects=True)
             output = self.compute_api.get_serial_console(context,
                                                          instance,
                                                          console_type)

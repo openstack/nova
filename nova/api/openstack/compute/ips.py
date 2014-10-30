@@ -60,25 +60,17 @@ class Controller(wsgi.Controller):
         super(Controller, self).__init__(**kwargs)
         self._compute_api = nova.compute.API()
 
-    def _get_instance(self, context, server_id):
-        try:
-            instance = self._compute_api.get(context, server_id)
-        except nova.exception.NotFound:
-            msg = _("Instance does not exist")
-            raise exc.HTTPNotFound(explanation=msg)
-        return instance
-
     @wsgi.serializers(xml=AddressesTemplate)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
-        instance = self._get_instance(context, server_id)
+        instance = common.get_instance(self._compute_api, context, server_id)
         networks = common.get_networks_for_instance(context, instance)
         return self._view_builder.index(networks)
 
     @wsgi.serializers(xml=NetworkTemplate)
     def show(self, req, server_id, id):
         context = req.environ["nova.context"]
-        instance = self._get_instance(context, server_id)
+        instance = common.get_instance(self._compute_api, context, server_id)
         networks = common.get_networks_for_instance(context, instance)
         if id not in networks:
             msg = _("Instance is not a member of specified network")

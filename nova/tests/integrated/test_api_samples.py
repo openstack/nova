@@ -3970,7 +3970,7 @@ class VolumeAttachmentsSampleBase(ServersSampleBase):
     def _stub_compute_api_get(self):
 
         def fake_compute_api_get(self, context, instance_id,
-                                 want_objects=False):
+                                 want_objects=False, expected_attrs=None):
             if want_objects:
                 return fake_instance.fake_instance_obj(
                         context, **{'uuid': instance_id})

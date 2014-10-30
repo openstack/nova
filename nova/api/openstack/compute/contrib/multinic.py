@@ -18,6 +18,7 @@
 import webob
 from webob import exc
 
+from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
@@ -36,14 +37,6 @@ class MultinicController(wsgi.Controller):
         super(MultinicController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    def _get_instance(self, context, instance_id, want_objects=False):
-        try:
-            return self.compute_api.get(context, instance_id,
-                                        want_objects=want_objects)
-        except exception.InstanceNotFound:
-            msg = _("Server not found")
-            raise exc.HTTPNotFound(explanation=msg)
-
     @wsgi.action('addFixedIp')
     def _add_fixed_ip(self, req, id, body):
         """Adds an IP on a given network to an instance."""
@@ -55,7 +48,8 @@ class MultinicController(wsgi.Controller):
             msg = _("Missing 'networkId' argument for addFixedIp")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        instance = self._get_instance(context, id, want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
         network_id = body['addFixedIp']['networkId']
         try:
             self.compute_api.add_fixed_ip(context, instance, network_id)
@@ -75,8 +69,8 @@ class MultinicController(wsgi.Controller):
             msg = _("Missing 'address' argument for removeFixedIp")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        instance = self._get_instance(context, id,
-                                      want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
         address = body['removeFixedIp']['address']
 
         try:

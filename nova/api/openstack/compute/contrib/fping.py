@@ -123,22 +123,24 @@ class FpingController(object):
         return {"servers": res}
 
     def show(self, req, id):
+        context = req.environ["nova.context"]
+        authorize(context)
+        self.check_fping()
+        instance = common.get_instance(self.compute_api, context, id)
+
         try:
-            context = req.environ["nova.context"]
-            authorize(context)
-            self.check_fping()
-            instance = self.compute_api.get(context, id)
             ips = [str(ip) for ip in self._get_instance_ips(context, instance)]
-            alive_ips = self.fping(ips)
-            return {
-                "server": {
-                    "id": instance["uuid"],
-                    "project_id": instance["project_id"],
-                    "alive": bool(set(ips) & alive_ips),
-                }
-            }
         except exception.NotFound:
             raise exc.HTTPNotFound()
+
+        alive_ips = self.fping(ips)
+        return {
+            "server": {
+                "id": instance["uuid"],
+                "project_id": instance["project_id"],
+                "alive": bool(set(ips) & alive_ips),
+            }
+        }
 
 
 class Fping(extensions.ExtensionDescriptor):

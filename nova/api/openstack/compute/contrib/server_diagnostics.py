@@ -45,11 +45,9 @@ class ServerDiagnosticsController(object):
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         authorize(context)
-        try:
-            instance = self.compute_api.get(context, server_id,
-                want_objects=True)
-        except exception.InstanceNotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=e.format_message())
+
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       want_objects=True)
 
         try:
             return self.compute_api.get_diagnostics(context, instance)
