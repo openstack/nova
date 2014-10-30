@@ -953,6 +953,63 @@ def create_cluster(name, ds_ref):
     _create_object('ClusterComputeResource', cluster)
 
 
+def create_vm(uuid=None, name=None,
+              cpus=1, memory=128, devices=None,
+              vmPathName=None, extraConfig=None,
+              res_pool_ref=None, host_ref=None):
+    if uuid is None:
+        uuid = uuidutils.generate_uuid()
+
+    if name is None:
+        name = uuid
+
+    if devices is None:
+        devices = []
+
+    if vmPathName is None:
+        vm_path = ds_util.DatastorePath(_db_content['Datastore'].values()[0])
+    else:
+        vm_path = ds_util.DatastorePath.parse(vmPathName)
+
+    if res_pool_ref is None:
+        res_pool_ref = _db_content['ResourcePool'].keys()[0]
+
+    if host_ref is None:
+        host_ref = _db_content["HostSystem"].keys()[0]
+
+    # Fill in the default path to the vmx file if we were only given a
+    # datastore. Note that if you create a VM with vmPathName '[foo]', when you
+    # retrieve vmPathName it will be '[foo] uuid/uuid.vmx'. Hence we use
+    # vm_path below for the stored value of vmPathName.
+    if vm_path.rel_path == '':
+        vm_path = vm_path.join(name, name + '.vmx')
+
+    for key, value in _db_content["Datastore"].iteritems():
+        if value.get('summary.name') == vm_path.datastore:
+            ds = key
+            break
+    else:
+        ds = create_datastore(vm_path.datastore, 1024, 500)
+
+    vm_dict = {"name": name,
+              "ds": [ds],
+              "runtime_host": host_ref,
+              "powerstate": "poweredOff",
+              "vmPathName": str(vm_path),
+              "numCpu": cpus,
+              "mem": memory,
+              "extra_config": extraConfig,
+              "virtual_device": devices,
+              "instanceUuid": uuid}
+    vm = VirtualMachine(**vm_dict)
+    _create_object("VirtualMachine", vm)
+
+    res_pool = _get_object(res_pool_ref)
+    res_pool.vm.ManagedObjectReference.append(vm.obj)
+
+    return vm.obj
+
+
 def create_task(task_name, state="running", result=None, error_fault=None):
     task = Task(task_name, state, result, error_fault)
     _create_object("Task", task)
@@ -1175,44 +1232,18 @@ class FakeVim(object):
         """Creates and registers a VM object with the Host System."""
         config_spec = kwargs.get("config")
         pool = kwargs.get('pool')
-        name = config_spec.name
-
-        vm_path = ds_util.DatastorePath.parse(config_spec.files.vmPathName)
-        # Fill in the default path to the vmx file if we were only given a
-        # datastore. Note that if you create a VM with vmPathName '[foo]', when
-        # you retrieve vmPathName it will be '[foo] uuid/uuid.vmx'. Hence we
-        # use vm_path below for the stored value of vmPathName.
-        if vm_path.rel_path == '':
-            vm_path = vm_path.join(name, name + '.vmx')
-
-        for key, value in _db_content["Datastore"].iteritems():
-            if value.get('summary.name') == vm_path.datastore:
-                ds = key
-                break
-        else:
-            ds = create_datastore(vm_path.datastore, 1024, 500)
 
         devices = []
         for device_change in config_spec.deviceChange:
             if device_change.operation == 'add':
                 devices.append(device_change.device)
 
-        host = _db_content["HostSystem"].keys()[0]
-        vm_dict = {"name": name,
-                  "ds": [ds],
-                  "runtime_host": host,
-                  "powerstate": "poweredOff",
-                  "vmPathName": str(vm_path),
-                  "numCpu": config_spec.numCPUs,
-                  "mem": config_spec.memoryMB,
-                  "extra_config": config_spec.extraConfig,
-                  "virtual_device": devices,
-                  "instanceUuid": config_spec.instanceUuid}
-        virtual_machine = VirtualMachine(**vm_dict)
-        _create_object("VirtualMachine", virtual_machine)
-        res_pool = _get_object(pool)
-        res_pool.vm.ManagedObjectReference.append(virtual_machine.obj)
-        task_mdo = create_task(method, "success", result=virtual_machine.obj)
+        vm_ref = create_vm(config_spec.instanceUuid, config_spec.name,
+                           config_spec.numCPUs, config_spec.memoryMB,
+                           devices, config_spec.files.vmPathName,
+                           config_spec.extraConfig, pool)
+
+        task_mdo = create_task(method, "success", result=vm_ref)
         return task_mdo.obj
 
     def _reconfig_vm(self, method, *args, **kwargs):
