@@ -2529,6 +2529,13 @@ class CommonNetworkTestCase(test.TestCase):
                           instance=fake_inst(uuid='ignoreduuid'))
         rollback.assert_called_once_with(self.context)
 
+    def test_fixed_cidr_out_of_range(self):
+        manager = network_manager.NetworkManager()
+        ctxt = context.get_admin_context()
+        self.assertRaises(exception.AddressOutOfRange,
+                          manager.create_networks, ctxt, label="fake",
+                          cidr='10.1.0.0/24', fixed_cidr='10.1.1.0/25')
+
 
 class TestRPCFixedManager(network_manager.RPCAllocateFixedIP,
         network_manager.NetworkManager):

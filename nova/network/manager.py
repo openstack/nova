@@ -1189,6 +1189,11 @@ class NetworkManager(manager.Manager):
             except netaddr.AddrFormatError:
                 raise exception.InvalidCidr(cidr=kwargs["fixed_cidr"])
 
+            # Subnet of fixed IPs must fall within fixed range
+            if kwargs["fixed_cidr"] not in fixnet:
+                raise exception.AddressOutOfRange(
+                    address=kwargs["fixed_cidr"].network, cidr=fixnet)
+
         LOG.debug('Create network: |%s|', kwargs)
         return self._do_create_networks(context, **kwargs)
 
