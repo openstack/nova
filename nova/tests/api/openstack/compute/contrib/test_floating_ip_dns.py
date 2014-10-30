@@ -114,6 +114,9 @@ class FloatingIpDNSTestV21(test.TestCase):
     def _check_status(self, expected_status, res, controller_methord):
         self.assertEqual(expected_status, controller_methord.wsgi_code)
 
+    def _bad_request(self):
+        return webob.exc.HTTPBadRequest
+
     def setUp(self):
         super(FloatingIpDNSTestV21, self).setUp()
         self.stubs.Set(network.api.API, "get_dns_domains",
@@ -185,29 +188,6 @@ class FloatingIpDNSTestV21(test.TestCase):
     def test_get_dns_entries_by_ipv6_address(self):
         self._test_get_dns_entries_by_address(test_ipv6_address)
 
-    def test_get_dns_entries_by_invalid_ipv4_or_ipv6(self):
-        # If it's not a valid ipv4 neither ipv6, the method 'show'
-        # will try to get dns entries by name instead. We use this
-        # to test if address is being correctly validated.
-        def fake_get_dns_entries_by_name(self, context, address, domain):
-            raise webob.exc.HTTPUnprocessableEntity()
-
-        self.stubs.Set(network.api.API, "get_dns_entries_by_name",
-                       fake_get_dns_entries_by_name)
-
-        invalid_addr = '333.333.333.333'
-
-        qparams = {'ip': invalid_addr}
-        params = "?%s" % urllib.urlencode(qparams) if qparams else ""
-
-        req = fakes.HTTPRequest.blank(
-            '/v2/123/os-floating-ip-dns/%s/entries/%s'
-            % (_quote_domain(domain), params))
-
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
-                          self.entry_controller.show,
-                          req, _quote_domain(domain), invalid_addr)
-
     def test_get_dns_entries_by_name(self):
         req = fakes.HTTPRequest.blank(
               '/v2/123/os-floating-ip-dns/%s/entries/%s' %
@@ -250,14 +230,14 @@ class FloatingIpDNSTestV21(test.TestCase):
         body = {'domain_entry':
                 {'scope': 'private',
                  'project': 'testproject'}}
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+        self.assertRaises(self._bad_request(),
                           self.domain_controller.update,
                           req, _quote_domain(domain), body=body)
 
         body = {'domain_entry':
                 {'scope': 'public',
                  'availability_zone': 'zone1'}}
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+        self.assertRaises(self._bad_request(),
                           self.domain_controller.update,
                           req, _quote_domain(domain), body=body)
 
@@ -353,6 +333,9 @@ class FloatingIpDNSTestV2(FloatingIpDNSTestV21):
 
     def _check_status(self, expected_status, res, controller_methord):
         self.assertEqual(expected_status, res.status_int)
+
+    def _bad_request(self):
+        return webob.exc.HTTPUnprocessableEntity
 
 
 class FloatingIpDNSSerializerTestV2(test.TestCase):

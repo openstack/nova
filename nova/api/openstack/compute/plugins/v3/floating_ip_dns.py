@@ -106,7 +106,7 @@ class FloatingIPDNSDomainController(object):
 
         return _translate_domain_entries_view(domainlist)
 
-    @extensions.expected_errors((422, 501))
+    @extensions.expected_errors((400, 501))
     @validation.schema(floating_ip_dns.domain_entry_update)
     def update(self, req, id, body):
         """Add or modify domain entry."""
@@ -117,9 +117,14 @@ class FloatingIPDNSDomainController(object):
         scope = entry['scope']
         project = entry.get('project', None)
         av_zone = entry.get('availability_zone', None)
-        if (scope == 'private' and project or
-            scope == 'public' and av_zone):
-            raise webob.exc.HTTPUnprocessableEntity()
+
+        if scope == 'private' and project:
+            msg = _("you can not pass project if the scope is private")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+        if scope == 'public' and av_zone:
+            msg = _("you can not pass av_zone if the scope is public")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
         try:
             if scope == 'private':
                 create_dns_domain = self.network_api.create_private_dns_domain
@@ -161,7 +166,7 @@ class FloatingIPDNSEntryController(object):
         super(FloatingIPDNSEntryController, self).__init__()
         self.network_api = network.API()
 
-    @extensions.expected_errors((422, 404, 501))
+    @extensions.expected_errors((404, 501))
     def show(self, req, domain_id, id):
         """Return the DNS entry that corresponds to domain_id and id."""
         context = req.environ['nova.context']
