@@ -410,6 +410,8 @@ class FakeNodeDevice(object):
 
 class LibvirtConnTestCase(test.NoDBTestCase):
 
+    REQUIRES_LOCKING = True
+
     def setUp(self):
         super(LibvirtConnTestCase, self).setUp()
         self.flags(fake_call=True)

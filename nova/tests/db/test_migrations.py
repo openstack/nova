@@ -151,6 +151,8 @@ class BaseMigrationTestCase(test.NoDBTestCase):
     and configures the databases to run tests against.
     """
 
+    REQUIRES_LOCKING = True
+
     # NOTE(jhesketh): It is expected that tests clean up after themselves.
     # This is necessary for concurrency to allow multiple tests to work on
     # one database.

@@ -176,6 +176,9 @@ vifs = [{'id': 0,
 
 
 class FlatNetworkTestCase(test.TestCase):
+
+    REQUIRES_LOCKING = True
+
     def setUp(self):
         super(FlatNetworkTestCase, self).setUp()
         self.tempdir = self.useFixture(fixtures.TempDir()).path
@@ -793,6 +796,9 @@ class FlatNetworkTestCase(test.TestCase):
 
 
 class FlatDHCPNetworkTestCase(test.TestCase):
+
+    REQUIRES_LOCKING = True
+
     def setUp(self):
         super(FlatDHCPNetworkTestCase, self).setUp()
         self.useFixture(test.SampleNetworks())
@@ -839,6 +845,9 @@ class FlatDHCPNetworkTestCase(test.TestCase):
 
 
 class VlanNetworkTestCase(test.TestCase):
+
+    REQUIRES_LOCKING = True
+
     def setUp(self):
         super(VlanNetworkTestCase, self).setUp()
         self.useFixture(test.SampleNetworks())
@@ -1884,6 +1893,8 @@ class FakeNetwork(object):
 
 class CommonNetworkTestCase(test.TestCase):
 
+    REQUIRES_LOCKING = True
+
     def setUp(self):
         super(CommonNetworkTestCase, self).setUp()
         self.context = context.RequestContext('fake', 'fake')
@@ -2560,6 +2571,9 @@ class TestFloatingIPManager(floating_ips.FloatingIP,
 
 
 class AllocateTestCase(test.TestCase):
+
+    REQUIRES_LOCKING = True
+
     def setUp(self):
         super(AllocateTestCase, self).setUp()
         dns = 'nova.network.noop_dns_driver.NoopDNSDriver'
@@ -2674,6 +2688,9 @@ class AllocateTestCase(test.TestCase):
 
 class FloatingIPTestCase(test.TestCase):
     """Tests nova.network.manager.FloatingIP."""
+
+    REQUIRES_LOCKING = True
+
     def setUp(self):
         super(FloatingIPTestCase, self).setUp()
         self.tempdir = self.useFixture(fixtures.TempDir()).path

@@ -783,6 +783,9 @@ class FakeConnectionTestCase(_VirtDriverTestCase, test.TestCase):
 
 
 class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
+
+    REQUIRES_LOCKING = True
+
     def setUp(self):
         # Point _VirtDriverTestCase at the right module
         self.driver_module = 'nova.virt.libvirt.LibvirtDriver'

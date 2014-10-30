@@ -86,6 +86,9 @@ def get_instances_with_cached_ips(orig_func, *args, **kwargs):
 
 
 class CinderCloudTestCase(test.TestCase):
+
+    REQUIRES_LOCKING = True
+
     def setUp(self):
         super(CinderCloudTestCase, self).setUp()
         ec2utils.reset_cache()
