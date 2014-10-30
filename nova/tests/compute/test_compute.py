@@ -60,6 +60,7 @@ from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
 from nova.objects import instance_group as instance_group_obj
+from nova.objects import instance_info_cache as cache_obj
 from nova.objects import migration as migration_obj
 from nova.objects import quotas as quotas_obj
 from nova.openstack.common.gettextutils import _
@@ -83,7 +84,6 @@ from nova.tests.image import fake as fake_image
 from nova.tests import matchers
 from nova.tests.objects import test_flavor
 from nova.tests.objects import test_migration
-from nova.tests.objects import test_network
 from nova import utils
 from nova.virt import block_device as driver_block_device
 from nova.virt import event
@@ -6771,6 +6771,35 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertIsNone(instance['task_state'])
         return instance, instance_uuid
 
+    def test_ip_filtering(self):
+        info = [{
+            'address': 'aa:bb:cc:dd:ee:ff',
+            'id': 1,
+            'network': {
+                'bridge': 'br0',
+                'id': 1,
+                'label': 'private',
+                'subnets': [{
+                    'cidr': '192.168.0.0/24',
+                    'ips': [{
+                        'address': '192.168.0.10',
+                        'type': 'fixed',
+                    }]
+                }]
+            }
+        }]
+
+        info1 = cache_obj.InstanceInfoCache(network_info=jsonutils.dumps(info))
+        inst1 = instance_obj.Instance(id=1, info_cache=info1)
+        info[0]['network']['subnets'][0]['ips'][0]['address'] = '192.168.0.20'
+        info2 = cache_obj.InstanceInfoCache(network_info=jsonutils.dumps(info))
+        inst2 = instance_obj.Instance(id=2, info_cache=info2)
+        instances = instance_obj.InstanceList(objects=[inst1, inst2])
+
+        instances = self.compute_api._ip_filter(instances, {'ip': '.*10'})
+        self.assertEqual(len(instances), 1)
+        self.assertEqual(instances[0].id, 1)
+
     def test_create_with_too_little_ram(self):
         # Test an instance type with too little memory.
 
@@ -7575,33 +7604,47 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(c, instance2['uuid'])
         db.instance_destroy(c, instance3['uuid'])
 
-    @mock.patch('nova.db.network_get')
-    @mock.patch('nova.db.fixed_ips_by_virtual_interface')
-    def test_get_all_by_multiple_options_at_once(self, fixed_get, network_get):
+    def test_get_all_by_multiple_options_at_once(self):
         # Test searching by multiple options at once.
         c = context.get_admin_context()
-        network_manager = fake_network.FakeNetworkManager(self.stubs)
-        fixed_get.side_effect = (
-            network_manager.db.fixed_ips_by_virtual_interface)
-        network_get.return_value = (
-            dict(test_network.fake_network,
-                 **network_manager.db.network_get(None, 1)))
-        self.stubs.Set(self.compute_api.network_api,
-                       'get_instance_uuids_by_ip_filter',
-                       network_manager.get_instance_uuids_by_ip_filter)
+
+        def fake_network_info(ip):
+            info = [{
+                'address': 'aa:bb:cc:dd:ee:ff',
+                'id': 1,
+                'network': {
+                    'bridge': 'br0',
+                    'id': 1,
+                    'label': 'private',
+                    'subnets': [{
+                        'cidr': '192.168.0.0/24',
+                        'ips': [{
+                            'address': ip,
+                            'type': 'fixed',
+                        }]
+                    }]
+                }
+            }]
+            return jsonutils.dumps(info)
 
         instance1 = self._create_fake_instance({
                 'display_name': 'woot',
                 'id': 1,
-                'uuid': '00000000-0000-0000-0000-000000000010'})
+                'uuid': '00000000-0000-0000-0000-000000000010',
+                'info_cache': {'network_info':
+                    fake_network_info('192.168.0.1')}})
         instance2 = self._create_fake_instance({
                 'display_name': 'woo',
                 'id': 20,
-                'uuid': '00000000-0000-0000-0000-000000000020'})
+                'uuid': '00000000-0000-0000-0000-000000000020',
+                'info_cache': {'network_info':
+                    fake_network_info('192.168.0.2')}})
         instance3 = self._create_fake_instance({
                 'display_name': 'not-woot',
                 'id': 30,
-                'uuid': '00000000-0000-0000-0000-000000000030'})
+                'uuid': '00000000-0000-0000-0000-000000000030',
+                'info_cache': {'network_info':
+                    fake_network_info('192.168.0.3')}})
 
         # ip ends up matching 2nd octet here.. so all 3 match ip
         # but 'name' only matches one
