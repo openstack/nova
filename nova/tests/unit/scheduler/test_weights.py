@@ -16,12 +16,12 @@
 Tests For Scheduler weights.
 """
 
-from oslo.serialization import jsonutils
-from oslotest import mockpatch
-
-from nova import context
 from nova import exception
+from nova.scheduler import host_manager
 from nova.scheduler import weights
+from nova.scheduler.weights import io_ops
+from nova.scheduler.weights import metrics
+from nova.scheduler.weights import ram
 from nova import test
 from nova.tests.unit import matchers
 from nova.tests.unit.scheduler import fakes
@@ -37,22 +37,16 @@ class TestWeighedHost(test.NoDBTestCase):
 
     def test_all_weighers(self):
         classes = weights.all_weighers()
-        class_names = [cls.__name__ for cls in classes]
-        self.assertIn('RAMWeigher', class_names)
-        self.assertIn('MetricsWeigher', class_names)
-        self.assertIn('IoOpsWeigher', class_names)
+        self.assertIn(ram.RAMWeigher, classes)
+        self.assertIn(metrics.MetricsWeigher, classes)
+        self.assertIn(io_ops.IoOpsWeigher, classes)
 
 
 class RamWeigherTestCase(test.NoDBTestCase):
     def setUp(self):
         super(RamWeigherTestCase, self).setUp()
-        self.useFixture(mockpatch.Patch(
-            'nova.db.compute_node_get_all',
-             return_value=fakes.COMPUTE_NODES))
-        self.host_manager = fakes.FakeHostManager()
         self.weight_handler = weights.HostWeightHandler()
-        self.weight_classes = self.weight_handler.get_matching_classes(
-                ['nova.scheduler.weights.ram.RAMWeigher'])
+        self.weight_classes = [ram.RAMWeigher]
 
     def _get_weighed_host(self, hosts, weight_properties=None):
         if weight_properties is None:
@@ -61,8 +55,14 @@ class RamWeigherTestCase(test.NoDBTestCase):
                 hosts, weight_properties)[0]
 
     def _get_all_hosts(self):
-        ctxt = context.get_admin_context()
-        return self.host_manager.get_all_host_states(ctxt)
+        host_values = [
+            ('host1', 'node1', {'free_ram_mb': 512}),
+            ('host2', 'node2', {'free_ram_mb': 1024}),
+            ('host3', 'node3', {'free_ram_mb': 3072}),
+            ('host4', 'node4', {'free_ram_mb': 8192})
+        ]
+        return [fakes.FakeHostState(host, node, values)
+                for host, node, values in host_values]
 
     def test_default_of_spreading_first(self):
         hostinfo_list = self._get_all_hosts()
@@ -134,13 +134,8 @@ class RamWeigherTestCase(test.NoDBTestCase):
 class MetricsWeigherTestCase(test.NoDBTestCase):
     def setUp(self):
         super(MetricsWeigherTestCase, self).setUp()
-        self.useFixture(mockpatch.Patch(
-            'nova.db.compute_node_get_all',
-             return_value=fakes.COMPUTE_NODES_METRICS))
-        self.host_manager = fakes.FakeHostManager()
         self.weight_handler = weights.HostWeightHandler()
-        self.weight_classes = self.weight_handler.get_matching_classes(
-                ['nova.scheduler.weights.metrics.MetricsWeigher'])
+        self.weight_classes = [metrics.MetricsWeigher]
 
     def _get_weighed_host(self, hosts, setting, weight_properties=None):
         if not weight_properties:
@@ -150,8 +145,28 @@ class MetricsWeigherTestCase(test.NoDBTestCase):
                 hosts, weight_properties)[0]
 
     def _get_all_hosts(self):
-        ctxt = context.get_admin_context()
-        return self.host_manager.get_all_host_states(ctxt)
+        def fake_metric(value):
+            return host_manager.MetricItem(value=value, timestamp='fake-time',
+                                           source='fake-source')
+
+        host_values = [
+            ('host1', 'node1', {'metrics': {'foo': fake_metric(512),
+                                            'bar': fake_metric(1)}}),
+            ('host2', 'node2', {'metrics': {'foo': fake_metric(1024),
+                                            'bar': fake_metric(2)}}),
+            ('host3', 'node3', {'metrics': {'foo': fake_metric(3072),
+                                            'bar': fake_metric(1)}}),
+            ('host4', 'node4', {'metrics': {'foo': fake_metric(8192),
+                                            'bar': fake_metric(0)}}),
+            ('host5', 'node5', {'metrics': {'foo': fake_metric(768),
+                                            'bar': fake_metric(0),
+                                            'zot': fake_metric(1)}}),
+            ('host6', 'node6', {'metrics': {'foo': fake_metric(2048),
+                                            'bar': fake_metric(0),
+                                            'zot': fake_metric(2)}}),
+        ]
+        return [fakes.FakeHostState(host, node, values)
+                for host, node, values in host_values]
 
     def _do_test(self, settings, expected_weight, expected_host):
         hostinfo_list = self._get_all_hosts()
@@ -250,58 +265,12 @@ class MetricsWeigherTestCase(test.NoDBTestCase):
         self._do_test(setting, 1.0, 'host5')
 
 
-COMPUTE_NODES_IO_OPS = [
-        # host1: num_io_ops=1
-        dict(id=1, local_gb=1024, memory_mb=1024, vcpus=1,
-             disk_available_least=None, free_ram_mb=512, vcpus_used=1,
-             free_disk_gb=512, local_gb_used=0, updated_at=None,
-             service=dict(host='host1', disabled=False),
-             host='host1', hypervisor_hostname='node1', host_ip='127.0.0.1',
-             hypervisor_version=0, numa_topology=None,
-             stats=jsonutils.dumps({'io_workload': '1'})),
-        # host2: num_io_ops=2
-        dict(id=2, local_gb=2048, memory_mb=2048, vcpus=2,
-             disk_available_least=1024, free_ram_mb=1024, vcpus_used=2,
-             free_disk_gb=1024, local_gb_used=0, updated_at=None,
-             service=dict(host='host2', disabled=True),
-             host='host2', hypervisor_hostname='node2', host_ip='127.0.0.1',
-             hypervisor_version=0, numa_topology=None,
-             stats=jsonutils.dumps({'io_workload': '2'})),
-        # host3: num_io_ops=0, so host3 should win in the case of default
-        # io_ops_weight_multiplier configure.
-        dict(id=3, local_gb=4096, memory_mb=4096, vcpus=4,
-             disk_available_least=3333, free_ram_mb=3072, vcpus_used=1,
-             free_disk_gb=3072, local_gb_used=0, updated_at=None,
-             service=dict(host='host3', disabled=False),
-             host='host3', hypervisor_hostname='node3', host_ip='127.0.0.1',
-             hypervisor_version=0, numa_topology=None,
-             stats=jsonutils.dumps({'io_workload': '0'})),
-        # host4: num_io_ops=4, so host4 should win in the case of positive
-        # io_ops_weight_multiplier configure.
-        dict(id=4, local_gb=8192, memory_mb=8192, vcpus=8,
-             disk_available_least=8192, free_ram_mb=8192, vcpus_used=0,
-             free_disk_gb=8888, local_gb_used=0, updated_at=None,
-             service=dict(host='host4', disabled=False),
-             host='host4', hypervisor_hostname='node4', host_ip='127.0.0.1',
-             hypervisor_version=0, numa_topology=None,
-             stats=jsonutils.dumps({'io_workload': '4'})),
-        # Broken entry
-        dict(id=5, local_gb=1024, memory_mb=1024, vcpus=1, service=None,
-             host='fake'),
-]
-
-
 class IoOpsWeigherTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(IoOpsWeigherTestCase, self).setUp()
-        self.useFixture(mockpatch.Patch(
-            'nova.db.compute_node_get_all',
-             return_value=COMPUTE_NODES_IO_OPS))
-        self.host_manager = fakes.FakeHostManager()
         self.weight_handler = weights.HostWeightHandler()
-        self.weight_classes = self.weight_handler.get_matching_classes(
-                ['nova.scheduler.weights.io_ops.IoOpsWeigher'])
+        self.weight_classes = [io_ops.IoOpsWeigher]
 
     def _get_weighed_host(self, hosts, io_ops_weight_multiplier):
         if io_ops_weight_multiplier is not None:
@@ -310,8 +279,14 @@ class IoOpsWeigherTestCase(test.NoDBTestCase):
                                                        hosts, {})[0]
 
     def _get_all_hosts(self):
-        ctxt = context.get_admin_context()
-        return self.host_manager.get_all_host_states(ctxt)
+        host_values = [
+            ('host1', 'node1', {'num_io_ops': 1}),
+            ('host2', 'node2', {'num_io_ops': 2}),
+            ('host3', 'node3', {'num_io_ops': 0}),
+            ('host4', 'node4', {'num_io_ops': 4})
+        ]
+        return [fakes.FakeHostState(host, node, values)
+                for host, node, values in host_values]
 
     def _do_test(self, io_ops_weight_multiplier, expected_weight,
                  expected_host):
