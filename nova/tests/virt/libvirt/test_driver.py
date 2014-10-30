@@ -11923,6 +11923,23 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         instance = objects.Instance(uuid='fake-uuid', id=1)
         self.assertTrue(conn.instance_on_disk(instance))
 
+    @mock.patch("nova.objects.Flavor.get_by_id")
+    @mock.patch("nova.compute.utils.get_image_metadata")
+    def test_prepare_args_for_get_config(self, mock_image, mock_get):
+        instance = self._create_instance()
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+
+        def fake_get_by_id(context, id):
+            self.assertEqual('yes', context.read_deleted)
+
+        mock_get.side_effect = fake_get_by_id
+
+        conn._prepare_args_for_get_config(self.context, instance)
+
+        mock_get.assert_called_once_with(self.context,
+                                         instance['instance_type_id'])
+
 
 class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
     """Test for LibvirtDriver.get_all_volume_usage."""

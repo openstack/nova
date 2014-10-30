@@ -3199,8 +3199,9 @@ class LibvirtDriver(driver.ComputeDriver):
             raise
 
     def _prepare_args_for_get_config(self, context, instance):
-        flavor = objects.Flavor.get_by_id(context,
-                                          instance['instance_type_id'])
+        with utils.temporary_mutation(context, read_deleted="yes"):
+            flavor = objects.Flavor.get_by_id(context,
+                instance['instance_type_id'])
         image_ref = instance['image_ref']
         image_meta = compute_utils.get_image_metadata(
                             context, self._image_api, image_ref, instance)
