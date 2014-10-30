@@ -55,7 +55,13 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
         self.mox.ReplayAll()
         res = self.extension._force_delete(self.fake_req, self.fake_uuid,
                                            self.fake_input_dict)
-        self.assertEqual(res.status_int, 202)
+        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # method instead of status_int in a response object.
+        if isinstance(self.extension, dd_v21.DeferredDeleteController):
+            status_int = self.extension._force_delete.wsgi_code
+        else:
+            status_int = res.status_int
+        self.assertEqual(202, status_int)
 
     def test_force_delete_instance_not_found(self):
         self.mox.StubOutWithMock(compute_api.API, 'get')
@@ -97,7 +103,13 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
         self.mox.ReplayAll()
         res = self.extension._restore(self.fake_req, self.fake_uuid,
                                       self.fake_input_dict)
-        self.assertEqual(res.status_int, 202)
+        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # method instead of status_int in a response object.
+        if isinstance(self.extension, dd_v21.DeferredDeleteController):
+            status_int = self.extension._restore.wsgi_code
+        else:
+            status_int = res.status_int
+        self.assertEqual(202, status_int)
 
     def test_restore_instance_not_found(self):
         self.mox.StubOutWithMock(compute_api.API, 'get')

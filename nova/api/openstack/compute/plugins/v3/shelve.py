@@ -14,7 +14,6 @@
 
 """The shelved mode extension."""
 
-import webob
 from webob import exc
 
 from nova.api.openstack import common
@@ -36,6 +35,7 @@ class ShelveController(wsgi.Controller):
         super(ShelveController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
+    @wsgi.response(202)
     @exts.expected_errors((404, 409))
     @wsgi.action('shelve')
     def _shelve(self, req, id, body):
@@ -53,8 +53,7 @@ class ShelveController(wsgi.Controller):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                                                                   'shelve', id)
 
-        return webob.Response(status_int=202)
-
+    @wsgi.response(202)
     @exts.expected_errors((404, 409))
     @wsgi.action('shelveOffload')
     def _shelve_offload(self, req, id, body):
@@ -73,8 +72,7 @@ class ShelveController(wsgi.Controller):
                                                               'shelveOffload',
                                                               id)
 
-        return webob.Response(status_int=202)
-
+    @wsgi.response(202)
     @exts.expected_errors((404, 409))
     @wsgi.action('unshelve')
     def _unshelve(self, req, id, body):
@@ -91,7 +89,6 @@ class ShelveController(wsgi.Controller):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                                                                   'unshelve',
                                                                   id)
-        return webob.Response(status_int=202)
 
 
 class Shelve(exts.V3APIExtensionBase):

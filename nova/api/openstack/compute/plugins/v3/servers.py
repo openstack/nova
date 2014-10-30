@@ -468,8 +468,8 @@ class ServersController(wsgi.Controller):
         req.cache_db_instance(instance)
         return self._view_builder.show(req, instance)
 
-    @extensions.expected_errors((400, 403, 409, 413))
     @wsgi.response(202)
+    @extensions.expected_errors((400, 403, 409, 413))
     @validation.schema(schema_server_create)
     def create(self, req, body):
         """Creates a new server for a given user."""
@@ -722,8 +722,8 @@ class ServersController(wsgi.Controller):
     # NOTE(gmann): Returns 204 for backwards compatibility but should be 202
     # for representing async API as this API just accepts the request and
     # request hypervisor driver to complete the same in async mode.
-    @extensions.expected_errors((400, 404, 409))
     @wsgi.response(204)
+    @extensions.expected_errors((400, 404, 409))
     @wsgi.action('confirmResize')
     def _action_confirm_resize(self, req, id, body):
         context = req.environ['nova.context']
@@ -739,8 +739,8 @@ class ServersController(wsgi.Controller):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'confirmResize', id)
 
-    @extensions.expected_errors((400, 404, 409))
     @wsgi.response(202)
+    @extensions.expected_errors((400, 404, 409))
     @wsgi.action('revertResize')
     def _action_revert_resize(self, req, id, body):
         context = req.environ['nova.context']
@@ -758,10 +758,9 @@ class ServersController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'revertResize', id)
-        return webob.Response(status_int=202)
 
-    @extensions.expected_errors((400, 404, 409))
     @wsgi.response(202)
+    @extensions.expected_errors((400, 404, 409))
     @wsgi.action('reboot')
     def _action_reboot(self, req, id, body):
         if 'reboot' in body and 'type' in body['reboot']:
@@ -790,7 +789,6 @@ class ServersController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'reboot', id)
-        return webob.Response(status_int=202)
 
     def _resize(self, req, instance_id, flavor_id, **kwargs):
         """Begin the resize process with given instance/flavor."""
@@ -832,10 +830,8 @@ class ServersController(wsgi.Controller):
             msg = _("Invalid instance image.")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        return webob.Response(status_int=202)
-
-    @extensions.expected_errors((404, 409))
     @wsgi.response(204)
+    @extensions.expected_errors((404, 409))
     def delete(self, req, id):
         """Destroys a server."""
         try:
@@ -881,8 +877,8 @@ class ServersController(wsgi.Controller):
         flavor_ref = data['server']['flavorRef']
         return common.get_id_from_href(flavor_ref)
 
-    @extensions.expected_errors((400, 401, 403, 404, 409))
     @wsgi.response(202)
+    @extensions.expected_errors((400, 401, 403, 404, 409))
     @wsgi.action('resize')
     @validation.schema(schema_server_resize)
     def _action_resize(self, req, id, body):
@@ -896,10 +892,10 @@ class ServersController(wsgi.Controller):
             self.resize_extension_manager.map(self._resize_extension_point,
                                               resize_dict, resize_kwargs)
 
-        return self._resize(req, id, flavor_ref, **resize_kwargs)
+        self._resize(req, id, flavor_ref, **resize_kwargs)
 
-    @extensions.expected_errors((400, 403, 404, 409, 413))
     @wsgi.response(202)
+    @extensions.expected_errors((400, 403, 404, 409, 413))
     @wsgi.action('rebuild')
     @validation.schema(schema_server_rebuild)
     def _action_rebuild(self, req, id, body):
@@ -974,8 +970,8 @@ class ServersController(wsgi.Controller):
         robj = wsgi.ResponseObject(view)
         return self._add_location(robj)
 
-    @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.response(202)
+    @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.action('createImage')
     @common.check_snapshots_enabled
     def _action_create_image(self, req, id, body):
@@ -1061,6 +1057,7 @@ class ServersController(wsgi.Controller):
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
+    @wsgi.response(202)
     @extensions.expected_errors((404, 409))
     @wsgi.action('os-start')
     def _start_server(self, req, id, body):
@@ -1074,8 +1071,8 @@ class ServersController(wsgi.Controller):
         except (exception.InstanceNotReady, exception.InstanceIsLocked,
                 exception.InstanceInvalidState) as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
-        return webob.Response(status_int=202)
 
+    @wsgi.response(202)
     @extensions.expected_errors((404, 409))
     @wsgi.action('os-stop')
     def _stop_server(self, req, id, body):
@@ -1089,7 +1086,6 @@ class ServersController(wsgi.Controller):
         except (exception.InstanceNotReady, exception.InstanceIsLocked,
                 exception.InstanceInvalidState) as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
-        return webob.Response(status_int=202)
 
 
 def remove_invalid_options(context, search_options, allowed_search_options):

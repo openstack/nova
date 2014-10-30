@@ -1006,7 +1006,14 @@ class DeleteSnapshotTestCaseV21(test.TestCase):
 
         self.req.method = 'DELETE'
         result = self.controller.delete(self.req, result['snapshot']['id'])
-        self.assertEqual(result.status_int, 202)
+
+        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # method instead of status_int in a response object.
+        if isinstance(self.controller, volumes_v3.SnapshotController):
+            status_int = self.controller.delete.wsgi_code
+        else:
+            status_int = result.status_int
+        self.assertEqual(202, status_int)
 
     def test_delete_snapshot_not_exists(self):
         def fake_delete_snapshot_not_exist(self, context, snapshot_id):

@@ -13,7 +13,6 @@
 #   under the License.
 
 """The Extended Volumes API extension."""
-import webob
 from webob import exc
 
 from nova.api.openstack import common
@@ -50,6 +49,7 @@ class ExtendedVolumesController(wsgi.Controller):
         key = "%s:volumes_attached" % ExtendedVolumes.alias
         server[key] = [{'id': volume_id} for volume_id in volume_ids]
 
+    @wsgi.response(202)
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('swap_volume_attachment')
     @validation.schema(extended_volumes.swap_volume_attachment)
@@ -97,8 +97,6 @@ class ExtendedVolumesController(wsgi.Controller):
             msg = _("The volume was either invalid or not attached to the "
                     "instance.")
             raise exc.HTTPNotFound(explanation=msg)
-        else:
-            return webob.Response(status_int=202)
 
     @wsgi.extends
     def show(self, req, resp_obj, id):

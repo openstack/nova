@@ -328,8 +328,9 @@ class ExtendedVolumesTest(test.TestCase):
 
     def test_swap_volume(self):
         self.stubs.Set(compute.api.API, 'swap_volume', fake_swap_volume)
-        result = self._test_swap()
-        self.assertEqual('202 Accepted', result.status)
+        # Check any exceptions don't happen and status code
+        self._test_swap()
+        self.assertEqual(202, self.Controller.swap.wsgi_code)
 
     def test_swap_volume_for_locked_server(self):
         def fake_swap_volume_for_locked_server(self, context, instance,

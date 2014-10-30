@@ -136,6 +136,7 @@ class ServerGroupController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         return {'server_group': self._format_server_group(context, sg)}
 
+    @wsgi.response(204)
     @extensions.expected_errors(404)
     def delete(self, req, id):
         """Delete an server group."""
@@ -166,8 +167,6 @@ class ServerGroupController(wsgi.Controller):
 
         if quotas:
             quotas.commit()
-
-        return webob.Response(status_int=204)
 
     @extensions.expected_errors(())
     def index(self, req):

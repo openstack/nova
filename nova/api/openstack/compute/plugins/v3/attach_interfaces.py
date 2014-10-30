@@ -21,6 +21,7 @@ from webob import exc
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas.v3 import attach_interfaces
 from nova.api.openstack import extensions
+from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova import exception
@@ -132,6 +133,7 @@ class InterfaceAttachmentController(object):
 
         return self.show(req, server_id, vif['id'])
 
+    @wsgi.response(202)
     @extensions.expected_errors((404, 409, 501))
     def delete(self, req, server_id, id):
         """Detach an interface from an instance."""
@@ -153,8 +155,6 @@ class InterfaceAttachmentController(object):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'detach_interface', server_id)
-
-        return webob.Response(status_int=202)
 
     def _items(self, req, server_id, entity_maker):
         """Returns a list of attachments, transformed through entity_maker."""

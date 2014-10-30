@@ -130,7 +130,15 @@ class FlavorManageTestV21(test.NoDBTestCase):
     def test_delete(self):
         req = fakes.HTTPRequest.blank(self.base_url + '/1234')
         res = self.controller._delete(req, 1234)
-        self.assertEqual(res.status_int, 202)
+
+        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # method instead of status_int in a response object.
+        if isinstance(self.controller,
+                      flavormanage_v21.FlavorManageController):
+            status_int = self.controller._delete.wsgi_code
+        else:
+            status_int = res.status_int
+        self.assertEqual(202, status_int)
 
         # subsequent delete should fail
         self.assertRaises(webob.exc.HTTPNotFound,

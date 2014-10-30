@@ -163,7 +163,14 @@ class ServerGroupQuotasTestV21(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups/123')
         resp = self.controller.delete(req, '123')
         self.assertTrue(self.called)
-        self.assertEqual(resp.status_int, 204)
+
+        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # method instead of status_int in a response object.
+        if isinstance(self.controller, sg_v3.ServerGroupController):
+            status_int = self.controller.delete.wsgi_code
+        else:
+            status_int = resp.status_int
+        self.assertEqual(204, status_int)
 
 
 class ServerGroupQuotasTestV2(ServerGroupQuotasTestV21):

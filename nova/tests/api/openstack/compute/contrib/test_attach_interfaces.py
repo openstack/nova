@@ -221,7 +221,14 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         req.environ['nova.context'] = self.context
 
         result = self.attachments.delete(req, FAKE_UUID1, FAKE_PORT_ID1)
-        self.assertEqual('202 Accepted', result.status)
+        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # method instead of status_int in a response object.
+        if isinstance(self.attachments,
+                      attach_interfaces_v3.InterfaceAttachmentController):
+            status_int = self.attachments.delete.wsgi_code
+        else:
+            status_int = result.status_int
+        self.assertEqual(202, status_int)
 
     def test_detach_interface_instance_locked(self):
         def fake_detach_interface_from_locked_server(self, context,

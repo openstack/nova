@@ -702,8 +702,14 @@ class ResetStateTestsV21(test.NoDBTestCase):
         body = {"os-resetState": {"state": "active"}}
         result = self.admin_api._reset_state(self.request, self.uuid,
                                              body=body)
-
-        self.assertEqual(result.status_int, 202)
+        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # method instead of status_int in a response object.
+        if isinstance(self.admin_api,
+                      admin_actions_v21.AdminActionsController):
+            status_int = self.admin_api._reset_state.wsgi_code
+        else:
+            status_int = result.status_int
+        self.assertEqual(202, status_int)
 
     def test_reset_error(self):
         self._setup_mock(dict(vm_state=vm_states.ERROR,
@@ -712,8 +718,14 @@ class ResetStateTestsV21(test.NoDBTestCase):
         body = {"os-resetState": {"state": "error"}}
         result = self.admin_api._reset_state(self.request, self.uuid,
                                              body=body)
-
-        self.assertEqual(result.status_int, 202)
+        # NOTE: on v2.1, http status code is set as wsgi_code of API
+        # method instead of status_int in a response object.
+        if isinstance(self.admin_api,
+                      admin_actions_v21.AdminActionsController):
+            status_int = self.admin_api._reset_state.wsgi_code
+        else:
+            status_int = result.status_int
+        self.assertEqual(202, status_int)
 
 
 class ResetStateTestsV2(ResetStateTestsV21):
