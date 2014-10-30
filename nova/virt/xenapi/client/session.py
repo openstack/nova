@@ -212,7 +212,8 @@ class XenAPISession(object):
         return pickle.loads(rv)
 
     def call_plugin_serialized_with_retry(self, plugin, fn, num_retries,
-                                          callback, *args, **kwargs):
+                                          callback, retry_cb=None, *args,
+                                          **kwargs):
         """Allows a plugin to raise RetryableError so we can try again."""
         attempts = num_retries + 1
         sleep_time = 0.5
@@ -237,6 +238,8 @@ class XenAPISession(object):
                 if self._is_retryable_exception(exc, fn):
                     LOG.warn(_('%(plugin)s.%(fn)s failed. Retrying call.')
                              % {'plugin': plugin, 'fn': fn})
+                    if retry_cb:
+                        retry_cb(exc=exc)
                 else:
                     raise
             except socket.error as exc:
@@ -244,6 +247,8 @@ class XenAPISession(object):
                     LOG.warn(_('Lost connection to XenAPI during call to '
                                '%(plugin)s.%(fn)s.  Retrying call.') %
                                {'plugin': plugin, 'fn': fn})
+                    if retry_cb:
+                        retry_cb(exc=exc)
                 else:
                     raise
 

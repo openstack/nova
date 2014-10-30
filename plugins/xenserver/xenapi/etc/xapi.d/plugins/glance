@@ -25,9 +25,8 @@ import md5
 import socket
 import urllib2
 
-import utils
-
 import pluginlib_nova
+import utils
 
 
 pluginlib_nova.configure_logging('glance')
@@ -205,7 +204,7 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
                     None, staging_path, callback=send_chunked_transfer_encoded,
                     compression_level=compression_level)
         finally:
-            send_chunked_transfer_encoded('') # Chunked-Transfer terminator
+            send_chunked_transfer_encoded('')  # Chunked-Transfer terminator
 
         bytes_written = callback_data['bytes_written']
         logging.info("Wrote %d bytes to %s" % (bytes_written, url))
@@ -218,22 +217,54 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
                       "Response Status: %i, Response body: %s"
                       % (url, resp.status, resp.read()))
 
-        if resp.status in (httplib.UNAUTHORIZED,
-                           httplib.REQUEST_ENTITY_TOO_LARGE,
-                           httplib.PRECONDITION_FAILED,
-                           httplib.CONFLICT,
-                           httplib.FORBIDDEN,
-                           httplib.INTERNAL_SERVER_ERROR):
-            # No point in retrying for these conditions
-            raise PluginError("Got Error response [%i] while uploading "
-                              "image [%s] "
-                              "to glance host [%s:%s]"
+        # Note(Jesse): This branch sorts errors into those that are permanent,
+        # those that are ephemeral, and those that are unexpected.
+        if resp.status in (httplib.BAD_REQUEST,                      # 400
+                           httplib.UNAUTHORIZED,                     # 401
+                           httplib.PAYMENT_REQUIRED,                 # 402
+                           httplib.FORBIDDEN,                        # 403
+                           httplib.NOT_FOUND,                        # 404
+                           httplib.METHOD_NOT_ALLOWED,               # 405
+                           httplib.NOT_ACCEPTABLE,                   # 406
+                           httplib.PROXY_AUTHENTICATION_REQUIRED,    # 407
+                           httplib.CONFLICT,                         # 409
+                           httplib.GONE,                             # 410
+                           httplib.LENGTH_REQUIRED,                  # 411
+                           httplib.PRECONDITION_FAILED,              # 412
+                           httplib.REQUEST_ENTITY_TOO_LARGE,         # 413
+                           httplib.REQUEST_URI_TOO_LONG,             # 414
+                           httplib.UNSUPPORTED_MEDIA_TYPE,           # 415
+                           httplib.REQUESTED_RANGE_NOT_SATISFIABLE,  # 416
+                           httplib.EXPECTATION_FAILED,               # 417
+                           httplib.UNPROCESSABLE_ENTITY,             # 422
+                           httplib.LOCKED,                           # 423
+                           httplib.FAILED_DEPENDENCY,                # 424
+                           httplib.UPGRADE_REQUIRED,                 # 426
+                           httplib.NOT_IMPLEMENTED,                  # 501
+                           httplib.HTTP_VERSION_NOT_SUPPORTED,       # 505
+                           httplib.NOT_EXTENDED,                     # 510
+                           ):
+            raise PluginError("Got Permanent Error response [%i] while "
+                              "uploading image [%s] to glance host [%s:%s]"
                               % (resp.status, image_id,
                                  glance_host, glance_port))
+        elif resp.status in (httplib.REQUEST_TIMEOUT,                # 408
+                             httplib.INTERNAL_SERVER_ERROR,          # 500
+                             httplib.BAD_GATEWAY,                    # 502
+                             httplib.SERVICE_UNAVAILABLE,            # 503
+                             httplib.GATEWAY_TIMEOUT,                # 504
+                             httplib.INSUFFICIENT_STORAGE,           # 507
+                             ):
+            raise RetryableError("Got Ephemeral Error response [%i] while "
+                                 "uploading image [%s] to glance host [%s:%s]"
+                                 % (resp.status, image_id,
+                                    glance_host, glance_port))
         else:
-            raise RetryableError("Unexpected response [%i] while uploading "
-                                 "image [%s] "
-                                 "to glance host [%s:%s]"
+            # Note(Jesse): Assume unexpected errors are retryable. If you are
+            # seeing this error message, the error should probably be added
+            # to either the ephemeral or permanent error list.
+            raise RetryableError("Got Unexpected Error response [%i] while "
+                                 "uploading image [%s] to glance host [%s:%s]"
                                  % (resp.status, image_id,
                                     glance_host, glance_port))
     finally:

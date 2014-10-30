@@ -276,7 +276,7 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
         self.mox.StubOutWithMock(
                 self.session, 'call_plugin_serialized_with_retry')
         func = self.session.call_plugin_serialized_with_retry(
-                'glance', 'download_vhd', 0, mox.IgnoreArg(),
+                'glance', 'download_vhd', 0, mox.IgnoreArg(), mox.IgnoreArg(),
                 extra_headers={'X-Service-Catalog': '[]',
                                'X-Auth-Token': 'auth_token',
                                'X-Roles': '',
