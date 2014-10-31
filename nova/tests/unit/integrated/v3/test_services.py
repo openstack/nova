@@ -56,8 +56,6 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV3):
                 'binary': 'nova-compute'}
         response = self._do_put('os-services/enable',
                                 'service-enable-put-req', subs)
-        subs = {"host": "host1",
-                "binary": "nova-compute"}
         self._verify_response('service-enable-put-resp', subs, response, 200)
 
     def test_service_disable(self):
@@ -66,8 +64,6 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV3):
                 'binary': 'nova-compute'}
         response = self._do_put('os-services/disable',
                                 'service-disable-put-req', subs)
-        subs = {"host": "host1",
-                "binary": "nova-compute"}
         self._verify_response('service-disable-put-resp', subs, response, 200)
 
     def test_service_disable_log_reason(self):
