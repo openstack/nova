@@ -3559,15 +3559,10 @@ class FlavorAccessSampleXmlTests(FlavorAccessSampleJsonTests):
     ctype = 'xml'
 
 
+@mock.patch.object(service_group_api.API, "service_is_up", lambda _: True)
 class HypervisorsSampleJsonTests(ApiSampleTestBaseV2):
     extension_name = ("nova.api.openstack.compute.contrib.hypervisors."
                       "Hypervisors")
-
-    def setUp(self):
-        super(HypervisorsSampleJsonTests, self).setUp()
-        mock.patch("nova.servicegroup.API.service_is_up",
-                   return_value=True).start()
-        self.addCleanup(mock.patch.stopall)
 
     def test_hypervisors_list(self):
         response = self._do_get('os-hypervisors')
