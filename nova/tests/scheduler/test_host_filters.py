@@ -116,19 +116,3 @@ class HostFiltersTestCase(test.NoDBTestCase):
     def test_group_affinity_filter_fails_legacy(self):
         self._test_group_affinity_filter_fails(
                 'GroupAffinityFilter', 'legacy')
-
-    def test_metrics_filter_pass(self):
-        self.flags(weight_setting=['foo=1', 'bar=2'], group='metrics')
-        metrics = dict(foo=1, bar=2)
-        host = fakes.FakeHostState('host1', 'node1',
-                                   attribute_dict={'metrics': metrics})
-        filt_cls = self.class_map['MetricsFilter']()
-        self.assertTrue(filt_cls.host_passes(host, None))
-
-    def test_metrics_filter_missing_metrics(self):
-        self.flags(weight_setting=['foo=1', 'bar=2'], group='metrics')
-        metrics = dict(foo=1)
-        host = fakes.FakeHostState('host1', 'node1',
-                                   attribute_dict={'metrics': metrics})
-        filt_cls = self.class_map['MetricsFilter']()
-        self.assertFalse(filt_cls.host_passes(host, None))
