@@ -236,7 +236,7 @@ policy_data = """
     "compute_extension:v3:os-instance-actions": "",
     "compute_extension:instance_actions:events": "is_admin:True",
     "compute_extension:v3:os-instance-actions:events": "is_admin:True",
-    "compute_extension:instance_usage_audit_log": "",
+    "compute_extension:instance_usage_audit_log": "rule:admin_api",
     "compute_extension:keypairs": "",
     "compute_extension:keypairs:index": "",
     "compute_extension:keypairs:show": "",
