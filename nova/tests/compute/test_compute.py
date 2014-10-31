@@ -6958,7 +6958,6 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(objects.Instance, 'save')
         self.mox.StubOutWithMock(self.compute,
                                  '_default_device_names_for_instance')
-        instance.save().AndReturn(None)
         self.compute._default_device_names_for_instance(instance,
                                                         '/dev/vda', [], [],
                                                         [bdm for bdm in bdms])
@@ -6996,7 +6995,6 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute._default_root_device_name(instance, mox.IgnoreArg(),
                                                bdms[0]).AndReturn('/dev/vda')
-        instance.save().AndReturn(None)
         bdms[0].save().AndReturn(None)
         self.compute._default_device_names_for_instance(instance,
                                                         '/dev/vda', [], [],
@@ -7048,17 +7046,15 @@ class ComputeTestCase(BaseTestCase):
         with contextlib.nested(
             mock.patch.object(self.compute, '_default_root_device_name',
                               return_value='/dev/vda'),
-            mock.patch.object(objects.Instance, 'save'),
             mock.patch.object(objects.BlockDeviceMapping, 'save'),
             mock.patch.object(self.compute,
                               '_default_device_names_for_instance')
-        ) as (default_root_device, instance_update, object_save,
+        ) as (default_root_device, object_save,
               default_device_names):
             self.compute._default_block_device_names(self.context, instance,
                                                      image_meta, bdms)
             default_root_device.assert_called_once_with(instance, image_meta,
                                                         bdms[0])
-            instance_update.assert_called_once_with()
             self.assertEqual('/dev/vda', instance.root_device_name)
             self.assertTrue(object_save.called)
             default_device_names.assert_called_once_with(instance,

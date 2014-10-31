@@ -1412,14 +1412,14 @@ class ComputeManager(manager.Manager):
                         instance, requested_networks_obj, macs,
                         security_groups, dhcp_options)
 
-                instance.vm_state = vm_states.BUILDING
-                instance.task_state = task_states.BLOCK_DEVICE_MAPPING
-                instance.save()
-
                 # Verify that all the BDMs have a device_name set and assign a
                 # default to the ones missing it with the help of the driver.
                 self._default_block_device_names(context, instance, image_meta,
                                                  bdms)
+
+                instance.vm_state = vm_states.BUILDING
+                instance.task_state = task_states.BLOCK_DEVICE_MAPPING
+                instance.save()
 
                 block_device_info = self._prep_block_device(
                         context, instance, bdms)
@@ -1751,13 +1751,11 @@ class ComputeManager(manager.Manager):
 
         # Get the root_device_name from the root BDM or the instance
         root_device_name = None
-        update_instance = False
         update_root_bdm = False
 
         if root_bdm.device_name:
             root_device_name = root_bdm.device_name
             instance.root_device_name = root_device_name
-            update_instance = True
         elif instance.root_device_name:
             root_device_name = instance.root_device_name
             root_bdm.device_name = root_device_name
@@ -1769,10 +1767,8 @@ class ComputeManager(manager.Manager):
 
             instance.root_device_name = root_device_name
             root_bdm.device_name = root_device_name
-            update_instance = update_root_bdm = True
+            update_root_bdm = True
 
-        if update_instance:
-            instance.save()
         if update_root_bdm:
             root_bdm.save()
 
