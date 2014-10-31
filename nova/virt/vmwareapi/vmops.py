@@ -219,7 +219,7 @@ class VMwareVMOps(object):
                                                       admin_password,
                                                       datastore.name,
                                                       dc_info.name,
-                                                      instance['uuid'],
+                                                      instance.uuid,
                                                       cookies)
         uploaded_iso_path = datastore.build_path(uploaded_iso_path)
         self._attach_cdrom_to_vm(
@@ -753,7 +753,7 @@ class VMwareVMOps(object):
         # Get the instance name. In some cases this may differ from the 'uuid',
         # for example when the spawn of a rescue instance takes place.
         if instance_name is None:
-            instance_name = instance['uuid']
+            instance_name = instance.uuid
         try:
             vm_ref = vm_util.get_vm_ref_from_name(self._session, instance_name)
             if vm_ref is None:
@@ -833,7 +833,7 @@ class VMwareVMOps(object):
                 self.unrescue(instance, power_on=False)
                 LOG.debug("Rescue VM destroyed", instance=instance)
             except Exception:
-                rescue_name = instance['uuid'] + self._rescue_suffix
+                rescue_name = instance.uuid + self._rescue_suffix
                 self._destroy_instance(instance,
                                        destroy_disks=destroy_disks,
                                        instance_name=rescue_name)
@@ -845,7 +845,7 @@ class VMwareVMOps(object):
             # arrive RESIZED state, uuid-orig VM need to deleted to avoid
             # VM leak. Within method _destroy_instance it will check vmref
             # exist or not before attempt deletion.
-            resize_orig_vmname = instance['uuid'] + self._migrate_suffix
+            resize_orig_vmname = instance.uuid + self._migrate_suffix
             vm_orig_ref = vm_util.get_vm_ref_from_name(self._session,
                                                        resize_orig_vmname)
             if vm_orig_ref:
@@ -1423,7 +1423,7 @@ class VMwareVMOps(object):
                               ' %s'),
                           e, instance=instance)
                 raise exception.InterfaceAttachFailed(
-                        instance_uuid=instance['uuid'])
+                        instance_uuid=instance.uuid)
         LOG.debug("Reconfigured VM to attach interface", instance=instance)
 
     def detach_interface(self, instance, vif):
@@ -1463,7 +1463,7 @@ class VMwareVMOps(object):
                               '%s'),
                           e, instance=instance)
                 raise exception.InterfaceDetachFailed(
-                        instance_uuid=instance['uuid'])
+                        instance_uuid=instance.uuid)
         LOG.debug("Reconfigured VM to detach interface", instance=instance)
 
     def _use_disk_image_as_full_clone(self, vm_ref, vi):
