@@ -64,6 +64,7 @@ Testing guides
     :maxdepth: 3
 
     testing/libvirt-numa
+    testing/serial-console
 
 Other Resources
 ---------------
