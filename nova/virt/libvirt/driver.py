@@ -51,6 +51,7 @@ from lxml import etree
 from oslo.concurrency import processutils
 from oslo.config import cfg
 from oslo.serialization import jsonutils
+from oslo.utils import encodeutils
 from oslo.utils import excutils
 from oslo.utils import importutils
 from oslo.utils import strutils
@@ -4374,12 +4375,14 @@ class LibvirtDriver(driver.ComputeDriver):
 
             if power_on:
                 err = _LE('Error launching a defined domain with XML: %s') \
-                          % domain.XMLDesc(0)
+                          % encodeutils.safe_decode(domain.XMLDesc(0),
+                                                    errors='ignore')
                 domain.createWithFlags(launch_flags)
 
             if not utils.is_neutron():
                 err = _LE('Error enabling hairpin mode with XML: %s') \
-                          % domain.XMLDesc(0)
+                          % encodeutils.safe_decode(domain.XMLDesc(0),
+                                                    errors='ignore')
                 self._enable_hairpin(domain.XMLDesc(0))
         except Exception:
             with excutils.save_and_reraise_exception():
