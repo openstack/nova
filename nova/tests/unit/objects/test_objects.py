@@ -1056,6 +1056,7 @@ object_data = {
     'TestSubclassedObject': '1.6-c63feb2f2533b7d075490c04a2cc10dd',
     'VirtualInterface': '1.0-10fdac4c704102b6d57d6936d6d790d2',
     'VirtualInterfaceList': '1.0-accbf02628a8063c1d885077a2bf49b6',
+    'VirtCPUTopology': '1.0-fc694de72e20298f7c6bab1083fd4563',
 }
 
 
