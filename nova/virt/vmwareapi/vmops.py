@@ -1296,15 +1296,6 @@ class VMwareVMOps(object):
                     return host.obj
         return None
 
-    def _get_vmfolder_ref(self):
-        """Get the Vm folder ref from the datacenter."""
-        dc_objs = self._session._call_method(vim_util, "get_objects",
-                                             "Datacenter", ["vmFolder"])
-        vm_util._cancel_retrieve_if_necessary(self._session, dc_objs)
-        # There is only one default datacenter in a standalone ESX host
-        vm_folder_ref = dc_objs.objects[0].propSet[0].val
-        return vm_folder_ref
-
     def _create_folder_if_missing(self, ds_name, ds_ref, folder):
         """Create a folder if it does not exist.
 
