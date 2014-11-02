@@ -866,7 +866,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                     'fake_rp_ref')
             mock_get_and_set_vnc_config.assert_called_once_with(
                 self._session.vim.client.factory,
-                self._instance)
+                self._instance,
+                'fake_vm_ref')
             mock_set_machine_id.assert_called_once_with(
                 self._session.vim.client.factory,
                 self._instance,
