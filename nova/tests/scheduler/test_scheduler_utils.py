@@ -15,6 +15,9 @@
 """
 Tests For Scheduler Utils
 """
+import contextlib
+import uuid
+
 import mock
 import mox
 from oslo.config import cfg
@@ -24,6 +27,7 @@ from nova.compute import utils as compute_utils
 from nova import db
 from nova import exception
 from nova import notifications
+from nova import objects
 from nova import rpc
 from nova.scheduler import utils as scheduler_utils
 from nova import test
@@ -86,9 +90,9 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         old_ref = 'old_ref'
         new_ref = 'new_ref'
 
-        for uuid in expected_uuids:
+        for _uuid in expected_uuids:
             db.instance_update_and_get_original(
-                    self.context, uuid, updates).AndReturn((old_ref, new_ref))
+                    self.context, _uuid, updates).AndReturn((old_ref, new_ref))
             notifications.send_update(self.context, old_ref, new_ref,
                                       service=service)
             compute_utils.add_instance_fault_from_exc(
@@ -98,7 +102,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
             payload = dict(request_spec=request_spec,
                            instance_properties=request_spec.get(
                                'instance_properties', {}),
-                           instance_id=uuid,
+                           instance_id=_uuid,
                            state='fake-vm-state',
                            method=method,
                            reason=exc_info)
@@ -234,3 +238,77 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         self.assertTrue(scheduler_utils.validate_filter('FakeFilter1'))
         self.assertTrue(scheduler_utils.validate_filter('FakeFilter2'))
         self.assertFalse(scheduler_utils.validate_filter('FakeFilter3'))
+
+    def _create_server_group(self, policy='anti-affinity'):
+        instance = fake_instance.fake_instance_obj(self.context,
+                params={'host': 'hostA'})
+
+        group = objects.InstanceGroup()
+        group.name = 'pele'
+        group.uuid = str(uuid.uuid4())
+        group.members = [instance.uuid]
+        group.policies = [policy]
+        return group
+
+    def _group_details_in_filter_properties(self, group, func='get_by_uuid',
+                                            hint=None, policy=None):
+        group_hint = hint
+        group_hosts = ['hostB']
+
+        with contextlib.nested(
+            mock.patch.object(objects.InstanceGroup, func, return_value=group),
+            mock.patch.object(objects.InstanceGroup, 'get_hosts',
+                              return_value=['hostA']),
+        ) as (get_group, get_hosts):
+            scheduler_utils._SUPPORTS_ANTI_AFFINITY = None
+            scheduler_utils._SUPPORTS_AFFINITY = None
+            group_info = scheduler_utils.setup_instance_group(
+                self.context, group_hint, group_hosts)
+            self.assertEqual(
+                (set(['hostA', 'hostB']), [policy]),
+                group_info)
+
+    def test_group_details_in_filter_properties(self):
+        for policy in ['affinity', 'anti-affinity']:
+            group = self._create_server_group(policy)
+            self._group_details_in_filter_properties(group, func='get_by_uuid',
+                                                     hint=group.uuid,
+                                                     policy=policy)
+
+    def _group_filter_with_filter_not_configured(self, policy):
+        self.flags(scheduler_default_filters=['f1', 'f2'])
+
+        instance = fake_instance.fake_instance_obj(self.context,
+                params={'host': 'hostA'})
+
+        group = objects.InstanceGroup()
+        group.uuid = str(uuid.uuid4())
+        group.members = [instance.uuid]
+        group.policies = [policy]
+
+        with contextlib.nested(
+            mock.patch.object(objects.InstanceGroup, 'get_by_uuid',
+                              return_value=group),
+            mock.patch.object(objects.InstanceGroup, 'get_hosts',
+                              return_value=['hostA']),
+        ) as (get_group, get_hosts):
+            scheduler_utils._SUPPORTS_ANTI_AFFINITY = None
+            scheduler_utils._SUPPORTS_AFFINITY = None
+            self.assertRaises(exception.NoValidHost,
+                              scheduler_utils.setup_instance_group,
+                              self.context, group.uuid)
+
+    def test_group_filter_with_filter_not_configured(self):
+        policies = ['anti-affinity', 'affinity']
+        for policy in policies:
+            self._group_filter_with_filter_not_configured(policy)
+
+    def test_group_uuid_details_in_filter_properties(self):
+        group = self._create_server_group()
+        self._group_details_in_filter_properties(group, 'get_by_uuid',
+                                                 group.uuid, 'anti-affinity')
+
+    def test_group_name_details_in_filter_properties(self):
+        group = self._create_server_group()
+        self._group_details_in_filter_properties(group, 'get_by_name',
+                                                 group.name, 'anti-affinity')
