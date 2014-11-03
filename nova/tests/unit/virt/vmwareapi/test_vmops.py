@@ -871,7 +871,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             mock_set_machine_id.assert_called_once_with(
                 self._session.vim.client.factory,
                 self._instance,
-                network_info)
+                network_info,
+                vm_ref='fake_vm_ref')
             if power_on:
                 mock_power_on_instance.assert_called_once_with(
                     self._session, self._instance, vm_ref='fake_vm_ref')
