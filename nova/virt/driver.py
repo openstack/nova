@@ -1168,7 +1168,7 @@ class ComputeDriver(object):
              |    ]
 
         """
-        pass
+        return None
 
     def manage_image_cache(self, context, all_instances):
         """Manage the driver's local image cache.
