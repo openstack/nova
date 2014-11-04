@@ -46,7 +46,7 @@ def quota_set(id, include_server_group_quotas=True):
 
 class BaseQuotaSetsTest(test.TestCase):
 
-    def is_v20_api_test(self):
+    def _is_v20_api_test(self):
         # NOTE(oomichi): If a test is for v2.0 API, this method returns
         # True. Otherwise(v2.1 API test), returns False.
         return (self.plugin == quotas_v2)
@@ -56,7 +56,7 @@ class BaseQuotaSetsTest(test.TestCase):
         # "update quota" API since v2.1 API, because it makes the
         # API consistent and it is not backwards incompatible change.
         # This method adds "id" for an expected body of a response.
-        if self.is_v20_api_test():
+        if self._is_v20_api_test():
             expected_body = base_body
         else:
             expected_body = copy.deepcopy(base_body)
@@ -64,18 +64,18 @@ class BaseQuotaSetsTest(test.TestCase):
         return expected_body
 
     def setup_mock_for_show(self):
-        if self.is_v20_api_test():
+        if self._is_v20_api_test():
             self.ext_mgr.is_loaded('os-user-quotas').AndReturn(True)
             self.mox.ReplayAll()
 
     def setup_mock_for_update(self):
-        if self.is_v20_api_test():
+        if self._is_v20_api_test():
             self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
             self.ext_mgr.is_loaded('os-user-quotas').AndReturn(True)
             self.mox.ReplayAll()
 
     def get_delete_status_int(self, res):
-        if self.is_v20_api_test():
+        if self._is_v20_api_test():
             return res.status_int
         else:
             # NOTE: on v2.1, http status code is set as wsgi_code of API
@@ -257,7 +257,7 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
         self._quotas_update_bad_request_case(body)
 
     def test_quotas_delete_as_unauthorized_user(self):
-        if self.is_v20_api_test():
+        if self._is_v20_api_test():
             self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
             self.mox.ReplayAll()
         req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234')
@@ -265,7 +265,7 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
                           req, 1234)
 
     def test_quotas_delete_as_admin(self):
-        if self.is_v20_api_test():
+        if self._is_v20_api_test():
             self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
         context = context_maker.get_admin_context()
         self.req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/1234')
@@ -498,7 +498,7 @@ class UserQuotasTestV21(BaseQuotaSetsTest):
                           req, 1234)
 
     def test_user_quotas_delete_as_admin(self):
-        if self.is_v20_api_test():
+        if self._is_v20_api_test():
             self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
             self.ext_mgr.is_loaded('os-user-quotas').AndReturn(True)
         context = context_maker.get_admin_context()
