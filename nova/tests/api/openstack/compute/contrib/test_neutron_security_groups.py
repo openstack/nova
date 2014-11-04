@@ -426,7 +426,7 @@ class TestNeutronSecurityGroupRulesTestCase(TestNeutronSecurityGroupsTestCase):
         super(TestNeutronSecurityGroupsTestCase, self).tearDown()
 
 
-class TestNeutronSecurityGroupRulesBase(object):
+class _TestNeutronSecurityGroupRulesBase(object):
 
     def test_create_add_existing_rules_by_cidr(self):
         sg = test_security_groups.security_group_template()
@@ -467,14 +467,14 @@ class TestNeutronSecurityGroupRulesBase(object):
 
 
 class TestNeutronSecurityGroupRulesV2(
-        TestNeutronSecurityGroupRulesBase,
+        _TestNeutronSecurityGroupRulesBase,
         test_security_groups.TestSecurityGroupRulesV2,
         TestNeutronSecurityGroupRulesTestCase):
     pass
 
 
 class TestNeutronSecurityGroupRulesV21(
-        TestNeutronSecurityGroupRulesBase,
+        _TestNeutronSecurityGroupRulesBase,
         test_security_groups.TestSecurityGroupRulesV21,
         TestNeutronSecurityGroupRulesTestCase):
     pass
