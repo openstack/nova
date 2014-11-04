@@ -79,7 +79,9 @@ class InterfaceAttachmentController(object):
             raise exc.HTTPForbidden(explanation=e.format_message())
 
         if port_info['port']['device_id'] != server_id:
-            raise exc.HTTPNotFound()
+            msg = _("Instance %(instance)s does not have a port with id "
+                    "%(port)s") % {'instance': server_id, 'port': port_id}
+            raise exc.HTTPNotFound(explanation=msg)
 
         return {'interfaceAttachment': _translate_interface_attachment_view(
                 port_info['port'])}
@@ -104,9 +106,11 @@ class InterfaceAttachmentController(object):
                 pass
 
         if network_id and port_id:
-            raise exc.HTTPBadRequest()
+            msg = _("Must not input both network_id and port_id")
+            raise exc.HTTPBadRequest(explanation=msg)
         if req_ip and not network_id:
-            raise exc.HTTPBadRequest()
+            msg = _("Must input network_id when request IP address")
+            raise exc.HTTPBadRequest(explanation=msg)
 
         instance = common.get_instance(self.compute_api, context,
                                        server_id, want_objects=True)
@@ -146,8 +150,8 @@ class InterfaceAttachmentController(object):
         try:
             self.compute_api.detach_interface(context,
                 instance, port_id=port_id)
-        except exception.PortNotFound:
-            raise exc.HTTPNotFound()
+        except exception.PortNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError as e:
@@ -168,8 +172,8 @@ class InterfaceAttachmentController(object):
 
         try:
             data = self.network_api.list_ports(context, **search_opts)
-        except exception.NotFound:
-            raise exc.HTTPNotFound()
+        except exception.NotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         except NotImplementedError:
             msg = _("Network driver does not support this function.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
