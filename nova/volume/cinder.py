@@ -39,47 +39,30 @@ cinder_opts = [
             default='volume:cinder:publicURL',
             help='Info to match when looking for cinder in the service '
                  'catalog. Format is: separated values of the form: '
-                 '<service_type>:<service_name>:<endpoint_type>',
-            deprecated_group='DEFAULT',
-            deprecated_name='cinder_catalog_info'),
+                 '<service_type>:<service_name>:<endpoint_type>'),
     cfg.StrOpt('endpoint_template',
                help='Override service catalog lookup with template for cinder '
-                    'endpoint e.g. http://localhost:8776/v1/%(project_id)s',
-               deprecated_group='DEFAULT',
-               deprecated_name='cinder_endpoint_template'),
+                    'endpoint e.g. http://localhost:8776/v1/%(project_id)s'),
     cfg.StrOpt('os_region_name',
-               help='Region name of this node',
-               deprecated_group='DEFAULT',
-               deprecated_name='os_region_name'),
+               help='Region name of this node'),
     cfg.StrOpt('ca_certificates_file',
                help='Location of ca certificates file to use for cinder '
-                    'client requests.',
-               deprecated_group='DEFAULT',
-               deprecated_name='cinder_ca_certificates_file'),
+                    'client requests.'),
     cfg.IntOpt('http_retries',
                default=3,
-               help='Number of cinderclient retries on failed http calls',
-            deprecated_group='DEFAULT',
-            deprecated_name='cinder_http_retries'),
+               help='Number of cinderclient retries on failed http calls'),
     cfg.IntOpt('http_timeout',
-               help='HTTP inactivity timeout (in seconds)',
-               deprecated_group='DEFAULT',
-               deprecated_name='cinder_http_timeout'),
+               help='HTTP inactivity timeout (in seconds)'),
     cfg.BoolOpt('api_insecure',
                 default=False,
-                help='Allow to perform insecure SSL requests to cinder',
-                deprecated_group='DEFAULT',
-                deprecated_name='cinder_api_insecure'),
+                help='Allow to perform insecure SSL requests to cinder'),
     cfg.BoolOpt('cross_az_attach',
                 default=True,
                 help='Allow attach between instance and volume in different '
-                     'availability zones.',
-                deprecated_group='DEFAULT',
-                deprecated_name='cinder_cross_az_attach'),
+                     'availability zones.'),
 ]
 
 CONF = cfg.CONF
-# cinder_opts options in the DEFAULT group were deprecated in Juno
 CONF.register_opts(cinder_opts, group='cinder')
 
 LOG = logging.getLogger(__name__)
