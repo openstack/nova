@@ -11120,6 +11120,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                        fake_enable_hairpin)
         self.stubs.Set(self.libvirtconnection, 'get_info',
                        fake_get_info)
+        self.stubs.Set(compute_utils, 'get_image_metadata', lambda *a: None)
 
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
@@ -11191,6 +11192,25 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     def test_finish_revert_migration_after_crash_delete_failed(self):
         self._test_finish_revert_migration_after_crash(backup_made=True,
                                                        del_inst_failed=True)
+
+    def test_finish_revert_migration_preserves_disk_bus(self):
+
+        def fake_get_guest_xml(context, instance, network_info, disk_info,
+                               block_device_info=None):
+            self.assertEqual('ide', disk_info['disk_bus'])
+
+        image_meta = {"properties": {"hw_disk_bus": "ide"}}
+        instance = self._create_instance()
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        with contextlib.nested(
+                mock.patch.object(conn, '_create_domain_and_network'),
+                mock.patch.object(compute_utils, 'get_image_metadata',
+                                  return_value=image_meta),
+                mock.patch.object(conn, '_get_guest_xml',
+                                  side_effect=fake_get_guest_xml)):
+            conn.finish_revert_migration('', instance, None, power_on=False)
 
     def test_cleanup_failed_migration(self):
         self.mox.StubOutWithMock(shutil, 'rmtree')

@@ -5884,9 +5884,16 @@ class LibvirtDriver(driver.ComputeDriver):
             self._cleanup_failed_migration(inst_base)
             utils.execute('mv', inst_base_resize, inst_base)
 
+        image_ref = instance.get('image_ref')
+        image_meta = compute_utils.get_image_metadata(context,
+                                                      self._image_api,
+                                                      image_ref,
+                                                      instance)
+
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
-                                            block_device_info)
+                                            block_device_info,
+                                            image_meta)
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
                                   block_device_info=block_device_info)
         self._create_domain_and_network(context, xml, instance, network_info,
