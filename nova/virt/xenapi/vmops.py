@@ -815,6 +815,7 @@ class VMOps(object):
         vm_ref = self._get_vm_opaque_ref(instance)
         label = "%s-snapshot" % instance['name']
 
+        start_time = timeutils.utcnow()
         with vm_utils.snapshot_attached_here(
                 self._session, instance, vm_ref, label,
                 post_snapshot_callback=update_task_state) as vdi_uuids:
@@ -827,7 +828,10 @@ class VMOps(object):
                                                    vdi_uuids,
                                                    )
 
-        LOG.debug("Finished snapshot and upload for VM",
+        duration = timeutils.delta_seconds(start_time, timeutils.utcnow())
+        LOG.debug("Finished snapshot and upload for VM, duration: "
+                  "%(duration).2f secs for image %(image_id)s",
+                  {'image_id': image_id, 'duration': duration},
                   instance=instance)
 
     def post_interrupted_snapshot_cleanup(self, context, instance):
