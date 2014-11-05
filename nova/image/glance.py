@@ -41,49 +41,35 @@ from nova import utils
 glance_opts = [
     cfg.StrOpt('host',
                default='$my_ip',
-               help='Default glance hostname or IP address',
-               deprecated_group='DEFAULT',
-               deprecated_name='glance_host'),
+               help='Default glance hostname or IP address'),
     cfg.IntOpt('port',
                default=9292,
-               help='Default glance port',
-               deprecated_group='DEFAULT',
-               deprecated_name='glance_port'),
+               help='Default glance port'),
     cfg.StrOpt('protocol',
                 default='http',
                 help='Default protocol to use when connecting to glance. '
-                     'Set to https for SSL.',
-               deprecated_group='DEFAULT',
-               deprecated_name='glance_protocol'),
+                     'Set to https for SSL.'),
     cfg.ListOpt('api_servers',
                 help='A list of the glance api servers available to nova. '
                      'Prefix with https:// for ssl-based glance api servers. '
-                     '([hostname|ip]:port)',
-               deprecated_group='DEFAULT',
-               deprecated_name='glance_api_servers'),
+                     '([hostname|ip]:port)'),
     cfg.BoolOpt('api_insecure',
                 default=False,
                 help='Allow to perform insecure SSL (https) requests to '
-                     'glance',
-               deprecated_group='DEFAULT',
-               deprecated_name='glance_api_insecure'),
+                     'glance'),
     cfg.IntOpt('num_retries',
                default=0,
                help='Number of retries when uploading / downloading an image '
-                    'to / from glance.',
-               deprecated_group='DEFAULT',
-               deprecated_name='glance_num_retries'),
+                    'to / from glance.'),
     cfg.ListOpt('allowed_direct_url_schemes',
                 default=[],
                 help='A list of url scheme that can be downloaded directly '
                      'via the direct_url.  Currently supported schemes: '
-                     '[file].',
-               deprecated_group='DEFAULT'),
+                     '[file].'),
     ]
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
-# glance_opts options in the DEFAULT group were deprecated in Juno
 CONF.register_opts(glance_opts, 'glance')
 CONF.import_opt('auth_strategy', 'nova.api.auth')
 CONF.import_opt('my_ip', 'nova.netconf')
