@@ -2229,23 +2229,25 @@ class API(base.Base):
                 instance_uuid=instance['uuid'],
                 state=instance['vm_state'],
                 method='soft reboot')
-        if ((reboot_type == 'SOFT' and
-                instance['task_state'] in
-                (task_states.REBOOTING, task_states.REBOOTING_HARD,
-                 task_states.REBOOT_PENDING, task_states.REBOOT_STARTED)) or
-            (reboot_type == 'HARD' and
-                instance['task_state'] == task_states.REBOOTING_HARD)):
+        if reboot_type == 'SOFT' and instance['task_state'] is not None:
             raise exception.InstanceInvalidState(
                 attr='task_state',
                 instance_uuid=instance['uuid'],
                 state=instance['task_state'],
                 method='reboot')
+        expected_task_state = [None]
+        if reboot_type == 'HARD':
+            expected_task_state.extend([task_states.REBOOTING,
+                                        task_states.REBOOT_PENDING,
+                                        task_states.REBOOT_STARTED,
+                                        task_states.REBOOTING_HARD,
+                                        task_states.RESUMING,
+                                        task_states.UNPAUSING,
+                                        task_states.SUSPENDING])
         state = {'SOFT': task_states.REBOOTING,
                  'HARD': task_states.REBOOTING_HARD}[reboot_type]
         instance.task_state = state
-        instance.save(expected_task_state=[None, task_states.REBOOTING,
-                                           task_states.REBOOT_PENDING,
-                                           task_states.REBOOT_STARTED])
+        instance.save(expected_task_state=expected_task_state)
 
         self._record_action_start(context, instance, instance_actions.REBOOT)
 

@@ -246,15 +246,13 @@ class ServerActionsControllerTest(test.TestCase):
                                         task_state=task_states.REBOOTING))
         self.controller._action_reboot(req, FAKE_UUID, body)
 
-    def test_reboot_hard_with_hard_in_progress_raises_conflict(self):
+    def test_reboot_hard_with_hard_in_progress(self):
         body = dict(reboot=dict(type="HARD"))
         req = fakes.HTTPRequestV3.blank(self.url)
         self.stubs.Set(db, 'instance_get_by_uuid',
                        fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                                         task_state=task_states.REBOOTING_HARD))
-        self.assertRaises(webob.exc.HTTPConflict,
-                          self.controller._action_reboot,
-                          req, FAKE_UUID, body)
+        self.controller._action_reboot(req, FAKE_UUID, body)
 
     def test_rebuild_accepted_minimum(self):
         return_server = fakes.fake_instance_get(image_ref='2',
