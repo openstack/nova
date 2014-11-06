@@ -532,6 +532,42 @@ class VirtCPUTopology(object):
                                                      allow_threads)[0]
 
 
+class VirtPageSize(object):
+    def __init__(self, size_kb):
+        """Handles a memory page size
+
+        :param size_kb: integer of page size in KiB
+        """
+        self.size_kb = int(size_kb)
+
+
+class VirtPagesTopology(VirtPageSize):
+    """Convenient class/type to identify memory pages info."""
+
+    def __init__(self, size_kb, total, used=0):
+        """Handles memory pages topology info
+
+        :param size_kb: integer of page size in KiB
+        :param total: integer of pages size available
+        :param used: integer of pages size used
+        """
+        super(VirtPagesTopology, self).__init__(size_kb)
+        self.used = int(used)
+        self.total = int(total)
+
+    def to_dict(self):
+        return {'size_kb': self.size_kb,
+                'total': self.total,
+                'used': self.used}
+
+    @classmethod
+    def from_dict(cls, data_dict):
+        size_kb = data_dict['size_kb']
+        total = data_dict.get('total', 0)
+        used = data_dict.get('used', 0)
+        return cls(size_kb, total, used)
+
+
 class VirtNUMATopologyCell(object):
     """Class for reporting NUMA resources in a cell
 

@@ -1383,3 +1383,25 @@ class HelperMethodsTestCase(test.NoDBTestCase):
                                                   never_serialize_result=True)
         self.assertIsInstance(res, hw.VirtNUMAHostTopology)
         self._check_usage(res)
+
+
+class VirtMemoryPagesTestCase(test.NoDBTestCase):
+    def test_virt_pages_topology(self):
+        pages = hw.VirtPagesTopology(4, 1024, 512)
+        self.assertEqual(4, pages.size_kb)
+        self.assertEqual(1024, pages.total)
+        self.assertEqual(512, pages.used)
+
+    def test_virt_pages_topology_to_dict(self):
+        pages = hw.VirtPagesTopology(4, 1024, 512)
+        self.assertEqual({'size_kb': 4,
+                          'total': 1024,
+                          'used': 512}, pages.to_dict())
+
+    def test_virt_pages_topology_from_dict(self):
+        pages = hw.VirtPagesTopology.from_dict({'size_kb': 4,
+                                                'total': 1024,
+                                                'used': 512})
+        self.assertEqual(4, pages.size_kb)
+        self.assertEqual(1024, pages.total)
+        self.assertEqual(512, pages.used)
