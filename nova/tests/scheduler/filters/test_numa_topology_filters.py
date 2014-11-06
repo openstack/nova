@@ -30,8 +30,8 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
 
     def test_numa_topology_filter_pass(self):
         instance_topology = hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCell(0, set([1]), 512),
-                   hardware.VirtNUMATopologyCell(1, set([3]), 512)])
+            cells=[hardware.VirtNUMATopologyCellInstance(0, set([1]), 512),
+                   hardware.VirtNUMATopologyCellInstance(1, set([3]), 512)])
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
         instance.numa_topology = (
                 objects.InstanceNUMATopology.obj_from_topology(
@@ -46,8 +46,8 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
 
     def test_numa_topology_filter_numa_instance_no_numa_host_fail(self):
         instance_topology = hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCell(0, set([1]), 512),
-                   hardware.VirtNUMATopologyCell(1, set([3]), 512)])
+            cells=[hardware.VirtNUMATopologyCellInstance(0, set([1]), 512),
+                   hardware.VirtNUMATopologyCellInstance(1, set([3]), 512)])
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
         instance.numa_topology = (
                 objects.InstanceNUMATopology.obj_from_topology(
@@ -73,9 +73,9 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
 
     def test_numa_topology_filter_fail_fit(self):
         instance_topology = hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCell(0, set([1]), 512),
-                   hardware.VirtNUMATopologyCell(1, set([2]), 512),
-                   hardware.VirtNUMATopologyCell(2, set([3]), 512)])
+            cells=[hardware.VirtNUMATopologyCellInstance(0, set([1]), 512),
+                   hardware.VirtNUMATopologyCellInstance(1, set([2]), 512),
+                   hardware.VirtNUMATopologyCellInstance(2, set([3]), 512)])
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
         instance.numa_topology = (
                 objects.InstanceNUMATopology.obj_from_topology(
@@ -92,8 +92,8 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
         self.flags(ram_allocation_ratio=1)
 
         instance_topology = hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCell(0, set([1]), 1024),
-                   hardware.VirtNUMATopologyCell(1, set([3]), 512)])
+            cells=[hardware.VirtNUMATopologyCellInstance(0, set([1]), 1024),
+                   hardware.VirtNUMATopologyCellInstance(1, set([3]), 512)])
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
         instance.numa_topology = (
                 objects.InstanceNUMATopology.obj_from_topology(
@@ -110,8 +110,9 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
         self.flags(cpu_allocation_ratio=1)
 
         instance_topology = hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCell(0, set([1]), 512),
-                   hardware.VirtNUMATopologyCell(1, set([3, 4, 5]), 512)])
+            cells=[hardware.VirtNUMATopologyCellInstance(0, set([1]), 512),
+                   hardware.VirtNUMATopologyCellInstance(
+                       1, set([3, 4, 5]), 512)])
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
         instance.numa_topology = (
                 objects.InstanceNUMATopology.obj_from_topology(
@@ -129,8 +130,8 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
         self.flags(ram_allocation_ratio=1.3)
 
         instance_topology = hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCell(0, set([1]), 512),
-                   hardware.VirtNUMATopologyCell(1, set([3]), 512)])
+            cells=[hardware.VirtNUMATopologyCellInstance(0, set([1]), 512),
+                   hardware.VirtNUMATopologyCellInstance(1, set([3]), 512)])
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
         instance.numa_topology = (
                 objects.InstanceNUMATopology.obj_from_topology(

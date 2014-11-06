@@ -58,8 +58,8 @@ class InstanceNUMATopology(base.NovaObject):
     def topology_from_obj(self):
         cells = []
         for objcell in self.cells:
-            cell = hardware.VirtNUMATopologyCell(objcell.id, objcell.cpuset,
-                                                 objcell.memory)
+            cell = hardware.VirtNUMATopologyCellInstance(
+                objcell.id, objcell.cpuset, objcell.memory)
             cells.append(cell)
         return hardware.VirtNUMAInstanceTopology(cells=cells)
 

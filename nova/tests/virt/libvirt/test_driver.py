@@ -1336,8 +1336,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_get_guest_config_non_numa_host_instance_topo(self, mock_flavor):
         instance_topology = objects.InstanceNUMATopology.obj_from_topology(
                 hardware.VirtNUMAInstanceTopology(
-                    cells=[hardware.VirtNUMATopologyCell(0, set([0]), 1024),
-                           hardware.VirtNUMATopologyCell(1, set([2]), 1024)]))
+                    cells=[hardware.VirtNUMATopologyCellInstance(
+                        0, set([0]), 1024),
+                           hardware.VirtNUMATopologyCellInstance(
+                               1, set([2]), 1024)]))
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.numa_topology = instance_topology
         flavor = objects.Flavor(memory_mb=2048, vcpus=2, root_gb=496,
@@ -1377,8 +1379,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_get_guest_config_numa_host_instance_topo(self, mock_flavor):
         instance_topology = objects.InstanceNUMATopology.obj_from_topology(
                 hardware.VirtNUMAInstanceTopology(
-                    cells=[hardware.VirtNUMATopologyCell(0, set([0, 1]), 1024),
-                           hardware.VirtNUMATopologyCell(1, set([2, 3]),
+                    cells=[hardware.VirtNUMATopologyCellInstance(
+                        0, set([0, 1]), 1024),
+                           hardware.VirtNUMATopologyCellInstance(
+                               1, set([2, 3]),
                                                          1024)]))
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.numa_topology = instance_topology

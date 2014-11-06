@@ -7278,8 +7278,8 @@ class ComputeAPITestCase(BaseTestCase):
                             'something_else': 'meow'}
 
         numa_topology = hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCell(0, set([1, 2]), 512),
-                   hardware.VirtNUMATopologyCell(1, set([3, 4]), 512)])
+            cells=[hardware.VirtNUMATopologyCellInstance(0, set([1, 2]), 512),
+                   hardware.VirtNUMATopologyCellInstance(1, set([3, 4]), 512)])
         numa_constraints_mock.return_value = numa_topology
 
         instances, resv_id = self.compute_api.create(self.context, inst_type,
