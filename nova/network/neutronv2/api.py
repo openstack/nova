@@ -43,75 +43,49 @@ from nova.pci import whitelist as pci_whitelist
 neutron_opts = [
     cfg.StrOpt('url',
                default='http://127.0.0.1:9696',
-               help='URL for connecting to neutron',
-               deprecated_group='DEFAULT',
-               deprecated_name='neutron_url'),
+               help='URL for connecting to neutron'),
     cfg.IntOpt('url_timeout',
                default=30,
-               help='Timeout value for connecting to neutron in seconds',
-               deprecated_group='DEFAULT',
-               deprecated_name='neutron_url_timeout'),
+               help='Timeout value for connecting to neutron in seconds'),
     cfg.StrOpt('admin_user_id',
                help='User id for connecting to neutron in admin context'),
     cfg.StrOpt('admin_username',
-               help='Username for connecting to neutron in admin context',
-               deprecated_group='DEFAULT',
-               deprecated_name='neutron_admin_username'),
+               help='Username for connecting to neutron in admin context'),
     cfg.StrOpt('admin_password',
                help='Password for connecting to neutron in admin context',
-               secret=True,
-               deprecated_group='DEFAULT',
-               deprecated_name='neutron_admin_password'),
+               secret=True),
     cfg.StrOpt('admin_tenant_id',
-               help='Tenant id for connecting to neutron in admin context',
-               deprecated_group='DEFAULT',
-               deprecated_name='neutron_admin_tenant_id'),
+               help='Tenant id for connecting to neutron in admin context'),
     cfg.StrOpt('admin_tenant_name',
                help='Tenant name for connecting to neutron in admin context. '
                     'This option will be ignored if neutron_admin_tenant_id '
                     'is set. Note that with Keystone V3 tenant names are '
-                    'only unique within a domain.',
-               deprecated_group='DEFAULT',
-               deprecated_name='neutron_admin_tenant_name'),
+                    'only unique within a domain.'),
     cfg.StrOpt('region_name',
-               help='Region name for connecting to neutron in admin context',
-               deprecated_group='DEFAULT',
-               deprecated_name='neutron_region_name'),
+               help='Region name for connecting to neutron in admin context'),
     cfg.StrOpt('admin_auth_url',
                default='http://localhost:5000/v2.0',
                help='Authorization URL for connecting to neutron in admin '
-               'context',
-               deprecated_group='DEFAULT',
-               deprecated_name='neutron_admin_auth_url'),
+               'context'),
     cfg.BoolOpt('api_insecure',
                 default=False,
-                help='If set, ignore any SSL validation issues',
-               deprecated_group='DEFAULT',
-               deprecated_name='neutron_api_insecure'),
+                help='If set, ignore any SSL validation issues'),
     cfg.StrOpt('auth_strategy',
                default='keystone',
                help='Authorization strategy for connecting to '
-                    'neutron in admin context',
-               deprecated_group='DEFAULT',
-               deprecated_name='neutron_auth_strategy'),
+                    'neutron in admin context'),
     # TODO(berrange) temporary hack until Neutron can pass over the
     # name of the OVS bridge it is configured with
     cfg.StrOpt('ovs_bridge',
                default='br-int',
-               help='Name of Integration Bridge used by Open vSwitch',
-               deprecated_group='DEFAULT',
-               deprecated_name='neutron_ovs_bridge'),
+               help='Name of Integration Bridge used by Open vSwitch'),
     cfg.IntOpt('extension_sync_interval',
                 default=600,
                 help='Number of seconds before querying neutron for'
-                     ' extensions',
-               deprecated_group='DEFAULT',
-               deprecated_name='neutron_extension_sync_interval'),
+                     ' extensions'),
     cfg.StrOpt('ca_certificates_file',
                 help='Location of CA certificates file to use for '
-                     'neutron client requests.',
-               deprecated_group='DEFAULT',
-               deprecated_name='neutron_ca_certificates_file'),
+                     'neutron client requests.'),
     cfg.BoolOpt('allow_duplicate_networks',
                 default=False,
                 help='Allow an instance to have multiple vNICs attached to '
@@ -119,7 +93,6 @@ neutron_opts = [
    ]
 
 CONF = cfg.CONF
-# neutron_opts options in the DEFAULT group were deprecated in Juno
 CONF.register_opts(neutron_opts, 'neutron')
 CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
 CONF.import_opt('flat_injected', 'nova.network.manager')
