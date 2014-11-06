@@ -382,11 +382,6 @@ class NetworkManager(manager.Manager):
         self.conductor_api.security_groups_trigger_members_refresh(
             admin_context, group_ids)
 
-    def get_floating_ips_by_fixed_address(self, context, fixed_address):
-        # NOTE(jkoelker) This is just a stub function. Managers supporting
-        #                floating ips MUST override this or use the Mixin
-        return []
-
     def get_instance_uuids_by_ip_filter(self, context, filters):
         fixed_ip_filter = filters.get('fixed_ip')
         ip_filter = re.compile(str(filters.get('ip')))

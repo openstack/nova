@@ -2564,16 +2564,6 @@ class TestNeutronv2(TestNeutronv2Base):
         networks = api.get_all(self.context)
         self.assertEqual(networks, [])
 
-    def test_get_floating_ips_by_fixed_address(self):
-        # NOTE(lbragstad): We need to reset the mocks in order to assert
-        # a NotImplementedError is raised when calling the method under test.
-        self.mox.ResetAll()
-        fake_fixed = '192.168.1.4'
-        api = neutronapi.API()
-        self.assertRaises(NotImplementedError,
-                          api.get_floating_ips_by_fixed_address,
-                          self.context, fake_fixed)
-
     @mock.patch.object(neutronv2, 'get_client', return_value=mock.Mock())
     def test_get_port_vnic_info_1(self, mock_get_client):
         api = neutronapi.API()

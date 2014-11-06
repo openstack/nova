@@ -147,10 +147,6 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
         self._test_network_api('get_floating_ips_by_project',
                 rpc_method='call')
 
-    def test_get_floating_ips_by_fixed_address(self):
-        self._test_network_api('get_floating_ips_by_fixed_address',
-                rpc_method='call', fixed_address='w.x.y.z')
-
     def test_get_instance_id_by_floating_address(self):
         self._test_network_api('get_instance_id_by_floating_address',
                 rpc_method='call', address='w.x.y.z')

@@ -3754,12 +3754,7 @@ class ServersViewBuilderTest(test.TestCase):
                     (None, {'label': 'private',
                             'ips': [dict(ip=ip) for ip in privates]})]
 
-        def floaters(*args, **kwargs):
-            return []
-
         fakes.stub_out_nw_api_get_instance_nw_info(self.stubs, nw_info)
-        fakes.stub_out_nw_api_get_floating_ips_by_fixed_address(self.stubs,
-                                                                floaters)
 
         self.uuid = db_inst['uuid']
         self.view_builder = views.servers.ViewBuilder()

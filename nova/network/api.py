@@ -139,12 +139,6 @@ class API(base_api.NetworkAPI):
                                                      context.project_id)
 
     @wrap_check_policy
-    def get_floating_ips_by_fixed_address(self, context, fixed_address):
-        floating_ips = objects.FloatingIPList.get_by_fixed_address(
-            context, fixed_address)
-        return [str(floating_ip.address) for floating_ip in floating_ips]
-
-    @wrap_check_policy
     def get_instance_id_by_floating_address(self, context, address):
         fixed_ip = objects.FixedIP.get_by_floating_address(context, address)
         if fixed_ip is None:
