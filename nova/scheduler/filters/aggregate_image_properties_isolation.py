@@ -15,9 +15,9 @@
 
 from oslo.config import cfg
 
-from nova import db
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
+from nova.scheduler.filters import utils
 
 opts = [
     cfg.StrOpt('aggregate_image_properties_isolation_namespace',
@@ -49,7 +49,8 @@ class AggregateImagePropertiesIsolation(filters.BaseHostFilter):
         spec = filter_properties.get('request_spec', {})
         image_props = spec.get('image', {}).get('properties', {})
         context = filter_properties['context']
-        metadata = db.aggregate_metadata_get_by_host(context, host_state.host)
+        metadata = utils.aggregate_metadata_get_by_host(context,
+                                                        host_state.host)
 
         for key, options in metadata.iteritems():
             if (cfg_namespace and

@@ -14,8 +14,25 @@
 
 import mock
 
+from nova import objects
 from nova.scheduler.filters import utils
 from nova import test
+
+
+_AGGREGATE_FIXTURES = [
+    objects.Aggregate(
+        id=1,
+        name='foo',
+        hosts=['fake-host'],
+        metadata={'k1': '1', 'k2': '2'},
+    ),
+    objects.Aggregate(
+        id=2,
+        name='bar',
+        hosts=['fake-host'],
+        metadata={'k1': '3', 'k2': '4'},
+    ),
+]
 
 
 class UtilsTestCase(test.NoDBTestCase):
@@ -30,15 +47,54 @@ class UtilsTestCase(test.NoDBTestCase):
 
     @mock.patch("nova.objects.aggregate.AggregateList.get_by_host")
     def test_aggregate_values_from_db(self, get_by_host):
-        aggrA = mock.MagicMock()
-        aggrB = mock.MagicMock()
         context = mock.MagicMock()
+        get_by_host.return_value = objects.AggregateList(
+            objects=_AGGREGATE_FIXTURES)
 
-        get_by_host.return_value = [aggrA, aggrB]
-        aggrA.metadata = {'k1': 1, 'k2': 2}
-        aggrB.metadata = {'k1': 3, 'k2': 4}
+        values = utils.aggregate_values_from_db(context,
+                                                'fake-host', key_name='k1')
 
-        values = utils.aggregate_values_from_db(context, 'h1', key_name='k1')
+        get_by_host.assert_called_with(context.elevated(),
+                                       'fake-host', key='k1')
+        self.assertEqual(set(['1', '3']), values)
 
-        self.assertTrue(context.elevated.called)
-        self.assertEqual(set([1, 3]), values)
+    @mock.patch("nova.objects.aggregate.AggregateList.get_by_host")
+    def test_aggregate_metadata_get_by_host_no_key(self, get_by_host):
+        context = mock.MagicMock()
+        get_by_host.return_value = objects.AggregateList(
+            objects=_AGGREGATE_FIXTURES)
+
+        metadata = utils.aggregate_metadata_get_by_host(context, 'fake-host')
+
+        get_by_host.assert_called_with(context.elevated(),
+                                       'fake-host', key=None)
+        self.assertIn('k1', metadata)
+        self.assertEqual(set(['1', '3']), metadata['k1'])
+        self.assertIn('k2', metadata)
+        self.assertEqual(set(['2', '4']), metadata['k2'])
+
+    @mock.patch("nova.objects.aggregate.AggregateList.get_by_host")
+    def test_aggregate_metadata_get_by_host_with_key(self, get_by_host):
+        context = mock.MagicMock()
+        get_by_host.return_value = objects.AggregateList(
+            objects=_AGGREGATE_FIXTURES)
+
+        metadata = utils.aggregate_metadata_get_by_host(context,
+                                                        'fake-host', 'k1')
+
+        get_by_host.assert_called_with(context.elevated(),
+                                       'fake-host', key='k1')
+        self.assertIn('k1', metadata)
+        self.assertEqual(set(['1', '3']), metadata['k1'])
+
+    @mock.patch("nova.objects.aggregate.AggregateList.get_by_host")
+    def test_aggregate_metadata_get_by_host_empty_result(self, get_by_host):
+        context = mock.MagicMock()
+        get_by_host.return_value = objects.AggregateList(objects=[])
+
+        metadata = utils.aggregate_metadata_get_by_host(context,
+                                                        'fake-host', 'k3')
+
+        get_by_host.assert_called_with(context.elevated(),
+                                       'fake-host', key='k3')
+        self.assertEqual({}, metadata)
