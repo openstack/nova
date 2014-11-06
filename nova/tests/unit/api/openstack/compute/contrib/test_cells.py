@@ -313,6 +313,31 @@ class CellsTestV21(BaseCellsTest):
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.controller.create, req, body=body)
 
+    def test_cell_create_rpc_port_with_string(self):
+        body = {'cell': {'name': 'fake',
+                         'username': 'fred',
+                         'password': 'secret',
+                         'rpc_host': 'r3.example.org',
+                         'rpc_port': '123',
+                         'type': 'parent'}}
+
+        req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
+        self.controller.create(req, body=body)
+
+    def test_cell_create_rpc_port_with_null(self):
+        body = {'cell': {'name': 'fake',
+                         'username': 'fred',
+                         'password': 'secret',
+                         'rpc_host': 'r3.example.org',
+                         'rpc_port': None,
+                         'type': 'parent'}}
+
+        req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
+        self.assertRaises(self.bad_request,
+            self.controller.create, req, body=body)
+
     def _cell_update(self):
         body = {'cell': {'username': 'zeb',
                          'password': 'sneaky'}}
@@ -401,6 +426,31 @@ class CellsTestV21(BaseCellsTest):
         self.assertEqual(cell2['rpc_host'], 'r2.example.org')
         self.assertEqual(cell2['username'], 'wingwj')
         self.assertEqual(cell2['type'], 'parent')
+
+    def test_cell_update_rpc_port_with_string(self):
+        body = {'cell': {'name': 'fake',
+                         'username': 'fred',
+                         'password': 'secret',
+                         'rpc_host': 'r3.example.org',
+                         'rpc_port': '123',
+                         'type': 'parent'}}
+
+        req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
+        self.controller.update(req, 'cell1', body=body)
+
+    def test_cell_update_rpc_port_with_null(self):
+        body = {'cell': {'name': 'fake',
+                         'username': 'fred',
+                         'password': 'secret',
+                         'rpc_host': 'r3.example.org',
+                         'rpc_port': None,
+                         'type': 'parent'}}
+
+        req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
+        self.assertRaises(self.bad_request,
+            self.controller.update, req, 'cell1', body=body)
 
     def test_cell_info(self):
         caps = ['cap1=a;b', 'cap2=c;d']
@@ -611,6 +661,30 @@ class CellsTestV2(CellsTestV21):
         req.environ['nova.context'] = self.context
         self.assertRaises(exc.HTTPBadRequest,
             self.controller.create, req, body=body)
+
+    def test_cell_create_rpc_port_with_null(self):
+        body = {'cell': {'name': 'fake',
+                         'username': 'fred',
+                         'password': 'secret',
+                         'rpc_host': 'r3.example.org',
+                         'rpc_port': None,
+                         'type': 'parent'}}
+
+        req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
+        self.controller.create(req, body=body)
+
+    def test_cell_update_rpc_port_with_null(self):
+        body = {'cell': {'name': 'fake',
+                         'username': 'fred',
+                         'password': 'secret',
+                         'rpc_host': 'r3.example.org',
+                         'rpc_port': None,
+                         'type': 'parent'}}
+
+        req = self._get_request("cells")
+        req.environ['nova.context'] = self.context
+        self.controller.update(req, 'cell1', body=body)
 
 
 class TestCellsXMLSerializer(BaseCellsTest):
