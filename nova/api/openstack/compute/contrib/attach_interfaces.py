@@ -15,6 +15,8 @@
 
 """The instance interfaces extension."""
 
+import netaddr
+import six
 import webob
 from webob import exc
 
@@ -104,6 +106,12 @@ class InterfaceAttachmentController(object):
         if req_ip and not network_id:
             msg = _("Must input network_id when request IP address")
             raise exc.HTTPBadRequest(explanation=msg)
+
+        if req_ip:
+            try:
+                netaddr.IPAddress(req_ip)
+            except netaddr.AddrFormatError as e:
+                raise exc.HTTPBadRequest(explanation=six.text_type(e))
 
         try:
             instance = common.get_instance(self.compute_api,
