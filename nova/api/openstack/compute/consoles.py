@@ -95,9 +95,12 @@ class Controller(object):
 
     def create(self, req, server_id, body):
         """Creates a new console."""
-        self.console_api.create_console(
+        try:
+            self.console_api.create_console(
                                 req.environ['nova.context'],
                                 server_id)
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
 
     @wsgi.serializers(xml=ConsoleTemplate)
     def show(self, req, server_id, id):

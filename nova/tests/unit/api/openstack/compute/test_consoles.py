@@ -144,6 +144,15 @@ class ConsolesControllerTest(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank(self.url)
         self.controller.create(req, self.uuid, None)
 
+    def test_create_console_unknown_instance(self):
+        def fake_create_console(cons_self, context, instance_id):
+            raise exception.InstanceNotFound(instance_id=instance_id)
+        self.stubs.Set(console.api.API, 'create_console', fake_create_console)
+
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.create,
+                          req, self.uuid, None)
+
     def test_show_console(self):
         def fake_get_console(cons_self, context, instance_id, console_id):
             self.assertEqual(instance_id, self.uuid)
