@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 from oslo.config import cfg
 from oslo.serialization import jsonutils
 import webob
@@ -41,12 +43,12 @@ def _fake_check_token_not_found(self, context, token):
 
 
 def _fake_check_token_unauthorized(self, context, token):
-    connect_info = _FAKE_CONNECT_INFO
+    connect_info = copy.deepcopy(_FAKE_CONNECT_INFO)
     connect_info['console_type'] = 'unauthorized_console_type'
     return connect_info
 
 
-class ConsoleAuthTokensExtensionTest(test.TestCase):
+class ConsoleAuthTokensExtensionTestV21(test.TestCase):
 
     _FAKE_URL = '/v2/fake/os-console-auth-tokens/1'
 
@@ -57,17 +59,16 @@ class ConsoleAuthTokensExtensionTest(test.TestCase):
                                     'fake_access_path'}}
 
     def setUp(self):
-        super(ConsoleAuthTokensExtensionTest, self).setUp()
+        super(ConsoleAuthTokensExtensionTestV21, self).setUp()
         self.stubs.Set(consoleauth_rpcapi.ConsoleAuthAPI, 'check_token',
                        _fake_check_token)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Console_auth_tokens'])
 
-        ctxt = self._get_admin_context()
-        self.app = fakes.wsgi_app(init_only=('os-console-auth-tokens',),
-                                  fake_auth_context=ctxt)
+        self._set_up_wsgi_app()
+
+    def _set_up_wsgi_app(self):
+        self.app = fakes.wsgi_app_v21(
+                        init_only=('os-console-auth-tokens'),
+                        fake_auth_context=self._get_admin_context())
 
     def _get_admin_context(self):
         ctxt = context.get_admin_context()
@@ -101,3 +102,14 @@ class ConsoleAuthTokensExtensionTest(test.TestCase):
         req = self._create_request()
         res = req.get_response(self.app)
         self.assertEqual(401, res.status_int)
+
+
+class ConsoleAuthTokensExtensionTestV2(ConsoleAuthTokensExtensionTestV21):
+    def _set_up_wsgi_app(self):
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Console_auth_tokens'])
+
+        self.app = fakes.wsgi_app(init_only=('os-console-auth-tokens',),
+                                  fake_auth_context=self._get_admin_context())
