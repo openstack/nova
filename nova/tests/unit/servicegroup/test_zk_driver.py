@@ -24,6 +24,7 @@ $ sudo apt-get install zookeeper zookeeperd python-zookeeper
 $ sudo pip install evzookeeper
 $ nosetests nova.tests.unit.servicegroup.test_zk_driver
 """
+import os
 
 import eventlet
 
@@ -63,3 +64,24 @@ class ZKServiceGroupTestCase(test.NoDBTestCase):
         pulse.stop()
         eventlet.sleep(1)
         self.assertFalse(self.servicegroup_api.service_is_up(service_id))
+
+    def test_zookeeper_hierarchy_structure(self):
+        """Test that hierarchy created by join method contains process id."""
+        from zookeeper import NoNodeException
+        self.servicegroup_api = servicegroup.API()
+        service_id = {'topic': 'unittest', 'host': 'serviceC'}
+        # use existing session object
+        session = self.servicegroup_api._driver._session
+        # prepare a path that contains process id
+        pid = os.getpid()
+        path = '/servicegroups/%s/%s/%s' % (service_id['topic'],
+                                              service_id['host'],
+                                              pid)
+        # assert that node doesn't exist yet
+        self.assertRaises(NoNodeException, session.get, path)
+        # join
+        self.servicegroup_api.join(service_id['host'],
+                                   service_id['topic'],
+                                   None)
+        # expected existing "process id" node
+        self.assertTrue(session.get(path))
