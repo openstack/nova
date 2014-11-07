@@ -16,7 +16,8 @@ import datetime
 
 from lxml import etree
 
-from nova.api.openstack.compute.contrib import migrations
+from nova.api.openstack.compute.contrib import migrations as migrations_v2
+from nova.api.openstack.compute.plugins.v3 import migrations as migrations_v21
 from nova import context
 from nova import exception
 from nova import objects
@@ -71,11 +72,13 @@ class FakeRequest(object):
     GET = {}
 
 
-class MigrationsTestCase(test.NoDBTestCase):
+class MigrationsTestCaseV21(test.NoDBTestCase):
+    migrations = migrations_v21
+
     def setUp(self):
         """Run before each test."""
-        super(MigrationsTestCase, self).setUp()
-        self.controller = migrations.MigrationsController()
+        super(MigrationsTestCaseV21, self).setUp()
+        self.controller = self.migrations.MigrationsController()
         self.context = context.get_admin_context()
         self.req = FakeRequest()
         self.req.environ['nova.context'] = self.context
@@ -84,7 +87,7 @@ class MigrationsTestCase(test.NoDBTestCase):
 
     def test_index(self):
         migrations_in_progress = {
-            'migrations': migrations.output(migrations_obj)}
+            'migrations': self.migrations.output(migrations_obj)}
 
         for mig in migrations_in_progress['migrations']:
             self.assertIn('id', mig)
@@ -116,13 +119,19 @@ class MigrationsTestCase(test.NoDBTestCase):
                           self.req)
 
 
-class MigrationsTemplateTest(test.NoDBTestCase):
+class MigrationsTestCaseV2(MigrationsTestCaseV21):
+    migrations = migrations_v2
+
+
+class MigrationsTemplateTestV2(test.NoDBTestCase):
+    migrations = migrations_v2
+
     def setUp(self):
-        super(MigrationsTemplateTest, self).setUp()
-        self.serializer = migrations.MigrationsTemplate()
+        super(MigrationsTemplateTestV2, self).setUp()
+        self.serializer = self.migrations.MigrationsTemplate()
 
     def test_index_serialization(self):
-        migrations_out = migrations.output(migrations_obj)
+        migrations_out = self.migrations.output(migrations_obj)
         res_xml = self.serializer.serialize(
             {'migrations': migrations_out})
 
