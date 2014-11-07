@@ -117,39 +117,6 @@ class LocalAPI(object):
                                               instance, last_refreshed,
                                               update_totals)
 
-    def service_get_all(self, context):
-        return self._manager.service_get_all_by(context, host=None, topic=None,
-                binary=None)
-
-    def service_get_all_by_topic(self, context, topic):
-        return self._manager.service_get_all_by(context, topic=topic,
-                host=None, binary=None)
-
-    def service_get_all_by_host(self, context, host):
-        return self._manager.service_get_all_by(context, host=host, topic=None,
-                binary=None)
-
-    def service_get_by_host_and_topic(self, context, host, topic):
-        return self._manager.service_get_all_by(context, topic, host,
-                binary=None)
-
-    def service_get_by_compute_host(self, context, host):
-        result = self._manager.service_get_all_by(context, 'compute', host,
-                binary=None)
-        # FIXME(comstud): A major revision bump to 2.0 should return a
-        # single entry, so we should just return 'result' at that point.
-        return result[0]
-
-    def service_get_by_host_and_binary(self, context, host, binary):
-        return self._manager.service_get_all_by(context, host=host,
-                                                binary=binary, topic=None)
-
-    def service_create(self, context, values):
-        return self._manager.service_create(context, values)
-
-    def service_destroy(self, context, service_id):
-        return self._manager.service_destroy(context, service_id)
-
     def compute_node_create(self, context, values):
         return self._manager.compute_node_create(context, values)
 
@@ -159,9 +126,6 @@ class LocalAPI(object):
 
     def compute_node_delete(self, context, node):
         return self._manager.compute_node_delete(context, node)
-
-    def service_update(self, context, service, values):
-        return self._manager.service_update(context, service, values)
 
     def task_log_get(self, context, task_name, begin, end, host, state=None):
         return self._manager.task_log_get(context, task_name, begin, end,
