@@ -1727,26 +1727,28 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         ex = exc.LiveMigrationWithOldNovaNotSafe(server='dummy')
         self._test_migrate_server_deals_with_expected_exceptions(ex)
 
-    def test_migrate_server_deals_with_unexpected_exceptions(self):
+    @mock.patch.object(scheduler_utils, 'set_vm_state_and_notify')
+    @mock.patch.object(live_migrate, 'execute')
+    def test_migrate_server_deals_with_unexpected_exceptions(self,
+            mock_live_migrate, mock_set_state):
+        expected_ex = IOError('fake error')
+        mock_live_migrate.side_effect = expected_ex
         instance = fake_instance.fake_db_instance()
         inst_obj = objects.Instance._from_db_object(
             self.context, objects.Instance(), instance, [])
-        self.mox.StubOutWithMock(live_migrate, 'execute')
-        self.mox.StubOutWithMock(scheduler_utils,
-                'set_vm_state_and_notify')
-
-        expected_ex = IOError('fake error')
-        live_migrate.execute(self.context, mox.IsA(objects.Instance),
-                             'destination', 'block_migration',
-                             'disk_over_commit').AndRaise(expected_ex)
-        self.mox.ReplayAll()
-
-        self.conductor = utils.ExceptionHelper(self.conductor)
-
         ex = self.assertRaises(exc.MigrationError,
             self.conductor.migrate_server, self.context, inst_obj,
             {'host': 'destination'}, True, False, None, 'block_migration',
             'disk_over_commit')
+        request_spec = {'instance_properties': {
+                'uuid': instance['uuid'], },
+        }
+        mock_set_state.assert_called_once_with(self.context,
+                        'compute_task', 'migrate_server',
+                        dict(vm_state=vm_states.ERROR,
+                             task_state=inst_obj.task_state,
+                             expected_task_state=task_states.MIGRATING,),
+                        expected_ex, request_spec, self.conductor.db)
         self.assertEqual(ex.kwargs['reason'], six.text_type(expected_ex))
 
     def test_set_vm_state_and_notify(self):
