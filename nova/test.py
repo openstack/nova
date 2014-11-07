@@ -54,8 +54,8 @@ from nova.openstack.common import log as nova_logging
 from nova import paths
 from nova import rpc
 from nova import service
-from nova.tests import conf_fixture
-from nova.tests import policy_fixture
+from nova.tests.unit import conf_fixture
+from nova.tests.unit import policy_fixture
 from nova import utils
 
 
