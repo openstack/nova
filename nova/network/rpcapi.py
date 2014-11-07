@@ -89,6 +89,7 @@ class NetworkAPI(object):
         can handle the version_cap being set to 1.13.
 
         * NOTE: remove unused method get_floating_ips_by_fixed_address()
+        * NOTE: remove unused method get_instance_uuids_by_ip_filter()
     '''
 
     VERSION_ALIASES = {
@@ -241,10 +242,6 @@ class NetworkAPI(object):
 
     def validate_networks(self, ctxt, networks):
         return self.client.call(ctxt, 'validate_networks', networks=networks)
-
-    def get_instance_uuids_by_ip_filter(self, ctxt, filters):
-        return self.client.call(ctxt, 'get_instance_uuids_by_ip_filter',
-                                filters=filters)
 
     def get_dns_domains(self, ctxt):
         return self.client.call(ctxt, 'get_dns_domains')

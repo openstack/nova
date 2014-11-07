@@ -382,6 +382,7 @@ class NetworkManager(manager.Manager):
         self.conductor_api.security_groups_trigger_members_refresh(
             admin_context, group_ids)
 
+    # NOTE(hanlind): This method can be removed in version 2.0 of the RPC API
     def get_instance_uuids_by_ip_filter(self, context, filters):
         fixed_ip_filter = filters.get('fixed_ip')
         ip_filter = re.compile(str(filters.get('ip')))

@@ -890,20 +890,6 @@ class API(base_api.NetworkAPI):
         return [{'instance_uuid': port['device_id']} for port in ports
                 if port['device_id']]
 
-    def get_instance_uuids_by_ip_filter(self, context, filters):
-        """Return a list of dicts in the form of
-        [{'instance_uuid': uuid}] that matched the ip filter.
-        """
-        # filters['ip'] is composed as '^%s$' % fixed_ip.replace('.', '\\.')
-        ip = filters.get('ip')
-        # we remove ^$\ in the ip filer
-        if ip[0] == '^':
-            ip = ip[1:]
-        if ip[-1] == '$':
-            ip = ip[:-1]
-        ip = ip.replace('\\.', '.')
-        return self._get_instance_uuids_by_ip(context, ip)
-
     def _get_port_id_by_fixed_address(self, client,
                                       instance, address):
         """Return port_id from a fixed address."""

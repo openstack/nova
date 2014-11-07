@@ -255,12 +255,6 @@ class NetworkAPI(base.Base):
         """
         raise NotImplementedError()
 
-    def get_instance_uuids_by_ip_filter(self, context, filters):
-        """Returns a list of dicts in the form of
-        {'instance_uuid': uuid, 'ip': ip} that matched the ip_filter
-        """
-        raise NotImplementedError()
-
     def get_dns_domains(self, context):
         """Returns a list of available dns domains.
         These can be used to create DNS entries for floating ips.
