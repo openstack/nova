@@ -700,6 +700,25 @@ class Session(sqlalchemy.orm.session.Session):
     def commit(self, *args, **kwargs):
         return super(Session, self).commit(*args, **kwargs)
 
+    def begin(self, **kw):
+        trans = super(Session, self).begin(**kw)
+        trans.__class__ = SessionTransactionWrapper
+        return trans
+
+
+class SessionTransactionWrapper(sqlalchemy.orm.session.SessionTransaction):
+    @property
+    def bind(self):
+        return self.session.bind
+
+    @_wrap_db_error
+    def commit(self, *args, **kwargs):
+        return super(SessionTransactionWrapper, self).commit(*args, **kwargs)
+
+    @_wrap_db_error
+    def rollback(self, *args, **kwargs):
+        return super(SessionTransactionWrapper, self).rollback(*args, **kwargs)
+
 
 def get_maker(engine, autocommit=True, expire_on_commit=False):
     """Return a SQLAlchemy sessionmaker using the given engine."""
