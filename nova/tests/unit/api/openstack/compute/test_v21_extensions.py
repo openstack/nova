@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 from oslo.config import cfg
 import stevedore
 import webob.exc
@@ -75,6 +76,21 @@ class ExtensionLoadingTestCase(test.NoDBTestCase):
         CONF.set_override('extensions_blacklist', ['os-hosts'], 'osapi_v3')
         app = compute.APIRouterV21()
         self.assertNotIn('os-hosts', app._loaded_extension_info.extensions)
+
+    @mock.patch('nova.api.openstack.APIRouterV21._register_resources_list')
+    def test_extensions_inherit(self, mock_register):
+        app = compute.APIRouterV21()
+        self.assertIn('servers', app._loaded_extension_info.extensions)
+        self.assertIn('os-volumes', app._loaded_extension_info.extensions)
+
+        mock_register.assert_called_with(mock.ANY, mock.ANY)
+        ext_no_inherits = mock_register.call_args_list[0][0][0]
+        ext_has_inherits = mock_register.call_args_list[1][0][0]
+        # os-volumes inherits from servers
+        name_list = [ext.obj.alias for ext in ext_has_inherits]
+        self.assertIn('os-volumes', name_list)
+        name_list = [ext.obj.alias for ext in ext_no_inherits]
+        self.assertIn('servers', name_list)
 
     def test_extensions_whitelist_accept(self):
         # NOTE(maurosr): just to avoid to get an exception raised for not
