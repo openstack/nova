@@ -113,15 +113,6 @@ class InstanceMetadata():
 
         ctxt = context.get_admin_context()
 
-        # NOTE(danms): This should be removed after bp:compute-manager-objects
-        if not isinstance(instance, obj_base.NovaObject):
-            expected = ['metadata', 'system_metadata']
-            if 'info_cache' in instance:
-                expected.append('info_cache')
-            instance = objects.Instance._from_db_object(
-                ctxt, objects.Instance(), instance,
-                expected_attrs=expected)
-
         # The default value of mimeType is set to MIME_TYPE_TEXT_PLAIN
         self.set_mimetype(MIME_TYPE_TEXT_PLAIN)
         self.instance = instance
