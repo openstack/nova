@@ -99,7 +99,7 @@ class InstanceMetadata(object):
     """Instance metadata."""
 
     def __init__(self, instance, address=None, content=None, extra_md=None,
-                 conductor_api=None, network_info=None, vd_driver=None):
+                 network_info=None, vd_driver=None):
         """Creation of this object should basically cover all time consuming
         collection.  Methods after that should not cause time delays due to
         network operations or lengthy cpu operations.
@@ -496,18 +496,16 @@ class VendorDataDriver(object):
         return self._data
 
 
-def get_metadata_by_address(conductor_api, address):
+def get_metadata_by_address(address):
     ctxt = context.get_admin_context()
     fixed_ip = network.API().get_fixed_ip_by_address(ctxt, address)
 
-    return get_metadata_by_instance_id(conductor_api,
-                                       fixed_ip['instance_uuid'],
+    return get_metadata_by_instance_id(fixed_ip['instance_uuid'],
                                        address,
                                        ctxt)
 
 
-def get_metadata_by_instance_id(conductor_api, instance_id, address,
-                                ctxt=None):
+def get_metadata_by_instance_id(instance_id, address, ctxt=None):
     ctxt = ctxt or context.get_admin_context()
     instance = objects.Instance.get_by_uuid(
         ctxt, instance_id, expected_attrs=['ec2_ids', 'flavor', 'info_cache'])
