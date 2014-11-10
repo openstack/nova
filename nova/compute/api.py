@@ -4050,11 +4050,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         return rules
 
     def get_default_rule(self, context, id):
-        try:
-            return self.db.security_group_default_rule_get(context, id)
-        except exception.NotFound:
-            msg = _("Rule (%s) not found") % id
-            self.raise_not_found(msg)
+        return self.db.security_group_default_rule_get(context, id)
 
     def validate_id(self, id):
         try:

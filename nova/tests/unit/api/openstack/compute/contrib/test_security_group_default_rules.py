@@ -13,6 +13,7 @@
 #    under the License.
 
 from lxml import etree
+import mock
 from oslo.config import cfg
 import webob
 
@@ -23,6 +24,7 @@ from nova.api.openstack.compute.plugins.v3 import \
 from nova.api.openstack import wsgi
 from nova import context
 import nova.db
+from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 
@@ -272,6 +274,16 @@ class TestSecurityGroupDefaultRulesV21(test.TestCase):
         res_dict = self.controller.index(req)
         self.assertEqual(res_dict, expected)
 
+    @mock.patch('nova.db.security_group_default_rule_list',
+                side_effect=(exception.
+                    SecurityGroupDefaultRuleNotFound("Rule Not Found")))
+    def test_non_existing_security_group_default_rules_list(self,
+                                                            mock_sec_grp_rule):
+        req = fakes.HTTPRequest.blank(
+            '/v2/fake/os-security-group-default-rules', use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.index, req)
+
     def test_default_security_group_default_rule_show(self):
         sgr = security_group_default_rule_template(id=1)
 
@@ -291,6 +303,16 @@ class TestSecurityGroupDefaultRulesV21(test.TestCase):
                          sgr['from_port'])
         self.assertEqual(security_group_default_rule['ip_range']['cidr'],
                          sgr['cidr'])
+
+    @mock.patch('nova.db.security_group_default_rule_get',
+                side_effect=(exception.
+                    SecurityGroupDefaultRuleNotFound("Rule Not Found")))
+    def test_non_existing_security_group_default_rule_show(self,
+                                                           mock_sec_grp_rule):
+        req = fakes.HTTPRequest.blank(
+            '/v2/fake/os-security-group-default-rules', use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.show, req, '1')
 
     def test_delete_security_group_default_rule(self):
         sgr = security_group_default_rule_template(id=1)
@@ -316,6 +338,16 @@ class TestSecurityGroupDefaultRulesV21(test.TestCase):
         self.controller.delete(req, '1')
 
         self.assertTrue(self.called)
+
+    @mock.patch('nova.db.security_group_default_rule_destroy',
+                side_effect=(exception.
+                    SecurityGroupDefaultRuleNotFound("Rule Not Found")))
+    def test_non_existing_security_group_default_rule_delete(
+            self, mock_sec_grp_rule):
+        req = fakes.HTTPRequest.blank(
+            '/v2/fake/os-security-group-default-rules', use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.delete, req, '1')
 
     def test_security_group_ensure_default(self):
         sgr = security_group_default_rule_template(id=1)
