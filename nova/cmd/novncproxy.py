@@ -18,18 +18,9 @@ Websocket proxy that is compatible with OpenStack Nova
 noVNC consoles. Leverages websockify.py by Joel Martin
 """
 
-from __future__ import print_function
-
-import os
-import sys
-
 from oslo.config import cfg
 
-from nova import config
-from nova.console import websocketproxy
-from nova.openstack.common import log as logging
-from nova.openstack.common.report import guru_meditation_report as gmr
-from nova import version
+from nova.cmd import baseproxy
 
 
 opts = [
@@ -43,47 +34,12 @@ opts = [
 
 CONF = cfg.CONF
 CONF.register_cli_opts(opts)
-CONF.import_opt('record', 'nova.cmd.novnc')
-CONF.import_opt('daemon', 'nova.cmd.novnc')
-CONF.import_opt('ssl_only', 'nova.cmd.novnc')
-CONF.import_opt('source_is_ipv6', 'nova.cmd.novnc')
-CONF.import_opt('cert', 'nova.cmd.novnc')
-CONF.import_opt('key', 'nova.cmd.novnc')
-CONF.import_opt('web', 'nova.cmd.novnc')
 
 
 def main():
-    # Setup flags
+    # set default web flag option
     CONF.set_default('web', '/usr/share/novnc')
-    config.parse_args(sys.argv)
-    logging.setup("nova")
 
-    if CONF.ssl_only and not os.path.exists(CONF.cert):
-        print("SSL only and %s not found" % CONF.cert)
-        return(-1)
-
-    # Check to see if novnc html/js/css files are present
-    if not os.path.exists(CONF.web):
-        print("Can not find novnc html/js/css files at %s." % CONF.web)
-        return(-1)
-
-    logging.setup("nova")
-
-    gmr.TextGuruMeditation.setup_autorun(version)
-
-    # Create and start the NovaWebSockets proxy
-    server = websocketproxy.NovaWebSocketProxy(
-                listen_host=CONF.novncproxy_host,
-                listen_port=CONF.novncproxy_port,
-                source_is_ipv6=CONF.source_is_ipv6,
-                verbose=CONF.verbose,
-                cert=CONF.cert,
-                key=CONF.key,
-                ssl_only=CONF.ssl_only,
-                daemon=CONF.daemon,
-                record=CONF.record,
-                traffic=CONF.verbose and not CONF.daemon,
-                web=CONF.web,
-                file_only=True,
-                RequestHandlerClass=websocketproxy.NovaProxyRequestHandler)
-    server.start_server()
+    baseproxy.proxy(
+        host=CONF.novncproxy_host,
+        port=CONF.novncproxy_port)
