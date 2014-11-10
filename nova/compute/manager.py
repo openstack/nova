@@ -160,9 +160,9 @@ interval_opts = [
                     'when shelved'),
     cfg.IntOpt('instance_delete_interval',
                default=300,
-               help=('Interval in seconds for retrying failed instance file '
-                     'deletes. Set to -1 to disable. '
-                     'Setting this to 0 will run at the default rate.')),
+               help='Interval in seconds for retrying failed instance file '
+                    'deletes. Set to -1 to disable. '
+                    'Setting this to 0 will run at the default rate.'),
     cfg.IntOpt('block_device_allocate_retries_interval',
                default=3,
                help='Waiting time interval (seconds) between block'
@@ -213,8 +213,8 @@ running_deleted_opts = [
 instance_cleaning_opts = [
     cfg.IntOpt('maximum_instance_delete_attempts',
                default=5,
-               help=('The number of times to attempt to reap an instance\'s '
-                     'files.')),
+               help='The number of times to attempt to reap an instance\'s '
+                    'files.'),
 ]
 
 CONF = cfg.CONF
