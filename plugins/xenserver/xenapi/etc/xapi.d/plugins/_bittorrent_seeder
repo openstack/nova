@@ -14,6 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+# NOTE: XenServer still only supports Python 2.4 in it's dom0 userspace
+# which means the Nova xenapi plugins must use only Python 2.4 features
+
 """Seed a bittorent image. This file should not be executed directly, rather it
 should be kicked off by the `bittorent` dom0 plugin."""
 
