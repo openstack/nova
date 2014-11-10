@@ -5638,7 +5638,8 @@ class ComputeManager(manager.Manager):
     def _get_host_volume_bdms(self, context, use_slave=False):
         """Return all block device mappings on a compute host."""
         compute_host_bdms = []
-        instances = objects.InstanceList.get_by_host(context, self.host)
+        instances = objects.InstanceList.get_by_host(context, self.host,
+            use_slave=use_slave)
         for instance in instances:
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid, use_slave=use_slave)
