@@ -4907,8 +4907,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                  rd_req=vol_stats[0],
                                  rd_bytes=vol_stats[1],
                                  wr_req=vol_stats[2],
-                                 wr_bytes=vol_stats[3],
-                                 flush_operations=vol_stats[4])
+                                 wr_bytes=vol_stats[3])
                     LOG.debug(
                         "Got volume usage stats for the volume=%(volume)s,"
                         " rd_req=%(rd_req)d, rd_bytes=%(rd_bytes)d, "
