@@ -45,6 +45,7 @@ Background Concepts for Nova
    filter_scheduler
    rpc
    hooks
+   upgrade
 
 Development policies
 --------------------
