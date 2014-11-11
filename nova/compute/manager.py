@@ -1150,7 +1150,7 @@ class ComputeManager(manager.Manager):
         """Retrieve the power state for the given instance."""
         LOG.debug('Checking state', instance=instance)
         try:
-            return self.driver.get_info(instance)["state"]
+            return self.driver.get_info(instance).state
         except exception.NotFound:
             return power_state.NOSTATE
 
@@ -5744,7 +5744,7 @@ class ComputeManager(manager.Manager):
         # No pending tasks. Now try to figure out the real vm_power_state.
         try:
             vm_instance = self.driver.get_info(db_instance)
-            vm_power_state = vm_instance['state']
+            vm_power_state = vm_instance.state
         except exception.InstanceNotFound:
             vm_power_state = power_state.NOSTATE
         # Note(maoy): the above get_info call might take a long time,

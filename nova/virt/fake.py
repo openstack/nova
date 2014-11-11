@@ -41,6 +41,7 @@ from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import diagnostics
 from nova.virt import driver
+from nova.virt import hardware
 from nova.virt import virtapi
 
 CONF = cfg.CONF
@@ -276,11 +277,11 @@ class FakeDriver(driver.ComputeDriver):
         if instance['name'] not in self.instances:
             raise exception.InstanceNotFound(instance_id=instance['name'])
         i = self.instances[instance['name']]
-        return {'state': i.state,
-                'max_mem': 0,
-                'mem': 0,
-                'num_cpu': 2,
-                'cpu_time': 0}
+        return hardware.InstanceInfo(state=i.state,
+                                     max_mem_kb=0,
+                                     mem_kb=0,
+                                     num_cpu=2,
+                                     cpu_time_ns=0)
 
     def get_diagnostics(self, instance_name):
         return {'cpu0_time': 17300000000,

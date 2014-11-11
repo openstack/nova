@@ -1054,8 +1054,8 @@ class LibvirtDriver(driver.ComputeDriver):
             #             never fail.
             try:
                 dom_info = self.get_info(instance)
-                state = dom_info['state']
-                new_domid = dom_info['id']
+                state = dom_info.state
+                new_domid = dom_info.id
             except exception.InstanceNotFound:
                 LOG.warning(_LW("During wait destroy, instance disappeared."),
                             instance=instance)
@@ -1139,7 +1139,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                                     network_info=network_info)
             except libvirt.libvirtError as e:
                 try:
-                    state = self.get_info(instance)['state']
+                    state = self.get_info(instance).state
                 except exception.InstanceNotFound:
                     state = power_state.SHUTDOWN
 
@@ -2397,7 +2397,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         def _wait_for_reboot():
             """Called at an interval until the VM is running again."""
-            state = self.get_info(instance)['state']
+            state = self.get_info(instance).state
 
             if state == power_state.RUNNING:
                 LOG.info(_LI("Instance rebooted successfully."),
@@ -2642,7 +2642,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         def _wait_for_boot():
             """Called at an interval until the VM is running."""
-            state = self.get_info(instance)['state']
+            state = self.get_info(instance).state
 
             if state == power_state.RUNNING:
                 LOG.info(_LI("Instance spawned successfully."),
@@ -4274,12 +4274,12 @@ class LibvirtDriver(driver.ComputeDriver):
                     'ex': ex})
             raise exception.NovaException(msg)
 
-        return {'state': LIBVIRT_POWER_STATE[dom_info[0]],
-                'max_mem': dom_info[1],
-                'mem': dom_info[2],
-                'num_cpu': dom_info[3],
-                'cpu_time': dom_info[4],
-                'id': virt_dom.ID()}
+        return hardware.InstanceInfo(state=LIBVIRT_POWER_STATE[dom_info[0]],
+                                     max_mem_kb=dom_info[1],
+                                     mem_kb=dom_info[2],
+                                     num_cpu=dom_info[3],
+                                     cpu_time_ns=dom_info[4],
+                                     id=virt_dom.ID())
 
     def _create_domain_setup_lxc(self, instance, block_device_info, disk_info):
         inst_path = libvirt_utils.get_instance_path(instance)
@@ -4325,7 +4325,7 @@ class LibvirtDriver(driver.ComputeDriver):
         container_dir = os.path.join(inst_path, 'rootfs')
 
         try:
-            state = self.get_info(instance)['state']
+            state = self.get_info(instance).state
         except exception.InstanceNotFound:
             # The domain may not be present if the instance failed to start
             state = None
@@ -5500,7 +5500,7 @@ class LibvirtDriver(driver.ComputeDriver):
         def wait_for_live_migration():
             """waiting for live migration completion."""
             try:
-                self.get_info(instance)['state']
+                self.get_info(instance).state
             except exception.InstanceNotFound:
                 timer.stop()
                 post_method(context, instance, dest, block_migration,
@@ -6017,7 +6017,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return disk_info_text
 
     def _wait_for_running(self, instance):
-        state = self.get_info(instance)['state']
+        state = self.get_info(instance).state
 
         if state == power_state.RUNNING:
             LOG.info(_LI("Instance running successfully."), instance=instance)

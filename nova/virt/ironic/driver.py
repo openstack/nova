@@ -44,6 +44,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.virt import driver as virt_driver
 from nova.virt import firewall
+from nova.virt import hardware
 from nova.virt.ironic import client_wrapper
 from nova.virt.ironic import ironic_states
 from nova.virt.ironic import patcher
@@ -516,26 +517,14 @@ class IronicDriver(virt_driver.ComputeDriver):
         with) NOSTATE and all resources == 0.
 
         :param instance: the instance object.
-        :returns: a dictionary containing:
-
-            :state: the running state. One of :mod:`nova.compute.power_state`.
-            :max_mem:  (int) the maximum memory in KBytes allowed.
-            :mem:      (int) the memory in KBytes used by the domain.
-            :num_cpu:  (int) the number of CPUs.
-            :cpu_time: (int) the CPU time used in nanoseconds. Always 0 for
-                             this driver.
-
+        :returns: a InstanceInfo object
         """
         ironicclient = client_wrapper.IronicClientWrapper()
         try:
             node = _validate_instance_and_node(ironicclient, instance)
         except exception.InstanceNotFound:
-            return {'state': map_power_state(ironic_states.NOSTATE),
-                    'max_mem': 0,
-                    'mem': 0,
-                    'num_cpu': 0,
-                    'cpu_time': 0
-                    }
+            return hardware.InstanceInfo(
+                state=map_power_state(ironic_states.NOSTATE))
 
         memory_kib = int(node.properties.get('memory_mb', 0)) * 1024
         if memory_kib == 0:
@@ -551,12 +540,10 @@ class IronicDriver(virt_driver.ComputeDriver):
                      {'instance': instance.uuid,
                       'node': instance.node})
 
-        return {'state': map_power_state(node.power_state),
-                'max_mem': memory_kib,
-                'mem': memory_kib,
-                'num_cpu': num_cpu,
-                'cpu_time': 0
-                }
+        return hardware.InstanceInfo(state=map_power_state(node.power_state),
+                                     max_mem_kb=memory_kib,
+                                     mem_kb=memory_kib,
+                                     num_cpu=num_cpu)
 
     def deallocate_networks_on_reschedule(self, instance):
         """Does the driver want networks deallocated on reschedule?

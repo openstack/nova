@@ -6791,12 +6791,12 @@ class ComputeTestCase(BaseTestCase):
             exception.InstanceNotFound(instance_id='fake-uuid'))
 
         self.compute.driver.get_info(mox.IgnoreArg()).AndReturn(
-            {'state': power_state.RUNNING})
+            hardware.InstanceInfo(state=power_state.RUNNING))
         self.compute._sync_instance_power_state(ctxt, mox.IgnoreArg(),
                                                 power_state.RUNNING,
                                                 use_slave=True)
         self.compute.driver.get_info(mox.IgnoreArg()).AndReturn(
-            {'state': power_state.SHUTDOWN})
+            hardware.InstanceInfo(state=power_state.SHUTDOWN))
         self.compute._sync_instance_power_state(ctxt, mox.IgnoreArg(),
                                                 power_state.SHUTDOWN,
                                                 use_slave=True)

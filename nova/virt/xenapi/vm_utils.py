@@ -1753,11 +1753,10 @@ def compile_info(session, vm_ref):
     mem = session.call_xenapi("VM.get_memory_dynamic_max", vm_ref)
     num_cpu = session.call_xenapi("VM.get_VCPUs_max", vm_ref)
 
-    return {'state': power_state,
-            'max_mem': long(max_mem) >> 10,
-            'mem': long(mem) >> 10,
-            'num_cpu': num_cpu,
-            'cpu_time': 0}
+    return hardware.InstanceInfo(state=power_state,
+                                 max_mem_kb=long(max_mem) >> 10,
+                                 mem_kb=long(mem) >> 10,
+                                 num_cpu=num_cpu)
 
 
 def compile_instance_diagnostics(instance, vm_rec):

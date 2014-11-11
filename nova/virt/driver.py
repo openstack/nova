@@ -160,13 +160,7 @@ class ComputeDriver(object):
 
         :param instance: nova.objects.instance.Instance object
 
-        Returns a dict containing:
-
-        :state:           the running state, one of the power_state codes
-        :max_mem:         (int) the maximum memory in KBytes allowed
-        :mem:             (int) the memory in KBytes used by the domain
-        :num_cpu:         (int) the number of virtual CPUs for the domain
-        :cpu_time:        (int) the CPU time used in nanoseconds
+        Returns a InstanceInfo object
         """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()

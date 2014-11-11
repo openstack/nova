@@ -451,8 +451,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         # Check that m1.large above turned into the right thing.
         mem_kib = long(self.type_data['memory_mb']) << 10
         vcpus = self.type_data['vcpus']
-        self.assertEqual(vm_info['max_mem'], mem_kib)
-        self.assertEqual(vm_info['mem'], mem_kib)
+        self.assertEqual(vm_info.max_mem_kb, mem_kib)
+        self.assertEqual(vm_info.mem_kb, mem_kib)
         self.assertEqual(vm.get("summary.config.instanceUuid"), self.uuid)
         self.assertEqual(vm.get("summary.config.numCpu"), vcpus)
         self.assertEqual(vm.get("summary.config.memorySizeMB"),
@@ -463,13 +463,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             "ns0:VirtualE1000")
         if powered_on:
             # Check that the VM is running according to Nova
-            self.assertEqual(power_state.RUNNING, vm_info['state'])
+            self.assertEqual(power_state.RUNNING, vm_info.state)
 
             # Check that the VM is running according to vSphere API.
             self.assertEqual('poweredOn', vm.get("runtime.powerState"))
         else:
             # Check that the VM is not running according to Nova
-            self.assertEqual(power_state.SHUTDOWN, vm_info['state'])
+            self.assertEqual(power_state.SHUTDOWN, vm_info.state)
 
             # Check that the VM is not running according to vSphere API.
             self.assertEqual('poweredOff', vm.get("runtime.powerState"))
@@ -491,10 +491,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         object in the db.
         """
         mem_kib = long(self.type_data['memory_mb']) << 10
-        self.assertEqual(info["state"], pwr_state)
-        self.assertEqual(info["max_mem"], mem_kib)
-        self.assertEqual(info["mem"], mem_kib)
-        self.assertEqual(info["num_cpu"], self.type_data['vcpus'])
+        self.assertEqual(info.state, pwr_state)
+        self.assertEqual(info.max_mem_kb, mem_kib)
+        self.assertEqual(info.mem_kb, mem_kib)
+        self.assertEqual(info.num_cpu, self.type_data['vcpus'])
 
     def test_instance_exists(self):
         self._create_vm()

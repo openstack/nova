@@ -37,6 +37,7 @@ from nova.openstack.common import loopingcall
 from nova.openstack.common import uuidutils
 from nova import utils
 from nova.virt import configdrive
+from nova.virt import hardware
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import ioutils
@@ -158,11 +159,11 @@ class VMOps(object):
         info = self._vmutils.get_vm_summary_info(instance_name)
 
         state = constants.HYPERV_POWER_STATE[info['EnabledState']]
-        return {'state': state,
-                'max_mem': info['MemoryUsage'],
-                'mem': info['MemoryUsage'],
-                'num_cpu': info['NumberOfProcessors'],
-                'cpu_time': info['UpTime']}
+        return hardware.InstanceInfo(state=state,
+                                     max_mem_kb=info['MemoryUsage'],
+                                     mem_kb=info['MemoryUsage'],
+                                     num_cpu=info['NumberOfProcessors'],
+                                     cpu_time_ns=info['UpTime'])
 
     def _create_root_vhd(self, context, instance):
         base_vhd_path = self._imagecache.get_cached_image(context, instance)
