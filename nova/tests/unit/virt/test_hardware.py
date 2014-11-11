@@ -53,6 +53,54 @@ class FakeFlavorObject(object):
             return default
 
 
+class InstanceInfoTests(test.NoDBTestCase):
+
+    def test_instance_info_default(self):
+        ii = hw.InstanceInfo()
+        self.assertIsNone(ii.state)
+        self.assertIsNone(ii.id)
+        self.assertEqual(0, ii.max_mem_kb)
+        self.assertEqual(0, ii.mem_kb)
+        self.assertEqual(0, ii.num_cpu)
+        self.assertEqual(0, ii.cpu_time_ns)
+
+    def test_instance_info(self):
+        ii = hw.InstanceInfo(state='fake-state',
+                             max_mem_kb=1,
+                             mem_kb=2,
+                             num_cpu=3,
+                             cpu_time_ns=4,
+                             id='fake-id')
+        self.assertEqual('fake-state', ii.state)
+        self.assertEqual('fake-id', ii.id)
+        self.assertEqual(1, ii.max_mem_kb)
+        self.assertEqual(2, ii.mem_kb)
+        self.assertEqual(3, ii.num_cpu)
+        self.assertEqual(4, ii.cpu_time_ns)
+
+    def test_instance_infoi_equals(self):
+        ii1 = hw.InstanceInfo(state='fake-state',
+                              max_mem_kb=1,
+                              mem_kb=2,
+                              num_cpu=3,
+                              cpu_time_ns=4,
+                              id='fake-id')
+        ii2 = hw.InstanceInfo(state='fake-state',
+                              max_mem_kb=1,
+                              mem_kb=2,
+                              num_cpu=3,
+                              cpu_time_ns=4,
+                              id='fake-id')
+        ii3 = hw.InstanceInfo(state='fake-estat',
+                              max_mem_kb=11,
+                              mem_kb=22,
+                              num_cpu=33,
+                              cpu_time_ns=44,
+                              id='fake-di')
+        self.assertEqual(ii1, ii2)
+        self.assertNotEqual(ii1, ii3)
+
+
 class CpuSetTestCase(test.NoDBTestCase):
     def test_get_vcpu_pin_set(self):
         self.flags(vcpu_pin_set="1-3,5,^2")
