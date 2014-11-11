@@ -95,7 +95,7 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
         compute_utils.notify_about_aggregate_update(context,
                                                     "updateprop.end",
                                                     payload)
-        return self._from_db_object(context, self, db_aggregate)
+        self._from_db_object(context, self, db_aggregate)
 
     @base.remotable
     def update_metadata(self, context, updates):
