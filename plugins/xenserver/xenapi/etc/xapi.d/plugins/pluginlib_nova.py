@@ -12,6 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+# NOTE: XenServer still only supports Python 2.4 in it's dom0 userspace
+# which means the Nova xenapi plugins must use only Python 2.4 features
+
 #
 # Helper functions for the Nova xapi plugins.  In time, this will merge
 # with the pluginlib.py shipped with xapi, but for now, that file is not
