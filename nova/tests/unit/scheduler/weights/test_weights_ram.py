@@ -13,31 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """
-Tests For Scheduler weights.
+Tests For Scheduler RAM weights.
 """
 
 from nova.scheduler import weights
-from nova.scheduler.weights import io_ops
-from nova.scheduler.weights import metrics
 from nova.scheduler.weights import ram
 from nova import test
-from nova.tests.unit import matchers
 from nova.tests.unit.scheduler import fakes
-
-
-class TestWeighedHost(test.NoDBTestCase):
-    def test_dict_conversion(self):
-        host_state = fakes.FakeHostState('somehost', None, {})
-        host = weights.WeighedHost(host_state, 'someweight')
-        expected = {'weight': 'someweight',
-                    'host': 'somehost'}
-        self.assertThat(host.to_dict(), matchers.DictMatches(expected))
-
-    def test_all_weighers(self):
-        classes = weights.all_weighers()
-        self.assertIn(ram.RAMWeigher, classes)
-        self.assertIn(metrics.MetricsWeigher, classes)
-        self.assertIn(io_ops.IoOpsWeigher, classes)
 
 
 class RamWeigherTestCase(test.NoDBTestCase):
