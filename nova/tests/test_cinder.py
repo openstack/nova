@@ -257,6 +257,8 @@ class CinderTestCase(test.NoDBTestCase):
             "name": "cinder",
             "endpoints": [{"publicURL": "http://localhost:8776/v1/project_id"}]
         }]
+        cinder.CONF.set_override('catalog_info',
+                                 'volume:cinder:publicURL', group='cinder')
         self.context = context.RequestContext('username', 'project_id',
                                               service_catalog=catalog)
         cinder.cinderclient(self.context)
@@ -331,8 +333,6 @@ class CinderV2TestCase(test.NoDBTestCase):
             "name": "cinderv2",
             "endpoints": [{"publicURL": "http://localhost:8776/v2/project_id"}]
         }]
-        cinder.CONF.set_override('catalog_info',
-                                 'volumev2:cinder:publicURL', group='cinder')
         self.context = context.RequestContext('username', 'project_id',
                                               service_catalog=catalog)
 

@@ -36,7 +36,7 @@ from nova.openstack.common import log as logging
 
 cinder_opts = [
     cfg.StrOpt('catalog_info',
-            default='volume:cinder:publicURL',
+            default='volumev2:cinderv2:publicURL',
             help='Info to match when looking for cinder in the service '
                  'catalog. Format is: separated values of the form: '
                  '<service_type>:<service_name>:<endpoint_type>'),
