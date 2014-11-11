@@ -34,14 +34,10 @@ from nova import version
 opts = [
     cfg.StrOpt('html5proxy_host',
                default='0.0.0.0',
-               help='Host on which to listen for incoming requests',
-               deprecated_group='DEFAULT',
-               deprecated_name='spicehtml5proxy_host'),
+               help='Host on which to listen for incoming requests'),
     cfg.IntOpt('html5proxy_port',
                default=6082,
-               help='Port on which to listen for incoming requests',
-               deprecated_group='DEFAULT',
-               deprecated_name='spicehtml5proxy_port'),
+               help='Port on which to listen for incoming requests'),
     ]
 
 CONF = cfg.CONF
