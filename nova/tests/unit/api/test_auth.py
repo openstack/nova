@@ -106,27 +106,13 @@ class TestKeystoneMiddlewareRoles(test.NoDBTestCase):
         self.roles = "pawn, knight, rook"
 
     def test_roles(self):
-        # Test that the newer style role header takes precedence.
         self.request.headers['X_ROLES'] = 'pawn,knight,rook'
-        self.request.headers['X_ROLE'] = 'bad'
 
         response = self.request.get_response(self.middleware)
         self.assertEqual(response.status, '200 Role Match')
 
     def test_roles_empty(self):
         self.request.headers['X_ROLES'] = ''
-        response = self.request.get_response(self.middleware)
-        self.assertEqual(response.status, '200 No Roles')
-
-    def test_deprecated_role(self):
-        # Test fallback to older role header.
-        self.request.headers['X_ROLE'] = 'pawn,knight,rook'
-
-        response = self.request.get_response(self.middleware)
-        self.assertEqual(response.status, '200 Role Match')
-
-    def test_role_empty(self):
-        self.request.headers['X_ROLE'] = ''
         response = self.request.get_response(self.middleware)
         self.assertEqual(response.status, '200 No Roles')
 
