@@ -1141,6 +1141,140 @@ class NUMATopologyTest(test.NoDBTestCase):
             self.assertNUMACellMatches(exp_cell, got_cell)
 
 
+class VirtNUMATopologyCellUsageTestCase(test.NoDBTestCase):
+    def test_fit_instance_cell_success_no_limit(self):
+        host_cell = hw.VirtNUMATopologyCellUsage(4, set([1, 2]), 1024)
+        instance_cell = hw.VirtNUMATopologyCell(
+                None, set([1, 2]), 1024)
+        fitted_cell = host_cell.fit_instance_cell(host_cell, instance_cell)
+        self.assertIsInstance(fitted_cell, hw.VirtNUMATopologyCell)
+        self.assertEqual(host_cell.id, fitted_cell.id)
+
+    def test_fit_instance_cell_success_w_limit(self):
+        host_cell = hw.VirtNUMATopologyCellUsage(4, set([1, 2]), 1024,
+                                                 cpu_usage=2,
+                                                 memory_usage=1024)
+        limit_cell = hw.VirtNUMATopologyCellLimit(
+                        4, set([1, 2]), 1024,
+                        cpu_limit=4, memory_limit=2048)
+        instance_cell = hw.VirtNUMATopologyCell(
+                None, set([1, 2]), 1024)
+        fitted_cell = host_cell.fit_instance_cell(
+                host_cell, instance_cell, limit_cell=limit_cell)
+        self.assertIsInstance(fitted_cell, hw.VirtNUMATopologyCell)
+        self.assertEqual(host_cell.id, fitted_cell.id)
+
+    def test_fit_instance_cell_self_overcommit(self):
+        host_cell = hw.VirtNUMATopologyCellUsage(4, set([1, 2]), 1024)
+        limit_cell = hw.VirtNUMATopologyCellLimit(
+                        4, set([1, 2]), 1024,
+                        cpu_limit=4, memory_limit=2048)
+        instance_cell = hw.VirtNUMATopologyCell(
+                None, set([1, 2, 3]), 4096)
+        fitted_cell = host_cell.fit_instance_cell(
+                host_cell, instance_cell, limit_cell=limit_cell)
+        self.assertIsNone(fitted_cell)
+
+    def test_fit_instance_cell_fail_w_limit(self):
+        host_cell = hw.VirtNUMATopologyCellUsage(4, set([1, 2]), 1024,
+                                                 cpu_usage=2,
+                                                 memory_usage=1024)
+        limit_cell = hw.VirtNUMATopologyCellLimit(
+                        4, set([1, 2]), 1024,
+                        cpu_limit=4, memory_limit=2048)
+        instance_cell = hw.VirtNUMATopologyCell(
+                None, set([1, 2]), 4096)
+        fitted_cell = host_cell.fit_instance_cell(
+                host_cell, instance_cell, limit_cell=limit_cell)
+        self.assertIsNone(fitted_cell)
+
+        instance_cell = hw.VirtNUMATopologyCell(
+                None, set([1, 2, 3, 4, 5]), 1024)
+        fitted_cell = host_cell.fit_instance_cell(
+                host_cell, instance_cell, limit_cell=limit_cell)
+        self.assertIsNone(fitted_cell)
+
+
+class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(VirtNUMAHostTopologyTestCase, self).setUp()
+
+        self.host = hw.VirtNUMAHostTopology(
+                cells=[
+                    hw.VirtNUMATopologyCellUsage(
+                        1, set([1, 2]), 2048,
+                        cpu_usage=2, memory_usage=2048),
+                    hw.VirtNUMATopologyCellUsage(
+                        2, set([3, 4]), 2048,
+                        cpu_usage=2, memory_usage=2048)])
+
+        self.limits = hw.VirtNUMALimitTopology(
+                cells=[
+                    hw.VirtNUMATopologyCellLimit(
+                        1, set([1, 2]), 2048,
+                        cpu_limit=4, memory_limit=4096),
+                    hw.VirtNUMATopologyCellLimit(
+                        2, set([3, 4]), 2048,
+                        cpu_limit=4, memory_limit=3072)])
+
+        self.instance1 = hw.VirtNUMAInstanceTopology(
+                cells=[
+                    hw.VirtNUMATopologyCell(
+                        None, set([1, 2]), 2048)])
+        self.instance2 = hw.VirtNUMAInstanceTopology(
+                cells=[
+                    hw.VirtNUMATopologyCell(
+                        None, set([1, 2, 3, 4]), 1024)])
+        self.instance3 = hw.VirtNUMAInstanceTopology(
+                cells=[
+                    hw.VirtNUMATopologyCell(
+                        None, set([1, 2]), 1024)])
+
+    def test_get_fitting_success_no_limits(self):
+        fitted_instance1 = hw.VirtNUMAHostTopology.fit_instance_to_host(
+                self.host, self.instance1)
+        self.assertIsInstance(fitted_instance1, hw.VirtNUMAInstanceTopology)
+        self.host = hw.VirtNUMAHostTopology.usage_from_instances(self.host,
+                [fitted_instance1])
+        fitted_instance2 = hw.VirtNUMAHostTopology.fit_instance_to_host(
+                self.host, self.instance3)
+        self.assertIsInstance(fitted_instance2, hw.VirtNUMAInstanceTopology)
+
+    def test_get_fitting_success_limits(self):
+        fitted_instance = hw.VirtNUMAHostTopology.fit_instance_to_host(
+                self.host, self.instance3, self.limits)
+        self.assertIsInstance(fitted_instance, hw.VirtNUMAInstanceTopology)
+        self.assertEqual(1, fitted_instance.cells[0].id)
+
+    def test_get_fitting_fails_no_limits(self):
+        fitted_instance = hw.VirtNUMAHostTopology.fit_instance_to_host(
+                self.host, self.instance2, self.limits)
+        self.assertIsNone(fitted_instance)
+
+    def test_get_fitting_culmulative_fails_limits(self):
+        fitted_instance1 = hw.VirtNUMAHostTopology.fit_instance_to_host(
+                self.host, self.instance1, self.limits)
+        self.assertIsInstance(fitted_instance1, hw.VirtNUMAInstanceTopology)
+        self.assertEqual(1, fitted_instance1.cells[0].id)
+        self.host = hw.VirtNUMAHostTopology.usage_from_instances(self.host,
+                [fitted_instance1])
+        fitted_instance2 = hw.VirtNUMAHostTopology.fit_instance_to_host(
+                self.host, self.instance1, self.limits)
+        self.assertIsNone(fitted_instance2)
+
+    def test_get_fitting_culmulative_success_limits(self):
+        fitted_instance1 = hw.VirtNUMAHostTopology.fit_instance_to_host(
+                self.host, self.instance1, self.limits)
+        self.assertIsInstance(fitted_instance1, hw.VirtNUMAInstanceTopology)
+        self.assertEqual(1, fitted_instance1.cells[0].id)
+        self.host = hw.VirtNUMAHostTopology.usage_from_instances(self.host,
+                [fitted_instance1])
+        fitted_instance2 = hw.VirtNUMAHostTopology.fit_instance_to_host(
+                self.host, self.instance3, self.limits)
+        self.assertIsInstance(fitted_instance2, hw.VirtNUMAInstanceTopology)
+        self.assertEqual(2, fitted_instance2.cells[0].id)
+
+
 class NumberOfSerialPortsTest(test.NoDBTestCase):
     def test_flavor(self):
         flavor = FakeFlavorObject(8, 2048, {"hw:serial_port_count": 3})

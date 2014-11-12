@@ -13,6 +13,7 @@
 # under the License.
 
 import collections
+import itertools
 
 from oslo.config import cfg
 import six
@@ -648,6 +649,35 @@ class VirtNUMATopologyCellUsage(VirtNUMATopologyCell):
         self.cpu_usage = cpu_usage
         self.memory_usage = memory_usage
 
+    @classmethod
+    def fit_instance_cell(cls, host_cell, instance_cell, limit_cell=None):
+        """Check if a instance cell can fit and set it's cell id
+
+        :param host_cell: host cell to fit the instance cell onto
+        :param instance_cell: instance cell we want to fit
+        :param limit_cell: cell with limits of the host_cell if any
+
+        Make sure we can fit the instance cell onto a host cell and if so,
+        return a new VirtNUMATopologyCell with the id set to that of
+        the host, or None if the cell exceeds the limits of the host
+
+        :returns: a new instance cell or None
+        """
+        # NOTE (ndipanov): do not allow an instance to overcommit against
+        # itself on any NUMA cell
+        if (instance_cell.memory > host_cell.memory or
+                len(instance_cell.cpuset) > len(host_cell.cpuset)):
+            return None
+
+        if limit_cell:
+            memory_usage = host_cell.memory_usage + instance_cell.memory
+            cpu_usage = host_cell.cpu_usage + len(instance_cell.cpuset)
+            if (memory_usage > limit_cell.memory_limit or
+                    cpu_usage > limit_cell.cpu_limit):
+                return None
+        return VirtNUMATopologyCell(
+                host_cell.id, instance_cell.cpuset, instance_cell.memory)
+
     def _to_dict(self):
         data_dict = super(VirtNUMATopologyCellUsage, self)._to_dict()
         data_dict['mem']['used'] = self.memory_usage
@@ -859,6 +889,47 @@ class VirtNUMAHostTopology(VirtNUMATopology):
                             for instance in instances]
         return all(instance_cells <= host_cells
                     for instance_cells in instances_cells)
+
+    @classmethod
+    def fit_instance_to_host(cls, host_topology, instance_topology,
+                                 limits_topology=None):
+        """Fit the instance topology onto the host topology given the limits
+
+        :param host_topology: VirtNUMAHostTopology object to fit an instance on
+        :param instance_topology: VirtNUMAInstanceTopology object to be fitted
+        :param limits_topology: VirtNUMALimitTopology that defines limits
+
+        Given a host and instance topology and optionally limits - this method
+        will attempt to fit instance cells onto all permutations of host cells
+        by calling the fit_instance_cell method, and return a new
+        VirtNUMAInstanceTopology with it's cell ids set to host cell id's of
+        the first successful permutation, or None.
+        """
+        if (not (host_topology and instance_topology) or
+                len(host_topology) < len(instance_topology)):
+            return
+        else:
+            if limits_topology is None:
+                limits_topology_cells = itertools.repeat(
+                        None, len(host_topology))
+            else:
+                limits_topology_cells = limits_topology.cells
+            # TODO(ndipanov): We may want to sort permutations differently
+            # depending on whether we want packing/spreading over NUMA nodes
+            for host_cell_perm in itertools.permutations(
+                        zip(host_topology.cells, limits_topology_cells),
+                        len(instance_topology)
+                    ):
+                cells = []
+                for (host_cell, limit_cell), instance_cell in zip(
+                        host_cell_perm, instance_topology.cells):
+                    got_cell = cls.cell_class.fit_instance_cell(
+                        host_cell, instance_cell, limit_cell)
+                    if got_cell is None:
+                        break
+                    cells.append(got_cell)
+                if len(cells) == len(host_cell_perm):
+                    return VirtNUMAInstanceTopology(cells=cells)
 
     @classmethod
     def usage_from_instances(cls, host, instances, free=False):
