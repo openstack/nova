@@ -282,8 +282,7 @@ and try to match it with the topology exposed by the host, accounting for the
 ``ram_allocation_ratio`` and ``cpu_allocation_ratio`` for over-subscription. The
 filtering is done in the following manner:
 
-* Filter will try to match the exact NUMA cells of the instance to those of
-  the host. It *will not* attempt to pack the instance onto the host.
+* Filter will attempt to pack instance cells onto host cells.
 * It will consider the standard over-subscription limits for each host NUMA cell,
   and provide limits to the compute host accordingly (as mentioned above).
 * If instance has no topology defined, it will be considered for any host.
