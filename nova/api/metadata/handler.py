@@ -148,7 +148,8 @@ class MetadataRequestHandler(wsgi.Application):
                           remote_address)
             msg = _('An unknown error has occurred. '
                     'Please try your request again.')
-            raise webob.exc.HTTPInternalServerError(explanation=unicode(msg))
+            raise webob.exc.HTTPInternalServerError(
+                                               explanation=six.text_type(msg))
 
         if meta_data is None:
             LOG.error(_LE('Failed to get metadata for ip: %s'),
@@ -205,7 +206,8 @@ class MetadataRequestHandler(wsgi.Application):
                           instance_id)
             msg = _('An unknown error has occurred. '
                     'Please try your request again.')
-            raise webob.exc.HTTPInternalServerError(explanation=unicode(msg))
+            raise webob.exc.HTTPInternalServerError(
+                                               explanation=six.text_type(msg))
 
         if meta_data is None:
             LOG.error(_LE('Failed to get metadata for instance id: %s'),
