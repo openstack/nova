@@ -390,10 +390,6 @@ class VMOps(object):
         except KeyError:
             raise exception.InvalidDiskFormat(disk_format=configdrive_ext)
 
-    def _disconnect_volumes(self, volume_drives):
-        for volume_drive in volume_drives:
-            self._volumeops.disconnect_volume(volume_drive)
-
     def _delete_disk_files(self, instance_name):
         self._pathutils.get_instance_dir(instance_name,
                                          create_dir=False,
@@ -413,7 +409,7 @@ class VMOps(object):
                 (disk_files, volume_drives) = storage
 
                 self._vmutils.destroy_vm(instance_name)
-                self._disconnect_volumes(volume_drives)
+                self._volumeops.disconnect_volumes(volume_drives)
             else:
                 LOG.debug("Instance not found", instance=instance)
 

@@ -68,8 +68,9 @@ class LiveMigrationOps(object):
             self._vmops.copy_vm_console_logs(instance_name, dest)
             iscsi_targets = self._livemigrutils.live_migrate_vm(instance_name,
                                                                 dest)
-            for (target_iqn, target_lun) in iscsi_targets:
-                self._volumeops.logout_storage_target(target_iqn)
+            for target_iqn, target_luns_count in iscsi_targets.items():
+                self._volumeops.logout_storage_target(target_iqn,
+                                                      target_luns_count)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.debug("Calling live migration recover_method "

@@ -17,6 +17,7 @@
 """
 Management class for Storage-related functions (attach, detach, etc).
 """
+import collections
 import time
 
 from oslo.config import cfg
@@ -152,7 +153,7 @@ class VolumeOps(object):
                 LOG.error(_LE('Unable to attach volume to instance %s'),
                           instance_name)
                 if target_iqn:
-                    self._volutils.logout_storage_target(target_iqn)
+                    self.logout_storage_target(target_iqn)
 
     def _get_free_controller_slot(self, scsi_controller_path):
         attached_disks = self._vmutils.get_attached_disks(scsi_controller_path)
@@ -168,9 +169,16 @@ class VolumeOps(object):
         for vol in mapping:
             self.detach_volume(vol['connection_info'], instance_name)
 
-    def logout_storage_target(self, target_iqn):
-        LOG.debug("Logging off storage target %s", target_iqn)
-        self._volutils.logout_storage_target(target_iqn)
+    def logout_storage_target(self, target_iqn, disconnected_luns_count=1):
+        total_available_luns = self._volutils.get_target_lun_count(
+            target_iqn)
+
+        if total_available_luns == disconnected_luns_count:
+            LOG.debug("Logging off storage target %s", target_iqn)
+            self._volutils.logout_storage_target(target_iqn)
+        else:
+            LOG.debug("Skipping disconnecting target %s as there "
+                      "are LUNs still being used.", target_iqn)
 
     def detach_volume(self, connection_info, instance_name):
         """Detach a volume to the SCSI controller."""
@@ -241,12 +249,20 @@ class VolumeOps(object):
                                        'for target_iqn: %s') % target_iqn)
         return mounted_disk_path
 
-    def disconnect_volume(self, physical_drive_path):
-        # Get the session_id of the ISCSI connection
-        session_id = self._volutils.get_session_id_from_mounted_disk(
-            physical_drive_path)
-        # Logging out the target
-        self._volutils.execute_log_out(session_id)
+    def disconnect_volumes(self, volume_drives):
+        targets = collections.defaultdict(int)
+        for volume_drive in volume_drives:
+            target = self._volutils.get_target_from_disk_path(
+                volume_drive)
+            if target:
+                target_iqn = target[0]
+                targets[target_iqn] += 1
+            else:
+                LOG.debug("Could not retrieve iSCSI target from disk path: ",
+                          volume_drive)
+
+        for target_iqn in targets:
+            self.logout_storage_target(target_iqn, targets[target_iqn])
 
     def get_target_from_disk_path(self, physical_drive_path):
         return self._volutils.get_target_from_disk_path(physical_drive_path)

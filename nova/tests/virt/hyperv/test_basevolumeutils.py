@@ -96,13 +96,40 @@ class BaseVolumeUtilsTestCase(test.NoDBTestCase):
 
         self.assertEqual(mock.sentinel.FAKE_SESSION_ID, session_id)
 
-    def test_get_device_number_for_target(self):
+    def test_get_devices_for_target(self):
         init_session = self._create_initiator_session()
         self._volutils._conn_wmi.query.return_value = [init_session]
+        devices = self._volutils._get_devices_for_target(
+            mock.sentinel.FAKE_IQN)
+
+        self.assertEqual(init_session.Devices, devices)
+
+    def test_get_devices_for_target_not_found(self):
+        self._volutils._conn_wmi.query.return_value = None
+        devices = self._volutils._get_devices_for_target(
+            mock.sentinel.FAKE_IQN)
+
+        self.assertEqual(0, len(devices))
+
+    @mock.patch.object(basevolumeutils.BaseVolumeUtils,
+                       '_get_devices_for_target')
+    def test_get_device_number_for_target(self, fake_get_devices):
+        init_session = self._create_initiator_session()
+        fake_get_devices.return_value = init_session.Devices
         device_number = self._volutils.get_device_number_for_target(
             mock.sentinel.FAKE_IQN, mock.sentinel.FAKE_LUN)
 
         self.assertEqual(mock.sentinel.FAKE_DEVICE_NUMBER, device_number)
+
+    @mock.patch.object(basevolumeutils.BaseVolumeUtils,
+                       '_get_devices_for_target')
+    def test_get_target_lun_count(self, fake_get_devices):
+        init_session = self._create_initiator_session()
+        fake_get_devices.return_value = [init_session]
+        lun_count = self._volutils.get_target_lun_count(
+            mock.sentinel.FAKE_IQN)
+
+        self.assertEqual(len(init_session.Devices), lun_count)
 
     @mock.patch.object(basevolumeutils.BaseVolumeUtils,
                        "_get_drive_number_from_disk_path")
