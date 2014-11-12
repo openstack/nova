@@ -204,11 +204,6 @@ class TestGroupAffinityFilter(test.NoDBTestCase):
                 affinity_filter.ServerGroupAntiAffinityFilter(),
                 'anti-affinity')
 
-    def test_group_anti_affinity_filter_passes_legacy(self):
-        self._test_group_anti_affinity_filter_passes(
-                affinity_filter.GroupAntiAffinityFilter(),
-                'legacy')
-
     def _test_group_anti_affinity_filter_fails(self, filt_cls, policy):
         host = fakes.FakeHostState('host1', 'node1', {})
         filter_properties = {'group_policies': [policy],
@@ -219,11 +214,6 @@ class TestGroupAffinityFilter(test.NoDBTestCase):
         self._test_group_anti_affinity_filter_fails(
                 affinity_filter.ServerGroupAntiAffinityFilter(),
                 'anti-affinity')
-
-    def test_group_anti_affinity_filter_fails_legacy(self):
-        self._test_group_anti_affinity_filter_fails(
-                affinity_filter.GroupAntiAffinityFilter(),
-                'legacy')
 
     def _test_group_affinity_filter_passes(self, filt_cls, policy):
         host = fakes.FakeHostState('host1', 'node1', {})
@@ -239,10 +229,6 @@ class TestGroupAffinityFilter(test.NoDBTestCase):
         self._test_group_affinity_filter_passes(
                 affinity_filter.ServerGroupAffinityFilter(), 'affinity')
 
-    def test_group_affinity_filter_passes_legacy(self):
-        self._test_group_affinity_filter_passes(
-                affinity_filter.GroupAffinityFilter(), 'legacy')
-
     def _test_group_affinity_filter_fails(self, filt_cls, policy):
         host = fakes.FakeHostState('host1', 'node1', {})
         filter_properties = {'group_policies': [policy],
@@ -252,7 +238,3 @@ class TestGroupAffinityFilter(test.NoDBTestCase):
     def test_group_affinity_filter_fails(self):
         self._test_group_affinity_filter_fails(
                 affinity_filter.ServerGroupAffinityFilter(), 'affinity')
-
-    def test_group_affinity_filter_fails_legacy(self):
-        self._test_group_affinity_filter_fails(
-                affinity_filter.GroupAffinityFilter(), 'legacy')
