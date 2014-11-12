@@ -244,7 +244,7 @@ class ClaimTestCase(test.NoDBTestCase):
     def test_numa_topology_no_limit(self, mock_get):
         huge_instance = hardware.VirtNUMAInstanceTopology(
                 cells=[hardware.VirtNUMATopologyCell(
-                    1, set([1, 2, 3, 4, 5]), 2048)])
+                    1, set([1, 2]), 512)])
         self._claim(numa_topology=huge_instance)
 
     def test_numa_topology_fails(self, mock_get):
@@ -264,7 +264,7 @@ class ClaimTestCase(test.NoDBTestCase):
     def test_numa_topology_passes(self, mock_get):
         huge_instance = hardware.VirtNUMAInstanceTopology(
                 cells=[hardware.VirtNUMATopologyCell(
-                    1, set([1, 2, 3, 4, 5]), 2048)])
+                    1, set([1, 2]), 512)])
         limit_topo = hardware.VirtNUMALimitTopology(
                 cells=[hardware.VirtNUMATopologyCellLimit(
                             1, [1, 2], 512, cpu_limit=5, memory_limit=4096),
