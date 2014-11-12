@@ -151,6 +151,8 @@ class ConductorAPI(object):
     * Remove instance_get_by_uuid()
     * Remove agent_build_get_by_triple()
 
+    * 2.1  - Make notify_usage_exists() take an instance object
+
     ... Juno supports message version 2.0.  So, any changes to
     existing methods in 2.x after that point should be done such
     that they can handle the version_cap being set to 2.0.
@@ -322,13 +324,17 @@ class ConductorAPI(object):
     def notify_usage_exists(self, context, instance, current_period=False,
                             ignore_missing_network_data=True,
                             system_metadata=None, extra_usage_info=None):
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('2.1'):
+            version = '2.1'
+        else:
+            version = '2.0'
+            instance = jsonutils.to_primitive(instance)
         system_metadata_p = jsonutils.to_primitive(system_metadata)
         extra_usage_info_p = jsonutils.to_primitive(extra_usage_info)
-        cctxt = self.client.prepare()
+        cctxt = self.client.prepare(version=version)
         return cctxt.call(
             context, 'notify_usage_exists',
-            instance=instance_p,
+            instance=instance,
             current_period=current_period,
             ignore_missing_network_data=ignore_missing_network_data,
             system_metadata=system_metadata_p,

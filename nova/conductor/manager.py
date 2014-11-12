@@ -79,7 +79,7 @@ class ConductorManager(manager.Manager):
     namespace.  See the ComputeTaskManager class for details.
     """
 
-    target = messaging.Target(version='2.0')
+    target = messaging.Target(version='2.1')
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -341,6 +341,12 @@ class ConductorManager(manager.Manager):
     def notify_usage_exists(self, context, instance, current_period,
                             ignore_missing_network_data,
                             system_metadata, extra_usage_info):
+        if not isinstance(instance, objects.Instance):
+            attrs = ['metadata', 'system_metadata']
+            instance = objects.Instance._from_db_object(context,
+                                                        objects.Instance(),
+                                                        instance,
+                                                        expected_attrs=attrs)
         compute_utils.notify_usage_exists(self.notifier, context, instance,
                                           current_period,
                                           ignore_missing_network_data,

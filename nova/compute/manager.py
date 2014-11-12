@@ -2770,8 +2770,7 @@ class ComputeManager(manager.Manager):
             # TODO(jaypipes): Move generate_image_url() into the nova.image.api
             orig_image_ref_url = glance.generate_image_url(orig_image_ref)
             extra_usage_info = {'image_ref_url': orig_image_ref_url}
-            self.conductor_api.notify_usage_exists(context,
-                    obj_base.obj_to_primitive(instance),
+            self.conductor_api.notify_usage_exists(context, instance,
                     current_period=True, system_metadata=orig_sys_metadata,
                     extra_usage_info=extra_usage_info)
 
@@ -4113,8 +4112,7 @@ class ComputeManager(manager.Manager):
         :param clean_shutdown: give the GuestOS a chance to stop
         """
         self.conductor_api.notify_usage_exists(
-            context, obj_base.obj_to_primitive(instance),
-            current_period=True)
+            context, instance, current_period=True)
         self._notify_about_instance_usage(context, instance, 'shelve.start')
 
         def update_task_state(task_state, expected_state=task_states.SHELVING):
