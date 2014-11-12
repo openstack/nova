@@ -17,7 +17,6 @@ import mox
 from neutronclient.common import exceptions as n_exc
 from neutronclient.v2_0 import client
 
-from nova.api.openstack.compute.contrib import security_groups
 from nova import context
 from nova import exception
 from nova.network import neutronv2
@@ -84,7 +83,7 @@ class TestNeutronDriver(test.NoDBTestCase):
             body).AndRaise(n_exc.NeutronClientException(status_code=409,
                                                         message=message))
         self.mox.ReplayAll()
-        sg_api = security_groups.NativeNeutronSecurityGroupAPI()
+        sg_api = neutron_driver.SecurityGroupAPI()
         self.assertRaises(exception.SecurityGroupLimitExceeded,
                           sg_api.create_security_group, self.context, name,
                           description)
@@ -104,7 +103,7 @@ class TestNeutronDriver(test.NoDBTestCase):
             body).AndRaise(n_exc.NeutronClientException(status_code=409,
                                                         message=message))
         self.mox.ReplayAll()
-        sg_api = security_groups.NativeNeutronSecurityGroupAPI()
+        sg_api = neutron_driver.SecurityGroupAPI()
         self.assertRaises(exception.SecurityGroupLimitExceeded,
                           sg_api.add_rules, self.context, None, name, [vals])
 

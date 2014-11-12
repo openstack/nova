@@ -216,24 +216,24 @@ class SecurityGroupBase(object):
 
     @staticmethod
     def raise_invalid_property(msg):
-        raise NotImplementedError()
+        raise exception.Invalid(msg)
 
     @staticmethod
     def raise_group_already_exists(msg):
-        raise NotImplementedError()
+        raise exception.Invalid(msg)
 
     @staticmethod
     def raise_invalid_group(msg):
-        raise NotImplementedError()
+        raise exception.Invalid(msg)
 
     @staticmethod
     def raise_invalid_cidr(cidr, decoding_exception=None):
-        raise NotImplementedError()
+        raise exception.InvalidCidr(cidr=cidr)
 
     @staticmethod
     def raise_over_quota(msg):
-        raise NotImplementedError()
+        raise exception.SecurityGroupLimitExceeded(msg)
 
     @staticmethod
     def raise_not_found(msg):
-        raise NotImplementedError()
+        raise exception.SecurityGroupNotFound(msg)
