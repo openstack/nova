@@ -971,22 +971,6 @@ class VirtNUMAHostTopology(VirtNUMATopology):
 
     cell_class = VirtNUMATopologyCellUsage
 
-    @staticmethod
-    def can_fit_instances(host, instances):
-        """Test if the instance topology can fit into the host
-
-        Returns True if all the cells of the all the instance topologies in
-        'instances' exist in the given 'host' topology. False otherwise.
-        """
-        if not host:
-            return True
-
-        host_cells = set(cell.id for cell in host.cells)
-        instances_cells = [set(cell.id for cell in instance.cells)
-                            for instance in instances]
-        return all(instance_cells <= host_cells
-                    for instance_cells in instances_cells)
-
     @classmethod
     def fit_instance_to_host(cls, host_topology, instance_topology,
                                  limits_topology=None):
@@ -1065,35 +1049,6 @@ class VirtNUMAHostTopology(VirtNUMATopology):
             cells.append(cell)
 
         return cls(cells)
-
-    @classmethod
-    def claim_test(cls, host, instances, limits=None):
-        """Test if we can claim an instance on the host with given limits.
-
-        :param host: VirtNUMAHostTopology with usage information
-        :param instances: list of VirtNUMAInstanceTopology
-        :param limits: VirtNUMALimitTopology with max values set. Should
-                       match the host topology otherwise
-
-        :returns: None if the claim succeeds or text explaining the error.
-        """
-        if not (host and instances):
-            return
-
-        if not cls.can_fit_instances(host, instances):
-            return (_("Requested instance NUMA topology cannot fit "
-                      "the given host NUMA topology."))
-
-        if not limits:
-            return
-
-        claimed_host = cls.usage_from_instances(host, instances)
-
-        for claimed_cell, limit_cell in zip(claimed_host.cells, limits.cells):
-            if (claimed_cell.memory_usage > limit_cell.memory_limit or
-                    claimed_cell.cpu_usage > limit_cell.cpu_limit):
-                return (_("Requested instance NUMA topology is too large for "
-                          "the given host NUMA topology limits."))
 
 
 # TODO(ndipanov): Remove when all code paths are using objects
