@@ -4326,6 +4326,33 @@ class LibvirtConnTestCase(test.TestCase):
                           conn.pre_live_migration, c, inst_ref, vol, None,
                           None, {'is_shared_storage': False})
 
+    @mock.patch('nova.virt.driver.block_device_info_get_mapping',
+                return_value=())
+    @mock.patch('nova.virt.configdrive.required_by',
+                return_value=True)
+    def test_pre_live_migration_block_with_config_drive_mocked_with_vfat(
+            self, mock_required_by, block_device_info_get_mapping):
+        self.flags(config_drive_format='vfat')
+        # Creating testdata
+        vol = {'block_device_mapping': [
+            {'connection_info': 'dummy', 'mount_device': '/dev/sda'},
+            {'connection_info': 'dummy', 'mount_device': '/dev/sdb'}]}
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        self.test_instance['name'] = 'fake'
+        self.test_instance['kernel_id'] = None
+
+        res_data = drvr.pre_live_migration(
+            self.context, self.test_instance, vol, [], None,
+            {'is_shared_storage': False})
+        block_device_info_get_mapping.assert_called_once_with(
+            {'block_device_mapping': [
+                {'connection_info': 'dummy', 'mount_device': '/dev/sda'},
+                {'connection_info': 'dummy', 'mount_device': '/dev/sdb'}
+            ]}
+        )
+        self.assertIsNone(res_data)
+
     def test_pre_live_migration_vol_backed_works_correctly_mocked(self):
         # Creating testdata, using temp dir.
         with utils.tempdir() as tmpdir:
