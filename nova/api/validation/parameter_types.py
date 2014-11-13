@@ -16,6 +16,9 @@ Common parameter types for validating request Body.
 
 """
 
+import copy
+
+
 boolean = {
     'type': ['boolean', 'string'],
     'enum': [True, 'True', 'TRUE', 'true', '1',
@@ -100,6 +103,11 @@ metadata = {
     },
     'additionalProperties': False
 }
+
+
+metadata_with_null = copy.deepcopy(metadata)
+metadata_with_null['patternProperties']['^[a-zA-Z0-9-_:. ]{1,255}$']['type'] =\
+    ['string', 'null']
 
 
 mac_address = {
