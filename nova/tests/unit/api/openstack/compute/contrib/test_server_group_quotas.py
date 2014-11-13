@@ -94,7 +94,8 @@ class ServerGroupQuotasTestV21(test.TestCase):
         sgroup = server_group_template()
         policies = ['anti-affinity']
         sgroup['policies'] = policies
-        res_dict = self.controller.create(self.req, {'server_group': sgroup})
+        res_dict = self.controller.create(self.req,
+                                          body={'server_group': sgroup})
         self.assertEqual(res_dict['server_group']['name'], 'test')
         self.assertTrue(uuidutils.is_uuid_like(res_dict['server_group']['id']))
         self.assertEqual(res_dict['server_group']['policies'], policies)
@@ -106,19 +107,19 @@ class ServerGroupQuotasTestV21(test.TestCase):
         sgroup['policies'] = policies
         # Start by creating as many server groups as we're allowed to.
         for i in range(CONF.quota_server_groups):
-            self.controller.create(self.req, {'server_group': sgroup})
+            self.controller.create(self.req, body={'server_group': sgroup})
 
         # Then, creating a server group should fail.
         self.assertRaises(webob.exc.HTTPForbidden,
                           self.controller.create,
-                          self.req, {'server_group': sgroup})
+                          self.req, body={'server_group': sgroup})
 
     def test_delete_server_group_by_admin(self):
         self._setup_quotas()
         sgroup = server_group_template()
         policies = ['anti-affinity']
         sgroup['policies'] = policies
-        res = self.controller.create(self.req, {'server_group': sgroup})
+        res = self.controller.create(self.req, body={'server_group': sgroup})
         sg_id = res['server_group']['id']
         context = self.req.environ['nova.context']
 
