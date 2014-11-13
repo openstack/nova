@@ -2058,7 +2058,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                     'fake-mac', start_period=0, use_slave=True)
             bw_usage_update.assert_called_once_with(self.context, 'fake-uuid',
                     'fake-mac', 0, 4, 6, 1, 2,
-                    last_refreshed=timeutils.isotime(_time))
+                    last_refreshed=timeutils.isotime(_time),
+                    update_cells=False)
 
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
