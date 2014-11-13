@@ -4683,18 +4683,6 @@ def flavor_extra_specs_get(context, flavor_id):
 
 
 @require_context
-def flavor_extra_specs_get_item(context, flavor_id, key):
-    result = _flavor_extra_specs_get_query(context, flavor_id).\
-                filter(models.InstanceTypeExtraSpecs.key == key).\
-                first()
-    if not result:
-        raise exception.FlavorExtraSpecsNotFound(
-                extra_specs_key=key, flavor_id=flavor_id)
-
-    return {result["key"]: result["value"]}
-
-
-@require_context
 def flavor_extra_specs_delete(context, flavor_id, key):
     result = _flavor_extra_specs_get_query(context, flavor_id).\
                      filter(models.InstanceTypeExtraSpecs.key == key).\

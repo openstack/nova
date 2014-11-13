@@ -3176,15 +3176,6 @@ class InstanceTypeExtraSpecsTestCase(BaseInstanceTypeTestCase):
             real_specs = db.flavor_extra_specs_get(self.ctxt, it['flavorid'])
             self._assertEqualObjects(it['extra_specs'], real_specs)
 
-    def test_flavor_extra_specs_get_item(self):
-        expected = dict(f1=dict(a='a', b='b', c='c'),
-                        f2=dict(d='d', e='e', f='f'))
-
-        for flavor, specs in expected.iteritems():
-            for key, val in specs.iteritems():
-                spec = db.flavor_extra_specs_get_item(self.ctxt, flavor, key)
-                self.assertEqual(spec[key], val)
-
     def test_flavor_extra_specs_delete(self):
         for it in self.flavors:
             specs = it['extra_specs']
