@@ -83,6 +83,21 @@ project_id = {
 }
 
 
+volume_id = {
+    'type': 'string', 'format': 'uuid'
+}
+
+
+network_id = {
+    'type': 'string', 'format': 'uuid'
+}
+
+
+network_port_id = {
+    'type': 'string', 'format': 'uuid'
+}
+
+
 admin_password = {
     # NOTE: admin_password is the admin password of a server
     # instance, and it is not stored into nova's data base.
