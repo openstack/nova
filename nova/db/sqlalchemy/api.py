@@ -249,60 +249,6 @@ def model_query(context, model, *args, **kwargs):
     return query
 
 
-def exact_filter(query, model, filters, legal_keys):
-    """Applies exact match filtering to a query.
-
-    Returns the updated query.  Modifies filters argument to remove
-    filters consumed.
-
-    :param query: query to apply filters to
-    :param model: model object the query applies to, for IN-style
-                  filtering
-    :param filters: dictionary of filters; values that are lists,
-                    tuples, sets, or frozensets cause an 'IN' test to
-                    be performed, while exact matching ('==' operator)
-                    is used for other values
-    :param legal_keys: list of keys to apply exact filtering to
-    """
-
-    filter_dict = {}
-
-    # Walk through all the keys
-    for key in legal_keys:
-        # Skip ones we're not filtering on
-        if key not in filters:
-            continue
-
-        # OK, filtering on this key; what value do we search for?
-        value = filters.pop(key)
-
-        if key in ('metadata', 'system_metadata'):
-            column_attr = getattr(model, key)
-            if isinstance(value, list):
-                for item in value:
-                    for k, v in item.iteritems():
-                        query = query.filter(column_attr.any(key=k))
-                        query = query.filter(column_attr.any(value=v))
-
-            else:
-                for k, v in value.iteritems():
-                    query = query.filter(column_attr.any(key=k))
-                    query = query.filter(column_attr.any(value=v))
-        elif isinstance(value, (list, tuple, set, frozenset)):
-            # Looking for values in a list; apply to query directly
-            column_attr = getattr(model, key)
-            query = query.filter(column_attr.in_(value))
-        else:
-            # OK, simple exact match; save for later
-            filter_dict[key] = value
-
-    # Apply simple exact matches
-    if filter_dict:
-        query = query.filter_by(**filter_dict)
-
-    return query
-
-
 def convert_objects_related_datetimes(values, *datetime_keys):
     for key in datetime_keys:
         if key in values and values[key]:
@@ -1989,14 +1935,10 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
                                 'system_metadata']
 
     # Filter the query
-    query_prefix = exact_filter(query_prefix, models.Instance,
+    query_prefix = _exact_instance_filter(query_prefix,
                                 filters, exact_match_filter_names)
-
-    query_prefix = regex_filter(query_prefix, models.Instance, filters)
-    query_prefix = tag_filter(context, query_prefix, models.Instance,
-                              models.InstanceMetadata,
-                              models.InstanceMetadata.instance_uuid,
-                              filters)
+    query_prefix = _regex_instance_filter(query_prefix, filters)
+    query_prefix = _tag_instance_filter(context, query_prefix, filters)
 
     # paginate query
     if marker is not None:
@@ -2013,20 +1955,23 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
     return _instances_fill_metadata(context, query_prefix.all(), manual_joins)
 
 
-def tag_filter(context, query, model, model_metadata,
-               model_uuid, filters):
-    """Applies tag filtering to a query.
+def _tag_instance_filter(context, query, filters):
+    """Applies tag filtering to an Instance query.
 
     Returns the updated query.  This method alters filters to remove
     keys that are tags.  This filters on resources by tags - this
     method assumes that the caller will take care of access control
 
+    :param context: request context object
     :param query: query to apply filters to
-    :param model: model object the query applies to
     :param filters: dictionary of filters
     """
     if filters.get('filter') is None:
         return query
+
+    model = models.Instance
+    model_metadata = models.InstanceMetadata
+    model_uuid = model_metadata.instance_uuid
 
     or_query = None
 
@@ -2071,16 +2016,16 @@ def tag_filter(context, query, model, model_metadata,
     return query
 
 
-def regex_filter(query, model, filters):
-    """Applies regular expression filtering to a query.
+def _regex_instance_filter(query, filters):
+    """Applies regular expression filtering to an Instance query.
 
     Returns the updated query.
 
     :param query: query to apply filters to
-    :param model: model object the query applies to
     :param filters: dictionary of filters with regex values
     """
 
+    model = models.Instance
     regexp_op_map = {
         'postgresql': '~',
         'mysql': 'REGEXP',
@@ -2101,6 +2046,59 @@ def regex_filter(query, model, filters):
         else:
             query = query.filter(column_attr.op(db_regexp_op)(
                                  str(filters[filter_name])))
+    return query
+
+
+def _exact_instance_filter(query, filters, legal_keys):
+    """Applies exact match filtering to an Instance query.
+
+    Returns the updated query.  Modifies filters argument to remove
+    filters consumed.
+
+    :param query: query to apply filters to
+    :param filters: dictionary of filters; values that are lists,
+                    tuples, sets, or frozensets cause an 'IN' test to
+                    be performed, while exact matching ('==' operator)
+                    is used for other values
+    :param legal_keys: list of keys to apply exact filtering to
+    """
+
+    filter_dict = {}
+    model = models.Instance
+
+    # Walk through all the keys
+    for key in legal_keys:
+        # Skip ones we're not filtering on
+        if key not in filters:
+            continue
+
+        # OK, filtering on this key; what value do we search for?
+        value = filters.pop(key)
+
+        if key in ('metadata', 'system_metadata'):
+            column_attr = getattr(model, key)
+            if isinstance(value, list):
+                for item in value:
+                    for k, v in item.iteritems():
+                        query = query.filter(column_attr.any(key=k))
+                        query = query.filter(column_attr.any(value=v))
+
+            else:
+                for k, v in value.iteritems():
+                    query = query.filter(column_attr.any(key=k))
+                    query = query.filter(column_attr.any(value=v))
+        elif isinstance(value, (list, tuple, set, frozenset)):
+            # Looking for values in a list; apply to query directly
+            column_attr = getattr(model, key)
+            query = query.filter(column_attr.in_(value))
+        else:
+            # OK, simple exact match; save for later
+            filter_dict[key] = value
+
+    # Apply simple exact matches
+    if filter_dict:
+        query = query.filter_by(**filter_dict)
+
     return query
 
 
