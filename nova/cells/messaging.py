@@ -1110,9 +1110,7 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
         items_to_remove = ['id']
         for key in items_to_remove:
             instance_fault.pop(key, None)
-        log_str = _("Got message to create instance fault: "
-                    "%(instance_fault)s")
-        LOG.debug(log_str, {'instance_fault': instance_fault})
+        LOG.debug("Got message to create instance fault: %s", instance_fault)
         fault = objects.InstanceFault(context=message.ctxt)
         fault.update(instance_fault)
         fault.create()

@@ -110,8 +110,8 @@ class VolumeOps(object):
 
     def _attach_volume_to_vm(self, vdi_ref, vm_ref, instance_name, dev_number,
                              hotplug):
-        msg = _('Attach_volume vdi: %(vdi_ref)s vm: %(vm_ref)s')
-        LOG.debug(msg, {'vdi_ref': vdi_ref, 'vm_ref': vm_ref})
+        LOG.debug('Attach_volume vdi: %(vdi_ref)s vm: %(vm_ref)s',
+                  {'vdi_ref': vdi_ref, 'vm_ref': vm_ref})
 
         # osvol is added to the vbd so we can spot which vbds are volumes
         vbd_ref = vm_utils.create_vbd(self._session, vm_ref, vdi_ref,
