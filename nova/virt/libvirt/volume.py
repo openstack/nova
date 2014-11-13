@@ -334,6 +334,8 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
 
             if multipath_device is not None:
                 host_device = multipath_device
+                connection_info['data']['multipath_id'] = \
+                    multipath_device.split('/')[-1]
 
         connection_info['data']['host_device'] = host_device
         return self.get_config(connection_info, disk_info)
@@ -345,7 +347,11 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         host_device = self._get_host_device(iscsi_properties)
         multipath_device = None
         if self.use_multipath:
-            multipath_device = self._get_multipath_device_name(host_device)
+            if 'multipath_id' in iscsi_properties:
+                multipath_device = ('/dev/mapper/%s' %
+                                    iscsi_properties['multipath_id'])
+            else:
+                multipath_device = self._get_multipath_device_name(host_device)
 
         super(LibvirtISCSIVolumeDriver,
               self).disconnect_volume(connection_info, disk_dev)
