@@ -2046,7 +2046,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 exc_val=mox.IgnoreArg(), exc_tb=mox.IgnoreArg(),
                 want_result=False)
 
-    def test_build_and_run_instance_called_with_proper_args(self):
+    @mock.patch('nova.utils.spawn_n')
+    def test_build_and_run_instance_called_with_proper_args(self, mock_spawn):
+        mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self._do_build_instance_update()
         self.compute._build_and_run_instance(self.context, self.instance,
@@ -2073,9 +2075,11 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch('nova.objects.InstanceActionEvent.event_start')
     @mock.patch('nova.objects.Instance.save')
     @mock.patch('nova.compute.manager.ComputeManager._build_and_run_instance')
+    @mock.patch('nova.utils.spawn_n')
     def test_build_and_run_instance_with_icehouse_requested_network(
-            self, mock_build_and_run, mock_save, mock_event_start,
+            self, mock_spawn, mock_build_and_run, mock_save, mock_event_start,
             mock_event_finish):
+        mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
         mock_save.return_value = self.instance
         self.compute.build_and_run_instance(self.context, self.instance,
                 self.image, request_spec={},
@@ -2092,7 +2096,18 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.assertEqual('10.0.0.1', str(requested_network.address))
         self.assertEqual('fake_port_id', requested_network.port_id)
 
-    def test_build_abort_exception(self):
+    @mock.patch('nova.utils.spawn_n')
+    def test_build_abort_exception(self, mock_spawn):
+        def fake_spawn(f, *args, **kwargs):
+            # NOTE(danms): Simulate the detached nature of spawn so that
+            # we confirm that the inner task has the fault logic
+            try:
+                return f(*args, **kwargs)
+            except Exception:
+                pass
+
+        mock_spawn.side_effect = fake_spawn
+
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
         self.mox.StubOutWithMock(self.compute, '_cleanup_volumes')
@@ -2128,7 +2143,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
 
-    def test_rescheduled_exception(self):
+    @mock.patch('nova.utils.spawn_n')
+    def test_rescheduled_exception(self, mock_spawn):
+        mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
@@ -2191,7 +2208,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.block_device_mapping, self.node,
                 self.limits, self.filter_properties)
 
-    def test_rescheduled_exception_without_retry(self):
+    @mock.patch('nova.utils.spawn_n')
+    def test_rescheduled_exception_without_retry(self, mock_spawn):
+        mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(compute_utils, 'add_instance_fault_from_exc')
         self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
@@ -2224,7 +2243,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
 
-    def test_rescheduled_exception_do_not_deallocate_network(self):
+    @mock.patch('nova.utils.spawn_n')
+    def test_rescheduled_exception_do_not_deallocate_network(self, mock_spawn):
+        mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(self.compute.driver,
                                  'deallocate_networks_on_reschedule')
@@ -2258,7 +2279,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
 
-    def test_rescheduled_exception_deallocate_network(self):
+    @mock.patch('nova.utils.spawn_n')
+    def test_rescheduled_exception_deallocate_network(self, mock_spawn):
+        mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(self.compute.driver,
                                  'deallocate_networks_on_reschedule')
@@ -2322,7 +2345,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self._instance_action_events()
         self.mox.ReplayAll()
 
-        self.compute.build_and_run_instance(self.context, self.instance,
+        with mock.patch('nova.utils.spawn_n') as mock_spawn:
+            mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
+            self.compute.build_and_run_instance(self.context, self.instance,
                 self.image, request_spec={},
                 filter_properties=self.filter_properties,
                 injected_files=self.injected_files,
@@ -2505,7 +2530,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.assertEqual(network_info, inst.info_cache.network_info)
         inst.save.assert_called_with(expected_task_state=task_states.SPAWNING)
 
-    def test_reschedule_on_resources_unavailable(self):
+    @mock.patch('nova.utils.spawn_n')
+    def test_reschedule_on_resources_unavailable(self, mock_spawn):
+        mock_spawn.side_effect = lambda f, *a, **k: f(*a, **k)
         reason = 'resource unavailable'
         exc = exception.ComputeResourcesUnavailable(reason=reason)
 
