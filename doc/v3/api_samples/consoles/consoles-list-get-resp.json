@@ -1,8 +1,10 @@
 {
     "consoles": [
         {
-            "console_type": "fake",
-            "id": 1
+            "console": {
+                "console_type": "fake",
+                "id": 1
+            }
         }
     ]
 }

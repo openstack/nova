@@ -26,7 +26,7 @@ def _translate_keys(cons):
     pool = cons['pool']
     info = {'id': cons['id'],
             'console_type': pool['console_type']}
-    return info
+    return dict(console=info)
 
 
 def _translate_detail_keys(cons):
@@ -47,19 +47,18 @@ class ConsolesController(object):
     def __init__(self):
         self.console_api = console_api.API()
 
-    @extensions.expected_errors(404)
+    @extensions.expected_errors(())
     def index(self, req, server_id):
         """Returns a list of consoles for this instance."""
-        try:
-            consoles = self.console_api.get_consoles(
+        consoles = self.console_api.get_consoles(
                 req.environ['nova.context'], server_id)
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         return dict(consoles=[_translate_keys(console)
                               for console in consoles])
 
+    # NOTE(gmann): Here should be 201 instead of 200 by v2.1
+    # +microversions because the console has been created
+    # completely when returning a response.
     @extensions.expected_errors(404)
-    @wsgi.response(201)
     def create(self, req, server_id, body):
         """Creates a new console."""
         try:
