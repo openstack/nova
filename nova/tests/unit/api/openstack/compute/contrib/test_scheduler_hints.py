@@ -76,7 +76,7 @@ class SchedulerHintsTestCaseV21(test.TestCase):
     def test_create_server_with_hints(self):
 
         def fake_create(*args, **kwargs):
-            self.assertEqual(kwargs['scheduler_hints'], {'a': 'b'})
+            self.assertEqual(kwargs['scheduler_hints'], {'group': 'foo'})
             return ([self.fake_instance], '')
 
         self.stubs.Set(nova.compute.api.API, 'create', fake_create)
@@ -90,14 +90,14 @@ class SchedulerHintsTestCaseV21(test.TestCase):
                   'imageRef': 'cedef40a-ed67-4d10-800e-17455edce175',
                   'flavorRef': '1',
             },
-            'os:scheduler_hints': {'a': 'b'},
+            'os:scheduler_hints': {'group': 'foo'},
         }
 
         req.body = jsonutils.dumps(body)
         res = req.get_response(self.app)
         self.assertEqual(202, res.status_int)
 
-    def test_create_server_bad_hints(self):
+    def _create_server_with_scheduler_hints_bad_request(self, param):
         req = self._get_request()
         req.method = 'POST'
         req.content_type = 'application/json'
@@ -107,12 +107,18 @@ class SchedulerHintsTestCaseV21(test.TestCase):
                   'imageRef': 'cedef40a-ed67-4d10-800e-17455edce175',
                   'flavorRef': '1',
             },
-            'os:scheduler_hints': 'here',
+            'os:scheduler_hints': param,
         }
-
         req.body = jsonutils.dumps(body)
         res = req.get_response(self.app)
         self.assertEqual(400, res.status_int)
+
+    def test_create_server_bad_hints_non_dict(self):
+        self._create_server_with_scheduler_hints_bad_request('non-dict')
+
+    def test_create_server_bad_hints_long_group(self):
+        param = {'group': 'a' * 256}
+        self._create_server_with_scheduler_hints_bad_request(param)
 
 
 class SchedulerHintsTestCaseV2(SchedulerHintsTestCaseV21):
@@ -126,6 +132,11 @@ class SchedulerHintsTestCaseV2(SchedulerHintsTestCaseV21):
 
     def _get_request(self):
         return fakes.HTTPRequest.blank('/fake/servers')
+
+    def test_create_server_bad_hints_long_group(self):
+        # NOTE: v2.0 API cannot handle this bad request case now.
+        # We skip this test for v2.0.
+        pass
 
 
 class ServersControllerCreateTestV21(test.TestCase):

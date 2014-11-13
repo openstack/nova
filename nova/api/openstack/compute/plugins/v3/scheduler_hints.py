@@ -12,10 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import webob.exc
-
+from nova.api.openstack.compute.schemas.v3 import scheduler_hints as schema
 from nova.api.openstack import extensions
-from nova.i18n import _
 
 ALIAS = "os-scheduler-hints"
 
@@ -44,7 +42,7 @@ class SchedulerHints(extensions.V3APIExtensionBase):
         elif 'OS-SCH-HNT:scheduler_hints' in req_body:
             scheduler_hints = req_body['OS-SCH-HNT:scheduler_hints']
 
-        if not isinstance(scheduler_hints, dict):
-            msg = _("Malformed scheduler_hints attribute")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
         create_kwargs['scheduler_hints'] = scheduler_hints
+
+    def get_server_create_schema(self):
+        return schema.server_create

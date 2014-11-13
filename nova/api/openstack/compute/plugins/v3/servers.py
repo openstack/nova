@@ -647,7 +647,13 @@ class ServersController(wsgi.Controller):
         LOG.debug("Running _create_extension_schema for %s", ext.obj)
 
         schema = handler.get_server_create_schema()
-        create_schema['properties']['server']['properties'].update(schema)
+        if ext.obj.name == 'SchedulerHints':
+            # NOTE(oomichi): The request parameter position of scheduler-hint
+            # extension is different from the other extensions, so here handles
+            # the difference.
+            create_schema['properties'].update(schema)
+        else:
+            create_schema['properties']['server']['properties'].update(schema)
 
     def _update_extension_schema(self, ext, update_schema):
         handler = ext.obj

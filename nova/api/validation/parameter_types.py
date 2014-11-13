@@ -89,6 +89,11 @@ project_id = {
 }
 
 
+server_id = {
+    'type': 'string', 'format': 'uuid'
+}
+
+
 volume_id = {
     'type': 'string', 'format': 'uuid'
 }
