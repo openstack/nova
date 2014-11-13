@@ -529,11 +529,6 @@ def fixed_ip_get_by_address(context, address, columns_to_join=None):
                                         columns_to_join=columns_to_join)
 
 
-def fixed_ip_get_by_address_detailed(context, address):
-    """Get detailed fixed ip info by address or raise if it does not exist."""
-    return IMPL.fixed_ip_get_by_address_detailed(context, address)
-
-
 def fixed_ip_get_by_floating_address(context, floating_address):
     """Get a fixed ip by a floating address."""
     return IMPL.fixed_ip_get_by_floating_address(context, floating_address)

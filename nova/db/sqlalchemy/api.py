@@ -1250,33 +1250,6 @@ def _fixed_ip_get_by_address(context, address, session=None,
     return result
 
 
-@require_admin_context
-def fixed_ip_get_by_address_detailed(context, address):
-    """:returns: a tuple of (models.FixedIp, models.Network, models.Instance)
-    """
-    try:
-        result = model_query(context, models.FixedIp,
-                             models.Network, models.Instance).\
-                             filter_by(address=address).\
-                             outerjoin((models.Network,
-                                        models.Network.id ==
-                                        models.FixedIp.network_id)).\
-                             outerjoin((models.Instance,
-                                        models.Instance.uuid ==
-                                        models.FixedIp.instance_uuid)).\
-            first()
-
-        if not result:
-            raise exception.FixedIpNotFoundForAddress(address=address)
-
-    except db_exc.DBError:
-        msg = _("Invalid fixed IP Address %s in request") % address
-        LOG.warn(msg)
-        raise exception.FixedIpInvalid(msg)
-
-    return result
-
-
 @require_context
 def fixed_ip_get_by_floating_address(context, floating_address):
     return model_query(context, models.FixedIp).\

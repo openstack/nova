@@ -1562,16 +1562,6 @@ class FixedIpJsonTest(ApiSampleTestBaseV2):
                     return fixed_ip
             raise exception.FixedIpNotFoundForAddress(address=address)
 
-        def fake_fixed_ip_get_by_address_detailed(context, address):
-            network = {'id': 1,
-                       'cidr': "192.168.1.0/24"}
-            host = {'host': "host",
-                    'hostname': 'openstack'}
-            for fixed_ip in fake_fixed_ips:
-                if fixed_ip['address'] == address:
-                    return (fixed_ip, network, host)
-            raise exception.FixedIpNotFoundForAddress(address=address)
-
         def fake_fixed_ip_update(context, address, values):
             fixed_ip = fake_fixed_ip_get_by_address(context, address)
             if fixed_ip is None:
@@ -1582,8 +1572,6 @@ class FixedIpJsonTest(ApiSampleTestBaseV2):
 
         self.stubs.Set(db, "fixed_ip_get_by_address",
                        fake_fixed_ip_get_by_address)
-        self.stubs.Set(db, "fixed_ip_get_by_address_detailed",
-                       fake_fixed_ip_get_by_address_detailed)
         self.stubs.Set(db, "fixed_ip_update", fake_fixed_ip_update)
 
     def test_fixed_ip_reserve(self):
