@@ -1520,3 +1520,52 @@ class VirtMemoryPagesTestCase(test.NoDBTestCase):
             exception.MemoryPageSizeForbidden,
             self._test_get_requested_mempages_pagesize,
             {}, {"hw_mem_page_size": "2048"})
+
+    def test_cell_accepts_request_wipe(self):
+        host_cell = objects.NUMACell(
+            id=0, cpuset=set([0]), memory=1024, mempages=[
+                objects.NUMAPagesTopology(size_kb=4, total=262144, used=0),
+            ])
+
+        inst_cell = objects.InstanceNUMACell(
+            id=0, cpuset=set([0]), memory=1024, pagesize=hw.MEMPAGES_SMALL)
+        self.assertEqual(
+            4,
+            hw._numa_cell_supports_pagesize_request(host_cell, inst_cell))
+
+        inst_cell = objects.InstanceNUMACell(
+            id=0, cpuset=set([0]), memory=1024, pagesize=hw.MEMPAGES_ANY)
+        self.assertEqual(
+            4,
+            hw._numa_cell_supports_pagesize_request(host_cell, inst_cell))
+
+        inst_cell = objects.InstanceNUMACell(
+            id=0, cpuset=set([0]), memory=1024, pagesize=hw.MEMPAGES_LARGE)
+        self.assertIsNone(hw._numa_cell_supports_pagesize_request(
+            host_cell, inst_cell))
+
+    def test_cell_accepts_request_large_pass(self):
+        inst_cell = objects.InstanceNUMACell(
+            id=0, cpuset=set([0]), memory=1024, pagesize=hw.MEMPAGES_LARGE)
+        host_cell = objects.NUMACell(
+            id=0, cpuset=set([0]), memory=1024, mempages=[
+                objects.NUMAPagesTopology(size_kb=4, total=256, used=0),
+                objects.NUMAPagesTopology(size_kb=2048, total=512, used=0)
+            ])
+
+        self.assertEqual(
+            2048,
+            hw._numa_cell_supports_pagesize_request(host_cell, inst_cell))
+
+    def test_cell_accepts_request_custom_pass(self):
+        inst_cell = objects.InstanceNUMACell(
+            id=0, cpuset=set([0]), memory=1024, pagesize=2048)
+        host_cell = objects.NUMACell(
+            id=0, cpuset=set([0]), memory=1024, mempages=[
+                objects.NUMAPagesTopology(size_kb=4, total=256, used=0),
+                objects.NUMAPagesTopology(size_kb=2048, total=512, used=0)
+            ])
+
+        self.assertEqual(
+            2048,
+            hw._numa_cell_supports_pagesize_request(host_cell, inst_cell))
