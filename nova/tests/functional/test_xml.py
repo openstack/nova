@@ -18,12 +18,14 @@ from lxml import etree
 from nova.api.openstack import common
 from nova.api.openstack import xmlutil
 from nova.openstack.common import log as logging
+from nova import test
 from nova.tests.functional import integrated_helpers
 
 
 LOG = logging.getLogger(__name__)
 
 
+@test.skipXmlTest("Nova v2 XML support is disabled")
 class XmlTests(integrated_helpers._IntegratedTestBase):
     """"Some basic XML sanity checks."""
 

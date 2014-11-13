@@ -150,6 +150,7 @@ class TestFaults(test.NoDBTestCase):
             self.assertEqual(response.content_type, "application/json")
             self.assertEqual(expected, actual)
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_raise(self):
         # Ensure the ability to raise :class:`Fault` in WSGI-ified methods.
         @webob.dec.wsgify
@@ -162,6 +163,7 @@ class TestFaults(test.NoDBTestCase):
         self.assertEqual(resp.status_int, 404)
         self.assertIn('whut?', resp.body)
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_raise_403(self):
         # Ensure the ability to raise :class:`Fault` in WSGI-ified methods.
         @webob.dec.wsgify
@@ -175,6 +177,7 @@ class TestFaults(test.NoDBTestCase):
         self.assertNotIn('resizeNotAllowed', resp.body)
         self.assertIn('forbidden', resp.body)
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_raise_localize_explanation(self):
         msgid = "String with params: %s"
         params = ('blah', )
@@ -196,6 +199,7 @@ class TestFaults(test.NoDBTestCase):
         fault = wsgi.Fault(webob.exc.HTTPBadRequest(explanation='what?'))
         self.assertEqual(fault.status_int, 400)
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_xml_serializer(self):
         # Ensure that a v1.1 request responds with a v1.1 xmlns.
         request = webob.Request.blank('/v1.1',

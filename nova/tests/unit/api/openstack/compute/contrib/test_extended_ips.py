@@ -173,6 +173,7 @@ class ExtendedIpsTestV2(ExtendedIpsTestV21):
         return res
 
 
+@test.skipXmlTest("Nova v2 XML support is disabled")
 class ExtendedIpsXmlTest(ExtendedIpsTestV2):
     content_type = 'application/xml'
     prefix = '{%s}' % extended_ips.Extended_ips.namespace

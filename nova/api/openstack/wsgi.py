@@ -44,9 +44,12 @@ XMLNS_ATOM = 'http://www.w3.org/2005/Atom'
 
 LOG = logging.getLogger(__name__)
 
-SUPPORTED_CONTENT_TYPES = (
+_SUPPORTED_CONTENT_TYPES = (
     'application/json',
     'application/vnd.openstack.compute+json',
+)
+
+_SUPPORTED_XML_CONTENT_TYPES = (
     'application/xml',
     'application/vnd.openstack.compute+xml',
 )
@@ -54,6 +57,9 @@ SUPPORTED_CONTENT_TYPES = (
 _MEDIA_TYPE_MAP = {
     'application/vnd.openstack.compute+json': 'json',
     'application/json': 'json',
+}
+
+_MEDIA_XML_TYPE_MAP = {
     'application/vnd.openstack.compute+xml': 'xml',
     'application/xml': 'xml',
     'application/atom+xml': 'atom',
@@ -73,11 +79,26 @@ _METHODS_WITH_BODY = [
     'PUT',
 ]
 
-
 # The default api version request if none is requested in the headers
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 DEFAULT_API_VERSION = "2.1"
+
+# TODO(dims): Temporary, we already deprecated the v2 XML API in
+# Juno, we should remove this before Kilo
+DISABLE_XML_V2_API = True
+
+
+def get_supported_content_types():
+    if DISABLE_XML_V2_API:
+        return _SUPPORTED_CONTENT_TYPES
+    return _SUPPORTED_CONTENT_TYPES + _SUPPORTED_XML_CONTENT_TYPES
+
+
+def get_media_map():
+    if DISABLE_XML_V2_API:
+        return _MEDIA_TYPE_MAP
+    return dict(_MEDIA_TYPE_MAP.items() + _MEDIA_XML_TYPE_MAP.items())
 
 
 class Request(webob.Request):
@@ -161,11 +182,12 @@ class Request(webob.Request):
             parts = self.path.rsplit('.', 1)
             if len(parts) > 1:
                 possible_type = 'application/' + parts[1]
-                if possible_type in SUPPORTED_CONTENT_TYPES:
+                if possible_type in get_supported_content_types():
                     content_type = possible_type
 
             if not content_type:
-                content_type = self.accept.best_match(SUPPORTED_CONTENT_TYPES)
+                content_type = self.accept.best_match(
+                    get_supported_content_types())
 
             self.environ['nova.best_content_type'] = (content_type or
                                                       'application/json')
@@ -189,7 +211,7 @@ class Request(webob.Request):
         if not content_type or content_type == 'text/plain':
             return None
 
-        if content_type not in SUPPORTED_CONTENT_TYPES:
+        if content_type not in get_supported_content_types():
             raise exception.InvalidContentType(content_type=content_type)
 
         return content_type
@@ -555,7 +577,7 @@ class ResponseObject(object):
         default_serializers = default_serializers or {}
 
         try:
-            mtype = _MEDIA_TYPE_MAP.get(content_type, content_type)
+            mtype = get_media_map().get(content_type, content_type)
             if mtype in self.serializers:
                 return mtype, self.serializers[mtype]
             else:
@@ -804,7 +826,7 @@ class Resource(wsgi.Application):
     def deserialize(self, meth, content_type, body):
         meth_deserializers = getattr(meth, 'wsgi_deserializers', {})
         try:
-            mtype = _MEDIA_TYPE_MAP.get(content_type, content_type)
+            mtype = get_media_map().get(content_type, content_type)
             if mtype in meth_deserializers:
                 deserializer = meth_deserializers[mtype]
             else:
@@ -1042,7 +1064,7 @@ class Resource(wsgi.Application):
 
         if action == 'action':
             # OK, it's an action; figure out which action...
-            mtype = _MEDIA_TYPE_MAP.get(content_type)
+            mtype = get_media_map().get(content_type)
             action_name = self.action_peek[mtype](body)
         else:
             action_name = action

@@ -623,6 +623,7 @@ class TestNeutronSecurityGroupsOutputTest(TestNeutronSecurityGroupsTestCase):
         self.assertEqual(res.status_int, 404)
 
 
+@test.skipXmlTest("Nova v2 XML support is disabled")
 class TestNeutronSecurityGroupsOutputXMLTest(
         TestNeutronSecurityGroupsOutputTest):
 

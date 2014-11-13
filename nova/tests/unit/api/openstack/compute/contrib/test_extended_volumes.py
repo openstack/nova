@@ -113,6 +113,7 @@ class ExtendedVolumesTest(test.TestCase):
             self.assertEqual(exp_volumes, actual)
 
 
+@test.skipXmlTest("Nova v2 XML support is disabled")
 class ExtendedVolumesXmlTest(ExtendedVolumesTest):
     content_type = 'application/xml'
     prefix = '{%s}' % extended_volumes.Extended_volumes.namespace

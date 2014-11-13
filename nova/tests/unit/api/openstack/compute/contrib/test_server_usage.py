@@ -148,6 +148,7 @@ class ServerUsageTestV20(ServerUsageTestV21):
         return fakes.wsgi_app(init_only=('servers',))
 
 
+@test.skipXmlTest("Nova v2 XML support is disabled")
 class ServerUsageXmlTest(ServerUsageTestV20):
     content_type = 'application/xml'
     prefix = '{%s}' % server_usage.Server_usage.namespace

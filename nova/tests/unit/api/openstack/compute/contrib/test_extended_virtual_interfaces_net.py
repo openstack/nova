@@ -104,13 +104,14 @@ class ExtendedServerVIFNetTest(test.NoDBTestCase):
         self.assertVIFs(self._get_vifs(res.body))
 
 
-class ExtendedServerVIFNetSerializerTest(ExtendedServerVIFNetTest):
+@test.skipXmlTest("Nova v2 XML support is disabled")
+class ExtendedServerVIFNetSerializerXmlTest(ExtendedServerVIFNetTest):
     content_type = 'application/xml'
     prefix = "{%s}" % extended_virtual_interfaces_net. \
                         Extended_virtual_interfaces_net.namespace
 
     def setUp(self):
-        super(ExtendedServerVIFNetSerializerTest, self).setUp()
+        super(ExtendedServerVIFNetSerializerXmlTest, self).setUp()
         self.namespace = wsgi.XMLNS_V11
         self.serializer = extended_virtual_interfaces_net. \
             ExtendedVirtualInterfaceNetTemplate()

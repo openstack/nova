@@ -195,7 +195,7 @@ class URLMap(paste.urlmap.URLMap):
         parts = path_info.rsplit('.', 1)
         if len(parts) > 1:
             possible_type = 'application/' + parts[1]
-            if possible_type in wsgi.SUPPORTED_CONTENT_TYPES:
+            if possible_type in wsgi.get_supported_content_types():
                 mime_type = possible_type
 
         parts = path_info.split('/')
@@ -256,7 +256,7 @@ class URLMap(paste.urlmap.URLMap):
         # 2) Content-Type header (eg application/json;version=1.1)
         # 3) Accept header (eg application/json;q=0.8;version=1.1)
 
-        supported_content_types = list(wsgi.SUPPORTED_CONTENT_TYPES)
+        supported_content_types = list(wsgi.get_supported_content_types())
 
         mime_type, app, app_url = self._path_strategy(host, port, path_info)
 

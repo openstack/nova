@@ -39,8 +39,10 @@ from oslo.config import fixture as config_fixture
 from oslo.messaging import conffixture as messaging_conffixture
 from oslo.utils import timeutils
 from oslotest import moxstubout
+import six
 import testtools
 
+from nova.api.openstack import wsgi
 from nova import context
 from nova import db
 from nova.db import migration
@@ -196,6 +198,44 @@ class NullHandler(logging.Handler):
 
     def createLock(self):
         self.lock = None
+
+
+class skipIf(object):
+    def __init__(self, condition, reason):
+        self.condition = condition
+        self.reason = reason
+
+    def __call__(self, func_or_cls):
+        condition = self.condition
+        reason = self.reason
+        if inspect.isfunction(func_or_cls):
+            @six.wraps(func_or_cls)
+            def wrapped(*args, **kwargs):
+                if condition:
+                    raise testtools.TestCase.skipException(reason)
+                return func_or_cls(*args, **kwargs)
+
+            return wrapped
+        elif inspect.isclass(func_or_cls):
+            orig_func = getattr(func_or_cls, 'setUp')
+
+            @six.wraps(orig_func)
+            def new_func(self, *args, **kwargs):
+                if condition:
+                    raise testtools.TestCase.skipException(reason)
+                orig_func(self, *args, **kwargs)
+
+            func_or_cls.setUp = new_func
+            return func_or_cls
+        else:
+            raise TypeError('skipUnless can be used only with functions or '
+                            'classes')
+
+
+class skipXmlTest(skipIf):
+    def __init__(self, reason):
+        super(skipXmlTest, self).__init__(wsgi.DISABLE_XML_V2_API,
+                                          reason)
 
 
 class TestCase(testtools.TestCase):

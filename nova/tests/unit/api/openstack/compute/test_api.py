@@ -62,6 +62,7 @@ class APITest(test.NoDBTestCase):
 
         jsonutils.loads(res.body)
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_vendor_content_type_xml(self):
         ctype = 'application/vnd.openstack.compute+xml'
 
@@ -107,6 +108,7 @@ class APITest(test.NoDBTestCase):
         self.assertIn('{"computeFault', resp.body)
         self.assertEqual(resp.status_int, 500, resp.body)
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_exceptions_are_converted_to_faults_exception_xml(self):
         @webob.dec.wsgify
         def fail(req):

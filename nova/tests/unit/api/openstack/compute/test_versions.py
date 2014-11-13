@@ -189,6 +189,7 @@ class VersionsTestV20(test.NoDBTestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(404, res.status_int)
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_get_version_2_detail_xml(self):
         req = webob.Request.blank('/v2/')
         req.accept = "application/xml"
@@ -212,6 +213,7 @@ class VersionsTestV20(test.NoDBTestCase):
             [{'rel': 'self', 'href': 'http://localhost/v2/'}]
             + expected['links']))
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_get_version_list_xml(self):
         req = webob.Request.blank('/')
         req.accept = "application/xml"
@@ -235,6 +237,7 @@ class VersionsTestV20(test.NoDBTestCase):
             self.assertTrue(common.compare_links(link,
                 [{'rel': 'self', 'href': 'http://localhost/%s/' % v}]))
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_get_version_2_detail_atom(self):
         req = webob.Request.blank('/v2/')
         req.accept = "application/atom+xml"
@@ -270,6 +273,7 @@ class VersionsTestV20(test.NoDBTestCase):
             'type': 'text/html',
             'rel': 'describedby'})
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_get_version_list_atom(self):
         req = webob.Request.blank('/')
         req.accept = "application/atom+xml"
@@ -363,6 +367,7 @@ class VersionsTestV20(test.NoDBTestCase):
         self.assertThat(jsonutils.loads(res.body),
                         matchers.DictMatches(expected))
 
+    @test.skipXmlTest("Nova v2 XML support is disabled")
     def test_multi_choice_image_xml(self):
         req = webob.Request.blank('/images/1')
         req.accept = "application/xml"
