@@ -17,11 +17,7 @@
 Scheduler host weights
 """
 
-from oslo.config import cfg
-
 from nova import weights
-
-CONF = cfg.CONF
 
 
 class WeighedHost(weights.WeighedObject):
