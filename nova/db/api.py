@@ -1908,11 +1908,6 @@ def action_event_get_by_id(context, action_id, event_id):
 ####################
 
 
-def get_ec2_instance_id_by_uuid(context, instance_id):
-    """Get ec2 id through uuid from instance_id_mappings table."""
-    return IMPL.get_ec2_instance_id_by_uuid(context, instance_id)
-
-
 def get_instance_uuid_by_ec2_id(context, ec2_id):
     """Get uuid through ec2 id from instance_id_mappings table."""
     return IMPL.get_instance_uuid_by_ec2_id(context, ec2_id)

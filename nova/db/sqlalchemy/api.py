@@ -5733,12 +5733,6 @@ def ec2_instance_get_by_uuid(context, instance_uuid):
 
 
 @require_context
-def get_ec2_instance_id_by_uuid(context, instance_id):
-    result = ec2_instance_get_by_uuid(context, instance_id)
-    return result['id']
-
-
-@require_context
 def ec2_instance_get_by_id(context, instance_id):
     result = _ec2_instance_get_query(context).\
                     filter_by(id=instance_id).\
