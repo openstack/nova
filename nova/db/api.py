@@ -1507,11 +1507,6 @@ def flavor_extra_specs_get(context, flavor_id):
     return IMPL.flavor_extra_specs_get(context, flavor_id)
 
 
-def flavor_extra_specs_get_item(context, flavor_id, key):
-    """Get extra specs by key and flavor_id."""
-    return IMPL.flavor_extra_specs_get_item(context, flavor_id, key)
-
-
 def flavor_extra_specs_delete(context, flavor_id, key):
     """Delete the given extra specs item."""
     IMPL.flavor_extra_specs_delete(context, flavor_id, key)
