@@ -6834,13 +6834,6 @@ class DnsdomainTestCase(test.TestCase):
         self.assertEqual(domain['project_id'], self.project)
         self.assertEqual(domain['scope'], 'public')
 
-    def test_dnsdomain_list(self):
-        d_list = ['test.domain.one', 'test.domain.two']
-        db.dnsdomain_register_for_zone(self.ctxt, d_list[0], self.testzone)
-        db.dnsdomain_register_for_project(self.ctxt, d_list[1], self.project)
-        db_list = db.dnsdomain_list(self.ctxt)
-        self.assertEqual(sorted(d_list), sorted(db_list))
-
     def test_dnsdomain_unregister(self):
         db.dnsdomain_register_for_zone(self.ctxt, self.domain, self.testzone)
         db.dnsdomain_unregister(self.ctxt, self.domain)
