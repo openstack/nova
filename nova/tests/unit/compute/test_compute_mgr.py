@@ -22,6 +22,7 @@ import mox
 from oslo.config import cfg
 from oslo import messaging
 from oslo.utils import importutils
+from oslo.utils import timeutils
 
 from nova.compute import manager
 from nova.compute import power_state
@@ -2027,6 +2028,37 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.assertFalse(mock_destroy.called)
             self.assertTrue(mock_save.called)
             self.assertTrue(mock_spawn.called)
+
+    @mock.patch.object(utils, 'last_completed_audit_period',
+            return_value=(0, 0))
+    @mock.patch.object(time, 'time', side_effect=[10, 20, 21])
+    @mock.patch.object(objects.InstanceList, 'get_by_host', return_value=[])
+    @mock.patch.object(objects.BandwidthUsage, 'get_by_instance_uuid_and_mac')
+    @mock.patch.object(db, 'bw_usage_update')
+    def test_poll_bandwidth_usage(self, bw_usage_update, get_by_uuid_mac,
+            get_by_host, time, last_completed_audit):
+        bw_counters = [{'uuid': 'fake-uuid', 'mac_address': 'fake-mac',
+                        'bw_in': 1, 'bw_out': 2}]
+        usage = objects.BandwidthUsage()
+        usage.bw_in = 3
+        usage.bw_out = 4
+        usage.last_ctr_in = 0
+        usage.last_ctr_out = 0
+        self.flags(bandwidth_poll_interval=1)
+        get_by_uuid_mac.return_value = usage
+        _time = timeutils.utcnow()
+        bw_usage_update.return_value = {'instance_uuid': '', 'mac': '',
+                'start_period': _time, 'last_refreshed': _time, 'bw_in': 0,
+                'bw_out': 0, 'last_ctr_in': 0, 'last_ctr_out': 0, 'deleted': 0,
+                'created_at': _time, 'updated_at': _time, 'deleted_at': _time}
+        with mock.patch.object(self.compute.driver,
+                'get_all_bw_counters', return_value=bw_counters):
+            self.compute._poll_bandwidth_usage(self.context)
+            get_by_uuid_mac.assert_called_once_with(self.context, 'fake-uuid',
+                    'fake-mac', start_period=0, use_slave=True)
+            bw_usage_update.assert_called_once_with(self.context, 'fake-uuid',
+                    'fake-mac', 0, 4, 6, 1, 2,
+                    last_refreshed=timeutils.isotime(_time))
 
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
