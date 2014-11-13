@@ -5345,15 +5345,6 @@ def aggregate_metadata_get_by_metadata_key(context, aggregate_id, key):
     return dict(metadata)
 
 
-def aggregate_host_get_by_metadata_key(context, key):
-    rows = aggregate_get_by_metadata_key(context, key)
-    metadata = collections.defaultdict(set)
-    for agg in rows:
-        for agghost in agg._hosts:
-            metadata[agghost.host].add(agg._metadata[0]['value'])
-    return dict(metadata)
-
-
 def aggregate_get_by_metadata_key(context, key):
     """Return rows that match metadata key.
 

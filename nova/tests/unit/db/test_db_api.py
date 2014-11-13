@@ -626,27 +626,6 @@ class AggregateDBApiTestCase(test.TestCase):
                                                key='good')
         self.assertNotIn('good', r2)
 
-    def test_aggregate_host_get_by_metadata_key(self):
-        ctxt = context.get_admin_context()
-        values2 = {'name': 'fake_aggregate12'}
-        values3 = {'name': 'fake_aggregate23'}
-        a2_hosts = ['foo1.openstack.org', 'foo2.openstack.org']
-        a2_metadata = {'good': 'value12', 'bad': 'badvalue12'}
-        a3_hosts = ['foo2.openstack.org', 'foo3.openstack.org']
-        a3_metadata = {'good': 'value23', 'bad': 'badvalue23'}
-        _create_aggregate_with_hosts(context=ctxt)
-        _create_aggregate_with_hosts(context=ctxt, values=values2,
-                hosts=a2_hosts, metadata=a2_metadata)
-        _create_aggregate_with_hosts(context=ctxt, values=values3,
-                hosts=a3_hosts, metadata=a3_metadata)
-        r1 = db.aggregate_host_get_by_metadata_key(ctxt, key='good')
-        self.assertEqual({
-            'foo1.openstack.org': set(['value12']),
-            'foo2.openstack.org': set(['value12', 'value23']),
-            'foo3.openstack.org': set(['value23']),
-        }, r1)
-        self.assertNotIn('fake_key1', r1)
-
     def test_aggregate_get_by_host_not_found(self):
         ctxt = context.get_admin_context()
         _create_aggregate_with_hosts(context=ctxt)
