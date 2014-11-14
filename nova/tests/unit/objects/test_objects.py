@@ -13,6 +13,7 @@
 #    under the License.
 
 import contextlib
+import copy
 import datetime
 import hashlib
 import inspect
@@ -102,6 +103,7 @@ class MyObj(base.NovaPersistentObject, base.NovaObject):
         self.rel_object = MyOwnedObject(baz=42)
 
     def obj_make_compatible(self, primitive, target_version):
+        super(MyObj, self).obj_make_compatible(primitive, target_version)
         # NOTE(danms): Simulate an older version that had a different
         # format for the 'bar' attribute
         if target_version == '1.1' and 'bar' in primitive:
@@ -724,6 +726,71 @@ class _TestObject(object):
                          'deleted_at=<?>,foo=123,missing=<?>,readonly=<?>,'
                          'rel_object=<?>,updated_at=<?>)', repr(obj))
 
+    def test_obj_make_obj_compatible(self):
+        subobj = MyOwnedObject(baz=1)
+        obj = MyObj(rel_object=subobj)
+        obj.obj_relationships = {
+            'rel_object': [('1.5', '1.1'), ('1.7', '1.2')],
+        }
+        primitive = obj.obj_to_primitive()['nova_object.data']
+        with mock.patch.object(subobj, 'obj_make_compatible') as mock_compat:
+            obj._obj_make_obj_compatible(copy.copy(primitive), '1.8',
+                                         'rel_object')
+            self.assertFalse(mock_compat.called)
+
+        with mock.patch.object(subobj, 'obj_make_compatible') as mock_compat:
+            obj._obj_make_obj_compatible(copy.copy(primitive),
+                                         '1.7', 'rel_object')
+            mock_compat.assert_called_once_with(
+                primitive['rel_object']['nova_object.data'], '1.2')
+            self.assertEqual('1.2',
+                             primitive['rel_object']['nova_object.version'])
+
+        with mock.patch.object(subobj, 'obj_make_compatible') as mock_compat:
+            obj._obj_make_obj_compatible(copy.copy(primitive),
+                                         '1.6', 'rel_object')
+            mock_compat.assert_called_once_with(
+                primitive['rel_object']['nova_object.data'], '1.1')
+            self.assertEqual('1.1',
+                             primitive['rel_object']['nova_object.version'])
+
+        with mock.patch.object(subobj, 'obj_make_compatible') as mock_compat:
+            obj._obj_make_obj_compatible(copy.copy(primitive), '1.5',
+                                         'rel_object')
+            mock_compat.assert_called_once_with(
+                primitive['rel_object']['nova_object.data'], '1.1')
+            self.assertEqual('1.1',
+                             primitive['rel_object']['nova_object.version'])
+
+        with mock.patch.object(subobj, 'obj_make_compatible') as mock_compat:
+            _prim = copy.copy(primitive)
+            obj._obj_make_obj_compatible(_prim, '1.4', 'rel_object')
+            self.assertFalse(mock_compat.called)
+            self.assertNotIn('rel_object', _prim)
+
+    def test_obj_make_compatible_hits_sub_objects(self):
+        subobj = MyOwnedObject(baz=1)
+        obj = MyObj(foo=123, rel_object=subobj)
+        obj.obj_relationships = {'rel_object': [('1.0', '1.0')]}
+        with mock.patch.object(obj, '_obj_make_obj_compatible') as mock_compat:
+            obj.obj_make_compatible({'rel_object': 'foo'}, '1.10')
+            mock_compat.assert_called_once_with({'rel_object': 'foo'}, '1.10',
+                                                'rel_object')
+
+    def test_obj_make_compatible_skips_unset_sub_objects(self):
+        obj = MyObj(foo=123)
+        obj.obj_relationships = {'rel_object': [('1.0', '1.0')]}
+        with mock.patch.object(obj, '_obj_make_obj_compatible') as mock_compat:
+            obj.obj_make_compatible({'rel_object': 'foo'}, '1.10')
+            self.assertFalse(mock_compat.called)
+
+    def test_obj_make_compatible_complains_about_missing_rules(self):
+        subobj = MyOwnedObject(baz=1)
+        obj = MyObj(foo=123, rel_object=subobj)
+        obj.obj_relationships = {}
+        self.assertRaises(exception.ObjectActionError,
+                          obj.obj_make_compatible, {}, '1.0')
+
 
 class TestObject(_LocalTest, _TestObject):
     pass
@@ -1124,3 +1191,26 @@ class TestObjectVersions(test.TestCase):
                 LOG.info('testing obj: %s version: %s' %
                          (obj_name, test_version))
                 obj_class().obj_to_primitive(target_version=test_version)
+
+    def test_obj_relationships_in_order(self):
+        # Iterate all object classes and verify that we can run
+        # obj_make_compatible with every older version than current.
+        # This doesn't actually test the data conversions, but it at least
+        # makes sure the method doesn't blow up on something basic like
+        # expecting the wrong version format.
+        for obj_name in base.NovaObject._obj_classes:
+            obj_class = base.NovaObject._obj_classes[obj_name][0]
+            for field, versions in obj_class.obj_relationships.items():
+                last_my_version = (0, 0)
+                last_child_version = (0, 0)
+                for my_version, child_version in versions:
+                    _my_version = utils.convert_version_to_tuple(my_version)
+                    _ch_version = utils.convert_version_to_tuple(child_version)
+                    self.assertTrue((last_my_version < _my_version
+                                     and last_child_version <= _ch_version),
+                                    'Object %s relationship '
+                                    '%s->%s for field %s is out of order' % (
+                                        obj_name, my_version, child_version,
+                                        field))
+                    last_my_version = _my_version
+                    last_child_version = _ch_version
