@@ -189,6 +189,31 @@ def get_number_of_serial_ports(flavor, image_meta):
     return flavor_num_ports or image_num_ports or 1
 
 
+class InstanceInfo(object):
+
+    def __init__(self, state=None, max_mem_kb=0, mem_kb=0, num_cpu=0,
+                 cpu_time_ns=0, id=None):
+        """Create a new Instance Info object
+
+        :param state: the running state, one of the power_state codes
+        :param max_mem_kb: (int) the maximum memory in KBytes allowed
+        :param mem_kb: (int) the memory in KBytes used by the instance
+        :param num_cpu: (int) the number of virtual CPUs for the instance
+        :param cpu_time_ns: (int) the CPU time used in nanoseconds
+        :param id: a unique ID for the instance
+        """
+        self.state = state
+        self.max_mem_kb = max_mem_kb
+        self.mem_kb = mem_kb
+        self.num_cpu = num_cpu
+        self.cpu_time_ns = cpu_time_ns
+        self.id = id
+
+    def __eq__(self, other):
+        return (self.__class__ == other.__class__ and
+                self.__dict__ == other.__dict__)
+
+
 class VirtCPUTopology(object):
 
     def __init__(self, sockets, cores, threads):
