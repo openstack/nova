@@ -5565,6 +5565,9 @@ class ComputeManager(manager.Manager):
                    curr_time - self._last_bw_usage_cell_update >
                            cells_update_interval):
                 self._last_bw_usage_cell_update = curr_time
+                update_cells = True
+            else:
+                update_cells = False
 
             instances = objects.InstanceList.get_by_host(context,
                                                               self.host,
@@ -5629,7 +5632,8 @@ class ComputeManager(manager.Manager):
                                               bw_ctr['bw_in'],
                                               bw_ctr['bw_out'],
                                               start_period=start_time,
-                                              last_refreshed=refreshed)
+                                              last_refreshed=refreshed,
+                                              update_cells=update_cells)
 
     def _get_host_volume_bdms(self, context, use_slave=False):
         """Return all block device mappings on a compute host."""

@@ -18,7 +18,8 @@ from nova.objects import fields
 class BandwidthUsage(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Add use_slave to get_by_instance_uuid_and_mac
-    VERSION = '1.1'
+    # Version 1.2: Add update_cells to create
+    VERSION = '1.2'
 
     fields = {
         'instance_uuid': fields.UUIDField(),
@@ -52,10 +53,12 @@ class BandwidthUsage(base.NovaPersistentObject, base.NovaObject):
     @base.serialize_args
     @base.remotable
     def create(self, context, uuid, mac, bw_in, bw_out, last_ctr_in,
-               last_ctr_out, start_period=None, last_refreshed=None):
+               last_ctr_out, start_period=None, last_refreshed=None,
+               update_cells=True):
         db_bw_usage = db.bw_usage_update(
             context, uuid, mac, start_period, bw_in, bw_out,
-            last_ctr_in, last_ctr_out, last_refreshed=last_refreshed)
+            last_ctr_in, last_ctr_out, last_refreshed=last_refreshed,
+            update_cells=update_cells)
 
         self._from_db_object(context, self, db_bw_usage)
 
@@ -63,13 +66,15 @@ class BandwidthUsage(base.NovaPersistentObject, base.NovaObject):
 class BandwidthUsageList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Add use_slave to get_by_uuids
-    VERSION = '1.1'
+    # Version 1.2: BandwidthUsage <= version 1.2
+    VERSION = '1.2'
     fields = {
         'objects': fields.ListOfObjectsField('BandwidthUsage'),
     }
     child_versions = {
         '1.0': '1.0',
         '1.1': '1.1',
+        '1.2': '1.2',
     }
 
     @base.serialize_args
