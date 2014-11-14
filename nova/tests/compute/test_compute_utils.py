@@ -21,6 +21,7 @@ import string
 
 import mock
 from oslo.config import cfg
+from oslo.utils import encodeutils
 import six
 import testtools
 
@@ -802,6 +803,28 @@ class ComputeUtilsGetRebootTypes(test.TestCase):
     def test_get_reboot_not_running_hard(self):
         reboot_type = compute_utils.get_reboot_type('foo', 'bar')
         self.assertEqual(reboot_type, 'HARD')
+
+
+class ComputeUtilsTestCase(test.NoDBTestCase):
+    def test_exception_to_dict_with_long_message_3_bytes(self):
+        # Generate Chinese byte string whose length is 300. This Chinese UTF-8
+        # character occupies 3 bytes. After truncating, the byte string length
+        # should be 255.
+        msg = encodeutils.safe_decode('\xe8\xb5\xb5' * 100)
+        exc = exception.NovaException(message=msg)
+        fault_dict = compute_utils.exception_to_dict(exc)
+        byte_message = encodeutils.safe_encode(fault_dict["message"])
+        self.assertEqual(255, len(byte_message))
+
+    def test_exception_to_dict_with_long_message_2_bytes(self):
+        # Generate Russian byte string whose length is 300. This Russian UTF-8
+        # character occupies 2 bytes. After truncating, the byte string length
+        # should be 254.
+        msg = encodeutils.safe_decode('\xd0\x92' * 150)
+        exc = exception.NovaException(message=msg)
+        fault_dict = compute_utils.exception_to_dict(exc)
+        byte_message = encodeutils.safe_encode(fault_dict["message"])
+        self.assertEqual(254, len(byte_message))
 
 
 class ComputeUtilsPeriodicTaskSpacingWarning(test.NoDBTestCase):
