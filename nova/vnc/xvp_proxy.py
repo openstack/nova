@@ -91,7 +91,7 @@ class XCPVNCProxy(object):
                     data += b
                     if data.find("\r\n\r\n") != -1:
                         if not data.split("\r\n")[0].find("200"):
-                            LOG.audit(_("Error in handshake: %s"), data)
+                            LOG.audit(_("Error in handshake format: %s"), data)
                             return
                         break
 
