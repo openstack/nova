@@ -1141,16 +1141,18 @@ class _TestInstanceListObject(object):
         dt = timeutils.utcnow()
 
         def fake_instance_get_active_by_window_joined(context, begin, end,
-                                                      project_id, host):
+                                                      project_id, host,
+                                                      columns_to_join):
             # make sure begin is tz-aware
             self.assertIsNotNone(begin.utcoffset())
             self.assertIsNone(end)
+            self.assertEqual(['metadata'], columns_to_join)
             return fakes
 
         with mock.patch.object(db, 'instance_get_active_by_window_joined',
                                fake_instance_get_active_by_window_joined):
             inst_list = instance.InstanceList.get_active_by_window_joined(
-                            self.context, dt)
+                            self.context, dt, expected_attrs=['metadata'])
 
         for fake, obj in zip(fakes, inst_list.objects):
             self.assertIsInstance(obj, instance.Instance)

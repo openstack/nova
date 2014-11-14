@@ -688,7 +688,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.9: Instance <= version 1.15
     # Version 1.10: Instance <= version 1.16
     # Version 1.11: Added sort_keys and sort_dirs to get_by_filters
-    VERSION = '1.11'
+    # Version 1.12: Pass expected_attrs to instance_get_active_by_window_joined
+    VERSION = '1.12'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -706,6 +707,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         '1.9': '1.15',
         '1.10': '1.16',
         '1.11': '1.16',
+        '1.12': '1.16',
         }
 
     @base.remotable_classmethod
@@ -767,11 +769,9 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         # to timezone-aware datetime objects for the DB API call.
         begin = timeutils.parse_isotime(begin)
         end = timeutils.parse_isotime(end) if end else None
-        db_inst_list = db.instance_get_active_by_window_joined(context,
-                                                               begin,
-                                                               end,
-                                                               project_id,
-                                                               host)
+        db_inst_list = db.instance_get_active_by_window_joined(
+            context, begin, end, project_id, host,
+            columns_to_join=_expected_cols(expected_attrs))
         return _make_instance_list(context, cls(), db_inst_list,
                                    expected_attrs)
 
