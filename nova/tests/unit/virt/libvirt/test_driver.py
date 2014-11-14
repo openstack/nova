@@ -517,6 +517,21 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             'ephemeral_key_uuid': None,
         }
 
+        self.device_xml_tmpl = """
+        <domain type='kvm'>
+          <devices>
+            <disk type='block' device='disk'>
+              <driver name='qemu' type='raw' cache='none'/>
+              <source dev='{device_path}'/>
+              <target bus='virtio' dev='vdb'/>
+              <serial>58a84f6d-3f0c-4e19-a0af-eb657b790657</serial>
+              <address type='pci' domain='0x0' bus='0x0' slot='0x04' \
+              function='0x0'/>
+            </disk>
+          </devices>
+        </domain>
+        """
+
     def relpath(self, path):
         return os.path.relpath(path, CONF.instances_path)
 
@@ -6189,7 +6204,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(0, mock_get_instance_disk_info.call_count)
 
     @mock.patch.object(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE', 8675, create=True)
-    def test_live_migration_changes_listen_addresses(self):
+    def test_live_migration_update_graphics_xml(self):
         self.compute = importutils.import_object(CONF.compute_manager)
         instance_dict = dict(self.test_instance)
         instance_dict.update({'host': 'fake',
@@ -6248,6 +6263,187 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                       self.context, instance_ref, 'dest', False,
                       self.compute._rollback_live_migration,
                       migrate_data=migrate_data)
+
+    @mock.patch.object(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE', 8675, create=True)
+    def test_live_migration_update_volume_xml(self):
+        self.compute = importutils.import_object(CONF.compute_manager)
+        instance_dict = dict(self.test_instance)
+        instance_dict.update({'host': 'fake',
+                              'power_state': power_state.RUNNING,
+                              'vm_state': vm_states.ACTIVE})
+        instance_ref = objects.Instance(**instance_dict)
+        target_xml = self.device_xml_tmpl.format(
+            device_path='/dev/disk/by-path/'
+            'ip-1.2.3.4:3260-iqn.'
+            'cde.67890.opst-lun-Z')
+        # start test
+        migrate_data = {'pre_live_migration_result':
+        {'volume': {u'58a84f6d-3f0c-4e19-a0af-eb657b790657':
+          {'connection_info': {u'driver_volume_type': u'iscsi',
+            'serial': u'58a84f6d-3f0c-4e19-a0af-eb657b790657',
+             u'data': {u'access_mode': u'rw', u'target_discovered': False,
+             u'target_iqn': u'ip-1.2.3.4:3260-iqn.cde.67890.opst-lun-Z',
+             u'volume_id': u'58a84f6d-3f0c-4e19-a0af-eb657b790657',
+             'device_path':
+              u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.cde.67890.opst-lun-Z'}},
+           'disk_info': {'bus': u'virtio', 'type': u'disk', 'dev': u'vdb'}}}},
+         'graphics_listen_addrs': {}}
+
+        pre_live_migrate_data = ((migrate_data or {}).
+                                  get('pre_live_migration_result', {}))
+        volume = pre_live_migrate_data.get('volume')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        test_mock = mock.MagicMock()
+
+        with mock.patch.object(libvirt_driver.LibvirtDriver, 'get_info') as \
+                mget_info,\
+                mock.patch.object(drvr._host, 'get_domain') as mget_domain,\
+                mock.patch.object(libvirt.virDomain, 'migrateToURI2'),\
+                mock.patch.object(drvr, '_update_xml') as mupdate:
+
+            mget_info.side_effect = exception.InstanceNotFound(
+                                     instance_id='foo')
+            mget_domain.return_value = test_mock
+            test_mock.XMLDesc.return_value = target_xml
+            self.assertFalse(drvr._live_migration(
+                             self.context, instance_ref, 'dest', test_mock,
+                             self.compute._rollback_live_migration,
+                             migrate_data=migrate_data))
+            mupdate.assert_called_once_with(target_xml, volume, None)
+
+    def test_update_volume_xml(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        initial_xml = self.device_xml_tmpl.format(
+            device_path='/dev/disk/by-path/'
+            'ip-1.2.3.4:3260-iqn.'
+            'abc.12345.opst-lun-X')
+        target_xml = self.device_xml_tmpl.format(
+            device_path='/dev/disk/by-path/'
+            'ip-1.2.3.4:3260-iqn.'
+            'cde.67890.opst-lun-Z')
+        target_xml = etree.tostring(etree.fromstring(target_xml))
+        serial = "58a84f6d-3f0c-4e19-a0af-eb657b790657"
+        volume_xml = {'volume': {}}
+        volume_xml['volume'][serial] = {'connection_info': {}, 'disk_info': {}}
+        volume_xml['volume'][serial]['connection_info'] = \
+          {u'driver_volume_type': u'iscsi',
+           'serial': u'58a84f6d-3f0c-4e19-a0af-eb657b790657',
+            u'data': {u'access_mode': u'rw', u'target_discovered': False,
+            u'target_iqn': u'ip-1.2.3.4:3260-iqn.cde.67890.opst-lun-Z',
+            u'volume_id': u'58a84f6d-3f0c-4e19-a0af-eb657b790657',
+           'device_path':
+              u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.cde.67890.opst-lun-Z'}}
+        volume_xml['volume'][serial]['disk_info'] = {'bus': u'virtio',
+                                                     'type': u'disk',
+                                                     'dev': u'vdb'}
+
+        connection_info = volume_xml['volume'][serial]['connection_info']
+        disk_info = volume_xml['volume'][serial]['disk_info']
+
+        conf = vconfig.LibvirtConfigGuestDisk()
+        conf.source_device = disk_info['type']
+        conf.driver_name = "qemu"
+        conf.driver_format = "raw"
+        conf.driver_cache = "none"
+        conf.target_dev = disk_info['dev']
+        conf.target_bus = disk_info['bus']
+        conf.serial = connection_info.get('serial')
+        conf.source_type = "block"
+        conf.source_path = connection_info['data'].get('device_path')
+
+        with mock.patch.object(drvr, '_get_volume_config',
+                               return_value=conf):
+            parser = etree.XMLParser(remove_blank_text=True)
+            xml_doc = etree.fromstring(initial_xml, parser)
+            config = drvr._update_volume_xml(xml_doc,
+                                             volume_xml['volume'])
+            xml_doc = etree.fromstring(target_xml, parser)
+            self.assertEqual(etree.tostring(xml_doc), etree.tostring(config))
+
+    def test_update_volume_xml_no_serial(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        xml_tmpl = """
+        <domain type='kvm'>
+          <devices>
+            <disk type='block' device='disk'>
+              <driver name='qemu' type='raw' cache='none'/>
+              <source dev='{device_path}'/>
+              <target bus='virtio' dev='vdb'/>
+              <serial></serial>
+              <address type='pci' domain='0x0' bus='0x0' slot='0x04' \
+              function='0x0'/>
+            </disk>
+          </devices>
+        </domain>
+        """
+
+        initial_xml = xml_tmpl.format(device_path='/dev/disk/by-path/'
+                                      'ip-1.2.3.4:3260-iqn.'
+                                      'abc.12345.opst-lun-X')
+        target_xml = xml_tmpl.format(device_path='/dev/disk/by-path/'
+                                     'ip-1.2.3.4:3260-iqn.'
+                                     'abc.12345.opst-lun-X')
+        target_xml = etree.tostring(etree.fromstring(target_xml))
+        serial = "58a84f6d-3f0c-4e19-a0af-eb657b790657"
+        volume_xml = {'volume': {}}
+        volume_xml['volume'][serial] = {'connection_info': {}, 'disk_info': {}}
+        volume_xml['volume'][serial]['connection_info'] = \
+          {u'driver_volume_type': u'iscsi',
+           'serial': u'58a84f6d-3f0c-4e19-a0af-eb657b790657',
+            u'data': {u'access_mode': u'rw', u'target_discovered': False,
+            u'target_iqn': u'ip-1.2.3.4:3260-iqn.cde.67890.opst-lun-Z',
+            u'volume_id': u'58a84f6d-3f0c-4e19-a0af-eb657b790657',
+           'device_path':
+              u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.cde.67890.opst-lun-Z'}}
+        volume_xml['volume'][serial]['disk_info'] = {'bus': u'virtio',
+                                                     'type': u'disk',
+                                                     'dev': u'vdb'}
+
+        connection_info = volume_xml['volume'][serial]['connection_info']
+        disk_info = volume_xml['volume'][serial]['disk_info']
+
+        conf = vconfig.LibvirtConfigGuestDisk()
+        conf.source_device = disk_info['type']
+        conf.driver_name = "qemu"
+        conf.driver_format = "raw"
+        conf.driver_cache = "none"
+        conf.target_dev = disk_info['dev']
+        conf.target_bus = disk_info['bus']
+        conf.serial = connection_info.get('serial')
+        conf.source_type = "block"
+        conf.source_path = connection_info['data'].get('device_path')
+
+        with mock.patch.object(drvr, '_get_volume_config',
+                               return_value=conf):
+            xml_doc = etree.fromstring(initial_xml)
+            config = drvr._update_volume_xml(xml_doc,
+                                             volume_xml['volume'])
+            self.assertEqual(target_xml, etree.tostring(config))
+
+    def test_update_volume_xml_no_connection_info(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        initial_xml = self.device_xml_tmpl.format(
+            device_path='/dev/disk/by-path/'
+            'ip-1.2.3.4:3260-iqn.'
+            'abc.12345.opst-lun-X')
+        target_xml = self.device_xml_tmpl.format(
+            device_path='/dev/disk/by-path/'
+            'ip-1.2.3.4:3260-iqn.'
+            'abc.12345.opst-lun-X')
+        target_xml = etree.tostring(etree.fromstring(target_xml))
+        serial = "58a84f6d-3f0c-4e19-a0af-eb657b790657"
+        volume_xml = {'volume': {}}
+        volume_xml['volume'][serial] = {'info1': {}, 'info2': {}}
+        conf = vconfig.LibvirtConfigGuestDisk()
+        with mock.patch.object(drvr, '_get_volume_config',
+                               return_value=conf):
+            xml_doc = etree.fromstring(initial_xml)
+            config = drvr._update_volume_xml(xml_doc,
+                                             volume_xml['volume'])
+            self.assertEqual(target_xml, etree.tostring(config))
 
     @mock.patch.object(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None, create=True)
     def test_live_migration_uses_migrateToURI_without_migratable_flag(self):
@@ -6593,8 +6789,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_pre_live_migration_works_correctly_mocked(self):
         # Creating testdata
         vol = {'block_device_mapping': [
-                  {'connection_info': 'dummy', 'mount_device': '/dev/sda'},
-                  {'connection_info': 'dummy', 'mount_device': '/dev/sdb'}]}
+           {'connection_info': {'serial': '12345', u'data':
+            {'device_path':
+             u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.abc.12345.opst-lun-X'}},
+             'mount_device': '/dev/sda'},
+           {'connection_info': {'serial': '67890', u'data':
+            {'device_path':
+             u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.cde.67890.opst-lun-Z'}},
+             'mount_device': '/dev/sdb'}]}
+
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         class FakeNetworkInfo(object):
@@ -6629,9 +6832,22 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
         result = drvr.pre_live_migration(c, instance, vol, nw_info, None)
 
-        target_res = {'graphics_listen_addrs': {'spice': '127.0.0.1',
-                                                'vnc': '127.0.0.1'}}
-        self.assertEqual(result, target_res)
+        target_ret = {
+        'graphics_listen_addrs': {'spice': '127.0.0.1', 'vnc': '127.0.0.1'},
+        'volume': {
+         '12345': {'connection_info': {u'data': {'device_path':
+              u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.abc.12345.opst-lun-X'},
+                   'serial': '12345'},
+                   'disk_info': {'bus': 'scsi',
+                                 'dev': 'sda',
+                                 'type': 'disk'}},
+         '67890': {'connection_info': {u'data': {'device_path':
+              u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.cde.67890.opst-lun-Z'},
+                   'serial': '67890'},
+                   'disk_info': {'bus': 'scsi',
+                                 'dev': 'sdb',
+                                 'type': 'disk'}}}}
+        self.assertEqual(result, target_ret)
 
     def test_pre_live_migration_block_with_config_drive_mocked(self):
         # Creating testdata
@@ -6658,8 +6874,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
             vol = {'block_device_mapping': [
-                  {'connection_info': 'dummy', 'mount_device': '/dev/sda'},
-                  {'connection_info': 'dummy', 'mount_device': '/dev/sdb'}]}
+             {'connection_info': {'serial': '12345', u'data':
+             {'device_path':
+              u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.abc.12345.opst-lun-X'}},
+             'mount_device': '/dev/sda'},
+             {'connection_info': {'serial': '67890', u'data':
+             {'device_path':
+             u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.cde.67890.opst-lun-Z'}},
+             'mount_device': '/dev/sdb'}]}
+
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
             def fake_none(*args, **kwargs):
@@ -6693,8 +6916,22 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                             }
             ret = drvr.pre_live_migration(c, inst_ref, vol, nw_info, None,
                                           migrate_data)
-            target_ret = {'graphics_listen_addrs': {'spice': '127.0.0.1',
-                                                    'vnc': '127.0.0.1'}}
+            target_ret = {
+            'graphics_listen_addrs': {'spice': '127.0.0.1',
+                                      'vnc': '127.0.0.1'},
+            'volume': {
+            '12345': {'connection_info': {u'data': {'device_path':
+              u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.abc.12345.opst-lun-X'},
+                      'serial': '12345'},
+                      'disk_info': {'bus': 'scsi',
+                                    'dev': 'sda',
+                                    'type': 'disk'}},
+            '67890': {'connection_info': {u'data': {'device_path':
+              u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.cde.67890.opst-lun-Z'},
+                      'serial': '67890'},
+                      'disk_info': {'bus': 'scsi',
+                                    'dev': 'sdb',
+                                    'type': 'disk'}}}}
             self.assertEqual(ret, target_ret)
             self.assertTrue(os.path.exists('%s/%s/' % (tmpdir,
                                                        inst_ref['name'])))
