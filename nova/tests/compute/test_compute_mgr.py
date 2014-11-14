@@ -1974,6 +1974,50 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         do_test()
 
+    def test_rebuild_default_impl(self):
+        def _detach(context, bdms):
+            pass
+
+        def _attach(context, instance, bdms, do_check_attach=True):
+            return {'block_device_mapping': 'shared_block_storage'}
+
+        def _spawn(context, instance, image_meta, injected_files,
+              admin_password, network_info=None, block_device_info=None):
+            self.assertEqual(block_device_info['block_device_mapping'],
+                             'shared_block_storage')
+
+        with contextlib.nested(
+            mock.patch.object(self.compute.driver, 'destroy',
+                              return_value=None),
+            mock.patch.object(self.compute.driver, 'spawn',
+                              side_effect=_spawn),
+            mock.patch.object(objects.Instance, 'save',
+                              return_value=None)
+        ) as(
+             mock_destroy,
+             mock_spawn,
+             mock_save
+        ):
+            instance = fake_instance.fake_instance_obj(self.context)
+            instance.task_state = task_states.REBUILDING
+            instance.save(expected_task_state=[task_states.REBUILDING])
+            self.compute._rebuild_default_impl(self.context,
+                                               instance,
+                                               None,
+                                               [],
+                                               admin_password='new_pass',
+                                               bdms=[],
+                                               detach_block_devices=_detach,
+                                               attach_block_devices=_attach,
+                                               network_info=None,
+                                               recreate=True,
+                                               block_device_info=None,
+                                               preserve_ephemeral=False)
+
+            self.assertFalse(mock_destroy.called)
+            self.assertTrue(mock_save.called)
+            self.assertTrue(mock_spawn.called)
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):
