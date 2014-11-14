@@ -251,6 +251,161 @@ class NotDbApiTestCase(DbTestCase):
                           self.context, {'display_name': '%test%'},
                           marker=str(stdlib_uuid.uuid4()))
 
+    def _assert_equals_inst_order(self, correct_order, filters,
+                                  sort_keys=None, sort_dirs=None,
+                                  limit=None, marker=None,
+                                  match_keys=['uuid', 'vm_state',
+                                              'display_name', 'id']):
+        '''Retrieves instances based on the given filters and sorting
+        information and verifies that the instances are returned in the
+        correct sorted order by ensuring that the supplied keys match.
+        '''
+        result = db.instance_get_all_by_filters_sort(
+            self.context, filters, limit=limit, marker=marker,
+            sort_keys=sort_keys, sort_dirs=sort_dirs)
+        self.assertEqual(len(correct_order), len(result))
+        for inst1, inst2 in zip(result, correct_order):
+            for key in match_keys:
+                self.assertEqual(inst1.get(key), inst2.get(key))
+        return result
+
+    def test_instance_get_all_by_filters_sort_keys(self):
+        '''Verifies sort order and direction for multiple instances.'''
+        # Instances that will reply to the query
+        test1_active = self.create_instance_with_args(
+                            display_name='test1',
+                            vm_state=vm_states.ACTIVE)
+        test1_error = self.create_instance_with_args(
+                           display_name='test1',
+                           vm_state=vm_states.ERROR)
+        test1_error2 = self.create_instance_with_args(
+                            display_name='test1',
+                            vm_state=vm_states.ERROR)
+        test2_active = self.create_instance_with_args(
+                            display_name='test2',
+                            vm_state=vm_states.ACTIVE)
+        test2_error = self.create_instance_with_args(
+                           display_name='test2',
+                           vm_state=vm_states.ERROR)
+        test2_error2 = self.create_instance_with_args(
+                            display_name='test2',
+                            vm_state=vm_states.ERROR)
+        # Other instances in the DB, will not match name filter
+        other_error = self.create_instance_with_args(
+                           display_name='other',
+                           vm_state=vm_states.ERROR)
+        other_active = self.create_instance_with_args(
+                            display_name='other',
+                            vm_state=vm_states.ACTIVE)
+        filters = {'display_name': '%test%'}
+
+        # Verify different sort key/direction combinations
+        sort_keys = ['display_name', 'vm_state', 'created_at']
+        sort_dirs = ['asc', 'asc', 'asc']
+        correct_order = [test1_active, test1_error, test1_error2,
+                         test2_active, test2_error, test2_error2]
+        self._assert_equals_inst_order(correct_order, filters,
+                                       sort_keys=sort_keys,
+                                       sort_dirs=sort_dirs)
+
+        sort_dirs = ['asc', 'desc', 'asc']
+        correct_order = [test1_error, test1_error2, test1_active,
+                         test2_error, test2_error2, test2_active]
+        self._assert_equals_inst_order(correct_order, filters,
+                                       sort_keys=sort_keys,
+                                       sort_dirs=sort_dirs)
+
+        sort_dirs = ['desc', 'desc', 'asc']
+        correct_order = [test2_error, test2_error2, test2_active,
+                         test1_error, test1_error2, test1_active]
+        self._assert_equals_inst_order(correct_order, filters,
+                                       sort_keys=sort_keys,
+                                       sort_dirs=sort_dirs)
+
+        # created_at is added by default if not supplied, descending order
+        sort_keys = ['display_name', 'vm_state']
+        sort_dirs = ['desc', 'desc']
+        correct_order = [test2_error2, test2_error, test2_active,
+                         test1_error2, test1_error, test1_active]
+        self._assert_equals_inst_order(correct_order, filters,
+                                       sort_keys=sort_keys,
+                                       sort_dirs=sort_dirs)
+
+        # Now created_at should be in ascending order (defaults to the first
+        # sort dir direction)
+        sort_dirs = ['asc', 'asc']
+        correct_order = [test1_active, test1_error, test1_error2,
+                         test2_active, test2_error, test2_error2]
+        self._assert_equals_inst_order(correct_order, filters,
+                                       sort_keys=sort_keys,
+                                       sort_dirs=sort_dirs)
+
+        # Remove name filter, get all instances
+        correct_order = [other_active, other_error,
+                         test1_active, test1_error, test1_error2,
+                         test2_active, test2_error, test2_error2]
+        self._assert_equals_inst_order(correct_order, {},
+                                       sort_keys=sort_keys,
+                                       sort_dirs=sort_dirs)
+
+        # Default sorting, 'created_at' then 'id' in desc order
+        correct_order = [other_active, other_error,
+                         test2_error2, test2_error, test2_active,
+                         test1_error2, test1_error, test1_active]
+        self._assert_equals_inst_order(correct_order, {})
+
+    def test_instance_get_all_by_filters_sort_keys_paginate(self):
+        '''Verifies sort order with pagination.'''
+        # Instances that will reply to the query
+        test1_active = self.create_instance_with_args(
+                            display_name='test1',
+                            vm_state=vm_states.ACTIVE)
+        test1_error = self.create_instance_with_args(
+                           display_name='test1',
+                           vm_state=vm_states.ERROR)
+        test1_error2 = self.create_instance_with_args(
+                            display_name='test1',
+                            vm_state=vm_states.ERROR)
+        test2_active = self.create_instance_with_args(
+                            display_name='test2',
+                            vm_state=vm_states.ACTIVE)
+        test2_error = self.create_instance_with_args(
+                           display_name='test2',
+                           vm_state=vm_states.ERROR)
+        test2_error2 = self.create_instance_with_args(
+                            display_name='test2',
+                            vm_state=vm_states.ERROR)
+        # Other instances in the DB, will not match name filter
+        self.create_instance_with_args(display_name='other')
+        self.create_instance_with_args(display_name='other')
+        filters = {'display_name': '%test%'}
+        # Common sort information for every query
+        sort_keys = ['display_name', 'vm_state', 'created_at']
+        sort_dirs = ['asc', 'desc', 'asc']
+        # Overall correct instance order based on the sort keys
+        correct_order = [test1_error, test1_error2, test1_active,
+                         test2_error, test2_error2, test2_active]
+
+        # Limits of 1, 2, and 3, verify that the instances returned are in the
+        # correct sorted order, update the marker to get the next correct page
+        for limit in range(1, 4):
+            marker = None
+            # Include the maximum number of instances (ie, 6) to ensure that
+            # the last query (with marker pointing to the last instance)
+            # returns 0 servers
+            for i in range(0, 7, limit):
+                if i == len(correct_order):
+                    correct = []
+                else:
+                    correct = correct_order[i:i + limit]
+                insts = self._assert_equals_inst_order(
+                    correct, filters,
+                    sort_keys=sort_keys, sort_dirs=sort_dirs,
+                    limit=limit, marker=marker)
+                if correct:
+                    marker = insts[-1]['uuid']
+                    self.assertEqual(correct[-1]['uuid'], marker)
+
     def test_convert_objects_related_datetimes(self):
 
         t1 = timeutils.utcnow()
@@ -786,6 +941,20 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         self.assertEqual({}, sys_meta)
         self.assertIn('info_cache', result[0])
         self.assertEqual(network_info, result[0]['info_cache']['network_info'])
+
+    @mock.patch('nova.db.sqlalchemy.api.instance_get_all_by_filters_sort')
+    def test_instance_get_all_by_filters_calls_sort(self,
+                                                    mock_get_all_filters_sort):
+        '''Verifies instance_get_all_by_filters calls the sort function.'''
+        # sort parameters should be wrapped in a list, all other parameters
+        # should be passed through
+        ctxt = context.get_admin_context()
+        sqlalchemy_api.instance_get_all_by_filters(ctxt, {'foo': 'bar'},
+            'sort_key', 'sort_dir', limit=100, marker='uuid',
+            columns_to_join='columns', use_slave=True)
+        mock_get_all_filters_sort.assert_called_once_with(ctxt, {'foo': 'bar'},
+            limit=100, marker='uuid', columns_to_join='columns',
+            use_slave=True, sort_keys=['sort_key'], sort_dirs=['sort_dir'])
 
 
 class ProcessSortParamTestCase(test.TestCase):

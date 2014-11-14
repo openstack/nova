@@ -1910,9 +1910,9 @@ class API(base.Base):
             instance = obj_base.obj_to_primitive(instance)
         return instance
 
-    def get_all(self, context, search_opts=None, sort_key='created_at',
-                sort_dir='desc', limit=None, marker=None, want_objects=False,
-                expected_attrs=None):
+    def get_all(self, context, search_opts=None, limit=None, marker=None,
+                want_objects=False, expected_attrs=None, sort_keys=None,
+                sort_dirs=None):
         """Get all instances filtered by one of the given parameters.
 
         If there is no filter and the context is an admin, it will retrieve
@@ -1921,8 +1921,10 @@ class API(base.Base):
         Deleted instances will be returned by default, unless there is a
         search option that says otherwise.
 
-        The results will be returned sorted in the order specified by the
-        'sort_dir' parameter using the key specified in the 'sort_key'
+        The results will be sorted based on the list of sort keys in the
+        'sort_keys' parameter (first value is primary sort key, second value is
+        seconardy sort ket, etc.). For each sort key, the associated sort
+        direction is based on the list of sort directions in the 'sort_dirs'
         parameter.
         """
 
@@ -1992,8 +1994,8 @@ class API(base.Base):
                         return []
 
         inst_models = self._get_instances_by_filters(context, filters,
-                sort_key, sort_dir, limit=limit, marker=marker,
-                expected_attrs=expected_attrs)
+                limit=limit, marker=marker, expected_attrs=expected_attrs,
+                sort_keys=sort_keys, sort_dirs=sort_dirs)
 
         if 'ip6' in filters or 'ip' in filters:
             inst_models = self._ip_filter(inst_models, filters)
@@ -2028,16 +2030,15 @@ class API(base.Base):
         return objects.InstanceList(objects=result_objs)
 
     def _get_instances_by_filters(self, context, filters,
-                                  sort_key, sort_dir,
-                                  limit=None,
-                                  marker=None, expected_attrs=None):
+                                  limit=None, marker=None, expected_attrs=None,
+                                  sort_keys=None, sort_dirs=None):
         fields = ['metadata', 'system_metadata', 'info_cache',
                   'security_groups']
         if expected_attrs:
             fields.extend(expected_attrs)
         return objects.InstanceList.get_by_filters(
-            context, filters=filters, sort_key=sort_key, sort_dir=sort_dir,
-            limit=limit, marker=marker, expected_attrs=fields)
+            context, filters=filters, limit=limit, marker=marker,
+            expected_attrs=fields, sort_keys=sort_keys, sort_dirs=sort_dirs)
 
     # NOTE(melwitt): We don't check instance lock for backup because lock is
     #                intended to prevent accidental change/delete of instances
@@ -3086,8 +3087,8 @@ class API(base.Base):
 
         formatted_metadata_list = []
         instances = self._get_instances_by_filters(context, filters={},
-                                                   sort_key='created_at',
-                                                   sort_dir='desc')
+                                                   sort_keys=['created_at'],
+                                                   sort_dirs=['desc'])
         for instance in instances:
             try:
                 check_policy(context, 'get_all_instance_%s' % metadata_type,

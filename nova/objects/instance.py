@@ -687,7 +687,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.8: Instance <= version 1.14
     # Version 1.9: Instance <= version 1.15
     # Version 1.10: Instance <= version 1.16
-    VERSION = '1.10'
+    # Version 1.11: Added sort_keys and sort_dirs to get_by_filters
+    VERSION = '1.11'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -704,16 +705,24 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         '1.8': '1.14',
         '1.9': '1.15',
         '1.10': '1.16',
+        '1.11': '1.16',
         }
 
     @base.remotable_classmethod
     def get_by_filters(cls, context, filters,
                        sort_key='created_at', sort_dir='desc', limit=None,
-                       marker=None, expected_attrs=None, use_slave=False):
-        db_inst_list = db.instance_get_all_by_filters(
-            context, filters, sort_key, sort_dir, limit=limit, marker=marker,
-            columns_to_join=_expected_cols(expected_attrs),
-            use_slave=use_slave)
+                       marker=None, expected_attrs=None, use_slave=False,
+                       sort_keys=None, sort_dirs=None):
+        if sort_keys or sort_dirs:
+            db_inst_list = db.instance_get_all_by_filters_sort(
+                context, filters, limit=limit, marker=marker,
+                columns_to_join=_expected_cols(expected_attrs),
+                use_slave=use_slave, sort_keys=sort_keys, sort_dirs=sort_dirs)
+        else:
+            db_inst_list = db.instance_get_all_by_filters(
+                context, filters, sort_key, sort_dir, limit=limit,
+                marker=marker, columns_to_join=_expected_cols(expected_attrs),
+                use_slave=use_slave)
         return _make_instance_list(context, cls(), db_inst_list,
                                    expected_attrs)
 

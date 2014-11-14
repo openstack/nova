@@ -999,6 +999,57 @@ class _TestInstanceListObject(object):
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
         self.assertRemotes()
 
+    def test_get_all_by_filters_sorted(self):
+        fakes = [self.fake_instance(1), self.fake_instance(2)]
+        self.mox.StubOutWithMock(db, 'instance_get_all_by_filters_sort')
+        db.instance_get_all_by_filters_sort(self.context, {'foo': 'bar'},
+                                            limit=None, marker=None,
+                                            columns_to_join=['metadata'],
+                                            use_slave=False,
+                                            sort_keys=['uuid'],
+                                            sort_dirs=['asc']).AndReturn(fakes)
+        self.mox.ReplayAll()
+        inst_list = instance.InstanceList.get_by_filters(
+            self.context, {'foo': 'bar'}, expected_attrs=['metadata'],
+            use_slave=False, sort_keys=['uuid'], sort_dirs=['asc'])
+
+        for i in range(0, len(fakes)):
+            self.assertIsInstance(inst_list.objects[i], instance.Instance)
+            self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
+        self.assertRemotes()
+
+    @mock.patch.object(db, 'instance_get_all_by_filters_sort')
+    @mock.patch.object(db, 'instance_get_all_by_filters')
+    def test_get_all_by_filters_calls_non_sort(self,
+                                               mock_get_by_filters,
+                                               mock_get_by_filters_sort):
+        '''Verifies InstanceList.get_by_filters calls correct DB function.'''
+        # Single sort key/direction is set, call non-sorted DB function
+        instance.InstanceList.get_by_filters(
+            self.context, {'foo': 'bar'}, sort_key='key', sort_dir='dir',
+            limit=100, marker='uuid', use_slave=True)
+        mock_get_by_filters.assert_called_once_with(
+            self.context, {'foo': 'bar'}, 'key', 'dir', limit=100,
+            marker='uuid', columns_to_join=None, use_slave=True)
+        self.assertEqual(0, mock_get_by_filters_sort.call_count)
+
+    @mock.patch.object(db, 'instance_get_all_by_filters_sort')
+    @mock.patch.object(db, 'instance_get_all_by_filters')
+    def test_get_all_by_filters_calls_sort(self,
+                                           mock_get_by_filters,
+                                           mock_get_by_filters_sort):
+        '''Verifies InstanceList.get_by_filters calls correct DB function.'''
+        # Multiple sort keys/directions are set, call sorted DB function
+        instance.InstanceList.get_by_filters(
+            self.context, {'foo': 'bar'}, limit=100, marker='uuid',
+            use_slave=True, sort_keys=['key1', 'key2'],
+            sort_dirs=['dir1', 'dir2'])
+        mock_get_by_filters_sort.assert_called_once_with(
+            self.context, {'foo': 'bar'}, limit=100,
+            marker='uuid', columns_to_join=None, use_slave=True,
+            sort_keys=['key1', 'key2'], sort_dirs=['dir1', 'dir2'])
+        self.assertEqual(0, mock_get_by_filters.call_count)
+
     def test_get_all_by_filters_works_for_cleaned(self):
         fakes = [self.fake_instance(1),
                  self.fake_instance(2, updates={'deleted': 2,
