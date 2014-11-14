@@ -361,12 +361,18 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             updates['info_cache'] = {
                 'network_info': updates['info_cache'].network_info.json()
                 }
+        updates['extra'] = {}
         numa_topology = updates.pop('numa_topology', None)
-        db_inst = db.instance_create(context, updates)
         if numa_topology:
             expected_attrs.append('numa_topology')
-            numa_topology.instance_uuid = db_inst['uuid']
-            numa_topology.create(context)
+            updates['extra']['numa_topology'] = (
+                numa_topology.topology_from_obj().to_json())
+        pci_requests = updates.pop('pci_requests', None)
+        if pci_requests:
+            expected_attrs.append('pci_requests')
+            updates['extra']['pci_requests'] = (
+                pci_requests.to_json())
+        db_inst = db.instance_create(context, updates)
         self._from_db_object(context, self, db_inst, expected_attrs)
 
     @base.remotable

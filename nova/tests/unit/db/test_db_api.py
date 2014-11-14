@@ -1555,11 +1555,13 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def _assertEqualInstances(self, instance1, instance2):
         self._assertEqualObjects(instance1, instance2,
-                ignored_keys=['metadata', 'system_metadata', 'info_cache'])
+                ignored_keys=['metadata', 'system_metadata', 'info_cache',
+                              'extra'])
 
     def _assertEqualListsOfInstances(self, list1, list2):
         self._assertEqualListsOfObjects(list1, list2,
-                ignored_keys=['metadata', 'system_metadata', 'info_cache'])
+                ignored_keys=['metadata', 'system_metadata', 'info_cache',
+                              'extra'])
 
     def create_instance_with_args(self, **kwargs):
         if 'context' in kwargs:
@@ -1872,7 +1874,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualListsOfObjects([inst1, inst2], result,
             ignored_keys=['metadata', 'system_metadata',
                           'deleted', 'deleted_at', 'info_cache',
-                          'pci_devices'])
+                          'pci_devices', 'extra'])
 
     def test_instance_get_all_by_filters_deleted_and_soft_deleted(self):
         inst1 = self.create_instance_with_args()
@@ -1884,7 +1886,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualListsOfObjects([inst1, inst2], result,
             ignored_keys=['metadata', 'system_metadata',
                           'deleted', 'deleted_at', 'info_cache',
-                          'pci_devices'])
+                          'pci_devices', 'extra'])
 
     def test_instance_get_all_by_filters_deleted_no_soft_deleted(self):
         inst1 = self.create_instance_with_args()
@@ -1896,7 +1898,8 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                                  'soft_deleted': False})
         self._assertEqualListsOfObjects([inst1], result,
                 ignored_keys=['deleted', 'deleted_at', 'metadata',
-                              'system_metadata', 'info_cache', 'pci_devices'])
+                              'system_metadata', 'info_cache', 'pci_devices',
+                              'extra'])
 
     def test_instance_get_all_by_filters_alive_and_soft_deleted(self):
         inst1 = self.create_instance_with_args()
@@ -1952,7 +1955,8 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         results = db.instance_get_all_hung_in_rebooting(self.ctxt, 10)
         self._assertEqualListsOfObjects([instance], results,
             ignored_keys=['task_state', 'info_cache', 'security_groups',
-                          'metadata', 'system_metadata', 'pci_devices'])
+                          'metadata', 'system_metadata', 'pci_devices',
+                          'extra'])
         db.instance_update(self.ctxt, instance['uuid'], {"task_state": None})
 
         # Ensure the newly rebooted instance is not returned.

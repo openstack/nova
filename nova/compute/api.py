@@ -831,7 +831,7 @@ class API(base.Base):
             'availability_zone': availability_zone,
             'root_device_name': root_device_name,
             'progress': 0,
-            'pci_request_info': pci_request_info,
+            'pci_requests': pci_request_info,
             'numa_topology': numa_topology,
             'system_metadata': system_metadata}
 
@@ -873,9 +873,6 @@ class API(base.Base):
                         context, instance_type, boot_meta, instance,
                         security_groups, block_device_mapping,
                         num_instances, i, shutdown_terminate)
-                pci_requests = base_options['pci_request_info']
-                pci_requests.instance_uuid = instance.uuid
-                pci_requests.save(context)
                 instances.append(instance)
 
                 if instance_group:
@@ -1113,7 +1110,7 @@ class API(base.Base):
         filter_properties = self._build_filter_properties(context,
                 scheduler_hints, forced_host,
                 forced_node, instance_type,
-                base_options.get('pci_request_info'))
+                base_options.get('pci_requests'))
 
         for instance in instances:
             self._record_action_start(context, instance,

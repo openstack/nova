@@ -97,6 +97,13 @@ class CellsScheduler(base.Base):
         instance_values.pop('info_cache')
         instance_values.pop('security_groups')
 
+        # FIXME(danms): The instance was brutally serialized before being
+        # sent over RPC to us. Thus, the pci_requests value wasn't really
+        # sent in a useful form. Since it was getting ignored for cells
+        # before it was part of the Instance, skip it now until cells RPC
+        # is sending proper instance objects.
+        instance_values.pop('pci_requests', None)
+
         instances = []
         num_instances = len(instance_uuids)
         for i, instance_uuid in enumerate(instance_uuids):
