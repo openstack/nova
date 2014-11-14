@@ -5413,7 +5413,6 @@ def aggregate_update(context, aggregate_id, values):
 
         aggregate.update(values)
         aggregate.save(session=session)
-        values['metadata'] = metadata
         return aggregate_get(context, aggregate.id)
     else:
         raise exception.AggregateNotFound(aggregate_id=aggregate_id)
