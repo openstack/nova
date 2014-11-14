@@ -286,6 +286,7 @@ class BaseTestCase(test.TestCase):
         inst = objects.Instance(context=self.context)
         inst.vm_state = vm_states.ACTIVE
         inst.task_state = None
+        inst.power_state = power_state.RUNNING
         inst.image_ref = FAKE_IMAGE_REF
         inst.reservation_id = 'r-fakeres'
         inst.user_id = self.user_id
@@ -3977,6 +3978,13 @@ class ComputeTestCase(BaseTestCase):
                                       [], self.none_quotas)
 
         self.assertTrue(self.tokens_deleted)
+
+    def test_delete_instance_changes_power_state(self):
+        """Test that the power state is NOSTATE after deleting an instance."""
+        instance = self._create_fake_instance_obj()
+        self.compute._delete_instance(self.context, instance, [],
+                                      self.none_quotas)
+        self.assertEqual(power_state.NOSTATE, instance.power_state)
 
     def test_instance_termination_exception_sets_error(self):
         """Test that we handle InstanceTerminationFailure

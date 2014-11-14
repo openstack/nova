@@ -2510,10 +2510,11 @@ class ComputeManager(manager.Manager):
             #             is already in ERROR.
             self._cleanup_volumes(context, instance.uuid, bdms,
                     raise_exc=False)
-            # if a delete task succeed, always update vm state and task
+            # if a delete task succeeded, always update vm state and task
             # state without expecting task state to be DELETING
             instance.vm_state = vm_states.DELETED
             instance.task_state = None
+            instance.power_state = power_state.NOSTATE
             instance.terminated_at = timeutils.utcnow()
             instance.save()
             self._update_resource_tracker(context, instance)
