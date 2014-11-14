@@ -350,7 +350,7 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.compute_api.start,
                           self.context, instance)
 
-    def _test_stop(self, vm_state, force=False):
+    def _test_stop(self, vm_state, force=False, clean_shutdown=True):
         # Make sure 'progress' gets reset
         params = dict(task_state=None, progress=99, vm_state=vm_state)
         instance = self._create_instance_obj(params=params)
@@ -369,14 +369,17 @@ class _ComputeAPIUnitTestMixIn(object):
             rpcapi = self.compute_api.compute_rpcapi
 
         self.mox.StubOutWithMock(rpcapi, 'stop_instance')
-        rpcapi.stop_instance(self.context, instance, do_cast=True)
+        rpcapi.stop_instance(self.context, instance, do_cast=True,
+                             clean_shutdown=clean_shutdown)
 
         self.mox.ReplayAll()
 
         if force:
-            self.compute_api.force_stop(self.context, instance)
+            self.compute_api.force_stop(self.context, instance,
+                                        clean_shutdown=clean_shutdown)
         else:
-            self.compute_api.stop(self.context, instance)
+            self.compute_api.stop(self.context, instance,
+                                  clean_shutdown=clean_shutdown)
         self.assertEqual(task_states.POWERING_OFF,
                          instance.task_state)
         self.assertEqual(0, instance.progress)
@@ -389,6 +392,14 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_stop_forced_shutdown(self):
         self._test_stop(vm_states.ACTIVE, force=True)
+
+    def test_stop_without_clean_shutdown(self):
+        self._test_stop(vm_states.ACTIVE,
+                       clean_shutdown=False)
+
+    def test_stop_forced_without_clean_shutdown(self):
+        self._test_stop(vm_states.ACTIVE, force=True,
+                        clean_shutdown=False)
 
     def _test_stop_invalid_state(self, vm_state):
         params = dict(vm_state=vm_state)
