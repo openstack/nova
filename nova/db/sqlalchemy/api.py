@@ -2217,10 +2217,20 @@ def _instance_get_all_uuids_by_host(context, host, session=None):
 
 
 @require_admin_context
-def instance_get_all_by_host_and_node(context, host, node):
+def instance_get_all_by_host_and_node(context, host, node,
+                                      columns_to_join=None):
+    if columns_to_join is None:
+        manual_joins = []
+    else:
+        candidates = ['system_metadata', 'metadata']
+        manual_joins = filter(lambda x: x in candidates,
+                              columns_to_join)
+        columns_to_join = list(set(columns_to_join) - set(candidates))
     return _instances_fill_metadata(context,
-        _instance_get_all_query(context, joins=[]).filter_by(host=host).
-            filter_by(node=node).all(), manual_joins=[])
+            _instance_get_all_query(
+                context,
+                joins=columns_to_join).filter_by(host=host).
+                filter_by(node=node).all(), manual_joins=manual_joins)
 
 
 @require_admin_context

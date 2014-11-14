@@ -1041,8 +1041,9 @@ class _TestInstanceListObject(object):
         fakes = [self.fake_instance(1),
                  self.fake_instance(2)]
         self.mox.StubOutWithMock(db, 'instance_get_all_by_host_and_node')
-        db.instance_get_all_by_host_and_node(self.context, 'foo', 'bar'
-                                             ).AndReturn(fakes)
+        db.instance_get_all_by_host_and_node(self.context, 'foo', 'bar',
+                                             columns_to_join=None).AndReturn(
+                                                 fakes)
         self.mox.ReplayAll()
         inst_list = instance.InstanceList.get_by_host_and_node(self.context,
                                                                'foo', 'bar')

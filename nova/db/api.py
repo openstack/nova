@@ -685,9 +685,11 @@ def instance_get_all_by_host(context, host,
                                          use_slave=use_slave)
 
 
-def instance_get_all_by_host_and_node(context, host, node):
+def instance_get_all_by_host_and_node(context, host, node,
+                                      columns_to_join=None):
     """Get all instances belonging to a node."""
-    return IMPL.instance_get_all_by_host_and_node(context, host, node)
+    return IMPL.instance_get_all_by_host_and_node(
+        context, host, node, columns_to_join=columns_to_join)
 
 
 def instance_get_all_by_host_and_not_type(context, host, type_id=None):
