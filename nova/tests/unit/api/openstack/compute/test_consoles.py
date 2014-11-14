@@ -21,7 +21,8 @@ from lxml import etree
 from oslo.utils import timeutils
 import webob
 
-from nova.api.openstack.compute import consoles
+from nova.api.openstack.compute import consoles as consoles_v2
+from nova.api.openstack.compute.plugins.v3 import consoles as consoles_v21
 from nova.compute import vm_states
 from nova import console
 from nova import db
@@ -122,9 +123,9 @@ def stub_instance(id, user_id='fake', project_id='fake', host=None,
     return instance
 
 
-class ConsolesControllerTest(test.NoDBTestCase):
+class ConsolesControllerTestV21(test.NoDBTestCase):
     def setUp(self):
-        super(ConsolesControllerTest, self).setUp()
+        super(ConsolesControllerTestV21, self).setUp()
         self.flags(verbose=True)
         self.instance_db = FakeInstanceDB()
         self.stubs.Set(db, 'instance_get',
@@ -133,7 +134,10 @@ class ConsolesControllerTest(test.NoDBTestCase):
                        self.instance_db.return_server_by_uuid)
         self.uuid = str(stdlib_uuid.uuid4())
         self.url = '/v2/fake/servers/%s/consoles' % self.uuid
-        self.controller = consoles.Controller()
+        self._set_up_controller()
+
+    def _set_up_controller(self):
+        self.controller = consoles_v21.ConsolesController()
 
     def test_create_console(self):
         def fake_create_console(cons_self, context, instance_id):
@@ -187,7 +191,8 @@ class ConsolesControllerTest(test.NoDBTestCase):
 
     def test_show_console_unknown_instance(self):
         def fake_get_console(cons_self, context, instance_id, console_id):
-            raise exception.InstanceNotFound(instance_id=instance_id)
+            raise exception.ConsoleNotFoundForInstance(
+                instance_uuid=instance_id)
 
         self.stubs.Set(console.api.API, 'get_console', fake_get_console)
 
@@ -250,13 +255,19 @@ class ConsolesControllerTest(test.NoDBTestCase):
 
     def test_delete_console_unknown_instance(self):
         def fake_delete_console(cons_self, context, instance_id, console_id):
-            raise exception.InstanceNotFound(instance_id=instance_id)
+            raise exception.ConsoleNotFoundForInstance(
+                instance_uuid=instance_id)
 
         self.stubs.Set(console.api.API, 'delete_console', fake_delete_console)
 
         req = fakes.HTTPRequest.blank(self.url + '/20')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
                           req, self.uuid, '20')
+
+
+class ConsolesControllerTestV2(ConsolesControllerTestV21):
+    def _set_up_controller(self):
+        self.controller = consoles_v2.Controller()
 
 
 class TestConsolesXMLSerializer(test.NoDBTestCase):
@@ -267,7 +278,7 @@ class TestConsolesXMLSerializer(test.NoDBTestCase):
                                'host': 'fake_hostname',
                                'console_type': 'fake_type'}}
 
-        output = consoles.ConsoleTemplate().serialize(fixture)
+        output = consoles_v2.ConsoleTemplate().serialize(fixture)
         res_tree = etree.XML(output)
 
         self.assertEqual(res_tree.tag, 'console')
@@ -283,7 +294,7 @@ class TestConsolesXMLSerializer(test.NoDBTestCase):
                                 {'console': {'id': 11,
                                              'console_type': 'fake_type2'}}]}
 
-        output = consoles.ConsolesTemplate().serialize(fixture)
+        output = consoles_v2.ConsolesTemplate().serialize(fixture)
         res_tree = etree.XML(output)
 
         self.assertEqual(res_tree.tag, 'consoles')

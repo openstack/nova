@@ -1,1 +1,10 @@
-{"consoles": [{"console_type": "fake", "id": 1}]}
+{
+    "consoles": [
+        {
+            "console": {
+                "console_type": "fake",
+                "id": 1
+            }
+        }
+    ]
+}
