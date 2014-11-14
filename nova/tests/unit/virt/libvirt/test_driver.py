@@ -6568,7 +6568,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # in the spawn method of the LibvirtDriver returns immediately
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, 'get_info')
         libvirt_driver.LibvirtDriver.get_info(instance
-            ).AndReturn({'state': power_state.RUNNING})
+            ).AndReturn(hardware.InstanceInfo(state=power_state.RUNNING))
 
         # Start test
         self.mox.ReplayAll()
@@ -6610,7 +6610,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.create_image_called = True
 
         def fake_get_info(instance):
-            return {'state': power_state.RUNNING}
+            return hardware.InstanceInfo(state=power_state.RUNNING)
 
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 1
@@ -6643,7 +6643,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 self.cache_called_for_disk = True
 
         def fake_get_info(instance):
-            return {'state': power_state.RUNNING}
+            return hardware.InstanceInfo(state=power_state.RUNNING)
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(conn, '_get_guest_xml', fake_none)
@@ -6768,7 +6768,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.patch.object(conn, '_get_volume_config',
                                      return_value=disk_mock),
             mock.patch.object(conn, 'get_info',
-                              return_value={'state': power_state.RUNNING}),
+                              return_value=hardware.InstanceInfo(
+                              state=power_state.RUNNING)),
             mock.patch('nova.virt.disk.api.setup_container',
                        side_effect=check_setup_container),
             mock.patch('nova.virt.disk.api.teardown_container'),
@@ -6788,7 +6789,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             return None
 
         def fake_get_info(instance):
-            return {'state': power_state.RUNNING}
+            return hardware.InstanceInfo(state=power_state.RUNNING)
 
         class FakeLibvirtPciDevice():
             def dettach(self):
@@ -6863,7 +6864,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             return
 
         def fake_get_info(instance):
-            return {'state': power_state.RUNNING}
+            return hardware.InstanceInfo(state=power_state.RUNNING)
 
         # Stop 'libvirt_driver._create_image' touching filesystem
         self.stubs.Set(nova.virt.libvirt.imagebackend.Backend, "image",
@@ -6946,7 +6947,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             return
 
         def fake_get_info(instance):
-            return {'state': power_state.RUNNING}
+            return hardware.InstanceInfo(state=power_state.RUNNING)
 
         # Stop 'libvirt_driver._create_image' touching filesystem
         self.stubs.Set(nova.virt.libvirt.imagebackend.Backend, "image",
@@ -7621,7 +7622,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 state = power_state.SHUTDOWN
             else:
                 state = power_state.RUNNING
-            return dict(state=state)
+            return hardware.InstanceInfo(state=state)
 
         self.stubs.Set(conn, 'get_info', fake_get_info)
 
@@ -7713,7 +7714,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 state = power_state.SHUTDOWN
             else:
                 state = power_state.RUNNING
-            return dict(state=state)
+            return hardware.InstanceInfo(state=state)
 
         def _get_inst(with_meta=True):
             inst_ref = self.test_instance
@@ -7966,7 +7967,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             return mock
 
         def fake_get_info(instance_name):
-            return {'state': power_state.SHUTDOWN, 'id': -1}
+            return hardware.InstanceInfo(state=power_state.SHUTDOWN, id=-1)
 
         def fake_delete_instance_files(instance):
             return None
@@ -8005,7 +8006,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             return mock
 
         def fake_get_info(instance_name):
-            return {'state': power_state.SHUTDOWN, 'id': -1}
+            return hardware.InstanceInfo(state=power_state.SHUTDOWN, id=-1)
 
         def fake_delete_instance_files(instance):
             return None
@@ -8034,7 +8035,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             return mock
 
         def fake_get_info(instance_name):
-            return {'state': power_state.SHUTDOWN, 'id': -1}
+            return hardware.InstanceInfo(state=power_state.SHUTDOWN, id=-1)
 
         def fake_delete_instance_files(instance):
             return None
@@ -8062,7 +8063,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             return mock
 
         def fake_get_info(instance_name):
-            return {'state': power_state.SHUTDOWN, 'id': -1}
+            return hardware.InstanceInfo(state=power_state.SHUTDOWN)
 
         def fake_delete_instance_files(instance):
             return None
@@ -9410,13 +9411,12 @@ Active:          8381604 kB
         lookup_mock.return_value = dom_mock
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         info = conn.get_info(instance)
-        expect = {'state': 1,
-                  'max_mem': 2048,
-                  'mem': 737,
-                  'num_cpu': 8,
-                  'cpu_time': 12345,
-                  'id': mock.sentinel.instance_id}
-        self.assertEqual(expect, info)
+        self.assertEqual(1, info.state)
+        self.assertEqual(2048, info.max_mem_kb)
+        self.assertEqual(737, info.mem_kb)
+        self.assertEqual(8, info.num_cpu)
+        self.assertEqual(12345, info.cpu_time_ns)
+        self.assertEqual(mock.sentinel.instance_id, info.id)
         dom_mock.info.assert_called_once_with()
         dom_mock.ID.assert_called_once_with()
         lookup_mock.assert_called_once_with(instance['name'])
@@ -9456,7 +9456,8 @@ Active:          8381604 kB
         mock_image.path = '/tmp/test.img'
         conn.image_backend.image.return_value = mock_image
         mock_setup_container.return_value = '/dev/nbd0'
-        mock_get_info.return_value = {'state': power_state.RUNNING}
+        mock_get_info.return_value = hardware.InstanceInfo(
+            state=power_state.RUNNING)
 
         with contextlib.nested(
             mock.patch.object(conn, '_create_images_and_backing'),
@@ -9518,7 +9519,8 @@ Active:          8381604 kB
         conn.image_backend.image.return_value = mock_image
         mock_setup_container.return_value = '/dev/nbd0'
         mock_chown.side_effect = chown_side_effect
-        mock_get_info.return_value = {'state': power_state.RUNNING}
+        mock_get_info.return_value = hardware.InstanceInfo(
+            state=power_state.RUNNING)
 
         with contextlib.nested(
             mock.patch.object(conn, '_create_images_and_backing'),
@@ -9566,7 +9568,8 @@ Active:          8381604 kB
         mock_image.path = '/tmp/test.img'
         conn.image_backend.image.return_value = mock_image
         mock_setup_container.return_value = '/dev/nbd0'
-        mock_get_info.return_value = {'state': power_state.SHUTDOWN}
+        mock_get_info.return_value = hardware.InstanceInfo(
+            state=power_state.SHUTDOWN)
 
         with contextlib.nested(
             mock.patch.object(conn, '_create_images_and_backing'),
@@ -10923,9 +10926,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             if instance['name'] == "not_found":
                 raise exception.InstanceNotFound(instance_id=instance['uuid'])
             elif instance['name'] == "running":
-                return {'state': power_state.RUNNING}
+                return hardware.InstanceInfo(state=power_state.RUNNING)
             else:
-                return {'state': power_state.SHUTDOWN}
+                return hardware.InstanceInfo(state=power_state.SHUTDOWN)
 
         self.stubs.Set(self.libvirtconnection, 'get_info',
                        fake_get_info)
@@ -11058,9 +11061,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         def fake_get_info(instance):
             if powered_on:
-                return {'state': power_state.RUNNING}
+                return hardware.InstanceInfo(state=power_state.RUNNING)
             else:
-                return {'state': power_state.SHUTDOWN}
+                return hardware.InstanceInfo(state=power_state.SHUTDOWN)
 
         def fake_disk_resize(info, size):
             self.fake_disk_resize_called = True
@@ -11125,9 +11128,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         def fake_get_info(instance):
             if powered_on:
-                return {'state': power_state.RUNNING}
+                return hardware.InstanceInfo(state=power_state.RUNNING)
             else:
-                return {'state': power_state.SHUTDOWN}
+                return hardware.InstanceInfo(state=power_state.SHUTDOWN)
 
         def fake_to_xml(context, instance, network_info, disk_info,
                         image_meta=None, rescue=None,

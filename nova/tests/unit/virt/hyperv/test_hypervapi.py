@@ -354,7 +354,7 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         info = self._conn.get_info(self._instance_data)
         self._mox.VerifyAll()
 
-        self.assertEqual(info["state"], power_state.RUNNING)
+        self.assertEqual(info.state, power_state.RUNNING)
 
     def test_get_info_instance_not_found(self):
         # Tests that InstanceNotFound is raised if the instance isn't found

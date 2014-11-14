@@ -47,6 +47,7 @@ from nova import utils
 from nova.virt import configdrive
 from nova.virt import diagnostics
 from nova.virt import driver
+from nova.virt import hardware
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
@@ -1153,11 +1154,11 @@ class VMwareVMOps(object):
                 self._session, vm_props)
         max_mem = int(query.get('summary.config.memorySizeMB', 0)) * 1024
         num_cpu = int(query.get('summary.config.numCpu', 0))
-        return {'state': VMWARE_POWER_STATES[query['runtime.powerState']],
-                'max_mem': max_mem,
-                'mem': max_mem,
-                'num_cpu': num_cpu,
-                'cpu_time': 0}
+        return hardware.InstanceInfo(
+            state=VMWARE_POWER_STATES[query['runtime.powerState']],
+            max_mem_kb=max_mem,
+            mem_kb=max_mem,
+            num_cpu=num_cpu)
 
     def _get_diagnostics(self, instance):
         """Return data about VM diagnostics."""

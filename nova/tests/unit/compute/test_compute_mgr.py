@@ -45,6 +45,7 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_instance_fault
 from nova.tests.unit.objects import test_instance_info_cache
 from nova import utils
+from nova.virt import hardware
 
 
 CONF = cfg.CONF
@@ -487,9 +488,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                     [], [], power_on)
         instance.save()
         self.compute.driver.get_info(instance).AndReturn(
-            {'state': power_state.SHUTDOWN})
+            hardware.InstanceInfo(state=power_state.SHUTDOWN))
         self.compute.driver.get_info(instance).AndReturn(
-            {'state': power_state.SHUTDOWN})
+            hardware.InstanceInfo(state=power_state.SHUTDOWN))
 
         self.mox.ReplayAll()
 

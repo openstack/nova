@@ -34,6 +34,7 @@ from nova.tests.unit.virt.ironic import utils as ironic_utils
 from nova.virt import driver
 from nova.virt import fake
 from nova.virt import firewall
+from nova.virt import hardware
 from nova.virt.ironic import client_wrapper as cw
 from nova.virt.ironic import driver as ironic_driver
 from nova.virt.ironic import ironic_states
@@ -503,29 +504,24 @@ class IronicDriverTestCase(test.NoDBTestCase):
         # ironic_states.POWER_ON should be mapped to
         # nova_states.RUNNING
         memory_kib = properties['memory_mb'] * 1024
-        expected = {'state': nova_states.RUNNING,
-                    'max_mem': memory_kib,
-                    'mem': memory_kib,
-                    'num_cpu': properties['cpus'],
-                    'cpu_time': 0}
         instance = fake_instance.fake_instance_obj('fake-context',
                                                    uuid=instance_uuid)
         result = self.driver.get_info(instance)
-        self.assertEqual(expected, result)
+        self.assertEqual(hardware.InstanceInfo(state=nova_states.RUNNING,
+                                               max_mem_kb=memory_kib,
+                                               mem_kb=memory_kib,
+                                               num_cpu=properties['cpus']),
+                         result)
 
     @mock.patch.object(FAKE_CLIENT.node, 'get_by_instance_uuid')
     def test_get_info_http_not_found(self, mock_gbiu):
         mock_gbiu.side_effect = ironic_exception.NotFound()
 
-        expected = {'state': nova_states.NOSTATE,
-                    'max_mem': 0,
-                    'mem': 0,
-                    'num_cpu': 0,
-                    'cpu_time': 0}
         instance = fake_instance.fake_instance_obj(
                                   self.ctx, uuid=uuidutils.generate_uuid())
         result = self.driver.get_info(instance)
-        self.assertEqual(expected, result)
+        self.assertEqual(hardware.InstanceInfo(state=nova_states.NOSTATE),
+                         result)
 
     @mock.patch.object(FAKE_CLIENT, 'node')
     def test_macs_for_instance(self, mock_node):

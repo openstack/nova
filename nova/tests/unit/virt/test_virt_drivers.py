@@ -37,6 +37,7 @@ from nova.tests.unit.virt.libvirt import fake_libvirt_utils
 from nova.virt import block_device as driver_block_device
 from nova.virt import event as virtevent
 from nova.virt import fake
+from nova.virt import hardware
 from nova.virt import libvirt
 from nova.virt.libvirt import imagebackend
 
@@ -500,11 +501,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     def test_get_info(self):
         instance_ref, network_info = self._get_running_instance()
         info = self.connection.get_info(instance_ref)
-        self.assertIn('state', info)
-        self.assertIn('max_mem', info)
-        self.assertIn('mem', info)
-        self.assertIn('num_cpu', info)
-        self.assertIn('cpu_time', info)
+        self.assertIsInstance(info, hardware.InstanceInfo)
 
     @catch_notimplementederror
     def test_get_info_for_unknown_instance(self):

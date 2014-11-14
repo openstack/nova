@@ -38,6 +38,7 @@ from nova import test
 from nova.tests.unit.virt.xenapi import stubs
 from nova.tests.unit.virt.xenapi import test_xenapi
 from nova import utils
+from nova.virt import hardware
 from nova.virt.xenapi.client import session as xenapi_session
 from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake
@@ -2412,11 +2413,8 @@ class VMInfoTests(VMUtilsTestBase):
 
         self.session.call_xenapi.side_effect = call_xenapi
 
-        expected = {'state': power_state.RUNNING,
-                    'max_mem': 10L,
-                    'mem': 9L,
-                    'num_cpu': '5',
-                    'cpu_time': 0}
-
-        self.assertEqual(vm_utils.compile_info(self.session, "dummy"),
-                         expected)
+        info = vm_utils.compile_info(self.session, "dummy")
+        self.assertEqual(hardware.InstanceInfo(state=power_state.RUNNING,
+                                               max_mem_kb=10L, mem_kb=9L,
+                                               num_cpu='5', cpu_time_ns=0),
+                         info)

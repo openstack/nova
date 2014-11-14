@@ -30,6 +30,7 @@ from nova.tests.unit import fake_instance
 import nova.tests.unit.image.fake
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
+from nova.virt import hardware
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import ds_util
@@ -287,11 +288,11 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             props)
         mock_get_vm_ref.assert_called_once_with(self._session,
             self._instance)
-        self.assertEqual(power_state.RUNNING, info['state'])
-        self.assertEqual(128 * 1024, info['max_mem'])
-        self.assertEqual(128 * 1024, info['mem'])
-        self.assertEqual(4, info['num_cpu'])
-        self.assertEqual(0, info['cpu_time'])
+        expected = hardware.InstanceInfo(state=power_state.RUNNING,
+                                         max_mem_kb=128 * 1024,
+                                         mem_kb=128 * 1024,
+                                         num_cpu=4)
+        self.assertEqual(expected, info)
 
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake_ref')
     @mock.patch.object(driver.VMwareAPISession, '_call_method')
@@ -311,11 +312,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             props)
         mock_get_vm_ref.assert_called_once_with(self._session,
             self._instance)
-        self.assertEqual(power_state.SHUTDOWN, info['state'])
-        self.assertEqual(0, info['max_mem'])
-        self.assertEqual(0, info['mem'])
-        self.assertEqual(0, info['num_cpu'])
-        self.assertEqual(0, info['cpu_time'])
+        self.assertEqual(hardware.InstanceInfo(state=power_state.SHUTDOWN),
+                         info)
 
     def _test_get_datacenter_ref_and_name(self, ds_ref_exists=False):
         instance_ds_ref = mock.Mock()
