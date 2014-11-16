@@ -57,7 +57,7 @@ class SingleKeyManager(mock_key_mgr.MockKeyManager):
     def store_key(self, ctxt, key, **kwargs):
         if key != self.key:
             raise exception.KeyManagerError(
-                        reason="cannot store arbitrary keys")
+                        reason=_("cannot store arbitrary keys"))
 
         return super(SingleKeyManager, self).store_key(ctxt, key, **kwargs)
 
@@ -67,6 +67,6 @@ class SingleKeyManager(mock_key_mgr.MockKeyManager):
 
         if key_id != self.key_id:
             raise exception.KeyManagerError(
-                        reason="cannot delete non-existent key")
+                        reason=_("cannot delete non-existent key"))
 
         LOG.warn(_("Not deleting key %s"), key_id)
