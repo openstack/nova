@@ -23,6 +23,7 @@ from oslo.config import cfg
 from oslo import messaging
 from oslo.serialization import jsonutils
 from oslo.utils import timeutils
+import six
 
 from nova.api.ec2 import ec2utils
 from nova.compute import arch
@@ -1743,18 +1744,19 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.mox.StubOutWithMock(scheduler_utils,
                 'set_vm_state_and_notify')
 
-        ex = IOError()
+        expected_ex = IOError('fake error')
         live_migrate.execute(self.context, mox.IsA(objects.Instance),
                              'destination', 'block_migration',
-                             'disk_over_commit').AndRaise(ex)
+                             'disk_over_commit').AndRaise(expected_ex)
         self.mox.ReplayAll()
 
         self.conductor = utils.ExceptionHelper(self.conductor)
 
-        self.assertRaises(exc.MigrationError,
+        ex = self.assertRaises(exc.MigrationError,
             self.conductor.migrate_server, self.context, inst_obj,
             {'host': 'destination'}, True, False, None, 'block_migration',
             'disk_over_commit')
+        self.assertEqual(ex.kwargs['reason'], six.text_type(expected_ex))
 
     def test_set_vm_state_and_notify(self):
         self.mox.StubOutWithMock(scheduler_utils,

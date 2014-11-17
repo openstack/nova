@@ -589,7 +589,7 @@ class ComputeTaskManager(base.Base):
                           ' %(dest)s unexpectedly failed.'),
                       {'instance_id': instance['uuid'], 'dest': destination},
                       exc_info=True)
-            raise exception.MigrationError(reason=ex)
+            raise exception.MigrationError(reason=six.text_type(ex))
 
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,
