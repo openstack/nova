@@ -2090,15 +2090,22 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
             expected = action
         self.assertEqual(result, expected)
 
+    def _test_host_action_no_param(self, method, action, expected=None):
+        result = method(action)
+        if not expected:
+            expected = action
+        self.assertEqual(result, expected)
+
     def test_host_reboot(self):
-        self._test_host_action(self.conn.host_power_action, 'reboot')
+        self._test_host_action_no_param(self.conn.host_power_action, 'reboot')
 
     def test_host_shutdown(self):
-        self._test_host_action(self.conn.host_power_action, 'shutdown')
+        self._test_host_action_no_param(self.conn.host_power_action,
+            'shutdown')
 
     def test_host_startup(self):
         self.assertRaises(NotImplementedError,
-                          self.conn.host_power_action, 'host', 'startup')
+                          self.conn.host_power_action, 'startup')
 
     def test_host_maintenance_on(self):
         self._test_host_action(self.conn.host_maintenance_mode,
@@ -2110,14 +2117,16 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
 
     def test_set_enable_host_enable(self):
         _create_service_entries(self.context, values={'nova': ['fake-mini']})
-        self._test_host_action(self.conn.set_host_enabled, True, 'enabled')
+        self._test_host_action_no_param(self.conn.set_host_enabled,
+                                        True, 'enabled')
         service = db.service_get_by_args(self.context, 'fake-mini',
                                          'nova-compute')
         self.assertEqual(service.disabled, False)
 
     def test_set_enable_host_disable(self):
         _create_service_entries(self.context, values={'nova': ['fake-mini']})
-        self._test_host_action(self.conn.set_host_enabled, False, 'disabled')
+        self._test_host_action_no_param(self.conn.set_host_enabled,
+                                        False, 'disabled')
         service = db.service_get_by_args(self.context, 'fake-mini',
                                          'nova-compute')
         self.assertEqual(service.disabled, True)

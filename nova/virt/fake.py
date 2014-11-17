@@ -450,7 +450,7 @@ class FakeDriver(driver.ComputeDriver):
         """Removes the named VM, as if it crashed. For testing."""
         self.instances.pop(instance_name)
 
-    def host_power_action(self, host, action):
+    def host_power_action(self, action):
         """Reboots, shuts down or powers up the host."""
         return action
 
@@ -462,7 +462,7 @@ class FakeDriver(driver.ComputeDriver):
             return 'off_maintenance'
         return 'on_maintenance'
 
-    def set_host_enabled(self, host, enabled):
+    def set_host_enabled(self, enabled):
         """Sets the specified host's ability to accept new instances."""
         if enabled:
             return 'enabled'

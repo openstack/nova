@@ -138,7 +138,7 @@ class HostOps(object):
 
         return dic
 
-    def host_power_action(self, host, action):
+    def host_power_action(self, action):
         """Reboots, shuts down or powers up the host."""
         pass
 

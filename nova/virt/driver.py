@@ -1012,7 +1012,7 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def host_power_action(self, host, action):
+    def host_power_action(self, action):
         """Reboots, shuts down or powers up the host."""
         raise NotImplementedError()
 
@@ -1022,7 +1022,7 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def set_host_enabled(self, host, enabled):
+    def set_host_enabled(self, enabled):
         """Sets the specified host's ability to accept new instances."""
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
