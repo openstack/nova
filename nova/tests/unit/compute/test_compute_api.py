@@ -77,7 +77,7 @@ class _ComputeAPIUnitTestMixIn(object):
             exclude_states = set()
         return vm_state - exclude_states
 
-    def _create_flavor(self, params=None):
+    def _create_flavor(self, **updates):
         flavor = {'id': 1,
                   'flavorid': 1,
                   'name': 'm1.tiny',
@@ -91,10 +91,15 @@ class _ComputeAPIUnitTestMixIn(object):
                   'deleted': 0,
                   'disabled': False,
                   'is_public': True,
+                  'deleted_at': None,
+                  'created_at': datetime.datetime(2012, 1, 19, 18,
+                                                  49, 30, 877329),
+                  'updated_at': None,
                  }
-        if params:
-            flavor.update(params)
-        return flavor
+        if updates:
+            flavor.update(updates)
+        return objects.Flavor._from_db_object(self.context, objects.Flavor(),
+                                              flavor)
 
     def _create_instance_obj(self, params=None, flavor=None):
         """Create a test instance."""
@@ -129,7 +134,7 @@ class _ComputeAPIUnitTestMixIn(object):
         instance.project_id = self.project_id
         instance.host = 'fake_host'
         instance.node = NODENAME
-        instance.instance_type_id = flavor['id']
+        instance.instance_type_id = flavor.id
         instance.ami_launch_index = 0
         instance.memory_mb = 0
         instance.vcpus = 0
@@ -516,10 +521,9 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, objects.Migration(),
                 fake_db_migration)
         inst.instance_type_id = migration.new_instance_type_id
-        old_flavor = {'vcpus': 1,
-                      'memory_mb': 512}
-        deltas['cores'] = -old_flavor['vcpus']
-        deltas['ram'] = -old_flavor['memory_mb']
+        old_flavor = self._create_flavor(vcpus=1, memory_mb=512)
+        deltas['cores'] = -old_flavor.vcpus
+        deltas['ram'] = -old_flavor.memory_mb
 
         self.mox.StubOutWithMock(objects.Migration,
                                  'get_by_instance_and_status')
@@ -1220,11 +1224,11 @@ class _ComputeAPIUnitTestMixIn(object):
 
         current_flavor = flavors.extract_flavor(fake_inst)
         if flavor_id_passed:
-            new_flavor = dict(id=200, flavorid='new-flavor-id',
-                              name='new_flavor', disabled=False)
+            new_flavor = self._create_flavor(id=200, flavorid='new-flavor-id',
+                                name='new_flavor', disabled=False)
             if same_flavor:
                 cur_flavor = flavors.extract_flavor(fake_inst)
-                new_flavor['id'] = cur_flavor['id']
+                new_flavor.id = cur_flavor.id
             flavors.get_flavor_by_flavor_id(
                     'new-flavor-id',
                     read_deleted='no').AndReturn(new_flavor)
@@ -1240,8 +1244,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                                            resvs)
 
             self.compute_api._upsize_quota_delta(
-                    self.context, new_flavor,
-                    current_flavor).AndReturn('deltas')
+                    self.context, mox.IsA(objects.Flavor),
+                    mox.IsA(objects.Flavor)).AndReturn('deltas')
             self.compute_api._reserve_quota_delta(self.context, 'deltas',
                     fake_inst).AndReturn(fake_quotas)
 
@@ -1274,9 +1278,9 @@ class _ComputeAPIUnitTestMixIn(object):
 
                 def _check_mig(ctxt):
                     self.assertEqual(fake_inst.uuid, mig.instance_uuid)
-                    self.assertEqual(current_flavor['id'],
+                    self.assertEqual(current_flavor.id,
                                      mig.old_instance_type_id)
-                    self.assertEqual(new_flavor['id'],
+                    self.assertEqual(new_flavor.id,
                                      mig.new_instance_type_id)
                     self.assertEqual('finished', mig.status)
 
@@ -1299,7 +1303,8 @@ class _ComputeAPIUnitTestMixIn(object):
             self.compute_api.compute_task_api.resize_instance(
                     self.context, fake_inst, extra_kwargs,
                     scheduler_hint=scheduler_hint,
-                    flavor=new_flavor, reservations=expected_reservations)
+                    flavor=mox.IsA(objects.Flavor),
+                    reservations=expected_reservations)
 
         self.mox.ReplayAll()
 
@@ -1376,8 +1381,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                  'resize_instance')
 
         fake_inst = obj_base.obj_to_primitive(self._create_instance_obj())
-        fake_flavor = dict(id=200, flavorid='flavor-id', name='foo',
-                           disabled=True)
+        fake_flavor = self._create_flavor(id=200, flavorid='flavor-id',
+                            name='foo', disabled=True)
 
         flavors.get_flavor_by_flavor_id(
                 'flavor-id', read_deleted='no').AndReturn(fake_flavor)
@@ -1391,8 +1396,8 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
     def test_resize_to_zero_disk_flavor_fails(self, get_flavor_by_flavor_id):
         fake_inst = self._create_instance_obj()
-        fake_flavor = dict(id=200, flavorid='flavor-id', name='foo',
-                           root_gb=0)
+        fake_flavor = self._create_flavor(id=200, flavorid='flavor-id',
+                            name='foo', root_gb=0)
 
         get_flavor_by_flavor_id.return_value = fake_flavor
 
@@ -1412,15 +1417,14 @@ class _ComputeAPIUnitTestMixIn(object):
                                  'resize_instance')
 
         fake_inst = obj_base.obj_to_primitive(self._create_instance_obj())
-        current_flavor = flavors.extract_flavor(fake_inst)
-        fake_flavor = dict(id=200, flavorid='flavor-id', name='foo',
-                           disabled=False)
+        fake_flavor = self._create_flavor(id=200, flavorid='flavor-id',
+                            name='foo', disabled=False)
         flavors.get_flavor_by_flavor_id(
                 'flavor-id', read_deleted='no').AndReturn(fake_flavor)
         deltas = dict(resource=0)
         self.compute_api._upsize_quota_delta(
-                self.context, fake_flavor,
-                current_flavor).AndReturn(deltas)
+                self.context, mox.IsA(objects.Flavor),
+                mox.IsA(objects.Flavor)).AndReturn(deltas)
         usage = dict(in_use=0, reserved=0)
         quotas = {'resource': 0}
         usages = {'resource': usage}

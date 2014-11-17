@@ -103,6 +103,10 @@ class SchedulerAPI(object):
                                      serializer=serializer)
 
     def select_destinations(self, ctxt, request_spec, filter_properties):
+        if 'instance_type' in filter_properties:
+            flavor = filter_properties['instance_type']
+            flavor_p = objects_base.obj_to_primitive(flavor)
+            filter_properties = dict(filter_properties, instance_type=flavor_p)
         cctxt = self.client.prepare()
         return cctxt.call(ctxt, 'select_destinations',
             request_spec=request_spec, filter_properties=filter_properties)

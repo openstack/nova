@@ -1193,7 +1193,7 @@ class _BaseTaskTestCase(object):
         inst = fake_instance.fake_db_instance(image_ref='image_ref')
         inst_obj = objects.Instance._from_db_object(
             self.context, objects.Instance(), inst, [])
-        flavor = flavors.get_default_flavor()
+        flavor = obj_base.obj_to_primitive(flavors.get_default_flavor())
         flavor['extra_specs'] = 'extra_specs'
         request_spec = {'instance_type': flavor,
                         'instance_properties': {}}
@@ -1243,10 +1243,9 @@ class _BaseTaskTestCase(object):
             system_metadata=system_metadata,
             expected_attrs=['system_metadata']) for i in xrange(2)]
         instance_type = flavors.extract_flavor(instances[0])
-        instance_type['extra_specs'] = 'fake-specs'
+        instance_type_p = jsonutils.to_primitive(instance_type)
         instance_properties = jsonutils.to_primitive(instances[0])
 
-        self.mox.StubOutWithMock(db, 'flavor_extra_specs_get')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.conductor_manager.scheduler_client,
                                  'select_destinations')
@@ -1256,15 +1255,12 @@ class _BaseTaskTestCase(object):
         self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
                                  'build_and_run_instance')
 
-        db.flavor_extra_specs_get(
-                self.context,
-                instance_type['flavorid']).AndReturn('fake-specs')
         scheduler_utils.setup_instance_group(self.context, None, None)
         self.conductor_manager.scheduler_client.select_destinations(
                 self.context, {'image': {'fake_data': 'should_pass_silently'},
                     'instance_properties': jsonutils.to_primitive(
                         instances[0]),
-                    'instance_type': instance_type,
+                    'instance_type': instance_type_p,
                     'instance_uuids': [inst.uuid for inst in instances],
                     'num_instances': 2},
                 {'retry': {'num_attempts': 1, 'hosts': []}}).AndReturn(
@@ -1284,7 +1280,7 @@ class _BaseTaskTestCase(object):
                 request_spec={
                     'image': {'fake_data': 'should_pass_silently'},
                     'instance_properties': instance_properties,
-                    'instance_type': instance_type,
+                    'instance_type': instance_type_p,
                     'instance_uuids': [inst.uuid for inst in instances],
                     'num_instances': 2},
                 filter_properties={'retry': {'num_attempts': 1,
@@ -1310,7 +1306,7 @@ class _BaseTaskTestCase(object):
                 request_spec={
                     'image': {'fake_data': 'should_pass_silently'},
                     'instance_properties': instance_properties,
-                    'instance_type': instance_type,
+                    'instance_type': instance_type_p,
                     'instance_uuids': [inst.uuid for inst in instances],
                     'num_instances': 2},
                 filter_properties={'limits': [],
