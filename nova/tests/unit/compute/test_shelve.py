@@ -241,7 +241,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.compute.driver.spawn(self.context, instance, image,
                 injected_files=[], admin_password=None,
                 network_info=[],
-                block_device_info='fake_bdm')
+                block_device_info='fake_bdm',
+                instance_type=None)
         self.compute._get_power_state(self.context, instance).AndReturn(123)
         db.instance_update_and_get_original(self.context, instance['uuid'],
                 {'power_state': 123,
@@ -313,7 +314,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.compute.driver.spawn(self.context, instance, None,
                 injected_files=[], admin_password=None,
                 network_info=[],
-                block_device_info='fake_bdm')
+                block_device_info='fake_bdm',
+                instance_type=None)
         self.compute._get_power_state(self.context, instance).AndReturn(123)
         db.instance_update_and_get_original(self.context, instance['uuid'],
                 {'power_state': 123,
