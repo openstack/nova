@@ -2319,7 +2319,8 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = self._get_guest_xml(context, instance, network_info,
                                   disk_info, image_meta,
                                   block_device_info=block_device_info,
-                                  write_to_disk=True)
+                                  write_to_disk=True,
+                                  flavor=flavor)
         self._create_domain_and_network(context, xml, instance, network_info,
                                         disk_info,
                                         block_device_info=block_device_info)
@@ -3662,7 +3663,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_guest_config(self, instance, network_info, image_meta,
                           disk_info, rescue=None, block_device_info=None,
-                          context=None):
+                          context=None, flavor=None):
         """Get config data for parameters.
 
         :param rescue: optional dictionary that should contain the key
@@ -3670,9 +3671,10 @@ class LibvirtDriver(driver.ComputeDriver):
             'kernel_id' if a kernel is needed for the rescue image.
         """
         ctxt = context or nova_context.get_admin_context()
-        with utils.temporary_mutation(ctxt, read_deleted="yes"):
-            flavor = objects.Flavor.get_by_id(ctxt,
-                                              instance['instance_type_id'])
+        if flavor is None:
+            with utils.temporary_mutation(ctxt, read_deleted="yes"):
+                flavor = objects.Flavor.get_by_id(ctxt,
+                                                  instance['instance_type_id'])
         inst_path = libvirt_utils.get_instance_path(instance)
         disk_mapping = disk_info['mapping']
         img_meta_prop = image_meta.get('properties', {}) if image_meta else {}
@@ -3907,7 +3909,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_guest_xml(self, context, instance, network_info, disk_info,
                        image_meta=None, rescue=None,
-                       block_device_info=None, write_to_disk=False):
+                       block_device_info=None, write_to_disk=False,
+                       flavor=None):
 
         if image_meta is None:
             image_ref = instance['image_ref']
@@ -3930,7 +3933,7 @@ class LibvirtDriver(driver.ComputeDriver):
         LOG.debug(strutils.mask_password(msg), instance=instance)
         conf = self._get_guest_config(instance, network_info, image_meta,
                                       disk_info, rescue, block_device_info,
-                                      context)
+                                      context, flavor=flavor)
         xml = conf.to_xml()
 
         if write_to_disk:
