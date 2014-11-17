@@ -18,6 +18,8 @@ import datetime
 from oslo.utils import timeutils
 
 from nova.api.openstack.compute.contrib import instance_usage_audit_log as ial
+from nova.api.openstack.compute.plugins.v3 import instance_usage_audit_log as \
+    v21_ial
 from nova import context
 from nova import db
 from nova import exception
@@ -109,12 +111,12 @@ def fake_last_completed_audit_period(unit=None, before=None):
     return begin1, end1
 
 
-class InstanceUsageAuditLogTest(test.NoDBTestCase):
+class InstanceUsageAuditLogTestV21(test.NoDBTestCase):
     def setUp(self):
-        super(InstanceUsageAuditLogTest, self).setUp()
+        super(InstanceUsageAuditLogTestV21, self).setUp()
         self.context = context.get_admin_context()
         timeutils.set_time_override(datetime.datetime(2012, 7, 5, 10, 0, 0))
-        self.controller = ial.InstanceUsageAuditLogController()
+        self._set_up_controller()
         self.host_api = self.controller.host_api
 
         def fake_service_get_all(context, disabled):
@@ -128,8 +130,11 @@ class InstanceUsageAuditLogTest(test.NoDBTestCase):
         self.stubs.Set(db, 'task_log_get_all',
                        fake_task_log_get_all)
 
+    def _set_up_controller(self):
+        self.controller = v21_ial.InstanceUsageAuditLogController()
+
     def tearDown(self):
-        super(InstanceUsageAuditLogTest, self).tearDown()
+        super(InstanceUsageAuditLogTestV21, self).tearDown()
         timeutils.clear_time_override()
 
     def test_index(self):
@@ -208,3 +213,8 @@ class InstanceUsageAuditLogTest(test.NoDBTestCase):
         self.assertEqual(0, logs['num_hosts_not_run'])
         self.assertEqual("ALL hosts done. 3 errors.",
                          logs['overall_status'])
+
+
+class InstanceUsageAuditLogTest(InstanceUsageAuditLogTestV21):
+    def _set_up_controller(self):
+        self.controller = ial.InstanceUsageAuditLogController()
