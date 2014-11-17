@@ -2621,7 +2621,7 @@ class API(base.Base):
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.PAUSED, vm_states.SUSPENDED])
-    def shelve(self, context, instance):
+    def shelve(self, context, instance, clean_shutdown=True):
         """Shelve an instance.
 
         Shuts down an instance and frees it up to be removed from the
@@ -2639,20 +2639,21 @@ class API(base.Base):
                     'snapshot')
             image_id = image_meta['id']
             self.compute_rpcapi.shelve_instance(context, instance=instance,
-                    image_id=image_id)
+                    image_id=image_id, clean_shutdown=clean_shutdown)
         else:
             self.compute_rpcapi.shelve_offload_instance(context,
-                    instance=instance)
+                    instance=instance, clean_shutdown=clean_shutdown)
 
     @wrap_check_policy
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.SHELVED])
-    def shelve_offload(self, context, instance):
+    def shelve_offload(self, context, instance, clean_shutdown=True):
         """Remove a shelved instance from the hypervisor."""
         instance.task_state = task_states.SHELVING_OFFLOADING
         instance.save(expected_task_state=[None])
 
-        self.compute_rpcapi.shelve_offload_instance(context, instance=instance)
+        self.compute_rpcapi.shelve_offload_instance(context, instance=instance,
+            clean_shutdown=clean_shutdown)
 
     @wrap_check_policy
     @check_instance_lock
