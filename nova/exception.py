@@ -677,7 +677,7 @@ class NetworkNotFoundForProject(NotFound):
 
 class NetworkAmbiguous(Invalid):
     msg_fmt = _("More than one possible network found. Specify "
-                "network ID(s) to select which one(s) to connect to,")
+                "network ID(s) to select which one(s) to connect to.")
 
 
 class NetworkRequiresSubnet(Invalid):
