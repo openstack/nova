@@ -5050,7 +5050,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     dest_check_data['filename'])})
 
         dest_check_data.update({'is_shared_block_storage':
-                self._is_shared_block_storage(instance, dest_check_data)})
+                self._is_shared_block_storage(instance, dest_check_data,
+                                              block_device_info)})
 
         if dest_check_data['block_migration']:
             if (dest_check_data['is_shared_block_storage'] or
@@ -5078,7 +5079,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return dest_check_data
 
-    def _is_shared_block_storage(self, instance, dest_check_data):
+    def _is_shared_block_storage(self, instance, dest_check_data,
+                                 block_device_info=None):
         """Check if all block storage of an instance can be shared
         between source and destination of a live migration.
 
@@ -5092,6 +5094,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         if (CONF.libvirt.images_type == dest_check_data.get('image_type') and
                 self.image_backend.backend().is_shared_block_storage()):
+            # NOTE(dgenin): currently true only for RBD image backend
             return True
 
         if (dest_check_data.get('is_shared_instance_path') and
@@ -5102,7 +5105,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if (dest_check_data.get('is_volume_backed') and
                 not bool(jsonutils.loads(
-                    self.get_instance_disk_info(instance['name'])))):
+                    self.get_instance_disk_info(instance['name'],
+                                                block_device_info)))):
             # pylint: disable E1120
             return True
 
