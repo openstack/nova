@@ -398,8 +398,12 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         pass
 
     def _save_numa_topology(self, context):
-        # NOTE(ndipanov): No need for this yet.
-        pass
+        if self.numa_topology:
+            self.numa_topology.instance_uuid = self.uuid
+            self.numa_topology._save(context)
+        else:
+            objects.InstanceNUMATopology.delete_by_instance_uuid(
+                    context, self.uuid)
 
     def _save_pci_devices(self, context):
         # NOTE(yjiang5): All devices held by PCI tracker, only PCI tracker
