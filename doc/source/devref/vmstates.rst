@@ -24,6 +24,8 @@ task states for various commands issued by the user:
     soft_deleted [label="SOFT_DELETED"]
     deleted [label="DELETED"]
     error [label="ERROR"]
+    shelved [label="SHELVED"]
+    shelved_offloaded [label="SHELVED_OFFLOADED"]
         
     /* apis */
     create [shape="rectangle"]
@@ -148,6 +150,26 @@ task states for various commands issued by the user:
     live_migrate -> active
     live_migrate -> error
     active -> live_migrate
+
+    shelve [shape="rectangle"]
+    shelve -> shelved
+    shelve -> shelved_offloaded
+    shelve -> error
+    active -> shelve
+    stopped -> shelve
+    paused -> shelve
+    suspended -> shelve
+
+    shelve_offload [shape="rectangle"]
+    shelve_offload -> shelved_offloaded
+    shelve_offload -> error
+    shelved -> shelve_offload
+
+    unshelve [shape="rectangle"]
+    unshelve -> active
+    unshelve -> error
+    shelved -> unshelve
+    shelved_offloaded -> unshelve
   }
 
 .. image:: ../images/PowerStates1.png
