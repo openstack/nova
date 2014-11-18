@@ -19,11 +19,16 @@ from nova import objects
 from nova.tests.unit.objects import test_objects
 from nova.virt import hardware
 
+fake_instance_uuid = str(uuid.uuid4())
 fake_numa_topology = hardware.VirtNUMAInstanceTopology(
-        cells=[hardware.VirtNUMATopologyCellInstance(
-            0, set([1, 2]), 512, 2048),
-               hardware.VirtNUMATopologyCellInstance(
-            1, set([3, 4]), 512, 2048)])
+    cells=[hardware.VirtNUMATopologyCellInstance(
+        0, set([1, 2]), 512, 2048),
+           hardware.VirtNUMATopologyCellInstance(
+        1, set([3, 4]), 512, 2048)])
+
+fake_obj_numa_topology = objects.InstanceNUMATopology.obj_from_topology(
+    fake_numa_topology)
+fake_obj_numa_topology.instance_uuid = fake_instance_uuid
 
 fake_db_topology = {
     'created_at': None,
@@ -31,9 +36,12 @@ fake_db_topology = {
     'deleted_at': None,
     'deleted': 0,
     'id': 1,
-    'instance_uuid': str(uuid.uuid4()),
-    'numa_topology': fake_numa_topology.to_json()
+    'instance_uuid': fake_instance_uuid,
+    'numa_topology': fake_obj_numa_topology._to_json()
     }
+
+fake_old_db_topology = dict(fake_db_topology)  # copy
+fake_old_db_topology['numa_topology'] = fake_numa_topology.to_json()
 
 
 class _TestInstanceNUMATopology(object):
@@ -45,9 +53,15 @@ class _TestInstanceNUMATopology(object):
         topo_obj.create(self.context)
         self.assertEqual(1, len(mock_update.call_args_list))
 
-    @mock.patch('nova.db.instance_extra_get_by_instance_uuid')
-    def test_get_by_instance_uuid(self, mock_get):
-        mock_get.return_value = fake_db_topology
+    @mock.patch('nova.db.instance_extra_update_by_uuid')
+    def test_save(self, mock_update):
+        topo_obj = objects.InstanceNUMATopology.obj_from_topology(
+               fake_numa_topology)
+        topo_obj.instance_uuid = fake_db_topology['instance_uuid']
+        topo_obj._save(self.context)
+        self.assertEqual(1, len(mock_update.call_args_list))
+
+    def _test_get_by_instance_uuid(self):
         numa_topology = objects.InstanceNUMATopology.get_by_instance_uuid(
             self.context, fake_db_topology['instance_uuid'])
         self.assertEqual(fake_db_topology['instance_uuid'],
@@ -58,6 +72,16 @@ class _TestInstanceNUMATopology(object):
             self.assertEqual(topo_cell.cpuset, obj_cell.cpuset)
             self.assertEqual(topo_cell.memory, obj_cell.memory)
             self.assertEqual(topo_cell.pagesize, obj_cell.pagesize)
+
+    @mock.patch('nova.db.instance_extra_get_by_instance_uuid')
+    def test_get_by_instance_uuid(self, mock_get):
+        mock_get.return_value = fake_db_topology
+        self._test_get_by_instance_uuid()
+
+    @mock.patch('nova.db.instance_extra_get_by_instance_uuid')
+    def test_get_by_instance_uuid_old(self, mock_get):
+        mock_get.return_value = fake_old_db_topology
+        self._test_get_by_instance_uuid()
 
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid')
     def test_get_by_instance_uuid_missing(self, mock_get):

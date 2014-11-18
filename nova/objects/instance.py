@@ -376,8 +376,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         numa_topology = updates.pop('numa_topology', None)
         if numa_topology:
             expected_attrs.append('numa_topology')
-            updates['extra']['numa_topology'] = (
-                numa_topology.topology_from_obj().to_json())
+            updates['extra']['numa_topology'] = numa_topology._to_json()
         pci_requests = updates.pop('pci_requests', None)
         if pci_requests:
             expected_attrs.append('pci_requests')

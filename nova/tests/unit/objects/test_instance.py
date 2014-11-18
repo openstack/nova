@@ -30,7 +30,6 @@ from nova import notifications
 from nova import objects
 from nova.objects import instance
 from nova.objects import instance_info_cache
-from nova.objects import instance_numa_topology
 from nova.objects import pci_device
 from nova.objects import security_group
 from nova import test
@@ -419,17 +418,19 @@ class _TestInstanceObject(object):
     @mock.patch('nova.objects.Instance._from_db_object')
     def test_save_updates_numa_topology(self, mock_fdo, mock_update,
             mock_extra_update):
+        fake_obj_numa_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(id=0, cpuset=set([0]), memory=128),
+            objects.InstanceNUMACell(id=1, cpuset=set([1]), memory=128)])
+        fake_obj_numa_topology.instance_uuid = 'fake-uuid'
+        jsonified = fake_obj_numa_topology._to_json()
+
         mock_update.return_value = None, None
         inst = instance.Instance(
             context=self.context, id=123, uuid='fake-uuid')
-        inst.numa_topology = (
-            instance_numa_topology.InstanceNUMATopology.obj_from_topology(
-                test_instance_numa_topology.fake_numa_topology))
+        inst.numa_topology = fake_obj_numa_topology
         inst.save()
         mock_extra_update.assert_called_once_with(
-                self.context, inst.uuid,
-                {'numa_topology':
-                    test_instance_numa_topology.fake_numa_topology.to_json()})
+            self.context, inst.uuid, {'numa_topology': jsonified})
         mock_extra_update.reset_mock()
         inst.numa_topology = None
         inst.save()
@@ -707,19 +708,18 @@ class _TestInstanceObject(object):
 
     def test_create_with_extras(self):
         inst = instance.Instance(uuid=self.fake_instance['uuid'],
-                numa_topology=objects.InstanceNUMATopology.obj_from_topology(
-                    test_instance_numa_topology.fake_numa_topology),
-                pci_requests=objects.InstancePCIRequests(
-                    requests=[
-                        objects.InstancePCIRequest(count=123,
-                                                   spec=[])]))
-
+            numa_topology=test_instance_numa_topology.fake_obj_numa_topology,
+            pci_requests=objects.InstancePCIRequests(
+                requests=[
+                    objects.InstancePCIRequest(count=123,
+                                               spec=[])]))
         inst.create(self.context)
         self.assertIsNotNone(inst.numa_topology)
         self.assertIsNotNone(inst.pci_requests)
         got_numa_topo = objects.InstanceNUMATopology.get_by_instance_uuid(
             self.context, inst.uuid)
-        self.assertEqual(inst.numa_topology.id, got_numa_topo.id)
+        self.assertEqual(inst.numa_topology.instance_uuid,
+                         got_numa_topo.instance_uuid)
         got_pci_requests = objects.InstancePCIRequests.get_by_instance_uuid(
             self.context, inst.uuid)
         self.assertEqual(123, got_pci_requests.requests[0].count)

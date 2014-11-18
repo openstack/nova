@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo.serialization import jsonutils
+
 from nova import db
 from nova import exception
 from nova.objects import base
@@ -47,13 +49,19 @@ class InstanceNUMATopology(base.NovaObject):
 
     @classmethod
     def obj_from_db_obj(cls, instance_uuid, db_obj):
-        topo = hardware.VirtNUMAInstanceTopology.from_json(db_obj)
-        obj_topology = cls.obj_from_topology(topo)
-        obj_topology.instance_uuid = instance_uuid
-        # NOTE (ndipanov) not really needed as we never save, but left for
-        # consistency
-        obj_topology.id = 0
-        obj_topology.obj_reset_changes()
+        if 'nova_object.name' in db_obj:
+            obj_topology = cls.obj_from_primitive(
+                jsonutils.loads(db_obj))
+        else:
+            # NOTE(sahid): This compatibility code needs to stay until we can
+            # guarantee that there are no cases of the old format stored in
+            # the database (or forever, if we can never guarantee that).
+            topo = hardware.VirtNUMAInstanceTopology.from_json(db_obj)
+            obj_topology = cls.obj_from_topology(topo)
+            obj_topology.instance_uuid = instance_uuid
+
+            # No benefit to store a list of changed fields
+            obj_topology.obj_reset_changes()
         return obj_topology
 
     @classmethod
@@ -81,22 +89,13 @@ class InstanceNUMATopology(base.NovaObject):
     # TODO(ndipanov) Remove this method on the major version bump to 2.0
     @base.remotable
     def create(self, context):
-        topology = self.topology_from_obj()
-        if not topology:
-            return
-        values = {'numa_topology': topology.to_json()}
-        db.instance_extra_update_by_uuid(context, self.instance_uuid,
-                                         values)
-        self.obj_reset_changes()
+        self._save(context)
 
     # NOTE(ndipanov): We can't rename create and want to avoid version bump
     # as this needs to be backported to stable so this is not a @remotable
     # That's OK since we only call it from inside Instance.save() which is.
     def _save(self, context):
-        topology = self.topology_from_obj()
-        if not topology:
-            return
-        values = {'numa_topology': topology.to_json()}
+        values = {'numa_topology': self._to_json()}
         db.instance_extra_update_by_uuid(context, self.instance_uuid,
                                          values)
         self.obj_reset_changes()
@@ -121,3 +120,6 @@ class InstanceNUMATopology(base.NovaObject):
             return None
 
         return cls.obj_from_db_obj(instance_uuid, db_extra['numa_topology'])
+
+    def _to_json(self):
+        return jsonutils.dumps(self.obj_to_primitive())
