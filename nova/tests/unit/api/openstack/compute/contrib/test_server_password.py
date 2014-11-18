@@ -29,11 +29,11 @@ CONF = cfg.CONF
 CONF.import_opt('osapi_compute_ext_list', 'nova.api.openstack.compute.contrib')
 
 
-class ServerPasswordTest(test.TestCase):
+class ServerPasswordTestV21(test.TestCase):
     content_type = 'application/json'
 
     def setUp(self):
-        super(ServerPasswordTest, self).setUp()
+        super(ServerPasswordTestV21, self).setUp()
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(
             compute.api.API, 'get',
@@ -43,6 +43,7 @@ class ServerPasswordTest(test.TestCase):
                 system_metadata={},
                 expected_attrs=['system_metadata']))
         self.password = 'fakepass'
+        self.fakes_wsgi_app = fakes.wsgi_app_v21
 
         def fake_extract_password(instance):
             return self.password
@@ -53,17 +54,14 @@ class ServerPasswordTest(test.TestCase):
 
         self.stubs.Set(password, 'extract_password', fake_extract_password)
         self.stubs.Set(password, 'convert_password', fake_convert_password)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Server_password'])
 
     def _make_request(self, url, method='GET'):
         req = webob.Request.blank(url)
         req.headers['Accept'] = self.content_type
         req.method = method
         res = req.get_response(
-                fakes.wsgi_app(init_only=('servers', 'os-server-password')))
+                self.fakes_wsgi_app(init_only=('servers',
+                                               'os-server-password')))
         return res
 
     def _get_pass(self, body):
@@ -86,7 +84,18 @@ class ServerPasswordTest(test.TestCase):
         self.assertEqual(self._get_pass(res.body), '')
 
 
-class ServerPasswordXmlTest(ServerPasswordTest):
+class ServerPasswordTestV2(ServerPasswordTestV21):
+
+    def setUp(self):
+        super(ServerPasswordTestV2, self).setUp()
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Server_password'])
+        self.fakes_wsgi_app = fakes.wsgi_app
+
+
+class ServerPasswordXmlTestV2(ServerPasswordTestV2):
     content_type = 'application/xml'
 
     def _get_pass(self, body):
