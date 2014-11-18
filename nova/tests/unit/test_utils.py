@@ -145,6 +145,8 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         # error case
         result = utils.parse_server_string('www.exa:mple.com:8443')
         self.assertEqual(('', ''), result)
+        result = utils.parse_server_string('')
+        self.assertEqual(('', ''), result)
 
     def test_hostname_unicode_sanitization(self):
         hostname = u"\u7684.test.example.com"

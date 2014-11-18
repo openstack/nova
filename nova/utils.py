@@ -456,10 +456,10 @@ def check_isinstance(obj, cls):
 
 
 def parse_server_string(server_str):
-    """Parses the given server_string and returns a list of host and port.
+    """Parses the given server_string and returns a tuple of host and port.
     If it's not a combination of host part and port, the port element
-    is a null string. If the input is invalid expression, return a null
-    list.
+    is an empty string. If the input is invalid expression, return a tuple of
+    two empty strings.
     """
     try:
         # First of all, exclude pure IPv6 address (w/o port).
@@ -479,7 +479,7 @@ def parse_server_string(server_str):
         (address, port) = server_str.split(':')
         return (address, port)
 
-    except Exception:
+    except (ValueError, netaddr.AddrFormatError):
         LOG.error(_LE('Invalid server_string: %s'), server_str)
         return ('', '')
 
@@ -496,14 +496,14 @@ def is_valid_ipv4(address):
     """Verify that address represents a valid IPv4 address."""
     try:
         return netaddr.valid_ipv4(address)
-    except Exception:
+    except (ValueError, netaddr.AddrFormatError):
         return False
 
 
 def is_valid_ipv6(address):
     try:
         return netaddr.valid_ipv6(address)
-    except Exception:
+    except (ValueError, netaddr.AddrFormatError):
         return False
 
 
@@ -513,9 +513,9 @@ def is_valid_ip_address(address):
 
 def is_valid_ipv6_cidr(address):
     try:
-        str(netaddr.IPNetwork(address, version=6).cidr)
+        netaddr.IPNetwork(address, version=6).cidr
         return True
-    except Exception:
+    except (TypeError, netaddr.AddrFormatError):
         return False
 
 
@@ -538,7 +538,7 @@ def is_valid_cidr(address):
     try:
         # Validate the correct CIDR Address
         netaddr.IPNetwork(address)
-    except netaddr.core.AddrFormatError:
+    except netaddr.AddrFormatError:
         return False
     except UnboundLocalError:
         # NOTE(MotoKen): work around bug in netaddr 0.7.5 (see detail in
