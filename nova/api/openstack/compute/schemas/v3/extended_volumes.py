@@ -12,18 +12,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.api.validation import parameter_types
+
+
 swap_volume_attachment = {
     'type': 'object',
     'properties': {
         'swap_volume_attachment': {
             'type': 'object',
             'properties': {
-                'old_volume_id': {
-                    'type': 'string', 'format': 'uuid'
-                },
-                'new_volume_id': {
-                    'type': 'string', 'format': 'uuid'
-                },
+                'old_volume_id': parameter_types.volume_id,
+                'new_volume_id': parameter_types.volume_id
             },
             'required': ['old_volume_id', 'new_volume_id'],
             'additionalProperties': False,
@@ -40,9 +39,7 @@ attach = {
         'attach': {
             'type': 'object',
             'properties': {
-                'volume_id': {
-                    'type': 'string', 'format': 'uuid'
-                },
+                'volume_id': parameter_types.volume_id,
                 'device': {
                     'type': 'string',
                     # NOTE: The validation pattern from match_device() in
@@ -71,9 +68,7 @@ detach = {
         'detach': {
             'type': 'object',
             'properties': {
-                'volume_id': {
-                    'type': 'string', 'format': 'uuid'
-                },
+                'volume_id': parameter_types.volume_id
             },
             'required': ['volume_id'],
             'additionalProperties': False,
