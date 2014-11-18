@@ -2341,7 +2341,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.injected_files, self.admin_pass,
                 network_info=self.network_info,
                 block_device_info=self.block_device_info,
-                instance_type=None).AndRaise(exc)
+                flavor=None).AndRaise(exc)
         self._notify_about_instance_usage('create.error',
                 fault=exc, stub=False)
         conductor_rpcapi.ConductorAPI.instance_update(
@@ -2541,7 +2541,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.injected_files, self.admin_pass,
                 network_info=self.network_info,
                 block_device_info=self.block_device_info,
-                instance_type=None).AndRaise(exc)
+                flavor=None).AndRaise(exc)
         self._notify_about_instance_usage('create.end',
                 fault=exc, stub=False)
         conductor_rpcapi.ConductorAPI.instance_update(
@@ -2575,7 +2575,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.injected_files, self.admin_pass,
                 network_info=self.network_info,
                 block_device_info=self.block_device_info,
-                instance_type=None).AndRaise(exc)
+                flavor=None).AndRaise(exc)
         conductor_rpcapi.ConductorAPI.instance_update(
             self.context, self.instance.uuid, mox.IgnoreArg(), 'conductor')
         self._notify_about_instance_usage('create.error',
@@ -2660,7 +2660,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, self.injected_files, self.admin_pass,
                 network_info=self.network_info,
                 block_device_info=self.block_device_info,
-                instance_type=None))
+                flavor=None))
 
             instance_update.assert_has_calls(mock.call(self.context,
                 self.instance.uuid, mock.ANY, 'conductor'))
@@ -2675,7 +2675,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         network_info = mock.MagicMock()
         with mock.patch.object(self.compute, 'driver'):
             self.compute._spawn(self.context, inst, {}, network_info, None,
-                                None, None, instance_type=None)
+                                None, None, flavor=None)
         network_info.wait.assert_called_once_with(do_raise=True)
         self.assertEqual(network_info, inst.info_cache.network_info)
         inst.save.assert_called_with(expected_task_state=task_states.SPAWNING)

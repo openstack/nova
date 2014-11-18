@@ -481,7 +481,7 @@ class VMwareVCDriver(driver.ComputeDriver):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None,
-              instance_type=None):
+              flavor=None):
         """Create VM instance."""
         _vmops = self._get_vmops_for_compute_node(instance['node'])
         _vmops.spawn(context, instance, image_meta, injected_files,
