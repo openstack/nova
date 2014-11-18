@@ -30,7 +30,7 @@ from nova.compute import vm_states
 from nova import conductor
 from nova.db import base
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LI
 from nova import objects
 from nova.objects import base as obj_base
 from nova.openstack.common import log as logging
@@ -236,8 +236,8 @@ class CellsScheduler(base.Base):
                     if i == max(0, CONF.cells.scheduler_retries):
                         raise
                     sleep_time = max(1, CONF.cells.scheduler_retry_delay)
-                    LOG.info(_("No cells available when scheduling.  Will "
-                               "retry in %(sleep_time)s second(s)"),
+                    LOG.info(_LI("No cells available when scheduling.  Will "
+                                 "retry in %(sleep_time)s second(s)"),
                              {'sleep_time': sleep_time})
                     time.sleep(sleep_time)
                     continue

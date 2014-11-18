@@ -51,6 +51,7 @@ from nova import exception
 from nova import hooks
 from nova.i18n import _
 from nova.i18n import _LE
+from nova.i18n import _LI
 from nova import image
 from nova import keymgr
 from nova import network
@@ -1520,7 +1521,7 @@ class API(base.Base):
 
     def _delete(self, context, instance, delete_type, cb, **instance_attrs):
         if instance.disable_terminate:
-            LOG.info(_('instance termination disabled'),
+            LOG.info(_LI('instance termination disabled'),
                      instance=instance)
             return
 
@@ -1534,8 +1535,8 @@ class API(base.Base):
         if instance['vm_state'] in (vm_states.SHELVED,
                                     vm_states.SHELVED_OFFLOADED):
             snapshot_id = instance.system_metadata.get('shelved_image_id')
-            LOG.info(_("Working on deleting snapshot %s "
-                       "from shelved instance..."),
+            LOG.info(_LI("Working on deleting snapshot %s "
+                         "from shelved instance..."),
                      snapshot_id, instance=instance)
             try:
                 self.image_api.delete(context, snapshot_id)
@@ -1604,8 +1605,9 @@ class API(base.Base):
                             and original_task_state in (
                             task_states.DELETING,
                             task_states.SOFT_DELETING)):
-                        LOG.info(_('Instance is already in deleting state, '
-                                   'ignoring this request'), instance=instance)
+                        LOG.info(_LI('Instance is already in deleting state, '
+                                     'ignoring this request'),
+                                 instance=instance)
                         quotas.rollback()
                         return
 
@@ -1639,18 +1641,18 @@ class API(base.Base):
             try:
                 migration = objects.Migration.get_by_instance_and_status(
                         context.elevated(), instance.uuid, status)
-                LOG.info(_('Found an unconfirmed migration during delete, '
-                           'id: %(id)s, status: %(status)s') %
-                           {'id': migration.id,
-                            'status': migration.status},
-                           context=context, instance=instance)
+                LOG.info(_LI('Found an unconfirmed migration during delete, '
+                             'id: %(id)s, status: %(status)s'),
+                         {'id': migration.id,
+                          'status': migration.status},
+                         context=context, instance=instance)
                 break
             except exception.MigrationNotFoundByStatus:
                 pass
 
         if not migration:
-            LOG.info(_('Instance may have been confirmed during delete'),
-                    context=context, instance=instance)
+            LOG.info(_LI('Instance may have been confirmed during delete'),
+                     context=context, instance=instance)
             return
 
         src_host = migration.source_compute
@@ -1666,8 +1668,9 @@ class API(base.Base):
         try:
             deltas = self._downsize_quota_delta(context, instance)
         except KeyError:
-            LOG.info(_('Migration %s may have been confirmed during delete') %
-                    migration.id, context=context, instance=instance)
+            LOG.info(_LI('Migration %s may have been confirmed during '
+                         'delete'),
+                     migration.id, context=context, instance=instance)
             return
         quotas = self._reserve_quota_delta(context, deltas, instance)
 

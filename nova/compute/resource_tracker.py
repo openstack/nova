@@ -32,7 +32,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import conductor
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LI
 from nova import objects
 from nova.objects import base as obj_base
 from nova.openstack.common import log as logging
@@ -400,14 +400,16 @@ class ResourceTracker(object):
             self._create(context, resources)
             if self.pci_tracker:
                 self.pci_tracker.set_compute_node_id(self.compute_node['id'])
-            LOG.info(_('Compute_service record created for %(host)s:%(node)s')
-                    % {'host': self.host, 'node': self.nodename})
+            LOG.info(_LI('Compute_service record created for '
+                         '%(host)s:%(node)s'),
+                     {'host': self.host, 'node': self.nodename})
 
         else:
             # just update the record:
             self._update(context, resources)
-            LOG.info(_('Compute_service record updated for %(host)s:%(node)s')
-                    % {'host': self.host, 'node': self.nodename})
+            LOG.info(_LI('Compute_service record updated for '
+                         '%(host)s:%(node)s'),
+                     {'host': self.host, 'node': self.nodename})
 
     def _write_ext_resources(self, resources):
         resources['stats'] = {}

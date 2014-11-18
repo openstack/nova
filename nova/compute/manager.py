@@ -281,7 +281,8 @@ def reverts_task_state(function):
             # task is preempted. Do not clear task state in this
             # case.
             with excutils.save_and_reraise_exception():
-                LOG.info(_("Task possibly preempted: %s") % e.format_message())
+                LOG.info(_LI("Task possibly preempted: %s"),
+                         e.format_message())
         except Exception:
             with excutils.save_and_reraise_exception():
                 try:
@@ -740,9 +741,9 @@ class ComputeManager(manager.Manager):
                                'vm_state': instance.vm_state},
                               instance=instance)
                     continue
-                LOG.info(_('Deleting instance as its host ('
-                           '%(instance_host)s) is not equal to our '
-                           'host (%(our_host)s).'),
+                LOG.info(_LI('Deleting instance as its host ('
+                             '%(instance_host)s) is not equal to our '
+                             'host (%(our_host)s).'),
                          {'instance_host': instance.host,
                           'our_host': our_host}, instance=instance)
                 try:
@@ -755,8 +756,8 @@ class ComputeManager(manager.Manager):
                 except exception.InstanceNotFound:
                     network_info = network_model.NetworkInfo()
                     bdi = {}
-                    LOG.info(_('Instance has been marked deleted already, '
-                               'removing it from the hypervisor.'),
+                    LOG.info(_LI('Instance has been marked deleted already, '
+                                 'removing it from the hypervisor.'),
                              instance=instance)
                     # always destroy disks if the instance was deleted
                     destroy_disks = True
@@ -899,9 +900,9 @@ class ComputeManager(manager.Manager):
 
         if instance.task_state == task_states.DELETING:
             try:
-                LOG.info(_('Service started deleting the instance during '
-                           'the previous run, but did not finish. Restarting '
-                           'the deletion now.'), instance=instance)
+                LOG.info(_LI('Service started deleting the instance during '
+                             'the previous run, but did not finish. Restarting'
+                             ' the deletion now.'), instance=instance)
                 instance.obj_load_attr('metadata')
                 instance.obj_load_attr('system_metadata')
                 bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -998,8 +999,8 @@ class ComputeManager(manager.Manager):
                 LOG.exception(_LE('Failed to revert crashed migration'),
                               instance=instance)
             finally:
-                LOG.info(_('Instance found in migrating state during '
-                           'startup. Resetting task_state'),
+                LOG.info(_LI('Instance found in migrating state during '
+                             'startup. Resetting task_state'),
                          instance=instance)
                 instance.task_state = None
                 instance.save()
@@ -1020,7 +1021,7 @@ class ComputeManager(manager.Manager):
                   instance=instance)
 
         if expect_running and CONF.resume_guests_state_on_host_boot:
-            LOG.info(_('Rebooting instance after nova-compute restart.'),
+            LOG.info(_LI('Rebooting instance after nova-compute restart.'),
                      instance=instance)
 
             block_device_info = \
@@ -1069,8 +1070,8 @@ class ComputeManager(manager.Manager):
         return retry_reboot, reboot_type
 
     def handle_lifecycle_event(self, event):
-        LOG.info(_("VM %(state)s (Lifecycle Event)") %
-                  {'state': event.get_name()},
+        LOG.info(_LI("VM %(state)s (Lifecycle Event)"),
+                 {'state': event.get_name()},
                  instance_uuid=event.get_instance_uuid())
         context = nova.context.get_admin_context(read_deleted='yes')
         instance = objects.Instance.get_by_uuid(context,
@@ -2507,7 +2508,7 @@ class ComputeManager(manager.Manager):
             try:
                 self._delete_instance(context, instance, bdms, quotas)
             except exception.InstanceNotFound:
-                LOG.info(_("Instance disappeared during terminate"),
+                LOG.info(_LI("Instance disappeared during terminate"),
                          instance=instance)
             except Exception:
                 # As we're trying to delete always go to Error if something
@@ -2735,12 +2736,12 @@ class ComputeManager(manager.Manager):
                               " storage"))
 
                 if on_shared_storage:
-                    LOG.info(_('disk on shared storage, recreating using'
-                               ' existing disk'))
+                    LOG.info(_LI('disk on shared storage, recreating using'
+                                 ' existing disk'))
                 else:
                     image_ref = orig_image_ref = instance.image_ref
-                    LOG.info(_("disk not on shared storage, rebuilding from:"
-                               " '%s'") % str(image_ref))
+                    LOG.info(_LI("disk not on shared storage, rebuilding from:"
+                                 " '%s'"), str(image_ref))
 
                 # NOTE(mriedem): On a recreate (evacuate), we need to update
                 # the instance's host and node properties to reflect it's
@@ -2859,7 +2860,7 @@ class ComputeManager(manager.Manager):
                 # compute-manager.
                 #
                 # API-detach
-                LOG.info(_("Detaching from volume api: %s") % volume_id)
+                LOG.info(_LI("Detaching from volume api: %s"), volume_id)
                 volume = self.volume_api.get(context, volume_id)
                 self.volume_api.check_detach(context, volume)
                 self.volume_api.begin_detaching(context, volume_id)
@@ -3375,8 +3376,8 @@ class ComputeManager(manager.Manager):
                 return
 
             if migration.status == 'confirmed':
-                LOG.info(_("Migration %s is already confirmed") %
-                            migration_id, context=context, instance=instance)
+                LOG.info(_LI("Migration %s is already confirmed"),
+                         migration_id, context=context, instance=instance)
                 quotas.rollback()
                 return
             elif migration.status not in ('finished', 'confirming'):
@@ -3395,8 +3396,8 @@ class ComputeManager(manager.Manager):
                         context, instance.uuid,
                         expected_attrs=expected_attrs)
             except exception.InstanceNotFound:
-                LOG.info(_("Instance is not found during confirmation"),
-                            context=context, instance=instance)
+                LOG.info(_LI("Instance is not found during confirmation"),
+                         context=context, instance=instance)
                 quotas.rollback()
                 return
 
@@ -3577,7 +3578,7 @@ class ComputeManager(manager.Manager):
                                                      migration_p)
 
             # if the original vm state was STOPPED, set it back to STOPPED
-            LOG.info(_("Updating instance to original state: '%s'") %
+            LOG.info(_LI("Updating instance to original state: '%s'"),
                      old_vm_state)
             if power_on:
                 instance.vm_state = vm_states.ACTIVE
@@ -5038,7 +5039,7 @@ class ComputeManager(manager.Manager):
         required for live migration without shared storage
 
         """
-        LOG.info(_('_post_live_migration() is started..'),
+        LOG.info(_LI('_post_live_migration() is started..'),
                  instance=instance)
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -5118,11 +5119,11 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(ctxt, instance,
                                           "live_migration._post.end",
                                           network_info=network_info)
-        LOG.info(_('Migrating instance to %s finished successfully.'),
+        LOG.info(_LI('Migrating instance to %s finished successfully.'),
                  dest, instance=instance)
-        LOG.info(_("You may see the error \"libvirt: QEMU error: "
-                   "Domain not found: no domain with matching name.\" "
-                   "This error can be safely ignored."),
+        LOG.info(_LI("You may see the error \"libvirt: QEMU error: "
+                     "Domain not found: no domain with matching name.\" "
+                     "This error can be safely ignored."),
                  instance=instance)
 
         if CONF.vnc_enabled or CONF.spice.enabled or CONF.rdp.enabled:
@@ -5145,7 +5146,7 @@ class ComputeManager(manager.Manager):
         :param block_migration: if true, prepare for block migration
 
         """
-        LOG.info(_('Post operation of migration started'),
+        LOG.info(_LI('Post operation of migration started'),
                  instance=instance)
 
         # NOTE(tr3buchet): setup networks on destination host
@@ -5408,8 +5409,8 @@ class ComputeManager(manager.Manager):
                 confirm_window=CONF.resize_confirm_window)
 
         if migrations_info["migration_count"] > 0:
-            LOG.info(_("Found %(migration_count)d unconfirmed migrations "
-                       "older than %(confirm_window)d seconds"),
+            LOG.info(_LI("Found %(migration_count)d unconfirmed migrations "
+                         "older than %(confirm_window)d seconds"),
                      migrations_info)
 
         def _set_migration_to_error(migration, reason, **kwargs):
@@ -5422,8 +5423,8 @@ class ComputeManager(manager.Manager):
 
         for migration in migrations:
             instance_uuid = migration.instance_uuid
-            LOG.info(_("Automatically confirming migration "
-                       "%(migration_id)s for instance %(instance_uuid)s"),
+            LOG.info(_LI("Automatically confirming migration "
+                         "%(migration_id)s for instance %(instance_uuid)s"),
                      {'migration_id': migration.id,
                       'instance_uuid': instance_uuid})
             expected_attrs = ['metadata', 'system_metadata']
@@ -5476,8 +5477,8 @@ class ComputeManager(manager.Manager):
                 self.compute_api.confirm_resize(context, instance,
                                                 migration=migration)
             except Exception as e:
-                LOG.info(_("Error auto-confirming resize: %s. "
-                           "Will retry later."),
+                LOG.info(_LI("Error auto-confirming resize: %s. "
+                             "Will retry later."),
                          e, instance=instance)
 
     @periodic_task.periodic_task(spacing=CONF.shelved_poll_interval)
@@ -5524,10 +5525,10 @@ class ComputeManager(manager.Manager):
         num_instances = len(instances)
         errors = 0
         successes = 0
-        LOG.info(_("Running instance usage audit for"
-                   " host %(host)s from %(begin_time)s to "
-                   "%(end_time)s. %(number_instances)s"
-                   " instances."),
+        LOG.info(_LI("Running instance usage audit for"
+                     " host %(host)s from %(begin_time)s to "
+                     "%(end_time)s. %(number_instances)s"
+                     " instances."),
                  dict(host=self.host,
                       begin_time=begin,
                       end_time=end,
@@ -5572,7 +5573,7 @@ class ComputeManager(manager.Manager):
         if (curr_time - self._last_bw_usage_poll >
                 CONF.bandwidth_poll_interval):
             self._last_bw_usage_poll = curr_time
-            LOG.info(_("Updating bandwidth usage cache"))
+            LOG.info(_LI("Updating bandwidth usage cache"))
             cells_update_interval = CONF.cells.bandwidth_update_interval
             if (cells_update_interval > 0 and
                    curr_time - self._last_bw_usage_cell_update >
@@ -5794,11 +5795,11 @@ class ComputeManager(manager.Manager):
             # is just in the process of migrating to another host.
             # This implies that the compute source must relinquish
             # control to the compute destination.
-            LOG.info(_("During the sync_power process the "
-                       "instance has moved from "
-                       "host %(src)s to host %(dst)s") %
-                       {'src': db_instance.host,
-                        'dst': self.host},
+            LOG.info(_LI("During the sync_power process the "
+                         "instance has moved from "
+                         "host %(src)s to host %(dst)s"),
+                     {'src': db_instance.host,
+                      'dst': self.host},
                      instance=db_instance)
             return
         elif db_instance.task_state is not None:
@@ -5807,8 +5808,8 @@ class ComputeManager(manager.Manager):
             # but the actual VM has not showed up on the hypervisor
             # yet. In this case, let's allow the loop to continue
             # and run the state sync in a later round
-            LOG.info(_("During sync_power_state the instance has a "
-                       "pending task (%(task)s). Skip."),
+            LOG.info(_LI("During sync_power_state the instance has a "
+                         "pending task (%(task)s). Skip."),
                      {'task': db_instance.task_state},
                      instance=db_instance)
             return
@@ -5953,7 +5954,7 @@ class ComputeManager(manager.Manager):
             if self._deleted_old_enough(instance, interval):
                 bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                         context, instance.uuid)
-                LOG.info(_('Reclaiming deleted instance'), instance=instance)
+                LOG.info(_LI('Reclaiming deleted instance'), instance=instance)
                 try:
                     self._delete_instance(context, instance, bdms, quotas)
                 except Exception as e:
@@ -6040,10 +6041,10 @@ class ComputeManager(manager.Manager):
                                 instance['name'], instance=instance)
 
                 elif action == 'shutdown':
-                    LOG.info(_("Powering off instance with name label "
-                               "'%s' which is marked as "
-                               "DELETED but still present on host."),
-                               instance['name'], instance=instance)
+                    LOG.info(_LI("Powering off instance with name label "
+                                 "'%s' which is marked as "
+                                 "DELETED but still present on host."),
+                             instance['name'], instance=instance)
                     try:
                         try:
                             # disable starting the instance
@@ -6058,9 +6059,9 @@ class ComputeManager(manager.Manager):
                         LOG.warn(msg, instance=instance, exc_info=True)
 
                 elif action == 'reap':
-                    LOG.info(_("Destroying instance with name label "
-                               "'%s' which is marked as "
-                               "DELETED but still present on host."),
+                    LOG.info(_LI("Destroying instance with name label "
+                                 "'%s' which is marked as "
+                                 "DELETED but still present on host."),
                              instance['name'], instance=instance)
                     self.instance_events.clear_events_for_instance(instance)
                     try:
@@ -6104,8 +6105,8 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 if quotas:
                     quotas.rollback()
-                LOG.info(_("Setting instance back to %(state)s after: "
-                           "%(error)s") %
+                LOG.info(_LI("Setting instance back to %(state)s after: "
+                             "%(error)s"),
                          {'state': instance_state, 'error': error},
                          instance_uuid=instance_uuid)
                 self._instance_update(context, instance_uuid,
@@ -6114,7 +6115,7 @@ class ComputeManager(manager.Manager):
         except exception.InstanceFaultRollback as error:
             if quotas:
                 quotas.rollback()
-            LOG.info(_("Setting instance back to ACTIVE after: %s"),
+            LOG.info(_LI("Setting instance back to ACTIVE after: %s"),
                      error, instance_uuid=instance_uuid)
             self._instance_update(context, instance_uuid,
                                   vm_state=vm_states.ACTIVE,
