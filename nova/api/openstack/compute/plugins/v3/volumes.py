@@ -19,10 +19,11 @@ from oslo.utils import strutils
 from webob import exc
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas.v3 import volumes as volumes_schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import exception
-from nova.i18n import _
 from nova import volume
 
 ALIAS = "os-volumes"
@@ -127,20 +128,17 @@ class VolumeController(wsgi.Controller):
         return {'volumes': res}
 
     @extensions.expected_errors(400)
+    @validation.schema(volumes_schema.create)
     def create(self, req, body):
         """Creates a new volume."""
         context = req.environ['nova.context']
         authorize(context)
 
-        if not self.is_valid_body(body, 'volume'):
-            msg = _("volume not specified")
-            raise exc.HTTPBadRequest(explanation=msg)
-
         vol = body['volume']
 
         vol_type = vol.get('volume_type')
         metadata = vol.get('metadata')
-        snapshot_id = vol.get('snapshot_id')
+        snapshot_id = vol.get('snapshot_id', None)
 
         if snapshot_id is not None:
             snapshot = self.volume_api.get_snapshot(context, snapshot_id)
@@ -282,25 +280,17 @@ class SnapshotController(wsgi.Controller):
         return {'snapshots': res}
 
     @extensions.expected_errors(400)
+    @validation.schema(volumes_schema.snapshot_create)
     def create(self, req, body):
         """Creates a new snapshot."""
         context = req.environ['nova.context']
         authorize(context)
 
-        if not self.is_valid_body(body, 'snapshot'):
-            msg = _("snapshot not specified")
-            raise exc.HTTPBadRequest(explanation=msg)
-
         snapshot = body['snapshot']
         volume_id = snapshot['volume_id']
 
         force = snapshot.get('force', False)
-        try:
-            force = strutils.bool_from_string(force, strict=True)
-        except ValueError:
-            msg = _("Invalid value '%s' for force.") % force
-            raise exc.HTTPBadRequest(explanation=msg)
-
+        force = strutils.bool_from_string(force, strict=True)
         if force:
             create_func = self.volume_api.create_snapshot_force
         else:
