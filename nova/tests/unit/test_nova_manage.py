@@ -24,7 +24,6 @@ from nova import context
 from nova import db
 from nova.db import migration
 from nova import exception
-from nova.i18n import _
 from nova import test
 from nova.tests.unit.db import fakes as db_fakes
 from nova.tests.unit.objects import test_network
@@ -217,15 +216,15 @@ class NetworkCommandsTestCase(test.TestCase):
         _fmt = "\t".join(["%(id)-5s", "%(cidr)-18s", "%(cidr_v6)-15s",
                           "%(dhcp_start)-15s", "%(dns1)-15s", "%(dns2)-15s",
                           "%(vlan)-15s", "%(project_id)-15s", "%(uuid)-15s"])
-        head = _fmt % {'id': _('id'),
-                       'cidr': _('IPv4'),
-                       'cidr_v6': _('IPv6'),
-                       'dhcp_start': _('start address'),
-                       'dns1': _('DNS1'),
-                       'dns2': _('DNS2'),
-                       'vlan': _('VlanID'),
-                       'project_id': _('project'),
-                       'uuid': _("uuid")}
+        head = _fmt % {'id': 'id',
+                       'cidr': 'IPv4',
+                       'cidr_v6': 'IPv6',
+                       'dhcp_start': 'start address',
+                       'dns1': 'DNS1',
+                       'dns2': 'DNS2',
+                       'vlan': 'VlanID',
+                       'project_id': 'project',
+                       'uuid': "uuid"}
         body = _fmt % {'id': self.net['id'],
                        'cidr': self.net['cidr'],
                        'cidr_v6': self.net['cidr_v6'],

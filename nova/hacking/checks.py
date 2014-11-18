@@ -88,6 +88,8 @@ translated_log = re.compile(
 mutable_default_args = re.compile(r"^\s*def .+\((.+=\{\}|.+=\[\])")
 string_translation = re.compile(r"[^_]*_\(\s*('|\")")
 underscore_import_check = re.compile(r"(.)*import _(.)*")
+import_translation_for_log_or_exception = re.compile(
+    r"(.)*(from\snova.i18n\simport)\s_")
 # We need this for cases where they have created their own _ function.
 custom_underscore_check = re.compile(r"(.)*_\s*=\s*(.)*")
 api_version_re = re.compile(r"@.*api_version")
@@ -299,6 +301,22 @@ def no_translate_debug_logs(logical_line, filename):
         yield(0, "N319 Don't translate debug level logs")
 
 
+def no_import_translation_in_tests(logical_line, filename):
+    """Check for 'from nova.i18n import _'
+    N337
+    """
+    # TODO(Mike_D): Needs to be remove with:
+    # I610deb44f33a966de50296272ab0bfa35462eec9
+    if ('nova/tests/unit/scheduler/test_host_manager.py' in filename or
+        'nova/tests/unit/volume/encryptors/test_base.py' in filename or
+            'nova/tests/unit/virt/xenapi/test_vm_utils.py' in filename):
+        return
+    if 'nova/tests/' in filename:
+        res = import_translation_for_log_or_exception.match(logical_line)
+        if res:
+            yield(0, "N337 Don't import translation in tests")
+
+
 def no_setting_conf_directly_in_tests(logical_line, filename):
     """Check for setting CONF.* attributes directly in tests
 
@@ -507,6 +525,7 @@ def factory(register):
     register(import_no_virt_driver_config_deps)
     register(capital_cfg_help)
     register(no_vi_headers)
+    register(no_import_translation_in_tests)
     register(assert_true_instance)
     register(assert_equal_type)
     register(assert_equal_none)

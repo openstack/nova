@@ -21,7 +21,6 @@ from oslo.serialization import jsonutils
 from oslo.utils import importutils
 import six
 
-from nova.i18n import _
 from nova import test
 from nova.tests.functional import integrated_helpers
 
@@ -111,7 +110,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         matched_value = None
         if isinstance(expected, dict):
             if not isinstance(result, dict):
-                raise NoMatch(_('%(result_str)s: %(result)s is not a dict.')
+                raise NoMatch('%(result_str)s: %(result)s is not a dict.'
                         % {'result_str': result_str, 'result': result})
             ex_keys = sorted(expected.keys())
             res_keys = sorted(result.keys())
@@ -125,9 +124,9 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                     if key not in ex_keys:
                         res_delta.append(key)
                 raise NoMatch(
-                        _('Dictionary key mismatch:\n'
+                        'Dictionary key mismatch:\n'
                         'Extra key(s) in template:\n%(ex_delta)s\n'
-                        'Extra key(s) in %(result_str)s:\n%(res_delta)s\n') %
+                        'Extra key(s) in %(result_str)s:\n%(res_delta)s\n' %
                         {'ex_delta': ex_delta, 'result_str': result_str,
                            'res_delta': res_delta})
             for key in ex_keys:
@@ -137,7 +136,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         elif isinstance(expected, list):
             if not isinstance(result, list):
                 raise NoMatch(
-                        _('%(result_str)s: %(result)s is not a list.') %
+                        '%(result_str)s: %(result)s is not a list.' %
                         {'result_str': result_str, 'result': result})
 
             expected = expected[:]
@@ -157,12 +156,12 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
             error = []
             if expected:
-                error.append(_('Extra list items in template:'))
+                error.append('Extra list items in template:')
                 error.extend([repr(o) for o in expected])
 
             if extra:
-                error.append(_('Extra list items in %(result_str)s:') %
-                        {'result_str': result_str})
+                error.append('Extra list items in %(result_str)s:' %
+                             {'result_str': result_str})
                 error.extend([repr(o) for o in extra])
 
             if error:
@@ -182,8 +181,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             match = re.match(expected, result)
             if not match:
                 raise NoMatch(
-                    _('Values do not match:\n'
-                    'Template: %(expected)s\n%(result_str)s: %(result)s') %
+                    'Values do not match:\n'
+                    'Template: %(expected)s\n%(result_str)s: %(result)s' %
                     {'expected': expected, 'result_str': result_str,
                         'result': result})
             try:
@@ -199,11 +198,11 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                     result = result.strip()
             if expected != result:
                 raise NoMatch(
-                        _('Values do not match:\n'
+                        'Values do not match:\n'
                         'Template: %(expected)s\n%(result_str)s: '
-                        '%(result)s') % {'expected': expected,
-                                         'result_str': result_str,
-                                         'result': result})
+                        '%(result)s' % {'expected': expected,
+                                        'result_str': result_str,
+                                        'result': result})
         return matched_value
 
     def generalize_subs(self, subs, vanilla_regexes):

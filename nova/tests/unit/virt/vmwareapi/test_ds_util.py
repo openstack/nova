@@ -21,7 +21,6 @@ from oslo.vmware import exceptions as vexc
 from testtools import matchers
 
 from nova import exception
-from nova.i18n import _
 from nova import test
 from nova.tests.unit.virt.vmwareapi import fake
 from nova.virt.vmwareapi import ds_util
@@ -288,7 +287,7 @@ class DsUtilTestCase(test.NoDBTestCase):
         # Test with a regex that has no match
         # Checks if code raises DatastoreNotFound with a specific message
         datastore_invalid_regex = re.compile("unknown-ds")
-        exp_message = (_("Datastore regex %s did not match any datastores")
+        exp_message = ("Datastore regex %s did not match any datastores"
                        % datastore_invalid_regex.pattern)
         fake_objects = fake.FakeRetrieveResult()
         fake_objects.add_object(fake.Datastore("fake-ds0"))

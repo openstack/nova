@@ -31,7 +31,6 @@ from nova.compute import power_state
 from nova import context
 from nova import db
 from nova import exception
-from nova.i18n import _
 from nova.image import glance
 from nova.openstack.common import fileutils
 from nova import test
@@ -594,8 +593,8 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         if admin_permissions:
             m.AndReturn(None)
         else:
-            m.AndRaise(vmutils.HyperVAuthorizationException(_(
-                                                'Simulated failure')))
+            m.AndRaise(vmutils.HyperVAuthorizationException(
+                'Simulated failure'))
 
     def _setup_log_vm_output_mocks(self):
         m = fake.PathUtils.get_vm_console_log_paths(mox.IsA(str))

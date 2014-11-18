@@ -18,7 +18,6 @@ from oslo.config import cfg
 from oslo.utils import timeutils
 
 from nova import exception
-from nova.i18n import _
 from nova.openstack.common import log as logging
 
 
@@ -184,20 +183,20 @@ class API(object):
 
     def check_attach(self, context, volume, instance=None):
         if volume['status'] != 'available':
-            msg = _("status must be available")
+            msg = "status must be available"
             msg = "%s" % volume
             raise exception.InvalidVolume(reason=msg)
         if volume['attach_status'] == 'attached':
-            msg = _("already attached")
+            msg = "already attached"
             raise exception.InvalidVolume(reason=msg)
         if instance and not CONF.cinder.cross_az_attach:
             if instance['availability_zone'] != volume['availability_zone']:
-                msg = _("Instance and volume not in same availability_zone")
+                msg = "Instance and volume not in same availability_zone"
                 raise exception.InvalidVolume(reason=msg)
 
     def check_detach(self, context, volume):
         if volume['status'] == "available":
-            msg = _("already detached")
+            msg = "already detached"
             raise exception.InvalidVolume(reason=msg)
 
     def attach(self, context, volume_id, instance_uuid, mountpoint, mode='rw'):

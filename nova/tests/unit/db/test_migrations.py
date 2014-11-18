@@ -51,7 +51,6 @@ from nova.db.sqlalchemy import migrate_repo
 from nova.db.sqlalchemy import migration as sa_migration
 from nova.db.sqlalchemy import utils as db_utils
 from nova import exception
-from nova.i18n import _
 from nova import test
 
 
@@ -637,6 +636,6 @@ class ProjectTestCase(test.NoDBTestCase):
                     fname = os.path.basename(path)
                     missing_downgrade.append(fname)
 
-        helpful_msg = (_("The following migrations are missing a downgrade:"
-                         "\n\t%s") % '\n\t'.join(sorted(missing_downgrade)))
+        helpful_msg = ("The following migrations are missing a downgrade:"
+                       "\n\t%s" % '\n\t'.join(sorted(missing_downgrade)))
         self.assertFalse(missing_downgrade, helpful_msg)

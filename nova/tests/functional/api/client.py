@@ -17,7 +17,6 @@ import urllib
 from oslo.serialization import jsonutils
 import requests
 
-from nova.i18n import _
 from nova.openstack.common import log as logging
 from nova.tests.unit.image import fake
 
@@ -35,10 +34,10 @@ class OpenStackApiException(Exception):
             _status = response.status_code
             _body = response.content
 
-            message = (_('%(message)s\nStatus Code: %(_status)s\n'
-                         'Body: %(_body)s') %
-                         {'message': message, '_status': _status,
-                          '_body': _body})
+            message = ('%(message)s\nStatus Code: %(_status)s\n'
+                       'Body: %(_body)s' %
+                       {'message': message, '_status': _status,
+                        '_body': _body})
 
         super(OpenStackApiException, self).__init__(message)
 
@@ -46,7 +45,7 @@ class OpenStackApiException(Exception):
 class OpenStackApiAuthenticationException(OpenStackApiException):
     def __init__(self, response=None, message=None):
         if not message:
-            message = _("Authentication error")
+            message = "Authentication error"
         super(OpenStackApiAuthenticationException, self).__init__(message,
                                                                   response)
 
@@ -54,7 +53,7 @@ class OpenStackApiAuthenticationException(OpenStackApiException):
 class OpenStackApiAuthorizationException(OpenStackApiException):
     def __init__(self, response=None, message=None):
         if not message:
-            message = _("Authorization error")
+            message = "Authorization error"
         super(OpenStackApiAuthorizationException, self).__init__(message,
                                                                   response)
 
@@ -62,7 +61,7 @@ class OpenStackApiAuthorizationException(OpenStackApiException):
 class OpenStackApiNotFoundException(OpenStackApiException):
     def __init__(self, response=None, message=None):
         if not message:
-            message = _("Item not found")
+            message = "Item not found"
         super(OpenStackApiNotFoundException, self).__init__(message, response)
 
 
@@ -140,8 +139,8 @@ class TestOpenStackClient(object):
                     raise OpenStackApiAuthorizationException(response=response)
                 else:
                     raise OpenStackApiException(
-                                        message=_("Unexpected status code"),
-                                        response=response)
+                        message="Unexpected status code",
+                        response=response)
 
         return response
 

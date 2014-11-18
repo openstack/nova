@@ -19,7 +19,6 @@ import webob
 import webob.exc
 
 import nova.api.auth
-from nova.i18n import _
 from nova import test
 
 CONF = cfg.CONF
@@ -94,7 +93,7 @@ class TestKeystoneMiddlewareRoles(test.NoDBTestCase):
             elif context.roles == ['']:
                 return webob.Response(status="200 No Roles")
             else:
-                raise webob.exc.HTTPBadRequest(_("unexpected role header"))
+                raise webob.exc.HTTPBadRequest("unexpected role header")
 
         self.middleware = nova.api.auth.NovaKeystoneContext(role_check_app)
         self.request = webob.Request.blank('/')

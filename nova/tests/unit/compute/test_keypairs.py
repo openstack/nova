@@ -21,7 +21,6 @@ from nova.compute import api as compute_api
 from nova import context
 from nova import db
 from nova import exception
-from nova.i18n import _
 from nova import quota
 from nova.tests.unit.compute import test_compute
 from nova.tests.unit import fake_notifier
@@ -121,21 +120,21 @@ class CreateImportSharedTestMixIn(object):
         self.assertEqual(expected_message, six.text_type(exc))
 
     def assertInvalidKeypair(self, expected_message, name):
-        msg = _('Keypair data is invalid: %s') % expected_message
+        msg = 'Keypair data is invalid: %s' % expected_message
         self.assertKeyNameRaises(exception.InvalidKeypair, msg, name)
 
     def test_name_too_short(self):
-        msg = _('Keypair name must be string and between 1 '
-                'and 255 characters long')
+        msg = ('Keypair name must be string and between 1 '
+               'and 255 characters long')
         self.assertInvalidKeypair(msg, '')
 
     def test_name_too_long(self):
-        msg = _('Keypair name must be string and between 1 '
-                'and 255 characters long')
+        msg = ('Keypair name must be string and between 1 '
+               'and 255 characters long')
         self.assertInvalidKeypair(msg, 'x' * 256)
 
     def test_invalid_chars(self):
-        msg = _("Keypair name contains unsafe characters")
+        msg = "Keypair name contains unsafe characters"
         self.assertInvalidKeypair(msg, '* BAD CHARACTERS!  *')
 
     def test_already_exists(self):
@@ -144,7 +143,7 @@ class CreateImportSharedTestMixIn(object):
 
         self.stubs.Set(db, "key_pair_create", db_key_pair_create_duplicate)
 
-        msg = (_("Key pair '%(key_name)s' already exists.") %
+        msg = ("Key pair '%(key_name)s' already exists." %
                {'key_name': self.existing_key_name})
         self.assertKeyNameRaises(exception.KeyPairExists, msg,
                                  self.existing_key_name)
@@ -155,7 +154,7 @@ class CreateImportSharedTestMixIn(object):
 
         self.stubs.Set(QUOTAS, "count", fake_quotas_count)
 
-        msg = _("Maximum number of key pairs exceeded")
+        msg = "Maximum number of key pairs exceeded"
         self.assertKeyNameRaises(exception.KeypairLimitExceeded, msg, 'foo')
 
 

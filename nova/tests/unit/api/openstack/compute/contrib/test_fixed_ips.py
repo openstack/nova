@@ -19,7 +19,6 @@ from nova.api.openstack.compute.plugins.v3 import fixed_ips as fixed_ips_v21
 from nova import context
 from nova import db
 from nova import exception
-from nova.i18n import _
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.objects import test_network
@@ -75,7 +74,7 @@ fake_fixed_ips = [{'id': 1,
 
 def fake_fixed_ip_get_by_address(context, address, columns_to_join=None):
     if address == 'inv.ali.d.ip':
-        msg = _("Invalid fixed IP Address %s in request") % address
+        msg = "Invalid fixed IP Address %s in request" % address
         raise exception.FixedIpInvalid(msg)
     for fixed_ip in fake_fixed_ips:
         if fixed_ip['address'] == address and not fixed_ip['deleted']:

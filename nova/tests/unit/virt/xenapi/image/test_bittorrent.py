@@ -18,7 +18,6 @@ import pkg_resources
 import six
 
 from nova import context
-from nova.i18n import _
 from nova import test
 from nova.tests.unit.virt.xenapi import stubs
 from nova.virt.xenapi import driver as xenapi_conn
@@ -124,9 +123,9 @@ class LookupTorrentURLTestCase(test.NoDBTestCase):
 
         exc = self.assertRaises(
                 RuntimeError, self.store._lookup_torrent_url_fn)
-        self.assertEqual(_('Cannot create default bittorrent URL without'
-                           ' torrent_base_url set'
-                           ' or torrent URL fetcher extension'),
+        self.assertEqual('Cannot create default bittorrent URL without'
+                         ' torrent_base_url set'
+                         ' or torrent URL fetcher extension',
                          six.text_type(exc))
 
     def test_default_fetch_url_base_url_is_set(self):
@@ -158,6 +157,6 @@ class LookupTorrentURLTestCase(test.NoDBTestCase):
 
         exc = self.assertRaises(
                 RuntimeError, self.store._lookup_torrent_url_fn)
-        self.assertEqual(_('Multiple torrent URL fetcher extensions found.'
-                           ' Failing.'),
+        self.assertEqual('Multiple torrent URL fetcher extensions found.'
+                         ' Failing.',
                          six.text_type(exc))

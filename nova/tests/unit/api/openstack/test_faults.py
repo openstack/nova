@@ -23,7 +23,6 @@ import webob.exc
 import nova.api.openstack
 from nova.api.openstack import wsgi
 from nova import exception
-from nova.i18n import _
 from nova import test
 
 
@@ -40,7 +39,7 @@ class TestFaultWrapper(test.NoDBTestCase):
 
         # Create an exception, passing a translatable message with a
         # known value we can test for later.
-        safe_exception = exception.NotFound(_('Should be translated.'))
+        safe_exception = exception.NotFound('Should be translated.')
         safe_exception.safe = True
         safe_exception.code = 404
 

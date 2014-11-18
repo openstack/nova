@@ -48,6 +48,7 @@ Nova Specific Commandments
   assertIn/NotIn(A, B, message)
 - [N335] Check for usage of deprecated assertRaisesRegexp
 - [N336] Must use a dict comprehension instead of a dict constructor with a sequence of key-value pairs.
+- [N337] Don't import translation in tests
 
 Creating Unit Tests
 -------------------

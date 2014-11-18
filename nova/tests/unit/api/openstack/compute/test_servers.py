@@ -43,7 +43,6 @@ from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
-from nova.i18n import _
 from nova.image import glance
 from nova.network import manager
 from nova.network.neutronv2 import api as neutron_api
@@ -2655,9 +2654,9 @@ class ServersControllerCreateTest(test.TestCase):
         params = {'networks': requested_networks}
 
         def fake_create(*args, **kwargs):
-            msg = _("Unable to launch multiple instances with"
-                    " a single configured port ID. Please launch your"
-                    " instance one by one with different ports.")
+            msg = ("Unable to launch multiple instances with"
+                   " a single configured port ID. Please launch your"
+                   " instance one by one with different ports.")
             raise exception.MultiplePortsNotApplicable(reason=msg)
 
         self.stubs.Set(compute_api.API, 'create', fake_create)
@@ -2735,18 +2734,18 @@ class ServersControllerCreateTest(test.TestCase):
             self.assertEqual(e.explanation, expected_msg)
 
     def test_create_instance_above_quota_instances(self):
-        msg = _('Quota exceeded for instances: Requested 1, but'
-                ' already used 10 of 10 instances')
+        msg = ('Quota exceeded for instances: Requested 1, but'
+               ' already used 10 of 10 instances')
         self._do_test_create_instance_above_quota('instances', 0, 10, msg)
 
     def test_create_instance_above_quota_ram(self):
-        msg = _('Quota exceeded for ram: Requested 4096, but'
-                ' already used 8192 of 10240 ram')
+        msg = ('Quota exceeded for ram: Requested 4096, but'
+               ' already used 8192 of 10240 ram')
         self._do_test_create_instance_above_quota('ram', 2048, 10 * 1024, msg)
 
     def test_create_instance_above_quota_cores(self):
-        msg = _('Quota exceeded for cores: Requested 2, but'
-                ' already used 9 of 10 cores')
+        msg = ('Quota exceeded for cores: Requested 2, but'
+               ' already used 9 of 10 cores')
         self._do_test_create_instance_above_quota('cores', 1, 10, msg)
 
     def test_create_instance_above_quota_group_members(self):

@@ -58,7 +58,6 @@ from nova.console import type as ctype
 from nova import context
 from nova import db
 from nova import exception
-from nova.i18n import _
 from nova.image import glance
 from nova.network import api as network_api
 from nova.network import model as network_model
@@ -6444,7 +6443,7 @@ class ComputeTestCase(BaseTestCase):
     def test_instance_update_host_check(self):
         # make sure rt usage doesn't happen if the host or node is different
         def fail_get(nodename):
-            raise test.TestingException(_("wrong host/node"))
+            raise test.TestingException("wrong host/node")
         self.stubs.Set(self.compute, '_get_resource_tracker', fail_get)
 
         instance = self._create_fake_instance_obj({'host': 'someotherhost'})
@@ -11142,7 +11141,7 @@ class ComputeInjectedFilesTestCase(BaseTestCase):
         def spawn_explode(context, instance, image_meta, injected_files,
                 admin_password, nw_info, block_device_info):
             # force reschedule logic to execute
-            raise test.TestingException(_("spawn error"))
+            raise test.TestingException("spawn error")
 
         self.stubs.Set(self.compute.driver, 'spawn', spawn_explode)
         self.stubs.Set(self.compute, '_reschedule_or_error', _roe)

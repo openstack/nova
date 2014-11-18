@@ -20,7 +20,6 @@ from lxml import etree
 import mock
 
 from nova.compute import arch
-from nova.i18n import _
 
 # Allow passing None to the various connect methods
 # (i.e. allow the client to rely on default URLs)
@@ -1072,15 +1071,13 @@ class Connection(object):
 def openAuth(uri, auth, flags):
 
     if type(auth) != list:
-        raise Exception(_("Expected a list for 'auth' parameter"))
+        raise Exception("Expected a list for 'auth' parameter")
 
     if type(auth[0]) != list:
-        raise Exception(
-            _("Expected a function in 'auth[0]' parameter"))
+        raise Exception("Expected a function in 'auth[0]' parameter")
 
     if not callable(auth[1]):
-        raise Exception(
-            _("Expected a function in 'auth[1]' parameter"))
+        raise Exception("Expected a function in 'auth[1]' parameter")
 
     return Connection(uri, (flags == VIR_CONNECT_RO))
 
@@ -1091,8 +1088,8 @@ def virEventRunDefaultImpl():
 
 def virEventRegisterDefaultImpl():
     if connection_used:
-        raise Exception(_("virEventRegisterDefaultImpl() must be \
-            called before connection is used."))
+        raise Exception("virEventRegisterDefaultImpl() must be "
+                        "called before connection is used.")
 
 
 def registerErrorHandler(handler, ctxt):

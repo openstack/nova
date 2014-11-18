@@ -27,7 +27,6 @@ from oslo.utils import units
 from oslo.vmware import exceptions as vexc
 
 from nova import exception
-from nova.i18n import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova.virt.vmwareapi import constants
@@ -264,7 +263,7 @@ class ManagedObject(object):
         for elem in self.propSet:
             if elem.name == attr:
                 return elem.val
-        msg = _("Property %(attr)s not set for the managed object %(name)s")
+        msg = "Property %(attr)s not set for the managed object %(name)s"
         raise exception.NovaException(msg % {'attr': attr,
                                              'name': self.__class__.__name__})
 
@@ -1074,10 +1073,10 @@ def fake_fetch_image(context, instance, host, port, dc_name, ds_name,
 def _get_vm_mdo(vm_ref):
     """Gets the Virtual Machine with the ref from the db."""
     if _db_content.get("VirtualMachine", None) is None:
-            raise exception.NotFound(_("There is no VM registered"))
+            raise exception.NotFound("There is no VM registered")
     if vm_ref not in _db_content.get("VirtualMachine"):
-        raise exception.NotFound(_("Virtual Machine with ref %s is not "
-                        "there") % vm_ref)
+        raise exception.NotFound("Virtual Machine with ref %s is not "
+                                 "there" % vm_ref)
     return _db_content.get("VirtualMachine")[vm_ref]
 
 
@@ -1223,9 +1222,8 @@ class FakeVim(object):
         if (self._session is None or self._session not in
                  _db_content['session']):
             LOG.debug("Session is faulty")
-            raise vexc.VimFaultException(
-                               [vexc.NOT_AUTHENTICATED],
-                               _("Session Invalid"))
+            raise vexc.VimFaultException([vexc.NOT_AUTHENTICATED],
+                                         "Session Invalid")
 
     def _session_is_active(self, *args, **kwargs):
         try:
@@ -1433,11 +1431,11 @@ class FakeVim(object):
     def _set_power_state(self, method, vm_ref, pwr_state="poweredOn"):
         """Sets power state for the VM."""
         if _db_content.get("VirtualMachine", None) is None:
-            raise exception.NotFound(_("No Virtual Machine has been "
-                                       "registered yet"))
+            raise exception.NotFound("No Virtual Machine has been "
+                                     "registered yet")
         if vm_ref not in _db_content.get("VirtualMachine"):
-            raise exception.NotFound(_("Virtual Machine with ref %s is not "
-                                       "there") % vm_ref)
+            raise exception.NotFound("Virtual Machine with ref %s is not "
+                                     "there" % vm_ref)
         vm_mdo = _db_content.get("VirtualMachine").get(vm_ref)
         vm_mdo.set("runtime.powerState", pwr_state)
         task_mdo = create_task(method, "success")

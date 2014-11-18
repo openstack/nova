@@ -24,7 +24,6 @@ from nova.compute import resources
 from nova.compute.resources import base
 from nova.compute.resources import vcpu
 from nova import context
-from nova.i18n import _
 from nova.objects import flavor as flavor_obj
 from nova import test
 from nova.tests.unit import fake_instance
@@ -75,7 +74,7 @@ class FakeResource(base.Resource):
         if requested <= free:
             return
         else:
-            return (_('Free %(free)d < requested %(requested)d ') %
+            return ('Free %(free)d < requested %(requested)d ' %
                     {'free': free, 'requested': requested})
 
     def add_instance(self, usage):
@@ -326,7 +325,7 @@ class TestVCPU(test.TestCase):
 
     def test_test_fail(self):
         result = self._vcpu.test(self._flavor, {'vcpu': 2})
-        expected = _('Free CPUs 2.00 VCPUs < requested 5 VCPUs')
+        expected = 'Free CPUs 2.00 VCPUs < requested 5 VCPUs'
         self.assertEqual(expected, result)
 
     def test_write(self):
