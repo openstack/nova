@@ -25,6 +25,18 @@ boolean = {
 }
 
 
+positive_integer = {
+    'type': ['integer', 'string'],
+    'pattern': '^[0-9]*$', 'minimum': 1
+}
+
+
+non_negative_integer = {
+    'type': ['integer', 'string'],
+    'pattern': '^[0-9]*$', 'minimum': 0
+}
+
+
 hostname = {
     'type': 'string', 'minLength': 1, 'maxLength': 255,
     # NOTE: 'host' is defined in "services" table, and that
