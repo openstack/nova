@@ -62,19 +62,55 @@ from nova import utils
 LOG = logging.getLogger(__name__)
 
 
+def get_connect_string(backend, database, user=None, passwd=None,
+                       host='localhost'):
+    """Get database connection
+    Try to get a connection with a very specific set of values, if we get
+    these then we'll run the tests, otherwise they are skipped
+    """
+    args = {'backend': backend,
+            'user': user,
+            'passwd': passwd,
+            'host': host,
+            'database': database}
+    if backend == 'sqlite':
+        template = '%(backend)s:///%(database)s'
+    else:
+        template = "%(backend)s://%(user)s:%(passwd)s@%(host)s/%(database)s"
+    return template % args
+
+
+def is_backend_avail(backend, database, user=None, passwd=None):
+    try:
+        connect_uri = get_connect_string(backend=backend,
+                                         database=database,
+                                         user=user,
+                                         passwd=passwd)
+        engine = sqlalchemy.create_engine(connect_uri)
+        connection = engine.connect()
+    except Exception as e:
+        # intentionally catch all to handle exceptions even if we don't
+        # have any backend code loaded.
+        msg = _("The %(backend)s backend is unavailable: %(exception)s")
+        LOG.info(msg, {"backend": backend, "exception": e})
+        return False
+    else:
+        connection.close()
+        engine.dispose()
+        return True
+
+
 def _have_mysql(user, passwd, database):
     present = os.environ.get('NOVA_TEST_MYSQL_PRESENT')
     if present is None:
-        return oslodbutils.is_backend_avail('mysql+mysqldb', database,
-                                            user, passwd)
+        return is_backend_avail('mysql+mysqldb', database, user, passwd)
     return present.lower() in ('', 'true')
 
 
 def _have_postgresql(user, passwd, database):
     present = os.environ.get('NOVA_TEST_POSTGRESQL_PRESENT')
     if present is None:
-        return oslodbutils.is_backend_avail('postgresql+psycopg2', database,
-                                            user, passwd)
+        return is_backend_avail('postgresql+psycopg2', database, user, passwd)
     return present.lower() in ('', 'true')
 
 
@@ -130,8 +166,8 @@ class CommonTestsMixIn(object):
         """Test that we can trigger a mysql connection failure and we fail
         gracefully to ensure we don't break people without mysql
         """
-        if oslodbutils.is_backend_avail('mysql+mysqldb', self.DATABASE,
-                                        "openstack_cifail", self.PASSWD):
+        if is_backend_avail('mysql+mysqldb', self.DATABASE,
+                            "openstack_cifail", self.PASSWD):
             self.fail("Shouldn't have connected")
 
     def test_postgresql_opportunistically(self):
@@ -141,8 +177,8 @@ class CommonTestsMixIn(object):
         """Test that we can trigger a postgres connection failure and we fail
         gracefully to ensure we don't break people without postgres
         """
-        if oslodbutils.is_backend_avail('postgresql+psycopg2', self.DATABASE,
-                                        "openstack_cifail", self.PASSWD):
+        if is_backend_avail('postgresql+psycopg2', self.DATABASE,
+                            "openstack_cifail", self.PASSWD):
             self.fail("Shouldn't have connected")
 
 
