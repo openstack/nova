@@ -161,11 +161,16 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
         context = sg._authorize_context(req)
         authorize(context)
 
-        id = self.security_group_api.validate_id(id)
+        try:
+            id = self.security_group_api.validate_id(id)
+        except exception.Invalid as ex:
+            raise exc.HTTPBadRequest(explanation=ex.format_message())
 
-        rule = self.security_group_api.get_default_rule(context, id)
-
-        self.security_group_api.remove_default_rules(context, [rule['id']])
+        try:
+            rule = self.security_group_api.get_default_rule(context, id)
+            self.security_group_api.remove_default_rules(context, [rule['id']])
+        except exception.SecurityGroupDefaultRuleNotFound as ex:
+            raise exc.HTTPNotFound(explanation=ex.format_message())
 
         return webob.Response(status_int=204)
 
@@ -176,10 +181,12 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
         authorize(context)
 
         ret = {'security_group_default_rules': []}
-        for rule in self.security_group_api.get_all_default_rules(context):
-            rule_fmt = self._format_security_group_default_rule(rule)
-            ret['security_group_default_rules'].append(rule_fmt)
-
+        try:
+            for rule in self.security_group_api.get_all_default_rules(context):
+                rule_fmt = self._format_security_group_default_rule(rule)
+                ret['security_group_default_rules'].append(rule_fmt)
+        except exception.SecurityGroupDefaultRuleNotFound as ex:
+            raise exc.HTTPNotFound(explanation=ex.format_message())
         return ret
 
     def _format_security_group_default_rule(self, rule):

@@ -87,7 +87,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
 
         try:
             rule = self.security_group_api.get_default_rule(context, id)
-        except exception.SecurityGroupNotFound as ex:
+        except exception.SecurityGroupDefaultRuleNotFound as ex:
             raise exc.HTTPNotFound(explanation=ex.format_message())
 
         fmt_rule = self._format_security_group_default_rule(rule)
@@ -106,10 +106,6 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
 
         try:
             rule = self.security_group_api.get_default_rule(context, id)
-        except exception.SecurityGroupNotFound as ex:
-            raise exc.HTTPNotFound(explanation=ex.format_message())
-
-        try:
             self.security_group_api.remove_default_rules(context, [rule['id']])
         except exception.SecurityGroupDefaultRuleNotFound as ex:
             raise exc.HTTPNotFound(explanation=ex.format_message())
