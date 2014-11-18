@@ -1822,23 +1822,38 @@ def _instances_fill_metadata(context, instances,
 
 
 def _manual_join_columns(columns_to_join):
+    """Separate manually joined columns from columns_to_join
+
+    If columns_to_join contains 'metadata', 'system_metadata', or
+    'pci_devices' those columns are removed from columns_to_join and added
+    to a manual_joins list to be used with the _instances_fill_metadata method.
+
+    The columns_to_join formal parameter is copied and not modified, the return
+    tuple has the modified columns_to_join list to be used with joinedload in
+    a model query.
+
+    :param:columns_to_join: List of columns to join in a model query.
+    :return: tuple of (manual_joins, columns_to_join)
+    """
     manual_joins = []
+    columns_to_join_new = copy.copy(columns_to_join)
     for column in ('metadata', 'system_metadata', 'pci_devices'):
-        if column in columns_to_join:
-            columns_to_join.remove(column)
+        if column in columns_to_join_new:
+            columns_to_join_new.remove(column)
             manual_joins.append(column)
-    return manual_joins, columns_to_join
+    return manual_joins, columns_to_join_new
 
 
 @require_context
 def instance_get_all(context, columns_to_join=None):
     if columns_to_join is None:
-        columns_to_join = ['info_cache', 'security_groups']
+        columns_to_join_new = ['info_cache', 'security_groups']
         manual_joins = ['metadata', 'system_metadata']
     else:
-        manual_joins, columns_to_join = _manual_join_columns(columns_to_join)
+        manual_joins, columns_to_join_new = (
+            _manual_join_columns(columns_to_join))
     query = model_query(context, models.Instance)
-    for column in columns_to_join:
+    for column in columns_to_join_new:
         query = query.options(joinedload(column))
     if not context.is_admin:
         # If we're not admin context, add appropriate filter..
@@ -1921,13 +1936,14 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
     session = get_session(use_slave=use_slave)
 
     if columns_to_join is None:
-        columns_to_join = ['info_cache', 'security_groups']
+        columns_to_join_new = ['info_cache', 'security_groups']
         manual_joins = ['metadata', 'system_metadata']
     else:
-        manual_joins, columns_to_join = _manual_join_columns(columns_to_join)
+        manual_joins, columns_to_join_new = (
+            _manual_join_columns(columns_to_join))
 
     query_prefix = session.query(models.Instance)
-    for column in columns_to_join:
+    for column in columns_to_join_new:
         query_prefix = query_prefix.options(joinedload(column))
 
     # Note: order_by is done in the sqlalchemy.utils.py paginate_query(),
@@ -2176,12 +2192,13 @@ def instance_get_active_by_window_joined(context, begin, end=None,
     query = session.query(models.Instance)
 
     if columns_to_join is None:
-        columns_to_join = ['info_cache', 'security_groups']
+        columns_to_join_new = ['info_cache', 'security_groups']
         manual_joins = ['metadata', 'system_metadata']
     else:
-        manual_joins, columns_to_join = _manual_join_columns(columns_to_join)
+        manual_joins, columns_to_join_new = (
+            _manual_join_columns(columns_to_join))
 
-    for column in columns_to_join:
+    for column in columns_to_join_new:
         query = query.options(joinedload(column))
 
     query = query.filter(or_(models.Instance.terminated_at == null(),
