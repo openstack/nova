@@ -558,16 +558,7 @@ class VirtCPUTopology(object):
                                                      allow_threads)[0]
 
 
-class VirtPageSize(object):
-    def __init__(self, size_kb):
-        """Handles a memory page size
-
-        :param size_kb: integer of page size in KiB
-        """
-        self.size_kb = int(size_kb)
-
-
-class VirtPagesTopology(VirtPageSize):
+class VirtPagesTopology(object):
     """Convenient class/type to identify memory pages info."""
 
     def __init__(self, size_kb, total, used=0):
@@ -577,7 +568,7 @@ class VirtPagesTopology(VirtPageSize):
         :param total: integer of pages size available
         :param used: integer of pages size used
         """
-        super(VirtPagesTopology, self).__init__(size_kb)
+        self.size_kb = int(size_kb)
         self.used = int(used)
         self.total = int(total)
 
@@ -642,7 +633,7 @@ class VirtNUMATopologyCellInstance(VirtNUMATopologyCell):
         :param id: integer identifier of cell
         :param cpuset: set containing list of CPU indexes
         :param memory: RAM measured in Mib
-        :param pagesize: a VirtPageSize
+        :param pagesize: measured in Kib
 
         :returns: a new NUMA cell instance object
         """
@@ -656,15 +647,14 @@ class VirtNUMATopologyCellInstance(VirtNUMATopologyCell):
         return {'cpus': format_cpu_spec(self.cpuset, allow_ranges=False),
                 'mem': {'total': self.memory},
                 'id': self.id,
-                'pagesize': self.pagesize and self.pagesize.size_kb or None}
+                'pagesize': self.pagesize}
 
     @classmethod
     def _from_dict(cls, data_dict):
         cpuset = parse_cpu_spec(data_dict.get('cpus', ''))
         memory = data_dict.get('mem', {}).get('total', 0)
         cell_id = data_dict.get('id')
-        pagesize = (data_dict.get('pagesize')
-                    and VirtPageSize(data_dict['pagesize']) or None)
+        pagesize = data_dict.get('pagesize')
         return cls(cell_id, cpuset, memory, pagesize)
 
 

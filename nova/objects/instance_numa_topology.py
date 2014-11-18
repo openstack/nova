@@ -64,24 +64,17 @@ class InstanceNUMATopology(base.NovaObject):
         if topology:
             cells = []
             for topocell in topology.cells:
-                pagesize = (topocell.pagesize
-                            and topocell.pagesize.size_kb or None)
                 cell = InstanceNUMACell(id=topocell.id, cpuset=topocell.cpuset,
                                         memory=topocell.memory,
-                                        pagesize=pagesize)
+                                        pagesize=topocell.pagesize)
                 cells.append(cell)
             return cls(cells=cells)
 
     def topology_from_obj(self):
         cells = []
         for objcell in self.cells:
-            pagesize = (
-                objcell.pagesize and
-                hardware.VirtPageSize(objcell.pagesize) or None)
-            cell = hardware.VirtNUMATopologyCellInstance(objcell.id,
-                                                         objcell.cpuset,
-                                                         objcell.memory,
-                                                         pagesize=pagesize)
+            cell = hardware.VirtNUMATopologyCellInstance(
+                objcell.id, objcell.cpuset, objcell.memory, objcell.pagesize)
             cells.append(cell)
         return hardware.VirtNUMAInstanceTopology(cells=cells)
 
