@@ -516,15 +516,17 @@ class VMwareVMOps(object):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None,
-              instance_name=None, power_on=True):
+              instance_name=None, power_on=True,
+              flavor=None):
 
         client_factory = self._session.vim.client.factory
         image_info = images.VMwareImage.from_image(instance.image_ref,
                                                    image_meta)
         # Read flavors for extra_specs
-        flavor = objects.Flavor.get_by_id(
-            nova_context.get_admin_context(read_deleted='yes'),
-            instance.instance_type_id)
+        if flavor is None:
+            flavor = objects.Flavor.get_by_id(
+                nova_context.get_admin_context(read_deleted='yes'),
+                instance.instance_type_id)
 
         extra_specs = self._get_extra_specs(flavor)
 
