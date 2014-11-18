@@ -245,33 +245,49 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         group.policies = [policy]
         return group
 
-    def _group_details_in_filter_properties(self, group, func='get_by_uuid',
-                                            hint=None, policy=None):
-        group_hint = hint
+    def _get_group_details(self, group, policy=None):
         group_hosts = ['hostB']
 
         with contextlib.nested(
-            mock.patch.object(objects.InstanceGroup, func, return_value=group),
+            mock.patch.object(objects.InstanceGroup, 'get_by_instance_uuid',
+                              return_value=group),
             mock.patch.object(objects.InstanceGroup, 'get_hosts',
                               return_value=['hostA']),
         ) as (get_group, get_hosts):
             scheduler_utils._SUPPORTS_ANTI_AFFINITY = None
             scheduler_utils._SUPPORTS_AFFINITY = None
-            group_info = scheduler_utils.setup_instance_group(
-                self.context, group_hint, group_hosts)
+            group_info = scheduler_utils._get_group_details(
+                self.context, ['fake_uuid'], group_hosts)
             self.assertEqual(
                 (set(['hostA', 'hostB']), [policy]),
                 group_info)
 
-    def test_group_details_in_filter_properties(self):
+    def test_get_group_details(self):
         for policy in ['affinity', 'anti-affinity']:
             group = self._create_server_group(policy)
-            self._group_details_in_filter_properties(group, func='get_by_uuid',
-                                                     hint=group.uuid,
-                                                     policy=policy)
+            self._get_group_details(group, policy=policy)
 
-    def _group_filter_with_filter_not_configured(self, policy):
-        self.flags(scheduler_default_filters=['f1', 'f2'])
+    def test_get_group_details_with_no_affinity_filters(self):
+        self.flags(scheduler_default_filters=['fake'])
+        scheduler_utils._SUPPORTS_ANTI_AFFINITY = None
+        scheduler_utils._SUPPORTS_AFFINITY = None
+        group_info = scheduler_utils._get_group_details(self.context,
+                                                        ['fake-uuid'])
+        self.assertIsNone(group_info)
+
+    def test_get_group_details_with_no_instance_uuids(self):
+        self.flags(scheduler_default_filters=['fake'])
+        scheduler_utils._SUPPORTS_ANTI_AFFINITY = None
+        scheduler_utils._SUPPORTS_AFFINITY = None
+        group_info = scheduler_utils._get_group_details(self.context, None)
+        self.assertIsNone(group_info)
+
+    def _get_group_details_with_filter_not_configured(self, policy):
+        wrong_filter = {
+            'affinity': 'ServerGroupAntiAffinityFilter',
+            'anti-affinity': 'ServerGroupAffinityFilter',
+        }
+        self.flags(scheduler_default_filters=[wrong_filter[policy]])
 
         instance = fake_instance.fake_instance_obj(self.context,
                 params={'host': 'hostA'})
@@ -282,7 +298,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         group.policies = [policy]
 
         with contextlib.nested(
-            mock.patch.object(objects.InstanceGroup, 'get_by_uuid',
+            mock.patch.object(objects.InstanceGroup, 'get_by_instance_uuid',
                               return_value=group),
             mock.patch.object(objects.InstanceGroup, 'get_hosts',
                               return_value=['hostA']),
@@ -290,20 +306,49 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
             scheduler_utils._SUPPORTS_ANTI_AFFINITY = None
             scheduler_utils._SUPPORTS_AFFINITY = None
             self.assertRaises(exception.NoValidHost,
-                              scheduler_utils.setup_instance_group,
-                              self.context, group.uuid)
+                              scheduler_utils._get_group_details,
+                              self.context, ['fake-uuid'])
 
-    def test_group_filter_with_filter_not_configured(self):
+    def test_get_group_details_with_filter_not_configured(self):
         policies = ['anti-affinity', 'affinity']
         for policy in policies:
-            self._group_filter_with_filter_not_configured(policy)
+            self._get_group_details_with_filter_not_configured(policy)
 
-    def test_group_uuid_details_in_filter_properties(self):
-        group = self._create_server_group()
-        self._group_details_in_filter_properties(group, 'get_by_uuid',
-                                                 group.uuid, 'anti-affinity')
+    @mock.patch.object(scheduler_utils, '_get_group_details')
+    def test_setup_instance_group_in_filter_properties(self, mock_ggd):
+        mock_ggd.return_value = (set(['hostA', 'hostB']), ['policy'])
+        spec = {'instance_uuids': ['fake-uuid']}
+        filter_props = {'group_hosts': ['hostC']}
 
-    def test_group_name_details_in_filter_properties(self):
-        group = self._create_server_group()
-        self._group_details_in_filter_properties(group, 'get_by_name',
-                                                 group.name, 'anti-affinity')
+        scheduler_utils.setup_instance_group(self.context, spec, filter_props)
+
+        mock_ggd.assert_called_once_with(self.context, ['fake-uuid'],
+                                         ['hostC'])
+        expected_filter_props = {'group_updated': True,
+                                 'group_hosts': set(['hostA', 'hostB']),
+                                 'group_policies': ['policy']}
+        self.assertEqual(expected_filter_props, filter_props)
+
+    @mock.patch.object(scheduler_utils, '_get_group_details')
+    def test_setup_instance_group_with_no_group(self, mock_ggd):
+        mock_ggd.return_value = None
+        spec = {'instance_uuids': ['fake-uuid']}
+        filter_props = {'group_hosts': ['hostC']}
+
+        scheduler_utils.setup_instance_group(self.context, spec, filter_props)
+
+        mock_ggd.assert_called_once_with(self.context, ['fake-uuid'],
+                                         ['hostC'])
+        self.assertNotIn('group_updated', filter_props)
+        self.assertNotIn('group_policies', filter_props)
+        self.assertEqual(['hostC'], filter_props['group_hosts'])
+
+    @mock.patch.object(scheduler_utils, '_get_group_details')
+    def test_setup_instance_group_with_filter_not_configured(self, mock_ggd):
+        mock_ggd.side_effect = exception.NoValidHost(reason='whatever')
+        spec = {'instance_uuids': ['fake-uuid']}
+        filter_props = {'group_hosts': ['hostC']}
+
+        self.assertRaises(exception.NoValidHost,
+                          scheduler_utils.setup_instance_group,
+                          self.context, spec, filter_props)

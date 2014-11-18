@@ -246,11 +246,12 @@ _SUPPORTS_AFFINITY = None
 _SUPPORTS_ANTI_AFFINITY = None
 
 
-def setup_instance_group(context, group_hint, user_group_hosts=None):
-    """Provides group_hosts and group_policies sets related to the group
-    provided by hint if corresponding filters are enabled.
+def _get_group_details(context, instance_uuids, user_group_hosts=None):
+    """Provide group_hosts and group_policies sets related to instances if
+    those instances are belonging to a group and if corresponding filters are
+    enabled.
 
-    :param group_hint: 'group' scheduler hint
+    :param instance_uuids: list of instance uuids
     :param user_group_hosts: Hosts from the group or empty set
 
     :returns: None or tuple (group_hosts, group_policies)
@@ -263,19 +264,47 @@ def setup_instance_group(context, group_hint, user_group_hosts=None):
     if _SUPPORTS_ANTI_AFFINITY is None:
         _SUPPORTS_ANTI_AFFINITY = validate_filter(
             'ServerGroupAntiAffinityFilter')
-    if group_hint:
-        group = objects.InstanceGroup.get_by_hint(context, group_hint)
-        policies = set(('anti-affinity', 'affinity'))
-        if any((policy in policies) for policy in group.policies):
-            if ('affinity' in group.policies and not _SUPPORTS_AFFINITY):
-                msg = _("ServerGroupAffinityFilter not configured")
-                LOG.error(msg)
-                raise exception.NoValidHost(reason=msg)
-            if ('anti-affinity' in group.policies and
-                    not _SUPPORTS_ANTI_AFFINITY):
-                msg = _("ServerGroupAntiAffinityFilter not configured")
-                LOG.error(msg)
-                raise exception.NoValidHost(reason=msg)
-            group_hosts = set(group.get_hosts(context))
-            user_hosts = set(user_group_hosts) if user_group_hosts else set()
-            return (user_hosts | group_hosts, group.policies)
+    _supports_server_groups = any((_SUPPORTS_AFFINITY,
+                                   _SUPPORTS_ANTI_AFFINITY))
+    if not _supports_server_groups or not instance_uuids:
+        return
+
+    try:
+        # NOTE(sbauza) If there are multiple instance UUIDs, it's a boot
+        # request and they will all be in the same group, so it's safe to
+        # only check the first one.
+        group = objects.InstanceGroup.get_by_instance_uuid(context,
+                                                           instance_uuids[0])
+    except exception.InstanceGroupNotFound:
+        return
+
+    policies = set(('anti-affinity', 'affinity'))
+    if any((policy in policies) for policy in group.policies):
+        if (not _SUPPORTS_AFFINITY and 'affinity' in group.policies):
+            msg = _("ServerGroupAffinityFilter not configured")
+            LOG.error(msg)
+            raise exception.NoValidHost(reason=msg)
+        if (not _SUPPORTS_ANTI_AFFINITY and 'anti-affinity' in group.policies):
+            msg = _("ServerGroupAntiAffinityFilter not configured")
+            LOG.error(msg)
+            raise exception.NoValidHost(reason=msg)
+        group_hosts = set(group.get_hosts(context))
+        user_hosts = set(user_group_hosts) if user_group_hosts else set()
+        return (user_hosts | group_hosts, group.policies)
+
+
+def setup_instance_group(context, request_spec, filter_properties):
+    """Add group_hosts and group_policies fields to filter_properties dict
+    based on instance uuids provided in request_spec, if those instances are
+    belonging to a group.
+
+    :param request_spec: Request spec
+    :param filter_properties: Filter properties
+    """
+    group_hosts = filter_properties.get('group_hosts')
+    instance_uuids = request_spec.get('instance_uuids')
+    group_info = _get_group_details(context, instance_uuids, group_hosts)
+    if group_info is not None:
+        filter_properties['group_updated'] = True
+        (filter_properties['group_hosts'],
+         filter_properties['group_policies']) = group_info

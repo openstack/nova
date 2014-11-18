@@ -503,6 +503,8 @@ class ComputeTaskManager(base.Base):
         quotas = objects.Quotas.from_reservations(context,
                                                   reservations,
                                                   instance=instance)
+        scheduler_utils.setup_instance_group(context, request_spec,
+                                             filter_properties)
         try:
             scheduler_utils.populate_retry(filter_properties, instance['uuid'])
             hosts = self.scheduler_client.select_destinations(
@@ -598,16 +600,8 @@ class ComputeTaskManager(base.Base):
         #                 2.0 of the RPC API.
         request_spec = scheduler_utils.build_request_spec(context, image,
                                                           instances)
-        # NOTE(sbauza): filter_properties['hints'] can be None
-        hints = filter_properties.get('scheduler_hints', {}) or {}
-        group_hint = hints.get('group')
-        group_hosts = filter_properties.get('group_hosts')
-        group_info = scheduler_utils.setup_instance_group(context, group_hint,
-                                                          group_hosts)
-        if isinstance(group_info, tuple):
-            filter_properties['group_updated'] = True
-            (filter_properties['group_hosts'],
-             filter_properties['group_policies']) = group_info
+        scheduler_utils.setup_instance_group(context, request_spec,
+                                             filter_properties)
         # TODO(danms): Remove this in version 2.0 of the RPC API
         if (requested_networks and
                 not isinstance(requested_networks,
@@ -663,6 +657,8 @@ class ComputeTaskManager(base.Base):
             *instances):
         request_spec = scheduler_utils.build_request_spec(context, image,
                 instances)
+        scheduler_utils.setup_instance_group(context, request_spec,
+                                             filter_properties)
         hosts = self.scheduler_client.select_destinations(context,
                 request_spec, filter_properties)
         return hosts
@@ -751,6 +747,8 @@ class ComputeTaskManager(base.Base):
                 request_spec = scheduler_utils.build_request_spec(context,
                                                                   image_ref,
                                                                   [instance])
+                scheduler_utils.setup_instance_group(context, request_spec,
+                                                     filter_properties)
                 try:
                     hosts = self.scheduler_client.select_destinations(context,
                                                             request_spec,
