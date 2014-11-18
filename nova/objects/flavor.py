@@ -48,7 +48,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject):
     def __init__(self, *args, **kwargs):
         super(Flavor, self).__init__(*args, **kwargs)
         self._orig_extra_specs = {}
-        self._orig_projects = {}
+        self._orig_projects = []
 
     @staticmethod
     def _from_db_object(context, flavor, db_flavor, expected_attrs=None):
