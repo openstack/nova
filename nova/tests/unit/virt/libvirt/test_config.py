@@ -2115,9 +2115,14 @@ class LibvirtConfigGuestCPUTuneTest(LibvirtConfigBaseTest):
         vcpu3.cpuset = set([6, 7])
         cputune.vcpupin.extend([vcpu0, vcpu1, vcpu2, vcpu3])
 
+        emu = config.LibvirtConfigGuestCPUTuneEmulatorPin()
+        emu.cpuset = set([0, 1, 2, 3, 4, 5, 6, 7])
+        cputune.emulatorpin = emu
+
         xml = cputune.to_xml()
         self.assertXmlEqual(xml, """
           <cputune>
+            <emulatorpin cpuset="0-7"/>
             <vcpupin vcpu="0" cpuset="0-1"/>
             <vcpupin vcpu="1" cpuset="2-3"/>
             <vcpupin vcpu="2" cpuset="4-5"/>
