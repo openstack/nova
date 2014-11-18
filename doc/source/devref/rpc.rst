@@ -35,7 +35,7 @@ Nova implements RPC (both request+response, and one-way, respectively nicknamed 
 Nova RPC Mappings
 -----------------
 
-The figure below shows the internals of a message broker node (referred to as a RabbitMQ node in the diagrams) when a single instance is deployed and shared in an OpenStack cloud. Every Nova component connects to the message broker and, depending on its personality (for example a compute node or a network node), may use the queue either as an Invoker (such as API or Scheduler) or a Worker (such as Compute or Network). Invokers and Workers do not actually exist in the Nova object model, but we are going to use them as an abstraction for sake of clarity. An Invoker is a component that sends messages in the queuing system via two operations: 1) rpc.call and ii) rpc.cast; a Worker is a component that receives messages from the queuing system and reply accordingly to rcp.call operations.
+The figure below shows the internals of a message broker node (referred to as a RabbitMQ node in the diagrams) when a single instance is deployed and shared in an OpenStack cloud. Every Nova component connects to the message broker and, depending on its personality (for example a compute node or a network node), may use the queue either as an Invoker (such as API or Scheduler) or a Worker (such as Compute or Network). Invokers and Workers do not actually exist in the Nova object model, but we are going to use them as an abstraction for sake of clarity. An Invoker is a component that sends messages in the queuing system via two operations: 1) rpc.call and ii) rpc.cast; a Worker is a component that receives messages from the queuing system and reply accordingly to rpc.call operations.
 
 Figure 2 shows the following internal elements:
 
@@ -55,7 +55,7 @@ Figure 2 shows the following internal elements:
 RPC Calls
 ---------
 
-The diagram below shows the message flow during an rp.call operation:
+The diagram below shows the message flow during an rpc.call operation:
 
     1. a Topic Publisher is instantiated to send the message request to the queuing system; immediately before the publishing operation, a Direct Consumer is instantiated to wait for the response message.
     2. once the message is dispatched by the exchange, it is fetched by the Topic Consumer dictated by the routing key (such as 'topic.host') and passed to the Worker in charge of the task.
@@ -70,7 +70,7 @@ The diagram below shows the message flow during an rp.call operation:
 RPC Casts
 ---------
 
-The diagram below the message flow during an rp.cast operation:
+The diagram below the message flow during an rpc.cast operation:
 
     1. A Topic Publisher is instantiated to send the message request to the queuing system.
     2. Once the message is dispatched by the exchange, it is fetched by the Topic Consumer dictated by the routing key (such as 'topic') and passed to the Worker in charge of the task.
