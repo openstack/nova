@@ -3454,7 +3454,7 @@ class ComputeManager(manager.Manager):
 
             # NOTE(wangpan): Get the instance from db, if it has been
             #                deleted, we do nothing and return here
-            expected_attrs = ['metadata', 'system_metadata']
+            expected_attrs = ['metadata', 'system_metadata', 'flavor']
             try:
                 instance = objects.Instance.get_by_uuid(
                         context, instance.uuid,

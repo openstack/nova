@@ -45,7 +45,6 @@ from nova import network
 from nova.network.security_group import neutron_driver
 from nova.network.security_group import openstack_driver
 from nova import objects
-from nova.objects import base as obj_base
 from nova.openstack.common import log as logging
 from nova import quota
 from nova import servicegroup
@@ -1393,7 +1392,7 @@ class CloudController(object):
                                             kwargs.get('instance_type', None))
 
         (instances, resv_id) = self.compute_api.create(context,
-            instance_type=obj_base.obj_to_primitive(flavor),
+            instance_type=flavor,
             image_href=image_uuid,
             max_count=int(kwargs.get('max_count', min_count)),
             min_count=min_count,

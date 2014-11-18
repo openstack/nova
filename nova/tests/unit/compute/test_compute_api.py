@@ -109,19 +109,12 @@ class _ComputeAPIUnitTestMixIn(object):
         if flavor is None:
             flavor = self._create_flavor()
 
-        def make_fake_sys_meta():
-            sys_meta = params.pop("system_metadata", {})
-            for key in flavors.system_metadata_flavor_props:
-                sys_meta['instance_type_%s' % key] = flavor[key]
-            return sys_meta
-
         now = timeutils.utcnow()
 
         instance = objects.Instance()
         instance.metadata = {}
         instance.metadata.update(params.pop('metadata', {}))
-        instance.system_metadata = make_fake_sys_meta()
-        instance.system_metadata.update(params.pop('system_metadata', {}))
+        instance.system_metadata = params.pop('system_metadata', {})
         instance._context = self.context
         instance.id = 1
         instance.uuid = uuidutils.generate_uuid()
@@ -148,6 +141,8 @@ class _ComputeAPIUnitTestMixIn(object):
         instance.launched_at = now
         instance.disable_terminate = False
         instance.info_cache = objects.InstanceInfoCache()
+        instance.flavor = flavor
+        instance.old_flavor = instance.new_flavor = None
 
         if params:
             instance.update(params)
@@ -1401,13 +1396,12 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
                                  'resize_instance')
 
-        current_flavor = flavors.extract_flavor(fake_inst)
+        current_flavor = fake_inst.get_flavor()
         if flavor_id_passed:
             new_flavor = self._create_flavor(id=200, flavorid='new-flavor-id',
                                 name='new_flavor', disabled=False)
             if same_flavor:
-                cur_flavor = flavors.extract_flavor(fake_inst)
-                new_flavor.id = cur_flavor.id
+                new_flavor.id = current_flavor.id
             flavors.get_flavor_by_flavor_id(
                     'new-flavor-id',
                     read_deleted='no').AndReturn(new_flavor)

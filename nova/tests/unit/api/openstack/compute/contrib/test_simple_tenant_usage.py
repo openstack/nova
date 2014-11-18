@@ -296,7 +296,7 @@ class SimpleTenantUsageControllerTestV21(test.TestCase):
         # If an instance is not deleted and missing type information from
         # system_metadata, then that's a bug
         self.inst_obj.system_metadata = {}
-        self.assertRaises(KeyError,
+        self.assertRaises(exception.NotFound,
                           self.controller._get_flavor, self.context,
                           self.inst_obj, {})
 

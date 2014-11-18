@@ -51,19 +51,22 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
             'ephemeral_gb': 20,
             'instance_type_id': 2,  # m1.tiny
             'config_drive': None,
-            'system_metadata': {
-                'instance_type_memory_mb': 128,
-                'instance_type_root_gb': 0,
-                'instance_type_name': 'm1.micro',
-                'instance_type_ephemeral_gb': 0,
-                'instance_type_vcpus': 1,
-                'instance_type_swap': 0,
-                'instance_type_rxtx_factor': 1.0,
-                'instance_type_flavorid': '1',
-                'instance_type_vcpu_weight': None,
-                'instance_type_id': 2,
-            }
+            'system_metadata': {},
         }
+
+        flavor = objects.Flavor(memory_mb=128,
+                                root_gb=0,
+                                name='m1.micro',
+                                ephemeral_gb=0,
+                                vcpus=1,
+                                swap=0,
+                                rxtx_factor=1.0,
+                                flavorid='1',
+                                vcpu_weight=None,
+                                id=2)
+        self.test_instance['flavor'] = flavor
+        self.test_instance['old_flavor'] = None
+        self.test_instance['new_flavor'] = None
 
     def test_volume_in_mapping(self):
         swap = {'device_name': '/dev/sdb',
@@ -254,8 +257,8 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
     def test_get_disk_mapping_simple_swap(self):
         # A simple disk mapping setup, but with a swap device added
 
-        self.test_instance['system_metadata']['instance_type_swap'] = 5
         instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.flavor.swap = 5
         image_meta = {}
 
         mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
@@ -366,8 +369,8 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
 
     def test_get_disk_mapping_ephemeral(self):
         # A disk mapping with ephemeral devices
-        self.test_instance['system_metadata']['instance_type_swap'] = 5
         instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.flavor.swap = 5
         image_meta = {}
 
         block_device_info = {

@@ -35,6 +35,7 @@ from nova import exception
 from nova.i18n import _, _LI, _LW
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import instance as instance_obj
 from nova.openstack.common import log as logging
 from nova.pci import manager as pci_manager
 from nova.pci import whitelist as pci_whitelist
@@ -173,7 +174,7 @@ class ResourceTracker(object):
                   "MB", {'flavor': instance_type['memory_mb'],
                           'overhead': overhead['memory_mb']})
 
-        instance_ref = obj_base.obj_to_primitive(instance)
+        instance_ref = instance_obj.compat_instance(instance)
         claim = claims.ResizeClaim(context, instance_ref, instance_type,
                                    image_meta, self, self.compute_node,
                                    overhead=overhead, limits=limits)
@@ -701,7 +702,8 @@ class ResourceTracker(object):
         is_deleted_instance = instance['vm_state'] == vm_states.DELETED
 
         if is_new_instance:
-            self.tracked_instances[uuid] = obj_base.obj_to_primitive(instance)
+            self.tracked_instances[uuid] = instance_obj.compat_instance(
+                instance)
             sign = 1
 
         if is_deleted_instance:
@@ -842,7 +844,9 @@ class ResourceTracker(object):
                   with updates
         """
         usage = {}
-        if isinstance(object_or_dict, (objects.Flavor, objects.Instance)):
+        if isinstance(object_or_dict, objects.Instance):
+            usage = instance_obj.compat_instance(object_or_dict)
+        elif isinstance(object_or_dict, objects.Flavor):
             usage = obj_base.obj_to_primitive(object_or_dict)
         else:
             usage.update(object_or_dict)

@@ -142,8 +142,9 @@ class ServerActionsControllerTestV21(test.TestCase):
         instance = objects.Instance._from_db_object(
             self.context, objects.Instance(), instance)
 
-        self.compute_api.get(self.context, uuid, want_objects=True,
-                expected_attrs=['pci_devices']).AndReturn(instance)
+        self.compute_api.get(self.context, uuid,
+                             expected_attrs=['pci_devices', 'flavor'],
+                             want_objects=True).AndReturn(instance)
         return instance
 
     def _test_locked_instance(self, action, method=None, body_map=None,
@@ -1285,7 +1286,7 @@ class ServerActionsControllerTestV2(ServerActionsControllerTestV21):
             self.context, objects.Instance(), instance)
 
         self.compute_api.get(self.context, uuid,
-                             expected_attrs=None,
+                             expected_attrs=['flavor'],
                              want_objects=True).AndReturn(instance)
         return instance
 

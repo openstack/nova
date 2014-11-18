@@ -251,13 +251,16 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
     @mock.patch.object(compute_api.API, '_check_auto_disk_config')
     def test_resize_instance(self, _check, _extract, _save, _upsize, _reserve,
                              _cells, _record):
-        _extract.return_value = objects.Flavor(**test_flavor.fake_flavor)
+        flavor = objects.Flavor(**test_flavor.fake_flavor)
+        _extract.return_value = flavor
         orig_system_metadata = {}
         instance = fake_instance.fake_instance_obj(self.context,
                 vm_state=vm_states.ACTIVE, cell_name='fake-cell',
                 launched_at=timeutils.utcnow(),
                 system_metadata=orig_system_metadata,
                 expected_attrs=['system_metadata'])
+        instance.flavor = flavor
+        instance.old_flavor = instance.new_flavor = None
 
         self.compute_api.resize(self.context, instance)
         self.assertTrue(self.cells_rpcapi.resize_instance.called)

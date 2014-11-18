@@ -436,7 +436,8 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
                   launched_at=timeutils.utcnow(),
                   terminated_at=timeutils.utcnow(),
                   availability_zone='', locked_by=None, cleaned=False,
-                  memory_mb=0, vcpus=0, root_gb=0, ephemeral_gb=0):
+                  memory_mb=0, vcpus=0, root_gb=0, ephemeral_gb=0,
+                  instance_type=None):
     if user_id is None:
         user_id = 'fake_user'
     if project_id is None:
@@ -472,6 +473,15 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
         server_name = "reservation_%s" % (reservation_id, )
 
     info_cache = create_info_cache(nw_cache)
+
+    if instance_type is not None:
+        flavorinfo = jsonutils.dumps({
+            'cur': instance_type.obj_to_primitive(),
+            'old': None,
+            'new': None,
+        })
+    else:
+        flavorinfo = None
 
     instance = {
         "id": int(id),
@@ -534,6 +544,7 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
         "os_type": "",
         "extra": {"numa_topology": None,
                   "pci_requests": None,
+                  "flavor": flavorinfo,
               },
         "cleaned": cleaned}
 
