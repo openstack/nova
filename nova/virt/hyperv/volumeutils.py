@@ -70,7 +70,8 @@ class VolumeUtils(basevolumeutils.BaseVolumeUtils):
                          '*', '*', '*', '*', '*', '*', '*', '*', '*', '*', '*',
                          '*', '*')
 
-    def login_storage_target(self, target_lun, target_iqn, target_portal):
+    def login_storage_target(self, target_lun, target_iqn, target_portal,
+                             auth_username=None, auth_password=None):
         """Ensure that the target is logged in."""
 
         self._login_target_portal(target_portal)
@@ -90,7 +91,8 @@ class VolumeUtils(basevolumeutils.BaseVolumeUtils):
                 session_info = self.execute('iscsicli.exe', 'SessionList')
                 if session_info.find(target_iqn) == -1:
                     # Sending login
-                    self.execute('iscsicli.exe', 'qlogintarget', target_iqn)
+                    self.execute('iscsicli.exe', 'qlogintarget', target_iqn,
+                                 auth_username, auth_password)
                 else:
                     return
             except vmutils.HyperVException as exc:

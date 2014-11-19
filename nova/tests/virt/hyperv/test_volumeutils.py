@@ -73,11 +73,18 @@ class VolumeUtilsTestCase(test_basevolumeutils.BaseVolumeUtilsTestCase):
     def test_login_new_portal(self):
         self._test_login_target_portal(False)
 
-    def _test_login_target(self, target_connected, raise_exception=False):
+    def _test_login_target(self, target_connected=False, raise_exception=False,
+                           use_chap=False):
         fake_portal = '%s:%s' % (self._FAKE_PORTAL_ADDR,
                                  self._FAKE_PORTAL_PORT)
         self._volutils.execute = mock.MagicMock()
         self._volutils._login_target_portal = mock.MagicMock()
+
+        if use_chap:
+            username, password = (mock.sentinel.username,
+                                  mock.sentinel.password)
+        else:
+            username, password = None, None
 
         if target_connected:
             self._volutils.execute.return_value = self._FAKE_TARGET
@@ -90,28 +97,34 @@ class VolumeUtilsTestCase(test_basevolumeutils.BaseVolumeUtilsTestCase):
         if raise_exception:
             self.assertRaises(vmutils.HyperVException,
                               self._volutils.login_storage_target,
-                              self._FAKE_LUN, self._FAKE_TARGET, fake_portal)
+                              self._FAKE_LUN, self._FAKE_TARGET,
+                              fake_portal, username, password)
         else:
             self._volutils.login_storage_target(self._FAKE_LUN,
                                                 self._FAKE_TARGET,
-                                                fake_portal)
-
-            call_list = self._volutils.execute.call_args_list
-            all_call_args = [arg for call in call_list for arg in call[0]]
+                                                fake_portal,
+                                                username, password)
 
             if target_connected:
+                call_list = self._volutils.execute.call_args_list
+                all_call_args = [arg for call in call_list for arg in call[0]]
                 self.assertNotIn('qlogintarget', all_call_args)
             else:
-                self.assertIn('qlogintarget', all_call_args)
+                self._volutils.execute.assert_any_call(
+                    'iscsicli.exe', 'qlogintarget',
+                    self._FAKE_TARGET, username, password)
 
     def test_login_connected_target(self):
-        self._test_login_target(True)
+        self._test_login_target(target_connected=True)
 
     def test_login_disconncted_target(self):
-        self._test_login_target(False)
+        self._test_login_target()
 
     def test_login_target_exception(self):
-        self._test_login_target(False, True)
+        self._test_login_target(raise_exception=True)
+
+    def test_login_target_using_chap(self):
+        self._test_login_target(use_chap=True)
 
     def _test_execute_wrapper(self, raise_exception):
         fake_cmd = ('iscsicli.exe', 'ListTargetPortals')

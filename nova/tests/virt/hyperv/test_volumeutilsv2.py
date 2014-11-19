@@ -68,7 +68,8 @@ class VolumeUtilsV2TestCase(test.NoDBTestCase):
     def test_login_new_portal(self):
         self._test_login_target_portal(False)
 
-    def _test_login_target(self, target_connected, raise_exception=False):
+    def _test_login_target(self, target_connected=False, raise_exception=False,
+                           use_chap=False):
         fake_portal = '%s:%s' % (self._FAKE_PORTAL_ADDR,
                                  self._FAKE_PORTAL_PORT)
 
@@ -88,6 +89,18 @@ class VolumeUtilsV2TestCase(test.NoDBTestCase):
         self._volutilsv2._conn_storage.MSFT_iSCSITarget = (
             fake_target_object)
 
+        if use_chap:
+            username, password = (mock.sentinel.username,
+                                  mock.sentinel.password)
+            auth = {
+                'AuthenticationType': self._volutilsv2._CHAP_AUTH_TYPE,
+                'ChapUsername': username,
+                'ChapSecret': password,
+            }
+        else:
+            username, password = None, None
+            auth = {}
+
         if raise_exception:
             self.assertRaises(vmutils.HyperVException,
                               self._volutilsv2.login_storage_target,
@@ -95,22 +108,26 @@ class VolumeUtilsV2TestCase(test.NoDBTestCase):
         else:
             self._volutilsv2.login_storage_target(self._FAKE_LUN,
                                                   self._FAKE_TARGET,
-                                                  fake_portal)
+                                                  fake_portal,
+                                                  username, password)
 
             if target_connected:
                 fake_target_object.Update.assert_called_with()
             else:
                 fake_target_object.Connect.assert_called_once_with(
-                    IsPersistent=True, NodeAddress=self._FAKE_TARGET)
+                    IsPersistent=True, NodeAddress=self._FAKE_TARGET, **auth)
 
     def test_login_connected_target(self):
-        self._test_login_target(True)
+        self._test_login_target(target_connected=True)
 
     def test_login_disconncted_target(self):
-        self._test_login_target(False)
+        self._test_login_target()
 
     def test_login_target_exception(self):
-        self._test_login_target(False, True)
+        self._test_login_target(raise_exception=True)
+
+    def test_login_target_using_chap(self):
+        self._test_login_target(use_chap=True)
 
     def test_logout_storage_target(self):
         mock_msft_target = self._volutilsv2._conn_storage.MSFT_iSCSITarget
