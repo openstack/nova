@@ -1113,7 +1113,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         # Using 'snapshot' for this test, because it
         # takes args and kwargs.
         self.mox.StubOutWithMock(self.tgt_compute_api, 'snapshot')
-        instance.refresh(self.ctxt)
+        instance.refresh()
         self.tgt_compute_api.snapshot(
                 self.ctxt, instance, 'name',
                 extra_properties='props').AndReturn('foo')
@@ -1158,7 +1158,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         self.mox.StubOutWithMock(self.tgt_msg_runner,
                                  'instance_destroy_at_top')
 
-        instance.refresh(self.ctxt).AndRaise(
+        instance.refresh().AndRaise(
                 exception.InstanceNotFound(instance_id=instance.uuid))
 
         self.tgt_msg_runner.instance_destroy_at_top(self.ctxt,

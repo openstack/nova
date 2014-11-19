@@ -834,7 +834,7 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         try:
             # NOTE(comstud): We need to refresh the instance from this
             # cell's view in the DB.
-            instance.refresh(ctxt)
+            instance.refresh()
         except exception.InstanceNotFound:
             with excutils.save_and_reraise_exception():
                 # Must be a race condition.  Let's try to resolve it by
