@@ -1295,7 +1295,8 @@ class CloudController(object):
                   {'public_ip': public_ip, 'instance_id': instance_id},
                   context=context)
         instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, instance_id)
-        instance = self.compute_api.get(context, instance_uuid)
+        instance = self.compute_api.get(context, instance_uuid,
+                                        want_objects=True)
 
         cached_ipinfo = ec2utils.get_ip_info_for_instance(context, instance)
         fixed_ips = cached_ipinfo['fixed_ips'] + cached_ipinfo['fixed_ip6s']
@@ -1320,7 +1321,8 @@ class CloudController(object):
         instance_id = self.network_api.get_instance_id_by_floating_address(
                                                          context, public_ip)
         if instance_id:
-            instance = self.compute_api.get(context, instance_id)
+            instance = self.compute_api.get(context, instance_id,
+                                            want_objects=True)
             LOG.audit(_("Disassociate address %s"), public_ip, context=context)
             self.network_api.disassociate_floating_ip(context, instance,
                                                       address=public_ip)

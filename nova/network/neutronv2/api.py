@@ -25,7 +25,6 @@ from oslo.utils import excutils
 import six
 
 from nova.api.openstack import extensions
-from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
@@ -483,7 +482,7 @@ class API(base_api.NetworkAPI):
         """
         self._refresh_neutron_extensions_cache(context, neutron=neutron)
         if constants.QOS_QUEUE in self.extensions:
-            flavor = flavors.extract_flavor(instance)
+            flavor = instance.get_flavor()
             rxtx_factor = flavor.get('rxtx_factor')
             port_req_body['port']['rxtx_factor'] = rxtx_factor
         if self._has_port_binding_extension(context, neutron=neutron):

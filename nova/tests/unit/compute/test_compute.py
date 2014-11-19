@@ -4393,7 +4393,7 @@ class ComputeTestCase(BaseTestCase):
         network_api.setup_networks_on_host(self.context, instance,
                                            'fake-mini')
         network_api.migrate_instance_finish(self.context,
-                                            mox.IsA(dict),
+                                            mox.IsA(objects.Instance),
                                             mox.IsA(dict))
 
         self.compute._get_instance_nw_info(
