@@ -1430,15 +1430,10 @@ class _BaseTaskTestCase(object):
         self.assertEqual(instance.vm_state, vm_states.ERROR)
 
     def test_unshelve_offloaded_instance_image_id_is_none(self):
-        db_instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance = objects.Instance.get_by_uuid(
-            self.context,
-            db_instance['uuid'],
-            expected_attrs=['system_metadata'])
+        instance = self._create_fake_instance_obj()
         instance.vm_state = vm_states.SHELVED_OFFLOADED
         instance.task_state = task_states.UNSHELVING
-        system_metadata = instance.system_metadata
-        system_metadata['shelved_image_id'] = None
+        instance.system_metadata['shelved_image_id'] = None
         instance.save()
 
         self.assertRaises(

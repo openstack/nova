@@ -452,7 +452,7 @@ class ComputeVolumeTestCase(BaseTestCase):
 
     def test_detach_volume_api_raises(self):
         fake_bdm = objects.BlockDeviceMapping(**self.fake_volume)
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
 
         with contextlib.nested(
             mock.patch.object(self.compute, '_detach_volume'),
@@ -1488,7 +1488,7 @@ class ComputeTestCase(BaseTestCase):
         # both total_mem_mb and the oversubscribed limit:
         params = {"memory_mb": instance_mb, "root_gb": 128,
                   "ephemeral_gb": 128}
-        instance = self._create_fake_instance(params)
+        instance = self._create_fake_instance_obj(params)
 
         filter_properties = {'limits': {'memory_mb': oversub_limit_mb}}
 
@@ -1587,7 +1587,7 @@ class ComputeTestCase(BaseTestCase):
         # build an instance, specifying an amount of disk that exceeds
         # total_disk_gb, but is less than the oversubscribed limit:
         params = {"root_gb": instance_gb, "memory_mb": 10}
-        instance = self._create_fake_instance(params)
+        instance = self._create_fake_instance_obj(params)
 
         limits = {'disk_gb': oversub_limit_gb}
         filter_properties = {'limits': limits}
@@ -1677,7 +1677,7 @@ class ComputeTestCase(BaseTestCase):
             raise exception.InvalidBDM()
         self.stubs.Set(nova.compute.manager.ComputeManager,
                        '_prep_block_device', fake)
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
         self.assertRaises(exception.InvalidBDM, self.compute.run_instance,
                           self.context, instance=instance, request_spec={},
                           filter_properties={}, requested_networks=[],
@@ -1700,7 +1700,7 @@ class ComputeTestCase(BaseTestCase):
         appropriate exception is raised and the instances to ERROR state, keep
         the task state.
         """
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
         self.assertRaises(exception.OverQuota, self.compute.run_instance,
                           self.context, instance=instance, request_spec={},
                           filter_properties={}, requested_networks=[],
@@ -1760,7 +1760,7 @@ class ComputeTestCase(BaseTestCase):
     def test_run_instance_bails_on_missing_instance(self):
         # Make sure that run_instance() will quickly ignore a deleted instance
         called = {}
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
 
         def fake_instance_update(self, *a, **args):
             called['instance_update'] = True
@@ -1774,7 +1774,7 @@ class ComputeTestCase(BaseTestCase):
     def test_run_instance_bails_on_deleting_instance(self):
         # Make sure that run_instance() will quickly ignore a deleting instance
         called = {}
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
 
         def fake_instance_update(self, *a, **args):
             called['instance_update'] = True
@@ -1789,7 +1789,7 @@ class ComputeTestCase(BaseTestCase):
     def test_run_instance_bails_on_missing_instance_2(self):
         # Make sure that run_instance() will quickly ignore a deleted instance
         called = {}
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
 
         def fake_default_block_device_names(self, *a, **args):
             called['default_block_device_names'] = True
