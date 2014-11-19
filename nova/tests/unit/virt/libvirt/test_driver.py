@@ -7621,7 +7621,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             if not hasattr(self, attrname):
                 self[attrname] = {}
 
-        def fake_save(self, context):
+        def fake_save(self):
             pass
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
