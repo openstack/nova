@@ -136,6 +136,8 @@ def get_next_device_name(instance, device_name_list,
     /dev/vdc is specified but the backend uses /dev/xvdc), the device
     name will be converted to the appropriate format.
     """
+    is_xen = driver.compute_driver_matches('xenapi.XenAPIDriver')
+
     req_prefix = None
     req_letter = None
 
@@ -155,7 +157,7 @@ def get_next_device_name(instance, device_name_list,
         raise exception.InvalidDevicePath(path=root_device_name)
 
     # NOTE(vish): remove this when xenapi is setting default_root_device
-    if driver.compute_driver_matches('xenapi.XenAPIDriver'):
+    if is_xen:
         prefix = '/dev/xvd'
 
     if req_prefix != prefix:
@@ -169,7 +171,7 @@ def get_next_device_name(instance, device_name_list,
 
     # NOTE(vish): remove this when xenapi is properly setting
     #             default_ephemeral_device and default_swap_device
-    if driver.compute_driver_matches('xenapi.XenAPIDriver'):
+    if is_xen:
         flavor = flavors.extract_flavor(instance)
         if flavor['ephemeral_gb']:
             used_letters.add('b')
