@@ -133,7 +133,8 @@ class FlavorExtraSpecsController(object):
             flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
             del flavor.extra_specs[id]
             flavor.save()
-        except exception.FlavorNotFound as e:
+        except (exception.FlavorNotFound,
+                exception.FlavorExtraSpecsNotFound) as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except KeyError:
             msg = _("Flavor %(flavor_id)s has no extra specs with "
