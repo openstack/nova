@@ -426,9 +426,16 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api, 'update')
         self.mox.StubOutWithMock(inst, 'save')
-        inst.save(expected_task_state=[None, task_states.REBOOTING,
-                                       task_states.REBOOT_PENDING,
-                                       task_states.REBOOT_STARTED])
+        expected_task_state = [None]
+        if reboot_type == 'HARD':
+            expected_task_state.extend([task_states.REBOOTING,
+                                        task_states.REBOOT_PENDING,
+                                        task_states.REBOOT_STARTED,
+                                        task_states.REBOOTING_HARD,
+                                        task_states.RESUMING,
+                                        task_states.UNPAUSING,
+                                        task_states.SUSPENDING])
+        inst.save(expected_task_state=expected_task_state)
         self.compute_api._record_action_start(self.context, inst,
                                               instance_actions.REBOOT)
 
@@ -474,6 +481,22 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_reboot_hard_rescued(self):
         self._test_reboot_type_fails('HARD', vm_state=vm_states.RESCUED)
 
+    def test_reboot_hard_resuming(self):
+        self._test_reboot_type(vm_states.ACTIVE,
+                               'HARD', task_state=task_states.RESUMING)
+
+    def test_reboot_hard_pausing(self):
+        self._test_reboot_type(vm_states.ACTIVE,
+                               'HARD', task_state=task_states.PAUSING)
+
+    def test_reboot_hard_unpausing(self):
+        self._test_reboot_type(vm_states.ACTIVE,
+                               'HARD', task_state=task_states.UNPAUSING)
+
+    def test_reboot_hard_suspending(self):
+        self._test_reboot_type(vm_states.ACTIVE,
+                               'HARD', task_state=task_states.SUSPENDING)
+
     def test_reboot_hard_error_not_launched(self):
         self._test_reboot_type_fails('HARD', vm_state=vm_states.ERROR,
                                      launched_at=None)
@@ -514,6 +537,18 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_reboot_soft_error_not_launched(self):
         self._test_reboot_type_fails('SOFT', vm_state=vm_states.ERROR,
                                      launched_at=None)
+
+    def test_reboot_soft_resuming(self):
+        self._test_reboot_type_fails('SOFT', task_state=task_states.RESUMING)
+
+    def test_reboot_soft_pausing(self):
+        self._test_reboot_type_fails('SOFT', task_state=task_states.PAUSING)
+
+    def test_reboot_soft_unpausing(self):
+        self._test_reboot_type_fails('SOFT', task_state=task_states.UNPAUSING)
+
+    def test_reboot_soft_suspending(self):
+        self._test_reboot_type_fails('SOFT', task_state=task_states.SUSPENDING)
 
     def _test_delete_resizing_part(self, inst, deltas):
         fake_db_migration = test_migration.fake_db_migration()
