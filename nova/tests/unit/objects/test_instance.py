@@ -18,6 +18,7 @@ import iso8601
 import mock
 import mox
 import netaddr
+from oslo.serialization import jsonutils
 from oslo.utils import timeutils
 
 from nova.cells import rpcapi as cells_rpcapi
@@ -126,26 +127,26 @@ class _TestInstanceObject(object):
         exp_cols.remove('fault')
         exp_cols.remove('numa_topology')
         exp_cols.remove('pci_requests')
+        exp_cols.extend(['extra', 'extra.numa_topology', 'extra.pci_requests'])
 
+        fake_topology = (test_instance_numa_topology.
+                         fake_db_topology['numa_topology'])
+        fake_requests = jsonutils.dumps(test_instance_pci_requests.
+                                        fake_pci_requests)
+        fake_instance = dict(self.fake_instance,
+                             extra={
+                                 'numa_topology': fake_topology,
+                                 'pci_requests': fake_requests,
+                                 })
         db.instance_get_by_uuid(
             self.context, 'uuid',
             columns_to_join=exp_cols,
             use_slave=False
-            ).AndReturn(self.fake_instance)
+            ).AndReturn(fake_instance)
         fake_faults = test_instance_fault.fake_faults
         db.instance_fault_get_by_instance_uuids(
-                self.context, [self.fake_instance['uuid']]
+                self.context, [fake_instance['uuid']]
                 ).AndReturn(fake_faults)
-        fake_topology = test_instance_numa_topology.fake_db_topology
-        db.instance_extra_get_by_instance_uuid(
-                self.context, self.fake_instance['uuid'],
-                columns=['numa_topology']
-                ).AndReturn(fake_topology)
-        fake_requests = test_instance_pci_requests.fake_pci_requests
-        db.instance_extra_get_by_instance_uuid(
-                self.context, self.fake_instance['uuid'],
-                columns=['pci_requests']
-                ).AndReturn(fake_requests)
 
         self.mox.ReplayAll()
         inst = instance.Instance.get_by_uuid(
@@ -950,6 +951,21 @@ class _TestInstanceObject(object):
         self.assertEqual(fake_fault['id'], fault.id)
         self.assertNotIn('metadata', inst.obj_what_changed())
 
+    def test_get_with_extras(self):
+        pci_requests = objects.InstancePCIRequests(requests=[
+            objects.InstancePCIRequest(count=123, spec=[])])
+        inst = objects.Instance(context=self.context,
+                                user_id=self.context.user_id,
+                                project_id=self.context.project_id,
+                                pci_requests=pci_requests)
+        inst.create()
+        uuid = inst.uuid
+        inst = objects.Instance.get_by_uuid(self.context, uuid)
+        self.assertFalse(inst.obj_attr_is_set('pci_requests'))
+        inst = objects.Instance.get_by_uuid(
+            self.context, uuid, expected_attrs=['pci_requests'])
+        self.assertTrue(inst.obj_attr_is_set('pci_requests'))
+
 
 class TestInstanceObject(test_objects._LocalTest,
                          _TestInstanceObject):
@@ -1254,3 +1270,8 @@ class TestInstanceObjectMisc(test.NoDBTestCase):
         self.stubs.Set(instance, '_INSTANCE_OPTIONAL_JOINED_FIELDS', ['bar'])
         self.assertEqual(['bar'], instance._expected_cols(['foo', 'bar']))
         self.assertIsNone(instance._expected_cols(None))
+
+    def test_expected_cols_extra(self):
+        self.assertEqual(['metadata', 'extra', 'extra.numa_topology'],
+                         instance._expected_cols(['metadata',
+                                                  'numa_topology']))

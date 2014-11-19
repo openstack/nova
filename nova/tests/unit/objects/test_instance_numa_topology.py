@@ -49,7 +49,7 @@ class _TestInstanceNUMATopology(object):
     def test_get_by_instance_uuid(self, mock_get):
         mock_get.return_value = fake_db_topology
         numa_topology = objects.InstanceNUMATopology.get_by_instance_uuid(
-            self.context, 'fake_uuid')
+            self.context, fake_db_topology['instance_uuid'])
         self.assertEqual(fake_db_topology['instance_uuid'],
                          numa_topology.instance_uuid)
         for obj_cell, topo_cell in zip(

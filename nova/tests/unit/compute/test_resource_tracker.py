@@ -282,18 +282,23 @@ class BaseTestCase(test.TestCase):
             'image_ref': None,
             'root_device_name': None,
         }
+        extra = {
+            'id': 1, 'created_at': None, 'updated_at': None,
+            'deleted_at': None, 'deleted': None,
+            'instance_uuid': instance['uuid'],
+            'numa_topology': None,
+            'pci_requests': None,
+        }
+
         numa_topology = kwargs.pop('numa_topology', None)
         if numa_topology:
-            numa_topology = {
-                'id': 1, 'created_at': None, 'updated_at': None,
-                'deleted_at': None, 'deleted': None,
-                'instance_uuid': instance['uuid'],
-                'numa_topology': numa_topology.to_json()
-            }
+            extra['numa_topology'] = numa_topology.to_json()
+
         instance.update(kwargs)
+        instance['extra'] = extra
 
         self._instances[instance_uuid] = instance
-        self._numa_topologies[instance_uuid] = numa_topology
+        self._numa_topologies[instance_uuid] = extra
         return instance
 
     def _fake_flavor_create(self, **kwargs):
