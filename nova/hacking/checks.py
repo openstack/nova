@@ -307,7 +307,6 @@ def validate_log_translations(logical_line, physical_line, filename):
     # and the Xen utilities
     if ("nova/tests" in filename or
         "plugins/xenserver/xenapi/etc/xapi.d" in filename or
-        "nova/compute" in filename or
         # TODO(Mike_D):Needs to be remove with:
         # I075ab2a522272f2082c292dfedc877abd8ebe328
             "nova/virt" in filename):

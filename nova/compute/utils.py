@@ -373,8 +373,8 @@ def notify_about_host_update(context, event_suffix, host_payload):
     """
     host_identifier = host_payload.get('host_name')
     if not host_identifier:
-        LOG.warn(_LW("No host name specified for the notification of "
-                   "HostAPI.%s and it will be ignored"), event_suffix)
+        LOG.warning(_LW("No host name specified for the notification of "
+                        "HostAPI.%s and it will be ignored"), event_suffix)
         return
 
     notifier = rpc.get_notifier(service='api', host=host_identifier)

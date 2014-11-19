@@ -1376,8 +1376,8 @@ class ComputeMonitorTestCase(BaseTestCase):
                                                  self.node_name)
         self.assertTrue(len(metrics) > 0)
 
-    @mock.patch.object(resource_tracker.LOG, 'warn')
-    def test_get_host_metrics_exception(self, mock_LOG_warn):
+    @mock.patch.object(resource_tracker.LOG, 'warning')
+    def test_get_host_metrics_exception(self, mock_LOG_warning):
         self.flags(compute_monitors=['FakeMontorClass1'])
         class1 = test_monitors.FakeMonitorClass1(self.tracker)
         self.tracker.monitors = [class1]
@@ -1385,7 +1385,7 @@ class ComputeMonitorTestCase(BaseTestCase):
                                side_effect=test.TestingException()):
             metrics = self.tracker._get_host_metrics(self.context,
                                                      self.node_name)
-            mock_LOG_warn.assert_called_once_with(
+            mock_LOG_warning.assert_called_once_with(
                 u'Cannot get the metrics from %s.', class1)
             self.assertEqual(0, len(metrics))
 

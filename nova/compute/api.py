@@ -52,6 +52,7 @@ from nova import hooks
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LI
+from nova.i18n import _LW
 from nova import image
 from nova import keymgr
 from nova import network
@@ -434,14 +435,14 @@ class API(base.Base):
                       'msg': msg}
 
             if min_count == max_count:
-                LOG.warn(_("%(overs)s quota exceeded for %(pid)s,"
-                           " tried to run %(min_count)d instances. %(msg)s"),
-                         params)
+                LOG.warning(_LW("%(overs)s quota exceeded for %(pid)s,"
+                                " tried to run %(min_count)d instances. "
+                                "%(msg)s"), params)
             else:
-                LOG.warn(_("%(overs)s quota exceeded for %(pid)s,"
-                           " tried to run between %(min_count)d and"
-                           " %(max_count)d instances. %(msg)s"),
-                         params)
+                LOG.warning(_LW("%(overs)s quota exceeded for %(pid)s,"
+                                " tried to run between %(min_count)d and"
+                                " %(max_count)d instances. %(msg)s"),
+                            params)
 
             num_instances = (str(min_count) if min_count == max_count else
                 "%s-%s" % (min_count, max_count))
@@ -1547,8 +1548,8 @@ class API(base.Base):
                 self.image_api.delete(context, snapshot_id)
             except (exception.ImageNotFound,
                     exception.ImageNotAuthorized) as exc:
-                LOG.warning(_("Failed to delete snapshot "
-                              "from shelved instance (%s)."),
+                LOG.warning(_LW("Failed to delete snapshot "
+                                "from shelved instance (%s)."),
                             exc.format_message(), instance=instance)
             except Exception as exc:
                 LOG.exception(_LE("Something wrong happened when trying to "
@@ -1709,7 +1710,7 @@ class API(base.Base):
                 try:
                     old_inst_type = flavors.get_flavor(old_inst_type_id)
                 except exception.FlavorNotFound:
-                    LOG.warning(_("Flavor %d not found"), old_inst_type_id)
+                    LOG.warning(_LW("Flavor %d not found"), old_inst_type_id)
                     pass
                 else:
                     instance_vcpus = old_inst_type['vcpus']
@@ -1729,8 +1730,8 @@ class API(base.Base):
         return quotas
 
     def _local_delete(self, context, instance, bdms, delete_type, cb):
-        LOG.warning(_("instance's host %s is down, deleting from "
-                      "database") % instance['host'], instance=instance)
+        LOG.warning(_LW("instance's host %s is down, deleting from "
+                        "database"), instance['host'], instance=instance)
         instance.info_cache.delete()
         compute_utils.notify_about_instance_usage(
             self.notifier, context, instance, "%s.start" % delete_type)
@@ -2567,9 +2568,9 @@ class API(base.Base):
             used = quotas[resource] - headroom[resource]
             total_allowed = used + headroom[resource]
             overs = ','.join(overs)
-            LOG.warn(_("%(overs)s quota exceeded for %(pid)s,"
-                       " tried to resize instance."),
-                     {'overs': overs, 'pid': context.project_id})
+            LOG.warning(_LW("%(overs)s quota exceeded for %(pid)s,"
+                            " tried to resize instance."),
+                        {'overs': overs, 'pid': context.project_id})
             raise exception.TooManyInstances(overs=overs,
                                              req=deltas[resource],
                                              used=used, allowed=total_allowed,
@@ -3554,7 +3555,7 @@ class AggregateAPI(base.Base):
                             and az != CONF.internal_service_availability_zone]
                 host_az = host_azs.pop()
                 if host_azs:
-                    LOG.warning(_("More than 1 AZ for host %s"), host)
+                    LOG.warning(_LW("More than 1 AZ for host %s"), host)
                 if host_az == CONF.default_availability_zone:
                     # NOTE(sbauza): Aggregate with AZ set to default AZ can
                     #               exist, we need to check
