@@ -1393,7 +1393,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
                                  'resize_instance')
 
-        fake_inst = obj_base.obj_to_primitive(self._create_instance_obj())
+        fake_inst = self._create_instance_obj()
         exc = exception.FlavorNotFound(flavor_id='flavor-id')
 
         flavors.get_flavor_by_flavor_id('flavor-id',
@@ -1415,7 +1415,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
                                  'resize_instance')
 
-        fake_inst = obj_base.obj_to_primitive(self._create_instance_obj())
+        fake_inst = self._create_instance_obj()
         fake_flavor = self._create_flavor(id=200, flavorid='flavor-id',
                             name='foo', disabled=True)
 
@@ -1451,7 +1451,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
                                  'resize_instance')
 
-        fake_inst = obj_base.obj_to_primitive(self._create_instance_obj())
+        fake_inst = self._create_instance_obj()
         fake_flavor = self._create_flavor(id=200, flavorid='flavor-id',
                             name='foo', disabled=False)
         flavors.get_flavor_by_flavor_id(
