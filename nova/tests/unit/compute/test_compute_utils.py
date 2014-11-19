@@ -56,7 +56,7 @@ CONF.import_opt('compute_manager', 'nova.service')
 CONF.import_opt('compute_driver', 'nova.virt.driver')
 
 
-class ComputeValidateDeviceTestCase(test.TestCase):
+class ComputeValidateDeviceTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ComputeValidateDeviceTestCase, self).setUp()
         self.context = context.RequestContext('fake', 'fake')
@@ -637,7 +637,7 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 0)
 
 
-class ComputeGetImageMetadataTestCase(test.TestCase):
+class ComputeGetImageMetadataTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ComputeGetImageMetadataTestCase, self).setUp()
         self.context = context.RequestContext('fake', 'fake')
@@ -767,7 +767,7 @@ class ComputeGetImageMetadataTestCase(test.TestCase):
         self.assertThat(expected, matchers.DictMatches(image_meta))
 
 
-class ComputeUtilsGetValFromSysMetadata(test.TestCase):
+class ComputeUtilsGetValFromSysMetadata(test.NoDBTestCase):
 
     def test_get_value_from_system_metadata(self):
         instance = fake_instance.fake_instance_obj('fake-context')
@@ -789,7 +789,7 @@ class ComputeUtilsGetValFromSysMetadata(test.TestCase):
         self.assertEqual(0, result)
 
 
-class ComputeUtilsGetNWInfo(test.TestCase):
+class ComputeUtilsGetNWInfo(test.NoDBTestCase):
     def test_instance_object_none_info_cache(self):
         inst = fake_instance.fake_instance_obj('fake-context',
                                                expected_attrs=['info_cache'])
@@ -804,7 +804,7 @@ class ComputeUtilsGetNWInfo(test.TestCase):
         self.assertEqual(jsonutils.dumps([]), result.json())
 
 
-class ComputeUtilsGetRebootTypes(test.TestCase):
+class ComputeUtilsGetRebootTypes(test.NoDBTestCase):
     def setUp(self):
         super(ComputeUtilsGetRebootTypes, self).setUp()
         self.context = context.RequestContext('fake', 'fake')
