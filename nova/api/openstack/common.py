@@ -34,6 +34,7 @@ from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
+from nova import objects
 from nova import quota
 
 osapi_opts = [
@@ -540,6 +541,13 @@ def raise_feature_not_supported(msg=None):
     if msg is None:
         msg = _("The requested functionality is not supported.")
     raise webob.exc.HTTPNotImplemented(explanation=msg)
+
+
+def get_flavor(context, flavor_id):
+    try:
+        return objects.Flavor.get_by_flavor_id(context, flavor_id)
+    except exception.FlavorNotFound as error:
+        raise exc.HTTPNotFound(explanation=error.format_message())
 
 
 def check_cells_enabled(function):
