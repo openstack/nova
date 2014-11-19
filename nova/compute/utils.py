@@ -22,7 +22,6 @@ from oslo.config import cfg
 from oslo.utils import encodeutils
 
 from nova import block_device
-from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
 from nova import exception
@@ -224,7 +223,7 @@ def get_image_metadata(context, image_api, image_id_or_uri, instance):
                         {"image_id": image_id_or_uri, "error": e},
                         instance=instance)
         else:
-            flavor = flavors.extract_flavor(instance)
+            flavor = instance.get_flavor()
             image_system_meta = utils.get_system_metadata_from_image(image,
                                                                      flavor)
 
