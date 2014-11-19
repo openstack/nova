@@ -2606,12 +2606,12 @@ class AllocateTestCase(test.TestCase):
         db.floating_ip_create(self.context,
                               {'address': address,
                                'pool': 'nova'})
-        inst = objects.Instance()
+        inst = objects.Instance(context=self.context)
         inst.host = self.compute.host
         inst.display_name = HOST
         inst.instance_type_id = 1
         inst.uuid = FAKEUUID
-        inst.create(self.context)
+        inst.create()
         networks = db.network_get_all(self.context)
         for network in networks:
             db.network_update(self.context, network['id'],
@@ -2640,12 +2640,12 @@ class AllocateTestCase(test.TestCase):
         db.network_update(self.context, networks[0]['id'],
                           {'project_id': self.user_context.project_id})
 
-        inst = objects.Instance()
+        inst = objects.Instance(context=self.context)
         inst.host = self.compute.host
         inst.display_name = HOST
         inst.instance_type_id = 1
         inst.uuid = FAKEUUID
-        inst.create(self.context)
+        inst.create()
         self.assertRaises(exception.NetworkNotFoundForProject,
             self.network.allocate_for_instance, self.user_context,
             instance_id=inst['id'], instance_uuid=inst['uuid'],
@@ -2839,10 +2839,10 @@ class FloatingIPTestCase(test.TestCase):
     def test_deallocation_deleted_instance(self):
         self.stubs.Set(self.network, '_teardown_network_on_host',
                        lambda *args, **kwargs: None)
-        instance = objects.Instance()
+        instance = objects.Instance(context=self.context)
         instance.project_id = self.project_id
         instance.deleted = True
-        instance.create(self.context)
+        instance.create()
         network = db.network_create_safe(self.context.elevated(), {
                 'project_id': self.project_id,
                 'host': CONF.host,
@@ -2859,9 +2859,9 @@ class FloatingIPTestCase(test.TestCase):
     def test_deallocation_duplicate_floating_ip(self):
         self.stubs.Set(self.network, '_teardown_network_on_host',
                        lambda *args, **kwargs: None)
-        instance = objects.Instance()
+        instance = objects.Instance(context=self.context)
         instance.project_id = self.project_id
-        instance.create(self.context)
+        instance.create()
         network = db.network_create_safe(self.context.elevated(), {
                 'project_id': self.project_id,
                 'host': CONF.host,
