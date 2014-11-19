@@ -1046,7 +1046,7 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
     def setUp(self):
         super(ResizeClaimTestCase, self).setUp()
 
-        def _fake_migration_create(mig_self, ctxt):
+        def _fake_migration_create(mig_self):
             self._migrations[mig_self.instance_uuid] = mig_self
             mig_self.obj_reset_changes()
 
@@ -1056,7 +1056,7 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
         self.instance = self._fake_instance()
         self.instance_type = self._fake_flavor_create()
 
-    def _fake_migration_create(self, context, values=None):
+    def _fake_migration_create(self, values=None):
         instance_uuid = str(uuid.uuid1())
         mig_dict = test_migration.fake_db_migration()
         mig_dict.update({
@@ -1075,10 +1075,10 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
         if values:
             mig_dict.update(values)
 
-        migration = objects.Migration()
+        migration = objects.Migration(context='fake')
         migration.update(mig_dict)
         # This hits the stub in setUp()
-        migration.create('fake')
+        migration.create()
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -1209,7 +1209,7 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
                   'old_instance_type_id': 1, 'new_instance_type_id': 1,
                   'status': 'post-migrating',
                   'instance_uuid': self.instance['uuid']}
-        self._fake_migration_create(self.context, values)
+        self._fake_migration_create(values)
 
         # attach an instance to the destination host tracker:
         dest_tracker.instance_claim(self.context, self.instance)
@@ -1272,8 +1272,8 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
         values = {'source_compute': self.host, 'dest_compute': self.host,
                   'instance_uuid': instance['uuid'], 'new_instance_type_id': 2}
         self._fake_flavor_create(id=2)
-        self._fake_migration_create(self.context, values)
-        self._fake_migration_create(self.context, values)
+        self._fake_migration_create(values)
+        self._fake_migration_create(values)
 
         self.tracker.update_available_resource(self.context)
         self.assertEqual(1, len(self.tracker.tracked_migrations))
