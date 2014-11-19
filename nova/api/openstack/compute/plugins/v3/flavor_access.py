@@ -17,6 +17,7 @@
 
 import webob
 
+from nova.api.openstack import common
 from nova.api.openstack.compute.schemas.v3 import flavor_access
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -50,10 +51,7 @@ class FlavorAccessController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context)
 
-        try:
-            flavor = objects.Flavor.get_by_flavor_id(context, flavor_id)
-        except exception.FlavorNotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=e.format_message())
+        flavor = common.get_flavor(context, flavor_id)
 
         # public flavor to all projects
         if flavor.is_public:
