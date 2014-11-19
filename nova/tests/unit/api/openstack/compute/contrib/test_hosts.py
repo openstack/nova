@@ -53,6 +53,9 @@ def stub_set_host_enabled(context, host_name, enabled):
     elif host_name == "dummydest":
         # The host does not exist
         raise exception.ComputeHostNotFound(host=host_name)
+    elif host_name == "service_not_available":
+        # The service is not available
+        raise exception.ComputeServiceUnavailable(host=host_name)
     elif host_name == "host_c2":
         # Simulate a failure
         return results[not enabled]
@@ -72,6 +75,9 @@ def stub_set_host_maintenance(context, host_name, mode):
     elif host_name == "dummydest":
         # The host does not exist
         raise exception.ComputeHostNotFound(host=host_name)
+    elif host_name == "service_not_available":
+        # The service is not available
+        raise exception.ComputeServiceUnavailable(host=host_name)
     elif host_name == "host_c2":
         # Simulate a failure
         return results[not mode]
@@ -86,6 +92,9 @@ def stub_host_power_action(context, host_name, action):
     elif host_name == "dummydest":
         # The host does not exist
         raise exception.ComputeHostNotFound(host=host_name)
+    elif host_name == "service_not_available":
+        # The service is not available
+        raise exception.ComputeServiceUnavailable(host=host_name)
     return action
 
 
@@ -260,6 +269,31 @@ class HostTestCaseV21(test.TestCase):
         self.req.environ["nova.context"].is_admin = True
         dest = 'dummydest'
         with testtools.ExpectedException(webob.exc.HTTPNotFound,
+                                         ".*%s.*" % dest):
+            self.controller.reboot(self.req, dest)
+
+    def test_host_status_bad_status(self):
+        # A host given as an argument does not exist.
+        self.req.environ["nova.context"].is_admin = True
+        dest = 'service_not_available'
+        with testtools.ExpectedException(webob.exc.HTTPBadRequest,
+                                         ".*%s.*" % dest):
+            self.controller.update(self.req, dest, body={'status': 'enable'})
+
+    def test_host_maintenance_bad_status(self):
+        # A host given as an argument does not exist.
+        self.req.environ["nova.context"].is_admin = True
+        dest = 'service_not_available'
+        with testtools.ExpectedException(webob.exc.HTTPBadRequest,
+                                         ".*%s.*" % dest):
+            self.controller.update(self.req, dest,
+                                   body={'maintenance_mode': 'enable'})
+
+    def test_host_power_action_bad_status(self):
+        # A host given as an argument does not exist.
+        self.req.environ["nova.context"].is_admin = True
+        dest = 'service_not_available'
+        with testtools.ExpectedException(webob.exc.HTTPBadRequest,
                                          ".*%s.*" % dest):
             self.controller.reboot(self.req, dest)
 

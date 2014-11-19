@@ -215,6 +215,8 @@ class HostController(object):
             raise webob.exc.HTTPNotImplemented(explanation=msg)
         except exception.NotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
+        except exception.ComputeServiceUnavailable as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         if result not in ("on_maintenance", "off_maintenance"):
             raise webob.exc.HTTPBadRequest(explanation=result)
         return result
@@ -237,6 +239,8 @@ class HostController(object):
             raise webob.exc.HTTPNotImplemented(explanation=msg)
         except exception.NotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
+        except exception.ComputeServiceUnavailable as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         if result not in ("enabled", "disabled"):
             raise webob.exc.HTTPBadRequest(explanation=result)
         return result
@@ -253,6 +257,8 @@ class HostController(object):
             raise webob.exc.HTTPNotImplemented(explanation=msg)
         except exception.NotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
+        except exception.ComputeServiceUnavailable as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         return {"host": host_name, "power_action": result}
 
     @wsgi.serializers(xml=HostActionTemplate)
