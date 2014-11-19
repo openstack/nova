@@ -17,6 +17,7 @@
 import urllib
 
 from lxml import etree
+import mock
 import webob
 
 from nova.api.openstack.compute.contrib import floating_ip_dns as fipdns_v2
@@ -326,6 +327,67 @@ class FloatingIpDNSTestV21(test.TestCase):
         entry = self.entry_controller.update(req, domain, name, body=body)
 
         self.assertEqual(entry['dns_entry']['ip'], test_ipv4_address2)
+
+    def test_not_implemented_dns_entry_update(self):
+        body = {'dns_entry':
+                 {'ip': test_ipv4_address,
+                  'dns_type': 'A'}}
+        req = fakes.HTTPRequest.blank(
+              '/v2/123/os-floating-ip-dns/%s/entries/%s' %
+              (_quote_domain(domain), name))
+        with mock.patch.object(network.api.API, 'modify_dns_entry',
+                               side_effect=NotImplementedError()):
+            self.assertRaises(webob.exc.HTTPNotImplemented,
+                              self.entry_controller.update, req,
+                              _quote_domain(domain), name, body=body)
+
+    def test_not_implemented_dns_entry_show(self):
+        req = fakes.HTTPRequest.blank(
+              '/v2/123/os-floating-ip-dns/%s/entries/%s' %
+              (_quote_domain(domain), name))
+        with mock.patch.object(network.api.API, 'get_dns_entries_by_name',
+                               side_effect=NotImplementedError()):
+            self.assertRaises(webob.exc.HTTPNotImplemented,
+                              self.entry_controller.show,
+                              req, _quote_domain(domain), name)
+
+    def test_not_implemented_delete_entry(self):
+        req = fakes.HTTPRequest.blank(
+              '/v2/123/os-floating-ip-dns/%s/entries/%s' %
+              (_quote_domain(domain), name))
+        with mock.patch.object(network.api.API, 'delete_dns_entry',
+                               side_effect=NotImplementedError()):
+            self.assertRaises(webob.exc.HTTPNotImplemented,
+                              self.entry_controller.delete, req,
+                              _quote_domain(domain), name)
+
+    def test_not_implemented_delete_domain(self):
+        req = fakes.HTTPRequest.blank('/v2/123/os-floating-ip-dns/%s' %
+                                      _quote_domain(domain))
+        with mock.patch.object(network.api.API, 'delete_dns_domain',
+                               side_effect=NotImplementedError()):
+            self.assertRaises(webob.exc.HTTPNotImplemented,
+                              self.domain_controller.delete, req,
+                              _quote_domain(domain))
+
+    def test_not_implemented_create_domain(self):
+        req = fakes.HTTPRequest.blank('/v2/123/os-floating-ip-dns/%s' %
+                                      _quote_domain(domain))
+        body = {'domain_entry':
+                {'scope': 'private',
+                 'availability_zone': 'zone1'}}
+        with mock.patch.object(network.api.API, 'create_private_dns_domain',
+                               side_effect=NotImplementedError()):
+            self.assertRaises(webob.exc.HTTPNotImplemented,
+                              self.domain_controller.update,
+                              req, _quote_domain(domain), body=body)
+
+    def test_not_implemented_dns_domains_list(self):
+        req = fakes.HTTPRequest.blank('/v2/123/os-floating-ip-dns')
+        with mock.patch.object(network.api.API, 'get_dns_domains',
+                               side_effect=NotImplementedError()):
+            self.assertRaises(webob.exc.HTTPNotImplemented,
+                              self.domain_controller.index, req)
 
 
 class FloatingIpDNSTestV2(FloatingIpDNSTestV21):
