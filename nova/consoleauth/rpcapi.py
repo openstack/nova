@@ -67,11 +67,7 @@ class ConsoleAuthAPI(object):
                           internal_access_path, instance_uuid):
         # The remote side doesn't return anything, but we want to block
         # until it completes.'
-        version = '2.0'
-        if not self.client.can_send_version('2.0'):
-            # NOTE(russellb) Havana compat
-            version = '1.2'
-        cctxt = self.client.prepare(version=version)
+        cctxt = self.client.prepare()
         return cctxt.call(ctxt,
                           'authorize_console',
                           token=token, console_type=console_type,
@@ -80,19 +76,11 @@ class ConsoleAuthAPI(object):
                           instance_uuid=instance_uuid)
 
     def check_token(self, ctxt, token):
-        version = '2.0'
-        if not self.client.can_send_version('2.0'):
-            # NOTE(russellb) Havana compat
-            version = '1.0'
-        cctxt = self.client.prepare(version=version)
+        cctxt = self.client.prepare()
         return cctxt.call(ctxt, 'check_token', token=token)
 
     def delete_tokens_for_instance(self, ctxt, instance_uuid):
-        version = '2.0'
-        if not self.client.can_send_version('2.0'):
-            # NOTE(russellb) Havana compat
-            version = '1.2'
-        cctxt = self.client.prepare(version=version)
+        cctxt = self.client.prepare()
         return cctxt.cast(ctxt,
                           'delete_tokens_for_instance',
                           instance_uuid=instance_uuid)
