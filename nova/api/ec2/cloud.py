@@ -1308,8 +1308,8 @@ class CloudController(object):
         # changed to support specifying a particular fixed_ip if
         # multiple exist but this may not apply to ec2..
         if len(fixed_ips) > 1:
-            LOG.warn(_LW('multiple fixed_ips exist, using the first: %s'),
-                     fixed_ips[0])
+            LOG.warning(_LW('multiple fixed_ips exist, using the first: %s'),
+                        fixed_ips[0])
 
         self.network_api.associate_floating_ip(context, instance,
                                                floating_address=public_ip,

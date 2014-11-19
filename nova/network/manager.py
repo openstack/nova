@@ -810,21 +810,21 @@ class NetworkManager(manager.Manager):
 
         domainref = objects.DNSDomain.get_by_domain(context, instance_domain)
         if domainref is None:
-            LOG.warn(_('instance-dns-zone not found |%s|.'),
+            LOG.warning(_LW('instance-dns-zone not found |%s|.'),
                      instance_domain, instance=instance)
             return True
         dns_zone = domainref.availability_zone
 
         instance_zone = instance.get('availability_zone')
         if dns_zone and (dns_zone != instance_zone):
-            LOG.warn(_('instance-dns-zone is |%(domain)s|, '
-                       'which is in availability zone |%(zone)s|. '
-                       'Instance is in zone |%(zone2)s|. '
-                       'No DNS record will be created.'),
-                     {'domain': instance_domain,
-                      'zone': dns_zone,
-                      'zone2': instance_zone},
-                     instance=instance)
+            LOG.warning(_LW('instance-dns-zone is |%(domain)s|, '
+                            'which is in availability zone |%(zone)s|. '
+                            'Instance is in zone |%(zone2)s|. '
+                            'No DNS record will be created.'),
+                        {'domain': instance_domain,
+                         'zone': dns_zone,
+                         'zone2': instance_zone},
+                        instance=instance)
             return False
         else:
             return True
@@ -860,11 +860,12 @@ class NetworkManager(manager.Manager):
             headroom = exc.kwargs['headroom']
             allowed = quotas['fixed_ips']
             used = allowed - headroom['fixed_ips']
-            LOG.warn(_LW("Quota exceeded for project %(pid)s, tried to "
-                         "allocate fixed IP. %(used)s of %(allowed)s are in "
-                         "use or are already reserved."),
-                     {'pid': quota_project, 'used': used, 'allowed': allowed},
-                     instance_uuid=instance_id)
+            LOG.warning(_LW("Quota exceeded for project %(pid)s, tried to "
+                            "allocate fixed IP. %(used)s of %(allowed)s are "
+                            "in use or are already reserved."),
+                        {'pid': quota_project, 'used': used,
+                         'allowed': allowed},
+                        instance_uuid=instance_id)
             raise exception.FixedIpLimitExceeded()
 
         try:
@@ -947,9 +948,9 @@ class NetworkManager(manager.Manager):
                     try:
                         f()
                     except Exception:
-                        LOG.warn(_('Error cleaning up fixed ip allocation. '
-                                   'Manual cleanup may be required.'),
-                                 exc_info=True)
+                        LOG.warning(_LW('Error cleaning up fixed ip '
+                                        'allocation. Manual cleanup may '
+                                        'be required.'), exc_info=True)
 
     def deallocate_fixed_ip(self, context, address, host=None, teardown=True,
             instance=None):
@@ -1049,9 +1050,9 @@ class NetworkManager(manager.Manager):
                 try:
                     quotas.rollback(context)
                 except Exception:
-                    LOG.warn(_LW("Failed to rollback quota for "
-                                 "deallocate fixed ip: %s"), address,
-                             instance=instance)
+                    LOG.warning(_LW("Failed to rollback quota for "
+                                    "deallocate fixed ip: %s"), address,
+                                instance=instance)
 
         # Commit the reservations
         quotas.commit(context)
@@ -1062,14 +1063,14 @@ class NetworkManager(manager.Manager):
         fixed_ip = objects.FixedIP.get_by_address(context, address)
 
         if fixed_ip.instance_uuid is None:
-            LOG.warn(_('IP %s leased that is not associated'), address,
-                       context=context)
+            LOG.warning(_LW('IP %s leased that is not associated'), address,
+                        context=context)
             return
         fixed_ip.leased = True
         fixed_ip.save()
         if not fixed_ip.allocated:
-            LOG.warn(_('IP |%s| leased that isn\'t allocated'), address,
-                     context=context)
+            LOG.warning(_LW('IP |%s| leased that isn\'t allocated'), address,
+                        context=context)
 
     def release_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is released."""
@@ -1077,12 +1078,12 @@ class NetworkManager(manager.Manager):
         fixed_ip = objects.FixedIP.get_by_address(context, address)
 
         if fixed_ip.instance_uuid is None:
-            LOG.warn(_('IP %s released that is not associated'), address,
-                       context=context)
+            LOG.warning(_LW('IP %s released that is not associated'), address,
+                        context=context)
             return
         if not fixed_ip.leased:
-            LOG.warn(_('IP %s released that was not leased'), address,
-                     context=context)
+            LOG.warning(_LW('IP %s released that was not leased'), address,
+                        context=context)
         fixed_ip.leased = False
         fixed_ip.save()
         if not fixed_ip.allocated:

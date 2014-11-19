@@ -87,7 +87,7 @@ class FaultWrapper(wsgi.Middleware):
         try:
             return req.get_response(self.application)
         except Exception as ex:
-            LOG.exception(_("FaultWrapper: %s"), ex)
+            LOG.exception(_LE("FaultWrapper: %s"), ex)
             return faults.Fault(webob.exc.HTTPInternalServerError())
 
 
@@ -167,12 +167,13 @@ class Lockout(wsgi.Middleware):
                 # NOTE(vish): To use incr, failures has to be a string.
                 self.mc.set(failures_key, '1', time=CONF.lockout_window * 60)
             elif failures >= CONF.lockout_attempts:
-                LOG.warn(_LW('Access key %(access_key)s has had %(failures)d '
-                             'failed authentications and will be locked out '
-                             'for %(lock_mins)d minutes.'),
-                         {'access_key': access_key,
-                          'failures': failures,
-                          'lock_mins': CONF.lockout_minutes})
+                LOG.warning(_LW('Access key %(access_key)s has had '
+                                '%(failures)d failed authentications and '
+                                'will be locked out for %(lock_mins)d '
+                                'minutes.'),
+                            {'access_key': access_key,
+                             'failures': failures,
+                             'lock_mins': CONF.lockout_minutes})
                 self.mc.set(failures_key, str(failures),
                             time=CONF.lockout_minutes * 60)
         return res

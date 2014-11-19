@@ -110,7 +110,7 @@ class MetadataRequestHandler(wsgi.Application):
             meta_data = self._handle_instance_id_request(req)
         else:
             if req.headers.get('X-Instance-ID'):
-                LOG.warn(
+                LOG.warning(
                     _LW("X-Instance-ID present in request headers. The "
                         "'service_metadata_proxy' option must be "
                         "enabled to process this header."))
@@ -144,7 +144,7 @@ class MetadataRequestHandler(wsgi.Application):
         try:
             meta_data = self.get_metadata_by_remote_address(remote_address)
         except Exception:
-            LOG.exception(_('Failed to get metadata for ip: %s'),
+            LOG.exception(_LE('Failed to get metadata for ip: %s'),
                           remote_address)
             msg = _('An unknown error has occurred. '
                     'Please try your request again.')
@@ -186,14 +186,15 @@ class MetadataRequestHandler(wsgi.Application):
 
         if not utils.constant_time_compare(expected_signature, signature):
             if instance_id:
-                LOG.warn(_LW('X-Instance-ID-Signature: %(signature)s does '
-                             'not match the expected value: '
-                             '%(expected_signature)s for id: %(instance_id)s.'
-                             '  Request From: %(remote_address)s'),
-                         {'signature': signature,
-                          'expected_signature': expected_signature,
-                          'instance_id': instance_id,
-                          'remote_address': remote_address})
+                LOG.warning(_LW('X-Instance-ID-Signature: %(signature)s does '
+                                'not match the expected value: '
+                                '%(expected_signature)s for id: '
+                                '%(instance_id)s. Request From: '
+                                '%(remote_address)s'),
+                            {'signature': signature,
+                             'expected_signature': expected_signature,
+                             'instance_id': instance_id,
+                             'remote_address': remote_address})
 
             msg = _('Invalid proxy request signature.')
             raise webob.exc.HTTPForbidden(explanation=msg)
@@ -202,7 +203,7 @@ class MetadataRequestHandler(wsgi.Application):
             meta_data = self.get_metadata_by_instance_id(instance_id,
                                                          remote_address)
         except Exception:
-            LOG.exception(_('Failed to get metadata for instance id: %s'),
+            LOG.exception(_LE('Failed to get metadata for instance id: %s'),
                           instance_id)
             msg = _('An unknown error has occurred. '
                     'Please try your request again.')
@@ -213,9 +214,9 @@ class MetadataRequestHandler(wsgi.Application):
             LOG.error(_LE('Failed to get metadata for instance id: %s'),
                       instance_id)
         elif meta_data.instance['project_id'] != tenant_id:
-            LOG.warn(_LW("Tenant_id %(tenant_id)s does not match tenant_id "
-                         "of instance %(instance_id)s."),
-                     {'tenant_id': tenant_id, 'instance_id': instance_id})
+            LOG.warning(_LW("Tenant_id %(tenant_id)s does not match tenant_id "
+                            "of instance %(instance_id)s."),
+                        {'tenant_id': tenant_id, 'instance_id': instance_id})
             # causes a 404 to be raised
             meta_data = None
 
