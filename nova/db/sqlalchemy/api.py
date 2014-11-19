@@ -933,13 +933,6 @@ def floating_ip_disassociate(context, address):
     return fixed_ip_ref
 
 
-@require_context
-def floating_ip_set_auto_assigned(context, address):
-    model_query(context, models.FloatingIp).\
-            filter_by(address=address).\
-            update({'auto_assigned': True})
-
-
 def _floating_ip_get_all(context, session=None):
     return model_query(context, models.FloatingIp, read_deleted="no",
                        session=session)

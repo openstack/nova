@@ -166,13 +166,6 @@ def fake_floating_ip_get_by_address(context, address):
     return FakeModel(ips[0])
 
 
-def fake_floating_ip_set_auto_assigned(contex, address):
-    ips = filter(lambda i: i['address'] == address,
-                 floating_ips)
-    if ips:
-        ips[0]['auto_assigned'] = True
-
-
 def fake_fixed_ip_associate(context, address, instance_id):
     ips = filter(lambda i: i['address'] == address,
                  fixed_ips)
@@ -338,7 +331,6 @@ def stub_out_db_network_api(stubs):
              fake_floating_ip_fixed_ip_associate,
              fake_floating_ip_get_all_by_host,
              fake_floating_ip_get_by_address,
-             fake_floating_ip_set_auto_assigned,
              fake_fixed_ip_associate,
              fake_fixed_ip_associate_pool,
              fake_fixed_ip_create,

@@ -4320,21 +4320,6 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           db.floating_ip_disassociate, self.ctxt,
                           '11.11.11.11')
 
-    def test_floating_ip_set_auto_assigned(self):
-        addresses = ['1.1.1.1', '1.1.1.2', '1.1.1.3']
-        float_ips = [self._create_floating_ip({'address': addr,
-                                               'auto_assigned': False})
-                        for addr in addresses]
-
-        for i in range(2):
-            db.floating_ip_set_auto_assigned(self.ctxt, float_ips[i].address)
-        for i in range(2):
-            float_ip = db.floating_ip_get(self.ctxt, float_ips[i].id)
-            self.assertTrue(float_ip.auto_assigned)
-
-        float_ip = db.floating_ip_get(self.ctxt, float_ips[2].id)
-        self.assertFalse(float_ip.auto_assigned)
-
     def test_floating_ip_get_all(self):
         addresses = ['1.1.1.1', '1.1.1.2', '1.1.1.3']
         float_ips = [self._create_floating_ip({'address': addr})
