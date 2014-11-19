@@ -34,7 +34,6 @@ from oslo.utils import units
 
 from nova import block_device
 from nova import compute
-from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
@@ -641,12 +640,12 @@ class VMOps(object):
     def _attach_disks(self, instance, vm_ref, name_label, vdis,
                       disk_image_type, network_info, rescue=False,
                       admin_password=None, files=None):
-        flavor = flavors.extract_flavor(instance)
+        flavor = instance.get_flavor()
 
         # Attach (required) root disk
         if disk_image_type == vm_utils.ImageType.DISK_ISO:
             # DISK_ISO needs two VBDs: the ISO disk and a blank RW disk
-            root_disk_size = flavor['root_gb']
+            root_disk_size = flavor.root_gb
             if root_disk_size > 0:
                 vm_utils.generate_iso_blank_root_disk(self._session, instance,
                     vm_ref, DEVICE_ROOT, name_label, root_disk_size)
@@ -662,7 +661,7 @@ class VMOps(object):
                           "resize root disk...", instance=instance)
                 vm_utils.try_auto_configure_disk(self._session,
                                                  root_vdi['ref'],
-                                                 flavor['root_gb'])
+                                                 flavor.root_gb)
 
             vm_utils.create_vbd(self._session, vm_ref, root_vdi['ref'],
                                 DEVICE_ROOT, bootable=True,
@@ -685,12 +684,12 @@ class VMOps(object):
         # _attach_orig_disks
 
         # Attach (optional) swap disk
-        swap_mb = flavor['swap']
+        swap_mb = flavor.swap
         if not rescue and swap_mb:
             vm_utils.generate_swap(self._session, instance, vm_ref,
                                    DEVICE_SWAP, name_label, swap_mb)
 
-        ephemeral_gb = flavor['ephemeral_gb']
+        ephemeral_gb = flavor.ephemeral_gb
         if not rescue and ephemeral_gb:
             ephemeral_vdis = vdis.get('ephemerals')
             if ephemeral_vdis:

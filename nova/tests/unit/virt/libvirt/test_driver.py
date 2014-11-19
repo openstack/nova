@@ -6829,8 +6829,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 'my_fake_image'
         instance = objects.Instance(**instance_ref)
-        instance = dict(instance.iteritems())
-        instance['pci_devices'] = [{'address': '0000:00:00.0'}]
+        instance['pci_devices'] = objects.PciDeviceList(
+            objects=[objects.PciDevice(address='0000:00:00.0')])
 
         conn.spawn(self.context, instance, None, [], None)
 

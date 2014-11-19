@@ -205,11 +205,17 @@ def get_create_system_metadata(context, instance_type_id):
     return flavors.save_flavor_info({}, flavor)
 
 
-def create_instance_with_system_metadata(context, instance_values):
+def create_instance_with_system_metadata(context, instance_values, obj=False):
     instance_values['system_metadata'] = get_create_system_metadata(
         context, instance_values['instance_type_id'])
     instance_values['pci_devices'] = []
-    return db.instance_create(context, instance_values)
+    db_inst = db.instance_create(context, instance_values)
+    if obj:
+        return objects.Instance._from_db_object(
+            context, objects.Instance(), db_inst,
+            expected_attrs=['system_metadata'])
+    else:
+        return db_inst
 
 
 class XenAPIVolumeTestCase(stubs.XenAPITestBaseNoDB):
@@ -1007,7 +1013,7 @@ iface eth0 inet6 static
         self.assertFalse(self._tee_executed)
 
     def test_spawn_injects_auto_disk_config_to_xenstore(self):
-        instance = self._create_instance(spawn=False)
+        instance = self._create_instance(spawn=False, obj=True)
         self.mox.StubOutWithMock(self.conn._vmops, '_inject_auto_disk_config')
         self.conn._vmops._inject_auto_disk_config(instance, mox.IgnoreArg())
         self.mox.ReplayAll()
@@ -1231,7 +1237,7 @@ iface eth0 inet6 static
                                              value=error)
 
     def test_rescue(self):
-        instance = self._create_instance(spawn=False)
+        instance = self._create_instance(spawn=False, obj=True)
         xenapi_fake.create_vm(instance['name'], 'Running')
 
         session = get_session()
@@ -1274,7 +1280,7 @@ iface eth0 inet6 static
     def test_rescue_preserve_disk_on_failure(self):
         # test that the original disk is preserved if rescue setup fails
         # bug #1227898
-        instance = self._create_instance()
+        instance = self._create_instance(obj=True)
         session = get_session()
         image_meta = {'id': IMAGE_VHD,
                       'disk_format': 'vhd'}
@@ -1496,7 +1502,7 @@ iface eth0 inet6 static
         self.assertEqual({}, actual)
 
     def test_per_instance_usage_halted(self):
-        instance = self._create_instance(spawn=True)
+        instance = self._create_instance(spawn=True, obj=True)
         self.conn.power_off(instance)
         actual = self.conn.get_per_instance_usage()
         self.assertEqual({}, actual)
@@ -1525,13 +1531,14 @@ iface eth0 inet6 static
         network_info = fake_network.fake_get_instance_nw_info(self.stubs)
         image_meta = {'id': IMAGE_VHD,
                       'disk_format': 'vhd'}
+        inst_obj = objects.Instance._from_db_object(
+            self.context, objects.Instance(), instance,
+            expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
         if spawn:
-            self.conn.spawn(self.context, instance, image_meta, [], 'herp',
+            self.conn.spawn(self.context, inst_obj, image_meta, [], 'herp',
                             network_info)
         if obj:
-            instance = objects.Instance._from_db_object(
-                self.context, objects.Instance(), instance,
-                expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
+            return inst_obj
         return instance
 
     def test_destroy_clean_up_kernel_and_ramdisk(self):
@@ -1696,7 +1703,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
     def _test_revert_migrate(self, power_on):
         instance = create_instance_with_system_metadata(self.context,
-                                                        self.instance_values)
+                                                        self.instance_values,
+                                                        obj=True)
         self.called = False
         self.fake_vm_start_called = False
         self.fake_finish_revert_migration_called = False
@@ -1745,7 +1753,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
     def _test_finish_migrate(self, power_on):
         instance = create_instance_with_system_metadata(self.context,
-                                                        self.instance_values)
+                                                        self.instance_values,
+                                                        obj=True)
         self.called = False
         self.fake_vm_start_called = False
 
@@ -1782,7 +1791,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         values = copy.copy(self.instance_values)
         values["root_gb"] = 0
         values["ephemeral_gb"] = 0
-        instance = create_instance_with_system_metadata(self.context, values)
+        instance = create_instance_with_system_metadata(self.context, values,
+                                                        obj=True)
 
         def fake_vdi_resize(*args, **kwargs):
             raise Exception("This shouldn't be called")
@@ -1798,7 +1808,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
     def test_finish_migrate_no_resize_vdi(self):
         instance = create_instance_with_system_metadata(self.context,
-                                                        self.instance_values)
+                                                        self.instance_values,
+                                                        obj=True)
 
         def fake_vdi_resize(*args, **kwargs):
             raise Exception("This shouldn't be called")
@@ -2258,7 +2269,8 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
 
         disk_image_type = vm_utils.ImageType.DISK_VHD
         instance = create_instance_with_system_metadata(self.context,
-                                                        self.instance_values)
+                                                        self.instance_values,
+                                                        obj=True)
         vm_ref = xenapi_fake.create_vm(instance['name'], 'Halted')
         vdi_ref = xenapi_fake.create_vdi(instance['name'], 'fake')
 
@@ -2391,7 +2403,8 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         # Test swap disk generation.
         instance_values = dict(self.instance_values, instance_type_id=5)
         instance = create_instance_with_system_metadata(self.context,
-                                                        instance_values)
+                                                        instance_values,
+                                                        obj=True)
 
         def fake_generate_swap(*args, **kwargs):
             self.called = True
@@ -2403,7 +2416,8 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         # Test ephemeral disk generation.
         instance_values = dict(self.instance_values, instance_type_id=4)
         instance = create_instance_with_system_metadata(self.context,
-                                                        instance_values)
+                                                        instance_values,
+                                                        obj=True)
 
         def fake_generate_ephemeral(*args):
             self.called = True
@@ -2416,7 +2430,8 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         instance_values.pop('kernel_id')
         instance_values.pop('ramdisk_id')
         instance = create_instance_with_system_metadata(self.context,
-                                                        instance_values)
+                                                        instance_values,
+                                                        obj=True)
 
         def fake_generate_ephemeral(*args):
             pass

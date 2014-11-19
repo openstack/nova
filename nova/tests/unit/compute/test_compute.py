@@ -4362,6 +4362,9 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(task_states.RESIZE_FINISH, instance.task_state)
             orig_mig_save()
 
+        def _instance_save0():
+            orig_inst_save()
+
         def _instance_save1():
             self.assertEqual(instance_type['id'],
                              instance.instance_type_id)
@@ -4381,7 +4384,10 @@ class ComputeTestCase(BaseTestCase):
             self.assertIn('launched_at', instance.obj_what_changed())
             orig_inst_save(expected_task_state=expected_task_state)
 
-        # First save to update flavor
+        # First save to update old flavor
+        instance.save().WithSideEffects(_instance_save0)
+
+        # Second save to update current flavor
         instance.save().WithSideEffects(_instance_save1)
 
         network_api.setup_networks_on_host(self.context, instance,
@@ -4393,7 +4399,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute._get_instance_nw_info(
                 self.context, instance).AndReturn('fake-nwinfo1')
 
-        # 2nd save to update task state
+        # Third save to update task state
         exp_kwargs = dict(expected_task_state=task_states.RESIZE_MIGRATED)
         instance.save(**exp_kwargs).WithSideEffects(_instance_save2)
 
@@ -4641,20 +4647,18 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(old_flavor['id'], instance.instance_type_id)
         self.assertNotEqual(instance_type['id'], instance.instance_type_id)
 
-    def test_save_instance_info(self):
+    def test_set_instance_info(self):
         old_flavor_name = 'm1.tiny'
         new_flavor_name = 'm1.small'
         instance = self._create_fake_instance_obj(type_name=old_flavor_name)
         new_flavor = flavors.get_flavor_by_name(new_flavor_name)
 
-        self.compute._save_instance_info(instance, new_flavor,
-                                         instance.system_metadata)
+        self.compute._set_instance_info(instance, new_flavor)
 
         self.assertEqual(new_flavor['memory_mb'], instance.memory_mb)
         self.assertEqual(new_flavor['vcpus'], instance.vcpus)
         self.assertEqual(new_flavor['root_gb'], instance.root_gb)
         self.assertEqual(new_flavor['ephemeral_gb'], instance.ephemeral_gb)
-        self.assertEqual(new_flavor['id'], instance.instance_type_id)
         self.assertEqual(new_flavor['id'], instance.instance_type_id)
 
     def test_rebuild_instance_notification(self):
@@ -5259,29 +5263,28 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(flavors, 'delete_flavor_info')
         self.mox.StubOutWithMock(flavors, 'save_flavor_info')
         if revert:
-            flavors.extract_flavor(instance, 'old_').AndReturn(
-                {'instance_type_id': old})
-            flavors.extract_flavor(instance).AndReturn(
-                {'instance_type_id': new})
+            old_flavor = dict(test_flavor.fake_flavor, id=old)
+            new_flavor = dict(test_flavor.fake_flavor, id=new)
+            flavors.extract_flavor(instance, 'old_').AndReturn(old_flavor)
+            flavors.extract_flavor(instance, '').AndReturn(new_flavor)
             flavors.save_flavor_info(
-                sys_meta, {'instance_type_id': old}).AndReturn(sys_meta)
+                sys_meta, mox.IgnoreArg(), '').AndReturn(sys_meta)
         else:
-            flavors.extract_flavor(instance).AndReturn(
-                {'instance_type_id': new})
-            flavors.extract_flavor(instance, 'old_').AndReturn(
-                {'instance_type_id': old})
+            new_flavor = dict(test_flavor.fake_flavor, id=new)
+            old_flavor = dict(test_flavor.fake_flavor, id=old)
+            flavors.extract_flavor(instance, '').AndReturn(new_flavor)
+            flavors.extract_flavor(instance, 'old_').AndReturn(old_flavor)
         flavors.delete_flavor_info(
             sys_meta, 'old_').AndReturn(sys_meta)
         flavors.delete_flavor_info(
             sys_meta, 'new_').AndReturn(sys_meta)
 
         self.mox.ReplayAll()
-        res = self.compute._cleanup_stored_instance_types(migration, instance,
-                                                          revert)
-        self.assertEqual(res,
-                         (sys_meta,
-                          {'instance_type_id': revert and old or new},
-                          {'instance_type_id': revert and new or old}))
+        sysmeta, flavor, drop_flavor = \
+            self.compute._cleanup_stored_instance_types(migration, instance,
+                                                        revert)
+        self.assertEqual(int(revert and old or new), flavor['id'])
+        self.assertEqual(int(revert and new or old), drop_flavor['id'])
 
     def test_cleanup_stored_instance_types_for_resize(self):
         self._test_cleanup_stored_instance_types('1', '2')
