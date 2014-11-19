@@ -41,7 +41,7 @@ Background Concepts for Nova
    aggregates
    threading
    vmstates
-   il8n
+   i18n
    filter_scheduler
    rpc
    hooks

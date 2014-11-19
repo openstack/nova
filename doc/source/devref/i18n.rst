@@ -1,0 +1,49 @@
+Internationalization
+====================
+
+Nova uses the `oslo.i18n library
+<http://docs.openstack.org/developer.oslo.i18n/index.html>`_ to support
+internationalization. The oslo.i18n library is built on top of `gettext
+<http://docs.python.org/library/gettext.html>`_ and provides functions that are
+used to enable user-facing strings such as log messages to appear in the
+appropriate language in different locales.
+
+Nova exposes the oslo.i18n library support via the ``nova/i18n.py`` integration
+module. This module provides the functions needed to wrap translatable strings.
+It provides the ``_()`` wrapper for general user-facing messages and specific
+wrappers for messages used only for logging. DEBUG level messages do not need
+translation but CRITICAL, ERROR, WARNING and INFO messages should be wrapped
+with ``_LC()``, ``_LE()``, ``_LW()`` or ``_LI()`` respectively.
+
+For example::
+
+    LOG.debug("block_device_mapping %(mapping)s",
+              {'mapping': block_device_mapping})
+
+or::
+
+    LOG.warn(_LW('Unknown base file %(img)s'), {'img': img})
+
+You should use the basic wrapper ``_()`` for strings which are not log
+messages::
+
+    raise nova.SomeException(_('Invalid service catalogue'))
+
+Do not use ``locals()`` for formatting messages because:
+1. It is not as clear as using explicit dicts.
+2. It could produce hidden errors during refactoring.
+3. Changing the name of a variable causes a change in the message.
+4. It creates a lot of otherwise unused variables.
+
+If you do not follow the project conventions, your code may cause hacking
+checks to fail.
+
+The ``_()``, ``_LC()``, ``_LE()``, ``_LW()`` and ``_LI()`` functions can be
+imported with::
+
+    from nova.i18n import _
+    from nova.i18n import _LC
+    from nova.i18n import _LE
+    from nova.i18n import _LW
+    from nova.i18n import _LI
+
