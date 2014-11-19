@@ -180,9 +180,8 @@ def destroy(name):
     try:
         if not name:
             raise ValueError()
-        flavor = objects.Flavor(name=name)
-        ctxt = context.get_admin_context()
-        flavor.destroy(ctxt)
+        flavor = objects.Flavor(context=context.get_admin_context(), name=name)
+        flavor.destroy()
     except (ValueError, exception.NotFound):
         LOG.exception(_LE('Instance type %s not found for deletion'), name)
         raise exception.FlavorNotFoundByName(flavor_name=name)
