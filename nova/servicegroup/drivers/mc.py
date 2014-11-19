@@ -68,7 +68,11 @@ class MemcachedDriver(api.ServiceGroupDriver):
         Check whether a service is up based on last heartbeat.
         """
         key = "%(topic)s:%(host)s" % service_ref
-        return self.mc.get(str(key)) is not None
+        is_up = self.mc.get(str(key)) is not None
+        if not is_up:
+            LOG.debug('Seems service %s is down' % key)
+
+        return is_up
 
     def get_all(self, group_id):
         """Returns ALL members of the given group
