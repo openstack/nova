@@ -799,7 +799,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                    mock_configure_config_drive,
                    block_device_info=None,
                    power_on=True,
-                   allocations=None,
+                   extra_specs=None,
                    config_drive=False):
 
         self._vmops._volumeops = mock.Mock()
@@ -813,14 +813,20 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         mock_get_datacenter_ref_and_name.return_value = self._dc_info
         mock_call_method = mock.Mock(return_value='fake_task')
 
+        if extra_specs is None:
+            extra_specs = vm_util.ExtraSpecs()
+
         with contextlib.nested(
                 mock.patch.object(self._session, '_wait_for_task'),
                 mock.patch.object(self._session, '_call_method',
                                   mock_call_method),
                 mock.patch.object(uuidutils, 'generate_uuid',
                                   return_value='tmp-uuid'),
-                mock.patch.object(images, 'fetch_image')
-        ) as (_wait_for_task, _call_method, _generate_uuid, _fetch_image):
+                mock.patch.object(images, 'fetch_image'),
+                mock.patch.object(self._vmops, '_get_extra_specs',
+                                  return_value=extra_specs)
+        ) as (_wait_for_task, _call_method, _generate_uuid, _fetch_image,
+              _get_extra_specs):
             self._vmops.spawn(self._context, self._instance, image,
                               injected_files='fake_files',
                               admin_password='password',
@@ -846,16 +852,14 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             mock_get_vif_info.assert_called_once_with(
                     self._session, None, False,
                     constants.DEFAULT_VIF_MODEL, network_info)
-            if allocations is None:
-                allocations = {}
             mock_get_create_spec.assert_called_once_with(
                     self._session.vim.client.factory,
                     self._instance,
                     'fake_uuid',
                     'fake_ds',
                     [],
-                    'otherGuest',
-                    allocations=allocations)
+                    extra_specs,
+                    'otherGuest')
             mock_create_vm.assert_called_once_with(
                     self._session,
                     self._instance,
@@ -996,10 +1000,18 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         image_id = nova.tests.unit.image.fake.get_valid_image_id()
         image = images.VMwareImage(image_id=image_id)
 
-        vm_ref = self._vmops.build_virtual_machine(self._instance,
-                                                  'fake-instance-name',
-                                                  image, self._dc_info,
-                                                  self._ds, self.network_info)
+        def _fake_flavor_get(context, id):
+            flavor = stubs._fake_flavor_get(context, id)
+            return flavor
+
+        with mock.patch.object(db, 'flavor_get', _fake_flavor_get):
+            flavor = objects.Flavor.get_by_id(self._context, 1)
+            vm_ref = self._vmops.build_virtual_machine(self._instance,
+                                                       'fake-instance-name',
+                                                       image, self._dc_info,
+                                                       self._ds,
+                                                       self.network_info,
+                                                       flavor)
 
         vm = vmwareapi_fake._get_object(vm_ref)
 
@@ -1041,53 +1053,88 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             self.fail('NIC not configured')
 
     def test_spawn_cpu_limit(self):
-        def _fake_flavor_get(context, id):
-            flavor = stubs._fake_flavor_get(context, id)
-            flavor['extra_specs'].update({'quota:cpu_limit': 7})
-            return flavor
-
-        with mock.patch.object(db, 'flavor_get', _fake_flavor_get):
-            self._test_spawn(allocations={'cpu_limit': 7})
+        cpu_limits = vm_util.CpuLimits(cpu_limit=7)
+        extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
+        self._test_spawn(extra_specs=extra_specs)
 
     def test_spawn_cpu_reservation(self):
-        def _fake_flavor_get(context, id):
-            flavor = stubs._fake_flavor_get(context, id)
-            flavor['extra_specs'].update({'quota:cpu_reservation': 7})
-            return flavor
-
-        with mock.patch.object(db, 'flavor_get', _fake_flavor_get):
-            self._test_spawn(allocations={'cpu_reservation': 7})
+        cpu_limits = vm_util.CpuLimits(cpu_reservation=7)
+        extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
+        self._test_spawn(extra_specs=extra_specs)
 
     def test_spawn_cpu_allocations(self):
-        def _fake_flavor_get(context, id):
-            flavor = stubs._fake_flavor_get(context, id)
-            flavor['extra_specs'].update({'quota:cpu_limit': 7,
-                                          'quota:cpu_reservation': 6})
-            return flavor
-
-        with mock.patch.object(db, 'flavor_get', _fake_flavor_get):
-            self._test_spawn(allocations={'cpu_limit': 7,
-                                          'cpu_reservation': 6})
+        cpu_limits = vm_util.CpuLimits(cpu_limit=7,
+                                       cpu_reservation=6)
+        extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
+        self._test_spawn(extra_specs=extra_specs)
 
     def test_spawn_cpu_shares_level(self):
-        def _fake_flavor_get(context, id):
-            flavor = stubs._fake_flavor_get(context, id)
-            flavor['extra_specs'].update({'quota:cpu_shares_level': 'high'})
-            return flavor
-
-        with mock.patch.object(db, 'flavor_get', _fake_flavor_get):
-            self._test_spawn(allocations={'cpu_shares_level': 'high'})
+        cpu_limits = vm_util.CpuLimits(cpu_shares_level='high')
+        extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
+        self._test_spawn(extra_specs=extra_specs)
 
     def test_spawn_cpu_shares_custom(self):
+        cpu_limits = vm_util.CpuLimits(cpu_shares_level='custom',
+                                       cpu_shares_share=1948)
+        extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
+        self._test_spawn(extra_specs=extra_specs)
+
+    def _validate_extra_specs(self, expected, actual):
+        self.assertEqual(expected.cpu_limits.cpu_limit,
+                         actual.cpu_limits.cpu_limit)
+        self.assertEqual(expected.cpu_limits.cpu_reservation,
+                         actual.cpu_limits.cpu_reservation)
+        self.assertEqual(expected.cpu_limits.cpu_shares_level,
+                         actual.cpu_limits.cpu_shares_level)
+        self.assertEqual(expected.cpu_limits.cpu_shares_share,
+                         actual.cpu_limits.cpu_shares_share)
+
+    def _validate_flavor_extra_specs(self, flavor_extra_specs, expected):
+
         def _fake_flavor_get(context, id):
             flavor = stubs._fake_flavor_get(context, id)
-            flavor['extra_specs'].update({'quota:cpu_shares_level': 'custom',
-                                          'quota:cpu_shares_share': 1948})
+            flavor['extra_specs'] = flavor_extra_specs
             return flavor
 
         with mock.patch.object(db, 'flavor_get', _fake_flavor_get):
-            self._test_spawn(allocations={'cpu_shares_level': 'custom',
-                                          'cpu_shares_share': 1948})
+            # Validate that the extra specs are parsed correctly
+            flavor = objects.Flavor.get_by_id(self._context, 1)
+            flavor_extra_specs = self._vmops._get_extra_specs(flavor)
+            self._validate_extra_specs(expected, flavor_extra_specs)
+
+    def test_extra_specs_cpu_limit(self):
+        flavor_extra_specs = {'quota:cpu_limit': 7}
+        cpu_limits = vm_util.CpuLimits(cpu_limit=7)
+        extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
+        self._validate_flavor_extra_specs(flavor_extra_specs, extra_specs)
+
+    def test_extra_specs_cpu_reservations(self):
+        flavor_extra_specs = {'quota:cpu_reservation': 7}
+        cpu_limits = vm_util.CpuLimits(cpu_reservation=7)
+        extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
+        self._validate_flavor_extra_specs(flavor_extra_specs, extra_specs)
+
+    def test_extra_specs_cpu_allocations(self):
+        flavor_extra_specs = {'quota:cpu_limit': 7,
+                              'quota:cpu_reservation': 6}
+        cpu_limits = vm_util.CpuLimits(cpu_limit=7,
+                                       cpu_reservation=6)
+        extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
+        self._validate_flavor_extra_specs(flavor_extra_specs, extra_specs)
+
+    def test_extra_specs_cpu_shares_level(self):
+        flavor_extra_specs = {'quota:cpu_shares_level': 'high'}
+        cpu_limits = vm_util.CpuLimits(cpu_shares_level='high')
+        extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
+        self._validate_flavor_extra_specs(flavor_extra_specs, extra_specs)
+
+    def test_extra_specs_cpu_shares_custom(self):
+        flavor_extra_specs = {'quota:cpu_shares_level': 'custom',
+                              'quota:cpu_shares_share': 1948}
+        cpu_limits = vm_util.CpuLimits(cpu_shares_level='custom',
+                                       cpu_shares_share=1948)
+        extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
+        self._validate_flavor_extra_specs(flavor_extra_specs, extra_specs)
 
     def _make_vm_config_info(self, is_iso=False, is_sparse_disk=False):
         disk_type = (constants.DISK_TYPE_SPARSE if is_sparse_disk
