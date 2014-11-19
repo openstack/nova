@@ -1088,7 +1088,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             def __getitem__(self, name):
                 return getattr(self, name)
 
-            def save(self, context):
+            def save(self):
                 pass
 
         class FakeInstanceList(object):
@@ -3120,11 +3120,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.instance = fake_instance.fake_instance_obj(self.context,
                 vm_state=vm_states.ACTIVE,
                 expected_attrs=['metadata', 'system_metadata', 'info_cache'])
-        self.migration = objects.Migration()
+        self.migration = objects.Migration(context=self.context.elevated())
         self.migration.status = 'migrating'
 
     def test_finish_resize_failure(self):
-        elevated_context = self.context.elevated()
         with contextlib.nested(
             mock.patch.object(self.compute, '_finish_resize',
                               side_effect=exception.ResizeError(reason='')),
@@ -3134,10 +3133,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             mock.patch.object(db, 'instance_fault_create'),
             mock.patch.object(self.compute, '_instance_update'),
             mock.patch.object(self.migration, 'save'),
-            mock.patch.object(self.context, 'elevated',
-                              return_value=elevated_context)
+            mock.patch.object(self.migration, 'obj_as_admin',
+                              return_value=mock.MagicMock())
         ) as (meth, event_start, event_finish, fault_create, instance_update,
-              migration_save, context_elevated):
+              migration_save, migration_obj_as_admin):
             fault_create.return_value = (
                 test_instance_fault.fake_faults['fake-uuid'][0])
             self.assertRaises(
@@ -3147,10 +3146,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 migration=self.migration
             )
             self.assertEqual("error", self.migration.status)
-            migration_save.assert_has_calls([mock.call(elevated_context)])
+            migration_save.assert_called_once_with()
+            migration_obj_as_admin.assert_called_once_with()
 
     def test_resize_instance_failure(self):
-        elevated_context = self.context.elevated()
         self.migration.dest_host = None
         with contextlib.nested(
             mock.patch.object(self.compute.driver,
@@ -3162,8 +3161,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             mock.patch.object(db, 'instance_fault_create'),
             mock.patch.object(self.compute, '_instance_update'),
             mock.patch.object(self.migration, 'save'),
-            mock.patch.object(self.context, 'elevated',
-                              return_value=elevated_context),
+            mock.patch.object(self.migration, 'obj_as_admin',
+                              return_value=mock.MagicMock()),
             mock.patch.object(self.compute, '_get_instance_nw_info',
                               return_value=None),
             mock.patch.object(self.instance, 'save'),
@@ -3175,8 +3174,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                               'get_by_instance_uuid',
                               return_value=None)
         ) as (meth, event_start, event_finish, fault_create, instance_update,
-              migration_save, context_elevated, nw_info, save_inst, notify,
-              vol_block_info, bdm):
+              migration_save, migration_obj_as_admin, nw_info, save_inst,
+              notify, vol_block_info, bdm):
             fault_create.return_value = (
                 test_instance_fault.fake_faults['fake-uuid'][0])
             self.assertRaises(
@@ -3185,4 +3184,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 reservations=[], migration=self.migration, instance_type='type'
             )
             self.assertEqual("error", self.migration.status)
-            migration_save.assert_has_calls([mock.call(elevated_context)])
+            self.assertEqual([mock.call(), mock.call()],
+                             migration_save.mock_calls)
+            self.assertEqual([mock.call(), mock.call()],
+                             migration_obj_as_admin.mock_calls)
