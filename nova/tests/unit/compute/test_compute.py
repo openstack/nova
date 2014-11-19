@@ -5215,6 +5215,8 @@ class ComputeTestCase(BaseTestCase):
                 instance['instance_type_id'])
         self.assertEqual(instance_type_ref['flavorid'], '1')
         self.assertEqual(instance.host, migration.source_compute)
+        self.assertEqual(migration.dest_compute, migration.source_compute)
+
         if remove_old_vm_state:
             self.assertEqual(vm_states.ACTIVE, instance.vm_state)
         else:

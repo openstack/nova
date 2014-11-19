@@ -3604,6 +3604,10 @@ class ComputeManager(manager.Manager):
             instance.node = migration['source_node']
             instance.save()
 
+            migration.dest_compute = migration['source_compute']
+            with migration.obj_as_admin():
+                migration.save()
+
             self.network_api.setup_networks_on_host(context, instance,
                                             migration['source_compute'])
 
