@@ -247,7 +247,7 @@ class ServerGroupController(wsgi.Controller):
                                   "server group"))
 
         try:
-            sg.destroy(context)
+            sg.destroy()
         except nova.exception.InstanceGroupNotFound as e:
             if quotas:
                 quotas.rollback()
