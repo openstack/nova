@@ -123,11 +123,11 @@ class BaseWeightHandler(loadables.BaseLoader):
 
     def get_weighed_objects(self, weighers, obj_list, weighing_properties):
         """Return a sorted (descending), normalized list of WeighedObjects."""
-
-        if not obj_list:
-            return []
-
         weighed_objs = [self.object_class(obj, 0.0) for obj in obj_list]
+
+        if len(weighed_objs) <= 1:
+            return weighed_objs
+
         for weigher in weighers:
             weights = weigher.weigh_objects(weighed_objs, weighing_properties)
 
