@@ -883,7 +883,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 root_disk = block_device_info['block_device_mapping'][0]
                 mock_attach = self._vmops._volumeops.attach_root_volume
                 mock_attach.assert_called_once_with(
-                        root_disk['connection_info'], self._instance, 'vda',
+                        root_disk['connection_info'], self._instance,
                         self._ds.ref)
                 self.assertFalse(_wait_for_task.called)
                 self.assertFalse(_fetch_image.called)

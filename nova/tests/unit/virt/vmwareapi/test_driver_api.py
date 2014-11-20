@@ -1101,7 +1101,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
                                  'attach_volume')
         volumeops.VMwareVolumeOps.attach_volume(connection_info,
-                self.instance, mox.IgnoreArg())
+                self.instance)
         self.mox.ReplayAll()
         block_device_info = {'mount_device': 'vda'}
         self.conn.spawn(self.context, self.instance, self.image,
@@ -1120,7 +1120,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
                                  'attach_volume')
         volumeops.VMwareVolumeOps.attach_volume(connection_info,
-                self.instance, mox.IgnoreArg())
+                self.instance)
         self.mox.ReplayAll()
         block_device_info = {'mount_device': 'vda'}
         self.conn.spawn(self.context, self.instance, self.image,
@@ -1757,7 +1757,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
                                  '_attach_volume_vmdk')
         volumeops.VMwareVolumeOps._attach_volume_vmdk(connection_info,
-                self.instance, mount_point)
+                self.instance)
         self.mox.ReplayAll()
         self.conn.attach_volume(None, connection_info, self.instance,
                                 mount_point)
@@ -1769,7 +1769,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
                                  '_detach_volume_vmdk')
         volumeops.VMwareVolumeOps._detach_volume_vmdk(connection_info,
-                self.instance, mount_point)
+                self.instance)
         self.mox.ReplayAll()
         self.conn.detach_volume(connection_info, self.instance, mount_point,
                                 encryption=None)
@@ -1827,7 +1827,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
                                  '_attach_volume_iscsi')
         volumeops.VMwareVolumeOps._attach_volume_iscsi(connection_info,
-                self.instance, mount_point)
+                self.instance)
         self.mox.ReplayAll()
         self.conn.attach_volume(None, connection_info, self.instance,
                                 mount_point)
@@ -1839,7 +1839,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
                                  '_detach_volume_iscsi')
         volumeops.VMwareVolumeOps._detach_volume_iscsi(connection_info,
-                self.instance, mount_point)
+                self.instance)
         self.mox.ReplayAll()
         self.conn.detach_volume(connection_info, self.instance, mount_point,
                                 encryption=None)

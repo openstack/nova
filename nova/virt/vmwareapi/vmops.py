@@ -157,7 +157,6 @@ class VMwareVMOps(object):
             # Aging disable ensures backward compatibility
             self._base_folder = CONF.image_cache_subdirectory_name
         self._tmp_folder = 'vmware_temp'
-        self._default_root_device = 'vda'
         self._rescue_suffix = '-rescue'
         self._migrate_suffix = '-orig'
         self._datastore_dc_mapping = {}
@@ -479,7 +478,6 @@ class VMwareVMOps(object):
                 # we still use instance in many locations for no other purpose
                 # than logging, can we simplify this?
                 self._volumeops.attach_root_volume(connection_info, instance,
-                                                   self._default_root_device,
                                                    vi.datastore.ref)
         else:
             self._imagecache.enlist_image(
