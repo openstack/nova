@@ -1426,6 +1426,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertEqual(3, cfg.cputune.vcpupin[3].id)
             self.assertEqual(set([2]), cfg.cputune.vcpupin[3].cpuset)
             self.assertIsNotNone(cfg.cpu.numa)
+
+            self.assertIsInstance(cfg.cputune.emulatorpin,
+                                  vconfig.LibvirtConfigGuestCPUTuneEmulatorPin)
+            self.assertEqual(set([0, 1, 2]), cfg.cputune.emulatorpin.cpuset)
+
             for instance_cell, numa_cfg_cell in zip(
                     instance_topology.cells, cfg.cpu.numa.cells):
                 self.assertEqual(instance_cell.id, numa_cfg_cell.id)

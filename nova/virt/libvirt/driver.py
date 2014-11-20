@@ -3762,6 +3762,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # Now get the CpuTune configuration from the numa_topology
                 guest_cpu_tune = vconfig.LibvirtConfigGuestCPUTune()
                 guest_numa_tune = vconfig.LibvirtConfigGuestNUMATune()
+                allpcpus = []
 
                 numa_mem = vconfig.LibvirtConfigGuestNUMATuneMemory()
                 numa_memnodes = []
@@ -3777,12 +3778,34 @@ class LibvirtDriver(driver.ComputeDriver):
 
                             numa_mem.nodeset.append(host_cell.id)
 
+                            allpcpus.extend(host_cell.cpuset)
+
                             for cpu in guest_cell.cpus:
                                 pin_cpuset = (
                                     vconfig.LibvirtConfigGuestCPUTuneVCPUPin())
                                 pin_cpuset.id = cpu
                                 pin_cpuset.cpuset = host_cell.cpuset
                                 guest_cpu_tune.vcpupin.append(pin_cpuset)
+
+                # TODO(berrange) When the guest has >1 NUMA node, it will
+                # span multiple host NUMA nodes. By pinning emulator threads
+                # to the union of all nodes, we guarantee there will be
+                # cross-node memory access by the emulator threads when
+                # responding to guest I/O operations. The only way to avoid
+                # this would be to pin emulator threads to a single node and
+                # tell the guest OS to only do I/O from one of its virtual
+                # NUMA nodes. This is not even remotely practical.
+                #
+                # The long term solution is to make use of a new QEMU feature
+                # called "I/O Threads" which will let us configure an explicit
+                # I/O thread for each guest vCPU or guest NUMA node. It is
+                # still TBD how to make use of this feature though, especially
+                # how to associate IO threads with guest devices to eliminiate
+                # cross NUMA node traffic. This is an area of investigation
+                # for QEMU community devs.
+                emulatorpin = vconfig.LibvirtConfigGuestCPUTuneEmulatorPin()
+                emulatorpin.cpuset = set(allpcpus)
+                guest_cpu_tune.emulatorpin = emulatorpin
 
                 guest_numa_tune.memory = numa_mem
                 guest_numa_tune.memnodes = numa_memnodes
