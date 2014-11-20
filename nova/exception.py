@@ -321,6 +321,11 @@ class InvalidUnicodeParameter(Invalid):
                 "Unicode is not supported by the current database.")
 
 
+class InvalidAPIVersionString(Invalid):
+    msg_fmt = _("API Version String %(version)s is of invalid format. Must "
+                "be of format MajorNum.MinorNum.")
+
+
 # Cannot be templated as the error syntax varies.
 # msg needs to be constructed when raised.
 class InvalidParameterValue(Invalid):
