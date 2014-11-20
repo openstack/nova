@@ -25,8 +25,10 @@ import webob
 from webob import exc
 
 from nova.api.openstack.compute.contrib import assisted_volume_snapshots as \
-        assisted_snaps
+        assisted_snaps_v2
 from nova.api.openstack.compute.contrib import volumes
+from nova.api.openstack.compute.plugins.v3 import assisted_volume_snapshots as \
+        assisted_snaps_v21
 from nova.api.openstack.compute.plugins.v3 import volumes as volumes_v3
 from nova.api.openstack import extensions
 from nova.compute import api as compute_api
@@ -1042,17 +1044,25 @@ class DeleteSnapshotTestCaseV2(DeleteSnapshotTestCaseV21):
     snapshot_cls = volumes.SnapshotController
 
 
-class AssistedSnapshotCreateTestCase(test.TestCase):
-    def setUp(self):
-        super(AssistedSnapshotCreateTestCase, self).setUp()
+class AssistedSnapshotCreateTestCaseV21(test.TestCase):
+    assisted_snaps = assisted_snaps_v21
+    bad_request = exception.ValidationError
 
-        self.controller = assisted_snaps.AssistedVolumeSnapshotsController()
+    def setUp(self):
+        super(AssistedSnapshotCreateTestCaseV21, self).setUp()
+
+        self.controller = \
+            self.assisted_snaps.AssistedVolumeSnapshotsController()
         self.stubs.Set(compute_api.API, 'volume_snapshot_create',
                        fake_compute_volume_snapshot_create)
 
     def test_assisted_create(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
-        body = {'snapshot': {'volume_id': '1', 'create_info': {}}}
+        body = {'snapshot':
+                   {'volume_id': '1',
+                    'create_info': {'type': 'qcow2',
+                                    'new_file': 'new_file',
+                                    'snapshot_id': 'snapshot_id'}}}
         req.method = 'POST'
         self.controller.create(req, body=body)
 
@@ -1060,15 +1070,26 @@ class AssistedSnapshotCreateTestCase(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
         body = {'snapshot': {'volume_id': '1'}}
         req.method = 'POST'
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+        self.assertRaises(self.bad_request, self.controller.create,
                 req, body=body)
 
 
-class AssistedSnapshotDeleteTestCase(test.TestCase):
-    def setUp(self):
-        super(AssistedSnapshotDeleteTestCase, self).setUp()
+class AssistedSnapshotCreateTestCaseV2(AssistedSnapshotCreateTestCaseV21):
+    assisted_snaps = assisted_snaps_v2
+    bad_request = webob.exc.HTTPBadRequest
 
-        self.controller = assisted_snaps.AssistedVolumeSnapshotsController()
+
+class AssistedSnapshotDeleteTestCaseV21(test.TestCase):
+    assisted_snaps = assisted_snaps_v21
+
+    def _check_status(self, expected_status, res, controller_method):
+        self.assertEqual(expected_status, controller_method.wsgi_code)
+
+    def setUp(self):
+        super(AssistedSnapshotDeleteTestCaseV21, self).setUp()
+
+        self.controller = \
+            self.assisted_snaps.AssistedVolumeSnapshotsController()
         self.stubs.Set(compute_api.API, 'volume_snapshot_delete',
                        fake_compute_volume_snapshot_delete)
 
@@ -1081,10 +1102,17 @@ class AssistedSnapshotDeleteTestCase(test.TestCase):
                 '&'.join(['%s=%s' % (k, v) for k, v in params.iteritems()]))
         req.method = 'DELETE'
         result = self.controller.delete(req, '5')
-        self.assertEqual(result.status_int, 204)
+        self._check_status(204, result, self.controller.delete)
 
     def test_assisted_delete_missing_delete_info(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
         req.method = 'DELETE'
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.delete,
                 req, '5')
+
+
+class AssistedSnapshotDeleteTestCaseV2(AssistedSnapshotDeleteTestCaseV21):
+    assisted_snaps = assisted_snaps_v2
+
+    def _check_status(self, expected_status, res, controller_method):
+        self.assertEqual(expected_status, res.status_int)
