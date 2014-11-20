@@ -37,7 +37,6 @@ class ConsoleRpcAPITestCase(test.NoDBTestCase):
         self.assertEqual(rpcapi.client.target.topic, CONF.console_topic)
 
         orig_prepare = rpcapi.client.prepare
-        expected_version = kwargs.pop('version', rpcapi.client.target.version)
 
         with contextlib.nested(
             mock.patch.object(rpcapi.client, rpc_method),
@@ -49,28 +48,18 @@ class ConsoleRpcAPITestCase(test.NoDBTestCase):
             prepare_mock.return_value = rpcapi.client
             rpc_mock.return_value = 'foo' if rpc_method == 'call' else None
             csv_mock.side_effect = (
-                lambda v: orig_prepare(version=v).can_send_version())
+                lambda v: orig_prepare().can_send_version())
 
             retval = getattr(rpcapi, method)(ctxt, **kwargs)
             self.assertEqual(retval, rpc_mock.return_value)
 
-            prepare_mock.assert_called_once_with(version=expected_version)
+            prepare_mock.assert_called_once_with()
             rpc_mock.assert_called_once_with(ctxt, method, **kwargs)
 
     def test_add_console(self):
         self._test_console_api('add_console', instance_id='i',
                                rpc_method='cast')
 
-        # NOTE(russellb) Havana compat
-        self.flags(console='havana', group='upgrade_levels')
-        self._test_console_api('add_console', instance_id='i',
-                               rpc_method='cast', version='1.0')
-
     def test_remove_console(self):
         self._test_console_api('remove_console', console_id='i',
                                rpc_method='cast')
-
-        # NOTE(russellb) Havana compat
-        self.flags(console='havana', group='upgrade_levels')
-        self._test_console_api('remove_console', console_id='i',
-                               rpc_method='cast', version='1.0')
