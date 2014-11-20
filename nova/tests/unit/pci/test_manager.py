@@ -52,6 +52,7 @@ fake_db_dev = {
     'address': '0000:00:00.1',
     'vendor_id': 'v',
     'product_id': 'p',
+    'numa_node': 1,
     'dev_type': 't',
     'status': 'available',
     'dev_id': 'i',

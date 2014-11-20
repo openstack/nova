@@ -561,6 +561,24 @@ class NovaMigrationsCheckers(test_migrations.WalkVersionsMixin):
         self.assertColumnNotExists(engine, 'compute_nodes', 'host')
         self.assertColumnNotExists(engine, 'shadow_compute_nodes', 'host')
 
+    def _check_269(self, engine, data):
+
+        self.assertColumnExists(engine, 'pci_devices', 'numa_node')
+        self.assertColumnExists(engine, 'shadow_pci_devices', 'numa_node')
+        pci_devices = oslodbutils.get_table(engine, 'pci_devices')
+        shadow_pci_devices = oslodbutils.get_table(
+            engine, 'shadow_pci_devices')
+        self.assertIsInstance(pci_devices.c.numa_node.type,
+                              sqlalchemy.types.Integer)
+        self.assertTrue(pci_devices.c.numa_node.nullable)
+        self.assertIsInstance(shadow_pci_devices.c.numa_node.type,
+                              sqlalchemy.types.Integer)
+        self.assertTrue(shadow_pci_devices.c.numa_node.nullable)
+
+    def _post_downgrade_269(self, engine):
+        self.assertColumnNotExists(engine, 'pci_devices', 'numa_node')
+        self.assertColumnNotExists(engine, 'shadow_pci_devices', 'numa_node')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase):

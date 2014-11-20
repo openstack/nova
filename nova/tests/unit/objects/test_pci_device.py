@@ -26,6 +26,7 @@ dev_dict = {
     'address': 'a',
     'product_id': 'p',
     'vendor_id': 'v',
+    'numa_node': 0,
     'status': 'available'}
 
 
@@ -39,6 +40,7 @@ fake_db_dev = {
     'address': 'a',
     'vendor_id': 'v',
     'product_id': 'p',
+    'numa_node': 0,
     'dev_type': 't',
     'status': 'available',
     'dev_id': 'i',
@@ -59,6 +61,7 @@ fake_db_dev_1 = {
     'address': 'a1',
     'vendor_id': 'v1',
     'product_id': 'p1',
+    'numa_node': 1,
     'dev_type': 't',
     'status': 'available',
     'dev_id': 'i',
@@ -87,7 +90,7 @@ class _TestPciDeviceObject(object):
         self.assertEqual(self.pci_device.product_id, 'p')
         self.assertEqual(self.pci_device.obj_what_changed(),
                          set(['compute_node_id', 'product_id', 'vendor_id',
-                              'status', 'address', 'extra_info']))
+                              'numa_node', 'status', 'address', 'extra_info']))
 
     def test_pci_device_extra_info(self):
         self.dev_dict = copy.copy(dev_dict)
@@ -99,7 +102,8 @@ class _TestPciDeviceObject(object):
         self.assertEqual(set(extra_value.keys()), set(('k1', 'k2')))
         self.assertEqual(self.pci_device.obj_what_changed(),
                          set(['compute_node_id', 'address', 'product_id',
-                              'vendor_id', 'status', 'extra_info']))
+                              'vendor_id', 'numa_node', 'status',
+                              'extra_info']))
 
     def test_update_device(self):
         self.pci_device = pci_device.PciDevice.create(dev_dict)
@@ -198,6 +202,15 @@ class _TestPciDeviceObject(object):
         self.called = False
         self.pci_device.save(ctxt)
         self.assertEqual(self.called, False)
+
+    def test_update_numa_node(self):
+        self.pci_device = pci_device.PciDevice.create(dev_dict)
+        self.assertEqual(0, self.pci_device.numa_node)
+
+        self.dev_dict = copy.copy(dev_dict)
+        self.dev_dict['numa_node'] = '1'
+        self.pci_device = pci_device.PciDevice.create(self.dev_dict)
+        self.assertEqual(1, self.pci_device.numa_node)
 
 
 class TestPciDeviceObject(test_objects._LocalTest,

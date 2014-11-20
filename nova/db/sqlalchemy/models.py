@@ -1413,6 +1413,9 @@ class PciDevice(BASE, NovaBase):
     extra_info = Column(Text)
 
     instance_uuid = Column(String(36))
+
+    numa_node = Column(Integer, nullable=True)
+
     instance = orm.relationship(Instance, backref="pci_devices",
                             foreign_keys=instance_uuid,
                             primaryjoin='and_('

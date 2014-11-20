@@ -140,8 +140,32 @@ _fake_NodeDevXml = \
           <bus>4</bus>
           <slot>16</slot>
           <function>7</function>
-       <product id='0x1520'>I350 Ethernet Controller Virtual Function</product>
+          <product id='0x1520'>I350 Ethernet Controller Virtual Function
+            </product>
           <vendor id='0x8086'>Intel Corporation</vendor>
+          <capability type='phys_function'>
+             <address domain='0x0000' bus='0x04' slot='0x00' function='0x3'/>
+          </capability>
+          <capability type='virt_functions'>
+          </capability>
+        </capability>
+    </device>""",
+    "pci_0000_04_11_7": """
+      <device>
+         <name>pci_0000_04_11_7</name>
+         <parent>pci_0000_00_01_1</parent>
+         <driver>
+         <name>igbvf</name>
+         </driver>
+         <capability type='pci'>
+          <domain>0</domain>
+          <bus>4</bus>
+          <slot>17</slot>
+          <function>7</function>
+          <product id='0x1520'>I350 Ethernet Controller Virtual Function
+            </product>
+          <vendor id='0x8086'>Intel Corporation</vendor>
+          <numa node='0'/>
           <capability type='phys_function'>
              <address domain='0x0000' bus='0x04' slot='0x00' function='0x3'/>
           </capability>
@@ -8726,24 +8750,38 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             "dev_id": "pci_0000_04_00_3",
             "address": "0000:04:00.3",
             "product_id": '1521',
+            "numa_node": None,
             "vendor_id": '8086',
             "label": 'label_8086_1521',
             "dev_type": 'type-PF',
             }
 
-        self.assertEqual(actualvf, expect_vf)
+        self.assertEqual(expect_vf, actualvf)
         actualvf = conn._get_pcidev_info("pci_0000_04_10_7")
         expect_vf = {
             "dev_id": "pci_0000_04_10_7",
             "address": "0000:04:10.7",
             "product_id": '1520',
+            "numa_node": None,
             "vendor_id": '8086',
             "label": 'label_8086_1520',
             "dev_type": 'type-VF',
             "phys_function": '0000:04:00.3',
             }
+        self.assertEqual(expect_vf, actualvf)
+        actualvf = conn._get_pcidev_info("pci_0000_04_11_7")
+        expect_vf = {
+            "dev_id": "pci_0000_04_11_7",
+            "address": "0000:04:11.7",
+            "product_id": '1520',
+            "vendor_id": '8086',
+            "numa_node": 0,
+            "label": 'label_8086_1520',
+            "dev_type": 'type-VF',
+            "phys_function": '0000:04:00.3',
+            }
 
-        self.assertEqual(actualvf, expect_vf)
+        self.assertEqual(expect_vf, actualvf)
 
     def test_list_devices_not_supported(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -8777,9 +8815,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_get_pci_passthrough_devices(self):
 
         def fakelistDevices(caps, fakeargs=0):
-            return ['pci_0000_04_00_3', 'pci_0000_04_10_7']
+            return ['pci_0000_04_00_3', 'pci_0000_04_10_7',
+                    'pci_0000_04_11_7']
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+
         libvirt_driver.LibvirtDriver._conn.listDevices = fakelistDevices
 
         def fake_nodeDeviceLookupByName(name):
@@ -8797,13 +8837,24 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 "product_id": '1521',
                 "vendor_id": '8086',
                 "dev_type": 'type-PF',
-                "phys_function": None},
+                "phys_function": None,
+                "numa_node": None},
             {
                 "dev_id": "pci_0000_04_10_7",
                 "domain": 0,
                 "address": "0000:04:10.7",
                 "product_id": '1520',
                 "vendor_id": '8086',
+                "numa_node": None,
+                "dev_type": 'type-VF',
+                "phys_function": [('0x0000', '0x04', '0x00', '0x3')]},
+            {
+                "dev_id": "pci_0000_04_11_7",
+                "domain": 0,
+                "address": "0000:04:11.7",
+                "product_id": '1520',
+                "vendor_id": '8086',
+                "numa_node": 0,
                 "dev_type": 'type-VF',
                 "phys_function": [('0x0000', '0x04', '0x00', '0x3')],
             }
@@ -8813,7 +8864,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         for dev in range(len(actualvfs)):
             for key in actualvfs[dev].keys():
                 if key not in ['phys_function', 'virt_functions', 'label']:
-                    self.assertEqual(actualvfs[dev][key], expectvfs[dev][key])
+                    self.assertEqual(expectvfs[dev][key], actualvfs[dev][key])
 
     def _fake_caps_numa_topology(self):
         topology = vconfig.LibvirtConfigCapsNUMATopology()

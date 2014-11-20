@@ -2003,6 +2003,7 @@ class LibvirtConfigNodeDevicePciCap(LibvirtConfigObject):
         self.product_id = None
         self.vendor = None
         self.vendor_id = None
+        self.numa_node = None
         self.fun_capability = list()
 
     def parse_dom(self, xmldoc):
@@ -2023,6 +2024,8 @@ class LibvirtConfigNodeDevicePciCap(LibvirtConfigObject):
             elif c.tag == "vendor":
                 self.vendor = c.text
                 self.vendor_id = int(c.get('id'), 16)
+            elif c.tag == "numa":
+                self.numa_node = int(c.get('node'))
             elif c.tag == "capability" and c.get('type') in \
                             ('virt_functions', 'phys_function'):
                 funcap = LibvirtConfigNodeDevicePciSubFunctionCap()

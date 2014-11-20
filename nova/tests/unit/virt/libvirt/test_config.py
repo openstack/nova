@@ -1974,6 +1974,7 @@ class LibvirtConfigNodeDevicePciCapTest(LibvirtConfigBaseTest):
         self.assertEqual(obj.product_id, 0x10bd)
         self.assertEqual(obj.vendor, "Intel Inc.")
         self.assertEqual(obj.vendor_id, 0x8086)
+        self.assertIsNone(obj.numa_node)
         self.assertIsInstance(obj.fun_capability[0],
                               config.LibvirtConfigNodeDevicePciSubFunctionCap)
 
@@ -1991,6 +1992,7 @@ class LibvirtConfigNodeDevicePciCapTest(LibvirtConfigBaseTest):
               <function>5</function>
               <product id="0x10bd">Intel 10 Gigabit Ethernet</product>
               <vendor id="0x8086">Intel Inc.</vendor>
+              <numa node='0'/>
               <capability type="virt_functions">
                <address domain="0000" bus="0x0a" slot="0x1" function="0x1"/>
                <address domain="0001" bus="0x0a" slot="0x02" function="0x03"/>
@@ -2010,6 +2012,7 @@ class LibvirtConfigNodeDevicePciCapTest(LibvirtConfigBaseTest):
         self.assertEqual(obj.product_id, 0x10bd)
         self.assertEqual(obj.vendor, "Intel Inc.")
         self.assertEqual(obj.vendor_id, 0x8086)
+        self.assertEqual(0, obj.numa_node)
         self.assertIsInstance(obj.fun_capability[0],
                               config.LibvirtConfigNodeDevicePciSubFunctionCap)
 

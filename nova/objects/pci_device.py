@@ -71,7 +71,8 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject,
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
     # Version 1.2: added request_id field
-    VERSION = '1.2'
+    # Version 1.3: Added field to represent PCI device NUMA node
+    VERSION = '1.3'
 
     fields = {
         'id': fields.IntegerField(),
@@ -88,6 +89,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject,
         'instance_uuid': fields.StringField(nullable=True),
         'request_id': fields.StringField(nullable=True),
         'extra_info': fields.DictOfStringsField(),
+        'numa_node': fields.IntegerField(nullable=True),
     }
 
     def obj_make_compatible(self, primitive, target_version):
@@ -188,6 +190,7 @@ class PciDeviceList(base.ObjectListBase, base.NovaObject):
         '1.0': '1.1',
         # NOTE(danms): PciDevice was at 1.1 before we added this
         '1.1': '1.2',
+        '1.2': '1.3',
         }
 
     def __init__(self, *args, **kwargs):
