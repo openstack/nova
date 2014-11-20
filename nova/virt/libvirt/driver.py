@@ -3609,7 +3609,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if img_props.get('os_command_line'):
                 guest.os_cmdline = img_props.get('os_command_line')
 
-    def _set_kvm_timers(self, vconfig, clk, image_meta):
+    def _set_kvm_timers(self, clk, image_meta):
         # TODO(berrange) One day this should be per-guest
         # OS type configurable
         tmpit = vconfig.LibvirtConfigGuestTimer()
@@ -3848,7 +3848,7 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.set_clock(clk)
 
         if virt_type == "kvm":
-            self._set_kvm_timers(vconfig, clk, image_meta)
+            self._set_kvm_timers(clk, image_meta)
 
         storage_configs = self._get_guest_storage_config(
                 instance, image_meta, disk_info, rescue, block_device_info,
