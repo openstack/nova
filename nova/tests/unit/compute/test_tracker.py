@@ -20,6 +20,7 @@ from nova.compute import power_state
 from nova.compute import resource_tracker
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova import exception as exc
 from nova import objects
 from nova import test
 
@@ -35,6 +36,57 @@ _VIRT_DRIVER_AVAIL_RESOURCES = {
     'hypervisor_hostname': 'fakehost',
     'cpu_info': '',
     'numa_topology': None,
+}
+
+_COMPUTE_NODE_FIXTURES = [
+    {
+        'id': 1,
+        # NOTE(jaypipes): Will be removed with the
+        #                 detach-compute-node-from-service blueprint
+        #                 implementation.
+        'service_id': 1,
+        'service': None,
+        'vcpus': _VIRT_DRIVER_AVAIL_RESOURCES['vcpus'],
+        'memory_mb': _VIRT_DRIVER_AVAIL_RESOURCES['memory_mb'],
+        'local_gb': _VIRT_DRIVER_AVAIL_RESOURCES['local_gb'],
+        'vcpus_used': _VIRT_DRIVER_AVAIL_RESOURCES['vcpus_used'],
+        'memory_mb_used': _VIRT_DRIVER_AVAIL_RESOURCES['memory_mb_used'],
+        'local_gb_used': _VIRT_DRIVER_AVAIL_RESOURCES['local_gb_used'],
+        'hypervisor_type': 'fake',
+        'hypervisor_version': 0,
+        'hypervisor_hostname': 'fake-host',
+        'free_ram_mb': (_VIRT_DRIVER_AVAIL_RESOURCES['memory_mb'] -
+                        _VIRT_DRIVER_AVAIL_RESOURCES['memory_mb_used']),
+        'free_disk_gb': (_VIRT_DRIVER_AVAIL_RESOURCES['local_gb'] -
+                         _VIRT_DRIVER_AVAIL_RESOURCES['local_gb_used']),
+        'current_workload': 0,
+        'running_vms': 0,
+        'cpu_info': '{}',
+        'disk_available_least': 0,
+        'host_ip': 'fake-ip',
+        'supported_instances': None,
+        'metrics': None,
+        'pci_stats': None,
+        'extra_resources': None,
+        'stats': '{}',
+        'numa_topology': None
+    },
+]
+
+# NOTE(jaypipes): This fixture should go bye-bye once bauzas implements
+#                 the detach-compute-node-from-service blueprint.
+_SERVICE_FIXTURE = {
+    'id': 1,
+    'host': 'fake-host',
+    'binary': 'nova-compute',
+    'topic': 'compute',
+    'report_count': 1,
+    'disabled': False,
+    'disabled_reason': '',
+    # Yes, it's a list. Yes, it's a singular form of compute_node, not a
+    # pluralized form. No, it doesn't matter, because this will all be removed
+    # when the above blueprint is implemented.
+    'compute_node': _COMPUTE_NODE_FIXTURES
 }
 
 _INSTANCE_TYPE_FIXTURES = {
@@ -612,3 +664,191 @@ class TestUpdateAvailableResources(BaseTestCase):
         }
         sync_mock.assert_called_once_with(mock.sentinel.ctx,
                 expected_resources)
+
+
+class TestSyncComputeNode(BaseTestCase):
+
+    def test_no_found_service_disabled(self):
+        self._setup_rt()
+
+        # NOTE(jaypipes): RT._get_service() calls the conductor right now to
+        #                 get the service for a compute host. Yes, this is odd,
+        #                 and yes, bauzas is fixing this problem in the
+        #                 detach-compute-node-from-service blueprint.
+        capi = self.cond_api_mock
+        service_mock = capi.service_get_by_compute_host
+        service_mock.side_effect = exc.NotFound
+
+        self.rt._sync_compute_node(mock.sentinel.ctx, mock.sentinel.resources)
+        self.assertTrue(self.rt.disabled)
+        self.assertIsNone(self.rt.compute_node)
+
+    def test_compute_node_created_on_empty(self):
+        self._setup_rt()
+
+        def fake_create_node(_ctx, resources):
+            res = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+            res.update(resources)
+            return res
+
+        capi = self.cond_api_mock
+        create_node_mock = capi.compute_node_create
+        create_node_mock.side_effect = fake_create_node
+        service_mock = capi.service_get_by_compute_host
+        service_obj = _SERVICE_FIXTURE
+        service_mock.return_value = service_obj
+
+        resources = {
+            'host_ip': 'fake-ip',
+            'numa_topology': None,
+            'metrics': '[]',
+            'cpu_info': '',
+            'hypervisor_hostname': 'fakehost',
+            'free_disk_gb': 6,
+            'hypervisor_version': 0,
+            'local_gb': 6,
+            'free_ram_mb': 512,
+            'memory_mb_used': 0,
+            'pci_stats': '[]',
+            'vcpus_used': 0,
+            'hypervisor_type': 'fake',
+            'local_gb_used': 0,
+            'memory_mb': 512,
+            'current_workload': 0,
+            'vcpus': 4,
+            'running_vms': 0
+        }
+        # We need to do this because _sync_compute_node() actually modifies
+        # the supplied dictionary :(
+        expected_resources = copy.deepcopy(resources)
+        # NOTE(jaypipes): This will go away once
+        #                 detach-compute-node-from-service blueprint is done
+        expected_resources['service_id'] = 1
+        # NOTE(jaypipes): The ERT adds a "stats" field, containing a dictionary
+        #                 of stuff that comes from the resource tracker's
+        #                 stats_class thing.
+        expected_resources['stats'] = '{}'
+
+        # NOTE(jaypipes): This is unfortunately necessary to the design of the
+        #                 ERT. The only way to set the initial state of the
+        #                 total amount of resources available to a compute
+        #                 node is to call the ERT's reset_resources() method,
+        #                 and it sets its totals based on the supplied values.
+        self.rt.ext_resources_handler.reset_resources(resources,
+                                                      self.rt.driver)
+        self.rt._sync_compute_node(mock.sentinel.ctx, resources)
+
+        self.assertFalse(self.rt.disabled)
+        service_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host')
+        create_node_mock.assert_called_once_with(mock.sentinel.ctx,
+                                                 expected_resources)
+        # TODO(jaypipes): The update_resource_stats() scheduler method should
+        #                 actually take the compute node identifier as a
+        #                 parameter instead of looking in the resources
+        #                 parameter for an "id" field in order to identify the
+        #                 compute node.
+        expected_resources['id'] = 1
+        urs_mock = self.sched_client_mock.update_resource_stats
+        urs_mock.assert_called_once_with(mock.sentinel.ctx,
+                                         ('fake-host', 'fake-node'),
+                                         expected_resources)
+
+    def test_existing_compute_node_updated_same_resources(self):
+        self._setup_rt()
+        self.rt.compute_node = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+
+        capi = self.cond_api_mock
+        create_node_mock = capi.compute_node_create
+        service_mock = capi.service_get_by_compute_host
+
+        # This is the same set of resources as the fixture, deliberately. We
+        # are checking below to see that update_resource_stats() is not
+        # needlessly called when the resources don't actually change.
+        resources = {
+            'host_ip': 'fake-ip',
+            'numa_topology': None,
+            'metrics': '[]',
+            'cpu_info': '',
+            'hypervisor_hostname': 'fakehost',
+            'free_disk_gb': 6,
+            'hypervisor_version': 0,
+            'local_gb': 6,
+            'free_ram_mb': 512,
+            'memory_mb_used': 0,
+            'pci_stats': '[]',
+            'vcpus_used': 0,
+            'hypervisor_type': 'fake',
+            'local_gb_used': 0,
+            'memory_mb': 512,
+            'current_workload': 0,
+            'vcpus': 4,
+            'running_vms': 0
+        }
+        orig_resources = copy.deepcopy(resources)
+        self.rt._sync_compute_node(mock.sentinel.ctx, resources)
+
+        self.assertFalse(self.rt.disabled)
+        self.assertFalse(service_mock.called)
+        self.assertFalse(create_node_mock.called)
+
+        # The above call to _sync_compute_node() will populate the
+        # RT.old_resources collection with the resources. Here, we check that
+        # if we call _sync_compute_node() again with the same resources, that
+        # the scheduler client won't be called again to update those
+        # (unchanged) resources for the compute node
+        self.sched_client_mock.reset_mock()
+        urs_mock = self.sched_client_mock.update_resource_stats
+        self.rt._sync_compute_node(mock.sentinel.ctx, orig_resources)
+        self.assertFalse(urs_mock.called)
+
+    def test_existing_compute_node_updated_new_resources(self):
+        self._setup_rt()
+        self.rt.compute_node = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+
+        capi = self.cond_api_mock
+        create_node_mock = capi.compute_node_create
+        service_mock = capi.service_get_by_compute_host
+
+        # Deliberately changing local_gb_used, vcpus_used, and memory_mb_used
+        # below to be different from the compute node fixture's base usages.
+        # We want to check that the code paths update the stored compute node
+        # usage records with what is supplied to _sync_compute_node().
+        resources = {
+            'host_ip': 'fake-ip',
+            'numa_topology': None,
+            'metrics': '[]',
+            'cpu_info': '',
+            'hypervisor_hostname': 'fakehost',
+            'free_disk_gb': 2,
+            'hypervisor_version': 0,
+            'local_gb': 6,
+            'free_ram_mb': 384,
+            'memory_mb_used': 128,
+            'pci_stats': '[]',
+            'vcpus_used': 2,
+            'hypervisor_type': 'fake',
+            'local_gb_used': 4,
+            'memory_mb': 512,
+            'current_workload': 0,
+            'vcpus': 4,
+            'running_vms': 0
+        }
+        expected_resources = copy.deepcopy(resources)
+        expected_resources['id'] = 1
+        expected_resources['stats'] = '{}'
+
+        self.rt.ext_resources_handler.reset_resources(resources,
+                                                      self.rt.driver)
+        # This emulates the behavior that occurs in the
+        # RT.update_available_resource() method, which updates resource
+        # information in the ERT differently than all other resources.
+        self.rt.ext_resources_handler.update_from_instance(dict(vcpus=2))
+        self.rt._sync_compute_node(mock.sentinel.ctx, resources)
+
+        self.assertFalse(self.rt.disabled)
+        self.assertFalse(service_mock.called)
+        self.assertFalse(create_node_mock.called)
+        urs_mock = self.sched_client_mock.update_resource_stats
+        urs_mock.assert_called_once_with(mock.sentinel.ctx,
+                                         ('fake-host', 'fake-node'),
+                                         expected_resources)
