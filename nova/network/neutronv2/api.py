@@ -959,9 +959,14 @@ class API(base_api.NetworkAPI):
         """Get all networks for client."""
         client = neutronv2.get_client(context)
         networks = client.list_networks().get('networks')
+        network_objs = []
         for network in networks:
-            network['label'] = network['name']
-        return networks
+            network_objs.append(objects.Network(context=context,
+                                                name=network['name'],
+                                                label=network['name'],
+                                                uuid=network['id']))
+        return objects.NetworkList(context=context,
+                                   objects=network_objs)
 
     def get(self, context, network_uuid):
         """Get specific network for client."""
@@ -970,8 +975,11 @@ class API(base_api.NetworkAPI):
             network = client.show_network(network_uuid).get('network') or {}
         except neutron_client_exc.NetworkNotFoundClient:
             raise exception.NetworkNotFound(network_id=network_uuid)
-        network['label'] = network['name']
-        return network
+        net_obj = objects.Network(context=context,
+                                  name=network['name'],
+                                  label=network['name'],
+                                  uuid=network['id'])
+        return net_obj
 
     def delete(self, context, network_uuid):
         """Delete a network for client."""
