@@ -53,14 +53,10 @@ from nova.virt.hyperv import hostutils
 from nova.virt.hyperv import ioutils
 from nova.virt.hyperv import livemigrationutils
 from nova.virt.hyperv import networkutils
-from nova.virt.hyperv import networkutilsv2
 from nova.virt.hyperv import pathutils
 from nova.virt.hyperv import rdpconsoleutils
-from nova.virt.hyperv import utilsfactory
 from nova.virt.hyperv import vhdutils
-from nova.virt.hyperv import vhdutilsv2
 from nova.virt.hyperv import vmutils
-from nova.virt.hyperv import vmutilsv2
 from nova.virt.hyperv import volumeops
 from nova.virt.hyperv import volumeutils
 from nova.virt.hyperv import volumeutilsv2
@@ -1173,90 +1169,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
                                                         fake_free_slot,
                                                         fake_mounted_disk)
         m.WithSideEffects(self._add_volume_disk)
-
-    def _test_util_class_version(self, v1_class, v2_class,
-                                 get_instance_action, is_hyperv_2012,
-                                 force_v1_flag, force_utils_v1):
-        self._check_min_windows_version_satisfied = is_hyperv_2012
-        CONF.set_override(force_v1_flag, force_v1_flag, 'hyperv')
-        self._conn = driver_hyperv.HyperVDriver(None)
-
-        instance = get_instance_action()
-        is_v1 = isinstance(instance, v1_class)
-        # v2_class can inherit from v1_class
-        is_v2 = isinstance(instance, v2_class)
-
-        self.assertTrue((is_hyperv_2012 and not force_v1_flag) ^
-                        (is_v1 and not is_v2))
-
-    def test_volumeutils_version_hyperv_2012(self):
-        self._test_util_class_version(volumeutils.VolumeUtils,
-                                      volumeutilsv2.VolumeUtilsV2,
-                                      lambda: utilsfactory.get_volumeutils(),
-                                      True, 'force_volumeutils_v1', False)
-
-    def test_volumeutils_version_hyperv_2012_force_v1(self):
-        self._test_util_class_version(volumeutils.VolumeUtils,
-                                      volumeutilsv2.VolumeUtilsV2,
-                                      lambda: utilsfactory.get_volumeutils(),
-                                      True, 'force_volumeutils_v1', True)
-
-    def test_volumeutils_version_hyperv_2008R2(self):
-        self._test_util_class_version(volumeutils.VolumeUtils,
-                                      volumeutilsv2.VolumeUtilsV2,
-                                      lambda: utilsfactory.get_volumeutils(),
-                                      False, 'force_volumeutils_v1', False)
-
-    def test_vmutils_version_hyperv_2012(self):
-        self._test_util_class_version(vmutils.VMUtils, vmutilsv2.VMUtilsV2,
-                                      lambda: utilsfactory.get_vmutils(),
-                                      True, 'force_hyperv_utils_v1', False)
-
-    def test_vmutils_version_hyperv_2012_force_v1(self):
-        self._test_util_class_version(vmutils.VMUtils, vmutilsv2.VMUtilsV2,
-                                      lambda: utilsfactory.get_vmutils(),
-                                      True, 'force_hyperv_utils_v1', True)
-
-    def test_vmutils_version_hyperv_2008R2(self):
-        self._test_util_class_version(vmutils.VMUtils, vmutilsv2.VMUtilsV2,
-                                      lambda: utilsfactory.get_vmutils(),
-                                      False, 'force_hyperv_utils_v1', False)
-
-    def test_vhdutils_version_hyperv_2012(self):
-        self._test_util_class_version(vhdutils.VHDUtils,
-                                      vhdutilsv2.VHDUtilsV2,
-                                      lambda: utilsfactory.get_vhdutils(),
-                                      True, 'force_hyperv_utils_v1', False)
-
-    def test_vhdutils_version_hyperv_2012_force_v1(self):
-        self._test_util_class_version(vhdutils.VHDUtils,
-                                      vhdutilsv2.VHDUtilsV2,
-                                      lambda: utilsfactory.get_vhdutils(),
-                                      True, 'force_hyperv_utils_v1', True)
-
-    def test_vhdutils_version_hyperv_2008R2(self):
-        self._test_util_class_version(vhdutils.VHDUtils,
-                                      vhdutilsv2.VHDUtilsV2,
-                                      lambda: utilsfactory.get_vhdutils(),
-                                      False, 'force_hyperv_utils_v1', False)
-
-    def test_networkutils_version_hyperv_2012(self):
-        self._test_util_class_version(networkutils.NetworkUtils,
-                                      networkutilsv2.NetworkUtilsV2,
-                                      lambda: utilsfactory.get_networkutils(),
-                                      True, 'force_hyperv_utils_v1', False)
-
-    def test_networkutils_version_hyperv_2012_force_v1(self):
-        self._test_util_class_version(networkutils.NetworkUtils,
-                                      networkutilsv2.NetworkUtilsV2,
-                                      lambda: utilsfactory.get_networkutils(),
-                                      True, 'force_hyperv_utils_v1', True)
-
-    def test_networkutils_version_hyperv_2008R2(self):
-        self._test_util_class_version(networkutils.NetworkUtils,
-                                      networkutilsv2.NetworkUtilsV2,
-                                      lambda: utilsfactory.get_networkutils(),
-                                      False, 'force_hyperv_utils_v1', False)
 
     def test_attach_volume(self):
         instance_data = self._get_instance_data()
