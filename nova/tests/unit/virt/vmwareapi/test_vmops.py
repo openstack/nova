@@ -61,22 +61,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._session = driver.VMwareAPISession()
 
         self._virtapi = mock.Mock()
-        self._vmops = vmops.VMwareVMOps(self._session, self._virtapi, None)
-
         self._image_id = nova.tests.unit.image.fake.get_valid_image_id()
-        self._instance_values = {
-            'name': 'fake_name',
-            'uuid': 'fake_uuid',
-            'vcpus': 1,
-            'memory_mb': 512,
-            'image_ref': self._image_id,
-            'root_gb': 10,
-            'node': 'respool-1001(MyResPoolName)',
-            'expected_attrs': ['system_metadata'],
-        }
-        self._instance = fake_instance.fake_instance_obj(
-                                 self._context, **self._instance_values)
-
         fake_ds_ref = vmwareapi_fake.ManagedObjectReference('fake-ds')
         self._ds = ds_util.Datastore(
                 ref=fake_ds_ref, name='fake_ds',
@@ -85,6 +70,23 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._dc_info = vmops.DcInfo(
                 ref='fake_dc_ref', name='fake_dc',
                 vmFolder='fake_vm_folder')
+        cluster = vmwareapi_fake.create_cluster('fake_cluster', fake_ds_ref)
+        self._instance_values = {
+            'name': 'fake_name',
+            'uuid': 'fake_uuid',
+            'vcpus': 1,
+            'memory_mb': 512,
+            'image_ref': self._image_id,
+            'root_gb': 10,
+            'node': '%s(%s)' % (cluster.mo_id, cluster.name),
+            'expected_attrs': ['system_metadata'],
+        }
+        self._instance = fake_instance.fake_instance_obj(
+                                 self._context, **self._instance_values)
+
+        self._vmops = vmops.VMwareVMOps(self._session, self._virtapi, None,
+                                        cluster=cluster.obj)
+        self._cluster = cluster
 
         subnet_4 = network_model.Subnet(cidr='192.168.0.1/24',
                                         dns=[network_model.IP('192.168.0.1')],
@@ -760,8 +762,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.vmwareapi.ds_util.get_datastore')
     @mock.patch(
         'nova.virt.vmwareapi.vmops.VMwareVMOps.get_datacenter_ref_and_name')
-    @mock.patch('nova.virt.vmwareapi.vm_util.get_mo_id_from_instance',
-                return_value='fake_node_mo_id')
     @mock.patch('nova.virt.vmwareapi.vm_util.get_res_pool_ref',
                 return_value='fake_rp_ref')
     @mock.patch('nova.virt.vmwareapi.vif.get_vif_info',
@@ -793,7 +793,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                    mock_is_neutron,
                    mock_get_vif_info,
                    mock_get_res_pool_ref,
-                   mock_get_mo_id_for_instance,
                    mock_get_datacenter_ref_and_name,
                    mock_get_datastore,
                    mock_configure_config_drive,
@@ -846,11 +845,10 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
             self.assertEqual(expected_mkdir_calls, len(mock_mkdir.mock_calls))
 
-            mock_get_mo_id_for_instance.assert_called_once_with(self._instance)
             mock_get_res_pool_ref.assert_called_once_with(
-                    self._session, None, 'fake_node_mo_id')
+                    self._session, self._cluster.obj)
             mock_get_vif_info.assert_called_once_with(
-                    self._session, None, False,
+                    self._session, self._cluster.obj, False,
                     constants.DEFAULT_VIF_MODEL, network_info)
             mock_get_create_spec.assert_called_once_with(
                     self._session.vim.client.factory,

@@ -229,9 +229,8 @@ class VMwareVMOps(object):
 
     def build_virtual_machine(self, instance, instance_name, image_info,
                               dc_info, datastore, network_info, flavor):
-        node_mo_id = vm_util.get_mo_id_from_instance(instance)
         res_pool_ref = vm_util.get_res_pool_ref(self._session,
-                                                self._cluster, node_mo_id)
+                                                self._cluster)
         vif_infos = vmwarevif.get_vif_info(self._session,
                                            self._cluster,
                                            utils.is_neutron(),
