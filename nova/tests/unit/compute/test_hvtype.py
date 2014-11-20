@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.compute import hvtype
+from nova.compute import hv_type
 from nova import exception
 from nova import test
 
@@ -20,27 +20,27 @@ from nova import test
 class HvTypeTest(test.NoDBTestCase):
 
     def test_valid_string(self):
-        self.assertTrue(hvtype.is_valid("vmware"))
+        self.assertTrue(hv_type.is_valid("vmware"))
 
     def test_valid_constant(self):
-        self.assertTrue(hvtype.is_valid(hvtype.QEMU))
+        self.assertTrue(hv_type.is_valid(hv_type.QEMU))
 
     def test_valid_bogus(self):
-        self.assertFalse(hvtype.is_valid("acmehypervisor"))
+        self.assertFalse(hv_type.is_valid("acmehypervisor"))
 
     def test_canonicalize_none(self):
-        self.assertIsNone(hvtype.canonicalize(None))
+        self.assertIsNone(hv_type.canonicalize(None))
 
     def test_canonicalize_case(self):
-        self.assertEqual(hvtype.QEMU, hvtype.canonicalize("QeMu"))
+        self.assertEqual(hv_type.QEMU, hv_type.canonicalize("QeMu"))
 
     def test_canonicalize_xapi(self):
-        self.assertEqual(hvtype.XEN, hvtype.canonicalize("xapi"))
+        self.assertEqual(hv_type.XEN, hv_type.canonicalize("xapi"))
 
     def test_canonicalize_powervm(self):
-        self.assertEqual(hvtype.PHYP, hvtype.canonicalize("POWERVM"))
+        self.assertEqual(hv_type.PHYP, hv_type.canonicalize("POWERVM"))
 
     def test_canonicalize_invalid(self):
         self.assertRaises(exception.InvalidHypervisorVirtType,
-                          hvtype.canonicalize,
+                          hv_type.canonicalize,
                           "wibble")

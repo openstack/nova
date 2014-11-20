@@ -26,7 +26,7 @@ from oslo.serialization import jsonutils
 from oslo.utils import units
 
 from nova.compute import arch
-from nova.compute import hvtype
+from nova.compute import hv_type
 from nova.compute import vm_mode
 from nova.i18n import _
 from nova.openstack.common import log as logging
@@ -132,8 +132,8 @@ class HostOps(object):
                'vcpus_used': 0,
                'cpu_info': jsonutils.dumps(cpu_info),
                'supported_instances': jsonutils.dumps(
-                   [(arch.I686, hvtype.HYPERV, vm_mode.HVM),
-                    (arch.X86_64, hvtype.HYPERV, vm_mode.HVM)]),
+                   [(arch.I686, hv_type.HYPERV, vm_mode.HVM),
+                    (arch.X86_64, hv_type.HYPERV, vm_mode.HVM)]),
                'numa_topology': None,
                }
 

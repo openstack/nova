@@ -29,7 +29,7 @@ from oslo.config import cfg
 from oslo.serialization import jsonutils
 
 from nova.compute import arch
-from nova.compute import hvtype
+from nova.compute import hv_type
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
@@ -116,7 +116,7 @@ class FakeDriver(driver.ComputeDriver):
           'cpu_info': {},
           'disk_available_least': 0,
           'supported_instances': jsonutils.dumps([(arch.X86_64,
-                                                   hvtype.FAKE,
+                                                   hv_type.FAKE,
                                                    vm_mode.HVM)]),
           'numa_topology': None,
           }

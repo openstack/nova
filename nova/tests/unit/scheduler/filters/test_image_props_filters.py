@@ -11,7 +11,7 @@
 #    under the License.
 
 from nova.compute import arch
-from nova.compute import hvtype
+from nova.compute import hv_type
 from nova.compute import vm_mode
 from nova.scheduler.filters import image_props_filter
 from nova import test
@@ -27,40 +27,40 @@ class TestImagePropsFilter(test.NoDBTestCase):
 
     def test_image_properties_filter_passes_same_inst_props_and_version(self):
         img_props = {'properties': {'_architecture': arch.X86_64,
-                                    'hypervisor_type': hvtype.KVM,
+                                    'hypervisor_type': hv_type.KVM,
                                     'vm_mode': vm_mode.HVM,
                                     'hypervisor_version_requires': '>=6.0,<6.2'
         }}
         filter_properties = {'request_spec': {'image': img_props}}
         hypervisor_version = utils.convert_version_to_int('6.0.0')
         capabilities = {'supported_instances':
-                        [(arch.X86_64, hvtype.KVM, vm_mode.HVM)],
+                        [(arch.X86_64, hv_type.KVM, vm_mode.HVM)],
                         'hypervisor_version': hypervisor_version}
         host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
 
     def test_image_properties_filter_fails_different_inst_props(self):
         img_props = {'properties': {'architecture': arch.ARMV7,
-                                    'hypervisor_type': hvtype.QEMU,
+                                    'hypervisor_type': hv_type.QEMU,
                                     'vm_mode': vm_mode.HVM}}
         filter_properties = {'request_spec': {'image': img_props}}
         hypervisor_version = utils.convert_version_to_int('6.0.0')
         capabilities = {'supported_instances':
-                        [(arch.X86_64, hvtype.KVM, vm_mode.HVM)],
+                        [(arch.X86_64, hv_type.KVM, vm_mode.HVM)],
                         'hypervisor_version': hypervisor_version}
         host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
 
     def test_image_properties_filter_fails_different_hyper_version(self):
         img_props = {'properties': {'architecture': arch.X86_64,
-                                    'hypervisor_type': hvtype.KVM,
+                                    'hypervisor_type': hv_type.KVM,
                                     'vm_mode': vm_mode.HVM,
                                     'hypervisor_version_requires': '>=6.2'}}
         filter_properties = {'request_spec': {'image': img_props}}
         hypervisor_version = utils.convert_version_to_int('6.0.0')
         capabilities = {'enabled': True,
                         'supported_instances':
-                        [(arch.X86_64, hvtype.KVM, vm_mode.HVM)],
+                        [(arch.X86_64, hv_type.KVM, vm_mode.HVM)],
                         'hypervisor_version': hypervisor_version}
         host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
@@ -71,7 +71,7 @@ class TestImagePropsFilter(test.NoDBTestCase):
         filter_properties = {'request_spec': {'image': img_props}}
         hypervisor_version = utils.convert_version_to_int('6.0.0')
         capabilities = {'supported_instances':
-                        [(arch.X86_64, hvtype.KVM, vm_mode.HVM)],
+                        [(arch.X86_64, hv_type.KVM, vm_mode.HVM)],
                         'hypervisor_version': hypervisor_version}
         host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
@@ -82,7 +82,7 @@ class TestImagePropsFilter(test.NoDBTestCase):
         filter_properties = {'request_spec': {'image': img_props}}
         hypervisor_version = utils.convert_version_to_int('6.0.0')
         capabilities = {'supported_instances':
-                        [(arch.X86_64, hvtype.XEN, vm_mode.XEN)],
+                        [(arch.X86_64, hv_type.XEN, vm_mode.XEN)],
                         'hypervisor_version': hypervisor_version}
         host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
@@ -91,14 +91,14 @@ class TestImagePropsFilter(test.NoDBTestCase):
         filter_properties = {'request_spec': {}}
         hypervisor_version = utils.convert_version_to_int('6.0.0')
         capabilities = {'supported_instances':
-                        [(arch.X86_64, hvtype.KVM, vm_mode.HVM)],
+                        [(arch.X86_64, hv_type.KVM, vm_mode.HVM)],
                         'hypervisor_version': hypervisor_version}
         host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
 
     def test_image_properties_filter_fails_without_host_props(self):
         img_props = {'properties': {'architecture': arch.X86_64,
-                                    'hypervisor_type': hvtype.KVM,
+                                    'hypervisor_type': hv_type.KVM,
                                     'vm_mode': vm_mode.HVM}}
         filter_properties = {'request_spec': {'image': img_props}}
         hypervisor_version = utils.convert_version_to_int('6.0.0')
@@ -109,25 +109,25 @@ class TestImagePropsFilter(test.NoDBTestCase):
 
     def test_image_properties_filter_passes_without_hyper_version(self):
         img_props = {'properties': {'architecture': arch.X86_64,
-                                    'hypervisor_type': hvtype.KVM,
+                                    'hypervisor_type': hv_type.KVM,
                                     'vm_mode': vm_mode.HVM,
                                     'hypervisor_version_requires': '>=6.0'}}
         filter_properties = {'request_spec': {'image': img_props}}
         capabilities = {'enabled': True,
                         'supported_instances':
-                        [(arch.X86_64, hvtype.KVM, vm_mode.HVM)]}
+                        [(arch.X86_64, hv_type.KVM, vm_mode.HVM)]}
         host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
 
     def test_image_properties_filter_fails_with_unsupported_hyper_ver(self):
         img_props = {'properties': {'architecture': arch.X86_64,
-                                    'hypervisor_type': hvtype.KVM,
+                                    'hypervisor_type': hv_type.KVM,
                                     'vm_mode': vm_mode.HVM,
                                     'hypervisor_version_requires': '>=6.0'}}
         filter_properties = {'request_spec': {'image': img_props}}
         capabilities = {'enabled': True,
                         'supported_instances':
-                        [(arch.X86_64, hvtype.KVM, vm_mode.HVM)],
+                        [(arch.X86_64, hv_type.KVM, vm_mode.HVM)],
                         'hypervisor_version': 5000}
         host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
@@ -138,7 +138,7 @@ class TestImagePropsFilter(test.NoDBTestCase):
         filter_properties = {'request_spec': {'image': img_props}}
         hypervisor_version = utils.convert_version_to_int('6.0.0')
         capabilities = {'supported_instances':
-                        [(arch.X86_64, hvtype.XEN, vm_mode.XEN)],
+                        [(arch.X86_64, hv_type.XEN, vm_mode.XEN)],
                         'hypervisor_version': hypervisor_version}
         host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
@@ -149,7 +149,7 @@ class TestImagePropsFilter(test.NoDBTestCase):
         filter_properties = {'request_spec': {'image': img_props}}
         hypervisor_version = utils.convert_version_to_int('6.0.0')
         capabilities = {'supported_instances':
-                        [(arch.X86_64, hvtype.KVM, vm_mode.HVM)],
+                        [(arch.X86_64, hv_type.KVM, vm_mode.HVM)],
                         'hypervisor_version': hypervisor_version}
         host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
@@ -160,18 +160,18 @@ class TestImagePropsFilter(test.NoDBTestCase):
         filter_properties = {'request_spec': {'image': img_props}}
         hypervisor_version = utils.convert_version_to_int('6.0.0')
         capabilities = {'supported_instances':
-                        [(arch.I686, hvtype.KVM, vm_mode.HVM)],
+                        [(arch.I686, hv_type.KVM, vm_mode.HVM)],
                         'hypervisor_version': hypervisor_version}
         host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
 
-    def test_image_properties_filter_xen_hvtype_compat(self):
-        # if an old image has 'xapi' for hvtype it should be treated as xen
+    def test_image_properties_filter_xen_hv_type_compat(self):
+        # if an old image has 'xapi' for hv_type it should be treated as xen
         img_props = {'properties': {'hypervisor_type': 'xapi'}}
         filter_properties = {'request_spec': {'image': img_props}}
         hypervisor_version = utils.convert_version_to_int('6.0.0')
         capabilities = {'supported_instances':
-                        [(arch.I686, hvtype.XEN, vm_mode.HVM)],
+                        [(arch.I686, hv_type.XEN, vm_mode.HVM)],
                         'hypervisor_version': hypervisor_version}
         host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
@@ -183,7 +183,7 @@ class TestImagePropsFilter(test.NoDBTestCase):
         filter_properties = {'request_spec': {'image': img_props}}
         hypervisor_version = utils.convert_version_to_int('6.0.0')
         capabilities = {'supported_instances':
-                        [(arch.I686, hvtype.BAREMETAL, vm_mode.HVM)],
+                        [(arch.I686, hv_type.BAREMETAL, vm_mode.HVM)],
                         'hypervisor_version': hypervisor_version}
         host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))

@@ -96,6 +96,6 @@ def canonicalize(name):
         newname = PHYP
 
     if not is_valid(newname):
-        raise exception.InvalidHypervisorVirtType(hvtype=name)
+        raise exception.InvalidHypervisorVirtType(hv_type=name)
 
     return newname

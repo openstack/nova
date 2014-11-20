@@ -20,7 +20,7 @@ Management class for host-related functions (start, reboot, etc).
 from oslo.utils import units
 
 from nova.compute import arch
-from nova.compute import hvtype
+from nova.compute import hv_type
 from nova.compute import vm_mode
 from nova import exception
 from nova import utils
@@ -81,8 +81,8 @@ class VCState(object):
                 str(about_info.version))
         data["hypervisor_hostname"] = self._host_name
         data["supported_instances"] = [
-            (arch.I686, hvtype.VMWARE, vm_mode.HVM),
-            (arch.X86_64, hvtype.VMWARE, vm_mode.HVM)]
+            (arch.I686, hv_type.VMWARE, vm_mode.HVM),
+            (arch.X86_64, hv_type.VMWARE, vm_mode.HVM)]
 
         self._stats = data
         return data
