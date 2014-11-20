@@ -278,16 +278,20 @@ class API(object):
 
     def check_attached(self, context, volume):
         if volume['status'] != "in-use":
-            msg = _("status must be 'in-use'")
+            msg = _("volume '%(vol)s' status must be 'in-use'. Currently in "
+                    "'%(status)s' status") % {"vol": volume['id'],
+                                              "status": volume['status']}
             raise exception.InvalidVolume(reason=msg)
 
     def check_attach(self, context, volume, instance=None):
         # TODO(vish): abstract status checking?
         if volume['status'] != "available":
-            msg = _("status must be 'available'")
+            msg = _("volume '%(vol)s' status must be 'available'. Currently "
+                    "in '%(status)s'") % {'vol': volume['id'],
+                                          'status': volume['status']}
             raise exception.InvalidVolume(reason=msg)
         if volume['attach_status'] == "attached":
-            msg = _("already attached")
+            msg = _("volume %s already attached") % volume['id']
             raise exception.InvalidVolume(reason=msg)
         if instance and not CONF.cinder.cross_az_attach:
             # NOTE(sorrison): If instance is on a host we match against it's AZ
@@ -298,13 +302,19 @@ class API(object):
             else:
                 instance_az = instance['availability_zone']
             if instance_az != volume['availability_zone']:
-                msg = _("Instance and volume not in same availability_zone")
+                msg = _("Instance %(instance)s and volume %(vol)s are not in "
+                        "the same availability_zone. Instance is in "
+                        "%(ins_zone)s. Volume is in %(vol_zone)s") % {
+                            "instance": instance['id'],
+                            "vol": volume['id'],
+                            'ins_zone': instance_az,
+                            'vol_zone': volume['availability_zone']}
                 raise exception.InvalidVolume(reason=msg)
 
     def check_detach(self, context, volume):
         # TODO(vish): abstract status checking?
         if volume['status'] == "available":
-            msg = _("already detached")
+            msg = _("volume %s already detached") % volume['id']
             raise exception.InvalidVolume(reason=msg)
 
     @translate_volume_exception
