@@ -29,10 +29,8 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
-from nova.compute import api as compute_api
 from nova import exception
 from nova.i18n import _
-from nova.network.security_group import neutron_driver
 from nova.network.security_group import openstack_driver
 from nova.openstack.common import log as logging
 from nova.virt import netutils
@@ -674,39 +672,3 @@ class Security_groups(extensions.ExtensionDescriptor):
         resources.append(res)
 
         return resources
-
-
-class NativeSecurityGroupExceptions(object):
-    @staticmethod
-    def raise_invalid_property(msg):
-        raise exception.Invalid(msg)
-
-    @staticmethod
-    def raise_group_already_exists(msg):
-        raise exception.Invalid(msg)
-
-    @staticmethod
-    def raise_invalid_group(msg):
-        raise exception.Invalid(msg)
-
-    @staticmethod
-    def raise_invalid_cidr(cidr, decoding_exception=None):
-        raise exception.InvalidCidr(cidr=cidr)
-
-    @staticmethod
-    def raise_over_quota(msg):
-        raise exception.SecurityGroupLimitExceeded(msg)
-
-    @staticmethod
-    def raise_not_found(msg):
-        raise exception.SecurityGroupNotFound(msg)
-
-
-class NativeNovaSecurityGroupAPI(NativeSecurityGroupExceptions,
-                                 compute_api.SecurityGroupAPI):
-    pass
-
-
-class NativeNeutronSecurityGroupAPI(NativeSecurityGroupExceptions,
-                                    neutron_driver.SecurityGroupAPI):
-    pass

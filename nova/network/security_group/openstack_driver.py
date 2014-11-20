@@ -25,10 +25,9 @@ security_group_opts = [
 CONF = cfg.CONF
 CONF.register_opts(security_group_opts)
 
-NOVA_DRIVER = ('nova.api.openstack.compute.contrib.security_groups.'
-               'NativeNovaSecurityGroupAPI')
-NEUTRON_DRIVER = ('nova.api.openstack.compute.contrib.security_groups.'
-                  'NativeNeutronSecurityGroupAPI')
+NOVA_DRIVER = ('nova.compute.api.SecurityGroupAPI')
+NEUTRON_DRIVER = ('nova.network.security_group.neutron_driver.'
+                  'SecurityGroupAPI')
 
 
 def get_openstack_security_group_driver():
