@@ -22,6 +22,7 @@ from keystoneauth1.fixture import V2Token
 from keystoneauth1 import loading as ks_loading
 import mock
 from mox3 import mox
+import netaddr
 from neutronclient.common import exceptions
 from neutronclient.v2_0 import client
 from oslo_config import cfg
@@ -2039,16 +2040,23 @@ class TestNeutronv2(TestNeutronv2Base):
                     'address': fip_data['floating_ip_address'],
                     'pool': self.fip_pool['name'],
                     'project_id': fip_data['tenant_id'],
-                    'fixed_ip_id': fip_data['port_id'],
-                    'fixed_ip':
-                        {'address': fip_data['fixed_ip_address']},
+                    'fixed_ip': None,
                     'instance': ({'uuid': self.port_data2[idx]['device_id']}
                                  if fip_data['port_id']
                                  else None)}
-        if expected['instance'] is not None:
-            expected['fixed_ip']['instance_uuid'] = \
-                expected['instance']['uuid']
+        if fip_data['fixed_ip_address']:
+            expected['fixed_ip'] = {'address': fip_data['fixed_ip_address']}
         return expected
+
+    def _compare(self, obj, dic):
+        for key, value in dic.items():
+            objvalue = obj[key]
+            if isinstance(value, dict):
+                self._compare(objvalue, value)
+            elif isinstance(objvalue, netaddr.IPAddress):
+                self.assertEqual(value, str(objvalue))
+            else:
+                self.assertEqual(value, objvalue)
 
     def _test_get_floating_ip(self, fip_data, idx=0, by_address=False):
         api = neutronapi.API()
@@ -2074,7 +2082,7 @@ class TestNeutronv2(TestNeutronv2Base):
             fip = api.get_floating_ip_by_address(self.context, address)
         else:
             fip = api.get_floating_ip(self.context, fip_id)
-        self.assertEqual(expected, fip)
+        self._compare(fip, expected)
 
     def test_get_floating_ip_unassociated(self):
         self._test_get_floating_ip(self.fip_unassociated, idx=0)
@@ -2148,7 +2156,9 @@ class TestNeutronv2(TestNeutronv2Base):
         expected = [self._get_expected_fip_model(self.fip_unassociated),
                     self._get_expected_fip_model(self.fip_associated, idx=1)]
         fips = api.get_floating_ips_by_project(self.context)
-        self.assertEqual(expected, fips)
+        self.assertEqual(len(expected), len(fips))
+        for i, expected_value in enumerate(expected):
+            self._compare(fips[i], expected_value)
 
     def _test_get_instance_id_by_floating_address(self, fip_data,
                                                   associated=False):
@@ -3848,6 +3858,70 @@ class TestNeutronv2WithMock(test.TestCase):
                                       'dns_name': ''}}
             port_client.update_port.assert_called_once_with(
                 uuids.port_id, port_req_body)
+
+    def test_make_floating_ip_obj(self):
+        self._test_make_floating_ip_obj()
+
+    def test_make_floating_ip_obj_pool_id(self):
+        self._test_make_floating_ip_obj(set_pool_name=False)
+
+    def test_make_floating_ip_obj_no_fixed_ip_address(self):
+        self._test_make_floating_ip_obj(set_fixed_ip=False)
+
+    def test_make_floating_ip_obj_no_port_id(self):
+        self._test_make_floating_ip_obj(set_port=False)
+
+    def _test_make_floating_ip_obj(self, set_port=True, set_fixed_ip=True,
+                                   set_pool_name=True):
+        net_id = '6cd58996-001a-11e6-86aa-5e5517507c66'
+        float_id = 'ea474936-0016-11e6-86aa-5e5517507c66'
+        tenant_id = '310b1db6-0017-11e6-86aa-5e5517507c66'
+        port_id = '40cfc710-0017-11e6-86aa-5e5517507c66' if set_port else None
+        device_id = '6b892334-0017-11e6-86aa-5e5517507c66'
+        floating_ip_address = '10.0.0.1'
+        fixed_ip_address = '192.168.100.100' if set_fixed_ip else None
+        pool_name = 'my_pool' if set_pool_name else None
+        pool_id = 'd7f7150e-001b-11e6-86aa-5e5517507c66'
+
+        fip = {'id': float_id,
+               'floating_ip_address': floating_ip_address,
+               'tenant_id': tenant_id,
+               'port_id': port_id,
+               'fixed_ip_address': fixed_ip_address,
+               'floating_network_id': net_id
+              }
+
+        pool_dict = {net_id: {'name': pool_name, 'id': pool_id}}
+
+        port_dict = {port_id: {'device_id': device_id}}
+
+        actual_obj = self.api._make_floating_ip_obj(self.context, fip,
+                                                    pool_dict, port_dict)
+
+        expected_pool = pool_name if set_pool_name else pool_id
+
+        if set_fixed_ip:
+            if set_port:
+                expected_fixed = objects.FixedIP(address=fixed_ip_address,
+                                                 instance_uuid=device_id)
+            else:
+                expected_fixed = objects.FixedIP(address=fixed_ip_address)
+        else:
+            expected_fixed = None
+
+        if set_port:
+            expected_instance = objects.Instance(context=context,
+                                                 uuid=device_id)
+        else:
+            expected_instance = None
+
+        expected_floating = objects.floating_ip.NeutronFloatingIP(
+            id=float_id, address=floating_ip_address, pool=expected_pool,
+            project_id=tenant_id, fixed_ip_id=port_id,
+            fixed_ip=expected_fixed, instance=expected_instance)
+
+        self.assertEqual(expected_floating.obj_to_primitive(),
+                         actual_obj.obj_to_primitive())
 
 
 class TestNeutronv2ModuleMethods(test.NoDBTestCase):

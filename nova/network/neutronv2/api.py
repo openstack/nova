@@ -1362,7 +1362,7 @@ class API(base_api.NetworkAPI):
         pool_dict = self._setup_net_dict(client,
                                          fip['floating_network_id'])
         port_dict = self._setup_port_dict(context, client, fip['port_id'])
-        return self._format_floating_ip_model(fip, pool_dict, port_dict)
+        return self._make_floating_ip_obj(context, fip, pool_dict, port_dict)
 
     def _get_floating_ip_pools(self, client, project_id=None):
         search_opts = {constants.NET_EXTERNAL: True}
@@ -1379,27 +1379,31 @@ class API(base_api.NetworkAPI):
         # nova.network.api.get_floating_ip_pools
         return [n['name'] or n['id'] for n in pools]
 
-    def _format_floating_ip_model(self, fip, pool_dict, port_dict):
+    def _make_floating_ip_obj(self, context, fip, pool_dict, port_dict):
         pool = pool_dict[fip['floating_network_id']]
-        result = {'id': fip['id'],
-                  'address': fip['floating_ip_address'],
-                  'pool': pool['name'] or pool['id'],
-                  'project_id': fip['tenant_id'],
-                  # In Neutron v2, an exact fixed_ip_id does not exist.
-                  'fixed_ip_id': fip['port_id'],
-                  }
+        # NOTE(danms): Don't give these objects a context, since they're
+        # not lazy-loadable anyway
+        floating = objects.floating_ip.NeutronFloatingIP(
+            id=fip['id'], address=fip['floating_ip_address'],
+            pool=(pool['name'] or pool['id']), project_id=fip['tenant_id'],
+            fixed_ip_id=fip['port_id'])
         # In Neutron v2 API fixed_ip_address and instance uuid
         # (= device_id) are known here, so pass it as a result.
-        result['fixed_ip'] = {'address': fip['fixed_ip_address']}
+        if fip['fixed_ip_address']:
+            floating.fixed_ip = objects.FixedIP(
+                address=fip['fixed_ip_address'])
+        else:
+            floating.fixed_ip = None
         if fip['port_id']:
             instance_uuid = port_dict[fip['port_id']]['device_id']
-            result['instance'] = {'uuid': instance_uuid}
-            # TODO(mriedem): remove this workaround once the get_floating_ip*
-            # API methods are converted to use nova objects.
-            result['fixed_ip']['instance_uuid'] = instance_uuid
+            # NOTE(danms): This could be .refresh()d, so give it context
+            floating.instance = objects.Instance(context=context,
+                                                 uuid=instance_uuid)
+            if floating.fixed_ip:
+                floating.fixed_ip.instance_uuid = instance_uuid
         else:
-            result['instance'] = None
-        return result
+            floating.instance = None
+        return floating
 
     def get_floating_ip_by_address(self, context, address):
         """Return a floating IP given an address."""
@@ -1408,7 +1412,7 @@ class API(base_api.NetworkAPI):
         pool_dict = self._setup_net_dict(client,
                                          fip['floating_network_id'])
         port_dict = self._setup_port_dict(context, client, fip['port_id'])
-        return self._format_floating_ip_model(fip, pool_dict, port_dict)
+        return self._make_floating_ip_obj(context, fip, pool_dict, port_dict)
 
     def get_floating_ips_by_project(self, context):
         client = get_client(context)
@@ -1418,7 +1422,7 @@ class API(base_api.NetworkAPI):
             return []
         pool_dict = self._setup_pools_dict(client)
         port_dict = self._setup_ports_dict(client, project_id)
-        return [self._format_floating_ip_model(fip, pool_dict, port_dict)
+        return [self._make_floating_ip_obj(context, fip, pool_dict, port_dict)
                 for fip in fips]
 
     def get_instance_id_by_floating_address(self, context, address):
