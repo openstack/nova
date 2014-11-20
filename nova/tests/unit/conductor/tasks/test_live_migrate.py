@@ -10,7 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mox
+from mox3 import mox
 
 from nova.compute import power_state
 from nova.compute import utils as compute_utils

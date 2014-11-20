@@ -17,7 +17,7 @@
 import os
 import tempfile
 
-import mox
+from mox3 import mox
 from oslo.config import cfg
 
 from nova import context

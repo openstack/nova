@@ -195,7 +195,8 @@ class CinderApiTestCase(test.NoDBTestCase):
     def test_reserve_volume(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
         self.mox.StubOutWithMock(self.cinderclient.volumes,
-                                 'reserve')
+                                 'reserve',
+                                 use_mock_anything=True)
         self.cinderclient.volumes.reserve('id1')
         self.mox.ReplayAll()
 
@@ -204,7 +205,8 @@ class CinderApiTestCase(test.NoDBTestCase):
     def test_unreserve_volume(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
         self.mox.StubOutWithMock(self.cinderclient.volumes,
-                                 'unreserve')
+                                 'unreserve',
+                                 use_mock_anything=True)
         self.cinderclient.volumes.unreserve('id1')
         self.mox.ReplayAll()
 
@@ -213,7 +215,8 @@ class CinderApiTestCase(test.NoDBTestCase):
     def test_begin_detaching(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
         self.mox.StubOutWithMock(self.cinderclient.volumes,
-                                 'begin_detaching')
+                                 'begin_detaching',
+                                 use_mock_anything=True)
         self.cinderclient.volumes.begin_detaching('id1')
         self.mox.ReplayAll()
 
@@ -222,7 +225,8 @@ class CinderApiTestCase(test.NoDBTestCase):
     def test_roll_detaching(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
         self.mox.StubOutWithMock(self.cinderclient.volumes,
-                                 'roll_detaching')
+                                 'roll_detaching',
+                                 use_mock_anything=True)
         self.cinderclient.volumes.roll_detaching('id1')
         self.mox.ReplayAll()
 
@@ -253,7 +257,8 @@ class CinderApiTestCase(test.NoDBTestCase):
     def test_detach(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
         self.mox.StubOutWithMock(self.cinderclient.volumes,
-                                 'detach')
+                                 'detach',
+                                 use_mock_anything=True)
         self.cinderclient.volumes.detach('id1')
         self.mox.ReplayAll()
 
@@ -262,7 +267,8 @@ class CinderApiTestCase(test.NoDBTestCase):
     def test_initialize_connection(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
         self.mox.StubOutWithMock(self.cinderclient.volumes,
-                                 'initialize_connection')
+                                 'initialize_connection',
+                                 use_mock_anything=True)
         self.cinderclient.volumes.initialize_connection('id1', 'connector')
         self.mox.ReplayAll()
 
@@ -271,7 +277,8 @@ class CinderApiTestCase(test.NoDBTestCase):
     def test_terminate_connection(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
         self.mox.StubOutWithMock(self.cinderclient.volumes,
-                                 'terminate_connection')
+                                 'terminate_connection',
+                                 use_mock_anything=True)
         self.cinderclient.volumes.terminate_connection('id1', 'connector')
         self.mox.ReplayAll()
 
@@ -280,7 +287,8 @@ class CinderApiTestCase(test.NoDBTestCase):
     def test_delete(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
         self.mox.StubOutWithMock(self.cinderclient.volumes,
-                                 'delete')
+                                 'delete',
+                                 use_mock_anything=True)
         self.cinderclient.volumes.delete('id1')
         self.mox.ReplayAll()
 
@@ -340,7 +348,8 @@ class CinderApiTestCase(test.NoDBTestCase):
     def test_delete_snapshot(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
         self.mox.StubOutWithMock(self.cinderclient.volume_snapshots,
-                                 'delete')
+                                 'delete',
+                                 use_mock_anything=True)
         self.cinderclient.volume_snapshots.delete('id1')
         self.mox.ReplayAll()
 
@@ -429,7 +438,8 @@ class CinderApiTestCase(test.NoDBTestCase):
     def test_update_snapshot_status(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
         self.mox.StubOutWithMock(self.cinderclient.volume_snapshots,
-                                 'update_snapshot_status')
+                                 'update_snapshot_status',
+                                 use_mock_anything=True)
         self.cinderclient.volume_snapshots.update_snapshot_status(
             'id1', {'status': 'error', 'progress': '90%'})
         self.mox.ReplayAll()
@@ -438,7 +448,8 @@ class CinderApiTestCase(test.NoDBTestCase):
     def test_get_volume_encryption_metadata(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
         self.mox.StubOutWithMock(self.cinderclient.volumes,
-                                 'get_encryption_metadata')
+                                 'get_encryption_metadata',
+                                 use_mock_anything=True)
         self.cinderclient.volumes.\
             get_encryption_metadata({'encryption_key_id': 'fake_key'})
         self.mox.ReplayAll()

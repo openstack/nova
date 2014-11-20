@@ -20,7 +20,7 @@ import copy
 import uuid
 
 import mock
-import mox
+from mox3 import mox
 from neutronclient.common import exceptions
 from neutronclient.v2_0 import client
 from oslo.config import cfg
@@ -2123,7 +2123,8 @@ class TestNeutronv2(TestNeutronv2Base):
         self.mox.StubOutWithMock(api, '_get_instance_nw_info')
         self.mox.StubOutWithMock(api.db, 'instance_info_cache_update')
         for instance in instances:
-            nw_info.json()
+            nw_info.__str__().AndReturn('')
+            nw_info.json().AndReturn({})
             api._get_instance_nw_info(mox.IgnoreArg(), instance).\
                 AndReturn(nw_info)
             api.db.instance_info_cache_update(mox.IgnoreArg(),

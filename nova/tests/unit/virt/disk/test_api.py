@@ -120,7 +120,8 @@ class APITestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(mounter, 'get_dev')
         self.mox.StubOutWithMock(mounter, 'unget_dev')
         self.mox.StubOutWithMock(api, 'resize2fs')
-        self.mox.StubOutWithMock(mount.Mount, 'instance_for_format')
+        self.mox.StubOutWithMock(mount.Mount, 'instance_for_format',
+                                 use_mock_anything=True)
 
         api.can_resize_image(imgfile, imgsize).AndReturn(True)
         utils.execute('qemu-img', 'resize', imgfile, imgsize)

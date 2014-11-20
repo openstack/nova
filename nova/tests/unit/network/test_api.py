@@ -20,7 +20,7 @@ import itertools
 import uuid
 
 import mock
-import mox
+from mox3 import mox
 
 from nova.compute import flavors
 from nova import context

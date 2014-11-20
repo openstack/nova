@@ -18,7 +18,7 @@ Tests For Chance Scheduler.
 
 import random
 
-import mox
+from mox3 import mox
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils

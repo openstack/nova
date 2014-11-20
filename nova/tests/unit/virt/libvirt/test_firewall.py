@@ -20,7 +20,7 @@ from xml.dom import minidom
 
 from lxml import etree
 import mock
-import mox
+from mox3 import mox
 from oslo.concurrency import lockutils
 
 from nova.compute import utils as compute_utils

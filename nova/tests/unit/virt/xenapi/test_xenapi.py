@@ -23,7 +23,7 @@ import os
 import re
 
 import mock
-import mox
+from mox3 import mox
 from oslo.concurrency import lockutils
 from oslo.config import cfg
 from oslo.config import fixture as config_fixture

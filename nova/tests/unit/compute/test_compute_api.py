@@ -19,7 +19,7 @@ import datetime
 
 import iso8601
 import mock
-import mox
+from mox3 import mox
 from oslo.utils import timeutils
 
 from nova.compute import api as compute_api

@@ -16,7 +16,7 @@ import datetime
 
 import iso8601
 import mock
-import mox
+from mox3 import mox
 import netaddr
 from oslo.serialization import jsonutils
 from oslo.utils import timeutils

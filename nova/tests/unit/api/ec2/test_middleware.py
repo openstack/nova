@@ -16,7 +16,7 @@
 
 from eventlet.green import httplib
 from lxml import etree
-import mox
+from mox3 import mox
 from oslo.config import cfg
 from oslo.utils import timeutils
 import webob

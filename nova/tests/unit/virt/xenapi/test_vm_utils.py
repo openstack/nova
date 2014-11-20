@@ -19,7 +19,7 @@ import uuid
 from eventlet import greenthread
 import fixtures
 import mock
-import mox
+from mox3 import mox
 from oslo.concurrency import lockutils
 from oslo.concurrency import processutils
 from oslo.config import cfg

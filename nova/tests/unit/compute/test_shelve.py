@@ -12,7 +12,7 @@
 
 import iso8601
 import mock
-import mox
+from mox3 import mox
 from oslo.config import cfg
 from oslo.utils import timeutils
 

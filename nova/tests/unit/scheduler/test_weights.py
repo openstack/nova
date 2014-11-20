@@ -17,10 +17,10 @@ Tests For Scheduler weights.
 """
 
 from oslo.serialization import jsonutils
+from oslotest import mockpatch
 
 from nova import context
 from nova import exception
-from nova.openstack.common.fixture import mockpatch
 from nova.scheduler import weights
 from nova import test
 from nova.tests.unit import matchers

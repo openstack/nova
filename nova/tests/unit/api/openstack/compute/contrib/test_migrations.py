@@ -15,6 +15,7 @@
 import datetime
 
 from lxml import etree
+from oslotest import moxstubout
 
 from nova.api.openstack.compute.contrib import migrations as migrations_v2
 from nova.api.openstack.compute.plugins.v3 import migrations as migrations_v21
@@ -22,7 +23,6 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova.objects import base
-from nova.openstack.common.fixture import moxstubout
 from nova import test
 
 fake_migrations = [

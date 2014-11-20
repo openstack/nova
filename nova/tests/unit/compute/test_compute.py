@@ -28,7 +28,7 @@ import uuid
 
 from eventlet import greenthread
 import mock
-import mox
+from mox3 import mox
 from oslo.config import cfg
 from oslo import messaging
 from oslo.serialization import jsonutils
@@ -2767,7 +2767,8 @@ class ComputeTestCase(BaseTestCase):
     def test_reboot_hard_and_delete_and_rescued(self):
         self._test_reboot(False, True, True)
 
-    def test_reboot_fail(self):
+    @mock.patch.object(jsonutils, 'to_primitive')
+    def test_reboot_fail(self, mock_to_primitive):
         self._test_reboot(False, fail_reboot=True)
 
     def test_reboot_fail_running(self):
