@@ -3609,6 +3609,23 @@ class LibvirtDriver(driver.ComputeDriver):
             if img_props.get('os_command_line'):
                 guest.os_cmdline = img_props.get('os_command_line')
 
+    def _set_clock(self, guest, os_type, image_meta, virt_type):
+        # NOTE(mikal): Microsoft Windows expects the clock to be in
+        # "localtime". If the clock is set to UTC, then you can use a
+        # registry key to let windows know, but Microsoft says this is
+        # buggy in http://support.microsoft.com/kb/2687252
+        clk = vconfig.LibvirtConfigGuestClock()
+        if os_type == 'windows':
+            LOG.info(_LI('Configuring timezone for windows instance to '
+                         'localtime'))
+            clk.offset = 'localtime'
+        else:
+            clk.offset = 'utc'
+        guest.set_clock(clk)
+
+        if virt_type == "kvm":
+            self._set_kvm_timers(clk, image_meta)
+
     def _set_kvm_timers(self, clk, image_meta):
         # TODO(berrange) One day this should be per-guest
         # OS type configurable
@@ -3834,21 +3851,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if virt_type not in ("lxc", "uml"):
             guest.acpi = guest.apic = True
 
-        # NOTE(mikal): Microsoft Windows expects the clock to be in
-        # "localtime". If the clock is set to UTC, then you can use a
-        # registry key to let windows know, but Microsoft says this is
-        # buggy in http://support.microsoft.com/kb/2687252
-        clk = vconfig.LibvirtConfigGuestClock()
-        if instance['os_type'] == 'windows':
-            LOG.info(_LI('Configuring timezone for windows instance to '
-                         'localtime'), instance=instance)
-            clk.offset = 'localtime'
-        else:
-            clk.offset = 'utc'
-        guest.set_clock(clk)
-
-        if virt_type == "kvm":
-            self._set_kvm_timers(clk, image_meta)
+        self._set_clock(guest, instance.os_type, image_meta, virt_type)
 
         storage_configs = self._get_guest_storage_config(
                 instance, image_meta, disk_info, rescue, block_device_info,
