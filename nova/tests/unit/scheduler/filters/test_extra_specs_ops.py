@@ -198,3 +198,38 @@ class ExtraSpecsOpsTestCase(test.NoDBTestCase):
             value='2',
             req='>= 3',
             matches=False)
+
+    def test_extra_specs_matches_all_with_op_allin(self):
+        values = ['aes', 'mmx', 'aux']
+        self._do_extra_specs_ops_test(
+            value=str(values),
+            req='<all-in> aes mmx',
+            matches=True)
+
+    def test_extra_specs_matches_one_with_op_allin(self):
+        values = ['aes', 'mmx', 'aux']
+        self._do_extra_specs_ops_test(
+            value=str(values),
+            req='<all-in> mmx',
+            matches=True)
+
+    def test_extra_specs_fails_with_op_allin(self):
+        values = ['aes', 'mmx', 'aux']
+        self._do_extra_specs_ops_test(
+            value=str(values),
+            req='<all-in>  txt',
+            matches=False)
+
+    def test_extra_specs_fails_all_with_op_allin(self):
+        values = ['aes', 'mmx', 'aux']
+        self._do_extra_specs_ops_test(
+            value=str(values),
+            req='<all-in> txt 3dnow',
+            matches=False)
+
+    def test_extra_specs_fails_match_one_with_op_allin(self):
+        values = ['aes', 'mmx', 'aux']
+        self._do_extra_specs_ops_test(
+            value=str(values),
+            req='<all-in> txt aes',
+            matches=False)
