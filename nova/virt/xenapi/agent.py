@@ -30,7 +30,7 @@ from nova.compute import utils as compute_utils
 from nova import context
 from nova import crypto
 from nova import exception
-from nova.i18n import _, _LE, _LI
+from nova.i18n import _, _LE, _LI, _LW
 from nova import objects
 from nova.openstack.common import log as logging
 from nova import utils
@@ -191,8 +191,8 @@ class XenAPIBasedAgent(object):
         self.vm_ref = vm_ref
 
     def _add_instance_fault(self, error, exc_info):
-        LOG.warning(_("Ignoring error while configuring instance with "
-                      "agent: %s") % error,
+        LOG.warning(_LW("Ignoring error while configuring instance with "
+                        "agent: %s"), error,
                     instance=self.instance, exc_info=True)
         try:
             ctxt = context.get_admin_context()
@@ -267,8 +267,8 @@ class XenAPIBasedAgent(object):
             self._call_agent('agentupdate', args)
         except exception.AgentError as exc:
             # Silently fail for agent upgrades
-            LOG.warning(_("Unable to update the agent due "
-                          "to: %(exc)s") % dict(exc=exc),
+            LOG.warning(_LW("Unable to update the agent due "
+                            "to: %(exc)s"), dict(exc=exc),
                         instance=self.instance)
 
     def _exchange_key_with_agent(self):
@@ -419,9 +419,9 @@ def should_use_agent(instance):
         try:
             return strutils.bool_from_string(use_agent_raw, strict=True)
         except ValueError:
-            LOG.warn(_("Invalid 'agent_present' value. "
-                       "Falling back to the default."),
-                       instance=instance)
+            LOG.warning(_LW("Invalid 'agent_present' value. "
+                            "Falling back to the default."),
+                        instance=instance)
             return CONF.xenserver.use_agent_default
 
 

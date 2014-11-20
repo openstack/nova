@@ -30,7 +30,7 @@ from oslo.serialization import jsonutils
 from oslo.utils import units
 import six.moves.urllib.parse as urlparse
 
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LW
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import driver
@@ -383,8 +383,8 @@ class XenAPIDriver(driver.ComputeDriver):
                 self._initiator = stats['host_other-config']['iscsi_iqn']
                 self._hypervisor_hostname = stats['host_hostname']
             except (TypeError, KeyError) as err:
-                LOG.warn(_('Could not determine key: %s') % err,
-                         instance=instance)
+                LOG.warning(_LW('Could not determine key: %s'), err,
+                            instance=instance)
                 self._initiator = None
         return {
             'ip': self._get_block_storage_ip(),

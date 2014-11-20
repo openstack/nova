@@ -25,7 +25,7 @@ from oslo.config import cfg
 
 from nova import context
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LW
 from nova import objects
 from nova.openstack.common import log as logging
 from nova.openstack.common import versionutils
@@ -236,17 +236,18 @@ class XenAPISession(object):
                 return self.call_plugin_serialized(plugin, fn, *args, **kwargs)
             except self.XenAPI.Failure as exc:
                 if self._is_retryable_exception(exc, fn):
-                    LOG.warn(_('%(plugin)s.%(fn)s failed. Retrying call.')
-                             % {'plugin': plugin, 'fn': fn})
+                    LOG.warning(_LW('%(plugin)s.%(fn)s failed. '
+                                    'Retrying call.'),
+                                {'plugin': plugin, 'fn': fn})
                     if retry_cb:
                         retry_cb(exc=exc)
                 else:
                     raise
             except socket.error as exc:
                 if exc.errno == errno.ECONNRESET:
-                    LOG.warn(_('Lost connection to XenAPI during call to '
-                               '%(plugin)s.%(fn)s.  Retrying call.') %
-                               {'plugin': plugin, 'fn': fn})
+                    LOG.warning(_LW('Lost connection to XenAPI during call to '
+                                    '%(plugin)s.%(fn)s.  Retrying call.'),
+                                {'plugin': plugin, 'fn': fn})
                     if retry_cb:
                         retry_cb(exc=exc)
                 else:

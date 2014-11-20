@@ -41,7 +41,7 @@ from nova.compute import vm_states
 from nova.console import type as ctype
 from nova import context as nova_context
 from nova import exception
-from nova.i18n import _, _LE, _LI
+from nova.i18n import _, _LE, _LI, _LW
 from nova import objects
 from nova.openstack.common import log as logging
 from nova.pci import manager as pci_manager
@@ -423,8 +423,8 @@ class VMOps(object):
                     vm_utils.handle_ipxe_iso(
                         self._session, instance, vdis['iso'], network_info)
                 else:
-                    LOG.warning(_('ipxe_boot is True but no ISO image found'),
-                                instance=instance)
+                    LOG.warning(_LW('ipxe_boot is True but no ISO image '
+                                    'found'), instance=instance)
 
             if resize:
                 self._resize_up_vdis(instance, vdis)
@@ -1082,9 +1082,9 @@ class VMOps(object):
                 self._restore_orig_vm_and_cleanup_orphan(instance)
                 # TODO(johngarbutt) should also cleanup VHDs at destination
             except Exception as rollback_error:
-                LOG.warn(_("_migrate_disk_resizing_up failed to "
-                           "rollback: %s"), rollback_error,
-                         instance=instance)
+                LOG.warning(_LW("_migrate_disk_resizing_up failed to "
+                                "rollback: %s"), rollback_error,
+                            instance=instance)
             raise exception.InstanceFaultRollback(error)
 
     def _apply_orig_vm_name_label(self, instance, vm_ref):
@@ -1216,9 +1216,9 @@ class VMOps(object):
                             bad_volumes_callback=bad_volumes_callback)
                 return
             elif details[0] == 'SR_BACKEND_FAILURE_46':
-                LOG.warn(_("Reboot failed due to bad volumes, detaching bad"
-                           " volumes and starting halted instance"),
-                         instance=instance)
+                LOG.warning(_LW("Reboot failed due to bad volumes, detaching "
+                                "bad volumes and starting halted instance"),
+                            instance=instance)
                 self._start(instance, vm_ref=vm_ref,
                             bad_volumes_callback=bad_volumes_callback)
                 return
@@ -1294,8 +1294,8 @@ class VMOps(object):
             # Skip the update when not possible, as the updated metadata will
             # get added when the VM is being booted up at the end of the
             # resize or rebuild.
-            LOG.warn(_("Unable to update metadata, VM not found."),
-                     instance=instance, exc_info=True)
+            LOG.warning(_LW("Unable to update metadata, VM not found."),
+                        instance=instance, exc_info=True)
             return
 
         def process_change(location, change):
@@ -1446,7 +1446,7 @@ class VMOps(object):
 
         """
         if vm_ref is None:
-            LOG.warning(_("VM is not present, skipping destroy..."),
+            LOG.warning(_LW("VM is not present, skipping destroy..."),
                         instance=instance)
             # NOTE(alaski): There should not be a block device mapping here,
             # but if there is it very likely means there was an error cleaning
@@ -1567,7 +1567,7 @@ class VMOps(object):
         try:
             vm_ref = self._get_vm_opaque_ref(instance)
         except exception.NotFound:
-            LOG.warning(_("VM is not present, skipping soft delete..."),
+            LOG.warning(_LW("VM is not present, skipping soft delete..."),
                         instance=instance)
         else:
             vm_utils.hard_shutdown_vm(self._session, instance, vm_ref)

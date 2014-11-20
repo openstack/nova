@@ -363,8 +363,8 @@ def inject_data(image, key=None, net=None, metadata=None, admin_password=None,
             inject_val = locals()[inject]
             if inject_val:
                 raise
-        LOG.warn(_LW('Ignoring error injecting data into image %(image)s '
-                   '(%(e)s)'), {'image': image, 'e': e})
+        LOG.warning(_LW('Ignoring error injecting data into image %(image)s '
+                        '(%(e)s)'), {'image': image, 'e': e})
         return False
 
     try:
@@ -453,8 +453,8 @@ def inject_data_into_fs(fs, key, net, metadata, admin_password, files,
             except Exception as e:
                 if inject in mandatory:
                     raise
-                LOG.warn(_LW('Ignoring error injecting %(inject)s into image '
-                           '(%(e)s)'), {'inject': inject, 'e': e})
+                LOG.warning(_LW('Ignoring error injecting %(inject)s into '
+                                'image (%(e)s)'), {'inject': inject, 'e': e})
                 status = False
     return status
 

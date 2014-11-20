@@ -43,7 +43,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
 from nova import exception
-from nova.i18n import _, _LE, _LI
+from nova.i18n import _, _LE, _LI, _LW
 from nova.network import model as network_model
 from nova.openstack.common import log as logging
 from nova.openstack.common import versionutils
@@ -323,8 +323,8 @@ def destroy_vm(session, instance, vm_ref):
 
 def clean_shutdown_vm(session, instance, vm_ref):
     if is_vm_shutdown(session, vm_ref):
-        LOG.warn(_("VM already halted, skipping shutdown..."),
-                 instance=instance)
+        LOG.warning(_LW("VM already halted, skipping shutdown..."),
+                    instance=instance)
         return True
 
     LOG.debug("Shutting down VM (cleanly)", instance=instance)
@@ -338,8 +338,8 @@ def clean_shutdown_vm(session, instance, vm_ref):
 
 def hard_shutdown_vm(session, instance, vm_ref):
     if is_vm_shutdown(session, vm_ref):
-        LOG.warn(_("VM already halted, skipping shutdown..."),
-                 instance=instance)
+        LOG.warning(_LW("VM already halted, skipping shutdown..."),
+                    instance=instance)
         return True
 
     LOG.debug("Shutting down VM (hard)", instance=instance)
@@ -842,7 +842,7 @@ def _find_cached_image(session, image_id, sr_ref):
     number_found = len(recs)
     if number_found > 0:
         if number_found > 1:
-            LOG.warn(_("Multiple base images for image: %s") % image_id)
+            LOG.warning(_LW("Multiple base images for image: %s"), image_id)
         return recs.keys()[0]
 
 
@@ -1232,9 +1232,9 @@ def _create_cached_image(context, session, instance, name_label,
     sr_type = session.call_xenapi('SR.get_type', sr_ref)
 
     if CONF.use_cow_images and sr_type != "ext":
-        LOG.warning(_("Fast cloning is only supported on default local SR "
-                      "of type ext. SR on this system was found to be of "
-                      "type %s. Ignoring the cow flag."), sr_type)
+        LOG.warning(_LW("Fast cloning is only supported on default local SR "
+                        "of type ext. SR on this system was found to be of "
+                        "type %s. Ignoring the cow flag."), sr_type)
 
     @utils.synchronized('xenapi-image-cache' + image_id)
     def _create_cached_image_impl(context, session, instance, name_label,
@@ -1307,8 +1307,8 @@ def create_image(context, session, instance, name_label, image_id,
     elif cache_images == 'none':
         cache = False
     else:
-        LOG.warning(_("Unrecognized cache_images value '%s', defaulting to"
-                      " True"), CONF.xenserver.cache_images)
+        LOG.warning(_LW("Unrecognized cache_images value '%s', defaulting to"
+                        " True"), CONF.xenserver.cache_images)
         cache = True
 
     # Fetch (and cache) the image
@@ -1383,7 +1383,7 @@ def _image_uses_bittorrent(context, instance):
     elif torrent_images == 'none':
         pass
     else:
-        LOG.warning(_("Invalid value '%s' for torrent_images"),
+        LOG.warning(_LW("Invalid value '%s' for torrent_images"),
                     torrent_images)
 
     return bittorrent
@@ -1406,8 +1406,8 @@ def _choose_download_handler(context, instance):
 def get_compression_level():
     level = CONF.xenserver.image_compression_level
     if level is not None and (level < 1 or level > 9):
-        LOG.warn(_("Invalid value '%d' for image_compression_level"),
-                 level)
+        LOG.warning(_LW("Invalid value '%d' for image_compression_level"),
+                    level)
         return None
     return level
 
@@ -1843,8 +1843,8 @@ def _scan_sr(session, sr_ref=None, max_attempts=4):
                         if exc.details[0] == 'SR_BACKEND_FAILURE_40':
                             if attempt < max_attempts:
                                 ctxt.reraise = False
-                                LOG.warn(_("Retry SR scan due to error: %s")
-                                         % exc)
+                                LOG.warning(_LW("Retry SR scan due to error: "
+                                                "%s"), exc)
                                 greenthread.sleep(2 ** attempt)
                                 attempt += 1
         do_scan(sr_ref)
@@ -1876,8 +1876,8 @@ def _find_sr(session):
         filter_pattern = tokens[1]
     except IndexError:
         # oops, flag is invalid
-        LOG.warning(_("Flag sr_matching_filter '%s' does not respect "
-                      "formatting convention"),
+        LOG.warning(_LW("Flag sr_matching_filter '%s' does not respect "
+                        "formatting convention"),
                     CONF.xenserver.sr_matching_filter)
         return None
 
@@ -2583,14 +2583,14 @@ def handle_ipxe_iso(session, instance, cd_vdi, network_info):
     """
     boot_menu_url = CONF.xenserver.ipxe_boot_menu_url
     if not boot_menu_url:
-        LOG.warn(_('ipxe_boot_menu_url not set, user will have to'
-                   ' enter URL manually...'), instance=instance)
+        LOG.warning(_LW('ipxe_boot_menu_url not set, user will have to'
+                        ' enter URL manually...'), instance=instance)
         return
 
     network_name = CONF.xenserver.ipxe_network_name
     if not network_name:
-        LOG.warn(_('ipxe_network_name not set, user will have to'
-                   ' enter IP manually...'), instance=instance)
+        LOG.warning(_LW('ipxe_network_name not set, user will have to'
+                        ' enter IP manually...'), instance=instance)
         return
 
     network = None
@@ -2600,9 +2600,9 @@ def handle_ipxe_iso(session, instance, cd_vdi, network_info):
             break
 
     if not network:
-        LOG.warn(_("Unable to find network matching '%(network_name)s', user"
-                   " will have to enter IP manually...") %
-                 {'network_name': network_name}, instance=instance)
+        LOG.warning(_LW("Unable to find network matching '%(network_name)s', "
+                        "user will have to enter IP manually..."),
+                    {'network_name': network_name}, instance=instance)
         return
 
     sr_path = get_sr_path(session)
@@ -2624,8 +2624,8 @@ def handle_ipxe_iso(session, instance, cd_vdi, network_info):
     except session.XenAPI.Failure as exc:
         _type, _method, error = exc.details[:3]
         if error == 'CommandNotFound':
-            LOG.warn(_("ISO creation tool '%s' does not exist.") %
-                     CONF.xenserver.ipxe_mkisofs_cmd, instance=instance)
+            LOG.warning(_LW("ISO creation tool '%s' does not exist."),
+                        CONF.xenserver.ipxe_mkisofs_cmd, instance=instance)
         else:
             raise
 

@@ -1099,7 +1099,7 @@ def get_all_cluster_mors(session):
         return results.objects
 
     except Exception as excep:
-        LOG.warn(_("Failed to get cluster references %s") % excep)
+        LOG.warning(_LW("Failed to get cluster references %s"), excep)
 
 
 def get_all_res_pool_mors(session):
@@ -1111,7 +1111,7 @@ def get_all_res_pool_mors(session):
         _cancel_retrieve_if_necessary(session, results)
         return results.objects
     except Exception as excep:
-        LOG.warn(_("Failed to get resource pool references " "%s") % excep)
+        LOG.warning(_LW("Failed to get resource pool references " "%s"), excep)
 
 
 def get_dynamic_property_mor(session, mor_ref, attribute):
@@ -1305,8 +1305,8 @@ def clone_vmref_for_instance(session, instance, vm_ref, host_ref, ds_ref,
     the passed instance.
     """
     if vm_ref is None:
-        LOG.warn(_("vmwareapi:vm_util:clone_vmref_for_instance, called "
-                   "with vm_ref=None"))
+        LOG.warning(_LW("vmwareapi:vm_util:clone_vmref_for_instance, called "
+                        "with vm_ref=None"))
         raise vexc.MissingParameter(param="vm_ref")
     # Get the clone vm spec
     client_factory = session.vim.client.factory

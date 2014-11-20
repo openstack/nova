@@ -25,7 +25,7 @@ from eventlet import greenthread
 from oslo.config import cfg
 
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LW
 from nova.openstack.common import log as logging
 
 xenapi_volume_utils_opts = [
@@ -226,7 +226,7 @@ def purge_sr(session, sr_ref):
     for vdi_ref in vdi_refs:
         vbd_refs = session.call_xenapi("VDI.get_VBDs", vdi_ref)
         if vbd_refs:
-            LOG.warn(_('Cannot purge SR with referenced VDIs'))
+            LOG.warning(_LW('Cannot purge SR with referenced VDIs'))
             return
 
     forget_sr(session, sr_ref)
@@ -243,16 +243,16 @@ def _unplug_pbds(session, sr_ref):
     try:
         pbds = session.call_xenapi("SR.get_PBDs", sr_ref)
     except session.XenAPI.Failure as exc:
-        LOG.warn(_('Ignoring exception %(exc)s when getting PBDs'
-                   ' for %(sr_ref)s'), {'exc': exc, 'sr_ref': sr_ref})
+        LOG.warning(_LW('Ignoring exception %(exc)s when getting PBDs'
+                        ' for %(sr_ref)s'), {'exc': exc, 'sr_ref': sr_ref})
         return
 
     for pbd in pbds:
         try:
             session.call_xenapi("PBD.unplug", pbd)
         except session.XenAPI.Failure as exc:
-            LOG.warn(_('Ignoring exception %(exc)s when unplugging'
-                       ' PBD %(pbd)s'), {'exc': exc, 'pbd': pbd})
+            LOG.warning(_LW('Ignoring exception %(exc)s when unplugging'
+                            ' PBD %(pbd)s'), {'exc': exc, 'pbd': pbd})
 
 
 def get_device_number(mountpoint):
@@ -275,7 +275,7 @@ def _mountpoint_to_number(mountpoint):
     elif re.match('^[0-9]+$', mountpoint):
         return string.atoi(mountpoint, 10)
     else:
-        LOG.warn(_('Mountpoint cannot be translated: %s'), mountpoint)
+        LOG.warning(_LW('Mountpoint cannot be translated: %s'), mountpoint)
         return -1
 
 

@@ -24,7 +24,7 @@ from oslo.config import cfg
 from oslo.utils import excutils
 
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LW
 from nova.openstack.common import log as logging
 from nova.virt import driver
 from nova.virt.hyperv import constants
@@ -217,8 +217,8 @@ class VolumeOps(object):
         if not self._initiator:
             self._initiator = self._volutils.get_iscsi_initiator()
             if not self._initiator:
-                LOG.warn(_('Could not determine iscsi initiator name'),
-                         instance=instance)
+                LOG.warning(_LW('Could not determine iscsi initiator name'),
+                            instance=instance)
         return {
             'ip': CONF.my_block_storage_ip,
             'host': CONF.host,
