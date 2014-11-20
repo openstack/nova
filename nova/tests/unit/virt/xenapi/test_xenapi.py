@@ -26,6 +26,7 @@ import mock
 import mox
 from oslo.concurrency import lockutils
 from oslo.config import cfg
+from oslo.config import fixture as config_fixture
 from oslo.serialization import jsonutils
 from oslo.utils import importutils
 
@@ -44,7 +45,6 @@ from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import instance as instance_obj
-from nova.openstack.common.fixture import config as config_fixture
 from nova.openstack.common import log as logging
 from nova import test
 from nova.tests.unit.db import fakes as db_fakes

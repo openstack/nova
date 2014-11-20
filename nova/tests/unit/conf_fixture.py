@@ -15,11 +15,10 @@
 #    under the License.
 
 from oslo.config import cfg
-
+from oslo.config import fixture as config_fixture
 
 from nova import config
 from nova import ipv6
-from nova.openstack.common.fixture import config as config_fixture
 from nova import paths
 from nova.tests.unit import utils
 

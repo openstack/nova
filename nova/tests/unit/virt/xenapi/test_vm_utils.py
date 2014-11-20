@@ -23,6 +23,7 @@ import mox
 from oslo.concurrency import lockutils
 from oslo.concurrency import processutils
 from oslo.config import cfg
+from oslo.config import fixture as config_fixture
 from oslo.utils import timeutils
 from oslo.utils import units
 import six
@@ -34,7 +35,6 @@ from nova import context
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.openstack.common.fixture import config as config_fixture
 from nova import test
 from nova.tests.unit.objects import test_flavor
 from nova.tests.unit.virt.xenapi import stubs
