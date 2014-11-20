@@ -38,6 +38,7 @@ from cinderclient import exceptions as cinder_exception
 import eventlet.event
 from eventlet import greenthread
 import eventlet.timeout
+from keystoneclient import exceptions as keystone_exception
 from oslo.config import cfg
 from oslo import messaging
 from oslo.serialization import jsonutils
@@ -2403,7 +2404,8 @@ class ComputeManager(manager.Manager):
             except exception.VolumeNotFound as exc:
                 LOG.debug('Ignoring VolumeNotFound: %s', exc,
                           instance=instance)
-            except cinder_exception.EndpointNotFound as exc:
+            except (cinder_exception.EndpointNotFound,
+                    keystone_exception.EndpointNotFound) as exc:
                 LOG.warn(_LW('Ignoring EndpointNotFound: %s'), exc,
                              instance=instance)
 
