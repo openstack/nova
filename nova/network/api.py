@@ -22,7 +22,7 @@ from oslo.config import cfg
 
 from nova.compute import flavors
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _LI
 from nova.network import base_api
 from nova.network import floating_ips
 from nova.network import model as network_model
@@ -224,8 +224,8 @@ class API(base_api.NetworkAPI):
         if orig_instance_uuid:
             msg_dict = dict(address=floating_address,
                             instance_id=orig_instance_uuid)
-            LOG.info(_('re-assign floating IP %(address)s from '
-                       'instance %(instance_id)s') % msg_dict)
+            LOG.info(_LI('re-assign floating IP %(address)s from '
+                         'instance %(instance_id)s'), msg_dict)
             orig_instance = objects.Instance.get_by_uuid(context,
                                                          orig_instance_uuid)
 

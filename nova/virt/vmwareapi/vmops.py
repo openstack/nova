@@ -39,7 +39,7 @@ from nova.compute import vm_states
 from nova.console import type as ctype
 from nova import context as nova_context
 from nova import exception
-from nova.i18n import _, _LE, _LW
+from nova.i18n import _, _LE, _LI, _LW
 from nova import objects
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
@@ -505,7 +505,7 @@ class VMwareVMOps(object):
                       CONF.config_drive_format)
             raise exception.InstancePowerOnFailure(reason=reason)
 
-        LOG.info(_('Using config drive for instance'), instance=instance)
+        LOG.info(_LI('Using config drive for instance'), instance=instance)
         extra_md = {}
         if admin_password:
             extra_md['admin_pass'] = admin_password
@@ -1132,11 +1132,11 @@ class VMwareVMOps(object):
                 timeout=timeout)
 
         if instances_info["instance_count"] > 0:
-            LOG.info(_("Found %(instance_count)d hung reboots "
-                    "older than %(timeout)d seconds") % instances_info)
+            LOG.info(_LI("Found %(instance_count)d hung reboots "
+                         "older than %(timeout)d seconds"), instances_info)
 
         for instance in instances:
-            LOG.info(_("Automatically hard rebooting"), instance=instance)
+            LOG.info(_LI("Automatically hard rebooting"), instance=instance)
             self.compute_api.reboot(ctxt, instance, "HARD")
 
     def get_info(self, instance):

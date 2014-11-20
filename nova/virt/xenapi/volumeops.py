@@ -20,7 +20,7 @@ Management class for Storage-related functions (attach, detach, etc).
 from oslo.utils import excutils
 
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LI
 from nova.openstack.common import log as logging
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import volume_utils
@@ -61,7 +61,7 @@ class VolumeOps(object):
             vdi_ref = self._connect_hypervisor_to_volume(sr_ref,
                                                          connection_data)
             vdi_uuid = self._session.VDI.get_uuid(vdi_ref)
-            LOG.info(_('Connected volume (vdi_uuid): %s'), vdi_uuid)
+            LOG.info(_LI('Connected volume (vdi_uuid): %s'), vdi_uuid)
 
             if vm_ref:
                 self._attach_volume_to_vm(vdi_ref, vm_ref, instance_name,
@@ -124,8 +124,8 @@ class VolumeOps(object):
                 LOG.debug("Plugging VBD: %s", vbd_ref)
                 self._session.VBD.plug(vbd_ref, vm_ref)
 
-        LOG.info(_('Dev %(dev_number)s attached to'
-                   ' instance %(instance_name)s'),
+        LOG.info(_LI('Dev %(dev_number)s attached to'
+                     ' instance %(instance_name)s'),
                  {'instance_name': instance_name, 'dev_number': dev_number})
 
     def detach_volume(self, connection_info, instance_name, mountpoint):
@@ -146,8 +146,8 @@ class VolumeOps(object):
                      instance_name)
         else:
             self._detach_vbds_and_srs(vm_ref, [vbd_ref])
-            LOG.info(_('Mountpoint %(mountpoint)s detached from instance'
-                       ' %(instance_name)s'),
+            LOG.info(_LI('Mountpoint %(mountpoint)s detached from instance'
+                         ' %(instance_name)s'),
                      {'instance_name': instance_name,
                       'mountpoint': mountpoint})
 

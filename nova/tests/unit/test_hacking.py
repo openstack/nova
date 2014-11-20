@@ -179,18 +179,16 @@ class HackingTestCase(test.NoDBTestCase):
                 'exception']
         levels = ['_LI', '_LW', '_LE', '_LC']
         debug = "LOG.debug('OK')"
-        self.assertEqual(0,
-            len(list(
-                checks.validate_log_translations(debug, debug, 'f'))))
+        audit = "LOG.audit(_('OK'))"
+        self.assertEqual(
+            0, len(list(checks.validate_log_translations(debug, debug, 'f'))))
+        self.assertEqual(
+            0, len(list(checks.validate_log_translations(audit, audit, 'f'))))
         for log in logs:
             bad = 'LOG.%s("Bad")' % log
             self.assertEqual(1,
                 len(list(
                     checks.validate_log_translations(bad, bad, 'f'))))
-            ok = "LOG.%s(_('OK'))" % log
-            self.assertEqual(0,
-                len(list(
-                    checks.validate_log_translations(ok, ok, 'f'))))
             ok = "LOG.%s('OK')    # noqa" % log
             self.assertEqual(0,
                 len(list(

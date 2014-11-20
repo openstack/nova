@@ -31,7 +31,7 @@ from oslo.vmware import vim_util
 import suds
 
 from nova import exception
-from nova.i18n import _, _LW
+from nova.i18n import _, _LI, _LW
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova.virt import driver
@@ -455,8 +455,8 @@ class VMwareVCDriver(driver.ComputeDriver):
             stats_dict = self._get_available_resources(host_stats)
 
         else:
-            LOG.info(_("Invalid cluster or resource pool"
-                       " name : %s") % nodename)
+            LOG.info(_LI("Invalid cluster or resource pool"
+                         " name : %s"), nodename)
 
         return stats_dict
 

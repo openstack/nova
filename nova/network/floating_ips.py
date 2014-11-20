@@ -25,7 +25,7 @@ import six
 from nova import context
 from nova.db import base
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LI
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.openstack.common import log as logging
@@ -173,7 +173,7 @@ class FloatingIP(object):
                                                   address,
                                                   affect_auto_assigned=True)
                 except exception.FloatingIpNotAssociated:
-                    LOG.info(_("Floating IP %s is not associated. Ignore."),
+                    LOG.info(_LI("Floating IP %s is not associated. Ignore."),
                              address)
                 # deallocate if auto_assigned
                 if floating_ip.auto_assigned:
@@ -532,7 +532,7 @@ class FloatingIP(object):
         if not floating_addresses or (source and source == dest):
             return
 
-        LOG.info(_("Starting migration network for instance %s"),
+        LOG.info(_LI("Starting migration network for instance %s"),
                  instance_uuid)
         for address in floating_addresses:
             floating_ip = objects.FloatingIP.get_by_address(context, address)
@@ -567,7 +567,7 @@ class FloatingIP(object):
         if not floating_addresses or (source and source == dest):
             return
 
-        LOG.info(_("Finishing migration network for instance %s"),
+        LOG.info(_LI("Finishing migration network for instance %s"),
                  instance_uuid)
 
         for address in floating_addresses:

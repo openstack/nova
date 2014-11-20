@@ -246,7 +246,7 @@ class VMOps(object):
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None):
         """Create a new VM and start it."""
-        LOG.info(_("Spawning new instance"), instance=instance)
+        LOG.info(_LI("Spawning new instance"), instance=instance)
 
         instance_name = instance['name']
         if self._vmutils.vm_exists(instance_name):
@@ -328,7 +328,7 @@ class VMOps(object):
                 _('Invalid config_drive_format "%s"') %
                 CONF.config_drive_format)
 
-        LOG.info(_('Using config drive for instance'), instance=instance)
+        LOG.info(_LI('Using config drive for instance'), instance=instance)
 
         extra_md = {}
         if admin_password and CONF.hyperv.config_drive_inject_password:
@@ -341,7 +341,7 @@ class VMOps(object):
         instance_path = self._pathutils.get_instance_dir(
             instance['name'])
         configdrive_path_iso = os.path.join(instance_path, 'configdrive.iso')
-        LOG.info(_('Creating config drive at %(path)s'),
+        LOG.info(_LI('Creating config drive at %(path)s'),
                  {'path': configdrive_path_iso}, instance=instance)
 
         with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
@@ -389,7 +389,7 @@ class VMOps(object):
     def destroy(self, instance, network_info=None, block_device_info=None,
                 destroy_disks=True):
         instance_name = instance['name']
-        LOG.info(_("Got request to destroy instance"), instance=instance)
+        LOG.info(_LI("Got request to destroy instance"), instance=instance)
         try:
             if self._vmutils.vm_exists(instance_name):
 

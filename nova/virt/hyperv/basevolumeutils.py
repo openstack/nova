@@ -28,7 +28,7 @@ if sys.platform == 'win32':
     import wmi
 
 from nova import block_device
-from nova.i18n import _
+from nova.i18n import _LI
 from nova.openstack.common import log as logging
 from nova.virt import driver
 
@@ -68,8 +68,8 @@ class BaseVolumeUtils(object):
             initiator_name = str(temp[0])
             _winreg.CloseKey(key)
         except Exception:
-            LOG.info(_("The ISCSI initiator name can't be found. "
-                       "Choosing the default one"))
+            LOG.info(_LI("The ISCSI initiator name can't be found. "
+                         "Choosing the default one"))
             initiator_name = "iqn.1991-05.com.microsoft:" + hostname.lower()
             if computer_system.PartofDomain:
                 initiator_name += '.' + computer_system.Domain.lower()

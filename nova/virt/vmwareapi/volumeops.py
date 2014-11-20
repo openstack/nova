@@ -21,7 +21,7 @@ from oslo.config import cfg
 from oslo.vmware import vim_util as vutil
 
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LI
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
@@ -443,8 +443,8 @@ class VMwareVolumeOps(object):
 
         # The volume has been moved from its original location.
         # Need to consolidate the VMDK files.
-        LOG.info(_("The volume's backing has been relocated to %s. Need to "
-                   "consolidate backing disk file."), current_device_path)
+        LOG.info(_LI("The volume's backing has been relocated to %s. Need to "
+                     "consolidate backing disk file."), current_device_path)
 
         # Pick the resource pool on which the instance resides.
         # Move the volume to the datastore where the new VMDK file is present.
