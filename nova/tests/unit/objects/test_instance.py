@@ -398,6 +398,16 @@ class _TestInstanceObject(object):
         self.assertEqual('goodbye', inst.display_name)
         self.assertEqual(set([]), inst.obj_what_changed())
 
+    def test_save_related_object_if_none(self):
+        with mock.patch.object(instance.Instance, '_save_pci_requests'
+                ) as save_mock:
+            inst = instance.Instance()
+            inst = instance.Instance._from_db_object(self.context, inst,
+                    self.fake_instance)
+            inst.pci_requests = None
+            inst.save()
+            self.assertTrue(save_mock.called)
+
     @mock.patch('nova.db.instance_update_and_get_original')
     @mock.patch('nova.objects.Instance._from_db_object')
     def test_save_does_not_refresh_pci_devices(self, mock_fdo, mock_update):
