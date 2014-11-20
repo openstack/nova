@@ -468,6 +468,19 @@ class NovaObject(object):
             obj['nova_object.changes'] = list(self.obj_what_changed())
         return obj
 
+    def obj_set_defaults(self, *attrs):
+        if not attrs:
+            attrs = [name for name, field in self.fields.items()
+                     if field.default != fields.UnspecifiedDefault]
+
+        for attr in attrs:
+            default = self.fields[attr].default
+            if default is fields.UnspecifiedDefault:
+                raise exception.ObjectActionError(
+                    action='set_defaults',
+                    reason='No default set for field %s' % attr)
+            setattr(self, attr, default)
+
     def obj_load_attr(self, attrname):
         """Load an additional attribute from the real object.
 
