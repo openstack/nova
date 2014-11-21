@@ -255,14 +255,16 @@ class APIRouterV21(base_wsgi.Router):
     and method.
     """
 
-    # TODO(oomichi): This namespace will be changed after moving all v3 APIs
-    # to v2.1.
-    API_EXTENSION_NAMESPACE = 'nova.api.v3.extensions'
-
     @classmethod
     def factory(cls, global_config, **local_config):
         """Simple paste factory, :class:`nova.wsgi.Router` doesn't have one."""
         return cls()
+
+    @staticmethod
+    def api_extension_namespace():
+        # TODO(oomichi): This namespaces will be changed after moving all v3
+        # APIs to v2.1.
+        return 'nova.api.v3.extensions'
 
     def __init__(self, init_only=None, v3mode=False):
         # TODO(cyeoh): bp v3-api-extension-framework. Currently load
@@ -313,7 +315,7 @@ class APIRouterV21(base_wsgi.Router):
                         list(in_blacklist_and_whitelist))
 
         self.api_extension_manager = stevedore.enabled.EnabledExtensionManager(
-            namespace=self.API_EXTENSION_NAMESPACE,
+            namespace=self.api_extension_namespace(),
             check_func=_check_load_extension,
             invoke_on_load=True,
             invoke_kwds={"extension_info": self.loaded_extension_info})
