@@ -27,7 +27,6 @@ from oslo_config import cfg
 from oslo_utils import units
 
 from nova.api.metadata import base as instance_metadata
-from nova.compute import power_state
 from nova import context
 from nova import db
 from nova import exception
@@ -158,9 +157,6 @@ class HyperVAPIBaseTestCase(test.NoDBTestCase):
         self._mox.StubOutWithMock(vmutils.VMUtils, 'create_scsi_controller')
         self._mox.StubOutWithMock(vmutils.VMUtils, 'create_nic')
         self._mox.StubOutWithMock(vmutils.VMUtils, 'set_vm_state')
-        self._mox.StubOutWithMock(vmutils.VMUtils, 'list_instances')
-        self._mox.StubOutWithMock(vmutils.VMUtils, 'get_vm_summary_info')
-        self._mox.StubOutWithMock(vmutils.VMUtils, 'set_nic_connection')
         self._mox.StubOutWithMock(vmutils.VMUtils, 'get_vm_scsi_controller')
         self._mox.StubOutWithMock(vmutils.VMUtils, 'get_vm_ide_controller')
         self._mox.StubOutWithMock(vmutils.VMUtils, 'get_attached_disks')
@@ -170,8 +166,6 @@ class HyperVAPIBaseTestCase(test.NoDBTestCase):
                                   'get_mounted_disk_by_drive_number')
         self._mox.StubOutWithMock(vmutils.VMUtils, 'detach_vm_disk')
         self._mox.StubOutWithMock(vmutils.VMUtils, 'get_vm_storage_paths')
-        self._mox.StubOutWithMock(vmutils.VMUtils,
-                                  'get_controller_volume_paths')
         self._mox.StubOutWithMock(vmutils.VMUtils, 'get_free_controller_slot')
         self._mox.StubOutWithMock(vmutils.VMUtils,
                                   'enable_vm_metrics_collection')
@@ -254,50 +248,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
     def test_public_api_signatures(self):
         self.assertPublicAPISignatures(driver.ComputeDriver(None), self._conn)
 
-    def test_list_instances(self):
-        fake_instances = ['fake1', 'fake2']
-        vmutils.VMUtils.list_instances().AndReturn(fake_instances)
-
-        self._mox.ReplayAll()
-        instances = self._conn.list_instances()
-        self._mox.VerifyAll()
-
-        self.assertEqual(instances, fake_instances)
-
-    def test_get_info(self):
-        self._instance = self._get_instance()
-
-        summary_info = {'NumberOfProcessors': 2,
-                        'EnabledState': constants.HYPERV_VM_STATE_ENABLED,
-                        'MemoryUsage': 1000,
-                        'UpTime': 1}
-
-        m = vmutils.VMUtils.vm_exists(mox.Func(self._check_instance_name))
-        m.AndReturn(True)
-
-        func = mox.Func(self._check_instance_name)
-        m = vmutils.VMUtils.get_vm_summary_info(func)
-        m.AndReturn(summary_info)
-
-        self._mox.ReplayAll()
-        info = self._conn.get_info(self._instance)
-        self._mox.VerifyAll()
-
-        self.assertEqual(info.state, power_state.RUNNING)
-
-    def test_get_info_instance_not_found(self):
-        # Tests that InstanceNotFound is raised if the instance isn't found
-        # from the vmutils.vm_exists method.
-        self._instance = self._get_instance()
-
-        m = vmutils.VMUtils.vm_exists(mox.Func(self._check_instance_name))
-        m.AndReturn(False)
-
-        self._mox.ReplayAll()
-        self.assertRaises(exception.InstanceNotFound, self._conn.get_info,
-                          self._instance)
-        self._mox.VerifyAll()
-
     def _setup_spawn_config_drive_mocks(self, use_cdrom):
         instance_metadata.InstanceMetadata(mox.IgnoreArg(),
                                            content=mox.IsA(list),
@@ -336,126 +286,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
     def _check_instance_name(self, vm_name):
         return vm_name == self._instance.name
 
-    def _test_vm_state_change(self, action, from_state, to_state):
-        self._instance = self._get_instance()
-
-        vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
-                                     to_state)
-
-        if to_state in (constants.HYPERV_VM_STATE_DISABLED,
-                        constants.HYPERV_VM_STATE_REBOOT):
-            self._setup_delete_vm_log_mocks()
-        if to_state in (constants.HYPERV_VM_STATE_ENABLED,
-                        constants.HYPERV_VM_STATE_REBOOT):
-            self._setup_log_vm_output_mocks()
-
-        self._mox.ReplayAll()
-        action(self._instance)
-        self._mox.VerifyAll()
-
-    def test_pause(self):
-        self._test_vm_state_change(self._conn.pause, None,
-                                   constants.HYPERV_VM_STATE_PAUSED)
-
-    def test_pause_already_paused(self):
-        self._test_vm_state_change(self._conn.pause,
-                                   constants.HYPERV_VM_STATE_PAUSED,
-                                   constants.HYPERV_VM_STATE_PAUSED)
-
-    def test_unpause(self):
-        self._test_vm_state_change(self._conn.unpause,
-                                   constants.HYPERV_VM_STATE_PAUSED,
-                                   constants.HYPERV_VM_STATE_ENABLED)
-
-    def test_unpause_already_running(self):
-        self._test_vm_state_change(self._conn.unpause, None,
-                                   constants.HYPERV_VM_STATE_ENABLED)
-
-    def test_suspend(self):
-        self._test_vm_state_change(lambda i: self._conn.suspend(self._context,
-                                                                i),
-                                   None,
-                                   constants.HYPERV_VM_STATE_SUSPENDED)
-
-    def test_suspend_already_suspended(self):
-        self._test_vm_state_change(lambda i: self._conn.suspend(self._context,
-                                                                i),
-                                   constants.HYPERV_VM_STATE_SUSPENDED,
-                                   constants.HYPERV_VM_STATE_SUSPENDED)
-
-    def test_resume(self):
-        self._test_vm_state_change(lambda i: self._conn.resume(self._context,
-                                                               i, None),
-                                   constants.HYPERV_VM_STATE_SUSPENDED,
-                                   constants.HYPERV_VM_STATE_ENABLED)
-
-    def test_resume_already_running(self):
-        self._test_vm_state_change(lambda i: self._conn.resume(self._context,
-                                                               i, None), None,
-                                   constants.HYPERV_VM_STATE_ENABLED)
-
-    def test_power_off(self):
-        self._test_vm_state_change(self._conn.power_off, None,
-                                   constants.HYPERV_VM_STATE_DISABLED)
-
-    def test_power_off_already_powered_off(self):
-        self._test_vm_state_change(self._conn.power_off,
-                                   constants.HYPERV_VM_STATE_DISABLED,
-                                   constants.HYPERV_VM_STATE_DISABLED)
-
-    def _test_power_on(self, block_device_info):
-        self._instance = self._get_instance()
-        network_info = fake_network.fake_get_instance_nw_info(self.stubs)
-
-        vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
-                                     constants.HYPERV_VM_STATE_ENABLED)
-        if block_device_info:
-            self._mox.StubOutWithMock(volumeops.VolumeOps,
-                                      'fix_instance_volume_disk_paths')
-            volumeops.VolumeOps.fix_instance_volume_disk_paths(
-                mox.Func(self._check_instance_name), block_device_info)
-
-        self._setup_log_vm_output_mocks()
-
-        self._mox.ReplayAll()
-        self._conn.power_on(self._context, self._instance, network_info,
-                            block_device_info=block_device_info)
-        self._mox.VerifyAll()
-
-    def test_power_on_having_block_devices(self):
-        block_device_info = db_fakes.get_fake_block_device_info(
-            self._volume_target_portal, self._volume_id)
-        self._test_power_on(block_device_info=block_device_info)
-
-    def test_power_on_without_block_devices(self):
-        self._test_power_on(block_device_info=None)
-
-    def test_power_on_already_running(self):
-        self._instance = self._get_instance()
-        network_info = fake_network.fake_get_instance_nw_info(self.stubs)
-        vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
-                                     constants.HYPERV_VM_STATE_ENABLED)
-        self._setup_log_vm_output_mocks()
-        self._mox.ReplayAll()
-        self._conn.power_on(self._context, self._instance, network_info)
-        self._mox.VerifyAll()
-
-    def test_reboot(self):
-
-        network_info = fake_network.fake_get_instance_nw_info(self.stubs)
-        self._instance = self._get_instance()
-
-        vmutils.VMUtils.set_vm_state(mox.Func(self._check_instance_name),
-                                     constants.HYPERV_VM_STATE_REBOOT)
-
-        self._setup_delete_vm_log_mocks()
-        self._setup_log_vm_output_mocks()
-
-        self._mox.ReplayAll()
-        self._conn.reboot(self._context, self._instance, network_info,
-                          None)
-        self._mox.VerifyAll()
-
     def _setup_destroy_mocks(self, destroy_disks=True):
         m = vmutils.VMUtils.vm_exists(mox.Func(self._check_instance_name))
         m.AndReturn(True)
@@ -472,15 +302,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
                                                 create_dir=False,
                                                 remove_dir=True)
             m.AndReturn(self._test_instance_dir)
-
-    def test_destroy(self):
-        self._instance = self._get_instance()
-
-        self._setup_destroy_mocks()
-
-        self._mox.ReplayAll()
-        self._conn.destroy(self._context, self._instance, None)
-        self._mox.VerifyAll()
 
     def test_get_instance_disk_info_is_implemented(self):
         instance = objects.Instance()
@@ -718,36 +539,6 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
             vmutils.VMUtils.set_vm_state(mox.Func(self._check_vm_name),
                                          constants.HYPERV_VM_STATE_ENABLED)
             self._setup_log_vm_output_mocks()
-
-    def _test_spawn_instance(self, cow=True,
-                             expected_disks=1,
-                             expected_dvds=0,
-                             setup_vif_mocks_func=None,
-                             with_exception=False,
-                             config_drive=False,
-                             use_cdrom=False,
-                             admin_permissions=True,
-                             vhd_format=constants.DISK_FORMAT_VHD,
-                             ephemeral_storage=False):
-        self._setup_spawn_instance_mocks(cow,
-                                         setup_vif_mocks_func,
-                                         with_exception,
-                                         config_drive=config_drive,
-                                         use_cdrom=use_cdrom,
-                                         admin_permissions=admin_permissions,
-                                         vhd_format=vhd_format,
-                                         ephemeral_storage=ephemeral_storage)
-
-        self._mox.ReplayAll()
-        self._spawn_instance(cow, ephemeral_storage=ephemeral_storage)
-        self._mox.VerifyAll()
-
-        self.assertEqual(len(self._instance_disks), expected_disks)
-        self.assertEqual(len(self._instance_dvds), expected_dvds)
-
-        vhd_path = os.path.join(self._test_instance_dir, 'root.' +
-                                vhd_format.lower())
-        self.assertEqual(vhd_path, self._instance_disks[0])
 
     def _mock_get_mounted_disk_from_lun(self, target_iqn, target_lun,
                                         fake_mounted_disk,
@@ -1317,14 +1108,14 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         # Check to make sure the method raises NotImplementedError.
         self.assertRaises(NotImplementedError,
                           self._conn.plug_vifs,
-                          instance=self._test_spawn_instance,
+                          instance=mock.sentinel.instance,
                           network_info=None)
 
     def test_unplug_vifs(self):
         # Check to make sure the method raises NotImplementedError.
         self.assertRaises(NotImplementedError,
                           self._conn.unplug_vifs,
-                          instance=self._test_spawn_instance,
+                          instance=mock.sentinel.instance,
                           network_info=None)
 
     def test_refresh_instance_security_rules(self):
