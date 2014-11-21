@@ -125,11 +125,15 @@ class BaseVolumeUtilsTestCase(test.NoDBTestCase):
                        '_get_devices_for_target')
     def test_get_target_lun_count(self, fake_get_devices):
         init_session = self._create_initiator_session()
-        fake_get_devices.return_value = [init_session]
+        # Only disk devices are being counted.
+        disk_device = mock.Mock(DeviceType=self._volutils._FILE_DEVICE_DISK)
+        init_session.Devices.append(disk_device)
+        fake_get_devices.return_value = init_session.Devices
+
         lun_count = self._volutils.get_target_lun_count(
             mock.sentinel.FAKE_IQN)
 
-        self.assertEqual(len(init_session.Devices), lun_count)
+        self.assertEqual(1, lun_count)
 
     @mock.patch.object(basevolumeutils.BaseVolumeUtils,
                        "_get_drive_number_from_disk_path")

@@ -36,6 +36,7 @@ LOG = logging.getLogger(__name__)
 
 
 class BaseVolumeUtils(object):
+    _FILE_DEVICE_DISK = 7
 
     def __init__(self, host='.'):
         if sys.platform == 'win32':
@@ -137,7 +138,9 @@ class BaseVolumeUtils(object):
 
     def get_target_lun_count(self, target_iqn):
         devices = self._get_devices_for_target(target_iqn)
-        return len(devices)
+        disk_devices = [device for device in devices
+                        if device.DeviceType == self._FILE_DEVICE_DISK]
+        return len(disk_devices)
 
     def get_target_from_disk_path(self, disk_path):
         initiator_sessions = self._conn_wmi.MSiSCSIInitiator_SessionClass()
