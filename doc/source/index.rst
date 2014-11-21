@@ -48,6 +48,7 @@ Developer Docs
 
    devref/index
    man/index
+   support-matrix
 
 API Extensions
 ==============
