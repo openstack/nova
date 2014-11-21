@@ -17,7 +17,6 @@
 
 import os
 import shutil
-import tempfile
 
 from oslo.config import cfg
 from oslo.utils import strutils
@@ -36,11 +35,6 @@ configdrive_opts = [
     cfg.StrOpt('config_drive_format',
                default='iso9660',
                help='Config drive format. One of iso9660 (default) or vfat'),
-    cfg.StrOpt('config_drive_tempdir',
-               default=tempfile.tempdir,
-               help=('DEPRECATED (not needed any more): '
-                     ' Where to put temporary files associated with '
-                     'config drive creation')),
     # force_config_drive is a string option, to allow for future behaviors
     #  (e.g. use config_drive based on image properties)
     cfg.StrOpt('force_config_drive',
