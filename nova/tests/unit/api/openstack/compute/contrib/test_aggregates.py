@@ -577,37 +577,37 @@ class AggregateTestCaseV21(test.NoDBTestCase):
 
     def test_set_metadata_with_missing_metadata(self):
         body = {"asdf": {"foo": "bar"}}
-        self.assertRaises(exc.HTTPBadRequest, eval(self.set_metadata),
+        self.assertRaises(self.bad_request, eval(self.set_metadata),
                           self.req, "1", body=body)
 
     def test_set_metadata_with_extra_params(self):
         body = {"metadata": {"foo": "bar"}, "asdf": {"foo": "bar"}}
-        self.assertRaises(exc.HTTPBadRequest, eval(self.set_metadata),
+        self.assertRaises(self.bad_request, eval(self.set_metadata),
                           self.req, "1", body=body)
 
     def test_set_metadata_without_dict(self):
         body = {"set_metadata": {'metadata': 1}}
-        self.assertRaises(exc.HTTPBadRequest, eval(self.set_metadata),
+        self.assertRaises(self.bad_request, eval(self.set_metadata),
                           self.req, "1", body=body)
 
     def test_set_metadata_with_empty_key(self):
         body = {"set_metadata": {"metadata": {"": "value"}}}
-        self.assertRaises(exc.HTTPBadRequest, eval(self.set_metadata),
+        self.assertRaises(self.bad_request, eval(self.set_metadata),
                           self.req, "1", body=body)
 
     def test_set_metadata_with_key_too_long(self):
         body = {"set_metadata": {"metadata": {"x" * 256: "value"}}}
-        self.assertRaises(exc.HTTPBadRequest, eval(self.set_metadata),
+        self.assertRaises(self.bad_request, eval(self.set_metadata),
                           self.req, "1", body=body)
 
     def test_set_metadata_with_value_too_long(self):
         body = {"set_metadata": {"metadata": {"key": "x" * 256}}}
-        self.assertRaises(exc.HTTPBadRequest, eval(self.set_metadata),
+        self.assertRaises(self.bad_request, eval(self.set_metadata),
                           self.req, "1", body=body)
 
     def test_set_metadata_with_string(self):
         body = {"set_metadata": {"metadata": "test"}}
-        self.assertRaises(exc.HTTPBadRequest, eval(self.set_metadata),
+        self.assertRaises(self.bad_request, eval(self.set_metadata),
                           self.req, "1", body=body)
 
     def test_delete_aggregate(self):

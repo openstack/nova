@@ -91,3 +91,21 @@ remove_host = {
     'required': ['remove_host'],
     'additionalProperties': False,
 }
+
+
+set_metadata = {
+    'type': 'object',
+    'properties': {
+        'type': 'object',
+        'set_metadata': {
+            'type': 'object',
+            'properties': {
+                'metadata': parameter_types.metadata_with_null
+            },
+            'required': ['metadata'],
+            'additionalProperties': False,
+        },
+    },
+    'required': ['set_metadata'],
+    'additionalProperties': False,
+}

@@ -26,7 +26,6 @@ from nova.api import validation
 from nova.compute import api as compute_api
 from nova import exception
 from nova.i18n import _
-from nova import utils
 
 ALIAS = "os-aggregates"
 authorize = extensions.extension_authorizer('compute', "v3:" + ALIAS)
@@ -174,28 +173,13 @@ class AggregateController(wsgi.Controller):
 
     @extensions.expected_errors((400, 404))
     @wsgi.action('set_metadata')
+    @validation.schema(aggregates.set_metadata)
     def _set_metadata(self, req, id, body):
         """Replaces the aggregate's existing metadata with new metadata."""
         context = _get_context(req)
         authorize(context, action='set_metadata')
-        if not self.is_valid_body(body, 'set_metadata'):
-            raise exc.HTTPBadRequest(explanation=_("Invalid request body"))
-        if not self.is_valid_body(body["set_metadata"], "metadata"):
-            raise exc.HTTPBadRequest(
-                explanation=_("Invalid request format for metadata"))
-        metadata = body["set_metadata"]["metadata"]
 
-        # The metadata should be a dict
-        if not isinstance(metadata, dict):
-            msg = _('The value of metadata must be a dict')
-            raise exc.HTTPBadRequest(explanation=msg)
-        try:
-            for key, value in metadata.items():
-                utils.check_string_length(key, "metadata.key", 1, 255)
-                if value is not None:
-                    utils.check_string_length(value, "metadata.value", 0, 255)
-        except exception.InvalidInput as e:
-            raise exc.HTTPBadRequest(explanation=e.format_message())
+        metadata = body["set_metadata"]["metadata"]
         try:
             aggregate = self.api.update_aggregate_metadata(context,
                                                            id, metadata)
