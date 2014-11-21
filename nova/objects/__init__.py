@@ -52,4 +52,5 @@ def register_all():
     __import__('nova.objects.security_group')
     __import__('nova.objects.security_group_rule')
     __import__('nova.objects.service')
+    __import__('nova.objects.virt_cpu_topology')
     __import__('nova.objects.virtual_interface')
