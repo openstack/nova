@@ -52,7 +52,7 @@ import sys
 from nova.i18n import _
 
 
-### Dump
+# Dump
 
 
 def dump_db(db_driver, db_name, db_url, migration_version, dump_filename):
@@ -69,11 +69,12 @@ def dump_db(db_driver, db_name, db_url, migration_version, dump_filename):
         db_driver.drop(db_name)
 
 
-### Diff
+# Diff
 
 
 def diff_files(filename1, filename2):
-    pipeline = ['diff -U 3 %(filename1)s %(filename2)s' % locals()]
+    pipeline = ['diff -U 3 %(filename1)s %(filename2)s'
+                % {'filename1': filename1, 'filename2': filename2}]
 
     # Use colordiff if available
     if subprocess.call(['which', 'colordiff']) == 0:
@@ -85,7 +86,7 @@ def diff_files(filename1, filename2):
     subprocess.check_call(cmd, shell=True)
 
 
-### Database
+# Database
 
 
 class Mysql(object):
@@ -97,7 +98,8 @@ class Mysql(object):
 
     def dump(self, name, dump_filename):
         subprocess.check_call(
-                'mysqldump -u root %(name)s > %(dump_filename)s' % locals(),
+                'mysqldump -u root %(name)s > %(dump_filename)s'
+                % {'name': name, 'dump_filename': dump_filename},
                 shell=True)
 
 
@@ -110,7 +112,8 @@ class Postgresql(object):
 
     def dump(self, name, dump_filename):
         subprocess.check_call(
-                'pg_dump %(name)s > %(dump_filename)s' % locals(),
+                'pg_dump %(name)s > %(dump_filename)s'
+                % {'name': name, 'dump_filename': dump_filename},
                 shell=True)
 
 
@@ -121,7 +124,7 @@ def _get_db_driver_class(db_url):
         raise Exception(_("database %s not supported") % db_url)
 
 
-### Migrate
+# Migrate
 
 
 MIGRATE_REPO = os.path.join(os.getcwd(), "nova/db/sqlalchemy/migrate_repo")
@@ -170,7 +173,7 @@ def _migrate_get_earliest_version():
     return versions[0]
 
 
-### Git
+# Git
 
 
 def git_current_branch_name():
@@ -196,7 +199,7 @@ def git_has_uncommited_changes():
     return subprocess.call(['git', 'diff', '--quiet', '--exit-code']) == 1
 
 
-### Command
+# Command
 
 
 def die(msg):

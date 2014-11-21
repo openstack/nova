@@ -137,7 +137,11 @@ def no_db_session_in_public_api(logical_line, filename):
             yield (0, "N309: public db api methods may not accept session")
 
 
-def use_timeutils_utcnow(logical_line):
+def use_timeutils_utcnow(logical_line, filename):
+    # tools are OK to use the standard datetime module
+    if "/tools/" in filename:
+        return
+
     msg = "N310: timeutils.utcnow() must be used instead of datetime.%s()"
 
     datetime_funcs = ['now', 'utcnow']
@@ -359,6 +363,10 @@ def use_jsonutils(logical_line, filename):
     # tree where jsonutils module is present, so don't enforce its usage
     # for this subdirectory
     if "plugins/xenserver" in filename:
+        return
+
+    # tools are OK to use the standard json module
+    if "/tools/" in filename:
         return
 
     msg = "N324: jsonutils.%(fun)s must be used instead of json.%(fun)s"
