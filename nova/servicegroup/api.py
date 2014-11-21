@@ -21,7 +21,7 @@ import random
 from oslo.config import cfg
 from oslo.utils import importutils
 
-from nova.i18n import _
+from nova.i18n import _, _LW
 from nova.openstack.common import log as logging
 from nova import utils
 
@@ -85,14 +85,14 @@ class API(object):
         report_interval = CONF.report_interval
         if CONF.service_down_time <= report_interval:
             new_service_down_time = int(report_interval * 2.5)
-            LOG.warn(_("Report interval must be less than service down "
-                       "time. Current config: <service_down_time: "
-                       "%(service_down_time)s, report_interval: "
-                       "%(report_interval)s>. Setting service_down_time to: "
-                       "%(new_service_down_time)s"),
-                       {'service_down_time': CONF.service_down_time,
-                        'report_interval': report_interval,
-                        'new_service_down_time': new_service_down_time})
+            LOG.warning(_LW("Report interval must be less than service down "
+                            "time. Current config: <service_down_time: "
+                            "%(service_down_time)s, report_interval: "
+                            "%(report_interval)s>. Setting service_down_time "
+                            "to: %(new_service_down_time)s"),
+                        {'service_down_time': CONF.service_down_time,
+                         'report_interval': report_interval,
+                         'new_service_down_time': new_service_down_time})
             CONF.set_override('service_down_time', new_service_down_time)
 
     def join(self, member_id, group_id, service=None):

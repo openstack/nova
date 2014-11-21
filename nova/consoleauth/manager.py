@@ -82,7 +82,7 @@ class ConsoleAuthManager(manager.Manager):
         if not self.mc.set(token.encode('UTF-8'),
                            data, CONF.console_token_ttl):
             LOG.warning(_LW("Token: %(token)s failed to save into memcached."),
-                            {'token': token})
+                        {'token': token})
         tokens = self._get_tokens_for_instance(instance_uuid)
         # Remove the expired tokens from cache.
         for tok in tokens:

@@ -20,7 +20,7 @@ from oslo import messaging
 from nova import baserpc
 from nova.conductor import manager
 from nova.conductor import rpcapi
-from nova.i18n import _, _LI
+from nova.i18n import _LI, _LW
 from nova.openstack.common import log as logging
 from nova import utils
 
@@ -317,11 +317,11 @@ class API(LocalAPI):
                 break
             except messaging.MessagingTimeout:
                 has_timedout = True
-                LOG.warning(_('Timed out waiting for nova-conductor.  '
-                              'Is it running? Or did this service start '
-                              'before nova-conductor?  '
-                              'Reattempting establishment of '
-                              'nova-conductor connection...'))
+                LOG.warning(_LW('Timed out waiting for nova-conductor.  '
+                                'Is it running? Or did this service start '
+                                'before nova-conductor?  '
+                                'Reattempting establishment of '
+                                'nova-conductor connection...'))
 
     def instance_update(self, context, instance_uuid, **updates):
         """Perform an instance update in the database."""

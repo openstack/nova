@@ -49,7 +49,7 @@ from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova.db import base
 from nova import exception
-from nova.i18n import _, _LE, _LI
+from nova.i18n import _, _LE, _LI, _LW
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import base as objects_base
@@ -1210,8 +1210,8 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
             if vol_id and instance_bdm['volume_id'] == vol_id:
                 break
         else:
-            LOG.warn(_("No match when trying to update BDM: %(bdm)s"),
-                     dict(bdm=bdm))
+            LOG.warning(_LW("No match when trying to update BDM: %(bdm)s"),
+                        dict(bdm=bdm))
             return
         self.db.block_device_mapping_update(message.ctxt,
                                             instance_bdm['id'], bdm,
@@ -1691,8 +1691,8 @@ class MessageRunner(object):
         """Call instance_<method> in correct cell for instance."""
         cell_name = instance.cell_name
         if not cell_name:
-            LOG.warn(_("No cell_name for %(method)s() from API"),
-                     dict(method=method), instance=instance)
+            LOG.warning(_LW("No cell_name for %(method)s() from API"),
+                        dict(method=method), instance=instance)
             return
         method_kwargs = {'instance': instance}
         if extra_kwargs:
@@ -1708,8 +1708,8 @@ class MessageRunner(object):
         """Update an instance object in its cell."""
         cell_name = instance.cell_name
         if not cell_name:
-            LOG.warn(_("No cell_name for instance update from API"),
-                     instance=instance)
+            LOG.warning(_LW("No cell_name for instance update from API"),
+                        instance=instance)
             return
         method_kwargs = {'instance': instance,
                          'expected_vm_state': expected_vm_state,

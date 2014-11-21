@@ -29,7 +29,7 @@ from nova.cells import state as cells_state
 from nova.cells import utils as cells_utils
 from nova import context
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _LW
 from nova import manager
 from nova import objects
 from nova.objects import base as base_obj
@@ -76,12 +76,12 @@ class CellsManager(manager.Manager):
     target = oslo_messaging.Target(version='1.29')
 
     def __init__(self, *args, **kwargs):
-        LOG.warn(_('The cells feature of Nova is considered experimental '
-                   'by the OpenStack project because it receives much '
-                   'less testing than the rest of Nova. This may change '
-                   'in the future, but current deployers should be aware '
-                   'that the use of it in production right now may be '
-                   'risky.'))
+        LOG.warning(_LW('The cells feature of Nova is considered experimental '
+                        'by the OpenStack project because it receives much '
+                        'less testing than the rest of Nova. This may change '
+                        'in the future, but current deployers should be aware '
+                        'that the use of it in production right now may be '
+                        'risky.'))
         # Mostly for tests.
         cell_state_manager = kwargs.pop('cell_state_manager', None)
         super(CellsManager, self).__init__(service_name='cells',

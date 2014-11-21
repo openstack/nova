@@ -25,8 +25,8 @@ from oslo.utils import timeutils
 import six
 
 from nova import exception
-from nova.i18n import _
 from nova.openstack.common import context
+from nova.i18n import _, _LW
 from nova.openstack.common import local
 from nova.openstack.common import log as logging
 from nova import policy
@@ -88,8 +88,8 @@ class RequestContext(object):
                 because they possibly came in from older rpc messages.
         """
         if kwargs:
-            LOG.warn(_('Arguments dropped when creating context: %s') %
-                    str(kwargs))
+            LOG.warning(_LW('Arguments dropped when creating context: %s') %
+                        str(kwargs))
 
         self.user_id = user_id
         self.project_id = project_id

@@ -34,7 +34,7 @@ from nova.compute import vm_states
 from nova.conductor.tasks import live_migrate
 from nova.db import base
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LW
 from nova import image
 from nova import manager
 from nova import network
@@ -727,7 +727,7 @@ class ComputeTaskManager(base.Base):
             except exception.NoValidHost:
                 instance.task_state = None
                 instance.save()
-                LOG.warning(_("No valid host found for unshelve instance"),
+                LOG.warning(_LW("No valid host found for unshelve instance"),
                             instance=instance)
                 return
         else:
@@ -768,8 +768,8 @@ class ComputeTaskManager(base.Base):
                                 'rebuild_server',
                                 {'vm_state': instance.vm_state,
                                  'task_state': None}, ex, request_spec)
-                        LOG.warning(_("No valid host found for rebuild"),
-                                      instance=instance)
+                        LOG.warning(_LW("No valid host found for rebuild"),
+                                    instance=instance)
 
             self.compute_rpcapi.rebuild_instance(context,
                     instance=instance,

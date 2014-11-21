@@ -175,7 +175,7 @@ class HackingTestCase(test.NoDBTestCase):
             "CONF.option = 1", "nova/compute/foo.py"))), 0)
 
     def test_log_translations(self):
-        logs = ['audit', 'error', 'info', 'warn', 'warning', 'critical',
+        logs = ['audit', 'error', 'info', 'warning', 'critical',
                 'exception']
         levels = ['_LI', '_LW', '_LE', '_LC']
         debug = "LOG.debug('OK')"
@@ -202,6 +202,11 @@ class HackingTestCase(test.NoDBTestCase):
                 self.assertEqual(0,
                     len(list(
                         checks.validate_log_translations(ok, ok, 'f'))))
+
+    def test_log_translations_warning_instead_warn(self):
+        warn = "LOG.warn('qwe')"
+        self.assertEqual(
+            1, len(list(checks.validate_log_translations(warn, warn, 'f'))))
 
     def test_no_mutable_default_args(self):
         self.assertEqual(1, len(list(checks.no_mutable_default_args(

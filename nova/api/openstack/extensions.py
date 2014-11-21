@@ -28,7 +28,6 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LE
 from nova.i18n import _LW
 from nova.openstack.common import log as logging
 import nova.policy
@@ -240,7 +239,7 @@ class ExtensionManager(object):
             LOG.debug('Ext namespace: %s', extension.namespace)
             LOG.debug('Ext updated: %s', extension.updated)
         except AttributeError as ex:
-            LOG.exception(_LE("Exception loading extension: %s"), ex)
+            LOG.exception(_("Exception loading extension: %s"), ex)
             return False
 
         return True
@@ -499,7 +498,7 @@ def expected_errors(errors):
                     # expected error.
                     raise
 
-                LOG.exception(_LE("Unexpected exception in API method"))
+                LOG.exception(_("Unexpected exception in API method"))
                 msg = _('Unexpected API Error. Please report this at '
                     'http://bugs.launchpad.net/nova/ and attach the Nova '
                     'API log if possible.\n%s') % type(exc)

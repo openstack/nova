@@ -60,7 +60,7 @@ from nova.compute import vm_states
 import nova.context
 from nova.db.sqlalchemy import models
 from nova import exception
-from nova.i18n import _, _LI, _LE
+from nova.i18n import _, _LI, _LE, _LW
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 from nova import quota
@@ -181,9 +181,9 @@ def _retry_on_deadlock(f):
             try:
                 return f(*args, **kwargs)
             except db_exc.DBDeadlock:
-                LOG.warn(_("Deadlock detected when running "
-                           "'%(func_name)s': Retrying..."),
-                           dict(func_name=f.__name__))
+                LOG.warning(_LW("Deadlock detected when running "
+                                "'%(func_name)s': Retrying..."),
+                            dict(func_name=f.__name__))
                 # Retry!
                 time.sleep(0.5)
                 continue
@@ -3491,8 +3491,8 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
             session.add(usage_ref)
 
     if unders:
-        LOG.warning(_("Change will make usage less than 0 for the following "
-                      "resources: %s"), unders)
+        LOG.warning(_LW("Change will make usage less than 0 for the following "
+                        "resources: %s"), unders)
 
     if overs:
         _raise_overquota_exception(project_quotas, user_quotas, deltas, overs,

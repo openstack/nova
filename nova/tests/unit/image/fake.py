@@ -178,8 +178,8 @@ class _FakeImageService(object):
         image = self.images.get(str(image_id))
         if image:
             return copy.deepcopy(image)
-        LOG.warn('Unable to find image id %s.  Have images: %s',
-                 image_id, self.images)
+        LOG.warning('Unable to find image id %s.  Have images: %s',
+                    image_id, self.images)
         raise exception.ImageNotFound(image_id=image_id)
 
     def create(self, context, metadata, data=None):

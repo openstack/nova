@@ -84,7 +84,7 @@ class AggregateDiskFilter(DiskFilter):
             ratio = utils.validate_num_values(
                 aggregate_vals, CONF.disk_allocation_ratio, cast_to=float)
         except ValueError as e:
-            LOG.warn(_LW("Could not decode disk_allocation_ratio: '%s'"), e)
+            LOG.warning(_LW("Could not decode disk_allocation_ratio: '%s'"), e)
             ratio = CONF.disk_allocation_ratio
 
         return ratio

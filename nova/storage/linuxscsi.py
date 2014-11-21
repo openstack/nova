@@ -98,8 +98,8 @@ def find_multipath_device(device):
         (out, err) = utils.execute('multipath', '-l', device,
                                run_as_root=True)
     except processutils.ProcessExecutionError as exc:
-        LOG.warn(_LW("Multipath call failed exit (%(code)s)")
-                 % {'code': exc.exit_code})
+        LOG.warning(_LW("Multipath call failed exit (%(code)s)"),
+                    {'code': exc.exit_code})
         return None
 
     if out:
@@ -119,7 +119,7 @@ def find_multipath_device(device):
                 mdev = '/dev/mapper/%s' % mdev_id
 
             if mdev is None:
-                LOG.warn(_LW("Couldn't find multipath device %s"), line)
+                LOG.warning(_LW("Couldn't find multipath device %s"), line)
                 return None
 
             LOG.debug("Found multipath device = %s", mdev)
@@ -128,9 +128,9 @@ def find_multipath_device(device):
                 if dev_line.find("policy") != -1:
                     continue
                 if '#' in dev_line:
-                    LOG.warn(_LW('Skip faulty line "%(dev_line)s" of'
-                                 ' multipath device %(mdev)s')
-                             % {'mdev': mdev, 'dev_line': dev_line})
+                    LOG.warning(_LW('Skip faulty line "%(dev_line)s" of'
+                                    ' multipath device %(mdev)s'),
+                                {'mdev': mdev, 'dev_line': dev_line})
                     continue
 
                 dev_line = dev_line.lstrip(' |-`')
