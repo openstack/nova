@@ -758,6 +758,35 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertIndexNotExists(engine, 'instances',
                                   'instances_project_id_deleted_idx')
 
+    def _pre_upgrade_275(self, engine):
+        # Create a keypair record so we can test that the upgrade will set
+        # 'ssh' as default value in the new column for the previous keypair
+        # entries.
+        key_pairs = oslodbutils.get_table(engine, 'key_pairs')
+        fake_keypair = {'name': 'test-migr'}
+        key_pairs.insert().execute(fake_keypair)
+
+    def _check_275(self, engine, data):
+        self.assertColumnExists(engine, 'key_pairs', 'type')
+        self.assertColumnExists(engine, 'shadow_key_pairs', 'type')
+
+        key_pairs = oslodbutils.get_table(engine, 'key_pairs')
+        shadow_key_pairs = oslodbutils.get_table(engine, 'shadow_key_pairs')
+        self.assertIsInstance(key_pairs.c.type.type,
+                              sqlalchemy.types.String)
+        self.assertIsInstance(shadow_key_pairs.c.type.type,
+                              sqlalchemy.types.String)
+
+        # Make sure the keypair entry will have the type 'ssh'
+        key_pairs = oslodbutils.get_table(engine, 'key_pairs')
+        keypair = key_pairs.select(
+            key_pairs.c.name == 'test-migr').execute().first()
+        self.assertEqual('ssh', keypair.type)
+
+    def _post_downgrade_275(self, engine):
+        self.assertColumnNotExists(engine, 'key_pairs', 'type')
+        self.assertColumnNotExists(engine, 'shadow_key_pairs', 'type')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test.TestCase,
