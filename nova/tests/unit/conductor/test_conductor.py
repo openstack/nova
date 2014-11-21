@@ -288,7 +288,10 @@ class _BaseTestCase(object):
             self.context, 'task', 'begin', 'end', 'host', 'errors', 'message')
         self.assertEqual(result, 'result')
 
-    def test_notify_usage_exists(self):
+    @mock.patch.object(notifications, 'audit_period_bounds')
+    @mock.patch.object(notifications, 'bandwidth_usage')
+    @mock.patch.object(compute_utils, 'notify_about_instance_usage')
+    def test_notify_usage_exists(self, mock_notify, mock_bw, mock_audit):
         info = {
             'audit_period_beginning': 'start',
             'audit_period_ending': 'end',
@@ -296,29 +299,26 @@ class _BaseTestCase(object):
             'image_meta': {},
             'extra': 'info',
             }
-        instance = {
-            'system_metadata': [],
-            }
+        instance = objects.Instance(id=1, system_metadata={})
 
-        self.mox.StubOutWithMock(notifications, 'audit_period_bounds')
-        self.mox.StubOutWithMock(notifications, 'bandwidth_usage')
-        self.mox.StubOutWithMock(compute_utils, 'notify_about_instance_usage')
-
-        notifications.audit_period_bounds(False).AndReturn(('start', 'end'))
-        notifications.bandwidth_usage(instance, 'start', True).AndReturn(
-            'bw_usage')
-        notifier = self.conductor_manager.notifier
-        compute_utils.notify_about_instance_usage(notifier,
-                                                  self.context, instance,
-                                                  'exists',
-                                                  system_metadata={},
-                                                  extra_usage_info=info)
-
-        self.mox.ReplayAll()
+        mock_audit.return_value = ('start', 'end')
+        mock_bw.return_value = 'bw_usage'
 
         self.conductor.notify_usage_exists(self.context, instance, False, True,
                                            system_metadata={},
                                            extra_usage_info=dict(extra='info'))
+
+        class MatchInstance(object):
+            def __eq__(self, thing):
+                return thing.id == instance.id
+
+        notifier = self.conductor_manager.notifier
+        mock_audit.assert_called_once_with(False)
+        mock_bw.assert_called_once_with(MatchInstance(), 'start', True)
+        mock_notify.assert_called_once_with(notifier, self.context,
+                                            MatchInstance(),
+                                            'exists', system_metadata={},
+                                            extra_usage_info=info)
 
     def test_security_groups_trigger_members_refresh(self):
         self.mox.StubOutWithMock(self.conductor_manager.security_group_api,
