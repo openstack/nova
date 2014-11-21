@@ -17,6 +17,7 @@ from oslo.config import cfg
 
 from nova import db
 from nova import exception
+from nova.i18n import _
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import fields
@@ -94,8 +95,8 @@ class Network(obj_base.NovaPersistentObject, obj_base.NovaObject):
         try:
             return netaddr.IPNetwork(netmask).netmask
         except netaddr.AddrFormatError:
-            raise ValueError('IPv6 netmask "%s" must be a netmask '
-                             'or integral prefix' % netmask)
+            raise ValueError(_('IPv6 netmask "%s" must be a netmask '
+                               'or integral prefix') % netmask)
 
     def obj_make_compatible(self, primitive, target_version):
         target_version = utils.convert_version_to_tuple(target_version)
