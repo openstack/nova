@@ -213,7 +213,7 @@ class FilterScheduler(driver.Scheduler):
         group_hint = scheduler_hints.get('group', None)
         if group_hint:
             group = objects.InstanceGroup.get_by_hint(context, group_hint)
-            policies = set(('anti-affinity', 'affinity'))
+            policies = set(('anti-affinity', 'affinity', 'legacy'))
             if any((policy in policies) for policy in group.policies):
                 if ('affinity' in group.policies and
                         not self._supports_affinity):

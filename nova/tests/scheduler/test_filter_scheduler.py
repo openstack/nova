@@ -410,7 +410,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             self.assertEqual([policy], filter_properties['group_policies'])
 
     def test_group_details_in_filter_properties(self):
-        for policy in ['affinity', 'anti-affinity']:
+        for policy in ['affinity', 'anti-affinity', 'legacy']:
             group = self._create_server_group(policy)
             self._group_details_in_filter_properties(group, func='get_by_uuid',
                                                      hint=group.uuid,
