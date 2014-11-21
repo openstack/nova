@@ -1190,16 +1190,24 @@ def _host_dhcp_network(vif_id):
 
 def _host_dhcp(fixedip):
     """Return a host string for an address in dhcp-host format."""
+    # NOTE(cfb): dnsmasq on linux only supports 64 characters in the hostname
+    #            field (LP #1238910). Since the . counts as a character we need
+    #            to truncate the hostname to only 63 characters.
+    hostname = fixedip.instance.hostname
+    if len(hostname) > 63:
+        LOG.warning(_LW('hostname %s too long, truncating.') % (hostname))
+        hostname = fixedip.instance.hostname[:2] + '-' +\
+                   fixedip.instance.hostname[-60:]
     if CONF.use_single_default_gateway:
         net = _host_dhcp_network(fixedip.virtual_interface_id)
         return '%s,%s.%s,%s,net:%s' % (fixedip.virtual_interface.address,
-                               fixedip.instance.hostname,
+                               hostname,
                                CONF.dhcp_domain,
                                fixedip.address,
                                net)
     else:
         return '%s,%s.%s,%s' % (fixedip.virtual_interface.address,
-                               fixedip.instance.hostname,
+                               hostname,
                                CONF.dhcp_domain,
                                fixedip.address)
 
