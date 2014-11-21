@@ -35,7 +35,7 @@ import webob.dec
 import webob.exc
 
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LI
 from nova.openstack.common import log as logging
 
 wsgi_opts = [
@@ -135,7 +135,7 @@ class Server(object):
             raise
 
         (self.host, self.port) = self._socket.getsockname()[0:2]
-        LOG.info(_("%(name)s listening on %(host)s:%(port)s"),
+        LOG.info(_LI("%(name)s listening on %(host)s:%(port)s"),
                  {'name': self.name, 'host': self.host, 'port': self.port})
 
     def start(self):
@@ -238,7 +238,7 @@ class Server(object):
         :returns: None
 
         """
-        LOG.info(_("Stopping WSGI server."))
+        LOG.info(_LI("Stopping WSGI server."))
 
         if self._server is not None:
             # Resize pool to stop new requests from being processed
@@ -258,7 +258,7 @@ class Server(object):
                 self._pool.waitall()
                 self._server.wait()
         except greenlet.GreenletExit:
-            LOG.info(_("WSGI server has stopped."))
+            LOG.info(_LI("WSGI server has stopped."))
 
 
 class Request(webob.Request):

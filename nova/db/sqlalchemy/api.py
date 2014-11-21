@@ -5119,9 +5119,9 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
                 rd_bytes < current_usage['curr_read_bytes'] or
                 wr_req < current_usage['curr_writes'] or
                     wr_bytes < current_usage['curr_write_bytes']):
-                LOG.info(_("Volume(%s) has lower stats then what is in "
-                           "the database. Instance must have been rebooted "
-                           "or crashed. Updating totals.") % id)
+                LOG.info(_LI("Volume(%s) has lower stats then what is in "
+                             "the database. Instance must have been rebooted "
+                             "or crashed. Updating totals."), id)
                 if not update_totals:
                     values['tot_reads'] = (models.VolumeUsage.tot_reads +
                                            current_usage['curr_reads'])

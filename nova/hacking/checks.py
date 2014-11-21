@@ -296,16 +296,7 @@ def validate_log_translations(logical_line, physical_line, filename):
     # Translations are not required in the test directory
     # and the Xen utilities
     if ("nova/tests" in filename or
-        "plugins/xenserver/xenapi/etc/xapi.d" in filename or
-        # TODO(Mike_D):Needs to be remove with:
-        # Iaebb239ef20a0da3df1e3552baf26f412d0fcdc0
-        "nova/compute" in filename or
-        "nova/cells" in filename or
-        "nova/image" in filename or
-        "nova/conductor" in filename or
-        "nova/wsgi.py" in filename or
-        "nova/filters.py" in filename or
-            "nova/db" in filename):
+            "plugins/xenserver/xenapi/etc/xapi.d" in filename):
         return
     if pep8.noqa(physical_line):
         return

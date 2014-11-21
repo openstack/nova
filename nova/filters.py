@@ -17,7 +17,7 @@
 Filter support
 """
 
-from nova.i18n import _
+from nova.i18n import _LI
 from nova import loadables
 from nova.openstack.common import log as logging
 
@@ -81,7 +81,7 @@ class BaseFilterHandler(loadables.BaseLoader):
                     return
                 list_objs = list(objs)
                 if not list_objs:
-                    LOG.info(_("Filter %s returned 0 hosts"), cls_name)
+                    LOG.info(_LI("Filter %s returned 0 hosts"), cls_name)
                     break
                 LOG.debug("Filter %(cls_name)s returned "
                           "%(obj_len)d host(s)",
