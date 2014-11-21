@@ -14,6 +14,7 @@ import inspect
 
 import webob
 
+from nova.api.openstack import api_version_request as api_version
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import exception
@@ -187,6 +188,26 @@ class RequestTest(test.NoDBTestCase):
         request.headers = {'Accept-Language': accepted}
         self.assertIs(request.best_match_language(), None)
 
+    def test_api_version_request_header_none(self):
+        request = wsgi.Request.blank('/')
+        request.set_api_version_request()
+        self.assertEqual(api_version.APIVersionRequest(
+            wsgi.DEFAULT_API_VERSION), request.api_version_request)
+
+    def test_api_version_request_header(self):
+        request = wsgi.Request.blank('/')
+        request.headers = {'X-OpenStack-Compute-API-Version': '2.14'}
+        request.set_api_version_request()
+        self.assertEqual(api_version.APIVersionRequest("2.14"),
+                         request.api_version_request)
+
+    def test_api_version_request_header_invalid(self):
+        request = wsgi.Request.blank('/')
+        request.headers = {'X-OpenStack-Compute-API-Version': '2.1.3'}
+
+        self.assertRaises(exception.InvalidAPIVersionString,
+                          request.set_api_version_request)
+
 
 class ActionDispatcherTest(test.NoDBTestCase):
     def test_dispatch(self):
@@ -351,6 +372,50 @@ class ResourceTest(test.NoDBTestCase):
                 header_name = 'x-compute-request-id'
 
         return header_name
+
+    def test_resource_receives_api_version_request_default(self):
+        class Controller(object):
+            def index(self, req):
+                if req.api_version_request != \
+                  api_version.APIVersionRequest(wsgi.DEFAULT_API_VERSION):
+                    raise webob.exc.HTTPInternalServerError()
+                return 'success'
+
+        app = fakes.TestRouter(Controller())
+        req = webob.Request.blank('/tests')
+        response = req.get_response(app)
+        self.assertEqual(response.body, 'success')
+        self.assertEqual(response.status_int, 200)
+
+    def test_resource_receives_api_version_request(self):
+        version = "2.5"
+
+        class Controller(object):
+            def index(self, req):
+                if req.api_version_request != \
+                  api_version.APIVersionRequest(version):
+                    raise webob.exc.HTTPInternalServerError()
+                return 'success'
+
+        app = fakes.TestRouter(Controller())
+        req = webob.Request.blank('/tests')
+        req.headers = {'X-OpenStack-Compute-API-Version': version}
+        response = req.get_response(app)
+        self.assertEqual(response.body, 'success')
+        self.assertEqual(response.status_int, 200)
+
+    def test_resource_receives_api_version_request_invalid(self):
+        invalid_version = "2.5.3"
+
+        class Controller(object):
+            def index(self, req):
+                return 'success'
+
+        app = fakes.TestRouter(Controller())
+        req = webob.Request.blank('/tests')
+        req.headers = {'X-OpenStack-Compute-API-Version': invalid_version}
+        response = req.get_response(app)
+        self.assertEqual(400, response.status_int)
 
     def test_resource_call_with_method_get(self):
         class Controller(object):

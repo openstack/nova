@@ -25,6 +25,7 @@ from oslo.utils import strutils
 import six
 import webob
 
+from nova.api.openstack import api_version_request as api_version
 from nova.api.openstack import xmlutil
 from nova import exception
 from nova import i18n
@@ -71,6 +72,12 @@ _METHODS_WITH_BODY = [
     'POST',
     'PUT',
 ]
+
+
+# The default api version request if none is requested in the headers
+# Note(cyeoh): This only applies for the v2.1 API once microversions
+# support is fully merged. It does not affect the V2 API.
+DEFAULT_API_VERSION = "2.1"
 
 
 class Request(webob.Request):
@@ -197,6 +204,15 @@ class Request(webob.Request):
             return None
         return self.accept_language.best_match(
                 i18n.get_available_languages())
+
+    def set_api_version_request(self):
+        """Set API version request based on the request header information."""
+        if 'X-OpenStack-Compute-API-Version' in self.headers:
+            self.api_version_request = api_version.APIVersionRequest(
+                self.headers['X-OpenStack-Compute-API-Version'])
+        else:
+            self.api_version_request = api_version.APIVersionRequest(
+                DEFAULT_API_VERSION)
 
 
 class ActionDispatcher(object):
@@ -868,6 +884,13 @@ class Resource(wsgi.Application):
     @webob.dec.wsgify(RequestClass=Request)
     def __call__(self, request):
         """WSGI method that controls (de)serialization and method dispatch."""
+
+        # Set the version of the API requested based on the header
+        try:
+            request.set_api_version_request()
+        except exception.InvalidAPIVersionString as e:
+            return Fault(webob.exc.HTTPBadRequest(
+                explanation=e.format_message()))
 
         # Identify the action, its arguments, and the requested
         # content type
