@@ -123,12 +123,6 @@ class _GroupAntiAffinityFilter(AffinityFilter):
         return True
 
 
-class GroupAntiAffinityFilter(_GroupAntiAffinityFilter):
-    def __init__(self):
-        self.policy_name = 'legacy'
-        super(GroupAntiAffinityFilter, self).__init__()
-
-
 class ServerGroupAntiAffinityFilter(_GroupAntiAffinityFilter):
     def __init__(self):
         self.policy_name = 'anti-affinity'
@@ -157,12 +151,6 @@ class _GroupAffinityFilter(AffinityFilter):
 
         # No groups configured
         return True
-
-
-class GroupAffinityFilter(_GroupAffinityFilter):
-    def __init__(self):
-        self.policy_name = 'legacy'
-        super(GroupAffinityFilter, self).__init__()
 
 
 class ServerGroupAffinityFilter(_GroupAffinityFilter):

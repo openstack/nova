@@ -146,12 +146,6 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
 * |ServerGroupAffinityFilter| - This filter works the same way as
   ServerGroupAntiAffinityFilter.  The difference is that when you create the server
   group, you should specify a policy of 'affinity'.
-* |GroupAntiAffinityFilter| - This filter is deprecated in favor of
-  ServerGroupAntiAffinityFilter.  Note that this should not be enabled at the
-  same time as GroupAffinityFilter or neither filter will work properly.
-* |GroupAffinityFilter| - This filter is deprecated in favor of
-  ServerGroupAffinityFilter.  Note that this should not be enabled at the same
-  time as GroupAntiAffinityFilter or neither filter will work properly.
 * |AggregateMultiTenancyIsolation| - isolate tenants in specific aggregates.
 * |AggregateImagePropertiesIsolation| - isolates hosts based on image
   properties and aggregate metadata.
@@ -231,14 +225,6 @@ one of the set of instances uses.
 |SimpleCIDRAffinityFilter| looks at the subnet mask and investigates if
 the network address of the current host is in the same sub network as it was
 defined in the request.
-
-|GroupAntiAffinityFilter| its method ``host_passes`` returns ``True`` if host
-to place the instance on is not in a group of hosts. The group of hosts is
-maintained by a group name. The scheduler hint contains the group name.
-
-|GroupAffinityFilter| its method ``host_passes`` returns ``True`` if host to
-place the instance on is in a group of hosts. The group of hosts is
-maintained by a group name. The scheduler hint contains the group name.
 
 |JsonFilter| - this filter provides the opportunity to write complicated
 queries for the hosts capabilities filtering, based on simple JSON-like syntax.
@@ -403,8 +389,6 @@ in :mod:``nova.tests.scheduler``.
 .. |AggregateIoOpsFilter| replace:: :class:`AggregateIoOpsFilter <nova.scheduler.filters.io_ops_filter.AggregateIoOpsFilter>`
 .. |PciPassthroughFilter| replace:: :class:`PciPassthroughFilter <nova.scheduler.filters.pci_passthrough_filter.PciPassthroughFilter>`
 .. |SimpleCIDRAffinityFilter| replace:: :class:`SimpleCIDRAffinityFilter <nova.scheduler.filters.affinity_filter.SimpleCIDRAffinityFilter>`
-.. |GroupAntiAffinityFilter| replace:: :class:`GroupAntiAffinityFilter <nova.scheduler.filters.affinity_filter.GroupAntiAffinityFilter>`
-.. |GroupAffinityFilter| replace:: :class:`GroupAffinityFilter <nova.scheduler.filters.affinity_filter.GroupAffinityFilter>`
 .. |DifferentHostFilter| replace:: :class:`DifferentHostFilter <nova.scheduler.filters.affinity_filter.DifferentHostFilter>`
 .. |SameHostFilter| replace:: :class:`SameHostFilter <nova.scheduler.filters.affinity_filter.SameHostFilter>`
 .. |RetryFilter| replace:: :class:`RetryFilter <nova.scheduler.filters.retry_filter.RetryFilter>`

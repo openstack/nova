@@ -32,9 +32,6 @@ from nova import utils
 LOG = logging.getLogger(__name__)
 
 
-# NOTE(russellb) There is one other policy, 'legacy', but we don't allow that
-# being set via the API.  It's only used when a group gets automatically
-# created to support the legacy behavior of the 'group' scheduler hint.
 SUPPORTED_POLICIES = ['anti-affinity', 'affinity']
 
 authorize = extensions.extension_authorizer('compute', 'server_groups')
