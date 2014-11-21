@@ -28,7 +28,7 @@ from oslo import messaging
 from oslo.serialization import jsonutils
 
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _LE
 from nova.objects import base as objects_base
 from nova.openstack.common import log as logging
 from nova import rpc
@@ -385,7 +385,7 @@ class CellsAPI(object):
             cctxt.cast(ctxt, 'bdm_update_or_create_at_top',
                        bdm=bdm, create=create)
         except Exception:
-            LOG.exception(_("Failed to notify cells of BDM update/create."))
+            LOG.exception(_LE("Failed to notify cells of BDM update/create."))
 
     def bdm_destroy_at_top(self, ctxt, instance_uuid, device_name=None,
                            volume_id=None):
@@ -401,7 +401,7 @@ class CellsAPI(object):
                        device_name=device_name,
                        volume_id=volume_id)
         except Exception:
-            LOG.exception(_("Failed to notify cells of BDM destroy."))
+            LOG.exception(_LE("Failed to notify cells of BDM destroy."))
 
     def get_migrations(self, ctxt, filters):
         """Get all migrations applying the filters."""

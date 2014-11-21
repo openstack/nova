@@ -295,7 +295,7 @@ class Service(service.Service):
         try:
             self.manager.cleanup_host()
         except Exception:
-            LOG.exception(_('Service error occurred during cleanup_host'))
+            LOG.exception(_LE('Service error occurred during cleanup_host'))
             pass
 
         super(Service, self).stop()

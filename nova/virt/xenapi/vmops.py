@@ -921,8 +921,8 @@ class VMOps(object):
                 undo_mgr, old_vdi_ref)
             transfer_vhd_to_dest(new_vdi_ref, new_vdi_uuid)
         except Exception as error:
-            LOG.exception(_("_migrate_disk_resizing_down failed. "
-                            "Restoring orig vm due_to: %s."), error,
+            LOG.exception(_LE("_migrate_disk_resizing_down failed. "
+                              "Restoring orig vm due_to: %s."), error,
                           instance=instance)
             undo_mgr._rollback()
             raise exception.InstanceFaultRollback(error)
@@ -1075,8 +1075,8 @@ class VMOps(object):
                 transfer_ephemeral_disks_then_all_leaf_vdis()
 
         except Exception as error:
-            LOG.exception(_("_migrate_disk_resizing_up failed. "
-                            "Restoring orig vm due_to: %s."), error,
+            LOG.exception(_LE("_migrate_disk_resizing_up failed. "
+                              "Restoring orig vm due_to: %s."), error,
                           instance=instance)
             try:
                 self._restore_orig_vm_and_cleanup_orphan(instance)

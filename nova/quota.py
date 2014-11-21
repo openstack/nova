@@ -25,7 +25,7 @@ import six
 
 from nova import db
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _LE
 from nova import objects
 from nova.openstack.common import log as logging
 
@@ -1327,7 +1327,8 @@ class QuotaEngine(object):
             # usage resynchronization and the reservation expiration
             # mechanisms will resolve the issue.  The exception is
             # logged, however, because this is less than optimal.
-            LOG.exception(_("Failed to commit reservations %s"), reservations)
+            LOG.exception(_LE("Failed to commit reservations %s"),
+                          reservations)
             return
         LOG.debug("Committed reservations %s", reservations)
 
@@ -1350,7 +1351,7 @@ class QuotaEngine(object):
             # usage resynchronization and the reservation expiration
             # mechanisms will resolve the issue.  The exception is
             # logged, however, because this is less than optimal.
-            LOG.exception(_("Failed to roll back reservations %s"),
+            LOG.exception(_LE("Failed to roll back reservations %s"),
                           reservations)
             return
         LOG.debug("Rolled back reservations %s", reservations)

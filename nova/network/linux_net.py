@@ -822,7 +822,7 @@ def clean_conntrack(fixed_ip):
         _execute('conntrack', '-D', '-r', fixed_ip, run_as_root=True,
                  check_exit_code=[0, 1])
     except processutils.ProcessExecutionError:
-        LOG.exception(_('Error deleting conntrack entries for %s'), fixed_ip)
+        LOG.exception(_LE('Error deleting conntrack entries for %s'), fixed_ip)
 
 
 def _enable_ipv4_forwarding():

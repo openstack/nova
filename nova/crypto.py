@@ -38,7 +38,7 @@ from pyasn1.type import univ
 from nova import context
 from nova import db
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
 from nova import paths
@@ -399,7 +399,7 @@ def _sign_csr(csr_text, ca_folder):
                 csrfile.write(csr_text)
         except IOError:
             with excutils.save_and_reraise_exception():
-                LOG.exception(_('Failed to write inbound.csr'))
+                LOG.exception(_LE('Failed to write inbound.csr'))
 
         LOG.debug('Flags path: %s', ca_folder)
         start = os.getcwd()

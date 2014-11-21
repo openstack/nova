@@ -408,7 +408,7 @@ class VMOps(object):
                 self._delete_disk_files(instance_name)
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.exception(_('Failed to destroy instance: %s'),
+                LOG.exception(_LE('Failed to destroy instance: %s'),
                               instance_name)
 
     def reboot(self, instance, network_info, reboot_type):

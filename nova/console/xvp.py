@@ -121,7 +121,7 @@ class XVPConsoleProxy(object):
                 cfile.write(config)
         except IOError:
             with excutils.save_and_reraise_exception():
-                LOG.exception(_("Failed to write configuration file"))
+                LOG.exception(_LE("Failed to write configuration file"))
 
     def _xvp_stop(self):
         LOG.debug('Stopping xvp')

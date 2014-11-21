@@ -1432,11 +1432,11 @@ def _fetch_vhd_image(context, session, instance, image_id):
         if type(handler) == type(default_handler):
             raise
 
-        LOG.exception(_("Download handler '%(handler)s' raised an"
-                        " exception, falling back to default handler"
-                        " '%(default_handler)s'") %
-                        {'handler': handler,
-                         'default_handler': default_handler})
+        LOG.exception(_LE("Download handler '%(handler)s' raised an"
+                          " exception, falling back to default handler"
+                          " '%(default_handler)s'"),
+                      {'handler': handler,
+                       'default_handler': default_handler})
 
         vdis = default_handler.download_image(
                 context, session, instance, image_id)
@@ -1581,7 +1581,7 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
             return {vdi_role: dict(uuid=vdi_uuid, file=None)}
     except (session.XenAPI.Failure, IOError, OSError) as e:
         # We look for XenAPI and OS failures.
-        LOG.exception(_("Failed to fetch glance image"),
+        LOG.exception(_LE("Failed to fetch glance image"),
                       instance=instance)
         e.args = e.args + ([dict(type=ImageType.to_string(image_type),
                                  uuid=vdi_uuid,
@@ -1813,7 +1813,7 @@ def compile_diagnostics(vm_rec):
 
         return diags
     except expat.ExpatError as e:
-        LOG.exception(_('Unable to parse rrd of %s'), e)
+        LOG.exception(_LE('Unable to parse rrd of %s'), e)
         return {"Unable to retrieve diagnostics": e}
 
 
@@ -1963,8 +1963,8 @@ def _get_rrd(server, vm_uuid):
             vm_uuid))
         return xml.read()
     except IOError:
-        LOG.exception(_('Unable to obtain RRD XML for VM %(vm_uuid)s with '
-                        'server details: %(server)s.'),
+        LOG.exception(_LE('Unable to obtain RRD XML for VM %(vm_uuid)s with '
+                          'server details: %(server)s.'),
                       {'vm_uuid': vm_uuid, 'server': server})
         return None
 

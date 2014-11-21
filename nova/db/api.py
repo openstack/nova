@@ -31,7 +31,7 @@ from oslo.config import cfg
 from oslo.db import concurrency
 
 from nova.cells import rpcapi as cells_rpcapi
-from nova.i18n import _
+from nova.i18n import _LE
 from nova.openstack.common import log as logging
 
 
@@ -625,7 +625,7 @@ def instance_destroy(context, instance_uuid, constraint=None,
         try:
             cells_rpcapi.CellsAPI().instance_destroy_at_top(context, rv)
         except Exception:
-            LOG.exception(_("Failed to notify cells of instance destroy"))
+            LOG.exception(_LE("Failed to notify cells of instance destroy"))
     return rv
 
 
@@ -737,7 +737,7 @@ def instance_update(context, instance_uuid, values, update_cells=True):
         try:
             cells_rpcapi.CellsAPI().instance_update_at_top(context, rv)
         except Exception:
-            LOG.exception(_("Failed to notify cells of instance update"))
+            LOG.exception(_LE("Failed to notify cells of instance update"))
     return rv
 
 
@@ -765,7 +765,7 @@ def instance_update_and_get_original(context, instance_uuid, values,
         try:
             cells_rpcapi.CellsAPI().instance_update_at_top(context, rv[1])
         except Exception:
-            LOG.exception(_("Failed to notify cells of instance update"))
+            LOG.exception(_LE("Failed to notify cells of instance update"))
     return rv
 
 
@@ -1688,7 +1688,7 @@ def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
                     uuid, mac, start_period, bw_in, bw_out,
                     last_ctr_in, last_ctr_out, last_refreshed)
         except Exception:
-            LOG.exception(_("Failed to notify cells of bw_usage update"))
+            LOG.exception(_LE("Failed to notify cells of bw_usage update"))
     return rv
 
 
