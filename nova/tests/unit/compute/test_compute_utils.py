@@ -22,7 +22,6 @@ import string
 import mock
 from oslo.config import cfg
 from oslo.serialization import jsonutils
-from oslo.utils import encodeutils
 from oslo.utils import importutils
 import six
 import testtools
@@ -826,13 +825,3 @@ class ComputeUtilsGetRebootTypes(test.NoDBTestCase):
     def test_get_reboot_not_running_hard(self):
         reboot_type = compute_utils.get_reboot_type('foo', 'bar')
         self.assertEqual(reboot_type, 'HARD')
-
-
-class ComputeUtilsTestCase(test.NoDBTestCase):
-    def test_exception_to_dict_with_long_message(self):
-        # Generate Russian byte message whose length is 300
-        msg = encodeutils.safe_decode(' \xd0\xb2' * 100)
-        exc = exception.NovaException(message=msg)
-        fault_dict = compute_utils.exception_to_dict(exc)
-        byte_message = encodeutils.safe_encode(fault_dict["message"])
-        self.assertEqual(255, len(byte_message))
