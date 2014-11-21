@@ -30,6 +30,7 @@ from nova import notifications
 from nova import objects
 from nova.objects import instance
 from nova.objects import instance_info_cache
+from nova.objects import instance_numa_topology
 from nova.objects import pci_device
 from nova.objects import security_group
 from nova import test
@@ -412,6 +413,28 @@ class _TestInstanceObject(object):
         inst.save()
         self.assertNotIn('pci_devices',
                          mock_fdo.call_args_list[0][1]['expected_attrs'])
+
+    @mock.patch('nova.db.instance_extra_update_by_uuid')
+    @mock.patch('nova.db.instance_update_and_get_original')
+    @mock.patch('nova.objects.Instance._from_db_object')
+    def test_save_updates_numa_topology(self, mock_fdo, mock_update,
+            mock_extra_update):
+        mock_update.return_value = None, None
+        inst = instance.Instance(
+            context=self.context, id=123, uuid='fake-uuid')
+        inst.numa_topology = (
+            instance_numa_topology.InstanceNUMATopology.obj_from_topology(
+                test_instance_numa_topology.fake_numa_topology))
+        inst.save()
+        mock_extra_update.assert_called_once_with(
+                self.context, inst.uuid,
+                {'numa_topology':
+                    test_instance_numa_topology.fake_numa_topology.to_json()})
+        mock_extra_update.reset_mock()
+        inst.numa_topology = None
+        inst.save()
+        mock_extra_update.assert_called_once_with(
+                self.context, inst.uuid, {'numa_topology': None})
 
     def test_get_deleted(self):
         fake_inst = dict(self.fake_instance, id=123, deleted=123)
