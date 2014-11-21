@@ -49,7 +49,7 @@ class MyOwnedObject(base.NovaPersistentObject, base.NovaObject):
 
 class MyObj(base.NovaPersistentObject, base.NovaObject):
     VERSION = '1.6'
-    fields = {'foo': fields.Field(fields.Integer()),
+    fields = {'foo': fields.Field(fields.Integer(), default=1),
               'bar': fields.Field(fields.String()),
               'missing': fields.Field(fields.String()),
               'readonly': fields.Field(fields.Integer(), read_only=True),
@@ -793,7 +793,22 @@ class _TestObject(object):
 
 
 class TestObject(_LocalTest, _TestObject):
-    pass
+    def test_set_defaults(self):
+        obj = MyObj()
+        obj.obj_set_defaults('foo')
+        self.assertTrue(obj.obj_attr_is_set('foo'))
+        self.assertEqual(1, obj.foo)
+
+    def test_set_defaults_no_default(self):
+        obj = MyObj()
+        self.assertRaises(exception.ObjectActionError,
+                          obj.obj_set_defaults, 'bar')
+
+    def test_set_all_defaults(self):
+        obj = MyObj()
+        obj.obj_set_defaults()
+        self.assertEqual(set(['deleted', 'foo']), obj.obj_what_changed())
+        self.assertEqual(1, obj.foo)
 
 
 class TestRemoteObject(_RemoteTest, _TestObject):
@@ -1036,7 +1051,7 @@ object_data = {
     'KeyPairList': '1.0-71132a568cc5d078ba1748a9c02c87b8',
     'Migration': '1.1-67c47726c2c71422058cd9d149d6d3ed',
     'MigrationList': '1.1-8c5f678edc72a592d591a13b35e54353',
-    'MyObj': '1.6-55bfc22259fd3df239e4a49fa3552c93',
+    'MyObj': '1.6-65fc480767fcc4289ce1849e91df9959',
     'MyOwnedObject': '1.0-0f3d6c028543d7f3715d121db5b8e298',
     'Network': '1.2-2ea21ede5e45bb80e7b7ac7106915c4e',
     'NetworkList': '1.2-aa4ad23f035b97a41732ea8b3445fc5e',
@@ -1053,7 +1068,7 @@ object_data = {
     'SecurityGroupRuleList': '1.1-667fca3a9928f23d2d10e61962c55f3c',
     'Service': '1.5-82bbfd46a744a9c89bc44b47a1b81683',
     'ServiceList': '1.3-4a1a5822dea268d0d7f892f5106bb2e1',
-    'TestSubclassedObject': '1.6-c63feb2f2533b7d075490c04a2cc10dd',
+    'TestSubclassedObject': '1.6-b9be83b5587fbca3c8570aab67cb3d02',
     'VirtualInterface': '1.0-10fdac4c704102b6d57d6936d6d790d2',
     'VirtualInterfaceList': '1.0-accbf02628a8063c1d885077a2bf49b6',
     'VirtCPUTopology': '1.0-fc694de72e20298f7c6bab1083fd4563',
