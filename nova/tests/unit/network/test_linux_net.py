@@ -1113,3 +1113,44 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                       check_exit_code=[0, 2, 254])
         ]
         self._create_veth_pair(calls)
+
+    def test_exec_ebtables_success(self):
+        executes = []
+
+        def fake_execute(*args, **kwargs):
+            executes.append(args)
+            return "", ""
+
+        self.stubs.Set(self.driver, '_execute', fake_execute)
+        self.driver._exec_ebtables('fake')
+        self.assertEqual(1, len(executes))
+        self.mox.UnsetStubs()
+
+    def test_exec_ebtables_fail_all(self):
+        executes = []
+
+        def fake_execute(*args, **kwargs):
+            executes.append(args)
+            raise processutils.ProcessExecutionError('error')
+
+        self.stubs.Set(self.driver, '_execute', fake_execute)
+        self.assertRaises(processutils.ProcessExecutionError,
+                          self.driver._exec_ebtables, 'fake')
+        max_calls = CONF.ebtables_exec_attempts
+        self.assertEqual(max_calls, len(executes))
+        self.mox.UnsetStubs()
+
+    def test_exec_ebtables_fail_once(self):
+        executes = []
+
+        def fake_execute(*args, **kwargs):
+            executes.append(args)
+            if len(executes) == 1:
+                raise processutils.ProcessExecutionError('error')
+            else:
+                return "", ""
+
+        self.stubs.Set(self.driver, '_execute', fake_execute)
+        self.driver._exec_ebtables('fake')
+        self.assertEqual(2, len(executes))
+        self.mox.UnsetStubs()
