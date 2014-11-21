@@ -70,7 +70,7 @@ def pipeline_factory(loader, global_conf, **local_conf):
     # If the configuration file still contains 'ratelimit_v3', just ignore it.
     # We will remove this code at next release (J)
     if 'ratelimit_v3' in pipeline:
-        LOG.warn(_LW('ratelimit_v3 is removed from v3 api.'))
+        LOG.warning(_LW('ratelimit_v3 is removed from v3 api.'))
         pipeline.remove('ratelimit_v3')
     return _load_pipeline(loader, pipeline)
 
@@ -166,6 +166,6 @@ class NovaKeystoneContext(wsgi.Middleware):
             # Fallback to deprecated role header:
             roles = req.headers.get('X_ROLE', '')
             if roles:
-                LOG.warn(_LW("Sourcing roles from deprecated X-Role HTTP "
-                             "header"))
+                LOG.warning(_LW("Sourcing roles from deprecated X-Role HTTP "
+                                "header"))
         return [r.strip() for r in roles.split(',')]

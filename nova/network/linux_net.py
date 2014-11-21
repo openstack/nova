@@ -32,7 +32,7 @@ from oslo.utils import timeutils
 import six
 
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _, _LE, _LW
 from nova import objects
 from nova.openstack.common import fileutils
 from nova.openstack.common import log as logging
@@ -229,8 +229,8 @@ class IptablesTable(object):
             chain_set = self.unwrapped_chains
 
         if name not in chain_set:
-            LOG.warn(_('Attempted to remove chain %s which does not exist'),
-                     name)
+            LOG.warning(_LW('Attempted to remove chain %s which does not '
+                            'exist'), name)
             return
         self.dirty = True
 
@@ -298,10 +298,10 @@ class IptablesTable(object):
                 self.remove_rules.append(IptablesRule(chain, rule, wrap, top))
             self.dirty = True
         except ValueError:
-            LOG.warn(_('Tried to remove rule that was not there:'
-                       ' %(chain)r %(rule)r %(wrap)r %(top)r'),
-                     {'chain': chain, 'rule': rule,
-                      'top': top, 'wrap': wrap})
+            LOG.warning(_LW('Tried to remove rule that was not there:'
+                            ' %(chain)r %(rule)r %(wrap)r %(top)r'),
+                        {'chain': chain, 'rule': rule,
+                         'top': top, 'wrap': wrap})
 
     def remove_rules_regex(self, regex):
         """Remove all rules matching regex."""

@@ -24,7 +24,7 @@ from webob import exc
 
 from nova.compute import api as compute_api
 from nova import exception
-from nova.i18n import _, _LE, _LI
+from nova.i18n import _, _LE, _LI, _LW
 from nova.network import neutronv2
 from nova.network.security_group import security_group_base
 from nova import objects
@@ -428,10 +428,12 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
 
         for port in ports:
             if not self._has_security_group_requirements(port):
-                LOG.warn(_("Cannot add security group %(name)s to %(instance)s"
-                           " since the port %(port_id)s does not meet security"
-                           " requirements"), {'name': security_group_name,
-                         'instance': instance['uuid'], 'port_id': port['id']})
+                LOG.warning(_LW("Cannot add security group %(name)s to "
+                                "%(instance)s since the port %(port_id)s "
+                                "does not meet security requirements"),
+                            {'name': security_group_name,
+                             'instance': instance['uuid'],
+                             'port_id': port['id']})
                 raise exception.SecurityGroupCannotBeApplied()
             if 'security_groups' not in port:
                 port['security_groups'] = []

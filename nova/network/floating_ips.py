@@ -25,7 +25,7 @@ import six
 from nova import context
 from nova.db import base
 from nova import exception
-from nova.i18n import _, _LE, _LI
+from nova.i18n import _LE, _LI, _LW
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.openstack.common import log as logging
@@ -192,14 +192,14 @@ class FloatingIP(object):
 
         if floating_ip.project_id != context.project_id:
             if floating_ip.project_id is None:
-                LOG.warn(_('Address |%(address)s| is not allocated'),
-                           {'address': floating_ip.address})
+                LOG.warning(_LW('Address |%(address)s| is not allocated'),
+                            {'address': floating_ip.address})
                 raise exception.Forbidden()
             else:
-                LOG.warn(_('Address |%(address)s| is not allocated to your '
-                           'project |%(project)s|'),
-                           {'address': floating_ip.address,
-                           'project': context.project_id})
+                LOG.warning(_LW('Address |%(address)s| is not allocated '
+                                'to your project |%(project)s|'),
+                            {'address': floating_ip.address,
+                             'project': context.project_id})
                 raise exception.Forbidden()
 
     def allocate_floating_ip(self, context, project_id, auto_assigned=False,
@@ -216,8 +216,8 @@ class FloatingIP(object):
                 reservations = QUOTAS.reserve(context, floating_ips=1,
                                               project_id=project_id)
         except exception.OverQuota:
-            LOG.warn(_("Quota exceeded for %s, tried to allocate "
-                       "floating IP"), context.project_id)
+            LOG.warning(_LW("Quota exceeded for %s, tried to allocate "
+                            "floating IP"), context.project_id)
             raise exception.FloatingIpLimitExceeded()
 
         try:
@@ -373,8 +373,8 @@ class FloatingIP(object):
                         objects.FloatingIP.disassociate(context,
                                                         floating_address)
                     except Exception:
-                        LOG.warn(_('Failed to disassociated floating '
-                                   'address: %s'), floating_address)
+                        LOG.warning(_LW('Failed to disassociated floating '
+                                        'address: %s'), floating_address)
                         pass
                     if "Cannot find device" in six.text_type(e):
                         try:
@@ -538,10 +538,11 @@ class FloatingIP(object):
             floating_ip = objects.FloatingIP.get_by_address(context, address)
 
             if self._is_stale_floating_ip_address(context, floating_ip):
-                LOG.warn(_("Floating ip address |%(address)s| no longer "
-                           "belongs to instance %(instance_uuid)s. Will not "
-                           "migrate it "),
-                         {'address': address, 'instance_uuid': instance_uuid})
+                LOG.warning(_LW("Floating ip address |%(address)s| no longer "
+                                "belongs to instance %(instance_uuid)s. "
+                                "Will not migrate it "),
+                            {'address': address,
+                             'instance_uuid': instance_uuid})
                 continue
 
             interface = CONF.public_interface or floating_ip.interface
@@ -574,10 +575,11 @@ class FloatingIP(object):
             floating_ip = objects.FloatingIP.get_by_address(context, address)
 
             if self._is_stale_floating_ip_address(context, floating_ip):
-                LOG.warn(_("Floating ip address |%(address)s| no longer "
-                           "belongs to instance %(instance_uuid)s. Will not"
-                           "setup it."),
-                         {'address': address, 'instance_uuid': instance_uuid})
+                LOG.warning(_LW("Floating ip address |%(address)s| no longer "
+                                "belongs to instance %(instance_uuid)s. "
+                                "Will not setup it."),
+                            {'address': address,
+                             'instance_uuid': instance_uuid})
                 continue
 
             floating_ip.host = dest
@@ -617,10 +619,10 @@ class FloatingIP(object):
                     if domain_entry:
                         domains.append(domain_entry)
             else:
-                LOG.warn(_('Database inconsistency: DNS domain |%s| is '
-                         'registered in the Nova db but not visible to '
-                         'either the floating or instance DNS driver. It '
-                         'will be ignored.'), dns_domain.domain)
+                LOG.warning(_LW('Database inconsistency: DNS domain |%s| is '
+                                'registered in the Nova db but not visible to '
+                                'either the floating or instance DNS driver. '
+                                'It will be ignored.'), dns_domain.domain)
 
         return domains
 
@@ -657,18 +659,18 @@ class FloatingIP(object):
         try:
             self.instance_dns_manager.create_domain(domain)
         except exception.FloatingIpDNSExists:
-            LOG.warn(_('Domain |%(domain)s| already exists, '
-                       'changing zone to |%(av_zone)s|.'),
-                     {'domain': domain, 'av_zone': av_zone})
+            LOG.warning(_LW('Domain |%(domain)s| already exists, '
+                            'changing zone to |%(av_zone)s|.'),
+                        {'domain': domain, 'av_zone': av_zone})
 
     def create_public_dns_domain(self, context, domain, project):
         objects.DNSDomain.register_for_project(context, domain, project)
         try:
             self.floating_dns_manager.create_domain(domain)
         except exception.FloatingIpDNSExists:
-            LOG.warn(_('Domain |%(domain)s| already exists, '
-                       'changing project to |%(project)s|.'),
-                     {'domain': domain, 'project': project})
+            LOG.warning(_LW('Domain |%(domain)s| already exists, '
+                            'changing project to |%(project)s|.'),
+                        {'domain': domain, 'project': project})
 
     def delete_dns_domain(self, context, domain):
         objects.DNSDomain.delete_by_domain(context, domain)

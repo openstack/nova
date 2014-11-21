@@ -29,6 +29,7 @@ from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LC
+from nova.i18n import _LE
 from nova.i18n import _LI
 from nova.i18n import _LW
 from nova.i18n import translate
@@ -89,7 +90,7 @@ class FaultWrapper(base_wsgi.Middleware):
                                   status, webob.exc.HTTPInternalServerError)()
 
     def _error(self, inner, req):
-        LOG.exception(_("Caught error: %s"), unicode(inner))
+        LOG.exception(_LE("Caught error: %s"), unicode(inner))
 
         safe = getattr(inner, 'safe', False)
         headers = getattr(inner, 'headers', None)
@@ -232,9 +233,9 @@ class APIRouter(base_wsgi.Router):
             msg_format_dict = {'collection': collection,
                                'ext_name': extension.extension.name}
             if collection not in self.resources:
-                LOG.warn(_LW('Extension %(ext_name)s: Cannot extend '
-                             'resource %(collection)s: No such resource'),
-                         msg_format_dict)
+                LOG.warning(_LW('Extension %(ext_name)s: Cannot extend '
+                                'resource %(collection)s: No such resource'),
+                            msg_format_dict)
                 continue
 
             LOG.debug('Extension %(ext_name)s extended resource: '
@@ -283,11 +284,11 @@ class APIRouterV21(base_wsgi.Router):
                     if ext.obj.alias not in CONF.osapi_v3.extensions_blacklist:
                         return self._register_extension(ext)
                     else:
-                        LOG.warn(_LW("Not loading %s because it is "
-                                     "in the blacklist"), ext.obj.alias)
+                        LOG.warning(_LW("Not loading %s because it is "
+                                        "in the blacklist"), ext.obj.alias)
                         return False
                 else:
-                    LOG.warn(
+                    LOG.warning(
                         _LW("Not loading %s because it is not in the "
                             "whitelist"), ext.obj.alias)
                     return False
@@ -308,8 +309,8 @@ class APIRouterV21(base_wsgi.Router):
             CONF.osapi_v3.extensions_whitelist).intersection(
                 CONF.osapi_v3.extensions_blacklist)
         if len(in_blacklist_and_whitelist) != 0:
-            LOG.warn(_LW("Extensions in both blacklist and whitelist: %s"),
-                     list(in_blacklist_and_whitelist))
+            LOG.warning(_LW("Extensions in both blacklist and whitelist: %s"),
+                        list(in_blacklist_and_whitelist))
 
         self.api_extension_manager = stevedore.enabled.EnabledExtensionManager(
             namespace=self.API_EXTENSION_NAMESPACE,
@@ -414,9 +415,9 @@ class APIRouterV21(base_wsgi.Router):
             controller = extension.controller
 
             if collection not in self.resources:
-                LOG.warn(_LW('Extension %(ext_name)s: Cannot extend '
-                             'resource %(collection)s: No such resource'),
-                         {'ext_name': ext_name, 'collection': collection})
+                LOG.warning(_LW('Extension %(ext_name)s: Cannot extend '
+                                'resource %(collection)s: No such resource'),
+                            {'ext_name': ext_name, 'collection': collection})
                 continue
 
             LOG.debug('Extension %(ext_name)s extending resource: '

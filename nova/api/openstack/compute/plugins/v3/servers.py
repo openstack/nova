@@ -106,11 +106,11 @@ class ServersController(wsgi.Controller):
                     if ext.obj.alias not in CONF.osapi_v3.extensions_blacklist:
                         return True
                     else:
-                        LOG.warn(_LW("Not loading %s because it is "
-                                     "in the blacklist"), ext.obj.alias)
+                        LOG.warning(_LW("Not loading %s because it is "
+                                        "in the blacklist"), ext.obj.alias)
                         return False
                 else:
-                    LOG.warn(
+                    LOG.warning(
                         _LW("Not loading %s because it is not in the "
                             "whitelist"), ext.obj.alias)
                     return False

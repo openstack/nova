@@ -23,7 +23,7 @@ import time
 from oslo.config import cfg
 
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LW
 from nova.network import dns_driver
 from nova.openstack.common import log as logging
 from nova import utils
@@ -105,9 +105,9 @@ class DNSEntry(object):
         if not entry:
             return None
         if len(entry) > 1:
-            LOG.warn(_("Found multiple matches for domain "
-                    "%(domain)s.\n%(entry)s") %
-                    (domain, entry))
+            LOG.warning(_LW("Found multiple matches for domain "
+                            "%(domain)s.\n%(entry)s"),
+                        domain, entry)
         return entry[0]
 
     @classmethod
@@ -132,10 +132,10 @@ class DNSEntry(object):
         if name.endswith(z):
             dequalified = name[0:name.rfind(z)]
         else:
-            LOG.warn(_("Unable to dequalify.  %(name)s is not in "
-                       "%(domain)s.\n") %
-                     {'name': name,
-                      'domain': self.qualified_domain})
+            LOG.warning(_LW("Unable to dequalify.  %(name)s is not in "
+                            "%(domain)s.\n"),
+                        {'name': name,
+                         'domain': self.qualified_domain})
             dequalified = None
 
         return dequalified
@@ -373,5 +373,6 @@ class LdapDNS(dns_driver.DNSDriver):
         dEntry.delete()
 
     def delete_dns_file(self):
-        LOG.warn(_("This shouldn't be getting called except during testing."))
+        LOG.warning(_LW("This shouldn't be getting called except during "
+                        "testing."))
         pass

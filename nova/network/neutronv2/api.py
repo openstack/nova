@@ -299,7 +299,7 @@ class API(base_api.NetworkAPI):
         nets = self._get_available_networks(context, instance.project_id,
                                             net_ids, neutron=neutron)
         if not nets:
-            LOG.warn(_LW("No network configured!"), instance=instance)
+            LOG.warning(_LW("No network configured!"), instance=instance)
             return network_model.NetworkInfo([])
 
         # if this function is directly called without a requested_network param

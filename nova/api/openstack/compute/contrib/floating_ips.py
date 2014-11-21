@@ -231,8 +231,8 @@ class FloatingIPActionController(wsgi.Controller):
         if not fixed_address:
             fixed_address = fixed_ips[0]['address']
             if len(fixed_ips) > 1:
-                LOG.warn(_LW('multiple fixed_ips exist, using the first: '
-                             '%s'), fixed_address)
+                LOG.warning(_LW('multiple fixed_ips exist, using the first: '
+                                '%s'), fixed_address)
 
         try:
             self.network_api.associate_floating_ip(context, instance,
