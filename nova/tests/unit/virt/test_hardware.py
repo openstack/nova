@@ -893,30 +893,6 @@ class NUMATopologyTest(test.NoDBTestCase):
                     self.assertEqual(testitem["expect"].cells[i].memory,
                                      topology.cells[i].memory)
 
-    def test_can_fit_isntances(self):
-        hosttopo = hw.VirtNUMAHostTopology([
-            hw.VirtNUMATopologyCellUsage(0, set([0, 1, 2, 3]), 1024),
-            hw.VirtNUMATopologyCellUsage(1, set([4, 6]), 512)
-        ])
-        instance1 = hw.VirtNUMAInstanceTopology([
-            hw.VirtNUMATopologyCellInstance(0, set([0, 1, 2]), 256),
-            hw.VirtNUMATopologyCellInstance(1, set([4]), 256),
-        ])
-        instance2 = hw.VirtNUMAInstanceTopology([
-            hw.VirtNUMATopologyCellInstance(0, set([0, 1]), 256),
-            hw.VirtNUMATopologyCellInstance(1, set([4, 6]), 256),
-            hw.VirtNUMATopologyCellInstance(2, set([7, 8]), 256),
-        ])
-
-        self.assertTrue(hw.VirtNUMAHostTopology.can_fit_instances(
-            hosttopo, []))
-        self.assertTrue(hw.VirtNUMAHostTopology.can_fit_instances(
-            hosttopo, [instance1]))
-        self.assertFalse(hw.VirtNUMAHostTopology.can_fit_instances(
-            hosttopo, [instance2]))
-        self.assertFalse(hw.VirtNUMAHostTopology.can_fit_instances(
-            hosttopo, [instance1, instance2]))
-
     def test_host_usage_contiguous(self):
         hosttopo = hw.VirtNUMAHostTopology([
             hw.VirtNUMATopologyCellUsage(0, set([0, 1, 2, 3]), 1024),
@@ -1381,96 +1357,6 @@ class NumberOfSerialPortsTest(test.NoDBTestCase):
         self.assertRaises(exception.ImageSerialPortNumberExceedFlavorValue,
                           hw.get_number_of_serial_ports,
                           flavor, image_meta)
-
-
-class NUMATopologyClaimsTest(test.NoDBTestCase):
-    def setUp(self):
-        super(NUMATopologyClaimsTest, self).setUp()
-
-        self.host = hw.VirtNUMAHostTopology(
-                cells=[
-                    hw.VirtNUMATopologyCellUsage(
-                        1, set([1, 2, 3, 4]), 2048,
-                        cpu_usage=1, memory_usage=512),
-                    hw.VirtNUMATopologyCellUsage(
-                        2, set([5, 6]), 1024)])
-
-        self.limits = hw.VirtNUMALimitTopology(
-                cells=[
-                    hw.VirtNUMATopologyCellLimit(
-                        1, set([1, 2, 3, 4]), 2048,
-                        cpu_limit=8, memory_limit=4096),
-                    hw.VirtNUMATopologyCellLimit(
-                        2, set([5, 6]), 1024,
-                        cpu_limit=4, memory_limit=2048)])
-
-        self.large_instance = hw.VirtNUMAInstanceTopology(
-                cells=[
-                    hw.VirtNUMATopologyCellInstance(
-                        1, set([1, 2, 3, 4, 5, 6]), 8192),
-                    hw.VirtNUMATopologyCellInstance(
-                        2, set([7, 8]), 4096)])
-        self.medium_instance = hw.VirtNUMAInstanceTopology(
-                cells=[
-                    hw.VirtNUMATopologyCellInstance(
-                        1, set([1, 2, 3, 4]), 1024),
-                    hw.VirtNUMATopologyCellInstance(
-                        2, set([7, 8]), 2048)])
-        self.small_instance = hw.VirtNUMAInstanceTopology(
-                cells=[
-                    hw.VirtNUMATopologyCellInstance(1, set([1]), 256),
-                    hw.VirtNUMATopologyCellInstance(2, set([5]), 1024)])
-        self.no_fit_instance = hw.VirtNUMAInstanceTopology(
-                cells=[
-                    hw.VirtNUMATopologyCellInstance(1, set([1]), 256),
-                    hw.VirtNUMATopologyCellInstance(2, set([2]), 256),
-                    hw.VirtNUMATopologyCellInstance(3, set([3]), 256)])
-
-    def test_claim_not_enough_info(self):
-
-        # No limits supplied
-        self.assertIsNone(
-                hw.VirtNUMAHostTopology.claim_test(
-                    self.host, [self.large_instance]))
-        # Empty topology
-        self.assertIsNone(
-                hw.VirtNUMAHostTopology.claim_test(
-                    hw.VirtNUMAHostTopology(), [self.large_instance],
-                    limits=self.limits))
-        # No instances to claim
-        self.assertIsNone(
-                hw.VirtNUMAHostTopology.claim_test(self.host, [], self.limits))
-
-    def test_claim_succeeds(self):
-        self.assertIsNone(
-                hw.VirtNUMAHostTopology.claim_test(
-                    self.host, [self.small_instance], self.limits))
-        self.assertIsNone(
-                hw.VirtNUMAHostTopology.claim_test(
-                    self.host, [self.medium_instance], self.limits))
-
-    def test_claim_fails(self):
-        self.assertIsInstance(
-                hw.VirtNUMAHostTopology.claim_test(
-                    self.host, [self.large_instance], self.limits),
-                six.text_type)
-
-        self.assertIsInstance(
-                hw.VirtNUMAHostTopology.claim_test(
-                     self.host, [self.medium_instance, self.small_instance],
-                     self.limits),
-                six.text_type)
-
-        # Instance fails if it won't fit the topology
-        self.assertIsInstance(
-                hw.VirtNUMAHostTopology.claim_test(
-                     self.host, [self.no_fit_instance], self.limits),
-                six.text_type)
-
-        # Instance fails if it won't fit the topology even with no limits
-        self.assertIsInstance(
-                hw.VirtNUMAHostTopology.claim_test(
-                     self.host, [self.no_fit_instance]), six.text_type)
 
 
 class HelperMethodsTestCase(test.NoDBTestCase):
