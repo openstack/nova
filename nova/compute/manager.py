@@ -2845,7 +2845,8 @@ class ComputeManager(manager.Manager):
             # TODO(jaypipes): Move generate_image_url() into the nova.image.api
             orig_image_ref_url = glance.generate_image_url(orig_image_ref)
             extra_usage_info = {'image_ref_url': orig_image_ref_url}
-            self.conductor_api.notify_usage_exists(context, instance,
+            compute_utils.notify_usage_exists(
+                    self.notifier, context, instance,
                     current_period=True, system_metadata=orig_sys_metadata,
                     extra_usage_info=extra_usage_info)
 
@@ -3350,8 +3351,8 @@ class ComputeManager(manager.Manager):
                 instance_id=instance.uuid,
                 reason=_("Driver Error: %s") % e)
 
-        self.conductor_api.notify_usage_exists(context, instance,
-                                               current_period=True)
+        compute_utils.notify_usage_exists(self.notifier, context, instance,
+                                          current_period=True)
 
         instance.vm_state = vm_states.RESCUED
         instance.task_state = None
@@ -3554,8 +3555,8 @@ class ComputeManager(manager.Manager):
 
         # NOTE(comstud): A revert_resize is essentially a resize back to
         # the old size, so we need to send a usage event here.
-        self.conductor_api.notify_usage_exists(
-                context, instance, current_period=True)
+        compute_utils.notify_usage_exists(self.notifier, context, instance,
+                                          current_period=True)
 
         with self._error_out_instance_on_exception(context, instance,
                                                    quotas=quotas):
@@ -3732,8 +3733,8 @@ class ComputeManager(manager.Manager):
                                                   instance=instance)
         with self._error_out_instance_on_exception(context, instance,
                                                    quotas=quotas):
-            self.conductor_api.notify_usage_exists(
-                    context, instance, current_period=True)
+            compute_utils.notify_usage_exists(self.notifier, context, instance,
+                                              current_period=True)
             self._notify_about_instance_usage(
                     context, instance, "resize.prep.start")
             try:
@@ -4192,8 +4193,8 @@ class ComputeManager(manager.Manager):
         :param image_id: an image id to snapshot to.
         :param clean_shutdown: give the GuestOS a chance to stop
         """
-        self.conductor_api.notify_usage_exists(
-            context, instance, current_period=True)
+        compute_utils.notify_usage_exists(self.notifier, context, instance,
+                                          current_period=True)
         self._notify_about_instance_usage(context, instance, 'shelve.start')
 
         def update_task_state(task_state, expected_state=task_states.SHELVING):
@@ -5622,8 +5623,8 @@ class ComputeManager(manager.Manager):
                                       self.host, num_instances)
         for instance in instances:
             try:
-                self.conductor_api.notify_usage_exists(
-                    context, instance,
+                compute_utils.notify_usage_exists(
+                    self.notifier, context, instance,
                     ignore_missing_network_data=False)
                 successes += 1
             except Exception:
