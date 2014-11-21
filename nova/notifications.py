@@ -28,11 +28,11 @@ from oslo_utils import timeutils
 import six
 
 import nova.context
-from nova import db
 from nova.i18n import _LE
 from nova.image import glance
 from nova import network
 from nova.network import model as network_model
+from nova import objects
 from nova.objects import base as obj_base
 from nova import rpc
 from nova import utils
@@ -308,19 +308,19 @@ def bandwidth_usage(instance_ref, audit_start,
     macs = [vif['address'] for vif in nw_info]
     uuids = [instance_ref["uuid"]]
 
-    bw_usages = db.bw_usage_get_by_uuids(admin_context, uuids, audit_start)
-    bw_usages = [b for b in bw_usages if b.mac in macs]
-
+    bw_usages = objects.BandwidthUsageList.get_by_uuids(admin_context, uuids,
+                                                        audit_start)
     bw = {}
 
     for b in bw_usages:
-        label = 'net-name-not-found-%s' % b['mac']
-        for vif in nw_info:
-            if vif['address'] == b['mac']:
-                label = vif['network']['label']
-                break
+        if b.mac in macs:
+            label = 'net-name-not-found-%s' % b.mac
+            for vif in nw_info:
+                if vif['address'] == b.mac:
+                    label = vif['network']['label']
+                    break
 
-        bw[label] = dict(bw_in=b.bw_in, bw_out=b.bw_out)
+            bw[label] = dict(bw_in=b.bw_in, bw_out=b.bw_out)
 
     return bw
 
