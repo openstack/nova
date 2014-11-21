@@ -247,9 +247,8 @@ class ResourceTracker(object):
                         instance['system_metadata'])
 
             if instance_type['id'] == itype['id']:
-                numa_topology = (
-                        hardware.VirtNUMAInstanceTopology.get_constraints(
-                            itype, image_meta))
+                numa_topology = hardware.numa_get_constraints(
+                    itype, image_meta)
                 usage = self._get_usage_dict(
                         itype, numa_topology=numa_topology)
                 if self.pci_tracker:
@@ -603,9 +602,7 @@ class ResourceTracker(object):
             if host_topology:
                 host_topology = hardware.VirtNUMAHostTopology.from_json(
                         host_topology)
-            numa_topology = (
-                    hardware.VirtNUMAInstanceTopology.get_constraints(
-                        itype, image_meta))
+            numa_topology = hardware.numa_get_constraints(itype, image_meta)
             numa_topology = (
                     hardware.VirtNUMAHostTopology.fit_instance_to_host(
                         host_topology, numa_topology))

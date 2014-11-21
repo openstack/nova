@@ -609,40 +609,6 @@ class VirtNUMATopologyCell(object):
         return cls(cell_id, cpuset, memory)
 
 
-class VirtNUMATopologyCellInstance(VirtNUMATopologyCell):
-    """Class for reporting NUMA resources in an iinstance cell."""
-
-    def __init__(self, id, cpuset, memory, pagesize=None):
-        """Create a new NUMA Cell Instance
-
-        :param id: integer identifier of cell
-        :param cpuset: set containing list of CPU indexes
-        :param memory: RAM measured in Mib
-        :param pagesize: measured in Kib
-
-        :returns: a new NUMA cell instance object
-        """
-
-        super(VirtNUMATopologyCellInstance, self).__init__(
-            id, cpuset, memory)
-
-        self.pagesize = pagesize
-
-    def _to_dict(self):
-        return {'cpus': format_cpu_spec(self.cpuset, allow_ranges=False),
-                'mem': {'total': self.memory},
-                'id': self.id,
-                'pagesize': self.pagesize}
-
-    @classmethod
-    def _from_dict(cls, data_dict):
-        cpuset = parse_cpu_spec(data_dict.get('cpus', ''))
-        memory = data_dict.get('mem', {}).get('total', 0)
-        cell_id = data_dict.get('id')
-        pagesize = data_dict.get('pagesize')
-        return cls(cell_id, cpuset, memory, pagesize)
-
-
 class VirtNUMATopologyCellLimit(VirtNUMATopologyCell):
     def __init__(self, id, cpuset, memory, cpu_limit, memory_limit):
         """Create a new NUMA Cell with usage
@@ -729,7 +695,7 @@ class VirtNUMATopologyCellUsage(VirtNUMATopologyCell):
         :param limit_cell: cell with limits of the host_cell if any
 
         Make sure we can fit the instance cell onto a host cell and if so,
-        return a new VirtNUMATopologyCellInstance with the id set to that of
+        return a new objects.InstanceNUMACell with the id set to that of
         the host, or None if the cell exceeds the limits of the host
 
         :returns: a new instance cell or None
@@ -746,9 +712,9 @@ class VirtNUMATopologyCellUsage(VirtNUMATopologyCell):
             if (memory_usage > limit_cell.memory_limit or
                     cpu_usage > limit_cell.cpu_limit):
                 return None
-        return VirtNUMATopologyCellInstance(
-                host_cell.id, instance_cell.cpuset, instance_cell.memory,
-                pagesize=instance_cell.pagesize)
+        return objects.InstanceNUMACell(
+            id=host_cell.id, cpuset=instance_cell.cpuset,
+            memory=instance_cell.memory)
 
     def _to_dict(self):
         data_dict = super(VirtNUMATopologyCellUsage, self)._to_dict()
@@ -809,124 +775,124 @@ class VirtNUMATopology(object):
         return cls._from_dict(jsonutils.loads(json_string))
 
 
-class VirtNUMAInstanceTopology(VirtNUMATopology):
-    """Class to represent the topology configured for a guest
-    instance. It provides helper APIs to determine configuration
-    from the metadata specified against the flavour and or
-    disk image
+def _numa_get_flavor_or_image_prop(flavor, image_meta, propname):
+    flavor_val = flavor.get('extra_specs', {}).get("hw:" + propname)
+    image_val = image_meta.get("hw_" + propname)
+
+    if flavor_val is not None:
+        if image_val is not None:
+            raise exception.ImageNUMATopologyForbidden(
+                name='hw_' + propname)
+
+        return flavor_val
+    else:
+        return image_val
+
+
+def _numa_get_constraints_manual(nodes, flavor, image_meta):
+    cells = []
+    totalmem = 0
+
+    availcpus = set(range(flavor['vcpus']))
+
+    for node in range(nodes):
+        cpus = _numa_get_flavor_or_image_prop(
+            flavor, image_meta, "numa_cpus.%d" % node)
+        mem = _numa_get_flavor_or_image_prop(
+            flavor, image_meta, "numa_mem.%d" % node)
+
+        # We're expecting both properties set, so
+        # raise an error if either is missing
+        if cpus is None or mem is None:
+            raise exception.ImageNUMATopologyIncomplete()
+
+        mem = int(mem)
+        cpuset = parse_cpu_spec(cpus)
+
+        for cpu in cpuset:
+            if cpu > (flavor['vcpus'] - 1):
+                raise exception.ImageNUMATopologyCPUOutOfRange(
+                    cpunum=cpu, cpumax=(flavor['vcpus'] - 1))
+
+            if cpu not in availcpus:
+                raise exception.ImageNUMATopologyCPUDuplicates(
+                    cpunum=cpu)
+
+            availcpus.remove(cpu)
+
+        cells.append(objects.InstanceNUMACell(
+            id=node, cpuset=cpuset, memory=mem))
+        totalmem = totalmem + mem
+
+    if availcpus:
+        raise exception.ImageNUMATopologyCPUsUnassigned(
+            cpuset=str(availcpus))
+
+    if totalmem != flavor['memory_mb']:
+        raise exception.ImageNUMATopologyMemoryOutOfRange(
+            memsize=totalmem,
+            memtotal=flavor['memory_mb'])
+
+    return objects.InstanceNUMATopology(cells=cells)
+
+
+def _numa_get_constraints_auto(nodes, flavor, image_meta):
+    if ((flavor['vcpus'] % nodes) > 0 or
+        (flavor['memory_mb'] % nodes) > 0):
+        raise exception.ImageNUMATopologyAsymmetric()
+
+    cells = []
+    for node in range(nodes):
+        cpus = _numa_get_flavor_or_image_prop(
+            flavor, image_meta, "numa_cpus.%d" % node)
+        mem = _numa_get_flavor_or_image_prop(
+            flavor, image_meta, "numa_mem.%d" % node)
+
+        # We're not expecting any properties set, so
+        # raise an error if there are any
+        if cpus is not None or mem is not None:
+            raise exception.ImageNUMATopologyIncomplete()
+
+        ncpus = int(flavor['vcpus'] / nodes)
+        mem = int(flavor['memory_mb'] / nodes)
+        start = node * ncpus
+        cpuset = set(range(start, start + ncpus))
+
+        cells.append(objects.InstanceNUMACell(
+            id=node, cpuset=cpuset, memory=mem))
+
+    return objects.InstanceNUMATopology(cells=cells)
+
+
+# TODO(sahid): Move numa related to hardward/numa.py
+def numa_get_constraints(flavor, image_meta):
+    """Return topology related to input request
+
+    :param flavor: Flavor object to read extra specs from
+    :param image_meta: Image object to read image metadata from
+
+    :returns: InstanceNUMATopology or None
     """
+    nodes = _numa_get_flavor_or_image_prop(
+        flavor, image_meta, "numa_nodes")
 
-    cell_class = VirtNUMATopologyCellInstance
+    if nodes is None:
+        return None
 
-    @staticmethod
-    def _get_flavor_or_image_prop(flavor, image_meta, propname):
-        flavor_val = flavor.get('extra_specs', {}).get("hw:" + propname)
-        image_val = image_meta.get("hw_" + propname)
+    nodes = int(nodes)
 
-        if flavor_val is not None:
-            if image_val is not None:
-                raise exception.ImageNUMATopologyForbidden(
-                    name='hw_' + propname)
+    # We'll pick what path to go down based on whether
+    # anything is set for the first node. Both paths
+    # have logic to cope with inconsistent property usage
+    auto = _numa_get_flavor_or_image_prop(
+        flavor, image_meta, "numa_cpus.0") is None
 
-            return flavor_val
-        else:
-            return image_val
-
-    @classmethod
-    def _get_constraints_manual(cls, nodes, flavor, image_meta):
-        cells = []
-        totalmem = 0
-
-        availcpus = set(range(flavor['vcpus']))
-
-        for node in range(nodes):
-            cpus = cls._get_flavor_or_image_prop(
-                flavor, image_meta, "numa_cpus.%d" % node)
-            mem = cls._get_flavor_or_image_prop(
-                flavor, image_meta, "numa_mem.%d" % node)
-
-            # We're expecting both properties set, so
-            # raise an error if either is missing
-            if cpus is None or mem is None:
-                raise exception.ImageNUMATopologyIncomplete()
-
-            mem = int(mem)
-            cpuset = parse_cpu_spec(cpus)
-
-            for cpu in cpuset:
-                if cpu > (flavor['vcpus'] - 1):
-                    raise exception.ImageNUMATopologyCPUOutOfRange(
-                        cpunum=cpu, cpumax=(flavor['vcpus'] - 1))
-
-                if cpu not in availcpus:
-                    raise exception.ImageNUMATopologyCPUDuplicates(
-                        cpunum=cpu)
-
-                availcpus.remove(cpu)
-
-            cells.append(cls.cell_class(node, cpuset, mem))
-            totalmem = totalmem + mem
-
-        if availcpus:
-            raise exception.ImageNUMATopologyCPUsUnassigned(
-                cpuset=str(availcpus))
-
-        if totalmem != flavor['memory_mb']:
-            raise exception.ImageNUMATopologyMemoryOutOfRange(
-                memsize=totalmem,
-                memtotal=flavor['memory_mb'])
-
-        return cls(cells)
-
-    @classmethod
-    def _get_constraints_auto(cls, nodes, flavor, image_meta):
-        if ((flavor['vcpus'] % nodes) > 0 or
-            (flavor['memory_mb'] % nodes) > 0):
-            raise exception.ImageNUMATopologyAsymmetric()
-
-        cells = []
-        for node in range(nodes):
-            cpus = cls._get_flavor_or_image_prop(
-                flavor, image_meta, "numa_cpus.%d" % node)
-            mem = cls._get_flavor_or_image_prop(
-                flavor, image_meta, "numa_mem.%d" % node)
-
-            # We're not expecting any properties set, so
-            # raise an error if there are any
-            if cpus is not None or mem is not None:
-                raise exception.ImageNUMATopologyIncomplete()
-
-            ncpus = int(flavor['vcpus'] / nodes)
-            mem = int(flavor['memory_mb'] / nodes)
-            start = node * ncpus
-            cpuset = set(range(start, start + ncpus))
-
-            cells.append(cls.cell_class(node, cpuset, mem))
-
-        return cls(cells)
-
-    @classmethod
-    def get_constraints(cls, flavor, image_meta):
-        nodes = cls._get_flavor_or_image_prop(
-            flavor, image_meta, "numa_nodes")
-
-        if nodes is None:
-            return None
-
-        nodes = int(nodes)
-
-        # We'll pick what path to go down based on whether
-        # anything is set for the first node. Both paths
-        # have logic to cope with inconsistent property usage
-        auto = cls._get_flavor_or_image_prop(
-            flavor, image_meta, "numa_cpus.0") is None
-
-        if auto:
-            return cls._get_constraints_auto(
-                nodes, flavor, image_meta)
-        else:
-            return cls._get_constraints_manual(
-                nodes, flavor, image_meta)
+    if auto:
+        return _numa_get_constraints_auto(
+            nodes, flavor, image_meta)
+    else:
+        return _numa_get_constraints_manual(
+            nodes, flavor, image_meta)
 
 
 class VirtNUMALimitTopology(VirtNUMATopology):
@@ -952,13 +918,13 @@ class VirtNUMAHostTopology(VirtNUMATopology):
         """Fit the instance topology onto the host topology given the limits
 
         :param host_topology: VirtNUMAHostTopology object to fit an instance on
-        :param instance_topology: VirtNUMAInstanceTopology object to be fitted
+        :param instance_topology: objects.InstanceNUMATopology to be fitted
         :param limits_topology: VirtNUMALimitTopology that defines limits
 
         Given a host and instance topology and optionally limits - this method
         will attempt to fit instance cells onto all permutations of host cells
         by calling the fit_instance_cell method, and return a new
-        VirtNUMAInstanceTopology with it's cell ids set to host cell id's of
+        InstanceNUMATopology with it's cell ids set to host cell id's of
         the first successful permutation, or None.
         """
         if (not (host_topology and instance_topology) or
@@ -985,14 +951,14 @@ class VirtNUMAHostTopology(VirtNUMATopology):
                         break
                     cells.append(got_cell)
                 if len(cells) == len(host_cell_perm):
-                    return VirtNUMAInstanceTopology(cells=cells)
+                    return objects.InstanceNUMATopology(cells=cells)
 
     @classmethod
     def usage_from_instances(cls, host, instances, free=False):
         """Get host topology usage
 
         :param host: VirtNUMAHostTopology with usage information
-        :param instances: list of VirtNUMAInstanceTopology
+        :param instances: list of objects.InstanceNUMATopology
         :param free: If True usage of the host will be decreased
 
         Sum the usage from all @instances to report the overall
@@ -1053,26 +1019,32 @@ def instance_topology_from_instance(instance):
 
     if instance_numa_topology:
         if isinstance(instance_numa_topology, six.string_types):
-            instance_numa_topology = VirtNUMAInstanceTopology.from_json(
-                            instance_numa_topology)
+            instance_numa_topology = (
+                objects.InstanceNUMATopology.obj_from_primitive(
+                    jsonutils.loads(instance_numa_topology)))
+
         elif isinstance(instance_numa_topology, dict):
-            # NOTE (ndipanov): A horrible hack so that we can use this in the
-            # scheduler, since the InstanceNUMATopology object is serialized
-            # raw using the obj_base.obj_to_primitive, (which is buggy and will
-            # give us a dict with a list of InstanceNUMACell objects), and then
-            # passed to jsonutils.to_primitive, which will make a dict out of
-            # those objects. All of this is done by
-            # scheduler.utils.build_request_spec called in the conductor.
+            # NOTE (ndipanov): A horrible hack so that we can use
+            # this in the scheduler, since the
+            # InstanceNUMATopology object is serialized raw using
+            # the obj_base.obj_to_primitive, (which is buggy and
+            # will give us a dict with a list of InstanceNUMACell
+            # objects), and then passed to jsonutils.to_primitive,
+            # which will make a dict out of those objects. All of
+            # this is done by scheduler.utils.build_request_spec
+            # called in the conductor.
             #
             # Remove when request_spec is a proper object itself!
             dict_cells = instance_numa_topology.get('cells')
             if dict_cells:
-                cells = [VirtNUMATopologyCellInstance(cell['id'],
-                                                      set(cell['cpuset']),
-                                                      cell['memory'],
-                                                      cell.get('pagesize'))
+                cells = [objects.InstanceNUMACell(
+                    id=cell['id'],
+                    cpuset=set(cell['cpuset']),
+                    memory=cell['memory'],
+                    pagesize=cell.get('pagesize'))
                          for cell in dict_cells]
-                instance_numa_topology = VirtNUMAInstanceTopology(cells=cells)
+                instance_numa_topology = objects.InstanceNUMATopology(
+                    cells=cells)
 
     return instance_numa_topology
 

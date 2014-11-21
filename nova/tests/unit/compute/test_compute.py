@@ -7312,7 +7312,7 @@ class ComputeAPITestCase(BaseTestCase):
             self.compute_api.create(self.context, inst_type,
                                     self.fake_image['id'])
 
-    @mock.patch('nova.virt.hardware.VirtNUMAInstanceTopology.get_constraints')
+    @mock.patch('nova.virt.hardware.numa_get_constraints')
     def test_create_with_numa_topology(self, numa_constraints_mock):
         inst_type = flavors.get_default_flavor()
         # This is what the stubbed out method will return
@@ -7320,19 +7320,24 @@ class ComputeAPITestCase(BaseTestCase):
                             'ramdisk_id': 'fake_ramdisk_id',
                             'something_else': 'meow'}
 
-        numa_topology = hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCellInstance(0, set([1, 2]), 512),
-                   hardware.VirtNUMATopologyCellInstance(1, set([3, 4]), 512)])
+        numa_topology = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell(
+                id=0, cpuset=set([1, 2]), memory=512),
+                   objects.InstanceNUMACell(
+                id=1, cpuset=set([3, 4]), memory=512)])
         numa_constraints_mock.return_value = numa_topology
 
         instances, resv_id = self.compute_api.create(self.context, inst_type,
                                                      self.fake_image['id'])
+
         numa_constraints_mock.assert_called_once_with(
-                inst_type, fake_image_props)
-        self.assertThat(numa_topology._to_dict(),
-                        matchers.DictMatches(
-                            instances[0].numa_topology
-                            .topology_from_obj()._to_dict()))
+            inst_type, fake_image_props)
+        self.assertEqual(
+            numa_topology.cells[0].obj_to_primitive(),
+            instances[0].numa_topology.cells[0].obj_to_primitive())
+        self.assertEqual(
+            numa_topology.cells[1].obj_to_primitive(),
+            instances[0].numa_topology.cells[1].obj_to_primitive())
 
     def test_create_instance_defaults_display_name(self):
         # Verify that an instance cannot be created without a display_name.

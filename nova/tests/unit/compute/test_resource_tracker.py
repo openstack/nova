@@ -292,7 +292,7 @@ class BaseTestCase(test.TestCase):
 
         numa_topology = kwargs.pop('numa_topology', None)
         if numa_topology:
-            extra['numa_topology'] = numa_topology.to_json()
+            extra['numa_topology'] = numa_topology._to_json()
 
         instance.update(kwargs)
         instance['extra'] = extra
@@ -719,9 +719,11 @@ class TrackerExtraResourcesTestCase(BaseTrackerTestCase):
 class InstanceClaimTestCase(BaseTrackerTestCase):
     def _instance_topology(self, mem):
         mem = mem * 1024
-        return hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCellInstance(0, set([1]), mem),
-                   hardware.VirtNUMATopologyCellInstance(1, set([3]), mem)])
+        return objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell(
+                id=0, cpuset=set([1]), memory=mem),
+                   objects.InstanceNUMACell(
+                id=1, cpuset=set([3]), memory=mem)])
 
     def _claim_topology(self, mem, cpus=1):
         if self.tracker.driver.numa_topology is None:

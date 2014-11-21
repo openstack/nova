@@ -73,7 +73,7 @@ class ClaimTestCase(test.NoDBTestCase):
                     'id': 1, 'created_at': None, 'updated_at': None,
                     'deleted_at': None, 'deleted': None,
                     'instance_uuid': instance['uuid'],
-                    'numa_topology': numa_topology.to_json()
+                    'numa_topology': numa_topology._to_json()
                 }
         else:
             db_numa_topology = None
@@ -234,15 +234,15 @@ class ClaimTestCase(test.NoDBTestCase):
         self.assertFalse(self.tracker.ext_resources_handler.usage_is_itype)
 
     def test_numa_topology_no_limit(self, mock_get):
-        huge_instance = hardware.VirtNUMAInstanceTopology(
-                cells=[hardware.VirtNUMATopologyCellInstance(
-                    1, set([1, 2]), 512)])
+        huge_instance = objects.InstanceNUMATopology(
+                cells=[objects.InstanceNUMACell(
+                    id=1, cpuset=set([1, 2]), memory=512)])
         self._claim(numa_topology=huge_instance)
 
     def test_numa_topology_fails(self, mock_get):
-        huge_instance = hardware.VirtNUMAInstanceTopology(
-                cells=[hardware.VirtNUMATopologyCellInstance(
-                    1, set([1, 2, 3, 4, 5]), 2048)])
+        huge_instance = objects.InstanceNUMATopology(
+                cells=[objects.InstanceNUMACell(
+                    id=1, cpuset=set([1, 2, 3, 4, 5]), memory=2048)])
         limit_topo = hardware.VirtNUMALimitTopology(
                 cells=[hardware.VirtNUMATopologyCellLimit(
                             1, [1, 2], 512, cpu_limit=2, memory_limit=512),
@@ -254,9 +254,9 @@ class ClaimTestCase(test.NoDBTestCase):
                           numa_topology=huge_instance)
 
     def test_numa_topology_passes(self, mock_get):
-        huge_instance = hardware.VirtNUMAInstanceTopology(
-                cells=[hardware.VirtNUMATopologyCellInstance(
-                    1, set([1, 2]), 512)])
+        huge_instance = objects.InstanceNUMATopology(
+                cells=[objects.InstanceNUMACell(
+                    id=1, cpuset=set([1, 2]), memory=512)])
         limit_topo = hardware.VirtNUMALimitTopology(
                 cells=[hardware.VirtNUMATopologyCellLimit(
                             1, [1, 2], 512, cpu_limit=5, memory_limit=4096),
@@ -292,8 +292,8 @@ class ResizeClaimTestCase(ClaimTestCase):
         numa_constraint = kwargs.pop('numa_topology', None)
         if overhead is None:
             overhead = {'memory_mb': 0}
-        with mock.patch.object(
-                hardware.VirtNUMAInstanceTopology, 'get_constraints',
+        with mock.patch(
+                'nova.virt.hardware.numa_get_constraints',
                 return_value=numa_constraint):
             return claims.ResizeClaim('context', self.instance, instance_type,
                                       {}, self.tracker, self.resources,
