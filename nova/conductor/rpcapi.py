@@ -151,12 +151,13 @@ class ConductorAPI(object):
     * Remove instance_get_by_uuid()
     * Remove agent_build_get_by_triple()
 
-    * 2.1  - Make notify_usage_exists() take an instance object
-
     ... Juno supports message version 2.0.  So, any changes to
     existing methods in 2.x after that point should be done such
     that they can handle the version_cap being set to 2.0.
 
+    * 2.1  - Make notify_usage_exists() take an instance object
+    * Remove bw_usage_update()
+    * Remove notify_usage_exists()
     """
 
     VERSION_ALIASES = {
@@ -197,19 +198,6 @@ class ConductorAPI(object):
         return cctxt.call(context, 'aggregate_metadata_get_by_host',
                           host=host,
                           key=key)
-
-    def bw_usage_update(self, context, uuid, mac, start_period,
-                        bw_in=None, bw_out=None,
-                        last_ctr_in=None, last_ctr_out=None,
-                        last_refreshed=None, update_cells=True):
-        msg_kwargs = dict(uuid=uuid, mac=mac, start_period=start_period,
-                          bw_in=bw_in, bw_out=bw_out, last_ctr_in=last_ctr_in,
-                          last_ctr_out=last_ctr_out,
-                          last_refreshed=last_refreshed,
-                          update_cells=update_cells)
-
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'bw_usage_update', **msg_kwargs)
 
     def provider_fw_rule_get_all(self, context):
         cctxt = self.client.prepare()
@@ -320,25 +308,6 @@ class ConductorAPI(object):
         return cctxt.call(context, 'task_log_end_task',
                           task_name=task_name, begin=begin, end=end,
                           host=host, errors=errors, message=message)
-
-    def notify_usage_exists(self, context, instance, current_period=False,
-                            ignore_missing_network_data=True,
-                            system_metadata=None, extra_usage_info=None):
-        if self.client.can_send_version('2.1'):
-            version = '2.1'
-        else:
-            version = '2.0'
-            instance = jsonutils.to_primitive(instance)
-        system_metadata_p = jsonutils.to_primitive(system_metadata)
-        extra_usage_info_p = jsonutils.to_primitive(extra_usage_info)
-        cctxt = self.client.prepare(version=version)
-        return cctxt.call(
-            context, 'notify_usage_exists',
-            instance=instance,
-            current_period=current_period,
-            ignore_missing_network_data=ignore_missing_network_data,
-            system_metadata=system_metadata_p,
-            extra_usage_info=extra_usage_info_p)
 
     def security_groups_trigger_handler(self, context, event, args):
         args_p = jsonutils.to_primitive(args)

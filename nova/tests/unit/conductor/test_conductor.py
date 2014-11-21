@@ -160,21 +160,6 @@ class _BaseTestCase(object):
                                                                'host', 'key')
         self.assertEqual(result, 'result')
 
-    def test_bw_usage_update(self):
-        self.mox.StubOutWithMock(db, 'bw_usage_update')
-        self.mox.StubOutWithMock(db, 'bw_usage_get')
-
-        update_args = (self.context, 'uuid', 'mac', 0, 10, 20, 5, 10, 20)
-        get_args = (self.context, 'uuid', 0, 'mac')
-
-        db.bw_usage_update(*update_args, update_cells=True)
-        db.bw_usage_get(*get_args).AndReturn('foo')
-
-        self.mox.ReplayAll()
-        result = self.conductor.bw_usage_update(*update_args,
-                update_cells=True)
-        self.assertEqual(result, 'foo')
-
     def test_provider_fw_rule_get_all(self):
         fake_rules = ['a', 'b', 'c']
         self.mox.StubOutWithMock(db, 'provider_fw_rule_get_all')
@@ -288,38 +273,6 @@ class _BaseTestCase(object):
         result = self.conductor.task_log_end_task(
             self.context, 'task', 'begin', 'end', 'host', 'errors', 'message')
         self.assertEqual(result, 'result')
-
-    @mock.patch.object(notifications, 'audit_period_bounds')
-    @mock.patch.object(notifications, 'bandwidth_usage')
-    @mock.patch.object(compute_utils, 'notify_about_instance_usage')
-    def test_notify_usage_exists(self, mock_notify, mock_bw, mock_audit):
-        info = {
-            'audit_period_beginning': 'start',
-            'audit_period_ending': 'end',
-            'bandwidth': 'bw_usage',
-            'image_meta': {},
-            'extra': 'info',
-            }
-        instance = objects.Instance(id=1, system_metadata={})
-
-        mock_audit.return_value = ('start', 'end')
-        mock_bw.return_value = 'bw_usage'
-
-        self.conductor.notify_usage_exists(self.context, instance, False, True,
-                                           system_metadata={},
-                                           extra_usage_info=dict(extra='info'))
-
-        class MatchInstance(object):
-            def __eq__(self, thing):
-                return thing.id == instance.id
-
-        notifier = self.conductor_manager.notifier
-        mock_audit.assert_called_once_with(False)
-        mock_bw.assert_called_once_with(MatchInstance(), 'start', True)
-        mock_notify.assert_called_once_with(notifier, self.context,
-                                            MatchInstance(),
-                                            'exists', system_metadata={},
-                                            extra_usage_info=info)
 
     def test_security_groups_trigger_members_refresh(self):
         self.mox.StubOutWithMock(self.conductor_manager.security_group_api,
@@ -761,6 +714,53 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
                                                           'fake-arch')
         self.assertEqual(result, 'it worked')
 
+    def test_bw_usage_update(self):
+        self.mox.StubOutWithMock(db, 'bw_usage_update')
+        self.mox.StubOutWithMock(db, 'bw_usage_get')
+
+        update_args = (self.context, 'uuid', 'mac', 0, 10, 20, 5, 10, 20)
+        get_args = (self.context, 'uuid', 0, 'mac')
+
+        db.bw_usage_update(*update_args, update_cells=True)
+        db.bw_usage_get(*get_args).AndReturn('foo')
+
+        self.mox.ReplayAll()
+        result = self.conductor.bw_usage_update(*update_args,
+                update_cells=True)
+        self.assertEqual(result, 'foo')
+
+    @mock.patch.object(notifications, 'audit_period_bounds')
+    @mock.patch.object(notifications, 'bandwidth_usage')
+    @mock.patch.object(compute_utils, 'notify_about_instance_usage')
+    def test_notify_usage_exists(self, mock_notify, mock_bw, mock_audit):
+        info = {
+            'audit_period_beginning': 'start',
+            'audit_period_ending': 'end',
+            'bandwidth': 'bw_usage',
+            'image_meta': {},
+            'extra': 'info',
+            }
+        instance = objects.Instance(id=1, system_metadata={})
+
+        mock_audit.return_value = ('start', 'end')
+        mock_bw.return_value = 'bw_usage'
+
+        self.conductor.notify_usage_exists(self.context, instance, False, True,
+                                           system_metadata={},
+                                           extra_usage_info=dict(extra='info'))
+
+        class MatchInstance(object):
+            def __eq__(self, thing):
+                return thing.id == instance.id
+
+        notifier = self.conductor_manager.notifier
+        mock_audit.assert_called_once_with(False)
+        mock_bw.assert_called_once_with(MatchInstance(), 'start', True)
+        mock_notify.assert_called_once_with(notifier, self.context,
+                                            MatchInstance(),
+                                            'exists', system_metadata={},
+                                            extra_usage_info=info)
+
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
     """Conductor RPC API Tests."""
@@ -910,18 +910,6 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
         # so override the base class here to make the call correctly
         return self.conductor.instance_update(self.context, instance_uuid,
                                               **updates)
-
-    def test_bw_usage_get(self):
-        self.mox.StubOutWithMock(db, 'bw_usage_update')
-        self.mox.StubOutWithMock(db, 'bw_usage_get')
-
-        get_args = (self.context, 'uuid', 0, 'mac')
-
-        db.bw_usage_get(*get_args).AndReturn('foo')
-
-        self.mox.ReplayAll()
-        result = self.conductor.bw_usage_get(*get_args)
-        self.assertEqual(result, 'foo')
 
     def test_block_device_mapping_update_or_create(self):
         self.mox.StubOutWithMock(db, 'block_device_mapping_create')

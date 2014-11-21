@@ -178,6 +178,7 @@ class ConductorManager(manager.Manager):
         result = self.db.aggregate_metadata_get_by_host(context, host, key)
         return jsonutils.to_primitive(result)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def bw_usage_update(self, context, uuid, mac, start_period,
                         bw_in, bw_out, last_ctr_in, last_ctr_out,
                         last_refreshed, update_cells):
@@ -345,6 +346,7 @@ class ConductorManager(manager.Manager):
                                            begin, end, host, errors, message)
         return jsonutils.to_primitive(result)
 
+    # NOTE(hanlind): This can be removed in version 3.0 of the RPC API
     def notify_usage_exists(self, context, instance, current_period,
                             ignore_missing_network_data,
                             system_metadata, extra_usage_info):
