@@ -18,6 +18,17 @@ from nova import test
 
 class ContextTestCase(test.NoDBTestCase):
 
+    def test_request_context_elevated(self):
+        user_ctxt = context.RequestContext('111',
+                                           '222',
+                                           admin=False)
+        self.assertFalse(user_ctxt.is_admin)
+        admin_ctxt = user_ctxt.elevated()
+        self.assertTrue(admin_ctxt.is_admin)
+        self.assertIn('admin', admin_ctxt.roles)
+        self.assertFalse(user_ctxt.is_admin)
+        self.assertNotIn('admin', user_ctxt.roles)
+
     def test_request_context_sets_is_admin(self):
         ctxt = context.RequestContext('111',
                                       '222',
