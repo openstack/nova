@@ -45,7 +45,7 @@ def _translate_interface_attachment_view(port_info):
         }
 
 
-class InterfaceAttachmentController(object):
+class InterfaceAttachmentController(wsgi.Controller):
     """The interface attachment API controller for the OpenStack API."""
 
     def __init__(self):

@@ -22,6 +22,7 @@ from webob import exc
 
 from nova.api.openstack import common
 from nova.api.openstack import extensions
+from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
 from nova.i18n import _
@@ -37,7 +38,7 @@ CONF = cfg.CONF
 CONF.import_opt('fping_path', 'nova.api.openstack.compute.contrib.fping')
 
 
-class FpingController(object):
+class FpingController(wsgi.Controller):
 
     def __init__(self, network_api=None):
         self.compute_api = compute.API()

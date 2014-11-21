@@ -79,7 +79,7 @@ def _create_domain_entry(domain, scope=None, project=None, av_zone=None):
             'availability_zone': av_zone}
 
 
-class FloatingIPDNSDomainController(object):
+class FloatingIPDNSDomainController(wsgi.Controller):
     """DNS domain controller for OpenStack API."""
 
     def __init__(self):
@@ -160,7 +160,7 @@ class FloatingIPDNSDomainController(object):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
 
-class FloatingIPDNSEntryController(object):
+class FloatingIPDNSEntryController(wsgi.Controller):
     """DNS Entry controller for OpenStack API."""
 
     def __init__(self):

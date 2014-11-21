@@ -55,7 +55,7 @@ def network_dict(network):
                         "label": network.get("label")}
 
 
-class TenantNetworkController(object):
+class TenantNetworkController(wsgi.Controller):
     def __init__(self, network_api=None):
         self.network_api = nova.network.API()
         self._default_networks = []

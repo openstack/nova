@@ -25,6 +25,7 @@ from webob import exc
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas.v3 import cells
 from nova.api.openstack import extensions
+from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import api as compute
@@ -91,7 +92,7 @@ def _scrub_cell(cell, detail=False):
     return cell_info
 
 
-class CellsController(object):
+class CellsController(wsgi.Controller):
     """Controller for Cell resources."""
 
     def __init__(self):

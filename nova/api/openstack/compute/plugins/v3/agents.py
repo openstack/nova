@@ -27,7 +27,7 @@ ALIAS = "os-agents"
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
-class AgentController(object):
+class AgentController(wsgi.Controller):
     """The agent is talking about guest agent.The host can use this for
     things like accessing files on the disk, configuring networking,
     or running other applications/scripts in the guest while it is

@@ -32,7 +32,7 @@ authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 soft_authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
 
 
-class KeypairController(object):
+class KeypairController(wsgi.Controller):
 
     """Keypair API controller for the OpenStack API."""
     def __init__(self):

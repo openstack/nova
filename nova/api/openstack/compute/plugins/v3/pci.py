@@ -80,7 +80,7 @@ class PciHypervisorController(wsgi.Controller):
             self._extend_hypervisor(hypervisor, compute_node)
 
 
-class PciController(object):
+class PciController(wsgi.Controller):
 
     def __init__(self):
         self.host_api = compute.HostAPI()

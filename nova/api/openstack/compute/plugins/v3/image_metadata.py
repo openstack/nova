@@ -25,7 +25,7 @@ import nova.image
 ALIAS = 'image-metadata'
 
 
-class ImageMetadataController(object):
+class ImageMetadataController(wsgi.Controller):
     """The image metadata API controller for the OpenStack API."""
 
     def __init__(self):

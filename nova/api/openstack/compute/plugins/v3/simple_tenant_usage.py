@@ -22,6 +22,7 @@ import six.moves.urllib.parse as urlparse
 from webob import exc
 
 from nova.api.openstack import extensions
+from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -41,7 +42,7 @@ def parse_strtime(dstr, fmt):
         raise exception.InvalidStrTime(reason=six.text_type(e))
 
 
-class SimpleTenantUsageController(object):
+class SimpleTenantUsageController(wsgi.Controller):
     def _hours_for(self, instance, period_start, period_stop):
         launched_at = instance.launched_at
         terminated_at = instance.terminated_at

@@ -40,7 +40,7 @@ def _marshall_flavor_access(flavor):
     return {'flavor_access': rval}
 
 
-class FlavorAccessController(object):
+class FlavorAccessController(wsgi.Controller):
     """The flavor access API controller for the OpenStack API."""
 
     def __init__(self):
