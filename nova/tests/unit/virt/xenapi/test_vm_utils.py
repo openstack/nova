@@ -33,7 +33,6 @@ from nova.compute import power_state
 from nova.compute import vm_mode
 from nova import context
 from nova import exception
-from nova.i18n import _
 from nova import objects
 from nova import test
 from nova.tests.unit.objects import test_flavor
@@ -517,9 +516,9 @@ class ResizeHelpersTestCase(VMUtilsTestBase):
 
     def test_log_progress_if_required(self):
         self.mox.StubOutWithMock(vm_utils.LOG, "debug")
-        vm_utils.LOG.debug(_("Sparse copy in progress, "
-                             "%(complete_pct).2f%% complete. "
-                             "%(left)s bytes left to copy"),
+        vm_utils.LOG.debug("Sparse copy in progress, "
+                           "%(complete_pct).2f%% complete. "
+                           "%(left)s bytes left to copy",
                            {"complete_pct": 50.0, "left": 1})
         current = timeutils.utcnow()
         timeutils.set_time_override(current)

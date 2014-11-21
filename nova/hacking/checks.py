@@ -305,12 +305,6 @@ def no_import_translation_in_tests(logical_line, filename):
     """Check for 'from nova.i18n import _'
     N337
     """
-    # TODO(Mike_D): Needs to be remove with:
-    # I610deb44f33a966de50296272ab0bfa35462eec9
-    if ('nova/tests/unit/scheduler/test_host_manager.py' in filename or
-        'nova/tests/unit/volume/encryptors/test_base.py' in filename or
-            'nova/tests/unit/virt/xenapi/test_vm_utils.py' in filename):
-        return
     if 'nova/tests/' in filename:
         res = import_translation_for_log_or_exception.match(logical_line)
         if res:

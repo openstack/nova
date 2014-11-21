@@ -15,7 +15,6 @@
 
 import mock
 
-from nova.i18n import _LE
 from nova import keymgr
 from nova import test
 from nova.tests.unit.keymgr import fake
@@ -48,7 +47,8 @@ class VolumeEncryptorTestCase(test.TestCase):
         try:
             encryptors.get_volume_encryptor(self.connection_info, **encryption)
         except Exception as e:
-            log.error.assert_called_once_with(_LE("Error instantiating "
-                                                  "%(provider)s: "
-                                                  "%(exception)s"),
-                      {'provider': provider, 'exception': e})
+            log.error.assert_called_once_with("Error instantiating "
+                                              "%(provider)s: "
+                                              "%(exception)s",
+                                              {'provider': provider,
+                                               'exception': e})

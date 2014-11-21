@@ -24,7 +24,6 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import db
 from nova import exception
-from nova.i18n import _LW
 from nova import objects
 from nova.scheduler import filters
 from nova.scheduler import host_manager
@@ -275,17 +274,17 @@ class HostManagerTestCase(test.NoDBTestCase):
         context = 'fake_context'
 
         self.mox.StubOutWithMock(db, 'compute_node_get_all')
-        self.mox.StubOutWithMock(host_manager.LOG, 'warn')
+        self.mox.StubOutWithMock(host_manager.LOG, 'warning')
 
         db.compute_node_get_all(context).AndReturn(fakes.COMPUTE_NODES)
         # node 3 host physical disk space is greater than database
-        host_manager.LOG.warning(_LW("Host %(hostname)s has more disk space "
-                                     "than database expected (%(physical)sgb >"
-                                     " %(database)sgb)"),
+        host_manager.LOG.warning("Host %(hostname)s has more disk space "
+                                 "than database expected (%(physical)sgb >"
+                                 " %(database)sgb)",
                                  {'physical': 3333, 'database': 3072,
                                   'hostname': 'node3'})
         # Invalid service
-        host_manager.LOG.warning(_LW("No service for compute ID %s"), 5)
+        host_manager.LOG.warning("No service for compute ID %s", 5)
 
         self.mox.ReplayAll()
         self.host_manager.get_all_host_states(context)
