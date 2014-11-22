@@ -31,6 +31,7 @@ from nova import exception
 from nova.i18n import _, _LW
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import constants
+from nova.virt.hyperv import hostutils
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -98,6 +99,13 @@ class VMUtils(object):
         if sys.platform == 'win32':
             self._init_hyperv_wmi_conn(host)
             self._conn_cimv2 = wmi.WMI(moniker='//%s/root/cimv2' % host)
+
+        # On version of Hyper-V prior to 2012 trying to directly set properties
+        # in default setting data WMI objects results in an exception
+        self._clone_wmi_objs = False
+        if sys.platform == 'win32':
+            hostutls = hostutils.HostUtils()
+            self._clone_wmi_objs = not hostutls.check_min_windows_version(6, 2)
 
     def _init_hyperv_wmi_conn(self, host):
         self._conn = wmi.WMI(moniker='//%s/root/virtualization' % host)
@@ -320,19 +328,36 @@ class VMUtils(object):
         return volumes
 
     def _get_new_setting_data(self, class_name):
-        return self._conn.query("SELECT * FROM %s WHERE InstanceID "
+        obj = self._conn.query("SELECT * FROM %s WHERE InstanceID "
                                 "LIKE '%%\\Default'" % class_name)[0]
+        return self._check_clone_wmi_obj(class_name, obj)
 
     def _get_new_resource_setting_data(self, resource_sub_type,
                                        class_name=None):
         if class_name is None:
             class_name = self._RESOURCE_ALLOC_SETTING_DATA_CLASS
-        return self._conn.query("SELECT * FROM %(class_name)s "
+        obj = self._conn.query("SELECT * FROM %(class_name)s "
                                 "WHERE ResourceSubType = "
                                 "'%(res_sub_type)s' AND "
                                 "InstanceID LIKE '%%\\Default'" %
                                 {"class_name": class_name,
                                  "res_sub_type": resource_sub_type})[0]
+        return self._check_clone_wmi_obj(class_name, obj)
+
+    def _check_clone_wmi_obj(self, class_name, obj):
+        if self._clone_wmi_objs:
+            return self._clone_wmi_obj(class_name, obj)
+        else:
+            return obj
+
+    def _clone_wmi_obj(self, class_name, obj):
+        wmi_class = getattr(self._conn, class_name)
+        new_obj = wmi_class.new()
+        # Copy the properties from the original.
+        for prop in obj._properties:
+                value = obj.Properties_.Item(prop).Value
+                new_obj.Properties_.Item(prop).Value = value
+        return new_obj
 
     def attach_ide_drive(self, vm_name, path, ctrller_addr, drive_addr,
                          drive_type=constants.IDE_DISK):
