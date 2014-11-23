@@ -15,10 +15,7 @@
 #    under the License.
 
 """The security groups extension."""
-import contextlib
-
 from oslo.serialization import jsonutils
-import six
 from webob import exc
 
 from nova.api.openstack import common
@@ -47,28 +44,6 @@ def _authorize_context(req):
     return context
 
 
-@contextlib.contextmanager
-def translate_exceptions():
-    """Translate nova exceptions to http exceptions."""
-    try:
-        yield
-    except exception.Invalid as exp:
-        msg = exp.format_message()
-        raise exc.HTTPBadRequest(explanation=msg)
-    except exception.SecurityGroupNotFound as exp:
-        msg = exp.format_message()
-        raise exc.HTTPNotFound(explanation=msg)
-    except exception.InstanceNotFound as exp:
-        msg = exp.format_message()
-        raise exc.HTTPNotFound(explanation=msg)
-    except exception.SecurityGroupLimitExceeded as exp:
-        msg = exp.format_message()
-        raise exc.HTTPForbidden(explanation=msg)
-    except exception.NoUniqueMatch as exp:
-        msg = exp.format_message()
-        raise exc.HTTPConflict(explanation=msg)
-
-
 class SecurityGroupControllerBase(wsgi.Controller):
     """Base class for Security Group controllers."""
 
@@ -93,21 +68,20 @@ class SecurityGroupControllerBase(wsgi.Controller):
         sg_rule['group'] = {}
         sg_rule['ip_range'] = {}
         if rule['group_id']:
-            with translate_exceptions():
-                try:
-                    source_group = self.security_group_api.get(
-                        context, id=rule['group_id'])
-                except exception.SecurityGroupNotFound:
-                    # NOTE(arosen): There is a possible race condition that can
-                    # occur here if two api calls occur concurrently: one that
-                    # lists the security groups and another one that deletes a
-                    # security group rule that has a group_id before the
-                    # group_id is fetched. To handle this if
-                    # SecurityGroupNotFound is raised we return None instead
-                    # of the rule and the caller should ignore the rule.
-                    LOG.debug("Security Group ID %s does not exist",
-                              rule['group_id'])
-                    return
+            try:
+                source_group = self.security_group_api.get(
+                    context, id=rule['group_id'])
+            except exception.SecurityGroupNotFound:
+                # NOTE(arosen): There is a possible race condition that can
+                # occur here if two api calls occur concurrently: one that
+                # lists the security groups and another one that deletes a
+                # security group rule that has a group_id before the
+                # group_id is fetched. To handle this if
+                # SecurityGroupNotFound is raised we return None instead
+                # of the rule and the caller should ignore the rule.
+                LOG.debug("Security Group ID %s does not exist",
+                          rule['group_id'])
+                return
             sg_rule['group'] = {'name': source_group.get('name'),
                                 'tenant_id': source_group.get('project_id')}
         elif group_rule_data:
@@ -143,29 +117,40 @@ class SecurityGroupControllerBase(wsgi.Controller):
 class SecurityGroupController(SecurityGroupControllerBase):
     """The Security group API controller for the OpenStack API."""
 
+    @extensions.expected_errors((400, 404))
     def show(self, req, id):
         """Return data about the given security group."""
         context = _authorize_context(req)
 
-        with translate_exceptions():
+        try:
             id = self.security_group_api.validate_id(id)
             security_group = self.security_group_api.get(context, None, id,
                                                          map_exception=True)
+        except exception.SecurityGroupNotFound as exp:
+            raise exc.HTTPNotFound(explanation=exp.format_message())
+        except exception.Invalid as exp:
+            raise exc.HTTPBadRequest(explanation=exp.format_message())
 
         return {'security_group': self._format_security_group(context,
                                                               security_group)}
 
+    @extensions.expected_errors((400, 404))
     @wsgi.response(202)
     def delete(self, req, id):
         """Delete a security group."""
         context = _authorize_context(req)
 
-        with translate_exceptions():
+        try:
             id = self.security_group_api.validate_id(id)
             security_group = self.security_group_api.get(context, None, id,
                                                          map_exception=True)
             self.security_group_api.destroy(context, security_group)
+        except exception.SecurityGroupNotFound as exp:
+            raise exc.HTTPNotFound(explanation=exp.format_message())
+        except exception.Invalid as exp:
+            raise exc.HTTPBadRequest(explanation=exp.format_message())
 
+    @extensions.expected_errors(404)
     def index(self, req):
         """Returns a list of security groups."""
         context = _authorize_context(req)
@@ -173,11 +158,10 @@ class SecurityGroupController(SecurityGroupControllerBase):
         search_opts = {}
         search_opts.update(req.GET)
 
-        with translate_exceptions():
-            project_id = context.project_id
-            raw_groups = self.security_group_api.list(context,
-                                                      project=project_id,
-                                                      search_opts=search_opts)
+        project_id = context.project_id
+        raw_groups = self.security_group_api.list(context,
+                                                  project=project_id,
+                                                  search_opts=search_opts)
 
         limited_list = common.limited(raw_groups, req)
         result = [self._format_security_group(context, group)
@@ -187,6 +171,7 @@ class SecurityGroupController(SecurityGroupControllerBase):
                 list(sorted(result,
                             key=lambda k: (k['tenant_id'], k['name'])))}
 
+    @extensions.expected_errors((400, 403))
     def create(self, req, body):
         """Creates a new security group."""
         context = _authorize_context(req)
@@ -196,35 +181,48 @@ class SecurityGroupController(SecurityGroupControllerBase):
         group_name = security_group.get('name', None)
         group_description = security_group.get('description', None)
 
-        with translate_exceptions():
+        try:
             self.security_group_api.validate_property(group_name, 'name', None)
             self.security_group_api.validate_property(group_description,
                                                       'description', None)
             group_ref = self.security_group_api.create_security_group(
                 context, group_name, group_description)
+        except exception.Invalid as exp:
+            raise exc.HTTPBadRequest(explanation=exp.format_message())
+        except exception.SecurityGroupLimitExceeded as exp:
+            raise exc.HTTPForbidden(explanation=exp.format_message())
 
         return {'security_group': self._format_security_group(context,
                                                               group_ref)}
 
+    @extensions.expected_errors((400, 404))
     def update(self, req, id, body):
         """Update a security group."""
         context = _authorize_context(req)
 
-        with translate_exceptions():
+        try:
             id = self.security_group_api.validate_id(id)
             security_group = self.security_group_api.get(context, None, id,
                                                          map_exception=True)
+        except exception.SecurityGroupNotFound as exp:
+            raise exc.HTTPNotFound(explanation=exp.format_message())
+        except exception.Invalid as exp:
+            raise exc.HTTPBadRequest(explanation=exp.format_message())
 
         security_group_data = self._from_body(body, 'security_group')
         group_name = security_group_data.get('name', None)
         group_description = security_group_data.get('description', None)
 
-        with translate_exceptions():
+        try:
             self.security_group_api.validate_property(group_name, 'name', None)
             self.security_group_api.validate_property(group_description,
                                                       'description', None)
             group_ref = self.security_group_api.update_security_group(
                 context, security_group, group_name, group_description)
+        except exception.SecurityGroupNotFound as exp:
+            raise exc.HTTPNotFound(explanation=exp.format_message())
+        except exception.Invalid as exp:
+            raise exc.HTTPBadRequest(explanation=exp.format_message())
 
         return {'security_group': self._format_security_group(context,
                                                               group_ref)}
@@ -232,28 +230,28 @@ class SecurityGroupController(SecurityGroupControllerBase):
 
 class SecurityGroupRulesController(SecurityGroupControllerBase):
 
+    @extensions.expected_errors((400, 403, 404))
     def create(self, req, body):
         context = _authorize_context(req)
 
         sg_rule = self._from_body(body, 'security_group_rule')
 
-        with translate_exceptions():
+        try:
             parent_group_id = self.security_group_api.validate_id(
                 sg_rule.get('parent_group_id'))
             security_group = self.security_group_api.get(context, None,
                                                          parent_group_id,
                                                          map_exception=True)
-        try:
             new_rule = self._rule_args_to_dict(context,
                               to_port=sg_rule.get('to_port'),
                               from_port=sg_rule.get('from_port'),
                               ip_protocol=sg_rule.get('ip_protocol'),
                               cidr=sg_rule.get('cidr'),
                               group_id=sg_rule.get('group_id'))
-        except exception.SecurityGroupNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
-        except Exception as exp:
-            raise exc.HTTPBadRequest(explanation=six.text_type(exp))
+        except (exception.Invalid, exception.InvalidCidr) as exp:
+            raise exc.HTTPBadRequest(explanation=exp.format_message())
+        except exception.SecurityGroupNotFound as exp:
+            raise exc.HTTPNotFound(explanation=exp.format_message())
 
         if new_rule is None:
             msg = _("Not enough parameters to build a valid rule.")
@@ -268,7 +266,7 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
                 raise exc.HTTPBadRequest(explanation=msg)
 
         group_rule_data = None
-        with translate_exceptions():
+        try:
             if sg_rule.get('group_id'):
                 source_group = self.security_group_api.get(
                             context, id=sg_rule['group_id'])
@@ -278,6 +276,12 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
             security_group_rule = (
                 self.security_group_api.create_security_group_rule(
                     context, security_group, new_rule))
+        except exception.Invalid as exp:
+            raise exc.HTTPBadRequest(explanation=exp.format_message())
+        except exception.SecurityGroupNotFound as exp:
+            raise exc.HTTPNotFound(explanation=exp.format_message())
+        except exception.SecurityGroupLimitExceeded as exp:
+            raise exc.HTTPForbidden(explanation=exp.format_message())
 
         formatted_rule = self._format_security_group_rule(context,
                                                           security_group_rule,
@@ -299,11 +303,12 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
             return self.security_group_api.new_cidr_ingress_rule(
                                         cidr, ip_protocol, from_port, to_port)
 
+    @extensions.expected_errors((400, 404, 409))
     @wsgi.response(202)
     def delete(self, req, id):
         context = _authorize_context(req)
 
-        with translate_exceptions():
+        try:
             id = self.security_group_api.validate_id(id)
             rule = self.security_group_api.get_rule(context, id)
             group_id = rule['parent_group_id']
@@ -312,20 +317,31 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
                                                          map_exception=True)
             self.security_group_api.remove_rules(context, security_group,
                                                  [rule['id']])
+        except exception.SecurityGroupNotFound as exp:
+            raise exc.HTTPNotFound(explanation=exp.format_message())
+        except exception.NoUniqueMatch as exp:
+            raise exc.HTTPConflict(explanation=exp.format_message())
+        except exception.Invalid as exp:
+            raise exc.HTTPBadRequest(explanation=exp.format_message())
 
 
 class ServerSecurityGroupController(SecurityGroupControllerBase):
 
+    @extensions.expected_errors(404)
     def index(self, req, server_id):
         """Returns a list of security groups for the given instance."""
         context = _authorize_context(req)
 
         self.security_group_api.ensure_default(context)
 
-        with translate_exceptions():
+        try:
             instance = self.compute_api.get(context, server_id)
             groups = self.security_group_api.get_instance_security_groups(
                 context, instance['uuid'], True)
+        except (exception.SecurityGroupNotFound,
+                exception.InstanceNotFound) as exp:
+            msg = exp.format_message()
+            raise exc.HTTPNotFound(explanation=msg)
 
         result = [self._format_security_group(context, group)
                     for group in groups]
@@ -361,10 +377,10 @@ class SecurityGroupActionController(wsgi.Controller):
         return group_name
 
     def _invoke(self, method, context, id, group_name):
-        with translate_exceptions():
-            instance = self.compute_api.get(context, id)
-            method(context, instance, group_name)
+        instance = self.compute_api.get(context, id)
+        method(context, instance, group_name)
 
+    @extensions.expected_errors((400, 404, 409))
     @wsgi.response(202)
     @wsgi.action('addSecurityGroup')
     def _addSecurityGroup(self, req, id, body):
@@ -372,10 +388,19 @@ class SecurityGroupActionController(wsgi.Controller):
         authorize(context)
 
         group_name = self._parse(body, 'addSecurityGroup')
+        try:
+            return self._invoke(self.security_group_api.add_to_instance,
+                                context, id, group_name)
+        except (exception.SecurityGroupNotFound,
+                exception.InstanceNotFound) as exp:
+            raise exc.HTTPNotFound(explanation=exp.format_message())
+        except exception.NoUniqueMatch as exp:
+            raise exc.HTTPConflict(explanation=exp.format_message())
+        except (exception.SecurityGroupCannotBeApplied,
+                exception.SecurityGroupExistsForInstance) as exp:
+            raise exc.HTTPBadRequest(explanation=exp.format_message())
 
-        return self._invoke(self.security_group_api.add_to_instance,
-                            context, id, group_name)
-
+    @extensions.expected_errors((400, 404, 409))
     @wsgi.response(202)
     @wsgi.action('removeSecurityGroup')
     def _removeSecurityGroup(self, req, id, body):
@@ -384,8 +409,16 @@ class SecurityGroupActionController(wsgi.Controller):
 
         group_name = self._parse(body, 'removeSecurityGroup')
 
-        return self._invoke(self.security_group_api.remove_from_instance,
-                            context, id, group_name)
+        try:
+            return self._invoke(self.security_group_api.remove_from_instance,
+                                context, id, group_name)
+        except (exception.SecurityGroupNotFound,
+                exception.InstanceNotFound) as exp:
+            raise exc.HTTPNotFound(explanation=exp.format_message())
+        except exception.NoUniqueMatch as exp:
+            raise exc.HTTPConflict(explanation=exp.format_message())
+        except exception.SecurityGroupNotExistsForInstance as exp:
+            raise exc.HTTPBadRequest(explanation=exp.format_message())
 
 
 class SecurityGroupsOutputController(wsgi.Controller):
