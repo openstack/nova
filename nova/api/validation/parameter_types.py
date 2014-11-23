@@ -79,6 +79,7 @@ name = {
 tcp_udp_port = {
     'type': ['integer', 'string'], 'pattern': '^[0-9]*$',
     'minimum': 0, 'maximum': 65535,
+    'minLength': 1
 }
 
 
