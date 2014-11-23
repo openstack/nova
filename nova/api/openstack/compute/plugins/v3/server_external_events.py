@@ -44,7 +44,8 @@ class ServerExternalEventsController(wsgi.Controller):
         authorize(context, action='create')
 
         response_events = []
-        accepted = []
+        accepted_events = []
+        accepted_instances = set()
         instances = {}
         result = 200
 
@@ -93,7 +94,8 @@ class ServerExternalEventsController(wsgi.Controller):
             # it will not be possible to dispatch the event
             if instance:
                 if instance.host:
-                    accepted.append(event)
+                    accepted_events.append(event)
+                    accepted_instances.add(instance)
                     LOG.audit(_('Creating event %(name)s:%(tag)s for instance '
                                 '%(instance_uuid)s'),
                               dict(event.iteritems()))
@@ -112,9 +114,9 @@ class ServerExternalEventsController(wsgi.Controller):
 
             response_events.append(_event)
 
-        if accepted:
+        if accepted_events:
             self.compute_api.external_instance_event(
-                context, instances.values(), accepted)
+                context, accepted_instances, accepted_events)
         else:
             msg = _('No instances found for any event')
             raise webob.exc.HTTPNotFound(explanation=msg)
