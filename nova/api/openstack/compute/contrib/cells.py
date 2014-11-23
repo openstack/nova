@@ -323,7 +323,12 @@ class Controller(object):
         if not transport_url.hosts:
             transport_url.hosts.append(messaging.TransportHost())
         transport_host = transport_url.hosts[0]
-
+        if cell.get('rpc_port') is not None:
+            try:
+                cell['rpc_port'] = int(cell['rpc_port'])
+            except ValueError:
+                raise exc.HTTPBadRequest(
+                    explanation=_('rpc_port must be integer'))
         # Copy over the input fields
         transport_field_map = {
             'username': 'username',

@@ -216,7 +216,8 @@ class CellsController(object):
         if not transport_url.hosts:
             transport_url.hosts.append(messaging.TransportHost())
         transport_host = transport_url.hosts[0]
-
+        if 'rpc_port' in cell:
+            cell['rpc_port'] = int(cell['rpc_port'])
         # Copy over the input fields
         transport_field_map = {
             'username': 'username',
