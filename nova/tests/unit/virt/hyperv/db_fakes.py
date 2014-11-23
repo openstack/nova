@@ -61,27 +61,23 @@ def get_fake_volume_info_data(target_portal, volume_id):
     return {
         'driver_volume_type': 'iscsi',
         'data': {
-            'volume_id': 1,
+            'volume_id': volume_id,
             'target_iqn': 'iqn.2010-10.org.openstack:volume-' + volume_id,
             'target_portal': target_portal,
             'target_lun': 1,
             'auth_method': 'CHAP',
-        }
+            'auth_username': 'fake_username',
+            'auth_password': 'fake_password',
+            'target_discovered': False,
+        },
+        'mount_device': 'vda',
+        'delete_on_termination': False
     }
 
 
 def get_fake_block_device_info(target_portal, volume_id):
-    return {'block_device_mapping': [{'connection_info': {
-                                      'driver_volume_type': 'iscsi',
-                                      'data': {'target_lun': 1,
-                                      'volume_id': volume_id,
-                                      'target_iqn':
-                                      'iqn.2010-10.org.openstack:volume-' +
-                                      volume_id,
-                                      'target_portal': target_portal,
-                                      'target_discovered': False}},
-                                     'mount_device': 'vda',
-                                     'delete_on_termination': False}],
+    connection_info = get_fake_volume_info_data(target_portal, volume_id)
+    return {'block_device_mapping': [{'connection_info': connection_info}],
             'root_device_name': 'fake_root_device_name',
             'ephemerals': [],
             'swap': None
