@@ -9102,6 +9102,17 @@ class LibvirtDriverTestCase(test.TestCase):
             'detach_interface', power_state.SHUTDOWN,
             expected_flags=(libvirt.VIR_DOMAIN_AFFECT_CONFIG))
 
+    def test_instance_on_disk(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = self._create_instance()
+        self.assertFalse(conn.instance_on_disk(instance))
+
+    def test_instance_on_disk_rbd(self):
+        self.flags(images_type='rbd', group='libvirt')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = self._create_instance()
+        self.assertTrue(conn.instance_on_disk(instance))
+
 
 class LibvirtVolumeUsageTestCase(test.TestCase):
     """Test for LibvirtDriver.get_all_volume_usage."""

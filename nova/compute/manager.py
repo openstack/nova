@@ -2556,7 +2556,8 @@ class ComputeManager(manager.Manager):
                 attach_block_devices=self._prep_block_device,
                 block_device_info=block_device_info,
                 network_info=network_info,
-                preserve_ephemeral=preserve_ephemeral)
+                preserve_ephemeral=preserve_ephemeral,
+                recreate=recreate)
             try:
                 self.driver.rebuild(**kwargs)
             except NotImplementedError:
