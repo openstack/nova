@@ -18,6 +18,7 @@
 import webob.exc
 
 from nova.api.openstack import extensions
+from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
 from nova.i18n import _
@@ -28,7 +29,7 @@ ALIAS = "os-hypervisors"
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
-class HypervisorsController(object):
+class HypervisorsController(wsgi.Controller):
     """The Hypervisors API controller for the OpenStack API."""
 
     def __init__(self):

@@ -13,6 +13,7 @@
 #    under the License.
 
 from nova.api.openstack import extensions
+from nova.api.openstack import wsgi
 from nova import network
 
 
@@ -33,7 +34,7 @@ def _translate_floating_ip_pools_view(pools):
     }
 
 
-class FloatingIPPoolsController(object):
+class FloatingIPPoolsController(wsgi.Controller):
     """The Floating IP Pool API controller for the OpenStack API."""
 
     def __init__(self):

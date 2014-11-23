@@ -19,6 +19,7 @@ import webob.exc
 
 from nova.api.openstack.compute.schemas.v3 import floating_ips_bulk
 from nova.api.openstack import extensions
+from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import exception
 from nova.i18n import _
@@ -33,7 +34,7 @@ ALIAS = 'os-floating-ips-bulk'
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
-class FloatingIPBulkController(object):
+class FloatingIPBulkController(wsgi.Controller):
 
     @extensions.expected_errors(404)
     def index(self, req):

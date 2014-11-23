@@ -11,6 +11,7 @@
 #    under the License.
 
 from nova.api.openstack import extensions
+from nova.api.openstack import wsgi
 from nova import compute
 from nova.objects import base as obj_base
 
@@ -36,7 +37,7 @@ def output(migrations_obj):
     return objects
 
 
-class MigrationsController(object):
+class MigrationsController(wsgi.Controller):
     """Controller for accessing migrations in OpenStack API."""
     def __init__(self):
         self.compute_api = compute.API()

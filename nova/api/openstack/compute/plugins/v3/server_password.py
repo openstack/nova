@@ -26,7 +26,7 @@ ALIAS = 'os-server-password'
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
-class ServerPasswordController(object):
+class ServerPasswordController(wsgi.Controller):
     """The Server Password API controller for the OpenStack API."""
     def __init__(self):
         self.compute_api = compute.API()

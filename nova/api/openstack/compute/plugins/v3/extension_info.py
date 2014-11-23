@@ -15,13 +15,14 @@
 import webob.exc
 
 from nova.api.openstack import extensions
+from nova.api.openstack import wsgi
 from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)
 
 
-class ExtensionInfoController(object):
+class ExtensionInfoController(wsgi.Controller):
 
     def __init__(self, extension_info):
         self.extension_info = extension_info

@@ -41,7 +41,7 @@ def _translate_detail_keys(cons):
     return dict(console=info)
 
 
-class ConsolesController(object):
+class ConsolesController(wsgi.Controller):
     """The Consoles controller for the OpenStack API."""
 
     def __init__(self):
