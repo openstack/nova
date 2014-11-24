@@ -2564,13 +2564,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         cfg = drvr._get_guest_config(instance_ref, [], {}, disk_info)
 
         self.assertEqual(cfg.os_type, vm_mode.XEN)
-        self.assertEqual(3, len(cfg.features))
+        self.assertEqual(1, len(cfg.features))
         self.assertIsInstance(cfg.features[0],
                               vconfig.LibvirtConfigGuestFeaturePAE)
-        self.assertIsInstance(cfg.features[1],
-                              vconfig.LibvirtConfigGuestFeatureACPI)
-        self.assertIsInstance(cfg.features[2],
-                              vconfig.LibvirtConfigGuestFeatureAPIC)
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
     def test_get_guest_config_with_vnc_and_spice(self, mock_flavor):

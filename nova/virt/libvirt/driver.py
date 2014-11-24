@@ -3627,7 +3627,8 @@ class LibvirtDriver(driver.ComputeDriver):
             if caps.host.cpu.arch in (arch.I686, arch.X86_64):
                 guest.features.append(vconfig.LibvirtConfigGuestFeaturePAE())
 
-        if virt_type not in ("lxc", "uml", "parallels"):
+        if (virt_type not in ("lxc", "uml", "parallels", "xen") or
+                (virt_type == "xen" and guest.os_type == vm_mode.HVM)):
             guest.features.append(vconfig.LibvirtConfigGuestFeatureACPI())
             guest.features.append(vconfig.LibvirtConfigGuestFeatureAPIC())
 
