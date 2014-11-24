@@ -184,11 +184,11 @@ def get_next_device_name(instance, device_name_list,
     # NOTE(vish): remove this when xenapi is properly setting
     #             default_ephemeral_device and default_swap_device
     if is_xen:
-        flavor = flavors.extract_flavor(instance)
-        if flavor['ephemeral_gb']:
+        flavor = instance.get_flavor()
+        if flavor.ephemeral_gb:
             used_letters.add('b')
 
-        if flavor['swap']:
+        if flavor.swap:
             used_letters.add('c')
 
     if not req_letter:

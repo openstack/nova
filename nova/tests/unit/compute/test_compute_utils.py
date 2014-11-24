@@ -18,6 +18,7 @@
 
 import copy
 import string
+import uuid
 
 import mock
 from oslo.config import cfg
@@ -48,6 +49,7 @@ from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_server_actions
 import nova.tests.unit.image.fake
 from nova.tests.unit import matchers
+from nova.tests.unit.objects import test_flavor
 from nova import utils
 from nova.virt import driver
 
@@ -63,18 +65,20 @@ class ComputeValidateDeviceTestCase(test.NoDBTestCase):
         # check if test name includes "xen"
         if 'xen' in self.id():
             self.flags(compute_driver='xenapi.XenAPIDriver')
-            self.instance = {
-                    'uuid': 'fake',
-                    'root_device_name': None,
-                    'instance_type_id': 'fake',
-            }
+            self.instance = objects.Instance(uuid=uuid.uuid4().hex,
+                root_device_name=None,
+                default_ephemeral_device=None)
         else:
-            self.instance = {
-                    'uuid': 'fake',
-                    'root_device_name': '/dev/vda',
-                    'default_ephemeral_device': '/dev/vdb',
-                    'instance_type_id': 'fake',
-            }
+            self.instance = objects.Instance(uuid=uuid.uuid4().hex,
+                root_device_name='/dev/vda',
+                default_ephemeral_device='/dev/vdb')
+
+        flavor = objects.Flavor(**test_flavor.fake_flavor)
+        self.instance.system_metadata = {}
+        with mock.patch.object(self.instance, 'save'):
+            self.instance.set_flavor(flavor)
+        self.instance.default_swap_device = None
+
         self.data = []
 
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
@@ -94,10 +98,8 @@ class ComputeValidateDeviceTestCase(test.NoDBTestCase):
             'vcpu_weight': 1,
             }
         self.flavor.update(flavor_info)
-        self.instance['system_metadata'] = [{'key': 'instance_type_%s' % key,
-                                             'value': value}
-                                            for key, value in
-                                            self.flavor.items()]
+        with mock.patch.object(self.instance, 'save'):
+            self.instance.set_flavor(self.flavor)
 
     def _validate_device(self, device=None):
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -185,8 +187,8 @@ class ComputeValidateDeviceTestCase(test.NoDBTestCase):
         self.assertEqual(device, '/dev/vdd')
 
     def test_swap_no_ephemeral(self):
-        del self.instance['default_ephemeral_device']
-        self.instance['default_swap_device'] = "/dev/vdb"
+        self.instance.default_ephemeral_device = None
+        self.instance.default_swap_device = "/dev/vdb"
         device = self._validate_device()
         self.assertEqual(device, '/dev/vdc')
 
