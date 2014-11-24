@@ -3318,6 +3318,18 @@ def _raise_overquota_exception(project_quotas, user_quotas, deltas, overs,
                            user.
     :raises:               nova.exception.OverQuota
     """
+
+    LOG.debug('Raise OverQuota exception because: '
+              'project_quotas: %(project_quotas)s, '
+              'user_quotas: %(user_quotas)s, deltas: %(deltas)s, '
+              'overs: %(overs)s, project_usages: %(project_usages)s, '
+              'user_usages: %(user_usages)s',
+              {'project_quotas': project_quotas,
+               'user_quotas': user_quotas,
+               'overs': overs, 'deltas': deltas,
+               'project_usages': project_usages,
+               'user_usages': user_usages})
+
     if project_quotas == user_quotas:
         usages = project_usages
     else:
