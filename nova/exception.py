@@ -326,6 +326,10 @@ class InvalidAPIVersionString(Invalid):
                 "be of format MajorNum.MinorNum.")
 
 
+class VersionNotFoundForAPIMethod(Invalid):
+    msg_fmt = _("API version %(version)s is not supported on this method.")
+
+
 # Cannot be templated as the error syntax varies.
 # msg needs to be constructed when raised.
 class InvalidParameterValue(Invalid):

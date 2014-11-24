@@ -26,6 +26,7 @@ import webob.request
 
 from nova.api import auth as api_auth
 from nova.api import openstack as openstack_api
+from nova.api.openstack import api_version_request as api_version
 from nova.api.openstack import auth
 from nova.api.openstack import compute
 from nova.api.openstack.compute import limits
@@ -265,6 +266,7 @@ class HTTPRequest(os_wsgi.Request):
         out = os_wsgi.Request.blank(*args, **kwargs)
         out.environ['nova.context'] = FakeRequestContext('fake_user', 'fake',
                 is_admin=use_admin_context)
+        out.api_version_request = api_version.APIVersionRequest("2.1")
         return out
 
 
