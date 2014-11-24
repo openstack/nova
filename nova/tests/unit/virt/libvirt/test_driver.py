@@ -10594,11 +10594,13 @@ class HostStateTestCase(test.NoDBTestCase):
         "vendor_id": '8086',
         "dev_type": 'type-PF',
         "phys_function": None}]
-    numa_topology = hardware.VirtNUMAHostTopology(
-                        cells=[hardware.VirtNUMATopologyCellUsage(
-                                1, set([1, 2]), 1024),
-                           hardware.VirtNUMATopologyCellUsage(
-                                2, set([3, 4]), 1024)])
+    numa_topology = objects.NUMATopology(
+                        cells=[objects.NUMACell(
+                            id=1, cpuset=set([1, 2]), memory=1024,
+                            cpu_usage=0, memory_usage=0),
+                               objects.NUMACell(
+                            id=2, cpuset=set([3, 4]), memory=1024,
+                            cpu_usage=0, memory_usage=0)])
 
     class FakeConnection(libvirt_driver.LibvirtDriver):
         """Fake connection object."""
@@ -10676,7 +10678,7 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertEqual(stats["disk_available_least"], 80)
         self.assertEqual(jsonutils.loads(stats["pci_passthrough_devices"]),
                          HostStateTestCase.pci_devices)
-        self.assertThat(hardware.VirtNUMAHostTopology.from_json(
+        self.assertThat(objects.NUMATopology.obj_from_db_obj(
                             stats['numa_topology'])._to_dict(),
                         matchers.DictMatches(
                                 HostStateTestCase.numa_topology._to_dict()))

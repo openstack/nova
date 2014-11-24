@@ -21,15 +21,17 @@ from oslo.serialization import jsonutils
 
 from nova.compute import vm_states
 from nova import db
+from nova import objects
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
-from nova.virt import hardware
 
-NUMA_TOPOLOGY = hardware.VirtNUMAHostTopology(
-                           cells=[hardware.VirtNUMATopologyCellUsage(
-                                      0, set([1, 2]), 512),
-                                  hardware.VirtNUMATopologyCellUsage(
-                                      1, set([3, 4]), 512)])
+NUMA_TOPOLOGY = objects.NUMATopology(
+                           cells=[objects.NUMACell(
+                                      id=0, cpuset=set([1, 2]), memory=512,
+                               cpu_usage=0, memory_usage=0),
+                                  objects.NUMACell(
+                                      id=1, cpuset=set([3, 4]), memory=512,
+                                cpu_usage=0, memory_usage=0)])
 
 COMPUTE_NODES = [
         dict(id=1, local_gb=1024, memory_mb=1024, vcpus=1,
@@ -49,7 +51,7 @@ COMPUTE_NODES = [
              free_disk_gb=3072, local_gb_used=0, updated_at=None,
              service=dict(host='host3', disabled=False),
              hypervisor_hostname='node3', host_ip='127.0.0.1',
-             hypervisor_version=0, numa_topology=NUMA_TOPOLOGY.to_json()),
+             hypervisor_version=0, numa_topology=NUMA_TOPOLOGY._to_json()),
         dict(id=4, local_gb=8192, memory_mb=8192, vcpus=8,
              disk_available_least=8192, free_ram_mb=8192, vcpus_used=0,
              free_disk_gb=8888, local_gb_used=0, updated_at=None,

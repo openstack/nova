@@ -18,11 +18,11 @@ from oslo.utils import timeutils
 
 from nova import db
 from nova import exception
+from nova import objects
 from nova.objects import compute_node
 from nova.objects import hv_spec
 from nova.objects import service
 from nova.tests.unit.objects import test_objects
-from nova.virt import hardware
 
 NOW = timeutils.utcnow().replace(microsecond=0)
 fake_stats = {'num_foo': '10'}
@@ -30,10 +30,12 @@ fake_stats_db_format = jsonutils.dumps(fake_stats)
 # host_ip is coerced from a string to an IPAddress
 # but needs to be converted to a string for the database format
 fake_host_ip = '127.0.0.1'
-fake_numa_topology = hardware.VirtNUMAHostTopology(
-        cells=[hardware.VirtNUMATopologyCellUsage(0, set([1, 2]), 512),
-               hardware.VirtNUMATopologyCellUsage(1, set([3, 4]), 512)])
-fake_numa_topology_db_format = fake_numa_topology.to_json()
+fake_numa_topology = objects.NUMATopology(
+        cells=[objects.NUMACell(id=0, cpuset=set([1, 2]), memory=512,
+                                cpu_usage=0, memory_usage=0),
+               objects.NUMACell(id=1, cpuset=set([3, 4]), memory=512,
+                                cpu_usage=0, memory_usage=0)])
+fake_numa_topology_db_format = fake_numa_topology._to_json()
 fake_hv_spec = hv_spec.HVSpec(arch='foo', hv_type='bar', vm_mode='foobar')
 fake_supported_hv_specs = [fake_hv_spec]
 # for backward compatibility, each supported instance object

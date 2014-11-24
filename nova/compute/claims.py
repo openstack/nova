@@ -204,10 +204,10 @@ class Claim(NopClaim):
         host_topology = resources.get('numa_topology')
         requested_topology = self.numa_topology
         if host_topology:
-            host_topology = hardware.VirtNUMAHostTopology.from_json(
+            host_topology = objects.NUMATopology.obj_from_db_obj(
                     host_topology)
             instance_topology = (
-                    hardware.VirtNUMAHostTopology.fit_instance_to_host(
+                    hardware.numa_fit_instance_to_host(
                         host_topology, requested_topology,
                         limits_topology=limit))
             if requested_topology and not instance_topology:

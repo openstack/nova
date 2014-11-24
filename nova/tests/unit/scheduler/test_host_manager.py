@@ -26,13 +26,13 @@ from nova.compute import vm_states
 from nova import db
 from nova import exception
 from nova.i18n import _LW
+from nova import objects
 from nova.scheduler import filters
 from nova.scheduler import host_manager
 from nova import test
 from nova.tests.unit import matchers
 from nova.tests.unit.scheduler import fakes
 from nova import utils
-from nova.virt import hardware
 
 
 class FakeFilterClass1(filters.BaseHostFilter):
@@ -319,7 +319,7 @@ class HostManagerTestCase(test.NoDBTestCase):
         self.assertEqual(host_states_map[('host3', 'node3')].free_disk_mb,
                          3145728)
         self.assertThat(
-                hardware.VirtNUMAHostTopology.from_json(
+                objects.NUMATopology.obj_from_db_obj(
                         host_states_map[('host3', 'node3')].numa_topology
                     )._to_dict(),
                 matchers.DictMatches(fakes.NUMA_TOPOLOGY._to_dict()))
@@ -532,7 +532,7 @@ class HostStateTestCase(test.NoDBTestCase):
                        local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
                        updated_at=None, host_ip='127.0.0.1',
                        hypervisor_version=hyper_ver_int,
-                       numa_topology=fakes.NUMA_TOPOLOGY.to_json())
+                       numa_topology=fakes.NUMA_TOPOLOGY._to_json())
         host = host_manager.HostState("fakehost", "fakenode")
         host.update_from_compute_node(compute)
 
