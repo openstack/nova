@@ -114,12 +114,10 @@ class ExtendedAvailabilityZoneTestV21(test.TestCase):
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
-        self.assertAvailabilityZone(self._get_server(res.body), 'fakeaz')
+        self.assertAvailabilityZone(self._get_server(res.body), '')
 
     def test_show_empty_host_az(self):
         self.stubs.Set(compute.api.API, 'get', fake_compute_get_empty)
-        self.stubs.Set(availability_zones, 'get_host_availability_zone',
-                       fake_get_no_host_availability_zone)
 
         url = self.base_url + UUID3
         res = self._make_request(url)
