@@ -20,6 +20,7 @@ import contextlib
 import mock
 from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
+from oslo_vmware.objects import datastore as ds_obj
 from oslo_vmware import pbm
 
 from nova import exception
@@ -29,7 +30,6 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.vmwareapi import fake
 from nova.tests.unit.virt.vmwareapi import stubs
 from nova.virt.vmwareapi import driver
-from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import vm_util
 
 
@@ -1096,7 +1096,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertEqual('vmx-08', result.version)
 
     def test_vm_create_spec_with_profile_spec(self):
-        datastore = ds_util.Datastore('fake-ds-ref', 'fake-ds-name')
+        datastore = ds_obj.Datastore('fake-ds-ref', 'fake-ds-name')
         extra_specs = vm_util.ExtraSpecs()
         create_spec = vm_util.get_vm_create_spec(fake.FakeFactory(),
                                             self._instance,

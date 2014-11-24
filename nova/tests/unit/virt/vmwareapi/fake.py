@@ -26,10 +26,10 @@ from oslo_serialization import jsonutils
 from oslo_utils import units
 from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
+from oslo_vmware.objects import datastore as ds_obj
 
 from nova import exception
 from nova.virt.vmwareapi import constants
-from nova.virt.vmwareapi import ds_util
 
 _CLASSES = ['Datacenter', 'Datastore', 'ResourcePool', 'VirtualMachine',
             'Network', 'HostSystem', 'HostNetworkSystem', 'Task', 'session',
@@ -967,9 +967,9 @@ def create_vm(uuid=None, name=None,
         devices = []
 
     if vmPathName is None:
-        vm_path = ds_util.DatastorePath(_db_content['Datastore'].values()[0])
+        vm_path = ds_obj.DatastorePath(_db_content['Datastore'].values()[0])
     else:
-        vm_path = ds_util.DatastorePath.parse(vmPathName)
+        vm_path = ds_obj.DatastorePath.parse(vmPathName)
 
     if res_pool_ref is None:
         res_pool_ref = _db_content['ResourcePool'].keys()[0]

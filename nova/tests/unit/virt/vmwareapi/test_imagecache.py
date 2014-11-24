@@ -18,6 +18,7 @@ import datetime
 import mock
 from oslo_config import cfg
 from oslo_utils import timeutils
+from oslo_vmware.objects import datastore as ds_obj
 
 from nova import objects
 from nova import test
@@ -67,13 +68,13 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             self.exists = False
             self._imagecache.timestamp_cleanup(
                     'fake-dc-ref', 'fake-ds-browser',
-                    ds_util.DatastorePath('fake-ds', 'fake-path'))
+                    ds_obj.DatastorePath('fake-ds', 'fake-path'))
             self.assertEqual(0, _file_delete.call_count)
             self.exists = True
             self._imagecache.timestamp_cleanup(
                     'fake-dc-ref', 'fake-ds-browser',
-                    ds_util.DatastorePath('fake-ds', 'fake-path'))
-            expected_ds_path = ds_util.DatastorePath(
+                    ds_obj.DatastorePath('fake-ds', 'fake-path'))
+            expected_ds_path = ds_obj.DatastorePath(
                     'fake-ds', 'fake-path', self._file_name)
             _file_delete.assert_called_once_with(self._session,
                     expected_ds_path, 'fake-dc-ref')
@@ -94,12 +95,12 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             self.exists = True
             ts = self._imagecache._get_timestamp(
                     'fake-ds-browser',
-                    ds_util.DatastorePath('fake-ds', 'fake-path'))
+                    ds_obj.DatastorePath('fake-ds', 'fake-path'))
             self.assertEqual(self._file_name, ts)
             self.exists = False
             ts = self._imagecache._get_timestamp(
                     'fake-ds-browser',
-                    ds_util.DatastorePath('fake-ds', 'fake-path'))
+                    ds_obj.DatastorePath('fake-ds', 'fake-path'))
             self.assertIsNone(ts)
 
     def test_get_timestamp_filename(self):
@@ -141,7 +142,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                               fake_get_sub_folders)
         ) as (_get_dynamic, _get_sub_folders):
             fake_ds_ref = fake.ManagedObjectReference('fake-ds-ref')
-            datastore = ds_util.Datastore(name='ds', ref=fake_ds_ref)
+            datastore = ds_obj.Datastore(name='ds', ref=fake_ds_ref)
             ds_path = datastore.build_path('base_folder')
             images = self._imagecache._list_datastore_images(
                     ds_path, datastore)
@@ -161,7 +162,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         image_id = "fake_image_id"
         dc_ref = "fake_dc_ref"
         fake_ds_ref = mock.Mock()
-        ds = ds_util.Datastore(
+        ds = ds_obj.Datastore(
                 ref=fake_ds_ref, name='fake_ds',
                 capacity=1,
                 freespace=1)
@@ -224,7 +225,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         ) as (_get_ds_browser, _get_timestamp, _mkdir, _file_delete,
               _timestamp_cleanup):
             timeutils.set_time_override(override_time=self._time)
-            datastore = ds_util.Datastore(name='ds', ref='fake-ds-ref')
+            datastore = ds_obj.Datastore(name='ds', ref='fake-ds-ref')
             dc_info = vmops.DcInfo(ref='dc_ref', name='name',
                                    vmFolder='vmFolder')
             self._get_timestamp_called = 0
@@ -233,7 +234,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             self._imagecache.used_images = set(['fake-image-4'])
             self._imagecache._age_cached_images(
                     'fake-context', datastore, dc_info,
-                    ds_util.DatastorePath('fake-ds', 'fake-path'))
+                    ds_obj.DatastorePath('fake-ds', 'fake-path'))
             self.assertEqual(3, self._get_timestamp_called)
 
     @mock.patch.object(objects.block_device.BlockDeviceMappingList,
@@ -273,7 +274,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             all_instances = [fake_instance.fake_instance_obj(None, **instance)
                              for instance in instances]
             self.images = set(['1', '2'])
-            datastore = ds_util.Datastore(name='ds', ref='fake-ds-ref')
+            datastore = ds_obj.Datastore(name='ds', ref='fake-ds-ref')
             dc_info = vmops.DcInfo(ref='dc_ref', name='name',
                                    vmFolder='vmFolder')
             datastores_info = [(datastore, dc_info)]
