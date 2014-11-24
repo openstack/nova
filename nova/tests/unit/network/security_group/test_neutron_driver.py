@@ -19,7 +19,7 @@ from neutronclient.v2_0 import client
 
 from nova import context
 from nova import exception
-from nova.network import neutronv2
+from nova.network.neutronv2 import api as neutronapi
 from nova.network.security_group import neutron_driver
 from nova import test
 
@@ -27,9 +27,9 @@ from nova import test
 class TestNeutronDriver(test.NoDBTestCase):
     def setUp(self):
         super(TestNeutronDriver, self).setUp()
-        self.mox.StubOutWithMock(neutronv2, 'get_client')
+        self.mox.StubOutWithMock(neutronapi, 'get_client')
         self.moxed_client = self.mox.CreateMock(client.Client)
-        neutronv2.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
+        neutronapi.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
             self.moxed_client)
         self.context = context.RequestContext('userid', 'my_tenantid')
         setattr(self.context,

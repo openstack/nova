@@ -25,7 +25,7 @@ from webob import exc
 from nova.compute import api as compute_api
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
-from nova.network import neutronv2
+from nova.network.neutronv2 import api as neutronapi
 from nova.network.security_group import security_group_base
 from nova import objects
 from nova.openstack.common import log as logging
@@ -47,7 +47,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
     id_is_uuid = True
 
     def create_security_group(self, context, name, description):
-        neutron = neutronv2.get_client(context)
+        neutron = neutronapi.get_client(context)
         body = self._make_neutron_security_group_dict(name, description)
         try:
             security_group = neutron.create_security_group(
@@ -68,7 +68,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
 
     def update_security_group(self, context, security_group,
                               name, description):
-        neutron = neutronv2.get_client(context)
+        neutron = neutronapi.get_client(context)
         body = self._make_neutron_security_group_dict(name, description)
         try:
             security_group = neutron.update_security_group(
@@ -120,7 +120,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         return nova_rule
 
     def get(self, context, name=None, id=None, map_exception=False):
-        neutron = neutronv2.get_client(context)
+        neutron = neutronapi.get_client(context)
         try:
             if not id and name:
                 # NOTE(flwang): The project id should be honoured so as to get
@@ -146,7 +146,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
     def list(self, context, names=None, ids=None, project=None,
              search_opts=None):
         """Returns list of security group rules owned by tenant."""
-        neutron = neutronv2.get_client(context)
+        neutron = neutronapi.get_client(context)
         search_opts = {}
         if names:
             search_opts['name'] = names
@@ -175,7 +175,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
     def destroy(self, context, security_group):
         """This function deletes a security group."""
 
-        neutron = neutronv2.get_client(context)
+        neutron = neutronapi.get_client(context)
         try:
             neutron.delete_security_group(security_group['id'])
         except n_exc.NeutronClientException as e:
@@ -197,7 +197,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         installed to a security group in neutron using bulk support.
         """
 
-        neutron = neutronv2.get_client(context)
+        neutron = neutronapi.get_client(context)
         body = self._make_neutron_security_group_rules_list(vals)
         try:
             rules = neutron.create_security_group_rule(
@@ -256,7 +256,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         return {'security_group_rules': new_rules}
 
     def remove_rules(self, context, security_group, rule_ids):
-        neutron = neutronv2.get_client(context)
+        neutron = neutronapi.get_client(context)
         rule_ids = set(rule_ids)
         try:
             # The ec2 api allows one to delete multiple security group rules
@@ -271,7 +271,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                               rule_ids)
 
     def get_rule(self, context, id):
-        neutron = neutronv2.get_client(context)
+        neutron = neutronapi.get_client(context)
         try:
             rule = neutron.show_security_group_rule(
                 id).get('security_group_rule')
@@ -342,7 +342,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         all of the instances and their security groups in one shot.
         """
 
-        neutron = neutronv2.get_client(context)
+        neutron = neutronapi.get_client(context)
 
         ports = self._get_ports_from_server_list(servers, neutron)
 
@@ -395,7 +395,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
     def add_to_instance(self, context, instance, security_group_name):
         """Add security group to the instance."""
 
-        neutron = neutronv2.get_client(context)
+        neutron = neutronapi.get_client(context)
         try:
             security_group_id = neutronv20.find_resourceid_by_name_or_id(
                 neutron, 'security_group',
@@ -452,7 +452,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
     @compute_api.wrap_check_security_groups_policy
     def remove_from_instance(self, context, instance, security_group_name):
         """Remove the security group associated with the instance."""
-        neutron = neutronv2.get_client(context)
+        neutron = neutronapi.get_client(context)
         try:
             security_group_id = neutronv20.find_resourceid_by_name_or_id(
                 neutron, 'security_group',

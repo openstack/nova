@@ -29,7 +29,6 @@ from nova import context
 import nova.db
 from nova import exception
 from nova.network import model
-from nova.network import neutronv2
 from nova.network.neutronv2 import api as neutron_api
 from nova.network.security_group import neutron_driver
 from nova.objects import instance as instance_obj
@@ -42,11 +41,11 @@ class TestNeutronSecurityGroupsTestCase(test.TestCase):
     def setUp(self):
         super(TestNeutronSecurityGroupsTestCase, self).setUp()
         cfg.CONF.set_override('security_group_api', 'neutron')
-        self.original_client = neutronv2.get_client
-        neutronv2.get_client = get_client
+        self.original_client = neutron_api.get_client
+        neutron_api.get_client = get_client
 
     def tearDown(self):
-        neutronv2.get_client = self.original_client
+        neutron_api.get_client = self.original_client
         get_client()._reset()
         super(TestNeutronSecurityGroupsTestCase, self).tearDown()
 
@@ -421,7 +420,7 @@ class TestNeutronSecurityGroupRulesTestCase(TestNeutronSecurityGroupsTestCase):
         neutron._fake_security_groups[id2] = sg_template2
 
     def tearDown(self):
-        neutronv2.get_client = self.original_client
+        neutron_api.get_client = self.original_client
         get_client()._reset()
         super(TestNeutronSecurityGroupsTestCase, self).tearDown()
 
