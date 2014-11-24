@@ -561,3 +561,25 @@ class NoopFirewallDriver(object):
 
     def instance_filter_exists(self, instance, network_info):
         return True
+
+
+class EbtablesFirewallDriver(FirewallDriver):
+    """Firewall driver which just provides basic filtering."""
+    def __init__(self, virtapi, **kwargs):
+        super(EbtablesFirewallDriver, self).__init__(virtapi)
+        self.basically_filtered = False
+
+    def prepare_instance_filter(self, instance, network_info):
+        pass
+
+    def unfilter_instance(self, instance, network_info):
+        pass
+
+    def apply_instance_filter(self, instance, network_info):
+        pass
+
+    def setup_basic_filtering(self, instance, network_info):
+        pass
+
+    def instance_filter_exists(self, instance, network_info):
+        pass
