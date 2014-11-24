@@ -544,7 +544,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
 
         self._from_db_object(context, self, inst_ref,
                              expected_attrs=expected_attrs)
-        notifications.send_update(context, old_ref, inst_ref)
+        notifications.send_update(context, old_ref, self)
         self.obj_reset_changes()
 
     @base.remotable
@@ -671,8 +671,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         md_was_changed = 'metadata' in self.obj_what_changed()
         del self.metadata[key]
         self._orig_metadata.pop(key, None)
-        instance_dict = base.obj_to_primitive(self)
-        notifications.send_update(context, instance_dict, instance_dict)
+        notifications.send_update(context, self, self)
         if not md_was_changed:
             self.obj_reset_changes(['metadata'])
 

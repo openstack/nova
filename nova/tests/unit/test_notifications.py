@@ -24,9 +24,10 @@ from nova.compute import flavors
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
-from nova import db
 from nova.network import api as network_api
 from nova import notifications
+from nova import objects
+from nova.objects import base as obj_base
 from nova import test
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_notifier
@@ -68,22 +69,23 @@ class NotificationsTestCase(test.TestCase):
     def _wrapped_create(self, params=None):
         instance_type = flavors.get_flavor_by_name('m1.tiny')
         sys_meta = flavors.save_flavor_info({}, instance_type)
-        inst = {}
-        inst['image_ref'] = 1
-        inst['user_id'] = self.user_id
-        inst['project_id'] = self.project_id
-        inst['instance_type_id'] = instance_type['id']
-        inst['root_gb'] = 0
-        inst['ephemeral_gb'] = 0
-        inst['access_ip_v4'] = '1.2.3.4'
-        inst['access_ip_v6'] = 'feed:5eed'
-        inst['display_name'] = 'test_instance'
-        inst['hostname'] = 'test_instance_hostname'
-        inst['node'] = 'test_instance_node'
-        inst['system_metadata'] = sys_meta
+        inst = objects.Instance(image_ref=1,
+                                user_id=self.user_id,
+                                project_id=self.project_id,
+                                instance_type_id=instance_type['id'],
+                                root_gb=0,
+                                ephemeral_gb=0,
+                                access_ip_v4='1.2.3.4',
+                                access_ip_v6='feed::5eed',
+                                display_name='test_instance',
+                                hostname='test_instance_hostname',
+                                node='test_instance_node',
+                                system_metadata=sys_meta)
+        inst._context = self.context
         if params:
             inst.update(params)
-        return db.instance_create(self.context, inst)
+        inst.create()
+        return inst
 
     def test_send_api_fault_disabled(self):
         self.flags(notify_api_faults=False)
@@ -115,12 +117,12 @@ class NotificationsTestCase(test.TestCase):
         self.flags(notify_on_state_change=None)
 
         old = copy.copy(self.instance)
-        self.instance["vm_state"] = vm_states.ACTIVE
+        self.instance.vm_state = vm_states.ACTIVE
 
         old_vm_state = old['vm_state']
-        new_vm_state = self.instance["vm_state"]
+        new_vm_state = self.instance.vm_state
         old_task_state = old['task_state']
-        new_task_state = self.instance["task_state"]
+        new_task_state = self.instance.task_state
 
         notifications.send_update_with_states(self.context, self.instance,
                 old_vm_state, new_vm_state, old_task_state, new_task_state,
@@ -136,12 +138,12 @@ class NotificationsTestCase(test.TestCase):
 
         # we should not get a notification on task stgate chagne now
         old = copy.copy(self.instance)
-        self.instance["task_state"] = task_states.SPAWNING
+        self.instance.task_state = task_states.SPAWNING
 
         old_vm_state = old['vm_state']
-        new_vm_state = self.instance["vm_state"]
+        new_vm_state = self.instance.vm_state
         old_task_state = old['task_state']
-        new_task_state = self.instance["task_state"]
+        new_task_state = self.instance.task_state
 
         notifications.send_update_with_states(self.context, self.instance,
                 old_vm_state, new_vm_state, old_task_state, new_task_state,
@@ -158,10 +160,10 @@ class NotificationsTestCase(test.TestCase):
     def test_send_no_notif(self):
 
         # test notification on send no initial vm state:
-        old_vm_state = self.instance['vm_state']
-        new_vm_state = self.instance['vm_state']
-        old_task_state = self.instance['task_state']
-        new_task_state = self.instance['task_state']
+        old_vm_state = self.instance.vm_state
+        new_vm_state = self.instance.vm_state
+        old_task_state = self.instance.task_state
+        new_task_state = self.instance.task_state
 
         notifications.send_update_with_states(self.context, self.instance,
                 old_vm_state, new_vm_state, old_task_state, new_task_state,
@@ -170,22 +172,21 @@ class NotificationsTestCase(test.TestCase):
         self.assertEqual(0, len(fake_notifier.NOTIFICATIONS))
 
     def test_send_on_vm_change(self):
-
+        old = obj_base.obj_to_primitive(self.instance)
+        old['task_state'] = None
         # pretend we just transitioned to ACTIVE:
-        params = {"vm_state": vm_states.ACTIVE}
-        (old_ref, new_ref) = db.instance_update_and_get_original(self.context,
-                self.instance['uuid'], params)
-        notifications.send_update(self.context, old_ref, new_ref)
+        self.instance.task_state = task_states.SPAWNING
+        notifications.send_update(self.context, old, self.instance)
 
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
 
     def test_send_on_task_change(self):
 
+        old = obj_base.obj_to_primitive(self.instance)
+        old['task_state'] = None
         # pretend we just transitioned to task SPAWNING:
-        params = {"task_state": task_states.SPAWNING}
-        (old_ref, new_ref) = db.instance_update_and_get_original(self.context,
-                self.instance['uuid'], params)
-        notifications.send_update(self.context, old_ref, new_ref)
+        self.instance.task_state = task_states.SPAWNING
+        notifications.send_update(self.context, old, self.instance)
 
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
 
@@ -204,11 +205,11 @@ class NotificationsTestCase(test.TestCase):
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
         notif = fake_notifier.NOTIFICATIONS[0]
         payload = notif.payload
-        access_ip_v4 = self.instance["access_ip_v4"]
-        access_ip_v6 = self.instance["access_ip_v6"]
-        display_name = self.instance["display_name"]
-        hostname = self.instance["hostname"]
-        node = self.instance["node"]
+        access_ip_v4 = str(self.instance.access_ip_v4)
+        access_ip_v6 = str(self.instance.access_ip_v6)
+        display_name = self.instance.display_name
+        hostname = self.instance.hostname
+        node = self.instance.node
 
         self.assertEqual(vm_states.BUILDING, payload["old_state"])
         self.assertEqual(vm_states.ACTIVE, payload["state"])
@@ -229,10 +230,10 @@ class NotificationsTestCase(test.TestCase):
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
         notif = fake_notifier.NOTIFICATIONS[0]
         payload = notif.payload
-        access_ip_v4 = self.instance["access_ip_v4"]
-        access_ip_v6 = self.instance["access_ip_v6"]
-        display_name = self.instance["display_name"]
-        hostname = self.instance["hostname"]
+        access_ip_v4 = str(self.instance.access_ip_v4)
+        access_ip_v6 = str(self.instance.access_ip_v6)
+        display_name = self.instance.display_name
+        hostname = self.instance.hostname
 
         self.assertEqual(vm_states.BUILDING, payload["old_state"])
         self.assertEqual(vm_states.BUILDING, payload["state"])
@@ -290,11 +291,11 @@ class NotificationsTestCase(test.TestCase):
         info = notifications.info_from_instance(self.context, self.instance,
                                                   self.net_info, None)
         self.assertIn("cell_name", info)
-        self.assertIsNone(self.instance['cell_name'])
+        self.assertIsNone(self.instance.cell_name)
         self.assertEqual("", info["cell_name"])
 
     def test_payload_has_cell_name(self):
-        self.instance['cell_name'] = "cell1"
+        self.instance.cell_name = "cell1"
         info = notifications.info_from_instance(self.context, self.instance,
                                                   self.net_info, None)
         self.assertIn("cell_name", info)
@@ -304,11 +305,11 @@ class NotificationsTestCase(test.TestCase):
         info = notifications.info_from_instance(self.context, self.instance,
                                                   self.net_info, None)
         self.assertIn("progress", info)
-        self.assertIsNone(self.instance['progress'])
+        self.assertIsNone(self.instance.progress)
         self.assertEqual("", info["progress"])
 
     def test_payload_has_progress(self):
-        self.instance['progress'] = 50
+        self.instance.progress = 50
         info = notifications.info_from_instance(self.context, self.instance,
                                                   self.net_info, None)
         self.assertIn("progress", info)
@@ -319,8 +320,8 @@ class NotificationsTestCase(test.TestCase):
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
         notif = fake_notifier.NOTIFICATIONS[0]
         payload = notif.payload
-        access_ip_v4 = self.instance["access_ip_v4"]
-        access_ip_v6 = self.instance["access_ip_v6"]
+        access_ip_v4 = str(self.instance.access_ip_v4)
+        access_ip_v6 = str(self.instance.access_ip_v6)
 
         self.assertEqual(payload["access_ip_v4"], access_ip_v4)
         self.assertEqual(payload["access_ip_v6"], access_ip_v6)
@@ -332,8 +333,8 @@ class NotificationsTestCase(test.TestCase):
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
         notif = fake_notifier.NOTIFICATIONS[0]
         payload = notif.payload
-        old_display_name = self.instance["display_name"]
-        new_display_name = new_name_inst["display_name"]
+        old_display_name = self.instance.display_name
+        new_display_name = new_name_inst.display_name
 
         self.assertEqual(payload["old_display_name"], old_display_name)
         self.assertEqual(payload["display_name"], new_display_name)
