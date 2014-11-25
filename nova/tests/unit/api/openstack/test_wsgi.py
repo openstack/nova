@@ -12,6 +12,7 @@
 
 import inspect
 
+import mock
 import webob
 
 from nova.api.openstack import api_version_request as api_version
@@ -196,9 +197,12 @@ class RequestTest(test.NoDBTestCase):
         request = wsgi.Request.blank('/')
         request.set_api_version_request()
         self.assertEqual(api_version.APIVersionRequest(
-            wsgi.DEFAULT_API_VERSION), request.api_version_request)
+            api_version.DEFAULT_API_VERSION), request.api_version_request)
 
-    def test_api_version_request_header(self):
+    @mock.patch("nova.api.openstack.api_version_request.max_api_version")
+    def test_api_version_request_header(self, mock_maxver):
+        mock_maxver.return_value = api_version.APIVersionRequest("2.14")
+
         request = wsgi.Request.blank('/')
         request.headers = {'X-OpenStack-Compute-API-Version': '2.14'}
         request.set_api_version_request()
@@ -381,7 +385,8 @@ class ResourceTest(test.NoDBTestCase):
         class Controller(object):
             def index(self, req):
                 if req.api_version_request != \
-                  api_version.APIVersionRequest(wsgi.DEFAULT_API_VERSION):
+                  api_version.APIVersionRequest(
+                      api_version.DEFAULT_API_VERSION):
                     raise webob.exc.HTTPInternalServerError()
                 return 'success'
 
@@ -391,8 +396,10 @@ class ResourceTest(test.NoDBTestCase):
         self.assertEqual(response.body, 'success')
         self.assertEqual(response.status_int, 200)
 
-    def test_resource_receives_api_version_request(self):
+    @mock.patch("nova.api.openstack.api_version_request.max_api_version")
+    def test_resource_receives_api_version_request(self, mock_maxver):
         version = "2.5"
+        mock_maxver.return_value = api_version.APIVersionRequest(version)
 
         class Controller(object):
             def index(self, req):

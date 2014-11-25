@@ -109,3 +109,11 @@ class APIVersionRequestTests(test.NoDBTestCase):
         self.assertFalse(v2.matches(v3, v1))
 
         self.assertRaises(ValueError, v_null.matches, v1, v3)
+
+    def test_get_string(self):
+        v1_string = "3.23"
+        v1 = api_version_request.APIVersionRequest(v1_string)
+        self.assertEqual(v1_string, v1.get_string())
+
+        self.assertRaises(ValueError,
+                          api_version_request.APIVersionRequest().get_string)

@@ -238,9 +238,20 @@ class Request(webob.Request):
         if 'X-OpenStack-Compute-API-Version' in self.headers:
             self.api_version_request = api_version.APIVersionRequest(
                 self.headers['X-OpenStack-Compute-API-Version'])
+
+            # Check that the version requested is within the global
+            # minimum/maximum of supported API versions
+            if not self.api_version_request.matches(
+                    api_version.min_api_version(),
+                    api_version.max_api_version()):
+                raise exception.InvalidGlobalAPIVersion(
+                    req_ver=self.api_version_request.get_string(),
+                    min_ver=api_version.min_api_version().get_string(),
+                    max_ver=api_version.max_api_version().get_string())
+
         else:
             self.api_version_request = api_version.APIVersionRequest(
-                DEFAULT_API_VERSION)
+                api_version.DEFAULT_API_VERSION)
 
 
 class ActionDispatcher(object):
@@ -918,6 +929,9 @@ class Resource(wsgi.Application):
             request.set_api_version_request()
         except exception.InvalidAPIVersionString as e:
             return Fault(webob.exc.HTTPBadRequest(
+                explanation=e.format_message()))
+        except exception.InvalidGlobalAPIVersion as e:
+            return Fault(webob.exc.HTTPNotAcceptable(
                 explanation=e.format_message()))
 
         # Identify the action, its arguments, and the requested
