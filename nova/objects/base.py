@@ -226,6 +226,12 @@ class NovaObject(object):
     # a client attempts to call an object method, the server checks to see if
     # the version of that object matches (in a compatible way) its object
     # implementation. If so, cool, and if not, fail.
+    #
+    # This version is allowed to have three parts, X.Y.Z, where the .Z element
+    # is reserved for stable branch backports. The .Z is ignored for the
+    # purposes of triggering a backport, which means anything changed under
+    # a .Z must be additive and non-destructive such that a node that knows
+    # about X.Y can consider X.Y.Z equivalent.
     VERSION = '1.0'
 
     # The fields present in this object as key:field pairs. For example:
@@ -707,6 +713,13 @@ class NovaObjectSerializer(messaging.NoOpSerializer):
         try:
             objinst = NovaObject.obj_from_primitive(objprim, context=context)
         except exception.IncompatibleObjectVersion as e:
+            objver = objprim['nova_object.version']
+            if objver.count('.') == 2:
+                # NOTE(danms): For our purposes, the .z part of the version
+                # should be safe to accept without requiring a backport
+                objprim['nova_object.version'] = \
+                    '.'.join(objver.split('.')[:2])
+                return self._process_object(context, objprim)
             objinst = self.conductor.object_backport(context, objprim,
                                                      e.kwargs['supported'])
         return objinst

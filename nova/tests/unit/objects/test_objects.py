@@ -457,6 +457,23 @@ class _TestObject(object):
         self.assertRaises(exception.UnsupportedObjectError,
                           MyObj.obj_from_primitive, primitive)
 
+    def test_hydration_additional_unexpected_stuff(self):
+        primitive = {'nova_object.name': 'MyObj',
+                     'nova_object.namespace': 'nova',
+                     'nova_object.version': '1.5.1',
+                     'nova_object.data': {
+                         'foo': 1,
+                         'unexpected_thing': 'foobar'}}
+        obj = MyObj.obj_from_primitive(primitive)
+        self.assertEqual(1, obj.foo)
+        self.assertFalse(hasattr(obj, 'unexpected_thing'))
+        # NOTE(danms): If we call obj_from_primitive() directly
+        # with a version containing .z, we'll get that version
+        # in the resulting object. In reality, when using the
+        # serializer, we'll get that snipped off (tested
+        # elsewhere)
+        self.assertEqual('1.5.1', obj.VERSION)
+
     def test_dehydration(self):
         expected = {'nova_object.name': 'MyObj',
                     'nova_object.namespace': 'nova',
@@ -833,6 +850,11 @@ class TestRemoteObject(_RemoteTest, _TestObject):
         obj = MyObj2.query(self.context)
         self.assertEqual('oldbar', obj.bar)
 
+    def test_revision_ignored(self):
+        MyObj2.VERSION = '1.1.456'
+        obj = MyObj2.query(self.context)
+        self.assertEqual('bar', obj.bar)
+
 
 class TestObjectListBase(test.TestCase):
     def test_list_like_operations(self):
@@ -951,18 +973,56 @@ class TestObjectSerializer(_BaseTestCase):
         for thing in (1, 'foo', [1, 2], {'foo': 'bar'}):
             self.assertEqual(thing, ser.deserialize_entity(None, thing))
 
-    def test_deserialize_entity_newer_version(self):
+    def _test_deserialize_entity_newer(self, obj_version, backported_to,
+                                       my_version='1.6'):
         ser = base.NovaObjectSerializer()
         ser._conductor = mock.Mock()
         ser._conductor.object_backport.return_value = 'backported'
-        obj = MyObj()
-        obj.VERSION = '1.25'
+
+        class MyTestObj(MyObj):
+            VERSION = my_version
+
+        obj = MyTestObj()
+        obj.VERSION = obj_version
         primitive = obj.obj_to_primitive()
         result = ser.deserialize_entity(self.context, primitive)
-        self.assertEqual('backported', result)
-        ser._conductor.object_backport.assert_called_with(self.context,
-                                                          primitive,
-                                                          '1.6')
+        if backported_to is None:
+            self.assertFalse(ser._conductor.object_backport.called)
+        else:
+            self.assertEqual('backported', result)
+            ser._conductor.object_backport.assert_called_with(self.context,
+                                                              primitive,
+                                                              backported_to)
+
+    def test_deserialize_entity_newer_version_backports(self):
+        self._test_deserialize_entity_newer('1.25', '1.6')
+
+    def test_deserialize_entity_newer_revision_does_not_backport_zero(self):
+        self._test_deserialize_entity_newer('1.6.0', None)
+
+    def test_deserialize_entity_newer_revision_does_not_backport(self):
+        self._test_deserialize_entity_newer('1.6.1', None)
+
+    def test_deserialize_entity_newer_version_passes_revision(self):
+        self._test_deserialize_entity_newer('1.7', '1.6.1', '1.6.1')
+
+    def test_deserialize_dot_z_with_extra_stuff(self):
+        primitive = {'nova_object.name': 'MyObj',
+                     'nova_object.namespace': 'nova',
+                     'nova_object.version': '1.6.1',
+                     'nova_object.data': {
+                         'foo': 1,
+                         'unexpected_thing': 'foobar'}}
+        ser = base.NovaObjectSerializer()
+        obj = ser.deserialize_entity(self.context, primitive)
+        self.assertEqual(1, obj.foo)
+        self.assertFalse(hasattr(obj, 'unexpected_thing'))
+        # NOTE(danms): The serializer is where the logic lives that
+        # avoids backports for cases where only a .z difference in
+        # the received object version is detected. As a result, we
+        # end up with a version of what we expected, effectively the
+        # .0 of the object.
+        self.assertEqual('1.6', obj.VERSION)
 
     def test_object_serialization(self):
         ser = base.NovaObjectSerializer()
