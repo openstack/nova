@@ -81,7 +81,7 @@ class FloatingIPBulkController(wsgi.Controller):
 
         return floating_ip_info
 
-    @extensions.expected_errors(400)
+    @extensions.expected_errors((400, 409))
     @validation.schema(floating_ips_bulk.create)
     def create(self, req, body):
         """Bulk create floating ips."""
@@ -103,7 +103,7 @@ class FloatingIPBulkController(wsgi.Controller):
         try:
             objects.FloatingIPList.create(context, ips)
         except exception.FloatingIpExists as exc:
-            raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
+            raise webob.exc.HTTPConflict(explanation=exc.format_message())
 
         return {"floating_ips_bulk_create": {"ip_range": ip_range,
                                                "pool": pool,
