@@ -14,6 +14,8 @@
 
 """Microversions Test Extension"""
 
+import webob
+
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 
@@ -32,6 +34,10 @@ class MicroversionsController(wsgi.Controller):
     def index(self, req):
         data = {'param': 'val2'}
         return data
+
+    @wsgi.Controller.api_version("3.0")  # noqa
+    def index(self, req):
+        raise webob.exc.HTTPBadRequest()
 
 
 # We have a second example controller here to help check

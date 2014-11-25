@@ -395,8 +395,8 @@ class APIRouterV21(base_wsgi.Router):
                 inherits = self.resources.get(resource.inherits)
                 if not resource.controller:
                     resource.controller = inherits.controller
-            wsgi_resource = wsgi.Resource(resource.controller,
-                                          inherits=inherits)
+            wsgi_resource = wsgi.ResourceV21(resource.controller,
+                                             inherits=inherits)
             self.resources[resource.collection] = wsgi_resource
             kargs = dict(
                 controller=wsgi_resource,

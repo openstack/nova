@@ -390,7 +390,7 @@ class ResourceTest(test.NoDBTestCase):
                     raise webob.exc.HTTPInternalServerError()
                 return 'success'
 
-        app = fakes.TestRouter(Controller())
+        app = fakes.TestRouterV21(Controller())
         req = webob.Request.blank('/tests')
         response = req.get_response(app)
         self.assertEqual(response.body, 'success')
@@ -408,7 +408,7 @@ class ResourceTest(test.NoDBTestCase):
                     raise webob.exc.HTTPInternalServerError()
                 return 'success'
 
-        app = fakes.TestRouter(Controller())
+        app = fakes.TestRouterV21(Controller())
         req = webob.Request.blank('/tests')
         req.headers = {'X-OpenStack-Compute-API-Version': version}
         response = req.get_response(app)
@@ -422,7 +422,7 @@ class ResourceTest(test.NoDBTestCase):
             def index(self, req):
                 return 'success'
 
-        app = fakes.TestRouter(Controller())
+        app = fakes.TestRouterV21(Controller())
         req = webob.Request.blank('/tests')
         req.headers = {'X-OpenStack-Compute-API-Version': invalid_version}
         response = req.get_response(app)
