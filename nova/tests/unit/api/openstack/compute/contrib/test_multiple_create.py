@@ -21,9 +21,13 @@ from oslo.serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute import plugins
-from nova.api.openstack.compute.plugins.v3 import block_device_mapping
-from nova.api.openstack.compute.plugins.v3 import multiple_create
-from nova.api.openstack.compute.plugins.v3 import servers
+from nova.api.openstack.compute.plugins.v3 import block_device_mapping as \
+    block_device_mapping_v21
+from nova.api.openstack.compute.plugins.v3 import multiple_create as \
+    multiple_create_v21
+from nova.api.openstack.compute.plugins.v3 import servers as servers_v21
+from nova.api.openstack.compute import servers as servers_v20
+from nova.api.openstack import extensions as extensions_v20
 from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova import db
@@ -46,11 +50,12 @@ def return_security_group(context, instance_id, security_group_id):
     pass
 
 
-class ServersControllerCreateTest(test.TestCase):
+class MultiCreateExtensionTestV21(test.TestCase):
+    validation_error = exception.ValidationError
 
     def setUp(self):
         """Shared implementation for tests below that create instance."""
-        super(ServersControllerCreateTest, self).setUp()
+        super(MultiCreateExtensionTestV21, self).setUp()
 
         self.flags(verbose=True,
                    enable_instance_password=True)
@@ -59,10 +64,11 @@ class ServersControllerCreateTest(test.TestCase):
         self.instance_cache_by_uuid = {}
 
         ext_info = plugins.LoadedExtensionInfo()
-        self.controller = servers.ServersController(extension_info=ext_info)
+        self.controller = servers_v21.ServersController(
+            extension_info=ext_info)
         CONF.set_override('extensions_blacklist', 'os-multiple-create',
                           'osapi_v3')
-        self.no_mult_create_controller = servers.ServersController(
+        self.no_mult_create_controller = servers_v21.ServersController(
             extension_info=ext_info)
 
         def instance_create(context, inst):
@@ -147,7 +153,7 @@ class ServersControllerCreateTest(test.TestCase):
             server.pop('imageRef', None)
         server.update(params)
         body = dict(server=server)
-        req = fakes.HTTPRequestV3.blank('/servers')
+        req = fakes.HTTPRequest.blank('/servers')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -156,18 +162,25 @@ class ServersControllerCreateTest(test.TestCase):
         else:
             server = self.controller.create(req, body=body).obj['server']
 
+    def _check_multiple_create_extension_disabled(self, **kwargs):
+        # NOTE: on v2.1 API, "create a server" API doesn't add the following
+        # attributes into kwargs when non-loading multiple_create extension.
+        # However, v2.0 API adds them as values "1" instead. So we need to
+        # define checking methods for each API here.
+        self.assertNotIn('min_count', kwargs)
+        self.assertNotIn('max_count', kwargs)
+
     def test_create_instance_with_multiple_create_disabled(self):
         min_count = 2
         max_count = 3
         params = {
-            multiple_create.MIN_ATTRIBUTE_NAME: min_count,
-            multiple_create.MAX_ATTRIBUTE_NAME: max_count,
+            multiple_create_v21.MIN_ATTRIBUTE_NAME: min_count,
+            multiple_create_v21.MAX_ATTRIBUTE_NAME: max_count,
         }
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
-            self.assertNotIn('min_count', kwargs)
-            self.assertNotIn('max_count', kwargs)
+            self._check_multiple_create_extension_disabled(**kwargs)
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
@@ -179,8 +192,8 @@ class ServersControllerCreateTest(test.TestCase):
         min_count = '2'
         max_count = '3'
         params = {
-            multiple_create.MIN_ATTRIBUTE_NAME: min_count,
-            multiple_create.MAX_ATTRIBUTE_NAME: max_count,
+            multiple_create_v21.MIN_ATTRIBUTE_NAME: min_count,
+            multiple_create_v21.MAX_ATTRIBUTE_NAME: max_count,
         }
         old_create = compute_api.API.create
 
@@ -198,8 +211,8 @@ class ServersControllerCreateTest(test.TestCase):
         min_count = 2
         max_count = 3
         params = {
-            multiple_create.MIN_ATTRIBUTE_NAME: min_count,
-            multiple_create.MAX_ATTRIBUTE_NAME: max_count,
+            multiple_create_v21.MIN_ATTRIBUTE_NAME: min_count,
+            multiple_create_v21.MAX_ATTRIBUTE_NAME: max_count,
         }
         old_create = compute_api.API.create
 
@@ -217,17 +230,17 @@ class ServersControllerCreateTest(test.TestCase):
 
         body = {
             'server': {
-                multiple_create.MIN_ATTRIBUTE_NAME: -1,
+                multiple_create_v21.MIN_ATTRIBUTE_NAME: -1,
                 'name': 'server_test',
                 'imageRef': image_href,
                 'flavorRef': flavor_ref,
             }
         }
-        req = fakes.HTTPRequestV3.blank('/servers')
+        req = fakes.HTTPRequest.blank('/servers')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        self.assertRaises(exception.ValidationError,
+        self.assertRaises(self.validation_error,
                           self.controller.create,
                           req,
                           body=body)
@@ -238,17 +251,17 @@ class ServersControllerCreateTest(test.TestCase):
 
         body = {
             'server': {
-                multiple_create.MAX_ATTRIBUTE_NAME: -1,
+                multiple_create_v21.MAX_ATTRIBUTE_NAME: -1,
                 'name': 'server_test',
                 'imageRef': image_href,
                 'flavorRef': flavor_ref,
             }
         }
-        req = fakes.HTTPRequestV3.blank('/servers')
+        req = fakes.HTTPRequest.blank('/servers')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        self.assertRaises(exception.ValidationError,
+        self.assertRaises(self.validation_error,
                           self.controller.create,
                           req,
                           body=body)
@@ -259,17 +272,17 @@ class ServersControllerCreateTest(test.TestCase):
 
         body = {
             'server': {
-                multiple_create.MIN_ATTRIBUTE_NAME: '',
+                multiple_create_v21.MIN_ATTRIBUTE_NAME: '',
                 'name': 'server_test',
                 'image_ref': image_href,
                 'flavor_ref': flavor_ref,
             }
         }
-        req = fakes.HTTPRequestV3.blank('/servers')
+        req = fakes.HTTPRequest.blank('/servers')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        self.assertRaises(exception.ValidationError,
+        self.assertRaises(self.validation_error,
                           self.controller.create,
                           req,
                           body=body)
@@ -280,17 +293,17 @@ class ServersControllerCreateTest(test.TestCase):
 
         body = {
             'server': {
-                multiple_create.MAX_ATTRIBUTE_NAME: '',
+                multiple_create_v21.MAX_ATTRIBUTE_NAME: '',
                 'name': 'server_test',
                 'image_ref': image_href,
                 'flavor_ref': flavor_ref,
             }
         }
-        req = fakes.HTTPRequestV3.blank('/servers')
+        req = fakes.HTTPRequest.blank('/servers')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        self.assertRaises(exception.ValidationError,
+        self.assertRaises(self.validation_error,
                           self.controller.create,
                           req,
                           body=body)
@@ -301,14 +314,14 @@ class ServersControllerCreateTest(test.TestCase):
 
         body = {
             'server': {
-                multiple_create.MIN_ATTRIBUTE_NAME: 4,
-                multiple_create.MAX_ATTRIBUTE_NAME: 2,
+                multiple_create_v21.MIN_ATTRIBUTE_NAME: 4,
+                multiple_create_v21.MAX_ATTRIBUTE_NAME: 2,
                 'name': 'server_test',
                 'imageRef': image_href,
                 'flavorRef': flavor_ref,
             }
         }
-        req = fakes.HTTPRequestV3.blank('/servers')
+        req = fakes.HTTPRequest.blank('/servers')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -323,17 +336,17 @@ class ServersControllerCreateTest(test.TestCase):
 
         body = {
             'server': {
-                multiple_create.MIN_ATTRIBUTE_NAME: 'abcd',
+                multiple_create_v21.MIN_ATTRIBUTE_NAME: 'abcd',
                 'name': 'server_test',
                 'imageRef': image_href,
                 'flavorRef': flavor_ref,
             }
         }
-        req = fakes.HTTPRequestV3.blank('/servers')
+        req = fakes.HTTPRequest.blank('/servers')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        self.assertRaises(exception.ValidationError,
+        self.assertRaises(self.validation_error,
                           self.controller.create,
                           req,
                           body=body)
@@ -344,17 +357,17 @@ class ServersControllerCreateTest(test.TestCase):
 
         body = {
             'server': {
-                multiple_create.MAX_ATTRIBUTE_NAME: 'abcd',
+                multiple_create_v21.MAX_ATTRIBUTE_NAME: 'abcd',
                 'name': 'server_test',
                 'imageRef': image_href,
                 'flavorRef': flavor_ref,
             }
         }
-        req = fakes.HTTPRequestV3.blank('/servers')
+        req = fakes.HTTPRequest.blank('/servers')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        self.assertRaises(exception.ValidationError,
+        self.assertRaises(self.validation_error,
                           self.controller.create,
                           req,
                           body=body)
@@ -367,7 +380,7 @@ class ServersControllerCreateTest(test.TestCase):
         flavor_ref = 'http://localhost/123/flavors/3'
         body = {
             'server': {
-                multiple_create.MIN_ATTRIBUTE_NAME: 2,
+                multiple_create_v21.MIN_ATTRIBUTE_NAME: 2,
                 'name': 'server_test',
                 'imageRef': image_href,
                 'flavorRef': flavor_ref,
@@ -376,7 +389,7 @@ class ServersControllerCreateTest(test.TestCase):
             }
         }
 
-        req = fakes.HTTPRequestV3.blank('/servers')
+        req = fakes.HTTPRequest.blank('/servers')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -394,7 +407,7 @@ class ServersControllerCreateTest(test.TestCase):
         flavor_ref = 'http://localhost/123/flavors/3'
         body = {
             'server': {
-                multiple_create.MIN_ATTRIBUTE_NAME: 2,
+                multiple_create_v21.MIN_ATTRIBUTE_NAME: 2,
                 'name': 'server_test',
                 'imageRef': image_href,
                 'flavorRef': flavor_ref,
@@ -403,7 +416,7 @@ class ServersControllerCreateTest(test.TestCase):
             }
         }
 
-        req = fakes.HTTPRequestV3.blank('/servers')
+        req = fakes.HTTPRequest.blank('/servers')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -429,17 +442,17 @@ class ServersControllerCreateTest(test.TestCase):
         flavor_ref = 'http://localhost/123/flavors/3'
         body = {
             'server': {
-                multiple_create.MIN_ATTRIBUTE_NAME: 2,
+                multiple_create_v21.MIN_ATTRIBUTE_NAME: 2,
                 'name': 'server_test',
                 'imageRef': image_href,
                 'flavorRef': flavor_ref,
                 'metadata': {'hello': 'world',
                              'open': 'stack'},
-                multiple_create.RRID_ATTRIBUTE_NAME: resv_id_return
+                multiple_create_v21.RRID_ATTRIBUTE_NAME: resv_id_return
             }
         }
 
-        req = fakes.HTTPRequestV3.blank('/servers')
+        req = fakes.HTTPRequest.blank('/servers')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
@@ -464,8 +477,8 @@ class ServersControllerCreateTest(test.TestCase):
                {'source_type': 'volume', 'uuid': 'vol-yyyy'}
         ]
         params = {
-                  block_device_mapping.ATTRIBUTE_NAME: bdm,
-                  multiple_create.MIN_ATTRIBUTE_NAME: min_count
+                  block_device_mapping_v21.ATTRIBUTE_NAME: bdm,
+                  multiple_create_v21.MIN_ATTRIBUTE_NAME: min_count
         }
         old_create = compute_api.API.create
 
@@ -487,8 +500,8 @@ class ServersControllerCreateTest(test.TestCase):
         min_count = 2
         bdm = [{'source_type': 'volume', 'uuid': 'vol-xxxx'}]
         params = {
-                 block_device_mapping.ATTRIBUTE_NAME: bdm,
-                 multiple_create.MIN_ATTRIBUTE_NAME: min_count
+                 block_device_mapping_v21.ATTRIBUTE_NAME: bdm,
+                 multiple_create_v21.MIN_ATTRIBUTE_NAME: min_count
         }
         old_create = compute_api.API.create
 
@@ -509,7 +522,7 @@ class ServersControllerCreateTest(test.TestCase):
         flavor_ref = 'http://localhost/123/flavors/3'
         body = {
             'server': {
-                multiple_create.MAX_ATTRIBUTE_NAME: 2.5,
+                multiple_create_v21.MAX_ATTRIBUTE_NAME: 2.5,
                 'name': 'server_test',
                 'imageRef': image_href,
                 'flavorRef': flavor_ref,
@@ -518,11 +531,11 @@ class ServersControllerCreateTest(test.TestCase):
             }
         }
 
-        req = fakes.HTTPRequestV3.blank('/servers')
+        req = fakes.HTTPRequest.blank('/servers')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        self.assertRaises(exception.ValidationError,
+        self.assertRaises(self.validation_error,
                           self.controller.create, req, body=body)
 
     def test_create_multiple_instance_with_non_integer_min_count(self):
@@ -530,7 +543,7 @@ class ServersControllerCreateTest(test.TestCase):
         flavor_ref = 'http://localhost/123/flavors/3'
         body = {
             'server': {
-                multiple_create.MIN_ATTRIBUTE_NAME: 2.5,
+                multiple_create_v21.MIN_ATTRIBUTE_NAME: 2.5,
                 'name': 'server_test',
                 'imageRef': image_href,
                 'flavorRef': flavor_ref,
@@ -539,9 +552,91 @@ class ServersControllerCreateTest(test.TestCase):
             }
         }
 
-        req = fakes.HTTPRequestV3.blank('/servers')
+        req = fakes.HTTPRequest.blank('/servers')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        self.assertRaises(exception.ValidationError,
+        self.assertRaises(self.validation_error,
                           self.controller.create, req, body=body)
+
+
+class MultiCreateExtensionTestV2(MultiCreateExtensionTestV21):
+    validation_error = webob.exc.HTTPBadRequest
+
+    def setUp(self):
+        """Shared implementation for tests below that create instance."""
+        super(MultiCreateExtensionTestV2, self).setUp()
+
+        self.flags(verbose=True,
+                   enable_instance_password=True)
+        self.instance_cache_num = 0
+        self.instance_cache_by_id = {}
+        self.instance_cache_by_uuid = {}
+
+        fakes.stub_out_nw_api(self.stubs)
+
+        self.ext_mgr = extensions_v20.ExtensionManager()
+        self.ext_mgr.extensions = {
+            'os-volumes': 'fake',
+            'os-multiple-create': 'fake',
+            'os-block-device-mapping-v2-boot': 'fake'
+        }
+        self.controller = servers_v20.Controller(self.ext_mgr)
+
+        no_mult_ext_mgr = extensions_v20.ExtensionManager()
+        no_mult_ext_mgr.extensions = {
+            'os-volumes': 'fake',
+            'os-block-device-mapping-v2-boot': 'fake'
+        }
+        self.no_mult_create_controller = servers_v20.Controller(
+            no_mult_ext_mgr)
+
+        def instance_create(context, inst):
+            inst_type = flavors.get_flavor_by_flavor_id(3)
+            image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+            def_image_ref = 'http://localhost/images/%s' % image_uuid
+            self.instance_cache_num += 1
+            instance = fake_instance.fake_db_instance(**{
+                'id': self.instance_cache_num,
+                'display_name': inst['display_name'] or 'test',
+                'uuid': FAKE_UUID,
+                'instance_type': inst_type,
+                'access_ip_v4': '1.2.3.4',
+                'access_ip_v6': 'fead::1234',
+                'image_ref': inst.get('image_ref', def_image_ref),
+                'user_id': 'fake',
+                'project_id': 'fake',
+                'reservation_id': inst['reservation_id'],
+                "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
+                "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
+                "config_drive": None,
+                "progress": 0,
+                "fixed_ips": [],
+                "task_state": "",
+                "vm_state": "",
+                "root_device_name": inst.get('root_device_name', 'vda'),
+                "security_groups": inst['security_groups'],
+                "extra": {"pci_requests": None,
+                          "numa_topology": None},
+            })
+
+            self.instance_cache_by_id[instance['id']] = instance
+            self.instance_cache_by_uuid[instance['uuid']] = instance
+            return instance
+
+        def instance_get(context, instance_id):
+            """Stub for compute/api create() pulling in instance after
+            scheduling
+            """
+            return self.instance_cache_by_id[instance_id]
+
+        fakes.stub_out_rate_limiting(self.stubs)
+        fakes.stub_out_key_pair_funcs(self.stubs)
+        fake.stub_out_image_service(self.stubs)
+        self.stubs.Set(uuid, 'uuid4', fake_gen_uuid)
+        self.stubs.Set(db, 'instance_create', instance_create)
+        self.stubs.Set(db, 'instance_get', instance_get)
+
+    def _check_multiple_create_extension_disabled(self, **kwargs):
+        self.assertEqual(kwargs['min_count'], 1)
+        self.assertEqual(kwargs['max_count'], 1)

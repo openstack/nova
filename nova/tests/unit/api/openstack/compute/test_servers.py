@@ -2041,42 +2041,6 @@ class ServersControllerCreateTest(test.TestCase):
                 "Flavor's disk is too small for requested image."):
             self.controller.create(self.req, self.body)
 
-    def test_create_instance_invalid_negative_min(self):
-        self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
-        self.body['server']['min_count'] = -1
-        self.req.body = jsonutils.dumps(self.body)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create,
-                          self.req,
-                          self.body)
-
-    def test_create_instance_invalid_negative_max(self):
-        self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
-        self.body['server']['max_count'] = -1
-        self.req.body = jsonutils.dumps(self.body)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create,
-                          self.req,
-                          self.body)
-
-    def test_create_instance_invalid_alpha_min(self):
-        self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
-        self.body['server']['min_count'] = 'abcd',
-        self.req.body = jsonutils.dumps(self.body)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create,
-                          self.req,
-                          self.body)
-
-    def test_create_instance_invalid_alpha_max(self):
-        self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
-        self.body['server']['max_count'] = 'abcd',
-        self.req.body = jsonutils.dumps(self.body)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create,
-                          self.req,
-                          self.body)
-
     def test_create_multiple_instances(self):
         """Test creating multiple instances but not asking for
         reservation_id
@@ -2134,43 +2098,6 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra, params, no_image=True)
-
-    def test_create_multiple_instances_with_single_volume_bdm(self):
-        """Test that a BadRequest is raised if multiple instances
-        are requested to boot from a single volume.
-        """
-        self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
-        min_count = 2
-        bdm = [{'device_name': 'foo1', 'volume_id': 'vol-xxxx'}]
-        params = {
-                 'block_device_mapping': bdm,
-                 'min_count': min_count
-        }
-        old_create = compute_api.API.create
-
-        def create(*args, **kwargs):
-            self.assertEqual(kwargs['min_count'], 2)
-            self.assertEqual(kwargs['block_device_mapping']['volume_id'],
-                            'vol-xxxx')
-            return old_create(*args, **kwargs)
-
-        self.stubs.Set(compute_api.API, 'create', create)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self._test_create_extra, params, no_image=True)
-
-    def test_create_multiple_instance_with_non_integer_max_count(self):
-        self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
-        self.body['server']['max_count'] = 2.5
-        self.req.body = jsonutils.dumps(self.body)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, self.req, self.body)
-
-    def test_create_multiple_instance_with_non_integer_min_count(self):
-        self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
-        self.body['server']['min_count'] = 2.5
-        self.req.body = jsonutils.dumps(self.body)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, self.req, self.body)
 
     def test_create_instance_image_ref_is_bookmark(self):
         image_href = 'http://localhost/fake/images/%s' % self.image_uuid
@@ -2727,41 +2654,6 @@ class ServersControllerCreateTest(test.TestCase):
 
         def create(*args, **kwargs):
             self.assertIsNone(kwargs['availability_zone'])
-            return old_create(*args, **kwargs)
-
-        self.stubs.Set(compute_api.API, 'create', create)
-        self._test_create_extra(params)
-
-    def test_create_instance_with_multiple_create_enabled(self):
-        self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
-        min_count = 2
-        max_count = 3
-        params = {
-            'min_count': min_count,
-            'max_count': max_count,
-        }
-        old_create = compute_api.API.create
-
-        def create(*args, **kwargs):
-            self.assertEqual(kwargs['min_count'], 2)
-            self.assertEqual(kwargs['max_count'], 3)
-            return old_create(*args, **kwargs)
-
-        self.stubs.Set(compute_api.API, 'create', create)
-        self._test_create_extra(params)
-
-    def test_create_instance_with_multiple_create_disabled(self):
-        min_count = 2
-        max_count = 3
-        params = {
-            'min_count': min_count,
-            'max_count': max_count,
-        }
-        old_create = compute_api.API.create
-
-        def create(*args, **kwargs):
-            self.assertEqual(kwargs['min_count'], 1)
-            self.assertEqual(kwargs['max_count'], 1)
             return old_create(*args, **kwargs)
 
         self.stubs.Set(compute_api.API, 'create', create)
