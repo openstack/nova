@@ -95,7 +95,7 @@ def get_fake_db_instance(start, end, instance_id, tenant_id,
 
 
 def fake_instance_get_active_by_window_joined(context, begin, end,
-        project_id, host):
+        project_id, host, columns_to_join):
             return [get_fake_db_instance(START,
                                          STOP,
                                          x,
