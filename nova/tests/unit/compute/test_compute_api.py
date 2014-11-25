@@ -1033,7 +1033,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api.volume_api.terminate_connection(
             mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg()).\
                AndRaise(exception.  VolumeNotFound('volume_id'))
-        bdms[0].destroy(self.context)
+        bdms[0].destroy()
 
         inst.destroy()
         compute_utils.notify_about_instance_usage(
@@ -1308,10 +1308,10 @@ class _ComputeAPIUnitTestMixIn(object):
                 expected_reservations = []
                 mig = objects.Migration()
 
-                def _get_migration():
+                def _get_migration(context=None):
                     return mig
 
-                def _check_mig(ctxt):
+                def _check_mig():
                     self.assertEqual(fake_inst.uuid, mig.instance_uuid)
                     self.assertEqual(current_flavor.id,
                                      mig.old_instance_type_id)
@@ -1324,7 +1324,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.mox.StubOutWithMock(mig, 'create')
 
                 self.context.elevated().AndReturn(self.context)
-                mig.create(self.context).WithSideEffects(_check_mig)
+                mig.create().WithSideEffects(_check_mig)
 
             if flavor_id_passed:
                 self.compute_api._record_action_start(self.context, fake_inst,
@@ -2445,7 +2445,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                   bdm,
                                   fake_num_instances,
                                   fake_index)
-                destroy.assert_called_once_with(self.context)
+                destroy.assert_called_once_with()
 
         # We use a nested method so we can decorate with the mocks.
         do_test(self)

@@ -868,7 +868,7 @@ class API(base.Base):
         instances = []
         try:
             for i in xrange(num_instances):
-                instance = objects.Instance()
+                instance = objects.Instance(context=context)
                 instance.update(base_options)
                 instance = self.create_db_entry_for_new_instance(
                         context, instance_type, boot_meta, instance,
@@ -1361,7 +1361,7 @@ class API(base.Base):
         instance.shutdown_terminate = shutdown_terminate
 
         self.security_group_api.ensure_default(context)
-        instance.create(context)
+        instance.create()
 
         if num_instances > 1:
             # NOTE(russellb) We wait until this spot to handle
@@ -1379,7 +1379,7 @@ class API(base.Base):
         except (exception.CinderConnectionFailed, exception.InvalidBDM,
                 exception.InvalidVolume):
             with excutils.save_and_reraise_exception():
-                instance.destroy(context)
+                instance.destroy()
 
         self._update_block_device_mapping(
             context, instance_type, instance['uuid'], block_device_mapping)
@@ -1753,7 +1753,7 @@ class API(base.Base):
                 except Exception as exc:
                     err_str = _("Ignoring volume cleanup failure due to %s")
                     LOG.warn(err_str % exc, instance=instance)
-            bdm.destroy(context)
+            bdm.destroy()
         cb(context, instance, bdms, local=True)
         sys_meta = instance.system_metadata
         instance.destroy()
@@ -2489,12 +2489,12 @@ class API(base.Base):
         # information, just the old and new flavors. Status is set to
         # 'finished' since nothing else will update the status along
         # the way.
-        mig = objects.Migration()
+        mig = objects.Migration(context=context.elevated())
         mig.instance_uuid = instance.uuid
         mig.old_instance_type_id = current_instance_type['id']
         mig.new_instance_type_id = new_instance_type['id']
         mig.status = 'finished'
-        mig.create(context.elevated())
+        mig.create()
 
     @wrap_check_policy
     @check_instance_lock
@@ -2942,7 +2942,7 @@ class API(base.Base):
                     volume_id=volume_id, mountpoint=device, bdm=volume_bdm)
         except Exception:
             with excutils.save_and_reraise_exception():
-                volume_bdm.destroy(context)
+                volume_bdm.destroy()
 
         return volume_bdm.device_name
 
@@ -3461,11 +3461,11 @@ class AggregateAPI(base.Base):
     def create_aggregate(self, context, aggregate_name, availability_zone):
         """Creates the model for the aggregate."""
 
-        aggregate = objects.Aggregate()
+        aggregate = objects.Aggregate(context=context)
         aggregate.name = aggregate_name
         if availability_zone:
             aggregate.metadata = {'availability_zone': availability_zone}
-        aggregate.create(context)
+        aggregate.create()
         return aggregate
 
     def get_aggregate(self, context, aggregate_id):
