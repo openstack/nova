@@ -386,6 +386,23 @@ class Image(object):
         """
         raise NotImplementedError()
 
+    def import_file(self, instance, local_file, remote_name):
+        """Import an image from local storage into this backend.
+
+        Import a local file into the store used by this image type. Note that
+        this is a noop for stores using local disk (the local file is
+        considered "in the store").
+
+        If the image already exists it will be overridden by the new file
+
+        :param local_file: path to the file to import
+        :param remote_name: the name for the file in the store
+        """
+
+        # NOTE(mikal): this is a noop for now for all stores except RBD, but
+        # we should talk about if we want this functionality for everything.
+        pass
+
 
 class Raw(Image):
     def __init__(self, instance=None, disk_name=None, path=None):
@@ -807,6 +824,12 @@ class Rbd(Image):
                                  self.rbd_user,
                                  secret,
                                  servers)
+
+    def import_file(self, instance, local_file, remote_name):
+        name = '%s_%s' % (instance.uuid, remote_name)
+        if self.check_image_exists():
+            self.driver.remove_image(name)
+        self.driver.import_image(local_file, name)
 
 
 class Ploop(Image):

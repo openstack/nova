@@ -7381,8 +7381,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                       filename=ephemeral_file_name,
                                       mkfs=True)
 
-    def test_create_image_with_swap(self):
+    def _create_image_helper(self, callback, suffix=''):
         gotFiles = []
+        imported_files = []
 
         def fake_image(self, instance, name, image_type=''):
             class FakeImage(imagebackend.Image):
@@ -7398,6 +7399,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           *args, **kwargs):
                     gotFiles.append({'filename': filename,
                                      'size': size})
+
+                def import_file(self, instance, local_filename,
+                                remote_filename):
+                    imported_files.append((local_filename, remote_filename))
 
                 def snapshot(self, name):
                     pass
@@ -7416,6 +7421,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 1
+        # NOTE(mikal): use this callback to tweak the instance to match
+        # what you're trying to test
+        callback(instance_ref)
         instance = objects.Instance(**instance_ref)
         # Turn on some swap to exercise that codepath in _create_image
         instance.flavor.swap = 500
@@ -7424,15 +7432,27 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.stubs.Set(drvr, '_get_guest_xml', fake_none)
         self.stubs.Set(drvr, '_create_domain_and_network', fake_none)
         self.stubs.Set(drvr, 'get_info', fake_get_info)
+        self.stubs.Set(instance_metadata, 'InstanceMetadata', fake_none)
+        self.stubs.Set(nova.virt.configdrive.ConfigDriveBuilder,
+                       'make_drive', fake_none)
 
         image_meta = {'id': instance['image_ref']}
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
                                             image_meta)
-        drvr._create_image(context, instance, disk_info['mapping'])
+        drvr._create_image(context, instance, disk_info['mapping'],
+                           suffix=suffix)
         drvr._get_guest_xml(self.context, instance, None,
                             disk_info, image_meta)
 
+        return gotFiles, imported_files
+
+    def test_create_image_with_swap(self):
+        def enable_swap(instance_ref):
+            # Turn on some swap to exercise that codepath in _create_image
+            instance_ref['system_metadata']['instance_type_swap'] = 500
+
+        gotFiles, _ = self._create_image_helper(enable_swap)
         wantFiles = [
             {'filename': '356a192b7913b04c54574d18c28d46e6395428ab',
              'size': 10 * units.Gi},
@@ -7442,6 +7462,27 @@ class LibvirtConnTestCase(test.NoDBTestCase):
              'size': 500 * units.Mi},
             ]
         self.assertEqual(gotFiles, wantFiles)
+
+    def test_create_image_with_configdrive(self):
+        def enable_configdrive(instance_ref):
+            instance_ref['config_drive'] = 'true'
+
+        # Ensure that we create a config drive and then import it into the
+        # image backend store
+        _, imported_files = self._create_image_helper(enable_configdrive)
+        self.assertTrue(imported_files[0][0].endswith('/disk.config'))
+        self.assertEqual('disk.config', imported_files[0][1])
+
+    def test_create_image_with_configdrive_rescue(self):
+        def enable_configdrive(instance_ref):
+            instance_ref['config_drive'] = 'true'
+
+        # Ensure that we create a config drive and then import it into the
+        # image backend store
+        _, imported_files = self._create_image_helper(enable_configdrive,
+                                                      suffix='.rescue')
+        self.assertTrue(imported_files[0][0].endswith('/disk.config.rescue'))
+        self.assertEqual('disk.config.rescue', imported_files[0][1])
 
     @mock.patch.object(nova.virt.libvirt.imagebackend.Image, 'cache',
                        side_effect=exception.ImageNotFound(image_id='fake-id'))
@@ -12603,6 +12644,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                     ).AndReturn(fake_imagebackend.Raw())
         imagebackend.Backend.image(instance, 'disk.rescue', 'default'
                                     ).AndReturn(fake_imagebackend.Raw())
+        imagebackend.Backend.image(instance, 'disk.config.rescue', 'raw'
+                                   ).AndReturn(fake_imagebackend.Raw())
 
         imagebackend.Image.cache(context=mox.IgnoreArg(),
                                 fetch_func=mox.IgnoreArg(),

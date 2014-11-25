@@ -1362,6 +1362,40 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
             ["server1:1899", "server2:1920"]),
                          model)
 
+    def test_import_file(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+
+        @mock.patch.object(image, 'check_image_exists')
+        @mock.patch.object(image.driver, 'remove_image')
+        @mock.patch.object(image.driver, 'import_image')
+        def _test(mock_import, mock_remove, mock_exists):
+            mock_exists.return_value = True
+            image.import_file(self.INSTANCE, mock.sentinel.file,
+                              mock.sentinel.remote_name)
+            name = '%s_%s' % (self.INSTANCE.uuid,
+                              mock.sentinel.remote_name)
+            mock_exists.assert_called_once_with()
+            mock_remove.assert_called_once_with(name)
+            mock_import.assert_called_once_with(mock.sentinel.file, name)
+        _test()
+
+    def test_import_file_not_found(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+
+        @mock.patch.object(image, 'check_image_exists')
+        @mock.patch.object(image.driver, 'remove_image')
+        @mock.patch.object(image.driver, 'import_image')
+        def _test(mock_import, mock_remove, mock_exists):
+            mock_exists.return_value = False
+            image.import_file(self.INSTANCE, mock.sentinel.file,
+                              mock.sentinel.remote_name)
+            name = '%s_%s' % (self.INSTANCE.uuid,
+                              mock.sentinel.remote_name)
+            mock_exists.assert_called_once_with()
+            self.assertFalse(mock_remove.called)
+            mock_import.assert_called_once_with(mock.sentinel.file, name)
+        _test()
+
 
 class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
     SIZE = 1024

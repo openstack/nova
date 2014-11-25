@@ -239,6 +239,23 @@ class RBDDriver(object):
         except rbd.ImageNotFound:
             return False
 
+    def remove_image(self, name):
+        """Remove RBD volume
+
+        :name: Name of RBD volume
+        """
+        with RADOSClient(self, self.pool) as client:
+            try:
+                rbd.RBD().remove(client.ioctx, name)
+            except rbd.ImageNotFound:
+                LOG.warn(_LW('image %(volume)s in pool %(pool)s can not be '
+                             'found, failed to remove'),
+                            {'volume': name, 'pool': self.pool})
+            except rbd.ImageHasSnapshots:
+                LOG.error(_LE('image %(volume)s in pool %(pool)s has '
+                              'snapshots, failed to remove'),
+                            {'volume': name, 'pool': self.pool})
+
     def import_image(self, base, name):
         """Import RBD volume from image file.
 
