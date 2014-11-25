@@ -113,17 +113,17 @@ class ServerGroupTestV21(test.TestCase):
         self.assertEqual(res_dict['server_group']['policies'], policies)
 
     def _create_instance(self, context):
-        instance = objects.Instance(image_ref=1, node='node1',
+        instance = objects.Instance(context=context, image_ref=1, node='node1',
                 reservation_id='a', host='host1', project_id='fake',
                 vm_state='fake', system_metadata={'key': 'value'})
-        instance.create(context)
+        instance.create()
         return instance
 
     def _create_instance_group(self, context, members):
-        ig = objects.InstanceGroup(name='fake_name',
+        ig = objects.InstanceGroup(context=context, name='fake_name',
                   user_id='fake_user', project_id='fake',
                   members=members)
-        ig.create(context)
+        ig.create()
         return ig.uuid
 
     def _create_groups_and_instances(self, ctx):
@@ -148,7 +148,7 @@ class ServerGroupTestV21(test.TestCase):
         req = fakes.HTTPRequest.blank(self._get_url() + '/os-server-groups')
 
         # delete an instance
-        instances[1].destroy(ctx)
+        instances[1].destroy()
         # check that the instance does not exist
         self.assertRaises(exception.InstanceNotFound,
                           objects.Instance.get_by_uuid,
