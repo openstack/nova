@@ -976,11 +976,12 @@ class API(base.Base):
 
     def _nw_info_build_network(self, port, networks, subnets):
         network_name = None
+        shared = None
         for net in networks:
             if port['network_id'] == net['id']:
                 network_name = net['name']
                 tenant_id = net['tenant_id']
-                shared = net['shared']
+                shared = net.get('shared')
                 break
         else:
             tenant_id = port['tenant_id']
