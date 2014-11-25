@@ -107,7 +107,7 @@ class CellsScheduler(base.Base):
         instances = []
         num_instances = len(instance_uuids)
         for i, instance_uuid in enumerate(instance_uuids):
-            instance = objects.Instance()
+            instance = objects.Instance(context=ctxt)
             instance.update(instance_values)
             instance.uuid = instance_uuid
             instance = self.compute_api.create_db_entry_for_new_instance(
