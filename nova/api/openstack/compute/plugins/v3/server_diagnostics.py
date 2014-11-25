@@ -35,11 +35,9 @@ class ServerDiagnosticsController(wsgi.Controller):
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         authorize(context)
-        try:
-            instance = self.compute_api.get(context, server_id,
-                want_objects=True)
-        except exception.InstanceNotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=e.format_message())
+
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       want_objects=True)
 
         try:
             # NOTE(gmann): To make V21 same as V2 API, this method will call
