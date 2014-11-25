@@ -195,7 +195,7 @@ class ResourceTracker(object):
         claim will not be lost if the audit process starts.
         """
         old_instance_type = flavors.extract_flavor(instance)
-        migration = objects.Migration()
+        migration = objects.Migration(context=context.elevated())
         migration.dest_compute = self.host
         migration.dest_node = self.nodename
         migration.dest_host = self.driver.get_host_ip_addr()
@@ -205,7 +205,7 @@ class ResourceTracker(object):
         migration.instance_uuid = instance['uuid']
         migration.source_compute = instance['host']
         migration.source_node = instance['node']
-        migration.create(context.elevated())
+        migration.create()
         return migration
 
     def _set_instance_host_and_node(self, context, instance_ref):
