@@ -2694,6 +2694,13 @@ class LibvirtDriver(driver.ComputeDriver):
                 path = source_node.get("path")
                 if not path:
                     continue
+
+                if not os.path.exists(path):
+                    LOG.info(_LI('Instance is configured with a file console, '
+                                 'but the backing file is not (yet?) present'),
+                             instance=instance)
+                    return ""
+
                 libvirt_utils.chown(path, os.getuid())
 
                 with libvirt_utils.file_open(path, 'rb') as fp:
