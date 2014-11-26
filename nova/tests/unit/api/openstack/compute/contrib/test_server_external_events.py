@@ -16,7 +16,10 @@ import mock
 from oslo.serialization import jsonutils
 import webob
 
-from nova.api.openstack.compute.contrib import server_external_events
+from nova.api.openstack.compute.contrib import server_external_events \
+                                                 as server_external_events_v2
+from nova.api.openstack.compute.plugins.v3 import server_external_events \
+                                                 as server_external_events_v21
 from nova import context
 from nova import exception
 from nova import objects
@@ -45,23 +48,26 @@ def fake_get_by_uuid(cls, context, uuid):
 
 
 @mock.patch('nova.objects.instance.Instance.get_by_uuid', fake_get_by_uuid)
-class ServerExternalEventsTest(test.NoDBTestCase):
+class ServerExternalEventsTestV21(test.NoDBTestCase):
+    server_external_events = server_external_events_v21
+
     def setUp(self):
-        super(ServerExternalEventsTest, self).setUp()
-        self.api = server_external_events.ServerExternalEventsController()
+        super(ServerExternalEventsTestV21, self).setUp()
+        self.api = \
+            self.server_external_events.ServerExternalEventsController()
         self.context = context.get_admin_context()
         self.event_1 = {'name': 'network-vif-plugged',
                         'tag': 'foo',
-                        'server_uuid': fake_instance_uuids[0]}
+                        'server_uuid': fake_instance_uuids[0],
+                        'status': 'completed'}
         self.event_2 = {'name': 'network-changed',
-                        'server_uuid': fake_instance_uuids[1]}
+                        'server_uuid': fake_instance_uuids[1],
+                        'status': 'completed'}
         self.default_body = {'events': [self.event_1, self.event_2]}
         self.resp_event_1 = dict(self.event_1)
         self.resp_event_1['code'] = 200
-        self.resp_event_1['status'] = 'completed'
         self.resp_event_2 = dict(self.event_2)
         self.resp_event_2['code'] = 200
-        self.resp_event_2['status'] = 'completed'
         self.default_resp_body = {'events': [self.resp_event_1,
                                              self.resp_event_2]}
 
@@ -156,3 +162,8 @@ class ServerExternalEventsTest(test.NoDBTestCase):
         req = self._create_req(body)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.api.create, req, body)
+
+
+@mock.patch('nova.objects.instance.Instance.get_by_uuid', fake_get_by_uuid)
+class ServerExternalEventsTestV2(ServerExternalEventsTestV21):
+    server_external_events = server_external_events_v2
