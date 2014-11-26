@@ -126,6 +126,9 @@ linux_net_opts = [
     cfg.BoolOpt('fake_network',
                 default=False,
                 help='If passed, use fake network devices and addresses'),
+    cfg.IntOpt('ebtables_exec_attempts',
+               default=3,
+               help='Number of times to retry ebtables commands on failure.'),
     ]
 
 CONF = cfg.CONF
@@ -1639,20 +1642,53 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             delete_net_dev(bridge)
 
 
+# NOTE(cfb): This is a temporary fix to LP #1316621. We really want to call
+#            ebtables with --concurrent. In order to do that though we need
+#            libvirt to support this. Additionally since ebtables --concurrent
+#            will hang indefinitely waiting on the lock we need to teach
+#            oslo.concurrency.processutils how to timeout a long running
+#            process first. Once those are complete we can replace all of this
+#            with calls to ebtables --concurrent and a reasonable timeout.
+def _exec_ebtables(*cmd, **kwargs):
+    check_exit_code = kwargs.pop('check_exit_code', True)
+
+    # We always try at least once
+    attempts = CONF.ebtables_exec_attempts
+    if attempts <= 0:
+        attempts = 1
+    while attempts > 0:
+        attempts -= 1
+        # NOTE(cfb): ebtables reports all errors with a return code of 255.
+        #            As such we can't know if we hit a locking error, or some
+        #            other error (like a rule doesn't exist) so we have to
+        #            retry on all errors.
+        try:
+            _execute(*cmd, check_exit_code=[0], **kwargs)
+        except processutils.ProcessExecutionError:
+            if not attempts and check_exit_code:
+                LOG.warning(_LW('%s failed. Not Retrying.'), ' '.join(cmd))
+                raise
+            else:
+                LOG.warning(_LW('%s failed. Retrying.'), ' '.join(cmd))
+        else:
+            # Success
+            return
+
+
 @utils.synchronized('ebtables', external=True)
 def ensure_ebtables_rules(rules, table='filter'):
     for rule in rules:
         cmd = ['ebtables', '-t', table, '-D'] + rule.split()
-        _execute(*cmd, check_exit_code=False, run_as_root=True)
+        _exec_ebtables(*cmd, check_exit_code=False, run_as_root=True)
         cmd[3] = '-I'
-        _execute(*cmd, run_as_root=True)
+        _exec_ebtables(*cmd, run_as_root=True)
 
 
 @utils.synchronized('ebtables', external=True)
 def remove_ebtables_rules(rules, table='filter'):
     for rule in rules:
         cmd = ['ebtables', '-t', table, '-D'] + rule.split()
-        _execute(*cmd, check_exit_code=False, run_as_root=True)
+        _exec_ebtables(*cmd, check_exit_code=False, run_as_root=True)
 
 
 def isolate_dhcp_address(interface, address):
