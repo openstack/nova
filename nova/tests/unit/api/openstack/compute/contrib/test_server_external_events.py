@@ -50,6 +50,7 @@ def fake_get_by_uuid(cls, context, uuid):
 @mock.patch('nova.objects.instance.Instance.get_by_uuid', fake_get_by_uuid)
 class ServerExternalEventsTestV21(test.NoDBTestCase):
     server_external_events = server_external_events_v21
+    invalid_error = exception.ValidationError
 
     def setUp(self):
         super(ServerExternalEventsTestV21, self).setUp()
@@ -82,7 +83,7 @@ class ServerExternalEventsTestV21(test.NoDBTestCase):
     def _assert_call(self, req, body, expected_uuids, expected_events):
         with mock.patch.object(self.api.compute_api,
                                'external_instance_event') as api_method:
-            response = self.api.create(req, body)
+            response = self.api.create(req, body=body)
 
         result = response.obj
         code = response._code
@@ -135,35 +136,36 @@ class ServerExternalEventsTestV21(test.NoDBTestCase):
         body['events'][1]['server_uuid'] = MISSING_UUID
         req = self._create_req(body)
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.api.create, req, body)
+                          self.api.create, req, body=body)
 
     def test_create_bad_status(self):
         body = self.default_body
         body['events'][1]['status'] = 'foo'
         req = self._create_req(body)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.api.create, req, body)
+        self.assertRaises(self.invalid_error,
+                          self.api.create, req, body=body)
 
     def test_create_extra_gorp(self):
         body = self.default_body
         body['events'][0]['foobar'] = 'bad stuff'
         req = self._create_req(body)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.api.create, req, body)
+        self.assertRaises(self.invalid_error,
+                          self.api.create, req, body=body)
 
     def test_create_bad_events(self):
         body = {'events': 'foo'}
         req = self._create_req(body)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.api.create, req, body)
+        self.assertRaises(self.invalid_error,
+                          self.api.create, req, body=body)
 
     def test_create_bad_body(self):
         body = {'foo': 'bar'}
         req = self._create_req(body)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.api.create, req, body)
+        self.assertRaises(self.invalid_error,
+                          self.api.create, req, body=body)
 
 
 @mock.patch('nova.objects.instance.Instance.get_by_uuid', fake_get_by_uuid)
 class ServerExternalEventsTestV2(ServerExternalEventsTestV21):
     server_external_events = server_external_events_v2
+    invalid_error = webob.exc.HTTPBadRequest

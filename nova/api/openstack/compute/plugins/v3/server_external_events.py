@@ -14,13 +14,14 @@
 
 import webob
 
+from nova.api.openstack.compute.schemas.v3 import server_external_events
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.objects import external_event as external_event_obj
 from nova.openstack.common import log as logging
 
 
@@ -38,6 +39,7 @@ class ServerExternalEventsController(wsgi.Controller):
 
     @extensions.expected_errors((400, 403, 404))
     @wsgi.response(200)
+    @validation.schema(server_external_events.create)
     def create(self, req, body):
         """Creates a new instance event."""
         context = req.environ['nova.context']
@@ -49,31 +51,16 @@ class ServerExternalEventsController(wsgi.Controller):
         instances = {}
         result = 200
 
-        body_events = body.get('events', [])
-        if not isinstance(body_events, list) or not len(body_events):
-            raise webob.exc.HTTPBadRequest()
+        body_events = body['events']
 
         for _event in body_events:
             client_event = dict(_event)
             event = objects.InstanceExternalEvent(context)
 
-            try:
-                event.instance_uuid = client_event.pop('server_uuid')
-                event.name = client_event.pop('name')
-                event.status = client_event.pop('status', 'completed')
-                event.tag = client_event.pop('tag', None)
-            except KeyError as missing_key:
-                msg = _('event entity requires key %(key)s') % missing_key
-                raise webob.exc.HTTPBadRequest(explanation=msg)
-
-            if client_event:
-                msg = (_('event entity contains unsupported items: %s') %
-                       ', '.join(client_event.keys()))
-                raise webob.exc.HTTPBadRequest(explanation=msg)
-
-            if event.status not in external_event_obj.EVENT_STATUSES:
-                raise webob.exc.HTTPBadRequest(
-                    _('Invalid event status `%s\'') % event.status)
+            event.instance_uuid = client_event.pop('server_uuid')
+            event.name = client_event.pop('name')
+            event.status = client_event.pop('status', 'completed')
+            event.tag = client_event.pop('tag', None)
 
             instance = instances.get(event.instance_uuid)
             if not instance:
