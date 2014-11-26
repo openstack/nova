@@ -17,6 +17,9 @@ from lxml import etree
 import webob
 
 from nova.api.openstack.compute.contrib import quota_classes
+from nova.api.openstack.compute import plugins
+from nova.api.openstack.compute.plugins.v3 import quota_classes \
+       as quota_classes_v21
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import test
@@ -34,13 +37,16 @@ def quota_set(class_name):
                                 'injected_file_path_bytes': 255}}
 
 
-class QuotaClassSetsTest(test.TestCase):
+class QuotaClassSetsTestV21(test.TestCase):
 
     def setUp(self):
-        super(QuotaClassSetsTest, self).setUp()
-        self.ext_mgr = extensions.ExtensionManager()
-        self.ext_mgr.extensions = {}
-        self.controller = quota_classes.QuotaClassSetsController(self.ext_mgr)
+        super(QuotaClassSetsTestV21, self).setUp()
+        self._setup()
+
+    def _setup(self):
+        ext_info = plugins.LoadedExtensionInfo()
+        self.controller = quota_classes_v21.QuotaClassSetsController(
+            extension_info=ext_info)
 
     def test_format_quota_set(self):
         raw_quota_set = {
@@ -154,6 +160,14 @@ class QuotaClassSetsTest(test.TestCase):
             use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 'test_class', body)
+
+
+class QuotaClassSetsTestV2(QuotaClassSetsTestV21):
+
+    def _setup(self):
+        ext_mgr = extensions.ExtensionManager()
+        ext_mgr.extensions = {}
+        self.controller = quota_classes.QuotaClassSetsController(ext_mgr)
 
 
 class QuotaTemplateXMLSerializerTest(test.TestCase):
