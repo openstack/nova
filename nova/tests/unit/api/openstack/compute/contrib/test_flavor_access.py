@@ -18,6 +18,7 @@ import datetime
 from lxml import etree
 from webob import exc
 
+from nova.api.openstack import api_version_request as api_version
 from nova.api.openstack.compute.contrib import flavor_access \
     as flavor_access_v2
 from nova.api.openstack.compute import flavors as flavors_api
@@ -104,6 +105,7 @@ def fake_get_all_flavors_sorted_list(context, inactive=False,
 
 class FakeRequest(object):
     environ = {"nova.context": context.get_admin_context()}
+    api_version_request = api_version.APIVersionRequest("2.1")
 
     def get_db_flavor(self, flavor_id):
         return INSTANCE_TYPES[flavor_id]

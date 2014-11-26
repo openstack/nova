@@ -24,6 +24,7 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova import test
+from nova.tests.unit.api.openstack import fakes
 
 fake_instances = {
     '00000000-0000-0000-0000-000000000001': objects.Instance(
@@ -73,7 +74,7 @@ class ServerExternalEventsTestV21(test.NoDBTestCase):
                                              self.resp_event_2]}
 
     def _create_req(self, body):
-        req = webob.Request.blank('/v2/fake/os-server-external-events')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-server-external-events')
         req.method = 'POST'
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context

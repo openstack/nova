@@ -174,7 +174,7 @@ class BootFromVolumeTest(test.TestCase):
                         delete_on_termination=False,
                         )]
                 ))
-        req = webob.Request.blank('/v2/fake/os-volumes_boot')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-volumes_boot')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -202,7 +202,7 @@ class BootFromVolumeTest(test.TestCase):
                         delete_on_termination=False,
                         )]
                 ))
-        req = webob.Request.blank('/v2/fake/os-volumes_boot')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-volumes_boot')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -251,7 +251,7 @@ class VolumeApiTestV21(test.TestCase):
                "display_description": "Volume Test Desc",
                "availability_zone": "zone1:host1"}
         body = {"volume": vol}
-        req = webob.Request.blank(self.url_prefix + '/os-volumes')
+        req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes')
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers['content-type'] = 'application/json'
@@ -288,30 +288,30 @@ class VolumeApiTestV21(test.TestCase):
                           volumes.VolumeController().create, req, body=body)
 
     def test_volume_index(self):
-        req = webob.Request.blank(self.url_prefix + '/os-volumes')
+        req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes')
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 200)
 
     def test_volume_detail(self):
-        req = webob.Request.blank(self.url_prefix + '/os-volumes/detail')
+        req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes/detail')
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 200)
 
     def test_volume_show(self):
-        req = webob.Request.blank(self.url_prefix + '/os-volumes/123')
+        req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes/123')
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 200)
 
     def test_volume_show_no_volume(self):
         self.stubs.Set(cinder.API, "get", fakes.stub_volume_notfound)
 
-        req = webob.Request.blank(self.url_prefix + '/os-volumes/456')
+        req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes/456')
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 404)
         self.assertIn('Volume 456 could not be found.', resp.body)
 
     def test_volume_delete(self):
-        req = webob.Request.blank(self.url_prefix + '/os-volumes/123')
+        req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes/123')
         req.method = 'DELETE'
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 202)
@@ -319,7 +319,7 @@ class VolumeApiTestV21(test.TestCase):
     def test_volume_delete_no_volume(self):
         self.stubs.Set(cinder.API, "delete", fakes.stub_volume_notfound)
 
-        req = webob.Request.blank(self.url_prefix + '/os-volumes/456')
+        req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes/456')
         req.method = 'DELETE'
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 404)
@@ -364,7 +364,8 @@ class VolumeAttachTestsV21(test.TestCase):
         self.attachments = volumes_v3.VolumeAttachmentController()
 
     def test_show(self):
-        req = webob.Request.blank('/v2/servers/id/os-volume_attachments/uuid')
+        req = fakes.HTTPRequest.blank(
+                  '/v2/servers/id/os-volume_attachments/uuid')
         req.method = 'POST'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -376,7 +377,8 @@ class VolumeAttachTestsV21(test.TestCase):
     @mock.patch.object(compute_api.API, 'get',
         side_effect=exception.InstanceNotFound(instance_id=FAKE_UUID))
     def test_show_no_instance(self, mock_mr):
-        req = webob.Request.blank('/v2/servers/id/os-volume_attachments/uuid')
+        req = fakes.HTTPRequest.blank(
+                  '/v2/servers/id/os-volume_attachments/uuid')
         req.method = 'POST'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -391,7 +393,8 @@ class VolumeAttachTestsV21(test.TestCase):
     @mock.patch.object(objects.BlockDeviceMappingList,
                        'get_by_instance_uuid', return_value=None)
     def test_show_no_bdms(self, mock_mr):
-        req = webob.Request.blank('/v2/servers/id/os-volume_attachments/uuid')
+        req = fakes.HTTPRequest.blank(
+                  '/v2/servers/id/os-volume_attachments/uuid')
         req.method = 'POST'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -406,7 +409,8 @@ class VolumeAttachTestsV21(test.TestCase):
     def test_show_bdms_no_mountpoint(self):
         FAKE_UUID_NOTEXIST = '00000000-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
-        req = webob.Request.blank('/v2/servers/id/os-volume_attachments/uuid')
+        req = fakes.HTTPRequest.blank(
+                  '/v2/servers/id/os-volume_attachments/uuid')
         req.method = 'POST'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -422,7 +426,8 @@ class VolumeAttachTestsV21(test.TestCase):
         self.stubs.Set(compute_api.API,
                        'detach_volume',
                        fake_detach_volume)
-        req = webob.Request.blank('/v2/servers/id/os-volume_attachments/uuid')
+        req = fakes.HTTPRequest.blank(
+                  '/v2/servers/id/os-volume_attachments/uuid')
         req.method = 'DELETE'
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
@@ -441,7 +446,8 @@ class VolumeAttachTestsV21(test.TestCase):
         self.stubs.Set(compute_api.API,
                        'detach_volume',
                        fake_detach_volume)
-        req = webob.Request.blank('/v2/servers/id/os-volume_attachments/uuid')
+        req = fakes.HTTPRequest.blank(
+                  '/v2/servers/id/os-volume_attachments/uuid')
         req.method = 'DELETE'
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
@@ -455,7 +461,8 @@ class VolumeAttachTestsV21(test.TestCase):
     @mock.patch('nova.objects.BlockDeviceMapping.is_root',
                  new_callable=mock.PropertyMock)
     def test_detach_vol_root(self, mock_isroot):
-        req = webob.Request.blank('/v2/servers/id/os-volume_attachments/uuid')
+        req = fakes.HTTPRequest.blank(
+                  '/v2/servers/id/os-volume_attachments/uuid')
         req.method = 'DELETE'
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
@@ -474,7 +481,8 @@ class VolumeAttachTestsV21(test.TestCase):
         self.stubs.Set(compute_api.API,
                        'detach_volume',
                        fake_detach_volume_from_locked_server)
-        req = webob.Request.blank('/v2/servers/id/os-volume_attachments/uuid')
+        req = fakes.HTTPRequest.blank(
+                  '/v2/servers/id/os-volume_attachments/uuid')
         req.method = 'DELETE'
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
@@ -488,7 +496,7 @@ class VolumeAttachTestsV21(test.TestCase):
                        fake_attach_volume)
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
                                     'device': '/dev/fake'}}
-        req = webob.Request.blank('/v2/servers/id/os-volume_attachments')
+        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
         req.method = 'POST'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -507,7 +515,7 @@ class VolumeAttachTestsV21(test.TestCase):
                        fake_attach_volume_to_locked_server)
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
                                     'device': '/dev/fake'}}
-        req = webob.Request.blank('/v2/servers/id/os-volume_attachments')
+        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
         req.method = 'POST'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -528,7 +536,7 @@ class VolumeAttachTestsV21(test.TestCase):
             }
         }
 
-        req = webob.Request.blank('/v2/servers/id/os-volume_attachments')
+        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
         req.method = 'POST'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -548,7 +556,7 @@ class VolumeAttachTestsV21(test.TestCase):
             }
         }
 
-        req = webob.Request.blank('/v2/servers/id/os-volume_attachments')
+        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
         req.method = 'POST'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -562,7 +570,7 @@ class VolumeAttachTestsV21(test.TestCase):
                                     'device': '/dev/fake',
                                     'extra': 'extra_arg'}}
 
-        req = webob.Request.blank('/v2/servers/id/os-volume_attachments')
+        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
         req.method = 'POST'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -579,7 +587,8 @@ class VolumeAttachTestsV21(test.TestCase):
                        fake_func)
         body = body or {'volumeAttachment': {'volumeId': FAKE_UUID_B}}
 
-        req = webob.Request.blank('/v2/servers/id/os-volume_attachments/uuid')
+        req = fakes.HTTPRequest.blank(
+                  '/v2/servers/id/os-volume_attachments/uuid')
         req.method = 'PUT'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
@@ -653,7 +662,7 @@ class VolumeAttachTestsV2(VolumeAttachTestsV21):
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
                                     'device': '/dev/fake',
                                     'extra': 'extra_arg'}}
-        req = webob.Request.blank('/v2/servers/id/os-volume_attachments')
+        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
         req.method = 'POST'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'

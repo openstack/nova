@@ -18,10 +18,11 @@ Request Body validating middleware.
 
 import functools
 
-from validators import _SchemaValidator
+from nova.api.openstack import api_version_request as api_version
+from nova.api.validation import validators
 
 
-def schema(request_body_schema):
+def schema(request_body_schema, min_version=None, max_version=None):
     """Register a schema to validate request body.
 
     Registered schema will be used for validating request body just before
@@ -30,12 +31,31 @@ def schema(request_body_schema):
     :argument dict request_body_schema: a schema to validate request body
 
     """
-    schema_validator = _SchemaValidator(request_body_schema)
+    schema_validator = validators._SchemaValidator(request_body_schema)
 
     def add_validator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            schema_validator.validate(kwargs['body'])
+            min_ver = api_version.APIVersionRequest(min_version)
+            max_ver = api_version.APIVersionRequest(max_version)
+
+            # The request object is always the second argument.
+            # However numerous unittests pass in the request object
+            # via kwargs instead so we handle that as well.
+            # TODO(cyeoh): cleanup unittests so we don't have to
+            # to do this
+            if 'req' in kwargs:
+                ver = kwargs['req'].api_version_request
+            else:
+                ver = args[1].api_version_request
+            if ver.matches(min_ver, max_ver):
+                # Only validate against the schema if it lies within
+                # the version range specified. Note that if both min
+                # and max are not specified the validator will always
+                # be run.
+                schema_validator.validate(kwargs['body'])
+
             return func(*args, **kwargs)
         return wrapper
+
     return add_validator
