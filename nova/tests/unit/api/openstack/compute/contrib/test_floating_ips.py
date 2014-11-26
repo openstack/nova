@@ -138,9 +138,36 @@ class FloatingIpTestNeutronV21(test.NoDBTestCase):
             # called if using neutron
             self.assertTrue(dis_and_del.called)
 
+    def _test_floatingip_delete_not_found(self, ex,
+                                          expect_ex=webob.exc.HTTPNotFound):
+        req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips/1')
+        with contextlib.nested(
+            mock.patch.object(self.controller.network_api,
+                              'get_floating_ip',
+                              side_effect=ex)
+            ):
+            self.assertRaises(expect_ex,
+                              self.controller.delete, req, 1)
+
+    def test_floatingip_delete_not_found_ip(self):
+        ex = exception.FloatingIpNotFound(id=1)
+        self._test_floatingip_delete_not_found(ex)
+
+    def test_floatingip_delete_not_found(self):
+        ex = exception.NotFound
+        self._test_floatingip_delete_not_found(ex)
+
+    def test_floatingip_delete_invalid_id(self):
+        ex = exception.InvalidID(id=1)
+        self._test_floatingip_delete_not_found(ex, webob.exc.HTTPBadRequest)
+
 
 class FloatingIpTestNeutronV2(FloatingIpTestNeutronV21):
     floating_ips = fips_v2
+
+    def test_floatingip_delete_invalid_id(self):
+        ex = exception.InvalidID(id=1)
+        self._test_floatingip_delete_not_found(ex, webob.exc.HTTPNotFound)
 
 
 class FloatingIpTestV21(test.TestCase):
@@ -232,6 +259,29 @@ class FloatingIpTestV21(test.TestCase):
             self.controller.delete(req, 1)
             self.assertTrue(disoc_fip.called)
             self.assertTrue(rel_fip.called)
+
+    def _test_floatingip_delete_not_found(self, ex,
+                                          expect_ex=webob.exc.HTTPNotFound):
+        req = self._get_fake_fip_request('1')
+        with contextlib.nested(
+            mock.patch.object(self.controller.network_api,
+                              'get_floating_ip',
+                              side_effect=ex)
+            ):
+            self.assertRaises(expect_ex,
+                              self.controller.delete, req, 1)
+
+    def test_floatingip_delete_not_found_ip(self):
+        ex = exception.FloatingIpNotFound(id=1)
+        self._test_floatingip_delete_not_found(ex)
+
+    def test_floatingip_delete_not_found(self):
+        ex = exception.NotFound
+        self._test_floatingip_delete_not_found(ex)
+
+    def test_floatingip_delete_invalid_id(self):
+        ex = exception.InvalidID(id=1)
+        self._test_floatingip_delete_not_found(ex, webob.exc.HTTPBadRequest)
 
     def test_translate_floating_ip_view(self):
         floating_ip_address = self.floating_ip
@@ -715,6 +765,10 @@ class FloatingIpTestV2(FloatingIpTestV21):
         req = self._get_fake_server_request()
         rsp = self.manager._add_floating_ip(req, 'test_inst', body)
         self.assertEqual(202, rsp.status_int)
+
+    def test_floatingip_delete_invalid_id(self):
+        ex = exception.InvalidID(id=1)
+        self._test_floatingip_delete_not_found(ex, webob.exc.HTTPNotFound)
 
 
 class ExtendedFloatingIpTestV21(test.TestCase):
