@@ -3492,10 +3492,9 @@ class ComputeManager(manager.Manager):
             self.network_api.setup_networks_on_host(context, instance,
                                                     teardown=True)
 
-            instance_p = obj_base.obj_to_primitive(instance)
             migration_p = obj_base.obj_to_primitive(migration)
             self.network_api.migrate_instance_start(context,
-                                                    instance_p,
+                                                    instance,
                                                     migration_p)
 
             network_info = self._get_instance_nw_info(context, instance)
@@ -3574,10 +3573,9 @@ class ComputeManager(manager.Manager):
             instance.launched_at = timeutils.utcnow()
             instance.save(expected_task_state=task_states.RESIZE_REVERTING)
 
-            instance_p = obj_base.obj_to_primitive(instance)
             migration_p = obj_base.obj_to_primitive(migration)
             self.network_api.migrate_instance_finish(context,
-                                                     instance_p,
+                                                     instance,
                                                      migration_p)
 
             # if the original vm state was STOPPED, set it back to STOPPED
@@ -3771,9 +3769,8 @@ class ComputeManager(manager.Manager):
             self._terminate_volume_connections(context, instance, bdms)
 
             migration_p = obj_base.obj_to_primitive(migration)
-            instance_p = obj_base.obj_to_primitive(instance)
             self.network_api.migrate_instance_start(context,
-                                                    instance_p,
+                                                    instance,
                                                     migration_p)
 
             migration.status = 'post-migrating'
@@ -3830,10 +3827,9 @@ class ComputeManager(manager.Manager):
         self.network_api.setup_networks_on_host(context, instance,
                                                 migration['dest_compute'])
 
-        instance_p = obj_base.obj_to_primitive(instance)
         migration_p = obj_base.obj_to_primitive(migration)
         self.network_api.migrate_instance_finish(context,
-                                                 instance_p,
+                                                 instance,
                                                  migration_p)
 
         network_info = self._get_instance_nw_info(context, instance)

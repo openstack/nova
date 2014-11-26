@@ -20,7 +20,6 @@ import functools
 
 from oslo.config import cfg
 
-from nova.compute import flavors
 from nova import exception
 from nova.i18n import _LI
 from nova.network import base_api
@@ -270,7 +269,7 @@ class API(base_api.NetworkAPI):
         #             this is called from compute.manager which shouldn't
         #             have db access so we do it on the other side of the
         #             rpc.
-        flavor = flavors.extract_flavor(instance)
+        flavor = instance.get_flavor()
         args = {}
         args['vpn'] = vpn
         args['requested_networks'] = requested_networks
@@ -319,7 +318,7 @@ class API(base_api.NetworkAPI):
     @base_api.refresh_cache
     def add_fixed_ip_to_instance(self, context, instance, network_id):
         """Adds a fixed ip to instance from specified network."""
-        flavor = flavors.extract_flavor(instance)
+        flavor = instance.get_flavor()
         args = {'instance_id': instance['uuid'],
                 'rxtx_factor': flavor['rxtx_factor'],
                 'host': instance['host'],
@@ -333,7 +332,7 @@ class API(base_api.NetworkAPI):
     def remove_fixed_ip_from_instance(self, context, instance, address):
         """Removes a fixed ip from instance from specified network."""
 
-        flavor = flavors.extract_flavor(instance)
+        flavor = instance.get_flavor()
         args = {'instance_id': instance['uuid'],
                 'rxtx_factor': flavor['rxtx_factor'],
                 'host': instance['host'],
@@ -382,7 +381,7 @@ class API(base_api.NetworkAPI):
 
     def _get_instance_nw_info(self, context, instance):
         """Returns all network info related to an instance."""
-        flavor = flavors.extract_flavor(instance)
+        flavor = instance.get_flavor()
         args = {'instance_id': instance['uuid'],
                 'rxtx_factor': flavor['rxtx_factor'],
                 'host': instance['host'],
@@ -518,7 +517,7 @@ class API(base_api.NetworkAPI):
     @wrap_check_policy
     def migrate_instance_start(self, context, instance, migration):
         """Start to migrate the network of an instance."""
-        flavor = flavors.extract_flavor(instance)
+        flavor = instance.get_flavor()
         args = dict(
             instance_uuid=instance['uuid'],
             rxtx_factor=flavor['rxtx_factor'],
@@ -538,7 +537,7 @@ class API(base_api.NetworkAPI):
     @wrap_check_policy
     def migrate_instance_finish(self, context, instance, migration):
         """Finish migrating the network of an instance."""
-        flavor = flavors.extract_flavor(instance)
+        flavor = instance.get_flavor()
         args = dict(
             instance_uuid=instance['uuid'],
             rxtx_factor=flavor['rxtx_factor'],

@@ -86,7 +86,8 @@ def get_instance_by_floating_ip_addr(self, context, address):
     snagiibfa = self.network_api.get_instance_id_by_floating_address
     instance_id = snagiibfa(context, address)
     if instance_id:
-        return common.get_instance(self.compute_api, context, instance_id)
+        return common.get_instance(self.compute_api, context, instance_id,
+                                   want_objects=True)
 
 
 def disassociate_floating_ip(self, context, instance, address):
@@ -206,7 +207,8 @@ class FloatingIPActionController(wsgi.Controller):
             msg = _("Address not specified")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        instance = common.get_instance(self.compute_api, context, id)
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
         cached_nwinfo = compute_utils.get_nw_info_for_instance(instance)
         if not cached_nwinfo:
             msg = _('No nw_info cache associated with instance')

@@ -17,6 +17,7 @@
 
 import contextlib
 import itertools
+import uuid
 
 import mock
 import mox
@@ -285,12 +286,12 @@ class ApiTestCase(test.TestCase):
     def _stub_migrate_instance_calls(self, method, multi_host, info):
         fake_flavor = flavors.get_default_flavor()
         fake_flavor['rxtx_factor'] = 1.21
-        sys_meta = utils.dict_to_metadata(
-            flavors.save_flavor_info({}, fake_flavor))
-        fake_instance = {'uuid': 'fake_uuid',
-                         'instance_type_id': fake_flavor['id'],
-                         'project_id': 'fake_project_id',
-                         'system_metadata': sys_meta}
+        sys_meta = flavors.save_flavor_info({}, fake_flavor)
+        fake_instance = objects.Instance(
+            uuid=uuid.uuid4().hex,
+            project_id='fake_project_id',
+            instance_type_id=fake_flavor['id'],
+            system_metadata=sys_meta)
         fake_migration = {'source_compute': 'fake_compute_source',
                           'dest_compute': 'fake_compute_dest'}
 
@@ -305,7 +306,7 @@ class ApiTestCase(test.TestCase):
         self.stubs.Set(self.network_api, '_get_multi_addresses',
                 fake_get_multi_addresses)
 
-        expected = {'instance_uuid': 'fake_uuid',
+        expected = {'instance_uuid': fake_instance.uuid,
                     'source_compute': 'fake_compute_source',
                     'dest_compute': 'fake_compute_dest',
                     'rxtx_factor': 1.21,

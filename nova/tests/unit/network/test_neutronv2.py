@@ -41,7 +41,6 @@ from nova.pci import whitelist as pci_whitelist
 from nova import policy
 from nova import test
 from nova.tests.unit import fake_instance
-from nova import utils
 
 CONF = cfg.CONF
 
@@ -844,9 +843,9 @@ class TestNeutronv2(TestNeutronv2Base):
         self.mox.ReplayAll()
         flavor = flavors.get_default_flavor()
         flavor['rxtx_factor'] = 1
-        sys_meta = utils.dict_to_metadata(
-            flavors.save_flavor_info({}, flavor))
-        instance = {'system_metadata': sys_meta}
+        instance = objects.Instance(system_metadata={})
+        with mock.patch.object(instance, 'save'):
+            instance.set_flavor(flavor)
         port_req_body = {'port': {}}
         api._populate_neutron_extension_values(self.context, instance,
                                                None, port_req_body)
