@@ -15,7 +15,14 @@
 
 import datetime
 
+from nova.compute import api as compute_api
+from nova.compute import manager as compute_manager
+from nova import context
+from nova import db
+from nova import objects
 from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import fake_block_device
+from nova.tests.unit import fake_instance
 from nova.tests.unit.integrated.v3 import api_sample_base
 from nova.tests.unit.integrated.v3 import test_servers
 from nova.volume import cinder
@@ -180,5 +187,126 @@ class VolumesSampleJsonTest(test_servers.ServersSampleBase):
         self._post_volume()
         vol_id = self._get_volume_id()
         response = self._do_delete('os-volumes/%s' % vol_id)
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')
+
+
+class VolumeAttachmentsSampleBase(test_servers.ServersSampleBase):
+    def _stub_db_bdms_get_all_by_instance(self, server_id):
+
+        def fake_bdms_get_all_by_instance(context, instance_uuid,
+                                          use_slave=False):
+            bdms = [
+                fake_block_device.FakeDbBlockDeviceDict(
+                {'id': 1, 'volume_id': 'a26887c6-c47b-4654-abb5-dfadf7d3f803',
+                'instance_uuid': server_id, 'source_type': 'volume',
+                'destination_type': 'volume', 'device_name': '/dev/sdd'}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                {'id': 2, 'volume_id': 'a26887c6-c47b-4654-abb5-dfadf7d3f804',
+                'instance_uuid': server_id, 'source_type': 'volume',
+                'destination_type': 'volume', 'device_name': '/dev/sdc'})
+            ]
+            return bdms
+
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       fake_bdms_get_all_by_instance)
+
+    def _stub_compute_api_get(self):
+
+        def fake_compute_api_get(self, context, instance_id,
+                                 want_objects=False, expected_attrs=None):
+            if want_objects:
+                return fake_instance.fake_instance_obj(
+                        context, **{'uuid': instance_id})
+            else:
+                return {'uuid': instance_id}
+
+        self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
+
+
+class VolumeAttachmentsSampleJsonTest(VolumeAttachmentsSampleBase):
+    extension_name = "os-volumes"
+
+    def test_attach_volume_to_server(self):
+        self.stubs.Set(cinder.API, 'get', fakes.stub_volume_get)
+        self.stubs.Set(cinder.API, 'check_attach', lambda *a, **k: None)
+        self.stubs.Set(cinder.API, 'reserve_volume', lambda *a, **k: None)
+        device_name = '/dev/vdd'
+        bdm = objects.BlockDeviceMapping()
+        bdm['device_name'] = device_name
+        self.stubs.Set(compute_manager.ComputeManager,
+                       "reserve_block_device_name",
+                       lambda *a, **k: bdm)
+        self.stubs.Set(compute_manager.ComputeManager,
+                       'attach_volume',
+                       lambda *a, **k: None)
+        self.stubs.Set(objects.BlockDeviceMapping, 'get_by_volume_id',
+                       classmethod(lambda *a, **k: None))
+
+        volume = fakes.stub_volume_get(None, context.get_admin_context(),
+                                       'a26887c6-c47b-4654-abb5-dfadf7d3f803')
+        subs = {
+            'volume_id': volume['id'],
+            'device': device_name
+        }
+        server_id = self._post_server()
+        response = self._do_post('servers/%s/os-volume_attachments'
+                                 % server_id,
+                                 'attach-volume-to-server-req', subs)
+
+        subs.update(self._get_regexes())
+        self._verify_response('attach-volume-to-server-resp', subs,
+                              response, 200)
+
+    def test_list_volume_attachments(self):
+        server_id = self._post_server()
+
+        self._stub_db_bdms_get_all_by_instance(server_id)
+
+        response = self._do_get('servers/%s/os-volume_attachments'
+                                % server_id)
+        subs = self._get_regexes()
+        self._verify_response('list-volume-attachments-resp', subs,
+                              response, 200)
+
+    def test_volume_attachment_detail(self):
+        server_id = self._post_server()
+        attach_id = "a26887c6-c47b-4654-abb5-dfadf7d3f803"
+        self._stub_db_bdms_get_all_by_instance(server_id)
+        self._stub_compute_api_get()
+        response = self._do_get('servers/%s/os-volume_attachments/%s'
+                                % (server_id, attach_id))
+        subs = self._get_regexes()
+        self._verify_response('volume-attachment-detail-resp', subs,
+                              response, 200)
+
+    def test_volume_attachment_delete(self):
+        server_id = self._post_server()
+        attach_id = "a26887c6-c47b-4654-abb5-dfadf7d3f803"
+        self._stub_db_bdms_get_all_by_instance(server_id)
+        self._stub_compute_api_get()
+        self.stubs.Set(cinder.API, 'get', fakes.stub_volume_get)
+        self.stubs.Set(compute_api.API, 'detach_volume', lambda *a, **k: None)
+        response = self._do_delete('servers/%s/os-volume_attachments/%s'
+                                   % (server_id, attach_id))
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, '')
+
+    def test_volume_attachment_update(self):
+        self.stubs.Set(cinder.API, 'get', fakes.stub_volume_get)
+        subs = {
+            'volume_id': 'a26887c6-c47b-4654-abb5-dfadf7d3f805',
+            'device': '/dev/sdd'
+        }
+        server_id = self._post_server()
+        attach_id = 'a26887c6-c47b-4654-abb5-dfadf7d3f803'
+        self._stub_db_bdms_get_all_by_instance(server_id)
+        self._stub_compute_api_get()
+        self.stubs.Set(cinder.API, 'get', fakes.stub_volume_get)
+        self.stubs.Set(compute_api.API, 'swap_volume', lambda *a, **k: None)
+        response = self._do_put('servers/%s/os-volume_attachments/%s'
+                                % (server_id, attach_id),
+                                'update-volume-req',
+                                subs)
         self.assertEqual(response.status_code, 202)
         self.assertEqual(response.content, '')
