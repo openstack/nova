@@ -46,6 +46,8 @@ Nova Specific Commandments
 - [N331] Change LOG.warn on LOG.warning.
 - [N332] Check that the api_version decorator is the first decorator on a method
 - [N333] Check for oslo library imports use the non-namespaced packages
+- [N334] Change assertTrue/False(A in/not in B, message) to the more specific
+  assertIn/NotIn(A, B, message)
 
 Creating Unit Tests
 -------------------

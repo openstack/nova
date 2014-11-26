@@ -163,14 +163,13 @@ class IptablesManagerTestCase(test.NoDBTestCase):
                      ':%s-snat - [0:0]' % (self.binary_name),
                      ':%s-PREROUTING - [0:0]' % (self.binary_name),
                      ':%s-POSTROUTING - [0:0]' % (self.binary_name)]:
-            self.assertTrue(line in new_lines, "One of our chains went"
+            self.assertIn(line, new_lines, "One of our chains went"
                                                " missing.")
 
         seen_lines = set()
         for line in new_lines:
             line = line.strip()
-            self.assertTrue(line not in seen_lines,
-                            "Duplicate line: %s" % line)
+            self.assertNotIn(line, seen_lines, "Duplicate line: %s" % line)
             seen_lines.add(line)
 
         last_postrouting_line = ''
@@ -179,7 +178,7 @@ class IptablesManagerTestCase(test.NoDBTestCase):
             if line.startswith('[0:0] -A POSTROUTING'):
                 last_postrouting_line = line
 
-        self.assertTrue('-j nova-postrouting-bottom' in last_postrouting_line,
+        self.assertIn('-j nova-postrouting-bottom', last_postrouting_line,
                         "Last POSTROUTING rule does not jump to "
                         "nova-postouting-bottom: %s" % last_postrouting_line)
 
@@ -198,22 +197,21 @@ class IptablesManagerTestCase(test.NoDBTestCase):
                      ':%s-INPUT - [0:0]' % (self.binary_name),
                      ':%s-local - [0:0]' % (self.binary_name),
                      ':%s-OUTPUT - [0:0]' % (self.binary_name)]:
-            self.assertTrue(line in new_lines, "One of our chains went"
+            self.assertIn(line, new_lines, "One of our chains went"
                                                " missing.")
 
         seen_lines = set()
         for line in new_lines:
             line = line.strip()
-            self.assertTrue(line not in seen_lines,
-                            "Duplicate line: %s" % line)
+            self.assertNotIn(line, seen_lines, "Duplicate line: %s" % line)
             seen_lines.add(line)
 
         for chain in ['FORWARD', 'OUTPUT']:
             for line in new_lines:
                 if line.startswith('[0:0] -A %s' % chain):
-                    self.assertTrue('-j nova-filter-top' in line,
-                                    "First %s rule does not "
-                                    "jump to nova-filter-top" % chain)
+                    self.assertIn('-j nova-filter-top', line,
+                                  "First %s rule does not "
+                                  "jump to nova-filter-top" % chain)
                     break
 
         self.assertTrue('[0:0] -A nova-filter-top '
@@ -233,7 +231,7 @@ class IptablesManagerTestCase(test.NoDBTestCase):
 
         for line in ['*filter',
                      'COMMIT']:
-            self.assertTrue(line in new_lines, "One of iptables key lines "
+            self.assertIn(line, new_lines, "One of iptables key lines "
                             "went missing.")
 
         self.assertTrue(len(new_lines) > 4, "No iptables rules added")
