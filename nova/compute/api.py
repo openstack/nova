@@ -2510,7 +2510,7 @@ class API(base.Base):
         """
         self._check_auto_disk_config(instance, **extra_instance_updates)
 
-        current_instance_type = flavors.extract_flavor(instance)
+        current_instance_type = instance.get_flavor()
 
         # If flavor_id is not provided, only migrate the instance.
         if not flavor_id:

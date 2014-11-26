@@ -35,6 +35,7 @@ from nova import quota
 from nova import test
 from nova.tests.unit.compute import test_compute
 from nova.tests.unit import fake_instance
+from nova.tests.unit.objects import test_flavor
 
 
 ORIG_COMPUTE_API = None
@@ -250,7 +251,7 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
     @mock.patch.object(compute_api.API, '_check_auto_disk_config')
     def test_resize_instance(self, _check, _extract, _save, _upsize, _reserve,
                              _cells, _record):
-        _extract.return_value = {'name': 'fake', 'id': 'fake'}
+        _extract.return_value = objects.Flavor(**test_flavor.fake_flavor)
         orig_system_metadata = {}
         instance = fake_instance.fake_instance_obj(self.context,
                 vm_state=vm_states.ACTIVE, cell_name='fake-cell',
