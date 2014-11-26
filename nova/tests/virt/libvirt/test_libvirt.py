@@ -24,6 +24,7 @@ import os
 import re
 import shutil
 import tempfile
+import uuid
 
 from eventlet import greenthread
 from lxml import etree
@@ -7343,6 +7344,33 @@ class LibvirtConnTestCase(test.TestCase):
                               conn.cleanup, 'ctxt', fake_inst, 'netinfo')
             unplug.assert_called_once_with(fake_inst, 'netinfo',
                                            ignore_errors=True)
+
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('tempfile.mkstemp')
+    @mock.patch('os.close', return_value=None)
+    def test_check_instance_shared_storage_local_raw(self,
+                                                 mock_close,
+                                                 mock_mkstemp,
+                                                 mock_exists):
+        instance_uuid = str(uuid.uuid4())
+        self.flags(images_type='raw', group='libvirt')
+        self.flags(instances_path='/tmp')
+        mock_mkstemp.return_value = (-1,
+                                     '/tmp/{0}/file'.format(instance_uuid))
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = fake_instance.fake_instance_obj(self.context)
+        temp_file = driver.check_instance_shared_storage_local(self.context,
+                                                               instance)
+        self.assertEqual('/tmp/{0}/file'.format(instance_uuid),
+                         temp_file['filename'])
+
+    def test_check_instance_shared_storage_local_rbd(self):
+        self.flags(images_type='rbd', group='libvirt')
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = fake_instance.fake_instance_obj(self.context)
+        self.assertIsNone(driver.
+                          check_instance_shared_storage_local(self.context,
+                                                              instance))
 
 
 class HostStateTestCase(test.TestCase):
