@@ -4325,7 +4325,23 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
         float_ips = [self._create_floating_ip({'address': addr})
                         for addr in addresses]
         self._assertEqualListsOfObjects(float_ips,
-                                        db.floating_ip_get_all(self.ctxt))
+                                        db.floating_ip_get_all(self.ctxt),
+                                        ignored_keys="fixed_ip")
+
+    def test_floating_ip_get_all_associated(self):
+        instance = db.instance_create(self.ctxt, {'uuid': 'fake'})
+        float_ip = self._create_floating_ip({'address': '1.1.1.1'})
+        fixed_ip = self._create_fixed_ip({'address': '2.2.2.2',
+                                          'instance_uuid': instance.uuid})
+        db.floating_ip_fixed_ip_associate(self.ctxt,
+                                          float_ip.address,
+                                          fixed_ip,
+                                          'host')
+        float_ips = db.floating_ip_get_all(self.ctxt)
+        self.assertEqual(1, len(float_ips))
+        self.assertEqual(float_ip.address, float_ips[0].address)
+        self.assertEqual(fixed_ip, float_ips[0].fixed_ip.address)
+        self.assertEqual(instance.uuid, float_ips[0].fixed_ip.instance_uuid)
 
     def test_floating_ip_get_all_not_found(self):
         self.assertRaises(exception.NoFloatingIpsDefined,
@@ -4348,7 +4364,8 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         for host, float_ips in hosts_with_float_ips.iteritems():
             real_float_ips = db.floating_ip_get_all_by_host(self.ctxt, host)
-            self._assertEqualListsOfObjects(float_ips, real_float_ips)
+            self._assertEqualListsOfObjects(float_ips, real_float_ips,
+                                            ignored_keys="fixed_ip")
 
     def test_floating_ip_get_all_by_host_not_found(self):
         self.assertRaises(exception.FloatingIpNotFoundForHost,

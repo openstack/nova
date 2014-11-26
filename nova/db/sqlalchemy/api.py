@@ -940,7 +940,9 @@ def _floating_ip_get_all(context, session=None):
 
 @require_admin_context
 def floating_ip_get_all(context):
-    floating_ip_refs = _floating_ip_get_all(context).all()
+    floating_ip_refs = _floating_ip_get_all(context).\
+                       options(joinedload('fixed_ip')).\
+                       all()
     if not floating_ip_refs:
         raise exception.NoFloatingIpsDefined()
     return floating_ip_refs
@@ -949,8 +951,9 @@ def floating_ip_get_all(context):
 @require_admin_context
 def floating_ip_get_all_by_host(context, host):
     floating_ip_refs = _floating_ip_get_all(context).\
-                            filter_by(host=host).\
-                            all()
+                       filter_by(host=host).\
+                       options(joinedload('fixed_ip')).\
+                       all()
     if not floating_ip_refs:
         raise exception.FloatingIpNotFoundForHost(host=host)
     return floating_ip_refs

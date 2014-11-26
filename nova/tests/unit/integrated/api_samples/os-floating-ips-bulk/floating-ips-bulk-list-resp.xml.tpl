@@ -3,6 +3,7 @@
   <item>
     <interface>eth0</interface>
     <instance_uuid>None</instance_uuid>
+    <fixed_ip>None</fixed_ip>
     <project_id>None</project_id>
     <pool>nova</pool>
     <address>10.10.10.1</address>
@@ -10,6 +11,7 @@
   <item>
     <interface>eth0</interface>
     <instance_uuid>None</instance_uuid>
+    <fixed_ip>None</fixed_ip>
     <project_id>None</project_id>
     <pool>nova</pool>
     <address>10.10.10.2</address>
@@ -18,6 +20,7 @@
     <interface>eth0</interface>
     <instance_uuid>None</instance_uuid>
     <project_id>None</project_id>
+    <fixed_ip>None</fixed_ip>
     <pool>nova</pool>
     <address>10.10.10.3</address>
   </item>

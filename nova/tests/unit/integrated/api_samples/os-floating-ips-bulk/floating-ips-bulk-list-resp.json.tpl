@@ -5,6 +5,7 @@
             "instance_uuid": null,
             "interface": "eth0",
             "pool": "nova",
+            "fixed_ip": null,
             "project_id": null
         },
         {
@@ -12,6 +13,7 @@
             "instance_uuid": null,
             "interface": "eth0",
             "pool": "nova",
+            "fixed_ip": null,
             "project_id": null
         },
         {
@@ -19,6 +21,7 @@
             "instance_uuid": null,
             "interface": "eth0",
             "pool": "nova",
+            "fixed_ip": null,
             "project_id": null
         }
     ]

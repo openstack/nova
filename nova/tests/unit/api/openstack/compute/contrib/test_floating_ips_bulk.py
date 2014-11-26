@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 import netaddr
 from oslo.config import cfg
 import webob
@@ -21,6 +22,7 @@ from nova.api.openstack.compute.plugins.v3 import floating_ips_bulk as\
                                                       fipbulk_v21
 from nova import context
 from nova import exception
+from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 
@@ -78,8 +80,37 @@ class FloatingIPBulkV21(test.TestCase):
                     'pool': CONF.default_floating_pool,
                     'interface': CONF.public_interface,
                     'project_id': None,
-                    'instance_uuid': None}
+                    'instance_uuid': None,
+                    'fixed_ip': None}
                    for ip_addr in netaddr.IPNetwork(ip_range).iter_hosts()]
+        response = {'floating_ip_info': ip_info}
+
+        self.assertEqual(res_dict, response)
+
+    @mock.patch('nova.objects.FloatingIPList.get_all')
+    def test_list_ips_associated(self, mock_get):
+        instance_uuid = "fake-uuid"
+        fixed_address = "10.0.0.1"
+        floating_address = "192.168.0.1"
+        fixed_ip = objects.FixedIP(instance_uuid=instance_uuid,
+                                   address=fixed_address)
+        floating_ip = objects.FloatingIP(address=floating_address,
+                                         fixed_ip=fixed_ip,
+                                         pool=CONF.default_floating_pool,
+                                         interface=CONF.public_interface,
+                                         project_id=None)
+        floating_list = objects.FloatingIPList(objects=[floating_ip])
+        mock_get.return_value = floating_list
+        req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips-bulk',
+                                      use_admin_context=True)
+        res_dict = self.controller.index(req)
+
+        ip_info = [{'address': floating_address,
+                    'pool': CONF.default_floating_pool,
+                    'interface': CONF.public_interface,
+                    'project_id': None,
+                    'instance_uuid': instance_uuid,
+                    'fixed_ip': fixed_address}]
         response = {'floating_ip_info': ip_info}
 
         self.assertEqual(res_dict, response)
