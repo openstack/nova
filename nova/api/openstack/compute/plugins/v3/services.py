@@ -121,8 +121,8 @@ class ServiceController(wsgi.Controller):
             msg = _("Unknown action")
             raise webob.exc.HTTPNotFound(explanation=msg)
         try:
-            host = body['service']['host']
-            binary = body['service']['binary']
+            host = body['host']
+            binary = body['binary']
             ret_value = {
                 'service': {
                     'host': host,
@@ -135,7 +135,7 @@ class ServiceController(wsgi.Controller):
                 'disabled_reason': None,
             }
             if id == "disable-log-reason":
-                reason = body['service']['disabled_reason']
+                reason = body['disabled_reason']
                 if not self._is_valid_as_reason(reason):
                     msg = _('Disabled reason contains invalid characters '
                             'or is too long')
