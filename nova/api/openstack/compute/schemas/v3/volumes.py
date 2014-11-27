@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 from nova.api.validation import parameter_types
 
 create = {
@@ -58,3 +60,29 @@ snapshot_create = {
     'required': ['snapshot'],
     'additionalProperties': False,
 }
+
+create_volume_attachment = {
+    'type': 'object',
+    'properties': {
+        'volumeAttachment': {
+            'type': 'object',
+            'properties': {
+                'volumeId': parameter_types.volume_id,
+                'device': {
+                    'type': 'string',
+                    # NOTE: The validation pattern from match_device() in
+                    #       nova/block_device.py.
+                    'pattern': '(^/dev/x{0,1}[a-z]{0,1}d{0,1})([a-z]+)[0-9]*$'
+                }
+            },
+            'required': ['volumeId'],
+            'additionalProperties': False,
+        },
+    },
+    'required': ['volumeAttachment'],
+    'additionalProperties': False,
+}
+
+update_volume_attachment = copy.deepcopy(create_volume_attachment)
+del update_volume_attachment['properties']['volumeAttachment'][
+    'properties']['device']

@@ -27,7 +27,6 @@ from nova import compute
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.openstack.common import uuidutils
 from nova import volume
 
 ALIAS = "os-volumes"
@@ -264,30 +263,16 @@ class VolumeAttachmentController(wsgi.Controller):
             instance['uuid'],
             assigned_mountpoint)}
 
-    def _validate_volume_id(self, volume_id):
-        if not uuidutils.is_uuid_like(volume_id):
-            msg = _("Bad volumeId format: volumeId is "
-                    "not in proper format (%s)") % volume_id
-            raise exc.HTTPBadRequest(explanation=msg)
-
     @extensions.expected_errors((400, 404, 409))
+    @validation.schema(volumes_schema.create_volume_attachment)
     def create(self, req, server_id, body):
         """Attach a volume to an instance."""
         context = req.environ['nova.context']
         authorize(context)
         authorize_attach(context, action='create')
 
-        if not self.is_valid_body(body, 'volumeAttachment'):
-            msg = _("volumeAttachment not specified")
-            raise exc.HTTPBadRequest(explanation=msg)
-        try:
-            volume_id = body['volumeAttachment']['volumeId']
-        except KeyError:
-            msg = _("volumeId must be specified.")
-            raise exc.HTTPBadRequest(explanation=msg)
+        volume_id = body['volumeAttachment']['volumeId']
         device = body['volumeAttachment'].get('device')
-
-        self._validate_volume_id(volume_id)
 
         instance = common.get_instance(self.compute_api, context, server_id,
                                        want_objects=True)
@@ -325,25 +310,17 @@ class VolumeAttachmentController(wsgi.Controller):
 
     @wsgi.response(202)
     @extensions.expected_errors((400, 404, 409))
+    @validation.schema(volumes_schema.update_volume_attachment)
     def update(self, req, server_id, id, body):
         context = req.environ['nova.context']
         authorize(context)
         authorize_attach(context, action='update')
 
-        if not self.is_valid_body(body, 'volumeAttachment'):
-            msg = _("volumeAttachment not specified")
-            raise exc.HTTPBadRequest(explanation=msg)
-
         old_volume_id = id
         try:
             old_volume = self.volume_api.get(context, old_volume_id)
 
-            try:
-                new_volume_id = body['volumeAttachment']['volumeId']
-            except KeyError:
-                msg = _("volumeId must be specified.")
-                raise exc.HTTPBadRequest(explanation=msg)
-            self._validate_volume_id(new_volume_id)
+            new_volume_id = body['volumeAttachment']['volumeId']
             new_volume = self.volume_api.get(context, new_volume_id)
         except exception.VolumeNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
