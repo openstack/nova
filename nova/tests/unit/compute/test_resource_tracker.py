@@ -339,7 +339,7 @@ class BaseTestCase(test.TestCase):
         return self._instance_types[id_]
 
     def _fake_instance_update_and_get_original(self, context, instance_uuid,
-            values):
+                                               values, columns_to_join=None):
         instance = self._instances[instance_uuid]
         instance.update(values)
         # the test doesn't care what the original instance values are, it's

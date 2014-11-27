@@ -127,9 +127,16 @@ class ConductorManager(manager.Manager):
             if key in datetime_fields and isinstance(value, six.string_types):
                 updates[key] = timeutils.parse_strtime(value)
 
+        # NOTE(danms): the send_update() call below is going to want to know
+        # about the flavor, so we need to join the appropriate things here,
+        # and objectify the result.
         old_ref, instance_ref = self.db.instance_update_and_get_original(
-            context, instance_uuid, updates)
-        notifications.send_update(context, old_ref, instance_ref, service)
+            context, instance_uuid, updates,
+            columns_to_join=['system_metadata'])
+        inst_obj = objects.Instance._from_db_object(
+            context, objects.Instance(),
+            instance_ref, expected_attrs=['system_metadata'])
+        notifications.send_update(context, old_ref, inst_obj, service)
         return jsonutils.to_primitive(instance_ref)
 
     @messaging.expected_exceptions(exception.InstanceNotFound)

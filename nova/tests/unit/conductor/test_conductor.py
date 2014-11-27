@@ -1114,7 +1114,9 @@ class ConductorPolicyTest(test.TestCase):
                 updates[key] = timeutils.utcnow()
             else:
                 updates[key] = 'foo'
-        conductor.instance_update(ctxt, 'fake-instance', **updates)
+
+        with mock.patch('nova.objects.Instance._from_db_object'):
+            conductor.instance_update(ctxt, 'fake-instance', **updates)
 
     def test_allowed_keys_are_real(self):
         instance = models.Instance()
