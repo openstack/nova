@@ -157,6 +157,7 @@ def fake_utcnow_ts():
 
 class ServicesTestV21(test.TestCase):
     service_is_up_exc = webob.exc.HTTPInternalServerError
+    bad_request = exception.ValidationError
 
     def _set_up_controller(self):
         self.controller = services_v21.ServiceController()
@@ -451,7 +452,7 @@ class ServicesTestV21(test.TestCase):
         body = {'host': 'host1', 'binary': 'nova-compute'}
         req = fakes.HTTPRequest.blank('/v2/fake/os-services/enable')
 
-        res_dict = self.controller.update(req, "enable", body)
+        res_dict = self.controller.update(req, "enable", body=body)
         self.assertEqual(res_dict['service']['status'], 'enabled')
         self.assertNotIn('disabled_reason', res_dict['service'])
 
@@ -462,7 +463,7 @@ class ServicesTestV21(test.TestCase):
                           self.controller.update,
                           req,
                           "enable",
-                          body)
+                          body=body)
 
     def test_services_enable_with_invalid_binary(self):
         body = {'host': 'host1', 'binary': 'invalid'}
@@ -471,12 +472,12 @@ class ServicesTestV21(test.TestCase):
                           self.controller.update,
                           req,
                           "enable",
-                          body)
+                          body=body)
 
     def test_services_disable(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-services/disable')
         body = {'host': 'host1', 'binary': 'nova-compute'}
-        res_dict = self.controller.update(req, "disable", body)
+        res_dict = self.controller.update(req, "disable", body=body)
 
         self.assertEqual(res_dict['service']['status'], 'disabled')
         self.assertNotIn('disabled_reason', res_dict['service'])
@@ -488,7 +489,7 @@ class ServicesTestV21(test.TestCase):
                           self.controller.update,
                           req,
                           "disable",
-                          body)
+                          body=body)
 
     def test_services_disable_with_invalid_binary(self):
         body = {'host': 'host1', 'binary': 'invalid'}
@@ -497,7 +498,7 @@ class ServicesTestV21(test.TestCase):
                           self.controller.update,
                           req,
                           "disable",
-                          body)
+                          body=body)
 
     def test_services_disable_log_reason(self):
         self.ext_mgr.extensions['os-extended-services'] = True
@@ -507,7 +508,9 @@ class ServicesTestV21(test.TestCase):
                 'binary': 'nova-compute',
                 'disabled_reason': 'test-reason',
                 }
-        res_dict = self.controller.update(req, "disable-log-reason", body)
+        res_dict = self.controller.update(req,
+                                          "disable-log-reason",
+                                          body=body)
 
         self.assertEqual(res_dict['service']['status'], 'disabled')
         self.assertEqual(res_dict['service']['disabled_reason'], 'test-reason')
@@ -520,15 +523,19 @@ class ServicesTestV21(test.TestCase):
                 'binary': 'nova-compute',
                }
         self.assertRaises(webob.exc.HTTPBadRequest,
-                self.controller.update, req, "disable-log-reason", body)
+                self.controller.update, req, "disable-log-reason", body=body)
 
     def test_invalid_reason_field(self):
-        reason = ' '
-        self.assertFalse(self.controller._is_valid_as_reason(reason))
+        self.ext_mgr.extensions['os-extended-services'] = True
+        url = '/v2/fake/os-services/disable-log-reason'
+        req = fakes.HTTPRequest.blank(url)
         reason = 'a' * 256
-        self.assertFalse(self.controller._is_valid_as_reason(reason))
-        reason = 'it\'s a valid reason.'
-        self.assertTrue(self.controller._is_valid_as_reason(reason))
+        body = {'host': 'host1',
+                'binary': 'nova-compute',
+                'disabled_reason': reason,
+               }
+        self.assertRaises(self.bad_request,
+                self.controller.update, req, "disable-log-reason", body=body)
 
     def test_services_delete(self):
         self.ext_mgr.extensions['os-extended-services-delete'] = True
@@ -566,6 +573,7 @@ class ServicesTestV21(test.TestCase):
 
 class ServicesTestV20(ServicesTestV21):
     service_is_up_exc = KeyError
+    bad_request = webob.exc.HTTPBadRequest
 
     def _set_up_controller(self):
         self.controller = services_v2.ServiceController(self.ext_mgr)

@@ -14,13 +14,14 @@
 
 import webob.exc
 
+from nova.api.openstack.compute.schemas.v3 import services
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.i18n import _
 from nova import servicegroup
-from nova import utils
 
 ALIAS = "os-services"
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
@@ -74,15 +75,6 @@ class ServiceController(wsgi.Controller):
 
         return svcs
 
-    def _is_valid_as_reason(self, reason):
-        try:
-            utils.check_string_length(reason.strip(), 'Disabled reason',
-                                      min_length=1, max_length=255)
-        except exception.InvalidInput:
-            return False
-
-        return True
-
     @wsgi.response(204)
     @extensions.expected_errors((400, 404))
     def delete(self, req, id):
@@ -106,6 +98,7 @@ class ServiceController(wsgi.Controller):
         return {'services': services}
 
     @extensions.expected_errors((400, 404))
+    @validation.schema(services.service_update)
     def update(self, req, id, body):
         """Enable/Disable scheduling for a service."""
         context = req.environ['nova.context']
@@ -120,34 +113,29 @@ class ServiceController(wsgi.Controller):
         else:
             msg = _("Unknown action")
             raise webob.exc.HTTPNotFound(explanation=msg)
-        try:
-            host = body['host']
-            binary = body['binary']
-            ret_value = {
-                'service': {
-                    'host': host,
-                    'binary': binary,
-                    'status': status,
-                },
-            }
-            status_detail = {
-                'disabled': disabled,
-                'disabled_reason': None,
-            }
-            if id == "disable-log-reason":
-                reason = body['disabled_reason']
-                if not self._is_valid_as_reason(reason):
-                    msg = _('Disabled reason contains invalid characters '
-                            'or is too long')
-                    raise webob.exc.HTTPBadRequest(explanation=msg)
 
-                status_detail['disabled_reason'] = reason
-                ret_value['service']['disabled_reason'] = reason
-        except (TypeError, KeyError):
-            msg = _('Invalid attribute in the request')
-            if 'host' in body and 'binary' in body:
+        host = body['host']
+        binary = body['binary']
+        ret_value = {
+            'service': {
+                'host': host,
+                'binary': binary,
+                'status': status,
+            },
+        }
+        status_detail = {
+            'disabled': disabled,
+            'disabled_reason': None,
+        }
+        if id == "disable-log-reason":
+            try:
+                reason = body['disabled_reason']
+            except (KeyError):
                 msg = _('Missing disabled reason field')
-            raise webob.exc.HTTPBadRequest(explanation=msg)
+                raise webob.exc.HTTPBadRequest(explanation=msg)
+
+            status_detail['disabled_reason'] = reason
+            ret_value['service']['disabled_reason'] = reason
 
         try:
             self.host_api.service_update(context, host, binary, status_detail)
