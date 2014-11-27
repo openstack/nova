@@ -42,12 +42,12 @@ def fake_instance_get(self, _context, instance_uuid, want_objects=False,
 class ServerDiagnosticsTestV21(test.NoDBTestCase):
 
     def _setup_router(self):
-        self.router = compute.APIRouterV3(init_only=('servers',
-                                                     'os-server-diagnostics'))
+        self.router = compute.APIRouterV21(init_only=('servers',
+                                                      'os-server-diagnostics'))
 
     def _get_request(self):
-        return fakes.HTTPRequestV3.blank(
-                   '/servers/%s/diagnostics' % UUID)
+        return fakes.HTTPRequest.blank(
+                   '/fake/servers/%s/diagnostics' % UUID)
 
     def setUp(self):
         super(ServerDiagnosticsTestV21, self).setUp()
@@ -100,10 +100,6 @@ class ServerDiagnosticsTestV2(ServerDiagnosticsTestV21):
             osapi_compute_ext_list=['Server_diagnostics'])
 
         self.router = compute.APIRouter(init_only=('servers', 'diagnostics'))
-
-    def _get_request(self):
-        return fakes.HTTPRequest.blank(
-                   '/fake/servers/%s/diagnostics' % UUID)
 
 
 class TestServerDiagnosticsXMLSerializer(test.NoDBTestCase):
