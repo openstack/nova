@@ -291,7 +291,7 @@ class ResourceTracker(object):
             try:
                 metrics += monitor.get_metrics(nodename=nodename)
             except Exception:
-                LOG.warn(_("Cannot get the metrics from %s."), monitors)
+                LOG.warn(_("Cannot get the metrics from %s."), monitor)
         if metrics:
             metrics_info['nodename'] = nodename
             metrics_info['metrics'] = metrics
