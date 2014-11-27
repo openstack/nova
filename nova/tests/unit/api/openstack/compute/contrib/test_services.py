@@ -492,7 +492,7 @@ class ServicesTestV21(test.TestCase):
 
     def test_services_disable_with_invalid_binary(self):
         body = {'host': 'host1', 'binary': 'invalid'}
-        req = fakes.HTTPRequestV3.blank('/v2/fake/os-services/disable')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-services/disable')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.update,
                           req,
