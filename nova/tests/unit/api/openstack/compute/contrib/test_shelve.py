@@ -48,7 +48,7 @@ class ShelvePolicyTestV21(test.NoDBTestCase):
         self.controller = self.plugin.ShelveController()
 
     def _fake_request(self):
-        return fakes.HTTPRequestV3.blank('/servers/12/os-shelve')
+        return fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
 
     def test_shelve_restricted_by_role(self):
         rules = {'compute_extension:%sshelve' % self.prefix:
@@ -143,6 +143,3 @@ class ShelvePolicyTestV2(ShelvePolicyTestV21):
     plugin = shelve_v2
     prefix = ''
     offload = 'shelveOffload'
-
-    def _fake_request(self):
-        return fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
