@@ -103,7 +103,7 @@ class FloatingIPBulkController(object):
         try:
             objects.FloatingIPList.create(context, ips)
         except exception.FloatingIpExists as exc:
-            raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
+            raise webob.exc.HTTPConflict(explanation=exc.format_message())
 
         return {"floating_ips_bulk_create": {"ip_range": ip_range,
                                                "pool": pool,

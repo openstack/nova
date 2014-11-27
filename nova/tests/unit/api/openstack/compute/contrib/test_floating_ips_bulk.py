@@ -146,7 +146,7 @@ class FloatingIPBulkV21(test.TestCase):
         ip_range = '192.168.1.0/29'
         body = {'floating_ips_bulk_create': {'ip_range': ip_range}}
         req = fakes.HTTPRequest.blank(self.url)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+        self.assertRaises(webob.exc.HTTPConflict, self.controller.create,
                           req, body=body)
 
     def test_create_bad_cidr_fail(self):
