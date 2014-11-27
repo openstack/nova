@@ -3286,7 +3286,9 @@ class LdapDNSTestCase(test.TestCase):
     def setUp(self):
         super(LdapDNSTestCase, self).setUp()
 
-        self.useFixture(test.ReplaceModule('ldap', fake_ldap))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.network.ldapdns.ldap',
+            fake_ldap))
         dns_class = 'nova.network.ldapdns.LdapDNS'
         self.driver = importutils.import_object(dns_class)
 

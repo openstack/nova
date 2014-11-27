@@ -30,7 +30,6 @@ import inspect
 import logging
 import os
 import shutil
-import sys
 import uuid
 
 import fixtures
@@ -148,23 +147,6 @@ class SampleNetworks(fixtures.Fixture):
                                 dns1=CONF.flat_network_dns)
         for net in db.network_get_all(ctxt):
             network.set_network_host(ctxt, net)
-
-
-class ReplaceModule(fixtures.Fixture):
-    """Replace a module with a fake module."""
-
-    def __init__(self, name, new_value):
-        self.name = name
-        self.new_value = new_value
-
-    def _restore(self, old_value):
-        sys.modules[self.name] = old_value
-
-    def setUp(self):
-        super(ReplaceModule, self).setUp()
-        old_value = sys.modules.get(self.name)
-        sys.modules[self.name] = self.new_value
-        self.addCleanup(self._restore, old_value)
 
 
 class ServiceFixture(fixtures.Fixture):
