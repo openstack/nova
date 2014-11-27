@@ -1936,7 +1936,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         inst_obj = objects.Instance._from_db_object(
                 self.context, objects.Instance(), inst,
                 expected_attrs=[])
-        request_spec = dict(instance_type=dict(extra_specs=dict()),
+        request_spec = dict(instance_type=dict(),
                             instance_properties=dict())
         filter_props = dict(context=None)
         resvs = 'fake-resvs'

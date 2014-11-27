@@ -532,7 +532,7 @@ class ComputeTaskManager(base.Base):
             # TODO(timello): originally, instance_type in request_spec
             # on compute.api.resize does not have 'extra_specs', so we
             # remove it for now to keep tests backward compatibility.
-            request_spec['instance_type'].pop('extra_specs')
+            request_spec['instance_type'].pop('extra_specs', None)
 
             (host, node) = (host_state['host'], host_state['nodename'])
             self.compute_rpcapi.prep_resize(
