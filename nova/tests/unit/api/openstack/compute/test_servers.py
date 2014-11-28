@@ -1322,66 +1322,6 @@ class ServersControllerUpdateTest(ControllerTest):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, FAKE_UUID, body)
 
-    def test_update_server_access_ipv4(self):
-        body = {'server': {'accessIPv4': '0.0.0.0'}}
-        req = self._get_request(body, {'access_ipv4': '0.0.0.0'})
-        res_dict = self.controller.update(req, FAKE_UUID, body)
-
-        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
-        self.assertEqual(res_dict['server']['accessIPv4'], '0.0.0.0')
-
-    def test_update_server_access_ipv4_bad_format(self):
-        body = {'server': {'accessIPv4': 'bad_format'}}
-        req = self._get_request(body, {'access_ipv4': '0.0.0.0'})
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                            req, FAKE_UUID, body)
-
-    def test_update_server_access_ipv4_none(self):
-        body = {'server': {'accessIPv4': None}}
-        req = self._get_request(body, {'access_ipv4': '0.0.0.0'})
-        res_dict = self.controller.update(req, FAKE_UUID, body)
-
-        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
-        self.assertEqual(res_dict['server']['accessIPv4'], '')
-
-    def test_update_server_access_ipv4_blank(self):
-        body = {'server': {'accessIPv4': ''}}
-        req = self._get_request(body, {'access_ipv4': '0.0.0.0'})
-        res_dict = self.controller.update(req, FAKE_UUID, body)
-
-        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
-        self.assertEqual(res_dict['server']['accessIPv4'], '')
-
-    def test_update_server_access_ipv6(self):
-        body = {'server': {'accessIPv6': 'beef::0123'}}
-        req = self._get_request(body, {'access_ipv6': 'beef::0123'})
-        res_dict = self.controller.update(req, FAKE_UUID, body)
-
-        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
-        self.assertEqual(res_dict['server']['accessIPv6'], 'beef::123')
-
-    def test_update_server_access_ipv6_bad_format(self):
-        body = {'server': {'accessIPv6': 'bad_format'}}
-        req = self._get_request(body, {'access_ipv6': 'beef::0123'})
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                            req, FAKE_UUID, body)
-
-    def test_update_server_access_ipv6_none(self):
-        body = {'server': {'accessIPv6': None}}
-        req = self._get_request(body, {'access_ipv6': 'beef::0123'})
-        res_dict = self.controller.update(req, FAKE_UUID, body)
-
-        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
-        self.assertEqual(res_dict['server']['accessIPv6'], '')
-
-    def test_update_server_access_ipv6_blank(self):
-        body = {'server': {'accessIPv6': ''}}
-        req = self._get_request(body, {'access_ipv6': 'beef::0123'})
-        res_dict = self.controller.update(req, FAKE_UUID, body)
-
-        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
-        self.assertEqual(res_dict['server']['accessIPv6'], '')
-
     def test_update_server_personality(self):
         body = {
             'server': {
@@ -1599,16 +1539,6 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         self.req.method = 'POST'
         self.req.headers["content-type"] = "application/json"
 
-    def test_rebuild_instance_with_access_ipv4_bad_format(self):
-        # proper local hrefs must start with 'http://localhost/v2/'
-        self.body['rebuild']['accessIPv4'] = 'bad_format'
-        self.body['rebuild']['accessIPv6'] = 'fead::1234'
-        self.body['rebuild']['metadata']['hello'] = 'world'
-        self.req.body = jsonutils.dumps(self.body)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller._action_rebuild,
-                          self.req, FAKE_UUID, self.body)
-
     def test_rebuild_instance_with_blank_metadata_key(self):
         self.body['rebuild']['accessIPv4'] = '0.0.0.0'
         self.body['rebuild']['accessIPv6'] = 'fead::1234'
@@ -1710,17 +1640,6 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
             self.assertRaises(webob.exc.HTTPForbidden,
                               self.controller._action_rebuild,
                               self.req, FAKE_UUID, body=self.body)
-
-    def test_rebuild_instance_with_access_ipv6_bad_format(self):
-        # proper local hrefs must start with 'http://localhost/v2/'
-        self.body['rebuild']['accessIPv4'] = '1.2.3.4'
-        self.body['rebuild']['accessIPv6'] = 'bad_format'
-        self.body['rebuild']['metadata']['hello'] = 'world'
-        self.req.body = jsonutils.dumps(self.body)
-        self.req.headers["content-type"] = "application/json"
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller._action_rebuild,
-                          self.req, FAKE_UUID, self.body)
 
     def test_rebuild_instance_with_null_image_ref(self):
         self.body['rebuild']['imageRef'] = None
@@ -2291,42 +2210,6 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', fake_create)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra, params)
-
-    def test_create_instance_with_access_ip(self):
-        self.body['server']['accessIPv4'] = '1.2.3.4'
-        self.body['server']['accessIPv6'] = 'fead::1234'
-
-        self.req.body = jsonutils.dumps(self.body)
-        res = self.controller.create(self.req, self.body).obj
-        server = res['server']
-        self._check_admin_pass_len(server)
-        self.assertEqual(FAKE_UUID, server['id'])
-
-    def test_create_instance_with_access_ip_pass_disabled(self):
-        # test with admin passwords disabled See lp bug 921814
-        self.flags(enable_instance_password=False)
-        self.body['server']['accessIPv4'] = '1.2.3.4'
-        self.body['server']['accessIPv6'] = 'fead::1234'
-        self.req.body = jsonutils.dumps(self.body)
-        res = self.controller.create(self.req, self.body).obj
-
-        server = res['server']
-        self._check_admin_pass_missing(server)
-        self.assertEqual(FAKE_UUID, server['id'])
-
-    def test_create_instance_bad_format_access_ip_v4(self):
-        self.body['server']['accessIPv4'] = 'bad_format'
-        self.body['server']['accessIPv6'] = 'fead::1234'
-        self.req.body = jsonutils.dumps(self.body)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, self.body)
-
-    def test_create_instance_bad_format_access_ip_v6(self):
-        self.body['server']['accessIPv4'] = '1.2.3.4'
-        self.body['server']['accessIPv6'] = 'bad_format'
-        self.req.body = jsonutils.dumps(self.body)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
-                          self.req, self.body)
 
     def test_create_instance_name_all_blank_spaces(self):
         self.body['server']['name'] = ' ' * 64
