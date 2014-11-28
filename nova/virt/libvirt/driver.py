@@ -3903,7 +3903,11 @@ class LibvirtDriver(driver.ComputeDriver):
             # client app is connected. Thus we can't get away
             # with a single type=pty console. Instead we have
             # to configure two separate consoles.
-            consolelog = vconfig.LibvirtConfigGuestSerial()
+            if guest.cpu.arch in (arch.S390, arch.S390X):
+                consolelog = vconfig.LibvirtConfigGuestConsole()
+                consolelog.target_type = "sclplm"
+            else:
+                consolelog = vconfig.LibvirtConfigGuestSerial()
             consolelog.type = "file"
             consolelog.source_path = self._get_console_log_path(instance)
             guest.add_device(consolelog)
@@ -4111,7 +4115,11 @@ class LibvirtDriver(driver.ComputeDriver):
             # Create the serial console char devices
             self._create_serial_console_devices(guest, instance, flavor,
                                                 image_meta)
-            consolepty = vconfig.LibvirtConfigGuestSerial()
+            if caps.host.cpu.arch in (arch.S390, arch.S390X):
+                consolepty = vconfig.LibvirtConfigGuestConsole()
+                consolepty.target_type = "sclp"
+            else:
+                consolepty = vconfig.LibvirtConfigGuestSerial()
         else:
             consolepty = vconfig.LibvirtConfigGuestConsole()
 

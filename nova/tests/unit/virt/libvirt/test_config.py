@@ -1035,6 +1035,43 @@ class LibvirtConfigGuestConsoleTest(LibvirtConfigBaseTest):
         self.assertXmlEqual(xml, """
             <console type="pty"/>""")
 
+    def test_config_target_type(self):
+        obj = config.LibvirtConfigGuestConsole()
+        obj.type = "pty"
+        obj.target_type = "sclp"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <console type="pty">
+                <target type="sclp"/>
+            </console>
+            """)
+
+    def test_config_type_file_with_target_type(self):
+        obj = config.LibvirtConfigGuestConsole()
+        obj.type = "file"
+        obj.target_type = "sclplm"
+        obj.source_path = "/var/lib/nova/instances/uuid/console.log"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <console type="file">
+                <source path="/var/lib/nova/instances/uuid/console.log"/>
+                <target type="sclplm"/>
+            </console>
+            """)
+
+    def test_config_target_port(self):
+        obj = config.LibvirtConfigGuestConsole()
+        obj.target_port = 0
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <console type="pty">
+                <target port="0"/>
+            </console>
+            """)
+
 
 class LibvirtConfigGuestChannelTest(LibvirtConfigBaseTest):
     def test_config_spice_minimal(self):
