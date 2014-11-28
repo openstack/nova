@@ -231,6 +231,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
     def test_find_destination_works(self):
         self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
+        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.task.scheduler_client,
                                  'select_destinations')
         self.mox.StubOutWithMock(self.task,
@@ -242,6 +243,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 self.instance).AndReturn("image")
         scheduler_utils.build_request_spec(self.context, mox.IgnoreArg(),
                                            mox.IgnoreArg()).AndReturn({})
+        scheduler_utils.setup_instance_group(
+            self.context, {}, {'ignore_hosts': [self.instance_host]})
         self.task.scheduler_client.select_destinations(self.context,
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(
                         [{'host': 'host1'}])
@@ -255,6 +258,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.instance['image_ref'] = ''
 
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
+        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.task.scheduler_client,
                                  'select_destinations')
         self.mox.StubOutWithMock(self.task,
@@ -263,6 +267,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         scheduler_utils.build_request_spec(self.context, None,
                                            mox.IgnoreArg()).AndReturn({})
+        scheduler_utils.setup_instance_group(
+            self.context, {}, {'ignore_hosts': [self.instance_host]})
         self.task.scheduler_client.select_destinations(self.context,
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(
                         [{'host': 'host1'}])
@@ -275,6 +281,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
     def _test_find_destination_retry_hypervisor_raises(self, error):
         self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
+        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.task.scheduler_client,
                                  'select_destinations')
         self.mox.StubOutWithMock(self.task,
@@ -286,12 +293,16 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 self.instance).AndReturn("image")
         scheduler_utils.build_request_spec(self.context, mox.IgnoreArg(),
                                            mox.IgnoreArg()).AndReturn({})
+        scheduler_utils.setup_instance_group(
+            self.context, {}, {'ignore_hosts': [self.instance_host]})
         self.task.scheduler_client.select_destinations(self.context,
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(
                         [{'host': 'host1'}])
         self.task._check_compatible_with_source_hypervisor("host1")\
                 .AndRaise(error)
 
+        scheduler_utils.setup_instance_group(
+            self.context, {}, {'ignore_hosts': [self.instance_host, "host1"]})
         self.task.scheduler_client.select_destinations(self.context,
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(
                         [{'host': 'host2'}])
@@ -313,6 +324,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.flags(migrate_max_retries=1)
         self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
+        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.task.scheduler_client,
                                  'select_destinations')
         self.mox.StubOutWithMock(self.task,
@@ -324,6 +336,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 self.instance).AndReturn("image")
         scheduler_utils.build_request_spec(self.context, mox.IgnoreArg(),
                                            mox.IgnoreArg()).AndReturn({})
+        scheduler_utils.setup_instance_group(
+            self.context, {}, {'ignore_hosts': [self.instance_host]})
         self.task.scheduler_client.select_destinations(self.context,
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(
                         [{'host': 'host1'}])
@@ -331,6 +345,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.task._call_livem_checks_on_host("host1")\
                 .AndRaise(exception.Invalid)
 
+        scheduler_utils.setup_instance_group(
+            self.context, {}, {'ignore_hosts': [self.instance_host, "host1"]})
         self.task.scheduler_client.select_destinations(self.context,
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(
                         [{'host': 'host2'}])
@@ -344,6 +360,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.flags(migrate_max_retries=0)
         self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
+        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.task.scheduler_client,
                                  'select_destinations')
         self.mox.StubOutWithMock(self.task,
@@ -354,6 +371,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 self.instance).AndReturn("image")
         scheduler_utils.build_request_spec(self.context, mox.IgnoreArg(),
                                            mox.IgnoreArg()).AndReturn({})
+        scheduler_utils.setup_instance_group(
+            self.context, {}, {'ignore_hosts': [self.instance_host]})
         self.task.scheduler_client.select_destinations(self.context,
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(
                         [{'host': 'host1'}])
@@ -366,6 +385,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
     def test_find_destination_when_runs_out_of_hosts(self):
         self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
+        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.task.scheduler_client,
                                  'select_destinations')
         compute_utils.get_image_metadata(self.context,
@@ -373,6 +393,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 self.instance).AndReturn("image")
         scheduler_utils.build_request_spec(self.context, mox.IgnoreArg(),
                                            mox.IgnoreArg()).AndReturn({})
+        scheduler_utils.setup_instance_group(
+            self.context, {}, {'ignore_hosts': [self.instance_host]})
         self.task.scheduler_client.select_destinations(self.context,
                 mox.IgnoreArg(), mox.IgnoreArg()).AndRaise(
                         exception.NoValidHost(reason=""))

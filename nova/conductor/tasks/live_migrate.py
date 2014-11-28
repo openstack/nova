@@ -156,6 +156,8 @@ class LiveMigrationTask(object):
         while host is None:
             self._check_not_over_max_retries(attempted_hosts)
             filter_properties = {'ignore_hosts': attempted_hosts}
+            scheduler_utils.setup_instance_group(self.context, request_spec,
+                                                 filter_properties)
             host = self.scheduler_client.select_destinations(self.context,
                             request_spec, filter_properties)[0]['host']
             try:

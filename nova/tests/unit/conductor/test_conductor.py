@@ -1188,6 +1188,7 @@ class _BaseTaskTestCase(object):
     def test_cold_migrate(self):
         self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
+        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(
                 self.conductor_manager.compute_rpcapi, 'prep_resize')
         self.mox.StubOutWithMock(self.conductor_manager.scheduler_client,
@@ -1207,6 +1208,8 @@ class _BaseTaskTestCase(object):
             self.context, 'image',
             [mox.IsA(objects.Instance)],
             instance_type=flavor).AndReturn(request_spec)
+
+        scheduler_utils.setup_instance_group(self.context, request_spec, {})
 
         hosts = [dict(host='host1', nodename=None, limits={})]
         self.conductor_manager.scheduler_client.select_destinations(
@@ -1257,14 +1260,14 @@ class _BaseTaskTestCase(object):
         self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
                                  'build_and_run_instance')
 
-        scheduler_utils.setup_instance_group(self.context, None, None)
+        spec = {'image': {'fake_data': 'should_pass_silently'},
+                'instance_properties': jsonutils.to_primitive(instances[0]),
+                'instance_type': instance_type_p,
+                'instance_uuids': [inst.uuid for inst in instances],
+                'num_instances': 2}
+        scheduler_utils.setup_instance_group(self.context, spec, {})
         self.conductor_manager.scheduler_client.select_destinations(
-                self.context, {'image': {'fake_data': 'should_pass_silently'},
-                    'instance_properties': jsonutils.to_primitive(
-                        instances[0]),
-                    'instance_type': instance_type_p,
-                    'instance_uuids': [inst.uuid for inst in instances],
-                    'num_instances': 2},
+                self.context, spec,
                 {'retry': {'num_attempts': 1, 'hosts': []}}).AndReturn(
                         [{'host': 'host1', 'nodename': 'node1', 'limits': []},
                          {'host': 'host2', 'nodename': 'node2', 'limits': []}])
@@ -1351,7 +1354,7 @@ class _BaseTaskTestCase(object):
 
         scheduler_utils.build_request_spec(self.context, image,
                 mox.IgnoreArg()).AndReturn(spec)
-        scheduler_utils.setup_instance_group(self.context, None, None)
+        scheduler_utils.setup_instance_group(self.context, spec, {})
         self.conductor_manager.scheduler_client.select_destinations(
                 self.context, spec,
                 {'retry': {'num_attempts': 1,
@@ -1566,12 +1569,14 @@ class _BaseTaskTestCase(object):
         with contextlib.nested(
             mock.patch.object(self.conductor_manager.compute_rpcapi,
                               'rebuild_instance'),
+            mock.patch.object(scheduler_utils, 'setup_instance_group',
+                              return_value=False),
             mock.patch.object(self.conductor_manager.scheduler_client,
                               'select_destinations',
                               return_value=[{'host': expected_host}]),
             mock.patch('nova.scheduler.utils.build_request_spec',
                        return_value=request_spec)
-        ) as (rebuild_mock, select_dest_mock, bs_mock):
+        ) as (rebuild_mock, sig_mock, select_dest_mock, bs_mock):
             self.conductor_manager.rebuild_instance(context=self.context,
                                             instance=inst_obj,
                                             **rebuild_args)
@@ -1595,12 +1600,14 @@ class _BaseTaskTestCase(object):
         with contextlib.nested(
             mock.patch.object(self.conductor_manager.compute_rpcapi,
                               'rebuild_instance'),
+            mock.patch.object(scheduler_utils, 'setup_instance_group',
+                              return_value=False),
             mock.patch.object(self.conductor_manager.scheduler_client,
                               'select_destinations',
                               side_effect=exc.NoValidHost(reason='')),
             mock.patch('nova.scheduler.utils.build_request_spec',
                        return_value=request_spec)
-        ) as (rebuild_mock, select_dest_mock, bs_mock):
+        ) as (rebuild_mock, sig_mock, select_dest_mock, bs_mock):
             self.assertRaises(exc.NoValidHost,
                               self.conductor_manager.rebuild_instance,
                               context=self.context, instance=inst_obj,
@@ -1778,6 +1785,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
+        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.conductor.scheduler_client,
                                  'select_destinations')
         self.mox.StubOutWithMock(self.conductor,
@@ -1791,6 +1799,9 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         scheduler_utils.build_request_spec(
                 self.context, image, [inst_obj],
                 instance_type=flavor).AndReturn(request_spec)
+
+        scheduler_utils.setup_instance_group(self.context, request_spec,
+                                             filter_props)
 
         exc_info = exc.NoValidHost(reason="")
 
@@ -1835,6 +1846,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
+        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.conductor.scheduler_client,
                                  'select_destinations')
         self.mox.StubOutWithMock(self.conductor,
@@ -1848,6 +1860,9 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         scheduler_utils.build_request_spec(
                 self.context, image, [inst_obj],
                 instance_type=flavor).AndReturn(request_spec)
+
+        scheduler_utils.setup_instance_group(self.context, request_spec,
+                                             filter_props)
 
         exc_info = exc.NoValidHost(reason="")
 
@@ -1894,10 +1909,12 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                               return_value=image),
             mock.patch.object(scheduler_utils, 'build_request_spec',
                               return_value=request_spec),
+            mock.patch.object(scheduler_utils, 'setup_instance_group',
+                              return_value=False),
             mock.patch.object(self.conductor.scheduler_client,
                               'select_destinations',
                               side_effect=exc.NoValidHost(reason=""))
-        ) as (image_mock, brs_mock, select_dest_mock):
+        ) as (image_mock, brs_mock, sig_mock, select_dest_mock):
             nvh = self.assertRaises(exc.NoValidHost,
                                     self.conductor._cold_migrate, self.context,
                                     inst_obj, flavor, filter_props, [resvs])
@@ -1918,6 +1935,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
+        self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.conductor.scheduler_client,
                                  'select_destinations')
         self.mox.StubOutWithMock(scheduler_utils,
@@ -1935,6 +1953,9 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         scheduler_utils.build_request_spec(
                 self.context, image, [inst_obj],
                 instance_type='flavor').AndReturn(request_spec)
+
+        scheduler_utils.setup_instance_group(self.context, request_spec,
+                                             filter_props)
 
         expected_filter_props = {'retry': {'num_attempts': 1,
                                  'hosts': []},
@@ -1998,10 +2019,12 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                               return_value=image),
             mock.patch.object(scheduler_utils, 'build_request_spec',
                               return_value=request_spec),
+            mock.patch.object(scheduler_utils, 'setup_instance_group',
+                              return_value=False),
             mock.patch.object(self.conductor.scheduler_client,
                               'select_destinations',
                               side_effect=exc.NoValidHost(reason=""))
-        ) as (image_mock, brs_mock, select_dest_mock):
+        ) as (image_mock, brs_mock, sig_mock, select_dest_mock):
             nvh = self.assertRaises(exc.NoValidHost,
                                     self.conductor._cold_migrate, self.context,
                                     inst_obj, flavor_new, filter_props,
@@ -2026,7 +2049,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         scheduler_utils.build_request_spec(self.context, image,
                 mox.IgnoreArg()).AndReturn(spec)
-        scheduler_utils.setup_instance_group(self.context, None, None)
+        scheduler_utils.setup_instance_group(self.context, spec, {})
         self.conductor_manager.scheduler_client.select_destinations(
                 self.context, spec,
                 {'retry': {'num_attempts': 1, 'hosts': []}}).AndReturn(
@@ -2102,8 +2125,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                     block_device_mapping='block_device_mapping',
                     legacy_bdm=False)
 
+            # NOTE(sbauza): Due to populate_retry() later in the code,
+            # filter_properties is dynamically modified
             setup_instance_group.assert_called_once_with(
-                self.context, None, None)
+                self.context, spec, {'retry': {'num_attempts': 1,
+                                               'hosts': []}})
             build_and_run_instance.assert_called_once_with(self.context,
                     instance=instances[1], host='host2', image={'fake-data':
                         'should_pass_silently'}, request_spec=spec,
