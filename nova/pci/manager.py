@@ -25,6 +25,7 @@ from nova import objects
 from nova.openstack.common import log as logging
 from nova.pci import device
 from nova.pci import stats
+from nova.virt import hardware
 
 LOG = logging.getLogger(__name__)
 
@@ -155,11 +156,23 @@ class PciDevTracker(object):
             context, instance)
         if not pci_requests.requests:
             return None
-        devs = self.stats.consume_requests(pci_requests.requests)
+        instance_numa_topology = hardware.instance_topology_from_instance(
+            instance)
+        instance_cells = None
+        if instance_numa_topology:
+            instance_cells = instance_numa_topology.cells
+
+        devs = self.stats.consume_requests(pci_requests.requests,
+                                           instance_cells)
         if not devs:
             raise exception.PciDeviceRequestFailed(pci_requests)
         for dev in devs:
             device.claim(dev, instance)
+        if instance_numa_topology and any(
+                                        dev.numa_node is None for dev in devs):
+            LOG.warning(_LW("Assigning a pci device without numa affinity to"
+            "instance %(instance)s which has numa topology"),
+                        {'instance': instance['uuid']})
         return devs
 
     def _allocate_instance(self, instance, devs):

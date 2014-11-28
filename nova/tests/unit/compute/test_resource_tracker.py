@@ -101,7 +101,8 @@ class FakeVirtDriver(driver.ComputeDriver):
                 'product_id': '0443',
                 'vendor_id': '8086',
                 'status': 'available',
-                'extra_k1': 'v1'
+                'extra_k1': 'v1',
+                'numa_node': 1
             },
             {
                 'label': 'label_8086_0443',
@@ -111,7 +112,8 @@ class FakeVirtDriver(driver.ComputeDriver):
                 'product_id': '0443',
                 'vendor_id': '8086',
                 'status': 'available',
-                'extra_k1': 'v1'
+                'extra_k1': 'v1',
+                'numa_node': 1
             },
             {
                 'label': 'label_8086_0443',
@@ -121,7 +123,8 @@ class FakeVirtDriver(driver.ComputeDriver):
                 'product_id': '0443',
                 'vendor_id': '8086',
                 'status': 'available',
-                'extra_k1': 'v1'
+                'extra_k1': 'v1',
+                'numa_node': 1
             },
             {
                 'label': 'label_8086_0123',
@@ -131,7 +134,8 @@ class FakeVirtDriver(driver.ComputeDriver):
                 'product_id': '0123',
                 'vendor_id': '8086',
                 'status': 'available',
-                'extra_k1': 'v1'
+                'extra_k1': 'v1',
+                'numa_node': 1
             },
             {
                 'label': 'label_8086_7891',
@@ -141,19 +145,22 @@ class FakeVirtDriver(driver.ComputeDriver):
                 'product_id': '7891',
                 'vendor_id': '8086',
                 'status': 'available',
-                'extra_k1': 'v1'
+                'extra_k1': 'v1',
+                'numa_node': None
             },
         ] if self.pci_support else []
         self.pci_stats = [
             {
                 'count': 2,
                 'vendor_id': '8086',
-                'product_id': '0443'
+                'product_id': '0443',
+                'numa_node': 1
             },
             {
                 'count': 1,
                 'vendor_id': '8086',
-                'product_id': '7891'
+                'product_id': '7891',
+                'numa_node': None
             },
         ] if self.pci_support else []
         if stats is not None:

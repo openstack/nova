@@ -31,6 +31,9 @@ class NUMATopologyFilter(filters.BaseHostFilter):
         requested_topology = hardware.instance_topology_from_instance(instance)
         host_topology, _fmt = hardware.host_topology_and_format_from_host(
                 host_state)
+        pci_requests = filter_properties.get('pci_requests')
+        if pci_requests:
+            pci_requests = pci_requests.requests
         if requested_topology and host_topology:
             limit_cells = []
             for cell in host_topology.cells:
@@ -42,7 +45,9 @@ class NUMATopologyFilter(filters.BaseHostFilter):
             limits = hardware.VirtNUMALimitTopology(cells=limit_cells)
             instance_topology = (hardware.numa_fit_instance_to_host(
                         host_topology, requested_topology,
-                        limits_topology=limits))
+                        limits_topology=limits,
+                        pci_requests=pci_requests,
+                        pci_stats=host_state.pci_stats))
             if not instance_topology:
                 return False
             host_state.limits['numa_topology'] = limits.to_json()

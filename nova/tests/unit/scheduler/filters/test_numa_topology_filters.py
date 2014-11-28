@@ -40,7 +40,8 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
                 'instance_properties': jsonutils.to_primitive(
                     obj_base.obj_to_primitive(instance))}}
         host = fakes.FakeHostState('host1', 'node1',
-                                   {'numa_topology': fakes.NUMA_TOPOLOGY})
+                                   {'numa_topology': fakes.NUMA_TOPOLOGY,
+                                    'pci_stats': None})
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
 
     def test_numa_topology_filter_numa_instance_no_numa_host_fail(self):
@@ -55,7 +56,7 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
             'request_spec': {
                 'instance_properties': jsonutils.to_primitive(
                     obj_base.obj_to_primitive(instance))}}
-        host = fakes.FakeHostState('host1', 'node1', {})
+        host = fakes.FakeHostState('host1', 'node1', {'pci_stats': None})
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
 
     def test_numa_topology_filter_numa_host_no_numa_instance_pass(self):
@@ -82,7 +83,8 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
                 'instance_properties': jsonutils.to_primitive(
                     obj_base.obj_to_primitive(instance))}}
         host = fakes.FakeHostState('host1', 'node1',
-                                   {'numa_topology': fakes.NUMA_TOPOLOGY})
+                                   {'numa_topology': fakes.NUMA_TOPOLOGY,
+                                    'pci_stats': None})
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
 
     def test_numa_topology_filter_fail_memory(self):
@@ -100,7 +102,8 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
                 'instance_properties': jsonutils.to_primitive(
                     obj_base.obj_to_primitive(instance))}}
         host = fakes.FakeHostState('host1', 'node1',
-                                   {'numa_topology': fakes.NUMA_TOPOLOGY})
+                                   {'numa_topology': fakes.NUMA_TOPOLOGY,
+                                    'pci_stats': None})
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
 
     def test_numa_topology_filter_fail_cpu(self):
@@ -117,7 +120,8 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
                 'instance_properties': jsonutils.to_primitive(
                     obj_base.obj_to_primitive(instance))}}
         host = fakes.FakeHostState('host1', 'node1',
-                                   {'numa_topology': fakes.NUMA_TOPOLOGY})
+                                   {'numa_topology': fakes.NUMA_TOPOLOGY,
+                                    'pci_stats': None})
         self.assertFalse(self.filt_cls.host_passes(host, filter_properties))
 
     def test_numa_topology_filter_pass_set_limit(self):
@@ -135,7 +139,8 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
                 'instance_properties': jsonutils.to_primitive(
                     obj_base.obj_to_primitive(instance))}}
         host = fakes.FakeHostState('host1', 'node1',
-                                   {'numa_topology': fakes.NUMA_TOPOLOGY})
+                                   {'numa_topology': fakes.NUMA_TOPOLOGY,
+                                    'pci_stats': None})
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
         limits_topology = hardware.VirtNUMALimitTopology.from_json(
                 host.limits['numa_topology'])

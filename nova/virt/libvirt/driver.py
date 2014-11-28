@@ -3376,7 +3376,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest_cpu_numa.cells.append(guest_cell)
             return guest_cpu_numa
 
-    def _get_guest_numa_config(self, instance_numa_topology, flavor,
+    def _get_guest_numa_config(self, instance_numa_topology, flavor, pci_devs,
                                allowed_cpus=None):
         """Returns the config objects for the guest NUMA specs.
 
@@ -3417,24 +3417,27 @@ class LibvirtDriver(driver.ComputeDriver):
             memory = flavor.memory_mb
             if topology:
                 # Host is NUMA capable so try to keep the instance in a cell
-                viable_cells_cpus = []
-                for cell in topology.cells:
-                    if vcpus <= len(cell.cpuset) and memory <= cell.memory:
-                        viable_cells_cpus.append(cell.cpuset)
+                pci_cells = {pci.numa_node for pci in pci_devs}
+                if len(pci_cells) == 0:
+                    viable_cells_cpus = []
+                    for cell in topology.cells:
+                        if vcpus <= len(cell.cpuset) and memory <= cell.memory:
+                            viable_cells_cpus.append(cell.cpuset)
 
-                if not viable_cells_cpus:
-                    # We can't contain the instance in a cell - do nothing for
-                    # now.
-                    # TODO(ndipanov): Attempt to spread the instance across
-                    # NUMA nodes and expose the topology to the instance as an
-                    # optimisation
-                    return GuestNumaConfig(allowed_cpus, None, None, None)
-                else:
-                    pin_cpuset = random.choice(viable_cells_cpus)
-                    return GuestNumaConfig(pin_cpuset, None, None, None)
-            else:
-                # We have no NUMA topology in the host either
-                return GuestNumaConfig(allowed_cpus, None, None, None)
+                    if viable_cells_cpus:
+                        pin_cpuset = random.choice(viable_cells_cpus)
+                        return GuestNumaConfig(pin_cpuset, None, None, None)
+                elif len(pci_cells) == 1 and None not in pci_cells:
+                    cell = topology.cells[pci_cells.pop()]
+                    if vcpus <= len(cell.cpuset) and memory <= cell.memory:
+                        return GuestNumaConfig(cell.cpuset, None, None, None)
+
+            # We have no NUMA topology in the host either,
+            # or we can't find a single cell to acomodate the instance
+            # TODO(ndipanov): Attempt to spread the instance
+            # accross NUMA nodes and expose the topology to the
+            # instance as an optimisation
+            return GuestNumaConfig(allowed_cpus, None, None, None)
         else:
             if topology:
                 # Now get the CpuTune configuration from the numa_topology
@@ -3856,9 +3859,10 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.memory = flavor.memory_mb * units.Ki
         guest.vcpus = flavor.vcpus
         allowed_cpus = hardware.get_vcpu_pin_set()
+        pci_devs = pci_manager.get_instance_pci_devs(instance, 'all')
 
         guest_numa_config = self._get_guest_numa_config(
-                instance.numa_topology, flavor, allowed_cpus)
+                instance.numa_topology, flavor, pci_devs, allowed_cpus)
 
         guest.cpuset = guest_numa_config.cpuset
         guest.cputune = guest_numa_config.cputune
@@ -3980,7 +3984,7 @@ class LibvirtDriver(driver.ComputeDriver):
             for pci_dev in pci_manager.get_instance_pci_devs(instance):
                 guest.add_device(self._get_guest_pci_device(pci_dev))
         else:
-            if len(pci_manager.get_instance_pci_devs(instance)) > 0:
+            if len(pci_devs) > 0:
                 raise exception.PciDeviceUnsupportedHypervisor(
                     type=virt_type)
 

@@ -192,6 +192,7 @@ class ClaimTestCase(test.NoDBTestCase):
             'address': 'a',
             'product_id': 'p',
             'vendor_id': 'v',
+            'numa_node': 0,
             'status': 'available'}
         self.tracker.new_pci_tracker()
         self.tracker.pci_tracker.set_hvdevs([dev_dict])
@@ -209,6 +210,7 @@ class ClaimTestCase(test.NoDBTestCase):
             'address': 'a',
             'product_id': 'p',
             'vendor_id': 'v1',
+            'numa_node': 1,
             'status': 'available'}
         self.tracker.new_pci_tracker()
         self.tracker.pci_tracker.set_hvdevs([dev_dict])
@@ -226,6 +228,7 @@ class ClaimTestCase(test.NoDBTestCase):
             'address': 'a',
             'product_id': 'p',
             'vendor_id': 'v',
+            'numa_node': 0,
             'status': 'available'}
         self.tracker.new_pci_tracker()
         self.tracker.pci_tracker.set_hvdevs([dev_dict])
@@ -268,6 +271,83 @@ class ClaimTestCase(test.NoDBTestCase):
                             1, [3, 4], 512, cpu_limit=5, memory_limit=4096)])
         self._claim(limits={'numa_topology': limit_topo.to_json()},
                     numa_topology=huge_instance)
+
+    @pci_fakes.patch_pci_whitelist
+    def test_numa_topology_with_pci(self, mock_get):
+        dev_dict = {
+            'compute_node_id': 1,
+            'address': 'a',
+            'product_id': 'p',
+            'vendor_id': 'v',
+            'numa_node': 1,
+            'status': 'available'}
+        self.tracker.new_pci_tracker()
+        self.tracker.pci_tracker.set_hvdevs([dev_dict])
+        request = objects.InstancePCIRequest(count=1,
+            spec=[{'vendor_id': 'v', 'product_id': 'p'}])
+        mock_get.return_value = objects.InstancePCIRequests(
+            requests=[request])
+
+        huge_instance = objects.InstanceNUMATopology(
+                cells=[objects.InstanceNUMACell(
+                    id=1, cpuset=set([1, 2]), memory=512)])
+
+        self._claim(numa_topology= huge_instance)
+
+    @pci_fakes.patch_pci_whitelist
+    def test_numa_topology_with_pci_fail(self, mock_get):
+        dev_dict = {
+            'compute_node_id': 1,
+            'address': 'a',
+            'product_id': 'p',
+            'vendor_id': 'v',
+            'numa_node': 1,
+            'status': 'available'}
+        dev_dict2 = {
+            'compute_node_id': 1,
+            'address': 'a',
+            'product_id': 'p',
+            'vendor_id': 'v',
+            'numa_node': 2,
+            'status': 'available'}
+        self.tracker.new_pci_tracker()
+        self.tracker.pci_tracker.set_hvdevs([dev_dict, dev_dict2])
+
+        request = objects.InstancePCIRequest(count=2,
+            spec=[{'vendor_id': 'v', 'product_id': 'p'}])
+        mock_get.return_value = objects.InstancePCIRequests(
+            requests=[request])
+
+        huge_instance = objects.InstanceNUMATopology(
+                cells=[objects.InstanceNUMACell(
+                    id=1, cpuset=set([1, 2]), memory=512)])
+
+        self.assertRaises(exception.ComputeResourcesUnavailable,
+                          self._claim,
+                          numa_topology=huge_instance)
+
+    @pci_fakes.patch_pci_whitelist
+    def test_numa_topology_with_pci_no_numa_info(self, mock_get):
+        dev_dict = {
+            'compute_node_id': 1,
+            'address': 'a',
+            'product_id': 'p',
+            'vendor_id': 'v',
+            'numa_node': None,
+            'status': 'available'}
+        self.tracker.new_pci_tracker()
+        self.tracker.pci_tracker.set_hvdevs([dev_dict])
+
+        request = objects.InstancePCIRequest(count=1,
+            spec=[{'vendor_id': 'v', 'product_id': 'p'}])
+        mock_get.return_value = objects.InstancePCIRequests(
+            requests=[request])
+
+        huge_instance = objects.InstanceNUMATopology(
+                cells=[objects.InstanceNUMACell(
+                    id=1, cpuset=set([1, 2]), memory=512)])
+
+        self._claim(numa_topology= huge_instance)
 
     def test_abort(self, mock_get):
         claim = self._abort()

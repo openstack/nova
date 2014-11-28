@@ -1183,6 +1183,144 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               'something', 'something'))
 
     @mock.patch.object(objects.Flavor, 'get_by_id')
+    def test_get_guest_config_numa_host_instance_1pci_fits(self, mock_flavor):
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = {}
+        flavor = objects.Flavor(memory_mb=1, vcpus=2, root_gb=496,
+                                ephemeral_gb=8128, swap=33550336, name='fake',
+                                extra_specs={})
+        mock_flavor.return_value = flavor
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "x86_64"
+        caps.host.topology = self._fake_caps_numa_topology()
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+        pci_device_info = dict(test_pci_device.fake_db_dev)
+        pci_device_info.update(compute_node_id=1,
+                               label='fake',
+                               status='available',
+                               address='0000:00:00.1',
+                               instance_uuid=None,
+                               request_id=None,
+                               extra_info={},
+                               numa_node=1)
+        pci_device = objects.PciDevice(**pci_device_info)
+
+        with contextlib.nested(
+                mock.patch.object(host.Host, 'has_min_version',
+                                  return_value=True),
+                mock.patch.object(
+                    host.Host, "get_capabilities", return_value=caps),
+                mock.patch.object(
+                        random, 'choice', side_effect=lambda cells: cells[0]),
+                mock.patch.object(pci_manager, "get_instance_pci_devs",
+                                  return_value=[pci_device])):
+            cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+            self.assertIsNone(instance_ref.numa_topology)
+            self.assertEqual(set([2, 3]), cfg.cpuset)
+            self.assertEqual(0, len(cfg.cputune.vcpupin))
+            self.assertIsNone(cfg.cpu.numa)
+
+    @mock.patch.object(objects.Flavor, 'get_by_id')
+    def test_get_guest_config_numa_host_instance_pci_no_numa_info(self,
+                                                                  mock_flavor):
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = {}
+        flavor = objects.Flavor(memory_mb=1, vcpus=2, root_gb=496,
+                                ephemeral_gb=8128, swap=33550336, name='fake',
+                                extra_specs={})
+        mock_flavor.return_value = flavor
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "x86_64"
+        caps.host.topology = self._fake_caps_numa_topology()
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+        pci_device_info = dict(test_pci_device.fake_db_dev)
+        pci_device_info.update(compute_node_id=1,
+                               label='fake',
+                               status='available',
+                               address='0000:00:00.1',
+                               instance_uuid=None,
+                               request_id=None,
+                               extra_info={},
+                               numa_node=None)
+        pci_device = objects.PciDevice(**pci_device_info)
+
+        with contextlib.nested(
+                mock.patch.object(host.Host, 'has_min_version',
+                                  return_value=True),
+                mock.patch.object(
+                    host.Host, "get_capabilities", return_value=caps),
+                mock.patch.object(
+                    hardware, 'get_vcpu_pin_set', return_value=set([3])),
+                mock.patch.object(pci_manager, "get_instance_pci_devs",
+                                  return_value=[pci_device])):
+            cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+            self.assertEqual(set([3]), cfg.cpuset)
+            self.assertEqual(0, len(cfg.cputune.vcpupin))
+            self.assertIsNone(cfg.cpu.numa)
+
+    @mock.patch.object(objects.Flavor, 'get_by_id')
+    def test_get_guest_config_numa_host_instance_2pci_no_fit(self,
+                                                             mock_flavor):
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = {}
+        flavor = objects.Flavor(memory_mb=4096, vcpus=4, root_gb=496,
+                                ephemeral_gb=8128, swap=33550336, name='fake',
+                                extra_specs={})
+        mock_flavor.return_value = flavor
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "x86_64"
+        caps.host.topology = self._fake_caps_numa_topology()
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+        pci_device_info = dict(test_pci_device.fake_db_dev)
+        pci_device_info.update(compute_node_id=1,
+                               label='fake',
+                               status='available',
+                               address='0000:00:00.1',
+                               instance_uuid=None,
+                               request_id=None,
+                               extra_info={},
+                               numa_node=1)
+        pci_device = objects.PciDevice(**pci_device_info)
+        pci_device_info.update(numa_node=0, address='0000:00:00.2')
+        pci_device2 = objects.PciDevice(**pci_device_info)
+        with contextlib.nested(
+                mock.patch.object(
+                    host.Host, "get_capabilities", return_value=caps),
+                mock.patch.object(
+                    hardware, 'get_vcpu_pin_set', return_value=set([3])),
+                mock.patch.object(random, 'choice'),
+                mock.patch.object(pci_manager, "get_instance_pci_devs",
+                                  return_value=[pci_device, pci_device2])
+            ) as (get_host_cap_mock,
+                  get_vcpu_pin_set_mock, choice_mock, pci_mock):
+            cfg = conn._get_guest_config(instance_ref, [], {}, disk_info)
+            self.assertFalse(choice_mock.called)
+            self.assertEqual(set([3]), cfg.cpuset)
+            self.assertEqual(0, len(cfg.cputune.vcpupin))
+            self.assertIsNone(cfg.cpu.numa)
+
+    @mock.patch.object(objects.Flavor, 'get_by_id')
     def test_get_guest_config_numa_host_instance_fit_w_cpu_pinset(self,
                                                                   mock_flavor):
         instance_ref = objects.Instance(**self.test_instance)

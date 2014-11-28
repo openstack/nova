@@ -52,7 +52,7 @@ class PciDeviceStats(object):
     This summary information will be helpful for cloud management also.
     """
 
-    pool_keys = ['product_id', 'vendor_id']
+    pool_keys = ['product_id', 'vendor_id', 'numa_node']
 
     def __init__(self, stats=None):
         super(PciDeviceStats, self).__init__()
@@ -135,7 +135,7 @@ class PciDeviceStats(object):
             free_devs.extend(pool['devices'])
         return free_devs
 
-    def consume_requests(self, pci_requests):
+    def consume_requests(self, pci_requests, numa_cells=None):
         alloc_devices = []
         for request in pci_requests:
             count = request.count
@@ -143,6 +143,8 @@ class PciDeviceStats(object):
             # For now, keep the same algorithm as during scheduling:
             # a spec may be able to match multiple pools.
             pools = self._filter_pools_for_spec(self.pools, spec)
+            if numa_cells:
+                pools = self._filter_pools_for_numa_cells(pools, numa_cells)
             # Failed to allocate the required number of devices
             # Return the devices already allocated back to their pools
             if sum([pool['count'] for pool in pools]) < count:
@@ -176,9 +178,24 @@ class PciDeviceStats(object):
         return [pool for pool in pools
                 if utils.pci_device_prop_match(pool, request_specs)]
 
-    def _apply_request(self, pools, request):
+    @staticmethod
+    def _filter_pools_for_numa_cells(pools, numa_cells):
+        # Some systems don't report numa node info for pci devices, in
+        # that case None is reported in pci_device.numa_node, by adding None
+        # to numa_cells we allow assigning those devices to instances with
+        # numa topology
+        numa_cells = [None] + [cell.id for cell in numa_cells]
+        # filter out pools which numa_node is not included in numa_cells
+        return [pool for pool in pools if any(utils.pci_device_prop_match(
+                                pool, [{'numa_node': cell}])
+                                              for cell in numa_cells)]
+
+    def _apply_request(self, pools, request, numa_cells=None):
         count = request.count
         matching_pools = self._filter_pools_for_spec(pools, request.spec)
+        if numa_cells:
+            matching_pools = self._filter_pools_for_numa_cells(matching_pools,
+                                                          numa_cells)
         if sum([pool['count'] for pool in matching_pools]) < count:
             return False
         else:
@@ -188,25 +205,31 @@ class PciDeviceStats(object):
                     break
         return True
 
-    def support_requests(self, requests):
+    def support_requests(self, requests, numa_cells=None):
         """Check if the pci requests can be met.
 
         Scheduler checks compute node's PCI stats to decide if an
         instance can be scheduled into the node. Support does not
         mean real allocation.
+        If numa_cells is provided then only devices contained in
+        those nodes are considered.
         """
         # note (yjiang5): this function has high possibility to fail,
         # so no exception should be triggered for performance reason.
         pools = copy.deepcopy(self.pools)
-        return all([self._apply_request(pools, r) for r in requests])
+        return all([self._apply_request(pools, r, numa_cells)
+                        for r in requests])
 
-    def apply_requests(self, requests):
+    def apply_requests(self, requests, numa_cells=None):
         """Apply PCI requests to the PCI stats.
 
         This is used in multiple instance creation, when the scheduler has to
         maintain how the resources are consumed by the instances.
+        If numa_cells is provided then only devices contained in
+        those nodes are considered.
         """
-        if not all([self._apply_request(self.pools, r) for r in requests]):
+        if not all([self._apply_request(self.pools, r, numa_cells)
+                                            for r in requests]):
             raise exception.PciDeviceRequestFailed(requests=requests)
 
     @staticmethod
