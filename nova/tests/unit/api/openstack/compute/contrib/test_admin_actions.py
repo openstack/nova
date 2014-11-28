@@ -12,8 +12,6 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
-from oslo.serialization import jsonutils
-from oslo.utils import timeutils
 import webob
 
 from nova.api.openstack import common
@@ -27,131 +25,12 @@ from nova import exception
 from nova import objects
 from nova.openstack.common import uuidutils
 from nova import test
+from nova.tests.unit.api.openstack.compute.plugins.v3 import \
+     admin_only_action_common
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit import fake_instance
 
 
-class CommonMixin(object):
-    admin_actions = None
-    fake_url = None
-
-    def _make_request(self, url, body):
-        req = webob.Request.blank(self.fake_url + url)
-        req.method = 'POST'
-        req.body = jsonutils.dumps(body)
-        req.content_type = 'application/json'
-        return req.get_response(self.app)
-
-    def _stub_instance_get(self, uuid=None):
-        if uuid is None:
-            uuid = uuidutils.generate_uuid()
-        instance = fake_instance.fake_db_instance(
-                id=1, uuid=uuid, vm_state=vm_states.ACTIVE,
-                task_state=None, launched_at=timeutils.utcnow())
-        instance = objects.Instance._from_db_object(
-                self.context, objects.Instance(), instance)
-        self.compute_api.get(self.context, uuid, expected_attrs=None,
-                             want_objects=True).AndReturn(instance)
-        return instance
-
-    def _stub_instance_get_failure(self, exc_info, uuid=None):
-        if uuid is None:
-            uuid = uuidutils.generate_uuid()
-        self.compute_api.get(self.context, uuid, expected_attrs=None,
-                             want_objects=True).AndRaise(exc_info)
-        return uuid
-
-    def _test_non_existing_instance(self, action, body_map=None):
-        uuid = uuidutils.generate_uuid()
-        self._stub_instance_get_failure(
-                exception.InstanceNotFound(instance_id=uuid), uuid=uuid)
-
-        self.mox.ReplayAll()
-
-        res = self._make_request('/servers/%s/action' % uuid,
-                                 {action: body_map.get(action)})
-        self.assertEqual(404, res.status_int)
-        # Do these here instead of tearDown because this method is called
-        # more than once for the same test case
-        self.mox.VerifyAll()
-        self.mox.UnsetStubs()
-
-    def _test_action(self, action, body=None, method=None):
-        if method is None:
-            method = action
-
-        instance = self._stub_instance_get()
-        getattr(self.compute_api, method)(self.context, instance)
-
-        self.mox.ReplayAll()
-        res = self._make_request('/servers/%s/action' % instance['uuid'],
-                                 {action: None})
-        self.assertEqual(202, res.status_int)
-        # Do these here instead of tearDown because this method is called
-        # more than once for the same test case
-        self.mox.VerifyAll()
-        self.mox.UnsetStubs()
-
-    def _test_invalid_state(self, action, method=None, body_map=None,
-                            compute_api_args_map=None):
-        if method is None:
-            method = action
-        if body_map is None:
-            body_map = {}
-        if compute_api_args_map is None:
-            compute_api_args_map = {}
-
-        instance = self._stub_instance_get()
-
-        args, kwargs = compute_api_args_map.get(action, ((), {}))
-
-        getattr(self.compute_api, method)(self.context, instance,
-                                          *args, **kwargs).AndRaise(
-                exception.InstanceInvalidState(
-                    attr='vm_state', instance_uuid=instance['uuid'],
-                    state='foo', method=method))
-
-        self.mox.ReplayAll()
-
-        res = self._make_request('/servers/%s/action' % instance['uuid'],
-                                 {action: body_map.get(action)})
-        self.assertEqual(409, res.status_int)
-        self.assertIn("Cannot \'%(action)s\' instance %(id)s"
-                      % {'id': instance['uuid'], 'action': action}, res.body)
-        # Do these here instead of tearDown because this method is called
-        # more than once for the same test case
-        self.mox.VerifyAll()
-        self.mox.UnsetStubs()
-
-    def _test_locked_instance(self, action, method=None, body_map=None,
-                              compute_api_args_map=None):
-        if method is None:
-            method = action
-
-        instance = self._stub_instance_get()
-
-        args, kwargs = (), {}
-        act = None
-
-        if compute_api_args_map:
-            args, kwargs = compute_api_args_map.get(action, ((), {}))
-            act = body_map.get(action)
-
-        getattr(self.compute_api, method)(self.context, instance,
-                                          *args, **kwargs).AndRaise(
-             exception.InstanceIsLocked(instance_uuid=instance['uuid']))
-        self.mox.ReplayAll()
-        res = self._make_request('/servers/%s/action' % instance['uuid'],
-                               {action: act})
-        self.assertEqual(409, res.status_int)
-        self.assertIn('Instance %s is locked' % instance['uuid'], res.body)
-        # Do these here instead of tearDown because this method is called
-        # more than once for the same test case
-        self.mox.VerifyAll()
-        self.mox.UnsetStubs()
-
-
-class AdminActionsTestV21(CommonMixin, test.NoDBTestCase):
+class AdminActionsTestV21(admin_only_action_common.CommonTests):
     admin_actions = admin_actions_v21
     fake_url = '/v2/fake'
 
@@ -180,34 +59,22 @@ class AdminActionsTestV21(CommonMixin, test.NoDBTestCase):
         method_translations = {'resetNetwork': 'reset_network',
                                'injectNetworkInfo': 'inject_network_info'}
 
-        for action in actions:
-            method = method_translations.get(action)
-            self.mox.StubOutWithMock(self.compute_api, method or action)
-            self._test_action(action, method=method)
-            # Re-mock this.
-            self.mox.StubOutWithMock(self.compute_api, 'get')
+        self._test_actions(actions, method_translations)
 
     def test_actions_with_non_existed_instance(self):
         actions = ['resetNetwork', 'injectNetworkInfo', 'os-resetState']
         body_map = {'os-resetState': {'state': 'active'}}
 
-        for action in actions:
-            self._test_non_existing_instance(action,
-                                             body_map=body_map)
-            # Re-mock this.
-            self.mox.StubOutWithMock(self.compute_api, 'get')
+        self._test_actions_with_non_existed_instance(actions,
+                                                     body_map=body_map)
 
     def test_actions_with_locked_instance(self):
         actions = ['resetNetwork', 'injectNetworkInfo']
         method_translations = {'resetNetwork': 'reset_network',
                                'injectNetworkInfo': 'inject_network_info'}
 
-        for action in actions:
-            method = method_translations.get(action)
-            self.mox.StubOutWithMock(self.compute_api, method or action)
-            self._test_locked_instance(action, method=method)
-            # Re-mock this.
-            self.mox.StubOutWithMock(self.compute_api, 'get')
+        self._test_actions_with_locked_instance(actions,
+            method_translations=method_translations)
 
 
 class AdminActionsTestV2(AdminActionsTestV21):
@@ -232,12 +99,7 @@ class AdminActionsTestV2(AdminActionsTestV21):
                                'resetNetwork': 'reset_network',
                                'injectNetworkInfo': 'inject_network_info'}
 
-        for action in actions:
-            method = method_translations.get(action)
-            self.mox.StubOutWithMock(self.compute_api, method or action)
-            self._test_action(action, method=method)
-            # Re-mock this.
-            self.mox.StubOutWithMock(self.compute_api, 'get')
+        self._test_actions(actions, method_translations)
 
     def test_actions_raise_conflict_on_invalid_state(self):
         actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
@@ -250,13 +112,10 @@ class AdminActionsTestV2(AdminActionsTestV21):
                          'disk_over_commit': False}}
         args_map = {'os-migrateLive': ((False, False, 'hostname'), {})}
 
-        for action in actions:
-            method = method_translations.get(action)
-            self.mox.StubOutWithMock(self.compute_api, method or action)
-            self._test_invalid_state(action, method=method, body_map=body_map,
-                                     compute_api_args_map=args_map)
-            # Re-mock this.
-            self.mox.StubOutWithMock(self.compute_api, 'get')
+        self._test_actions_raise_conflict_on_invalid_state(actions,
+            method_translations=method_translations,
+            body_map=body_map,
+            args_map=args_map)
 
     def test_actions_with_non_existed_instance(self):
         actions = ['pause', 'unpause', 'suspend', 'resume',
@@ -267,11 +126,9 @@ class AdminActionsTestV2(AdminActionsTestV21):
                                   {'host': 'hostname',
                                    'block_migration': False,
                                    'disk_over_commit': False}}
-        for action in actions:
-            self._test_non_existing_instance(action,
-                                             body_map=body_map)
-            # Re-mock this.
-            self.mox.StubOutWithMock(self.compute_api, 'get')
+
+        self._test_actions_with_non_existed_instance(actions,
+                                                     body_map=body_map)
 
     def test_actions_with_locked_instance(self):
         actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
@@ -285,15 +142,10 @@ class AdminActionsTestV2(AdminActionsTestV21):
                                        'block_migration': False,
                                        'disk_over_commit': False}}
 
-        for action in actions:
-            method = method_translations.get(action)
-            self.mox.StubOutWithMock(self.compute_api, method or action)
-            self._test_locked_instance(action, method=method,
-                                       body_map=body_map,
-                                       compute_api_args_map=args_map)
-
-            # Re-mock this.
-            self.mox.StubOutWithMock(self.compute_api, 'get')
+        self._test_actions_with_locked_instance(actions,
+            method_translations=method_translations,
+            body_map=body_map,
+            args_map=args_map)
 
     def _test_migrate_exception(self, exc_info, expected_result):
         self.mox.StubOutWithMock(self.compute_api, 'resize')
@@ -435,7 +287,7 @@ class AdminActionsTestV2(AdminActionsTestV21):
         self.assertEqual(403, res.status_int)
 
 
-class CreateBackupTestsV2(CommonMixin, test.NoDBTestCase):
+class CreateBackupTestsV2(admin_only_action_common.CommonTests):
     fake_url = '/v2/fake'
 
     def setUp(self):
