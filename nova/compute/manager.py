@@ -590,7 +590,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.39')
+    target = messaging.Target(version='3.40')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to a instance during power off.  The overall
@@ -2025,6 +2025,13 @@ class ComputeManager(manager.Manager):
             # is receiving an object, so lookup the flavor to ensure this.
             flavor = objects.Flavor.get_by_id(context, flavor['id'])
             filter_properties = dict(filter_properties, instance_type=flavor)
+
+        # NOTE(sahid): Remove this in v4.0 of the RPC API
+        if (limits and 'numa_topology' in limits and
+                isinstance(limits['numa_topology'], six.string_types)):
+            db_obj = jsonutils.loads(limits['numa_topology'])
+            limits['numa_topology'] = (
+                objects.NUMATopologyLimits.obj_from_db_obj(db_obj))
 
         @utils.synchronized(instance.uuid)
         def _locked_do_build_and_run_instance(*args, **kwargs):

@@ -148,9 +148,6 @@ class Claim(NopClaim):
         memory_mb_limit = limits.get('memory_mb')
         disk_gb_limit = limits.get('disk_gb')
         numa_topology_limit = limits.get('numa_topology')
-        if numa_topology_limit:
-            numa_topology_limit = hardware.VirtNUMALimitTopology.from_json(
-                numa_topology_limit)
 
         msg = _("Attempting claim: memory %(memory_mb)d MB, disk %(disk_gb)d "
                 "GB")
@@ -217,7 +214,7 @@ class Claim(NopClaim):
             instance_topology = (
                     hardware.numa_fit_instance_to_host(
                         host_topology, requested_topology,
-                        limits_topology=limit,
+                        limits=limit,
                         pci_requests=pci_requests.requests,
                         pci_stats=pci_stats))
 

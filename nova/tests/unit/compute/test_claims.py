@@ -27,7 +27,6 @@ from nova import objects
 from nova.pci import manager as pci_manager
 from nova import test
 from nova.tests.unit.pci import fakes as pci_fakes
-from nova.virt import hardware
 
 
 class FakeResourceHandler(object):
@@ -252,26 +251,20 @@ class ClaimTestCase(test.NoDBTestCase):
         huge_instance = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
                     id=1, cpuset=set([1, 2, 3, 4, 5]), memory=2048)])
-        limit_topo = hardware.VirtNUMALimitTopology(
-                cells=[hardware.VirtNUMATopologyCellLimit(
-                            1, [1, 2], 512, cpu_limit=2, memory_limit=512),
-                       hardware.VirtNUMATopologyCellLimit(
-                            1, [3, 4], 512, cpu_limit=2, memory_limit=512)])
+        limit_topo = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=1, ram_allocation_ratio=1)
         self.assertRaises(exception.ComputeResourcesUnavailable,
                           self._claim,
-                          limits={'numa_topology': limit_topo.to_json()},
+                          limits={'numa_topology': limit_topo},
                           numa_topology=huge_instance)
 
     def test_numa_topology_passes(self, mock_get):
         huge_instance = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
                     id=1, cpuset=set([1, 2]), memory=512)])
-        limit_topo = hardware.VirtNUMALimitTopology(
-                cells=[hardware.VirtNUMATopologyCellLimit(
-                            1, [1, 2], 512, cpu_limit=5, memory_limit=4096),
-                       hardware.VirtNUMATopologyCellLimit(
-                            1, [3, 4], 512, cpu_limit=5, memory_limit=4096)])
-        self._claim(limits={'numa_topology': limit_topo.to_json()},
+        limit_topo = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=1, ram_allocation_ratio=1)
+        self._claim(limits={'numa_topology': limit_topo},
                     numa_topology=huge_instance)
 
     @pci_fakes.patch_pci_whitelist

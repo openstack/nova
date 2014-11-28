@@ -1316,13 +1316,12 @@ class VirtNUMATopologyCellUsageTestCase(test.NoDBTestCase):
 
     def test_fit_instance_cell_success_w_limit(self):
         host_cell = objects.NUMACell(id=4, cpuset=set([1, 2]), memory=1024,
-                                                 cpu_usage=2,
-                                                 memory_usage=1024,
+                                     cpu_usage=2,
+                                     memory_usage=1024,
                                      mempages=[], siblings=[],
                                      pinned_cpus=set([]))
-        limit_cell = hw.VirtNUMATopologyCellLimit(
-                        4, cpuset=set([1, 2]), memory=1024,
-                        cpu_limit=4, memory_limit=2048)
+        limit_cell = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2)
         instance_cell = objects.InstanceNUMACell(
             id=0, cpuset=set([1, 2]), memory=1024)
         fitted_cell = hw._numa_fit_instance_cell(
@@ -1334,9 +1333,8 @@ class VirtNUMATopologyCellUsageTestCase(test.NoDBTestCase):
         host_cell = objects.NUMACell(id=4, cpuset=set([1, 2]), memory=1024,
                                      cpu_usage=0, memory_usage=0, mempages=[],
                                      siblings=[], pinned_cpus=set([]))
-        limit_cell = hw.VirtNUMATopologyCellLimit(
-                        4, cpuset=set([1, 2]), memory=1024,
-                        cpu_limit=4, memory_limit=2048)
+        limit_cell = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2)
         instance_cell = objects.InstanceNUMACell(
             id=0, cpuset=set([1, 2, 3]), memory=4096)
         fitted_cell = hw._numa_fit_instance_cell(
@@ -1345,15 +1343,14 @@ class VirtNUMATopologyCellUsageTestCase(test.NoDBTestCase):
 
     def test_fit_instance_cell_fail_w_limit(self):
         host_cell = objects.NUMACell(id=4, cpuset=set([1, 2]), memory=1024,
-                                                 cpu_usage=2,
-                                                 memory_usage=1024,
+                                     cpu_usage=2,
+                                     memory_usage=1024,
                                      mempages=[], siblings=[],
                                      pinned_cpus=set([]))
-        limit_cell = hw.VirtNUMATopologyCellLimit(
-                        4, cpuset=set([1, 2]), memory=1024,
-                        cpu_limit=4, memory_limit=2048)
         instance_cell = objects.InstanceNUMACell(
             id=0, cpuset=set([1, 2]), memory=4096)
+        limit_cell = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2)
         fitted_cell = hw._numa_fit_instance_cell(
                 host_cell, instance_cell, limit_cell=limit_cell)
         self.assertIsNone(fitted_cell)
@@ -1380,15 +1377,8 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
                                      mempages=[], siblings=[],
                                      pinned_cpus=set([]))])
 
-        self.limits = hw.VirtNUMALimitTopology(
-                cells=[
-                    hw.VirtNUMATopologyCellLimit(
-                        1, cpuset=set([1, 2]), memory=2048,
-                        cpu_limit=4, memory_limit=4096),
-                    hw.VirtNUMATopologyCellLimit(
-                        2, cpuset=set([3, 4]), memory=2048,
-                        cpu_limit=4, memory_limit=3072)])
-
+        self.limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2, ram_allocation_ratio=2)
         self.instance1 = objects.InstanceNUMATopology(
                 cells=[
                     objects.InstanceNUMACell(
@@ -1431,7 +1421,7 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
         self.host = hw.numa_usage_from_instances(self.host,
                 [fitted_instance1])
         fitted_instance2 = hw.numa_fit_instance_to_host(
-                self.host, self.instance1, self.limits)
+                self.host, self.instance2, self.limits)
         self.assertIsNone(fitted_instance2)
 
     def test_get_fitting_culmulative_success_limits(self):

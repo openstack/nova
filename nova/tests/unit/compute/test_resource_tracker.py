@@ -38,7 +38,6 @@ from nova.tests.unit.compute.monitors import test_monitors
 from nova.tests.unit.objects import test_migration
 from nova.tests.unit.pci import fakes as pci_fakes
 from nova.virt import driver
-from nova.virt import hardware
 
 
 FAKE_VIRT_MEMORY_MB = 5
@@ -52,11 +51,9 @@ FAKE_VIRT_NUMA_TOPOLOGY = objects.NUMATopology(
                objects.NUMACell(id=1, cpuset=set([3, 4]), memory=3072,
                                 cpu_usage=0, memory_usage=0, mempages=[],
                                 siblings=[], pinned_cpus=set([]))])
-FAKE_VIRT_NUMA_TOPOLOGY_OVERHEAD = hardware.VirtNUMALimitTopology(
-        cells=[hardware.VirtNUMATopologyCellLimit(
-                    0, set([1, 2]), 3072, 4, 10240),
-               hardware.VirtNUMATopologyCellLimit(
-                    1, set([3, 4]), 3072, 4, 10240)])
+FAKE_VIRT_NUMA_TOPOLOGY_OVERHEAD = objects.NUMATopologyLimits(
+    cpu_allocation_ratio=2, ram_allocation_ratio=2)
+
 ROOT_GB = 5
 EPHEMERAL_GB = 1
 FAKE_VIRT_LOCAL_GB = ROOT_GB + EPHEMERAL_GB
@@ -641,7 +638,7 @@ class BaseTrackerTestCase(BaseTestCase):
             'memory_mb': memory_mb,
             'disk_gb': disk_gb,
             'vcpu': vcpus,
-            'numa_topology': numa_topology.to_json() if numa_topology else None
+            'numa_topology': numa_topology,
         }
 
     def assertEqualNUMAHostTopology(self, expected, got):
@@ -971,7 +968,7 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         limits = {'memory_mb': memory_mb + FAKE_VIRT_MEMORY_OVERHEAD,
                   'disk_gb': root_gb * 2,
                   'vcpu': vcpus,
-                  'numa_topology': FAKE_VIRT_NUMA_TOPOLOGY_OVERHEAD.to_json()}
+                  'numa_topology': FAKE_VIRT_NUMA_TOPOLOGY_OVERHEAD}
 
         instance = self._fake_instance(memory_mb=memory_mb,
                 root_gb=root_gb, ephemeral_gb=ephemeral_gb,

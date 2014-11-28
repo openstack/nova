@@ -1189,6 +1189,7 @@ object_data = {
     'NUMACell': '1.2-cb9c3b08cc1c418d021492f788d04173',
     'NUMAPagesTopology': '1.0-97d93f70a68625b5f29ff63a40a4f612',
     'NUMATopology': '1.2-790f6bdff85bf6e5677f409f3a4f1c6a',
+    'NUMATopologyLimits': '1.0-201845851897940c0a300e3d14ebf04a',
     'PciDevice': '1.3-e059641df10e85d464672c5183a9473b',
     'PciDeviceList': '1.1-38cbe2d3c23b9e46f7a74b486abcad85',
     'PciDevicePool': '1.0-d6ed1abe611c9947345a44155abe6f11',

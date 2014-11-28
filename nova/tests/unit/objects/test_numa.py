@@ -10,7 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 from nova import exception
 from nova import objects
 from nova.tests.unit.objects import test_objects
@@ -36,6 +35,35 @@ class _TestNUMA(object):
         d2 = objects.NUMATopology.obj_from_primitive(d1)._to_dict()
 
         self.assertEqual(d1, d2)
+
+    def test_from_legacy_limits(self):
+        old_style = {"cells": [
+                        {"mem": {
+                            "total": 1024,
+                            "limit": 2048},
+                         "cpu_limit": 96.0,
+                         "cpus": "0,1,2,3,4,5",
+                         "id": 0}]}
+
+        limits = objects.NUMATopologyLimits.obj_from_db_obj(old_style)
+        self.assertEqual(16.0, limits.cpu_allocation_ratio)
+        self.assertEqual(2.0, limits.ram_allocation_ratio)
+
+    def test_to_legacy_limits(self):
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=16,
+            ram_allocation_ratio=2)
+        host_topo = objects.NUMATopology(cells=[
+            objects.NUMACell(id=0, cpuset=set([1, 2]), memory=1024)
+        ])
+
+        old_style = {'cells': [
+            {'mem': {'total': 1024,
+                     'limit': 2048.0},
+             'id': 0,
+             'cpus': '1,2',
+             'cpu_limit': 32.0}]}
+        self.assertEqual(old_style, limits.to_dict_legacy(host_topo))
 
     def test_free_cpus(self):
         obj = objects.NUMATopology(cells=[
