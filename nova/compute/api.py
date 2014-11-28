@@ -785,11 +785,8 @@ class API(base.Base):
                 block_device.properties_root_device_name(
                     boot_meta.get('properties', {})))
 
-        numa_topology = hardware.VirtNUMAInstanceTopology.get_constraints(
+        numa_topology = hardware.numa_get_constraints(
                 instance_type, boot_meta.get('properties', {}))
-        if numa_topology is not None:
-            numa_topology = objects.InstanceNUMATopology.obj_from_topology(
-                    numa_topology)
 
         system_metadata = flavors.save_flavor_info(
             dict(), instance_type)

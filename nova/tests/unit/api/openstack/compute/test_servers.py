@@ -2357,7 +2357,7 @@ class ServersControllerCreateTest(test.TestCase):
         self._check_admin_pass_missing(server)
         self.assertEqual(FAKE_UUID, server['id'])
 
-    @mock.patch('nova.virt.hardware.VirtNUMAInstanceTopology.get_constraints')
+    @mock.patch('nova.virt.hardware.numa_get_constraints')
     def test_create_instance_numa_topology_wrong(self, numa_constraints_mock):
         numa_constraints_mock.side_effect = (
                 exception.ImageNUMATopologyIncomplete)

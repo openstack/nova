@@ -29,13 +29,12 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
         self.filt_cls = numa_topology_filter.NUMATopologyFilter()
 
     def test_numa_topology_filter_pass(self):
-        instance_topology = hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCellInstance(0, set([1]), 512),
-                   hardware.VirtNUMATopologyCellInstance(1, set([3]), 512)])
+        instance_topology = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell(id=0, cpuset=set([1]), memory=512),
+                   objects.InstanceNUMACell(id=1, cpuset=set([3]), memory=512)
+               ])
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
-        instance.numa_topology = (
-                objects.InstanceNUMATopology.obj_from_topology(
-                    instance_topology))
+        instance.numa_topology = instance_topology
         filter_properties = {
             'request_spec': {
                 'instance_properties': jsonutils.to_primitive(
@@ -45,13 +44,12 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
 
     def test_numa_topology_filter_numa_instance_no_numa_host_fail(self):
-        instance_topology = hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCellInstance(0, set([1]), 512),
-                   hardware.VirtNUMATopologyCellInstance(1, set([3]), 512)])
+        instance_topology = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell(id=0, cpuset=set([1]), memory=512),
+                   objects.InstanceNUMACell(id=1, cpuset=set([3]), memory=512)
+               ])
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
-        instance.numa_topology = (
-                objects.InstanceNUMATopology.obj_from_topology(
-                    instance_topology))
+        instance.numa_topology = instance_topology
 
         filter_properties = {
             'request_spec': {
@@ -72,14 +70,13 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
         self.assertTrue(self.filt_cls.host_passes(host, filter_properties))
 
     def test_numa_topology_filter_fail_fit(self):
-        instance_topology = hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCellInstance(0, set([1]), 512),
-                   hardware.VirtNUMATopologyCellInstance(1, set([2]), 512),
-                   hardware.VirtNUMATopologyCellInstance(2, set([3]), 512)])
+        instance_topology = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell(id=0, cpuset=set([1]), memory=512),
+                   objects.InstanceNUMACell(id=1, cpuset=set([2]), memory=512),
+                   objects.InstanceNUMACell(id=2, cpuset=set([3]), memory=512)
+               ])
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
-        instance.numa_topology = (
-                objects.InstanceNUMATopology.obj_from_topology(
-                    instance_topology))
+        instance.numa_topology = instance_topology
         filter_properties = {
             'request_spec': {
                 'instance_properties': jsonutils.to_primitive(
@@ -91,13 +88,13 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
     def test_numa_topology_filter_fail_memory(self):
         self.flags(ram_allocation_ratio=1)
 
-        instance_topology = hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCellInstance(0, set([1]), 1024),
-                   hardware.VirtNUMATopologyCellInstance(1, set([3]), 512)])
+        instance_topology = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell(id=0, cpuset=set([1]),
+                                            memory=1024),
+                   objects.InstanceNUMACell(id=1, cpuset=set([3]), memory=512)
+               ])
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
-        instance.numa_topology = (
-                objects.InstanceNUMATopology.obj_from_topology(
-                    instance_topology))
+        instance.numa_topology = instance_topology
         filter_properties = {
             'request_spec': {
                 'instance_properties': jsonutils.to_primitive(
@@ -109,14 +106,12 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
     def test_numa_topology_filter_fail_cpu(self):
         self.flags(cpu_allocation_ratio=1)
 
-        instance_topology = hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCellInstance(0, set([1]), 512),
-                   hardware.VirtNUMATopologyCellInstance(
-                       1, set([3, 4, 5]), 512)])
+        instance_topology = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell(id=0, cpuset=set([1]), memory=512),
+                   objects.InstanceNUMACell(id=1, cpuset=set([3, 4, 5]),
+                                            memory=512)])
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
-        instance.numa_topology = (
-                objects.InstanceNUMATopology.obj_from_topology(
-                    instance_topology))
+        instance.numa_topology = instance_topology
         filter_properties = {
             'request_spec': {
                 'instance_properties': jsonutils.to_primitive(
@@ -129,13 +124,12 @@ class TestNUMATopologyFilter(test.NoDBTestCase):
         self.flags(cpu_allocation_ratio=21)
         self.flags(ram_allocation_ratio=1.3)
 
-        instance_topology = hardware.VirtNUMAInstanceTopology(
-            cells=[hardware.VirtNUMATopologyCellInstance(0, set([1]), 512),
-                   hardware.VirtNUMATopologyCellInstance(1, set([3]), 512)])
+        instance_topology = objects.InstanceNUMATopology(
+            cells=[objects.InstanceNUMACell(id=0, cpuset=set([1]), memory=512),
+                   objects.InstanceNUMACell(id=1, cpuset=set([3]), memory=512)
+               ])
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
-        instance.numa_topology = (
-                objects.InstanceNUMATopology.obj_from_topology(
-                    instance_topology))
+        instance.numa_topology = instance_topology
         filter_properties = {
             'request_spec': {
                 'instance_properties': jsonutils.to_primitive(
