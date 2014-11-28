@@ -332,8 +332,7 @@ class APIRouterV21(base_wsgi.Router):
         if list(self.api_extension_manager):
             # NOTE(cyeoh): Stevedore raises an exception if there are
             # no plugins detected. I wonder if this is a bug.
-            self.api_extension_manager.map(self._register_resources,
-                                           mapper=mapper)
+            self._register_resources_check_inherits(mapper)
             self.api_extension_manager.map(self._register_controllers)
 
         missing_core_extensions = self.get_missing_core_extensions(
@@ -345,6 +344,25 @@ class APIRouterV21(base_wsgi.Router):
                 missing_apis=missing_core_extensions)
 
         super(APIRouterV21, self).__init__(mapper)
+
+    def _register_resources_list(self, ext_list, mapper):
+        for ext in ext_list:
+            self._register_resources(ext, mapper)
+
+    def _register_resources_check_inherits(self, mapper):
+        ext_has_inherits = []
+        ext_no_inherits = []
+
+        for ext in self.api_extension_manager:
+            for resource in ext.obj.get_resources():
+                if resource.inherits:
+                    ext_has_inherits.append(ext)
+                    break
+            else:
+                ext_no_inherits.append(ext)
+
+        self._register_resources_list(ext_no_inherits, mapper)
+        self._register_resources_list(ext_has_inherits, mapper)
 
     @staticmethod
     def get_missing_core_extensions(extensions_loaded):
