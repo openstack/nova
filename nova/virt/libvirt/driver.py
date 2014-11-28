@@ -3635,6 +3635,9 @@ class LibvirtDriver(driver.ComputeDriver):
             if caps.host.cpu.arch == arch.AARCH64:
                 mach_type = "virt"
 
+            if caps.host.cpu.arch in (arch.S390, arch.S390X):
+                mach_type = 's390-ccw-virtio'
+
             # If set in the config, use that as the default.
             if CONF.libvirt.hw_machine_type:
                 mappings = self._machine_type_mappings()

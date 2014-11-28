@@ -3327,6 +3327,19 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                      {}, disk_info)
         self.assertEqual(cfg.os_mach_type, "virt")
 
+    def test_get_guest_config_machine_type_s390(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigGuestCPU()
+
+        host_cpu_archs = (arch.S390, arch.S390X)
+        for host_cpu_arch in host_cpu_archs:
+            caps.host.cpu.arch = host_cpu_arch
+            os_mach_type = conn._get_machine_type(None, caps)
+            self.assertEqual('s390-ccw-virtio', os_mach_type)
+
     @mock.patch.object(objects.Flavor, 'get_by_id')
     def test_get_guest_config_machine_type_through_image_meta(self,
                                                               mock_flavor):
